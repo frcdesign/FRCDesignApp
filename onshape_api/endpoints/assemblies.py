@@ -60,7 +60,7 @@ def add_element_to_assembly(
     assembly_path: ElementPath,
     element_path: ElementPath,
     element_type: ElementType,
-    configuration: dict[str, str] | None = None,
+    configuration: str | None = None,
 ) -> None:
     """
     Adds the contents of an element tab to an assembly.
@@ -74,7 +74,7 @@ def add_element_to_assembly(
 
     instance = {}
     if configuration != None:
-        instance["configuration"] = encode_configuration(configuration)
+        instance["configuration"] = configuration
 
     if element_type == ElementType.ASSEMBLY:
         instance["isAssembly"] = True

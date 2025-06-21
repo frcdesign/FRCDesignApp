@@ -31,11 +31,43 @@ class QuantityType(StrEnum):
     REAL = "REAL"
 
 
+class Unit(StrEnum):
+    METER = "meter"
+    CENTIMETER = "centimeter"
+    MILLIMETER = "millimeter"
+    YARD = "yard"
+    FOOT = "foot"
+    INCH = "inch"
+    DEGREE = "degree"
+    RADIAN = "radian"
+    UNITLESS = ""
+
+
+def get_abbreviation(unit: Unit) -> str:
+    match unit:
+        case Unit.METER:
+            return "m"
+        case Unit.CENTIMETER:
+            return "cm"
+        case Unit.MILLIMETER:
+            return "mm"
+        case Unit.YARD:
+            return "yd"
+        case Unit.FOOT:
+            return "ft"
+        case Unit.INCH:
+            return "in"
+        case Unit.DEGREE:
+            return "deg"
+        case Unit.RADIAN:
+            return "rad"
+        case Unit.UNITLESS:
+            return ""
+
+
 def parse_configuration(configuration: dict) -> dict:
     parameters = []
-    for parameter, current in zip(
-        configuration["configurationParameters"], configuration["currentConfiguration"]
-    ):
+    for parameter in configuration["configurationParameters"]:
         parameter_type = parameter["btType"]
         result = {
             "id": parameter["parameterId"],
@@ -56,15 +88,18 @@ def parse_configuration(configuration: dict) -> dict:
         elif parameter_type == ParameterType.QUANTITY:
             quantity_type = parameter["quantityType"]
             range = parameter["rangeAndDefault"]
-            result = {
-                "quantityType": quantity_type,
-                "default": current["expression"],
-                "min": range["minValue"],
-                "max": range["maxValue"],
-                "unit": range["units"],  # empty string for real and integer
-            }
-            # if quantity_type not in [QuantityType.REAL, QuantityType.INTEGER]:
-            #     result["unit"] = range["units"]
+
+            unit: Unit = range["units"]
+            default = f"{range["defaultValue"]} {get_abbreviation(unit)}"
+            result.update(
+                {
+                    "quantityType": quantity_type,
+                    "default": default,
+                    "min": range["minValue"],
+                    "max": range["maxValue"],
+                    "unit": range["units"],  # empty string for real and integer
+                }
+            )
 
         parameters.append(result)
 

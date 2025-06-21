@@ -18,6 +18,7 @@ import {
     StringParameterObj
 } from "../api/backend-types";
 import {
+    Alignment,
     Button,
     Checkbox,
     Dialog,
@@ -178,7 +179,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             <Select<EnumOption>
                 items={parameter.options}
                 filterable={false}
-                popoverProps={{ minimal: true }}
+                popoverProps={{ minimal: true, popoverClassName: "enum-menu" }}
                 itemRenderer={(enumOption, { handleClick, handleFocus }) => {
                     const selected = value === enumOption.id;
                     return (
@@ -213,7 +214,8 @@ function BooleanParameter(
     const { parameter, value, onValueChange } = props;
     return (
         <Checkbox
-            title={parameter.name}
+            label={parameter.name}
+            alignIndicator={Alignment.START}
             checked={value === "true"}
             onChange={handleBooleanChange((checked) =>
                 onValueChange(checked ? "true" : "false")
@@ -246,6 +248,7 @@ function QuantityParameter(
                 value={value}
                 allowNumericCharactersOnly={false}
                 onValueChange={(_, value) => onValueChange(value)}
+                buttonPosition="none"
             />
         </FormGroup>
     );
