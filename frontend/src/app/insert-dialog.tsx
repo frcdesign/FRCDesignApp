@@ -20,7 +20,7 @@ import {
 import {
     Alignment,
     Button,
-    ButtonVariant,
+    Card,
     Checkbox,
     Dialog,
     DialogBody,
@@ -28,7 +28,6 @@ import {
     FormGroup,
     InputGroup,
     Intent,
-    Label,
     MenuItem,
     NumericInput
 } from "@blueprintjs/core";
@@ -95,11 +94,15 @@ export function ConfigurationDialog(): ReactNode {
             isOpen
             title={element.name}
             onClose={() => navigate({ to: "/app/documents" })}
+            style={{ maxHeight: "85vh" }}
         >
-            <DialogBody>
-                {parameters}
-                <div className="center">{previewImage}</div>
-            </DialogBody>
+            <Card
+                className="center"
+                style={{ margin: "10px", marginBottom: "0px" }}
+            >
+                {previewImage}
+            </Card>
+            <DialogBody>{parameters}</DialogBody>
             <DialogFooter minimal actions={submitButton} />
         </Dialog>
     );
@@ -224,15 +227,17 @@ function BooleanParameter(
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Checkbox
-            label={parameter.name}
-            alignIndicator={Alignment.START}
-            inline
-            checked={value === "true"}
-            onChange={handleBooleanChange((checked) =>
-                onValueChange(checked ? "true" : "false")
-            )}
-        />
+        <div style={{ width: "100%" }}>
+            <Checkbox
+                label={parameter.name}
+                alignIndicator={Alignment.START}
+                inline
+                checked={value === "true"}
+                onChange={handleBooleanChange((checked) =>
+                    onValueChange(checked ? "true" : "false")
+                )}
+            />
+        </div>
     );
 }
 
