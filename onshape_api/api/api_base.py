@@ -15,9 +15,10 @@ class ApiArgs(TypedDict):
     version: NotRequired[int | None]
 
 
-class ApiQueryArgs(TypedDict):
+class ApiRequestArgs(TypedDict):
     query: NotRequired[str | dict]
     headers: NotRequired[dict[str, str]]
+    is_json: NotRequired[bool]
 
 
 def get_api_base_args() -> ApiArgs:
@@ -77,6 +78,7 @@ class Api(ABC):
         query: dict | str = "",
         body: dict | str = "",
         headers: dict[str, str] = {},
+        is_json: bool = True,
     ) -> Any:
         """
         Issues a request to Onshape.
@@ -86,6 +88,7 @@ class Api(ABC):
             query: Query parameters for the request.
             body: A body for the POST request.
             headers: Extra headers to add to the request.
+            is_json: Whether the response should be parsed as json.
 
         Returns:
             The response from Onshape parsed as json, or the Response itself.
@@ -95,13 +98,13 @@ class Api(ABC):
         """
         ...
 
-    def get(self, path: str, **kwargs: Unpack[ApiQueryArgs]) -> Any:
+    def get(self, path: str, **kwargs: Unpack[ApiRequestArgs]) -> Any:
         return self._request(http.HTTPMethod.GET, path=path, **kwargs)
 
     def post(
-        self, path: str, body: dict | str = "", **kwargs: Unpack[ApiQueryArgs]
+        self, path: str, body: dict | str = "", **kwargs: Unpack[ApiRequestArgs]
     ) -> Any:
         return self._request(http.HTTPMethod.POST, path, body=body, **kwargs)
 
-    def delete(self, path: str, **kwargs: Unpack[ApiQueryArgs]) -> Any:
+    def delete(self, path: str, **kwargs: Unpack[ApiRequestArgs]) -> Any:
         return self._request(http.HTTPMethod.DELETE, path=path, **kwargs)

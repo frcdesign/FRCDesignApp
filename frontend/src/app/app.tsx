@@ -22,7 +22,11 @@ export function App() {
     return (
         <Section
             className={getThemeClass(search.theme)}
-            style={{ position: "absolute", height: "100%", width: "100%" }}
+            style={{
+                position: "absolute",
+                height: "100%",
+                width: "100%"
+            }}
         >
             <QueryClientProvider client={queryClient}>
                 <AppNavbar />

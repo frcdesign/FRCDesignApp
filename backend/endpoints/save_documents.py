@@ -125,7 +125,7 @@ def save_element(
     }
 
     configuration = get_configuration(api, path)
-    if configuration["configurationParameters"] != []:
+    if len(configuration["configurationParameters"]) > 0:
         configuration_value = parse_configuration(configuration)
         # Re-use element db id since configurations can't be shared
         db.configurations.document(element_id).set(configuration_value)
@@ -170,7 +170,8 @@ def save_all_documents(**kwargs):
     with open("config.json") as file:
         config = json5.load(file)
 
-    documents_list = config["documents"]
+    # Iterate in reverse so the result is ordered
+    documents_list = reversed(config["documents"])
 
     count = 0
     visited = set()

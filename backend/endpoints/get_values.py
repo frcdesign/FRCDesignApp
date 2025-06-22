@@ -1,4 +1,5 @@
 import logging
+from urllib import parse
 import flask
 
 from backend.common import database
@@ -12,6 +13,7 @@ from backend.common.connect import (
 )
 from onshape_api.endpoints import thumbnails
 from onshape_api.paths.instance_type import InstanceType
+from onshape_api.paths.paths import ElementPath, InstancePath
 
 router = flask.Blueprint("get-values", __name__)
 
@@ -28,7 +30,15 @@ def get_documents(**kwargs):
         document = doc_ref.to_dict()
         element_ids = document["elementIds"]
         documents.append(
-            {"id": doc_ref.id, "name": document["name"], "elementIds": element_ids}
+            {
+                "id": doc_ref.id,
+                "name": document["name"],
+                "elementIds": element_ids,
+                # InstancePath properties
+                "documentId": doc_ref.id,
+                "instanceId": document["instanceId"],
+                "instanceType": InstanceType.VERSION,
+            }
         )
         for element_id in document["elementIds"]:
             element = db.elements.document(element_id).get().to_dict()
@@ -69,7 +79,8 @@ def get_document_thumbnail(**kwargs):
     api = connect.get_api(db)
     instance_path = get_route_instance_path()
     size = get_optional_query_arg("size")
-    return thumbnails.get_instance_thumbnail(api, instance_path, size)
+    thumbnail = thumbnails.get_instance_thumbnail(api, instance_path, size)
+    return flask.send_file(thumbnail, mimetype="image/gif")
 
 
 @router.get("/thumbnail" + element_route())
@@ -79,4 +90,7 @@ def get_element_thumbnail(**kwargs):
     element_path = get_route_element_path()
     configuration = get_optional_query_arg("configuration")
     size = get_optional_query_arg("size")
-    return thumbnails.get_element_thumbnail(api, element_path, size, configuration)
+    thumbnail = thumbnails.get_element_thumbnail(
+        api, element_path, configuration=configuration, size=size
+    )
+    return flask.send_file(thumbnail, mimetype="image/gif")

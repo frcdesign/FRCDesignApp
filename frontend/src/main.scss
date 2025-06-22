@@ -8,7 +8,17 @@
     -webkit-user-select: none;
 }
 
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .enum-menu {
     max-height: 250px;
     overflow: scroll;
+}
+
+.document-title {
+    margin-left: 30px;
 }

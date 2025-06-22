@@ -1,7 +1,7 @@
 /**
  * A collection of type and result definitions mirroring backend endpoints and/or Onshape.
  */
-import { ElementPath } from "./path";
+import { ElementPath, InstancePath } from "./path";
 
 /**
  * The type of the Onshape tab the app is open in.
@@ -102,7 +102,7 @@ export interface DocumentResult {
     elements: ElementObj[];
 }
 
-export interface DocumentObj {
+export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
     elementIds: string[];
@@ -113,4 +113,19 @@ export interface ElementObj extends ElementPath {
     name: string;
     elementType: ElementType;
     configurationId?: string;
+}
+
+export enum ThumbnailSize {
+    STANDARD = "300x300",
+    LARGE = "600x340",
+    SMALL = "300x170",
+    TINY = "70x40"
+}
+
+export function getHeightAndWidth(size: ThumbnailSize): {
+    height: number;
+    width: number;
+} {
+    const parts = size.split("x");
+    return { width: parseInt(parts[0]), height: parseInt(parts[1]) };
 }

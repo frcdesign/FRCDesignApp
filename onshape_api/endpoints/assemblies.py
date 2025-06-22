@@ -1,3 +1,4 @@
+from operator import is_
 from typing import Iterable
 from urllib import parse
 
@@ -101,6 +102,7 @@ def add_element_to_assembly(
     api.post(
         api_path("assemblies", assembly_path, ElementPath, "instances"),
         body=instance,
+        is_json=False,
     )
 
 

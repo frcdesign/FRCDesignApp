@@ -48,6 +48,26 @@ export async function apiGet(
 }
 
 /**
+ * Makes a get request for an image to a backend /api route.
+ * Returns a local url for the image.
+ */
+export async function apiGetImage(
+    path: string,
+    query?: URLSearchParamsInit,
+    signal?: AbortSignal
+): Promise<string> {
+    return fetch(getUrl(path, query), { signal }).then(handleImageResponse);
+}
+
+async function handleImageResponse(response: Response) {
+    if (!response.ok) {
+        throw new Error("Network response failed.");
+    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+}
+
+/**
  * Makes a delete request to a backend /api route.
  * Note delete is a reserved keyword in JavaScript.
  */

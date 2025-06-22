@@ -80,29 +80,29 @@ def get_oauth_session(
     )
 
 
-def instance_route(wvm_param: str = "w"):
-    return f"/d/<document_id>/<{wvm_param}>/<workspace_id>"
+def instance_route():
+    return f"/d/<document_id>/<instance_type>/<workspace_id>"
 
 
-def element_route(wvm_param: str = "w"):
-    return instance_route(wvm_param) + "/e/<element_id>"
+def element_route():
+    return instance_route() + "/e/<element_id>"
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:
     return onshape_api.make_oauth_api(get_oauth_session(db))
 
 
-def get_route_instance_path(wvm_param: str = "w") -> onshape_api.InstancePath:
+def get_route_instance_path() -> onshape_api.InstancePath:
     return onshape_api.InstancePath(
         get_route("document_id"),
         get_route("workspace_id"),
-        get_route(wvm_param),
+        get_route("instance_type"),
     )
 
 
 def get_route_element_path(wvm_param: str = "w") -> onshape_api.ElementPath:
     return onshape_api.ElementPath.from_path(
-        get_route_instance_path(wvm_param),
+        get_route_instance_path(),
         get_route("element_id"),
     )
 

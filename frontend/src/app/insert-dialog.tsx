@@ -36,6 +36,7 @@ import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
 import { getThemeClass } from "../api/search-params";
+import { ElementThumbnail } from "./thumbnail";
 
 export function ConfigurationDialog(): ReactNode {
     const documentResult = useLoaderData({
@@ -81,6 +82,14 @@ export function ConfigurationDialog(): ReactNode {
         );
     }
 
+    const previewImage = (
+        <ElementThumbnail
+            isDialogPreview
+            elementPath={element}
+            configuration={configuration}
+        />
+    );
+
     const submitButton = (
         <InsertButton element={element} configuration={configuration} />
     );
@@ -91,7 +100,12 @@ export function ConfigurationDialog(): ReactNode {
             title={element.name}
             onClose={() => navigate({ to: "/app/documents" })}
         >
-            <DialogBody>{parameters}</DialogBody>
+            <DialogBody>
+                <>
+                    {parameters}
+                    <div className="center">{previewImage}</div>
+                </>
+            </DialogBody>
             <DialogFooter minimal actions={submitButton} />
         </Dialog>
     );

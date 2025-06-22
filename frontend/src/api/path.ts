@@ -49,3 +49,17 @@ export function toInstanceApiPath(path: WorkspacePath): string {
 export function toElementApiPath(path: ElementPath): string {
     return toInstanceApiPath(path) + `/e/${path.elementId}`;
 }
+
+/**
+ * Converts a configuration into a string.
+ */
+export function makeConfigurationString(
+    values?: Record<string, string>
+): string {
+    if (!values) {
+        return "";
+    }
+    return Object.entries(values)
+        .map(([id, value]) => `${id}=${value}`)
+        .join(";");
+}
