@@ -20,6 +20,7 @@ import {
 import {
     Alignment,
     Button,
+    ButtonVariant,
     Checkbox,
     Dialog,
     DialogBody,
@@ -27,6 +28,7 @@ import {
     FormGroup,
     InputGroup,
     Intent,
+    Label,
     MenuItem,
     NumericInput
 } from "@blueprintjs/core";
@@ -95,10 +97,8 @@ export function ConfigurationDialog(): ReactNode {
             onClose={() => navigate({ to: "/app/documents" })}
         >
             <DialogBody>
-                <>
-                    {parameters}
-                    <div className="center">{previewImage}</div>
-                </>
+                {parameters}
+                <div className="center">{previewImage}</div>
             </DialogBody>
             <DialogFooter minimal actions={submitButton} />
         </Dialog>
@@ -128,7 +128,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             }}
         />
     ));
-    return parameters;
+    return <div style={{ width: "100%" }}>{parameters}</div>;
 }
 
 interface ParameterProps<T extends ParameterObj> {
@@ -183,11 +183,14 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         (enumOption) => enumOption.id === value
     );
     return (
-        <FormGroup label={parameter.name}>
+        <FormGroup label={parameter.name} inline>
             <Select<EnumOption>
                 items={parameter.options}
                 filterable={false}
-                popoverProps={{ minimal: true, popoverClassName: "enum-menu" }}
+                popoverProps={{
+                    minimal: true,
+                    popoverClassName: "enum-menu"
+                }}
                 itemRenderer={(enumOption, { handleClick, handleFocus }) => {
                     const selected = value === enumOption.id;
                     return (
@@ -224,6 +227,7 @@ function BooleanParameter(
         <Checkbox
             label={parameter.name}
             alignIndicator={Alignment.START}
+            inline
             checked={value === "true"}
             onChange={handleBooleanChange((checked) =>
                 onValueChange(checked ? "true" : "false")
@@ -235,7 +239,7 @@ function BooleanParameter(
 function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup label={parameter.name} labelFor={parameter.id}>
+        <FormGroup label={parameter.name} inline labelFor={parameter.id}>
             <InputGroup
                 id={parameter.id}
                 value={value}
@@ -250,7 +254,7 @@ function QuantityParameter(
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup label={parameter.name} labelFor={parameter.id}>
+        <FormGroup label={parameter.name} inline labelFor={parameter.id}>
             <NumericInput
                 id={parameter.id}
                 value={value}
