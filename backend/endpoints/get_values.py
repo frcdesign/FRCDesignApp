@@ -12,8 +12,8 @@ from backend.common.connect import (
     instance_route,
 )
 from onshape_api.endpoints import thumbnails
+from onshape_api.endpoints.configurations import encode_configuration
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import ElementPath, InstancePath
 
 router = flask.Blueprint("get-values", __name__)
 
@@ -23,29 +23,28 @@ def get_documents(**kwargs):
     """Returns a list of the top level documents and elements to display to the user."""
     db = database.Database()
 
-    documents = []
-    elements = []
+    documents: dict[str, dict] = dict()
+    elements: dict[str, dict] = dict()
 
     for doc_ref in db.documents.stream():
         document = doc_ref.to_dict()
+        document_id = doc_ref.id
         element_ids = document["elementIds"]
-        documents.append(
-            {
-                "id": doc_ref.id,
-                "name": document["name"],
-                "elementIds": element_ids,
-                # InstancePath properties
-                "documentId": doc_ref.id,
-                "instanceId": document["instanceId"],
-                "instanceType": InstanceType.VERSION,
-            }
-        )
+        documents[document_id] = {
+            "id": document_id,
+            "name": document["name"],
+            "elementIds": element_ids,
+            # InstancePath properties
+            "documentId": doc_ref.id,
+            "instanceId": document["instanceId"],
+            "instanceType": InstanceType.VERSION,
+        }
         for element_id in document["elementIds"]:
             element = db.elements.document(element_id).get().to_dict()
             if element == None:
                 raise ValueError(f"Missing element with id {element_id}")
 
-            result = {
+            elements[element_id] = {
                 "id": element_id,
                 "name": element["name"],
                 "elementType": element["elementType"],
@@ -57,7 +56,6 @@ def get_documents(**kwargs):
                 # Include element id again out of laziness so we can parse it on the client
                 "elementId": element_id,
             }
-            elements.append(result)
 
     return {"documents": documents, "elements": elements}
 
@@ -88,9 +86,25 @@ def get_element_thumbnail(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
     element_path = get_route_element_path()
-    configuration = get_optional_query_arg("configuration")
+
     size = get_optional_query_arg("size")
-    thumbnail = thumbnails.get_element_thumbnail(
-        api, element_path, configuration=configuration, size=size
-    )
+    thumbnail_id = get_optional_query_arg("thumbnailId")
+
+    if thumbnail_id == None:
+        thumbnail = thumbnails.get_element_thumbnail(api, element_path, size)
+    else:
+        thumbnail = thumbnails.get_thumbnail_from_id(api, thumbnail_id, size)
     return flask.send_file(thumbnail, mimetype="image/gif")
+
+
+@router.get("/thumbnail-id" + element_route())
+def get_thumbnail_id(**kwargs):
+    db = database.Database()
+    api = connect.get_api(db)
+    element_path = get_route_element_path()
+
+    configuration = get_optional_query_arg("configuration")
+    logging.info(configuration)
+    return {
+        "thumbnailId": thumbnails.get_thumbnail_id(api, element_path, configuration)
+    }

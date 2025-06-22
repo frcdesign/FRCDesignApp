@@ -98,8 +98,8 @@ export interface QuantityParameterObj extends ParameterBase {
 //     REAL = "REAL"
 
 export interface DocumentResult {
-    documents: DocumentObj[];
-    elements: ElementObj[];
+    documents: Record<string, DocumentObj>;
+    elements: Record<string, ElementObj>;
 }
 
 export interface DocumentObj extends InstancePath {
@@ -112,7 +112,8 @@ export interface ElementObj extends ElementPath {
     id: string;
     name: string;
     elementType: ElementType;
-    configurationId?: string;
+    // By default missing elements are null
+    configurationId: string | null;
 }
 
 export enum ThumbnailSize {
@@ -128,4 +129,23 @@ export function getHeightAndWidth(size: ThumbnailSize): {
 } {
     const parts = size.split("x");
     return { width: parseInt(parts[0]), height: parseInt(parts[1]) };
+}
+
+// function quotePlus(value: string): string {
+//     return encodeURIComponent(value).replace(/%20/g, "+");
+// }
+
+/**
+ * Encodes a configuration into a string.
+ * Used to send configurations as a query parameter to the backend.
+ */
+export function encodeConfigurationForQuery(
+    values?: Record<string, string>
+): string {
+    if (!values) {
+        return "";
+    }
+    return Object.entries(values)
+        .map(([id, value]) => `${id}=${value}`)
+        .join(";");
 }

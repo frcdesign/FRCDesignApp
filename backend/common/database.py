@@ -26,30 +26,13 @@ class Database:
         return self.db.collection("configurations")
 
     def delete_document(self, document_id: str):
+        """Deletes a document and all elements and configurations which depend on it."""
         element = self.documents.document(document_id).get().to_dict()
         if element == None:
             return
         for element_id in element.get("elementIds", []):
             self.elements.document(element_id).delete()
             self.configurations.document(element_id).delete()
-
-
-def make_element_db_id(element_path: ElementPath) -> str:
-    """Constructs the id of an element in the elements collection of the database.
-
-    The id consists of the document id and element id.
-    Note element id would be sufficient but isn't guaranteed to be unique.
-    instance id isn't included so ids don't become invalid when new versions are created.
-    """
-    return f"{element_path.document_id}|{element_path.element_id}"
-
-
-def parse_element_db_id(element_db_id: str, instance_id: str) -> ElementPath:
-    """Given an id of an element in the database and it's instance id, returns the path to the tab."""
-    parts = element_db_id.split("|")
-    return ElementPath(
-        parts[0], instance_id, parts[1], instance_type=InstanceType.VERSION
-    )
 
 
 def delete_collection(coll_ref: CollectionReference, batch_size=500):

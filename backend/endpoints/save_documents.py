@@ -106,11 +106,14 @@ def parse_configuration(configuration: dict) -> dict:
     default_value = encode_configuration(
         {param["id"]: param["default"] for param in parameters}
     )
-    return {"defaultConfiguration": default_value, "parameters": parameters}
+    return {"defaultConfigurationId": default_value, "parameters": parameters}
 
 
 def save_element(
-    db: database.Database, api: Api, version_path: InstancePath, element: dict
+    db: database.Database,
+    api: Api,
+    version_path: InstancePath,
+    element: dict,
 ) -> str:
     element_type: ElementType = element["elementType"]
     name = element["name"]  # Use the name of the tab
@@ -176,19 +179,22 @@ def save_all_documents(**kwargs):
     count = 0
     visited = set()
     for document_url in documents_list:
-        path = url_to_document_path(document_url)
-        visited.add(path.document_id)
+        document_path = url_to_document_path(document_url)
 
-        latest_version_path = get_latest_version_path(api, path)
-        document = db.documents.document(path.document_id).get().to_dict()
+        visited.add(document_path.document_id)
+
+        latest_version_path = get_latest_version_path(api, document_path)
+        document = db.documents.document(document_path.document_id).get().to_dict()
         if document == None:
+            # Document doesn't exist, create it immediately
             count += save_document(api, db, latest_version_path)
             continue
         # Version is already saved
         if document.get("instanceId") == latest_version_path.instance_id:
             continue
 
-        db.delete_document(path.document_id)
+        # Refresh document
+        db.delete_document(document_path.document_id)
         count += save_document(api, db, latest_version_path)
 
     # Clean up any documents that are no longer in the config

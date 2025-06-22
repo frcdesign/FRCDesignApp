@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Iterable
 from urllib import parse
 
 from onshape_api.api.api_base import Api
@@ -28,36 +27,29 @@ def set_configuration(
 
 
 def decode_configuration(
-    api: Api, element_path: ElementPath, config_string: str
-) -> dict:
-    """Converts a configuration string into JSON."""
-    return api.get(
+    api: Api, element_path: ElementPath, configuration_string: str
+) -> dict[str, str]:
+    """Converts a configuration string into back into a dict mapping parameter ids to arrays."""
+    result = api.get(
         api_path(
             "elements",
             element_path,
             ElementPath,
             "configurationencodings",
-            end_id=config_string,
+            end_id=configuration_string,
         )
     )
-
-
-# def encode_configuration(
-#     api: Api, element_path: ElementPath, configuration: list[dict]
-# ) -> dict:
-#     """Converts a configuration JSON into a string."""
-#     body = {"parameters": configuration}
-#     return api.post(
-#         f"/elements/d/{element_path.document_id}/e/{element_path.element_id}/configurationencodings",
-#         body=body,
-#     )
+    return {
+        parameter["parameterId"]: parameter["parameterValue"]
+        for parameter in result["parameters"]
+    }
 
 
 def encode_configuration(values: dict[str, str]) -> str:
-    """Encodes a configuration into a format suitable for passing to the Onshape API via a body parameter."""
+    """Encodes a configuration into a string suitable for passing to the Onshape API as a body parameter."""
     # Convert to str to handle booleans and other tomfoolery
     return ";".join(
-        f"{id}={parse.quote_plus(str(value))}" for (id, value) in values.items()
+        f"{id}={str(parse.quote_plus(value))}" for (id, value) in values.items()
     )
 
 

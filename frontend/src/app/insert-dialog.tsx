@@ -36,7 +36,7 @@ import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
 import { getThemeClass } from "../api/search-params";
-import { ElementThumbnail } from "./thumbnail";
+import { PreviewThumbnail } from "./thumbnail";
 
 export function ConfigurationDialog(): ReactNode {
     const documentResult = useLoaderData({
@@ -62,14 +62,7 @@ export function ConfigurationDialog(): ReactNode {
     const navigate = useNavigate();
     const search = useSearch({ from: "/app" });
 
-    const element = documentResult.elements.find(
-        (element) => element.id === elementId
-    );
-
-    if (!element || (element.configurationId && !configurationResult)) {
-        // Error if we don't have an element or we're missing our configurationResult
-        return null;
-    }
+    const element = documentResult.elements[elementId];
 
     let parameters = null;
     if (configurationResult) {
@@ -83,7 +76,7 @@ export function ConfigurationDialog(): ReactNode {
     }
 
     const previewImage = (
-        <ElementThumbnail
+        <PreviewThumbnail
             isDialogPreview
             elementPath={element}
             configuration={configuration}
@@ -93,6 +86,7 @@ export function ConfigurationDialog(): ReactNode {
     const submitButton = (
         <InsertButton element={element} configuration={configuration} />
     );
+
     return (
         <Dialog
             className={getThemeClass(search.theme)}

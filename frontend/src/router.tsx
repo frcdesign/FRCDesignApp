@@ -58,9 +58,7 @@ const insertDialogRoute = createRoute({
     path: "/$elementId",
     component: ConfigurationDialog,
     loader: ({ params, abortController, context }) => {
-        const element = context.elements.find(
-            (element) => element.id === params.elementId
-        );
+        const element = context.elements[params.elementId];
         const configurationId = element?.configurationId;
         if (!configurationId) {
             return undefined;

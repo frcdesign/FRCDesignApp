@@ -1,78 +1,106 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGetImage } from "../api/api";
-import { getHeightAndWidth, ThumbnailSize } from "../api/backend-types";
+import { apiGet, apiGetImage } from "../api/api";
+import {
+    getHeightAndWidth,
+    encodeConfigurationForQuery,
+    ThumbnailSize
+} from "../api/backend-types";
 import {
     ElementPath,
-    makeConfigurationString,
     InstancePath,
+    isElementPath,
     toElementApiPath,
     toInstanceApiPath
 } from "../api/path";
 import { Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
 import { ReactNode } from "react";
 
-export interface DocumentThumbnailProps {
-    instancePath: InstancePath;
+export interface ThumbnailProps {
+    path: InstancePath | ElementPath;
 }
 
-export function DocumentThumbnail(props: DocumentThumbnailProps): ReactNode {
-    const { instancePath } = props;
+export function Thumbnail(props: ThumbnailProps): ReactNode {
+    const { path } = props;
     const size = ThumbnailSize.TINY;
 
+    const apiPath = isElementPath(path)
+        ? toElementApiPath(path)
+        : toInstanceApiPath(path);
+
     const imageQuery = useQuery({
-        queryKey: ["document-thumbnail", toInstanceApiPath(instancePath)],
+        queryKey: ["document-thumbnail", apiPath],
         queryFn: () =>
-            apiGetImage("/thumbnail" + toInstanceApiPath(instancePath), {
+            apiGetImage("/thumbnail" + apiPath, {
                 size
             })
     });
 
-    const heightAndWidth = getHeightAndWidth(size);
+    let content;
     if (imageQuery.isPending) {
-        return (
-            <div className="center" style={heightAndWidth}>
-                <Spinner intent={Intent.PRIMARY} size={25} />
-            </div>
-        );
+        content = <Spinner intent={Intent.PRIMARY} size={25} />;
+    } else {
+        content = <img src={imageQuery.data} />;
     }
-    return <img src={imageQuery.data} {...heightAndWidth} />;
+
+    const heightAndWidth = getHeightAndWidth(size);
+    return (
+        <div className="center" style={heightAndWidth}>
+            {content}
+        </div>
+    );
+    return;
 }
 
-export interface ElementThumbnailProps {
+export interface PreviewThumbnailProps {
     elementPath: ElementPath;
     configuration?: Record<string, string>;
     isDialogPreview?: boolean;
 }
 
-export function ElementThumbnail(props: ElementThumbnailProps): ReactNode {
+export function PreviewThumbnail(props: PreviewThumbnailProps): ReactNode {
     const { elementPath, configuration } = props;
-    const isDialogPreview = props.isDialogPreview ?? false;
-    const size = isDialogPreview ? ThumbnailSize.SMALL : ThumbnailSize.TINY;
+    const size = ThumbnailSize.SMALL;
 
-    const imageQuery = useQuery({
+    // Thumbnail id generation with queries is really unreliable
+    // The standard Onshape API for it appears to be broken/bugged
+    // So we use an undocumented alternate workflow where insertables returns an id
+    // However, the id can take a while to update, so we have to basically poll the endpoint while waiting for it to load
+    const thumbnailIdQuery = useQuery({
         queryKey: [
-            "document-thumbnail",
+            "thumbnail-id",
             toElementApiPath(elementPath),
-            configuration,
-            size
+            configuration
         ],
-        queryFn: () =>
-            apiGetImage("/thumbnail" + toElementApiPath(elementPath), {
+        queryFn: () => {
+            return apiGet("/thumbnail-id" + toElementApiPath(elementPath), {
+                configuration: encodeConfigurationForQuery(configuration)
+            }).then((value) => value.thumbnailId);
+        }
+    });
+
+    const thumbnailQuery = useQuery({
+        queryKey: ["thumbnail", toElementApiPath(elementPath), configuration],
+        queryFn: () => {
+            const query: Record<string, string> = {
                 size,
-                configuration: makeConfigurationString(configuration)
-            })
+                thumbnailId: thumbnailIdQuery.data
+            };
+            return apiGetImage(
+                "/thumbnail" + toElementApiPath(elementPath),
+                query
+            );
+        },
+        retry: 10,
+        enabled: thumbnailIdQuery.data !== undefined
     });
 
     const heightAndWidth = getHeightAndWidth(size);
-    if (imageQuery.isPending) {
+    if (thumbnailQuery.isPending) {
         return (
             <div className="center" style={heightAndWidth}>
-                <Spinner
-                    intent={Intent.PRIMARY}
-                    size={isDialogPreview ? SpinnerSize.STANDARD : 25}
-                />
+                <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
             </div>
         );
     }
-    return <img src={imageQuery.data} {...heightAndWidth} />;
+    return <img src={thumbnailQuery.data} {...heightAndWidth} />;
 }

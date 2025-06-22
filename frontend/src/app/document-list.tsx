@@ -10,27 +10,17 @@ import {
 import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj, ElementObj, ElementType } from "../api/backend-types";
-import { DocumentThumbnail, ElementThumbnail } from "./thumbnail";
-
-function findElement(
-    elements: ElementObj[],
-    elementId: string
-): ElementObj | undefined {
-    return elements.find((element) => element.id === elementId);
-}
+import { Thumbnail } from "./thumbnail";
 
 export function DocumentList(): ReactNode {
     const data = useLoaderData({ from: "/app/documents" });
 
-    const cards = data.documents.map((document) => {
+    const cards = Object.entries(data.documents).map(([id, document]) => {
         return (
-            <DocumentContainer key={document.id} document={document}>
+            <DocumentContainer key={id} document={document}>
                 {document.elementIds.map((elementId) => {
-                    const element = findElement(data.elements, elementId);
-                    if (!element) {
-                        return null;
-                    }
-                    return <ElementCard key={element.id} element={element} />;
+                    const element = data.elements[elementId];
+                    return <ElementCard key={elementId} element={element} />;
                 })}
             </DocumentContainer>
         );
@@ -53,13 +43,18 @@ interface DocumentContainerProps extends PropsWithChildren {
  */
 function DocumentContainer(props: DocumentContainerProps): ReactNode {
     const { document } = props;
-    const thumbnail = <DocumentThumbnail instancePath={document} />;
+    const thumbnail = <Thumbnail path={document} />;
     return (
-        <Section collapsible title={document.name} icon={thumbnail}>
+        <Section
+            collapsible
+            collapseProps={{ defaultIsOpen: false }}
+            title={document.name}
+            icon={thumbnail}
+        >
             <SectionCard
                 padded={false}
                 style={{
-                    maxHeight: "300px",
+                    maxHeight: "250px",
                     overflow: "scroll"
                 }}
             >
@@ -77,7 +72,7 @@ function ElementCard(props: ElementCardProps): ReactNode {
     const { element } = props;
     const navigate = useNavigate();
 
-    const thumbnail = <ElementThumbnail elementPath={element} />;
+    const thumbnail = <Thumbnail path={element} />;
 
     const subtitle =
         element.elementType === ElementType.PART_STUDIO

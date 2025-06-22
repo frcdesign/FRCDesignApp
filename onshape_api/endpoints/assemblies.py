@@ -1,8 +1,7 @@
-from operator import is_
 from typing import Iterable
 from urllib import parse
 
-from backend.endpoints.save_documents import parse_configuration
+
 from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_workspace
 from onshape_api.endpoints.configurations import encode_configuration
@@ -61,7 +60,7 @@ def add_element_to_assembly(
     assembly_path: ElementPath,
     element_path: ElementPath,
     element_type: ElementType,
-    configuration: str | None = None,
+    configuration: dict[str, str] | None = None,
 ) -> None:
     """
     Adds the contents of an element tab to an assembly.
@@ -75,7 +74,7 @@ def add_element_to_assembly(
 
     instance = {}
     if configuration != None:
-        instance["configuration"] = configuration
+        instance["configuration"] = encode_configuration(configuration)
 
     if element_type == ElementType.ASSEMBLY:
         instance["isAssembly"] = True
