@@ -1,14 +1,6 @@
-import {
-    Card,
-    CardList,
-    EntityTitle,
-    Intent,
-    Section,
-    SectionCard,
-    Tag
-} from "@blueprintjs/core";
+import { Collapse, Section } from "@blueprintjs/core";
 import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentObj, ElementObj, ElementType } from "../api/backend-types";
 import { Thumbnail } from "./thumbnail";
 
@@ -28,7 +20,17 @@ export function DocumentList(): ReactNode {
 
     return (
         <>
-            {cards}
+            <div
+                style={{
+                    marginTop: "10px",
+                    marginRight: "10px",
+                    marginLeft: "10px",
+                    display: "flex",
+                    flexDirection: "column"
+                }}
+            >
+                {cards}
+            </div>
             <Outlet />
         </>
     );
@@ -44,23 +46,22 @@ interface DocumentContainerProps extends PropsWithChildren {
 function DocumentContainer(props: DocumentContainerProps): ReactNode {
     const { document } = props;
     const thumbnail = <Thumbnail path={document} />;
+    const [isOpen, setIsOpen] = useState(false);
+
+    // Section likes to wrap it's own collapse
+    // Wrap in a div (rather than <>) so gap doesn't apply to both section and collapse
     return (
-        <Section
-            collapsible
-            collapseProps={{ defaultIsOpen: false }}
-            title={document.name}
-            icon={thumbnail}
-        >
-            <SectionCard
-                padded={false}
-                style={{
-                    maxHeight: "250px",
-                    overflow: "scroll"
-                }}
-            >
-                <CardList bordered={false}>{props.children}</CardList>
-            </SectionCard>
-        </Section>
+        <div>
+            <Section
+                onClick={() => setIsOpen(!isOpen)}
+                collapseProps={{ defaultIsOpen: false }}
+                title={document.name}
+                className="document-section"
+                collapsible
+                icon={thumbnail}
+            />
+            <Collapse isOpen={isOpen}>{props.children}</Collapse>
+        </div>
     );
 }
 
@@ -79,29 +80,38 @@ function ElementCard(props: ElementCardProps): ReactNode {
             ? "Part studio"
             : "Assembly";
 
-    const configurableTag = element.configurationId ? (
-        <Tag intent={Intent.PRIMARY} round>
-            Configurable
-        </Tag>
-    ) : undefined;
-
     return (
-        <Card
-            interactive
+        <Section
+            title={element.name}
+            subtitle={subtitle}
             onClick={() =>
                 navigate({
                     to: "/app/documents/$elementId",
                     params: { elementId: element.id }
                 })
             }
-        >
-            <EntityTitle
-                icon={thumbnail}
-                className="document-title"
-                title={element.name}
-                subtitle={subtitle}
-                tags={configurableTag}
-            />
-        </Card>
+            icon={thumbnail}
+            style={{
+                paddingLeft: "20px",
+                marginBottom: "10px"
+            }}
+        />
+        // <Card
+        //     interactive
+        //     onClick={() =>
+        //         navigate({
+        //             to: "/app/documents/$elementId",
+        //             params: { elementId: element.id }
+        //         })
+        //     }
+        //     style={{ margin: "10px" }}
+        // >
+        //     <EntityTitle
+        //         icon={thumbnail}
+        //         className="entity-title"
+        //         title={element.name}
+        //         subtitle={subtitle}
+        //     />
+        // </Card>
     );
 }

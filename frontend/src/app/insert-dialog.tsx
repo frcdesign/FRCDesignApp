@@ -22,6 +22,7 @@ import {
     Button,
     Card,
     Checkbox,
+    Colors,
     Dialog,
     DialogBody,
     DialogFooter,
@@ -76,7 +77,7 @@ export function ConfigurationDialog(): ReactNode {
         );
     }
 
-    const previewImage = (
+    const previewThumbnail = (
         <PreviewThumbnail
             isDialogPreview
             elementPath={element}
@@ -84,7 +85,7 @@ export function ConfigurationDialog(): ReactNode {
         />
     );
 
-    const submitButton = (
+    const insertButton = (
         <InsertButton element={element} configuration={configuration} />
     );
 
@@ -94,16 +95,15 @@ export function ConfigurationDialog(): ReactNode {
             isOpen
             title={element.name}
             onClose={() => navigate({ to: "/app/documents" })}
-            style={{ maxHeight: "85vh" }}
+            style={{ maxHeight: "90vh", maxWidth: "400px" }}
         >
-            <Card
-                className="center"
-                style={{ margin: "10px", marginBottom: "0px" }}
-            >
-                {previewImage}
+            <Card className="center preview-image-card">
+                {previewThumbnail}
             </Card>
             <DialogBody>{parameters}</DialogBody>
-            <DialogFooter minimal actions={submitButton} />
+            <DialogFooter actions={insertButton}>
+                <Button icon="heart" text="Favorite" intent={Intent.SUCCESS} />
+            </DialogFooter>
         </Dialog>
     );
 }
@@ -186,7 +186,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         (enumOption) => enumOption.id === value
     );
     return (
-        <FormGroup label={parameter.name} inline>
+        <FormGroup label={parameter.name} inline className="full-width">
             <Select<EnumOption>
                 items={parameter.options}
                 filterable={false}
@@ -229,10 +229,12 @@ function BooleanParameter(
     return (
         <div style={{ width: "100%" }}>
             <Checkbox
+                className="checkbox"
                 label={parameter.name}
-                alignIndicator={Alignment.START}
+                alignIndicator={Alignment.END}
                 inline
                 checked={value === "true"}
+                color={Colors.GREEN3}
                 onChange={handleBooleanChange((checked) =>
                     onValueChange(checked ? "true" : "false")
                 )}
@@ -244,7 +246,12 @@ function BooleanParameter(
 function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup label={parameter.name} inline labelFor={parameter.id}>
+        <FormGroup
+            label={parameter.name}
+            inline
+            labelFor={parameter.id}
+            className="full-width"
+        >
             <InputGroup
                 id={parameter.id}
                 value={value}
@@ -259,7 +266,12 @@ function QuantityParameter(
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup label={parameter.name} inline labelFor={parameter.id}>
+        <FormGroup
+            label={parameter.name}
+            inline
+            labelFor={parameter.id}
+            className="full-width"
+        >
             <NumericInput
                 id={parameter.id}
                 value={value}
@@ -305,9 +317,9 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
 
     return (
         <Button
-            intent={Intent.PRIMARY}
             text="Insert"
             endIcon="plus"
+            intent={Intent.SUCCESS}
             loading={insertMutation.isPending}
             onClick={() => insertMutation.mutate()}
         />

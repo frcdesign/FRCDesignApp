@@ -20,14 +20,7 @@ export function App() {
     }
 
     return (
-        <Section
-            className={getThemeClass(search.theme)}
-            style={{
-                position: "absolute",
-                height: "100%",
-                width: "100%"
-            }}
-        >
+        <Section className={getThemeClass(search.theme) + " app-background"}>
             <QueryClientProvider client={queryClient}>
                 <AppNavbar />
                 <Outlet />

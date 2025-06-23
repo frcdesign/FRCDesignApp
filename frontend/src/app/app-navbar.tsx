@@ -1,7 +1,6 @@
 import {
     Alignment,
     Button,
-    ButtonVariant,
     IconSize,
     InputGroup,
     Navbar,
@@ -21,7 +20,7 @@ import { router } from "../router";
  */
 export function AppNavbar(): ReactNode {
     return (
-        <Navbar fixedToTop={false}>
+        <Navbar fixedToTop className="app-navbar">
             <NavbarGroup>
                 <img
                     height={IconSize.LARGE}
@@ -60,7 +59,6 @@ function ReloadAllDocumentsButton(): ReactNode {
     return (
         <Button
             icon="refresh"
-            variant={ButtonVariant.MINIMAL}
             text="Reload all documents"
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
