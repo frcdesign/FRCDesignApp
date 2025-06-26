@@ -54,10 +54,3 @@ export function showErrorToast(message: string, key?: string): string {
         key
     );
 }
-
-export function showInternalErrorToast(message: string, key?: string): string {
-    return showErrorToast(
-        message + " If the problem persists, contact Alex.",
-        key
-    );
-}

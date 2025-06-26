@@ -63,6 +63,7 @@ class KeyApi(Api):
         query: dict | str = "",
         body: dict | str = "",
         headers: dict[str, str] = {},
+        is_json: bool = True,
     ):
         query_str = query if isinstance(query, str) else parse.urlencode(query)
 
@@ -90,7 +91,7 @@ class KeyApi(Api):
 
         if status.is_success:
             if self._logging:
-                if res.text == "":
+                if res.text == "" or not is_json:
                     logging.info("request succeeded")
                 else:
                     logging.info("request succeeded, details: " + res.text)
@@ -122,10 +123,7 @@ class KeyApi(Api):
                 logging.error("request failed, details: " + res.text)
             raise exceptions.ApiError(res.text, status)
 
-        try:
-            return res.json()
-        except:
-            return res
+        return res.json() if is_json else res
 
 
 def make_headers(

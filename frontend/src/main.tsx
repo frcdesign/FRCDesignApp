@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { IconPaths, Icons } from "@blueprintjs/icons";
 
 // Router
-import { RouterProvider } from "react-router-dom";
+import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
 
 // Used to make static assets work in dev
@@ -37,8 +37,14 @@ Icons.setLoaderOptions({
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
-const container: HTMLElement = document.getElementById("root")!;
-const root = createRoot(container);
+declare module "@tanstack/react-router" {
+    interface Register {
+        router: typeof router;
+    }
+}
+
+const rootElement: HTMLElement = document.getElementById("root")!;
+const root = createRoot(rootElement);
 root.render(
     <StrictMode>
         <RouterProvider router={router} />

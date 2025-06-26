@@ -1,17 +1,17 @@
-"""Contains Path classes for Onshape. Objects can be used to work on Onshape Documents, Workspaces, and Tabs. 
+"""Contains Path classes for Onshape. Objects can be used to work on Onshape Documents, Workspaces, and Tabs.
 
 The object model has the following elements:
-    Document: Represents an Onshape document. 
+    Document: Represents an Onshape document.
         Notably, documents are actually just collections of instances (workspaces and versions), so this isn't inherently useful on it's own.
-    Instance: Represents an Onshape workspace, version, or microversion. 
-        Workspaces are editable and are thus the most common. Note Onshape allows creating multiple workspaces in the same document, but most users don't utilize this functionality. 
+    Instance: Represents an Onshape workspace, version, or microversion.
+        Workspaces are editable and are thus the most common. Note Onshape allows creating multiple workspaces in the same document, but most users don't utilize this functionality.
         Versions correspond to explicit versions in the version list.
         Microversions typically correspond to individual edits in the edit history of a document.
     Element: Represents an Onshape tab, such as a Part Studio, Assembly, or Drawing.
     Part: Represents a Part inside a Part Studio.
 
 Notes on Path methods:
-    to_api_path: This method is static in order to work with api_path. 
+    to_api_path: This method is static in order to work with api_path.
         In particular, it is important for api_path to be able to print out a subset of the path, as the full path is not always required.
     copy: Creates a copy of a path. This is a class method in order to gain access to the constructor.
 """
@@ -34,10 +34,12 @@ class DocumentPath:
 
     @staticmethod
     def to_api_path(path: DocumentPath) -> str:
+        """Returns a path to this instance formated for api consumption."""
         return "/d/{}".format(path.document_id)
 
     @staticmethod
     def to_api_object(path: DocumentPath) -> dict:
+        """Returns a dict formated for sending to the frontend."""
         return {"documentId": path.document_id}
 
     @classmethod  # class method in order to have constructor
@@ -85,6 +87,7 @@ class InstancePath(DocumentPath):
 
     @staticmethod
     def to_api_object(path: InstancePath) -> dict:
+        """Returns a dict formated for sending to the frontend."""
         object = DocumentPath.to_api_object(path)
         object[get_instance_type_key(path.instance_type)] = path.instance_id
         return object
@@ -136,10 +139,12 @@ class ElementPath(InstancePath):
 
     @staticmethod
     def to_api_path(element: ElementPath) -> str:
+        """Returns a path to this instance formated for api consumption."""
         return InstancePath.to_api_path(element) + "/e/" + element.element_id
 
     @staticmethod
     def to_api_object(path: ElementPath) -> dict:
+        """Returns a dict formated for sending to the frontend."""
         object = InstancePath.to_api_object(path)
         object["elementId"] = path.element_id
         return object
@@ -192,6 +197,7 @@ class PartPath(ElementPath):
 
     @staticmethod
     def to_api_object(path: PartPath) -> dict:
+        """Returns a dict formated for sending to the frontend."""
         object = ElementPath.to_api_object(path)
         object["partId"] = path.part_id
         return object
@@ -230,6 +236,14 @@ class PartPath(ElementPath):
         return PartPath.to_api_path(self)
 
 
+def url_to_document_path(url: str) -> DocumentPath:
+    """Constructs an DocumentPath from an Onshape document url."""
+    path = parse.urlparse(url).path
+    path = path.removeprefix("/documents")
+    parts = pathlib.Path(path).parts
+    return DocumentPath(parts[1])
+
+
 def url_to_instance_path(url: str) -> InstancePath:
     """Constructs an InstancePath from an Onshape document url."""
     path = parse.urlparse(url).path
@@ -243,6 +257,7 @@ def url_to_element_path(url: str) -> ElementPath:
     path = parse.urlparse(url).path
     path = path.removeprefix("/documents")
     parts = pathlib.Path(path).parts
+    # /d/<document id>/<instance type>/<instance id>/e/<element type>
     return ElementPath(parts[1], parts[3], parts[5], instance_type=parts[2])
 
 
@@ -256,3 +271,21 @@ def path_to_url(object: DocumentPath) -> str:
     else:
         api_path = DocumentPath.to_api_path(object)
     return base + api_path.removeprefix("/d/")
+
+
+def path_to_frontend_dict(path: ElementPath) -> dict:
+    """Converts a path to a dict which can be sent to the frontend.
+
+    This is not implemented as a class method since it's fine to always return every property that's present.
+    """
+    # Probably should just be a class method, but whatever
+    result = {"documentId": path.document_id}
+    if isinstance(object, DocumentPath):
+        return result
+
+    result.update({"instanceId": path.instance_id, "instanceType": path.instance_type})
+    if isinstance(object, InstancePath):
+        return result
+
+    result.update({"elementId": path.element_id})
+    return result

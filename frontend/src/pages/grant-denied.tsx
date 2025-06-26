@@ -1,5 +1,5 @@
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
-import { OpenUrlButton } from "../components/open-url-button";
+import { OpenUrlButton } from "../common/open-url-button";
 
 const URL = "https://cad.onshape.com/user/applications";
 

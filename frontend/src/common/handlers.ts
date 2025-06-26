@@ -17,7 +17,3 @@ export function handleValueChange<T>(handler: Dispatch<T>) {
     return (event: FormEvent<HTMLElement>) =>
         handler((event.target as HTMLInputElement).value as T);
 }
-
-export interface OnSubmitProps<T> {
-    onSubmit: Dispatch<T>;
-}

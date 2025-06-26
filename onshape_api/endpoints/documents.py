@@ -1,6 +1,5 @@
 import enum
 from typing import Iterable, override
-from unittest import skip
 
 from onshape_api.assertions import (
     assert_instance_type,
@@ -232,4 +231,36 @@ def move_elements(
 
     return api.post(
         api_path("documents", source_path, InstancePath, "moveelement"), body
+    )
+
+
+def get_insertables(
+    api: Api,
+    instance_path: InstancePath,
+    include_parts: bool = False,
+    include_part_studios: bool = False,
+    include_assemblies: bool = False,
+    include_feature_studios: bool = False,
+) -> dict:
+    query = {
+        "includeParts": include_parts,
+        "includePartStudios": include_part_studios,
+        "includeAssemblies": include_assemblies,
+        "includeFeatureStudios": include_feature_studios,
+    }
+    return api.get(
+        api_path("documents", instance_path, InstancePath, "insertables"), query=query
+    )
+
+
+def get_contents(
+    api: Api,
+    instance_path: InstancePath,
+    include_thumbnails: bool = False,
+) -> dict:
+    query = {
+        "withThumbnails": include_thumbnails,
+    }
+    return api.get(
+        api_path("documents", instance_path, InstancePath, "contents"), query=query
     )

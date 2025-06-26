@@ -1,5 +1,5 @@
 import { Button } from "@blueprintjs/core";
-import { openUrlInNewTab } from "../common/url";
+import { openUrlInNewTab } from "./url";
 
 interface UrlButtonProps {
     url: string;

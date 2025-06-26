@@ -1,7 +1,8 @@
+import logging
 import os
 import flask
 from onshape_api.endpoints import users
-from backend import api
+from backend.endpoints import api
 from backend.common import connect, database, env
 from backend import oauth
 
@@ -24,7 +25,7 @@ def create_app():
         if env.is_production:
             return flask.send_from_directory("dist", "index.html")
         else:
-            flask.current_app.logger.debug("App running in development mode")
+            logging.info("App running in development mode!")
             return flask.render_template("index.html")
 
     @app.get("/app")

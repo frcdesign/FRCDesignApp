@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from urllib import parse
 
 from onshape_api.api.api_base import Api
 from onshape_api.paths.api_path import api_path
@@ -27,57 +27,32 @@ def set_configuration(
 
 
 def decode_configuration(
-    api: Api, element_path: ElementPath, config_string: str
-) -> dict:
-    """Converts a configuration string into JSON."""
-    return api.get(
+    api: Api, element_path: ElementPath, configuration_string: str
+) -> dict[str, str]:
+    """Converts a configuration string into back into a dict mapping parameter ids to arrays."""
+    result = api.get(
         api_path(
             "elements",
             element_path,
             ElementPath,
             "configurationencodings",
-            end_id=config_string,
+            end_id=configuration_string,
         )
     )
+    return {
+        parameter["parameterId"]: parameter["parameterValue"]
+        for parameter in result["parameters"]
+    }
 
 
-def encode_configuration(
-    api: Api, element_path: ElementPath, configuration: list[dict]
-) -> dict:
-    """Converts a configuration JSON into a string."""
-    body = {"parameters": configuration}
-    return api.post(
-        f"/elements/d/{element_path.document_id}/e/{element_path.element_id}/configurationencodings",
-        body=body,
+def encode_configuration(values: dict[str, str]) -> str:
+    """Encodes a configuration into a string suitable for passing to the Onshape API as a body parameter."""
+    # Convert to str to handle booleans and other tomfoolery
+    return ";".join(
+        f"{id}={str(parse.quote_plus(value))}" for (id, value) in values.items()
     )
 
 
-@dataclass
-class ConfigurationParameterEnum:
-    parameter_name: str
-    parameter_id: str
-    options: list[ConfigurationEnumOption]
-    default_value: str = "Default"
-
-    def to_dict(self) -> dict:
-        result = {
-            "btType": "BTMConfigurationParameterEnum-105",
-            "defaultValue": self.default_value,
-            "parameterId": self.parameter_id,
-            "parameterName": self.parameter_name,
-            "option": [option.to_dict() for option in self.options],
-        }
-        return result
-
-
-@dataclass
-class ConfigurationEnumOption:
-    option_name: str
-    option: str
-
-    def to_dict(self) -> dict:
-        return {
-            "btType": "BTMEnumOption-592",
-            "optionName": self.option_name,
-            "option": self.option,
-        }
+def encode_configuration_for_query(values: dict[str, str]) -> str:
+    """Encodes a configuration into a format suitable for passing to the Onshape API via a query parameter."""
+    return parse.quote_plus(";".join(f"{id}={value}" for (id, value) in values.items()))

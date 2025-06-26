@@ -34,6 +34,7 @@ class OAuthApi(Api):
         query: dict | str = {},
         body: dict | str = {},
         headers: dict[str, str] = {},
+        is_json: bool = True,
     ):
         query_str = query if isinstance(query, str) else parse.urlencode(query)
         body_str = body if isinstance(body, str) else json.dumps(body)
@@ -41,7 +42,7 @@ class OAuthApi(Api):
         url = self._base_url + path + "?" + query_str
 
         if self._logging:
-            if len(body) > 0:
+            if body != {} and body != "":
                 logging.info(body)
             logging.info("request url: " + url)
 
@@ -57,13 +58,13 @@ class OAuthApi(Api):
         status = http.HTTPStatus(res.status_code)
         if status.is_success:
             if self._logging:
-                logging.info("request succeeded, details: " + res.text)
+                if is_json:
+                    logging.info("request succeeded, details: " + res.text)
+                else:
+                    logging.info("request succeeded")
         else:
             if self._logging:
                 logging.error("request failed, details: " + res.text)
             raise exceptions.ApiError(res.text, status)
 
-        try:
-            return res.json()
-        except:
-            return res
+        return res.json() if is_json else res

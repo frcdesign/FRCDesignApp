@@ -1,9 +1,8 @@
-import { getCurrentElementPath } from "../app/onshape-params";
-import { capitalize } from "./str-utils";
+import { capitalize } from "../common/str-utils";
 
 /**
  * Errors which are generated and thrown on the client.
- * Unlike other errors, the message is usually displayed directly to the user.
+ * Unlike other errors, the message is displayed directly to the user.
  */
 export class HandledError extends Error {
     constructor(message: string) {
@@ -28,15 +27,17 @@ export class ReportedError extends Error {
 export class MissingPermissionError extends ReportedError {
     public constructor(
         public permission: string,
-        public isCurrentDocument: boolean,
         public documentName?: string
     ) {
         super("MISSING_PERMISSION");
         Object.setPrototypeOf(this, new.target.prototype);
     }
 
-    public getDescription(unknownAccessMessage?: string): string {
-        if (this.isCurrentDocument) {
+    public getDescription(
+        isCurrentDocument?: boolean,
+        unknownAccessMessage?: string
+    ): string {
+        if (isCurrentDocument ?? true) {
             // You need to have Write access to this document.
             return `You need to have ${this.permission} access to this document.`;
         } else if (this.documentName) {
@@ -54,32 +55,13 @@ export function reportMissingPermissionError(json: any) {
     if (json.type !== "MISSING_PERMISSION") {
         return;
     }
-    const isCurrentDocument =
-        json.documentId === getCurrentElementPath().documentId;
     let permission;
     if (json.permission === "LINK") {
         // Change link to link document to match UI
         permission = "Link document";
     } else {
+        // e.g., Read, Write
         permission = capitalize(json.permission);
     }
-    throw new MissingPermissionError(
-        permission,
-        isCurrentDocument,
-        json.documentName
-    );
-}
-
-export class LinkedCycleError extends ReportedError {
-    public constructor() {
-        super("LINKED_CYCLE");
-        Object.setPrototypeOf(this, new.target.prototype);
-    }
-}
-
-export function reportLinkedCycleError(json: any) {
-    if (json.type !== "LINKED_CYCLE") {
-        return;
-    }
-    throw new LinkedCycleError();
+    throw new MissingPermissionError(permission, json.documentName);
 }

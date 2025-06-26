@@ -5,7 +5,8 @@ import {
     isInstancePath,
     isElementPath,
     isWorkspacePath,
-    WorkspacePath
+    WorkspacePath,
+    InstanceType
 } from "../api/path";
 
 export function makeUrl(path: DocumentPath): string;
@@ -32,7 +33,7 @@ export interface Configuration {
 }
 
 /**
- * A utility which parses Onshape urls into an ElementPath.
+ * Parses Onshape urls into an ElementPath.
  * Returns `undefined` if the url could not be parsed successfully.
  */
 export function parseUrl(
@@ -47,7 +48,7 @@ export function parseUrl(
         return {
             documentId: parts[2],
             instanceId: parts[4],
-            instanceType: parts[3],
+            instanceType: parts[3] as InstanceType,
             elementId: parts[6],
             configuration
         };

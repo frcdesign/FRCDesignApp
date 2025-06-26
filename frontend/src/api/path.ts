@@ -10,11 +10,13 @@ export interface Workspace extends WorkspacePath {
     name: string;
 }
 
+export type InstanceType = "w" | "v" | "m";
+
 export interface InstancePath extends WorkspacePath {
     /**
      * One of "w", "v", or "m". Defaults to "w".
      */
-    instanceType: string;
+    instanceType: InstanceType;
 }
 
 export interface ElementPath extends InstancePath {

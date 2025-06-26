@@ -1,10 +1,13 @@
 from typing import Iterable
 from urllib import parse
 
+
 from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_workspace
+from onshape_api.endpoints.configurations import encode_configuration
+from onshape_api.endpoints.documents import ElementType
 from onshape_api.paths.api_path import api_path
-from onshape_api.paths.paths import ElementPath, InstancePath, PartPath
+from onshape_api.paths.paths import ElementPath, InstancePath
 
 
 def get_assembly(
@@ -52,38 +55,54 @@ def create_assembly(api: Api, workspace_path: InstancePath, assembly_name: str) 
     )
 
 
-def add_parts(
+def add_element_to_assembly(
     api: Api,
     assembly_path: ElementPath,
-    part_studio_path: ElementPath | PartPath,
-    part_id: str | None = None,
+    element_path: ElementPath,
+    element_type: ElementType,
+    configuration: dict[str, str] | None = None,
 ) -> None:
-    """Adds a part studio to a given assembly.
+    """
+    Adds the contents of an element tab to an assembly.
 
-    If the part_studio_path is an ElementPath, the entire part studio is added. Otherwise, only the specified part is added.
+    Note this function uses the transformedinstances endpoint since the default insert endpoint has no return value.
 
-    This endpoint has no response since Onshape doesn't give one.
+    assembly_path: The path to the assembly to add to.
+    element_path: The path to the element tab to insert into the assembly.
     """
     assert_workspace(assembly_path)
-    body = {
-        "includePartTypes": ["PARTS"],
-        "isWholePartStudio": part_id is None,
-    }
 
-    if isinstance(part_studio_path, PartPath):
-        body.update(PartPath.to_api_object(part_studio_path))
+    instance = {}
+    if configuration != None:
+        instance["configuration"] = encode_configuration(configuration)
+
+    if element_type == ElementType.ASSEMBLY:
+        instance["isAssembly"] = True
+    elif element_type == ElementType.PART_STUDIO:
+        instance.update(
+            {
+                "includePartTypes": ["PARTS"],
+                "isWholePartStudio": True,
+            }
+        )
     else:
-        body.update(ElementPath.to_api_object(part_studio_path))
+        raise ValueError(
+            f"The given element_type must be a part studio or assembly, got {element_type}"
+        )
 
-    api.post(api_path("assemblies", assembly_path, ElementPath, "instances"), body=body)
+    instance.update(ElementPath.to_api_object(element_path))
 
+    # Could use the transformedinstances endpoint to get a return value
+    # body = {
+    #     "transformGroups": [{"instances": [instance], "transform": IDENTITY_TRANSFORM}]
+    # }
 
-def add_part_to_assembly(
-    api: Api,
-    assembly_path: ElementPath,
-    part_path: PartPath,
-) -> None:
-    add_parts(api, assembly_path, part_path, part_path.part_id)
+    # The post instances endpoint has no return value :(
+    api.post(
+        api_path("assemblies", assembly_path, ElementPath, "instances"),
+        body=instance,
+        is_json=False,
+    )
 
 
 def transform_instance(

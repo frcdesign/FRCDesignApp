@@ -1,6 +1,6 @@
 @import "@blueprintjs/core/lib/scss/variables";
 
-/* Disable drag text highlighting */
+// Disable drag text highlighting
 * {
     user-select: none;
     -moz-user-select: none;
@@ -8,14 +8,72 @@
     -webkit-user-select: none;
 }
 
-.link-card {
-    justify-content: space-between;
+.app-navbar {
+    background-color: $dark-gray4;
 }
 
-.link-card-url-input {
-    padding-right: $pt-grid-size * 2;
+.app-background {
+    padding-top: $pt-navbar-height;
+    height: 100vh;
+    width: 100vw;
+    background-color: $gray4;
+    overflow: scroll;
 }
 
-.section-header-switch {
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bp5-control input:checked ~ .bp5-control-indicator {
+    background-color: $green3;
+}
+
+.bp5-control:hover input:checked ~ .bp5-control-indicator {
+    background-color: $green2;
+}
+
+.full-width {
+    display: flex;
+    width: 100%;
+    align-items: center;
+}
+
+.full-width .bp5-form-content {
+    flex: 1;
+}
+
+.full-width .bp5-input-group {
+    width: 100%;
+}
+
+.full-width .bp5-button {
+    width: 100%;
+}
+
+.preview-image-card {
+    margin: 10px;
+    margin-bottom: 0px;
+    background-color: $light-gray4;
+}
+
+.max-size {
+    height: 100%;
+    width: 100%;
+}
+
+.element-title {
+    margin-left: 20px;
+}
+
+.document-section {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    margin-bottom: 10px;
+
+    .bp5-section-header {
+        padding-left: 10px;
+    }
 }

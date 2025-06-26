@@ -1,5 +1,6 @@
 from onshape_api.paths.api_path import api_path
 from onshape_api.api.api_base import Api
+from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.paths import DocumentPath, InstancePath
 
 
@@ -20,6 +21,13 @@ def get_versions(
     return api.get(
         api_path("documents", document_path, DocumentPath, "versions"),
         query={offset: offset, limit: limit},
+    )
+
+
+def get_latest_version_path(api: Api, document_path: DocumentPath) -> InstancePath:
+    version_id = get_latest_version(api, document_path)["id"]
+    return InstancePath.from_path(
+        document_path, version_id, instance_type=InstanceType.VERSION
     )
 
 
