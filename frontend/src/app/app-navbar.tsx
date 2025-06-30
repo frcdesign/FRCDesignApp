@@ -1,68 +1,123 @@
 import {
     Alignment,
     Button,
+    ButtonVariant,
+    Collapse,
+    ControlGroup,
     IconSize,
     InputGroup,
+    Intent,
     Navbar,
     NavbarDivider,
-    NavbarGroup
+    NavbarGroup,
+    Tag
 } from "@blueprintjs/core";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 
-import robotIcon from "/robot-icon.svg";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
-import { queryClient } from "../query-client";
-import { router } from "../router";
+import frcDesignBook from "/frc-design-book.svg";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 
 /**
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
-    return (
-        <Navbar fixedToTop className="app-navbar">
-            <NavbarGroup>
-                <img
-                    height={IconSize.LARGE}
-                    src={robotIcon}
-                    alt="Robot manager"
-                />
-                <NavbarDivider />
-                <InputGroup
-                    type="search"
-                    leftIcon="search"
-                    placeholder="Search library..."
-                />
-            </NavbarGroup>
-            <NavbarGroup align={Alignment.END}>
-                <ReloadAllDocumentsButton />
-            </NavbarGroup>
-        </Navbar>
-    );
-}
+    const navigate = useNavigate();
+    const currentPath = useLocation().pathname;
 
-function ReloadAllDocumentsButton(): ReactNode {
-    const mutation = useMutation({
-        mutationKey: ["save-all-documents"],
-        mutationFn: () => {
-            return apiPost("/save-all-documents", {
-                // Set a timeout of 5 minutes
-                signal: AbortSignal.timeout(5 * 60000)
-            });
-        },
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ["documents"] });
-            router.invalidate(); // Trigger page reload
-        }
+    const [showFilters, setShowFilters] = useState(false);
+
+    const frcDesignIcon = (
+        <a href="https://frcdesign.org" target="_blank">
+            <img
+                src={frcDesignBook}
+                alt="FRCDesign.org"
+                className="frc-design-icon"
+                width={IconSize.LARGE}
+            />
+        </a>
+    );
+
+    const searchGroup = (
+        <ControlGroup>
+            <Button
+                icon="filter"
+                variant={ButtonVariant.MINIMAL}
+                onClick={() => setShowFilters(!showFilters)}
+                active={showFilters}
+                intent={showFilters ? Intent.PRIMARY : Intent.NONE}
+            />
+            <InputGroup
+                type="search"
+                leftIcon="search"
+                placeholder="Search library..."
+            />
+        </ControlGroup>
+    );
+
+    const filterTags = [
+        "REV",
+        "West Coast Products",
+        "The Thrifty Bot",
+        "AndyMark"
+    ].map((vendor) => {
+        return (
+            <Tag round interactive key={vendor} intent={Intent.PRIMARY}>
+                {vendor}
+            </Tag>
+        );
     });
 
-    return (
+    const clearButton = (
         <Button
-            icon="refresh"
-            text="Reload all documents"
-            onClick={() => mutation.mutate()}
-            loading={mutation.isPending}
-            intent="primary"
+            text="Clear"
+            disabled
+            variant={ButtonVariant.OUTLINED}
+            icon="small-cross"
         />
+    );
+
+    return (
+        <Navbar
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "unset"
+            }}
+        >
+            <div>
+                <NavbarGroup>
+                    {frcDesignIcon}
+                    <NavbarDivider />
+                    {searchGroup}
+                </NavbarGroup>
+                <NavbarGroup align={Alignment.END}>
+                    <Button
+                        icon="cog"
+                        variant={ButtonVariant.MINIMAL}
+                        onClick={() =>
+                            navigate({
+                                to: currentPath + "/admin"
+                            })
+                        }
+                    />
+                </NavbarGroup>
+            </div>
+            <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
+                <Collapse isOpen={showFilters}>
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                        }}
+                    >
+                        <div style={{ display: "flex", gap: "5px" }}>
+                            {filterTags}
+                        </div>
+                        {clearButton}
+                    </div>
+                </Collapse>
+            </div>
+        </Navbar>
     );
 }

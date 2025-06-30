@@ -1,5 +1,5 @@
 import { App } from "./app/app";
-import { DocumentList } from "./app/document-list";
+import { HomeList } from "./app/home-list";
 import { SearchParams } from "./api/search-params";
 import { GrantDenied } from "./pages/grant-denied";
 import { License } from "./pages/license";
@@ -15,6 +15,8 @@ import { ConfigurationResult, DocumentResult } from "./api/backend-types";
 import { ConfigurationDialog } from "./app/insert-dialog";
 import { queryOptions } from "@tanstack/react-query";
 import { apiGet } from "./api/api";
+import { DocumentList } from "./app/document-list";
+import { AdminPanel } from "./app/admin-panel";
 
 const rootRoute = createRootRoute();
 
@@ -24,7 +26,7 @@ const rootRoute = createRootRoute();
  */
 const appRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/app",
+    path: "app",
     component: App,
     // Add SearchSchemaInput so search parameters become optional
     validateSearch: (
@@ -39,8 +41,7 @@ const appRoute = createRoute({
 
 const documentsRoute = createRoute({
     getParentRoute: () => appRoute,
-    path: "/documents",
-    component: DocumentList,
+    path: "documents",
     beforeLoad: ({ abortController }) => {
         const loadDocuments = queryOptions<DocumentResult>({
             queryKey: ["documents"],
@@ -53,9 +54,21 @@ const documentsRoute = createRoute({
     }
 });
 
-const insertDialogRoute = createRoute({
+const homeListRoute = createRoute({
     getParentRoute: () => documentsRoute,
-    path: "/$elementId",
+    path: "/",
+    component: HomeList
+});
+
+const documentListRoute = createRoute({
+    getParentRoute: () => documentsRoute,
+    path: "$documentId",
+    component: DocumentList
+});
+
+const insertDialogRoute = createRoute({
+    getParentRoute: () => documentListRoute,
+    path: "elements/$elementId",
     component: ConfigurationDialog,
     loader: ({ params, abortController, context }) => {
         const element = context.elements[params.elementId];
@@ -78,25 +91,44 @@ const insertDialogRoute = createRoute({
 
 const grantDeniedRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/grant-denied",
+    path: "grant-denied",
     component: GrantDenied
 });
 
 const licenseRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/license",
+    path: "license",
     component: License
 });
 
+const homeListAdminRoute = createRoute({
+    getParentRoute: () => homeListRoute,
+    path: "admin",
+    component: AdminPanel
+});
+
+const documentListAdminRoute = createRoute({
+    getParentRoute: () => documentListRoute,
+    path: "admin",
+    component: AdminPanel
+});
+
 const routeTree = rootRoute.addChildren([
-    appRoute.addChildren([documentsRoute.addChildren([insertDialogRoute])]),
+    appRoute.addChildren([
+        documentsRoute.addChildren([
+            homeListRoute.addChildren([homeListAdminRoute]),
+            documentListRoute.addChildren([
+                documentListAdminRoute,
+                insertDialogRoute
+            ])
+        ])
+    ]),
     grantDeniedRoute,
     licenseRoute
 ]);
 
 export const router = createRouter({
-    routeTree
+    routeTree,
     // Database is immutable, so no need to refetch things
-    // defaultStaleTime: Infinity,
-    // defaultPreloadStaleTime: Infinity
+    defaultStaleTime: Infinity
 });

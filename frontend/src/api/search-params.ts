@@ -12,5 +12,5 @@ export interface SearchParams extends ElementPath {
 }
 
 export function getThemeClass(theme: ColorTheme) {
-    return theme === ColorTheme.DARK ? "bp5-dark" : "";
+    return theme === ColorTheme.DARK ? "bp6-dark" : "";
 }

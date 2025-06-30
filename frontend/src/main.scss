@@ -1,4 +1,9 @@
-@import "@blueprintjs/core/lib/scss/variables";
+// @use "sass:meta";
+// @include meta.load-css("@blueprintjs/core/lib/scss/variables");
+// @include meta.load-css("tailwindcss");
+
+@use "@blueprintjs/core/lib/scss/variables" as bp;
+@use "tailwindcss" as tailwind;
 
 // Disable drag text highlighting
 * {
@@ -8,16 +13,25 @@
     -webkit-user-select: none;
 }
 
-.app-navbar {
-    background-color: $dark-gray4;
+$frc-design-green: #4cae4f;
+
+.frc-design-green {
+    color: $frc-design-green;
+}
+
+.frc-design-icon {
+    background-color: $frc-design-green;
+    height: 28px;
+    width: 28px;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 10%;
 }
 
 .app-background {
-    padding-top: $pt-navbar-height;
     height: 100vh;
     width: 100vw;
-    background-color: $gray4;
-    overflow: scroll;
+    background-color: bp.$pt-app-background-color;
 }
 
 .center {
@@ -26,54 +40,50 @@
     justify-content: center;
 }
 
-.bp5-control input:checked ~ .bp5-control-indicator {
-    background-color: $green3;
-}
+// Make checkbox green when hovered/checked
+// .checkbox {
+//     input:checked ~ .bp6-control-indicator {
+//         background-color: bp.$green3;
+//     }
+// }
+// .checkbox:hover {
+//     input:checked ~ .bp6-control-indicator {
+//         background-color: bp.$green2 !important;
+//     }
+// }
 
-.bp5-control:hover input:checked ~ .bp5-control-indicator {
-    background-color: $green2;
-}
-
+// Makes insert dialog inputs full width
 .full-width {
     display: flex;
-    width: 100%;
-    align-items: center;
+
+    .bp6-form-content {
+        flex: 1;
+    }
 }
 
-.full-width .bp5-form-content {
-    flex: 1;
-}
-
-.full-width .bp5-input-group {
-    width: 100%;
-}
-
-.full-width .bp5-button {
-    width: 100%;
+.enum-menu {
+    max-height: 250px;
+    overflow: scroll;
 }
 
 .preview-image-card {
     margin: 10px;
     margin-bottom: 0px;
-    background-color: $light-gray4;
+    background-color: bp.$light-gray4;
 }
 
-.max-size {
-    height: 100%;
-    width: 100%;
-}
+// .document-section {
+//     display: flex;
+//     align-items: center;
+//     justify-content: space-between;
+//     margin-bottom: 10px;
 
-.element-title {
-    margin-left: 20px;
-}
+//     .bp6-section-header {
+//         padding-left: 10px;
+//     }
+// }
 
-.document-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    .bp5-section-header {
-        padding-left: 10px;
-    }
+.no-items-error {
+    padding-top: 25px;
+    padding-bottom: 40px;
 }

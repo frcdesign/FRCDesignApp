@@ -1,4 +1,4 @@
-import { capitalize } from "../common/str-utils";
+import { capitalize } from "../common/utils";
 
 /**
  * Errors which are generated and thrown on the client.

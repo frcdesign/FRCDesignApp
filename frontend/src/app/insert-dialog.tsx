@@ -22,7 +22,6 @@ import {
     Button,
     Card,
     Checkbox,
-    Colors,
     Dialog,
     DialogBody,
     DialogFooter,
@@ -39,16 +38,18 @@ import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
 import { getThemeClass } from "../api/search-params";
 import { PreviewThumbnail } from "./thumbnail";
+import { OpenUrlButton } from "../common/open-url-button";
+import { makeUrl } from "../common/url";
 
 export function ConfigurationDialog(): ReactNode {
     const documentResult = useLoaderData({
         from: "/app/documents"
     });
     const configurationResult = useLoaderData({
-        from: "/app/documents/$elementId"
+        from: "/app/documents/$documentId/elements/$elementId"
     });
     const elementId = useParams({
-        from: "/app/documents/$elementId"
+        from: "/app/documents/$documentId/elements/$elementId"
     }).elementId;
 
     const [configuration, setConfiguration] = useState<Record<string, string>>(
@@ -85,8 +86,14 @@ export function ConfigurationDialog(): ReactNode {
         />
     );
 
-    const insertButton = (
-        <InsertButton element={element} configuration={configuration} />
+    const actions = (
+        <>
+            <OpenUrlButton
+                url={makeUrl(element, configuration)}
+                text={"Open"}
+            />
+            <InsertButton element={element} configuration={configuration} />
+        </>
     );
 
     return (
@@ -94,14 +101,19 @@ export function ConfigurationDialog(): ReactNode {
             className={getThemeClass(search.theme)}
             isOpen
             title={element.name}
-            onClose={() => navigate({ to: "/app/documents" })}
+            onClose={() =>
+                navigate({
+                    from: "/app/documents/$documentId/elements/$elementId",
+                    to: "../.."
+                })
+            }
             style={{ maxHeight: "90vh", maxWidth: "400px" }}
         >
             <Card className="center preview-image-card">
                 {previewThumbnail}
             </Card>
             <DialogBody>{parameters}</DialogBody>
-            <DialogFooter actions={insertButton}>
+            <DialogFooter actions={actions}>
                 <Button icon="heart" text="Favorite" intent={Intent.SUCCESS} />
             </DialogFooter>
         </Dialog>
@@ -186,7 +198,13 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         (enumOption) => enumOption.id === value
     );
     return (
-        <FormGroup label={parameter.name} inline className="full-width">
+        <FormGroup
+            label={parameter.name}
+            labelFor={parameter.id}
+            inline
+            className="full-width"
+            intent={Intent.SUCCESS}
+        >
             <Select<EnumOption>
                 items={parameter.options}
                 filterable={false}
@@ -194,13 +212,17 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                     minimal: true,
                     popoverClassName: "enum-menu"
                 }}
-                itemRenderer={(enumOption, { handleClick, handleFocus }) => {
+                itemRenderer={(
+                    enumOption,
+                    { handleClick, handleFocus, modifiers }
+                ) => {
                     const selected = value === enumOption.id;
                     return (
                         <MenuItem
                             key={enumOption.id}
                             onClick={handleClick}
                             onFocus={handleFocus}
+                            active={modifiers.active}
                             text={enumOption.name}
                             roleStructure="listoption"
                             selected={selected}
@@ -213,9 +235,11 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                 }}
             >
                 <Button
+                    id={parameter.id}
                     alignText="start"
                     endIcon="caret-down"
                     text={selectedItem?.name}
+                    fill
                 />
             </Select>
         </FormGroup>
@@ -226,15 +250,15 @@ function BooleanParameter(
     props: ParameterProps<BooleanParameterObj>
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
+    // Add a 100% width div to eat up space to the right of the checkbox
+    // Otherwise multiple checkboxes in a row can fold onto the same line
     return (
         <div style={{ width: "100%" }}>
             <Checkbox
-                className="checkbox"
                 label={parameter.name}
                 alignIndicator={Alignment.END}
                 inline
                 checked={value === "true"}
-                color={Colors.GREEN3}
                 onChange={handleBooleanChange((checked) =>
                     onValueChange(checked ? "true" : "false")
                 )}
@@ -275,6 +299,7 @@ function QuantityParameter(
             <NumericInput
                 id={parameter.id}
                 value={value}
+                fill
                 allowNumericCharactersOnly={false}
                 onValueChange={(_, value) => onValueChange(value)}
                 buttonPosition="none"
@@ -311,14 +336,17 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
             });
         },
         onSuccess: () => {
-            navigate({ to: "/app/documents" });
+            navigate({
+                from: "/app/documents/$documentId/elements/$elementId",
+                to: "../.."
+            });
         }
     });
 
     return (
         <Button
             text="Insert"
-            endIcon="plus"
+            icon="plus"
             intent={Intent.SUCCESS}
             loading={insertMutation.isPending}
             onClick={() => insertMutation.mutate()}

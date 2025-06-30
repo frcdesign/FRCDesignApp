@@ -1,67 +1,74 @@
-import { Collapse, Section } from "@blueprintjs/core";
-import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentObj, ElementObj, ElementType } from "../api/backend-types";
+import {
+    Card,
+    CardList,
+    Classes,
+    EntityTitle,
+    H5,
+    Intent,
+    Section,
+    SectionCard,
+    Tag
+} from "@blueprintjs/core";
+import {
+    Outlet,
+    useLoaderData,
+    useNavigate,
+    useParams
+} from "@tanstack/react-router";
+import { PropsWithChildren, ReactNode, useLayoutEffect, useRef } from "react";
+import { ElementObj, ElementType } from "../api/backend-types";
 import { Thumbnail } from "./thumbnail";
 
+/**
+ * A list of elements in a document.
+ */
 export function DocumentList(): ReactNode {
+    const navigate = useNavigate();
     const data = useLoaderData({ from: "/app/documents" });
+    const documentId = useParams({
+        from: "/app/documents/$documentId"
+    }).documentId;
 
-    const cards = Object.entries(data.documents).map(([id, document]) => {
-        return (
-            <DocumentContainer key={id} document={document}>
-                {document.elementIds.map((elementId) => {
-                    const element = data.elements[elementId];
-                    return <ElementCard key={elementId} element={element} />;
-                })}
-            </DocumentContainer>
-        );
+    const document = data.documents[documentId];
+    const elements = document.elementIds.map(
+        (elementId) => data.elements[elementId]
+    );
+
+    const cards = elements.map((element) => {
+        return <ElementCard key={element.id} element={element} />;
     });
+
+    // Manually inject the interactive class into the section
+    const sectionRef = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        const section = sectionRef.current;
+        if (!section) {
+            return;
+        }
+        const child = section.children[0];
+        child.className += " " + Classes.INTERACTIVE;
+    }, [sectionRef]);
 
     return (
         <>
-            <div
-                style={{
-                    marginTop: "10px",
-                    marginRight: "10px",
-                    marginLeft: "10px",
-                    display: "flex",
-                    flexDirection: "column"
-                }}
+            <Section
+                icon="arrow-left"
+                ref={sectionRef}
+                title={document.name}
+                titleRenderer={H5}
+                onClick={() => navigate({ to: "/app/documents" })}
             >
-                {cards}
-            </div>
+                <SectionCard
+                    padded={false}
+                    style={{
+                        overflow: "scroll"
+                    }}
+                >
+                    <CardList bordered={false}>{cards}</CardList>
+                </SectionCard>
+            </Section>
             <Outlet />
         </>
-    );
-}
-
-interface DocumentContainerProps extends PropsWithChildren {
-    document: DocumentObj;
-}
-
-/**
- * A collapsible card containing one or more elements.
- */
-function DocumentContainer(props: DocumentContainerProps): ReactNode {
-    const { document } = props;
-    const thumbnail = <Thumbnail path={document} />;
-    const [isOpen, setIsOpen] = useState(false);
-
-    // Section likes to wrap it's own collapse
-    // Wrap in a div (rather than <>) so gap doesn't apply to both section and collapse
-    return (
-        <div>
-            <Section
-                onClick={() => setIsOpen(!isOpen)}
-                collapseProps={{ defaultIsOpen: false }}
-                title={document.name}
-                className="document-section"
-                collapsible
-                icon={thumbnail}
-            />
-            <Collapse isOpen={isOpen}>{props.children}</Collapse>
-        </div>
     );
 }
 
@@ -69,9 +76,14 @@ interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
 }
 
+/**
+ * A card representing a part studio or assembly.
+ */
 function ElementCard(props: ElementCardProps): ReactNode {
     const { element } = props;
-    const navigate = useNavigate();
+    const navigate = useNavigate({
+        from: "/app/documents/$documentId"
+    });
 
     const thumbnail = <Thumbnail path={element} />;
 
@@ -80,38 +92,31 @@ function ElementCard(props: ElementCardProps): ReactNode {
             ? "Part studio"
             : "Assembly";
 
+    const configurableTag = element.configurationId ? (
+        <Tag intent={Intent.PRIMARY} round>
+            Configurable
+        </Tag>
+    ) : undefined;
+
     return (
-        <Section
-            title={element.name}
-            subtitle={subtitle}
-            onClick={() =>
+        <Card
+            interactive
+            onClick={(event) => {
+                event.stopPropagation();
                 navigate({
-                    to: "/app/documents/$elementId",
-                    params: { elementId: element.id }
-                })
-            }
-            icon={thumbnail}
-            style={{
-                paddingLeft: "20px",
-                marginBottom: "10px"
+                    to: "./elements/$elementId",
+                    params: {
+                        elementId: element.id
+                    }
+                });
             }}
-        />
-        // <Card
-        //     interactive
-        //     onClick={() =>
-        //         navigate({
-        //             to: "/app/documents/$elementId",
-        //             params: { elementId: element.id }
-        //         })
-        //     }
-        //     style={{ margin: "10px" }}
-        // >
-        //     <EntityTitle
-        //         icon={thumbnail}
-        //         className="entity-title"
-        //         title={element.name}
-        //         subtitle={subtitle}
-        //     />
-        // </Card>
+        >
+            <EntityTitle
+                icon={thumbnail}
+                title={element.name}
+                subtitle={subtitle}
+                tags={configurableTag}
+            />
+        </Card>
     );
 }
