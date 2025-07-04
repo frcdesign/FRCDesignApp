@@ -2,12 +2,12 @@ import {
     Card,
     CardList,
     Classes,
+    Colors,
     EntityTitle,
     H5,
-    Intent,
+    Icon,
     Section,
-    SectionCard,
-    Tag
+    SectionCard
 } from "@blueprintjs/core";
 import {
     Outlet,
@@ -16,8 +16,8 @@ import {
     useParams
 } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementObj, ElementType } from "../api/backend-types";
-import { Thumbnail } from "./thumbnail";
+import { ElementObj } from "../api/backend-types";
+import { CardThumbnail } from "./thumbnail";
 
 /**
  * A list of elements in a document.
@@ -58,12 +58,7 @@ export function DocumentList(): ReactNode {
                 titleRenderer={H5}
                 onClick={() => navigate({ to: "/app/documents" })}
             >
-                <SectionCard
-                    padded={false}
-                    style={{
-                        overflow: "scroll"
-                    }}
-                >
+                <SectionCard padded={false}>
                     <CardList bordered={false}>{cards}</CardList>
                 </SectionCard>
             </Section>
@@ -85,18 +80,9 @@ function ElementCard(props: ElementCardProps): ReactNode {
         from: "/app/documents/$documentId"
     });
 
-    const thumbnail = <Thumbnail path={element} />;
+    const thumbnail = <CardThumbnail path={element} />;
 
-    const subtitle =
-        element.elementType === ElementType.PART_STUDIO
-            ? "Part studio"
-            : "Assembly";
-
-    const configurableTag = element.configurationId ? (
-        <Tag intent={Intent.PRIMARY} round>
-            Configurable
-        </Tag>
-    ) : undefined;
+    const favoriteIcon = <Icon icon="heart" color={Colors.RED2} />;
 
     return (
         <Card
@@ -110,13 +96,18 @@ function ElementCard(props: ElementCardProps): ReactNode {
                     }
                 });
             }}
+            className="item-card"
         >
             <EntityTitle
+                title={
+                    <span style={{ lineHeight: "normal" }} title={element.name}>
+                        {element.name}
+                    </span>
+                }
                 icon={thumbnail}
-                title={element.name}
-                subtitle={subtitle}
-                tags={configurableTag}
+                ellipsize
             />
+            {favoriteIcon}
         </Card>
     );
 }

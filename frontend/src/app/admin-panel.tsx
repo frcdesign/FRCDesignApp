@@ -1,6 +1,5 @@
 import { Button, Dialog, DialogFooter } from "@blueprintjs/core";
-import { getThemeClass } from "../api/search-params";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { apiPost } from "../api/api";
@@ -8,7 +7,6 @@ import { queryClient } from "../query-client";
 import { router } from "../router";
 
 export function AdminPanel() {
-    const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
 
     const reloadButton = <ReloadAllDocumentsButton />;
@@ -17,7 +15,6 @@ export function AdminPanel() {
 
     return (
         <Dialog
-            className={getThemeClass(search.theme)}
             isOpen
             title="Admin Settings"
             onClose={() => navigate({ to: ".." })}

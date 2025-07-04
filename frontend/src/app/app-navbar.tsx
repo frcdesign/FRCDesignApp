@@ -77,13 +77,7 @@ export function AppNavbar(): ReactNode {
     );
 
     return (
-        <Navbar
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "unset"
-            }}
-        >
+        <Navbar className="navbar">
             <div>
                 <NavbarGroup>
                     {frcDesignIcon}

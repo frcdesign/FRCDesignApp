@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { getThemeClass } from "../api/search-params";
-import { Section } from "@blueprintjs/core";
+import { BlueprintProvider, Section } from "@blueprintjs/core";
 
 export function App() {
     const matchRoute = useMatchRoute();
@@ -20,12 +20,18 @@ export function App() {
     }
 
     return (
-        <Section className={getThemeClass(search.theme) + " app-background"}>
+        <BlueprintProvider portalClassName={getThemeClass(search.theme)}>
             <QueryClientProvider client={queryClient}>
-                <AppNavbar />
-                <Outlet />
-                <TanStackRouterDevtools />
+                <Section
+                    className={getThemeClass(search.theme) + " app-background"}
+                >
+                    <AppNavbar />
+                    <div className="app-content">
+                        <Outlet />
+                        <TanStackRouterDevtools />
+                    </div>
+                </Section>
             </QueryClientProvider>
-        </Section>
+        </BlueprintProvider>
     );
 }

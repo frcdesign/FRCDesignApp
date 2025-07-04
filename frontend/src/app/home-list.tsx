@@ -4,7 +4,6 @@ import {
     Classes,
     Colors,
     EntityTitle,
-    H5,
     Icon,
     Intent,
     NonIdealState,
@@ -15,7 +14,7 @@ import {
 import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj } from "../api/backend-types";
-import { Thumbnail } from "./thumbnail";
+import { CardThumbnail } from "./thumbnail";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -24,7 +23,7 @@ export function HomeList(): ReactNode {
     const data = useLoaderData({ from: "/app/documents" });
 
     const cards = Object.entries(data.documents).map(([id, document]) => {
-        return <DocumentContainer key={id} document={document} />;
+        return <DocumentCard key={id} document={document} />;
     });
 
     return (
@@ -32,9 +31,9 @@ export function HomeList(): ReactNode {
             <Section
                 title="Favorites"
                 icon={<Icon icon="heart" color={Colors.RED3} />}
-                titleRenderer={H5}
                 collapsible
                 collapseProps={{ defaultIsOpen: false }}
+                compact
             >
                 <SectionCard padded={false}>
                     <NonIdealState
@@ -54,9 +53,9 @@ export function HomeList(): ReactNode {
             <Section
                 title="Recently Used"
                 icon={<Icon icon="time" color={Colors.BLUE3} />}
-                titleRenderer={H5}
                 collapsible
                 collapseProps={{ defaultIsOpen: false }}
+                compact
             >
                 <SectionCard padded={false}>
                     <NonIdealState
@@ -76,8 +75,8 @@ export function HomeList(): ReactNode {
             <Section
                 title="Library"
                 icon={<Icon icon="manual" className="frc-design-green" />}
-                titleRenderer={H5}
                 collapsible
+                compact
             >
                 <SectionCard padded={false}>
                     <CardList bordered={false}>{cards}</CardList>
@@ -95,11 +94,11 @@ interface DocumentContainerProps extends PropsWithChildren {
 /**
  * A collapsible card representing a single document.
  */
-function DocumentContainer(props: DocumentContainerProps): ReactNode {
+function DocumentCard(props: DocumentContainerProps): ReactNode {
     const { document } = props;
     const navigate = useNavigate();
 
-    const thumbnail = <Thumbnail path={document} />;
+    const thumbnail = <CardThumbnail path={document} />;
 
     return (
         <>
@@ -111,12 +110,25 @@ function DocumentContainer(props: DocumentContainerProps): ReactNode {
                         params: { documentId: document.id }
                     })
                 }
-                style={{ display: "flex", justifyContent: "space-between" }}
+                className="item-card"
             >
-                <EntityTitle title={document.name} icon={thumbnail} />
+                <EntityTitle
+                    title={
+                        <span
+                            style={{
+                                lineHeight: "normal"
+                            }}
+                            title={document.name}
+                        >
+                            {document.name}
+                        </span>
+                    }
+                    icon={thumbnail}
+                    ellipsize
+                />
                 <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
             </Card>
-            {/* <Collapse isOpen>
+            {/* <Collapse>
                 <Section>
                     <SectionCard padded={false}>
                         <CardList bordered={false}>

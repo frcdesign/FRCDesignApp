@@ -37,7 +37,7 @@ import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
 import { getThemeClass } from "../api/search-params";
-import { PreviewThumbnail } from "./thumbnail";
+import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
 
@@ -79,7 +79,7 @@ export function ConfigurationDialog(): ReactNode {
     }
 
     const previewThumbnail = (
-        <PreviewThumbnail
+        <PreviewImage
             isDialogPreview
             elementPath={element}
             configuration={configuration}
