@@ -2,17 +2,14 @@ import {
     Card,
     CardList,
     Classes,
+    Collapse,
     Colors,
     EntityTitle,
-    Icon,
-    Intent,
-    NonIdealState,
-    NonIdealStateIconSize,
-    Section,
-    SectionCard
+    H6,
+    Icon
 } from "@blueprintjs/core";
 import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentObj } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 
@@ -26,9 +23,42 @@ export function HomeList(): ReactNode {
         return <DocumentCard key={id} document={document} />;
     });
 
+    const [isOpen, setIsOpen] = useState(false);
+
     return (
         <>
-            <Section
+            <CardList compact bordered={false}>
+                <Card
+                    className="home-card"
+                    onClick={() => setIsOpen(!isOpen)}
+                    interactive
+                >
+                    <div className="home-card-title">
+                        <Icon icon="heart" color={Colors.RED3} />
+                        <H6 style={{ marginBottom: "1px" }}>Favorites</H6>
+                    </div>
+                    <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
+                </Card>
+                <Collapse isOpen={isOpen}>
+                    <CardList compact>{cards}</CardList>
+                </Collapse>
+                <Card
+                    className="home-card"
+                    interactive
+                    onClick={() => setIsOpen(!isOpen)}
+                >
+                    <div className="home-card-title">
+                        <Icon icon="manual" className="frc-design-green" />
+                        <H6 style={{ marginBottom: "1px" }}>Library</H6>
+                    </div>
+                    <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
+                </Card>
+                <Collapse isOpen={isOpen}>
+                    <CardList compact>{cards}</CardList>
+                </Collapse>
+            </CardList>
+
+            {/* <Section
                 title="Favorites"
                 icon={<Icon icon="heart" color={Colors.RED3} />}
                 collapsible
@@ -79,9 +109,11 @@ export function HomeList(): ReactNode {
                 compact
             >
                 <SectionCard padded={false}>
-                    <CardList bordered={false}>{cards}</CardList>
+                    <CardList bordered={false} compact>
+                        {cards}
+                    </CardList>
                 </SectionCard>
-            </Section>
+            </Section> */}
             <Outlet />
         </>
     );
@@ -101,47 +133,31 @@ function DocumentCard(props: DocumentContainerProps): ReactNode {
     const thumbnail = <CardThumbnail path={document} />;
 
     return (
-        <>
-            <Card
-                interactive
-                onClick={() =>
-                    navigate({
-                        to: "/app/documents/$documentId",
-                        params: { documentId: document.id }
-                    })
+        <Card
+            interactive
+            onClick={() =>
+                navigate({
+                    to: "/app/documents/$documentId",
+                    params: { documentId: document.id }
+                })
+            }
+            className="item-card"
+        >
+            <EntityTitle
+                title={
+                    <span
+                        style={{
+                            lineHeight: "normal"
+                        }}
+                        title={document.name}
+                    >
+                        {document.name}
+                    </span>
                 }
-                className="item-card"
-            >
-                <EntityTitle
-                    title={
-                        <span
-                            style={{
-                                lineHeight: "normal"
-                            }}
-                            title={document.name}
-                        >
-                            {document.name}
-                        </span>
-                    }
-                    icon={thumbnail}
-                    ellipsize
-                />
-                <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
-            </Card>
-            {/* <Collapse>
-                <Section>
-                    <SectionCard padded={false}>
-                        <CardList bordered={false}>
-                            <Card interactive style={{ width: "100%" }}>
-                                <span>Ahhh</span>
-                            </Card>
-                            <Card interactive>
-                                <span>Ahhh</span>
-                            </Card>
-                        </CardList>
-                    </SectionCard>
-                </Section>
-            </Collapse> */}
-        </>
+                icon={thumbnail}
+                ellipsize
+            />
+            <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
+        </Card>
     );
 }

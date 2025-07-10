@@ -4,7 +4,6 @@ import {
     Classes,
     Colors,
     EntityTitle,
-    H5,
     Icon,
     Section,
     SectionCard
@@ -55,11 +54,17 @@ export function DocumentList(): ReactNode {
                 icon="arrow-left"
                 ref={sectionRef}
                 title={document.name}
-                titleRenderer={H5}
                 onClick={() => navigate({ to: "/app/documents" })}
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%"
+                }}
             >
-                <SectionCard padded={false}>
-                    <CardList bordered={false}>{cards}</CardList>
+                <SectionCard padded={false} style={{ overflow: "scroll" }}>
+                    <CardList bordered={false} compact>
+                        {cards}
+                    </CardList>
                 </SectionCard>
             </Section>
             <Outlet />
