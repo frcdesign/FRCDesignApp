@@ -1,9 +1,4 @@
-import {
-    useLoaderData,
-    useNavigate,
-    useParams,
-    useSearch
-} from "@tanstack/react-router";
+import { useLoaderData, useNavigate, useParams } from "@tanstack/react-router";
 import { Dispatch, ReactNode, useState } from "react";
 import {
     BooleanParameterObj,
@@ -32,17 +27,19 @@ import {
     NumericInput
 } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
-import { toElementApiPath } from "../api/path";
+import { apiDelete, apiPost } from "../api/api";
+import { toUserApiPath, toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
-import { getThemeClass } from "../api/search-params";
+import { useOnshapeData } from "../api/onshape-data";
 import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
+import { queryClient } from "../query-client";
+import { router } from "../router";
 
 export function ConfigurationDialog(): ReactNode {
-    const documentResult = useLoaderData({
+    const data = useLoaderData({
         from: "/app/documents"
     });
     const configurationResult = useLoaderData({
@@ -63,9 +60,9 @@ export function ConfigurationDialog(): ReactNode {
     );
 
     const navigate = useNavigate();
-    const search = useSearch({ from: "/app" });
 
-    const element = documentResult.elements[elementId];
+    const element = data.elements[elementId];
+    const isFavorite = data.favorites[elementId] !== undefined;
 
     let parameters = null;
     if (configurationResult) {
@@ -88,17 +85,13 @@ export function ConfigurationDialog(): ReactNode {
 
     const actions = (
         <>
-            <OpenUrlButton
-                url={makeUrl(element, configuration)}
-                text={"Open"}
-            />
+            <OpenUrlButton url={makeUrl(element, configuration)} text="Open" />
             <InsertButton element={element} configuration={configuration} />
         </>
     );
 
     return (
         <Dialog
-            className={getThemeClass(search.theme)}
             isOpen
             title={element.name}
             onClose={() =>
@@ -114,7 +107,7 @@ export function ConfigurationDialog(): ReactNode {
             </Card>
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
-                <Button icon="heart" text="Favorite" intent={Intent.SUCCESS} />
+                <FavoriteButton isFavorite={isFavorite} elementId={elementId} />
             </DialogFooter>
         </Dialog>
     );
@@ -316,19 +309,19 @@ interface SubmitButtonProps {
 function InsertButton(props: SubmitButtonProps): ReactNode {
     const { element, configuration } = props;
 
-    const search = useSearch({ from: "/app" });
+    const onshapeData = useOnshapeData();
     const navigate = useNavigate();
 
     const insertMutation = useMutation({
         mutationKey: ["insert", element.id],
         mutationFn: async () => {
             let endpoint;
-            if (search.elementType == ElementType.ASSEMBLY) {
+            if (onshapeData.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
             } else {
                 endpoint = "/add-to-part-studio";
             }
-            return apiPost(endpoint + toElementApiPath(search), {
+            return apiPost(endpoint + toElementApiPath(onshapeData), {
                 body: {
                     ...element,
                     configuration
@@ -350,6 +343,44 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
             intent={Intent.SUCCESS}
             loading={insertMutation.isPending}
             onClick={() => insertMutation.mutate()}
+        />
+    );
+}
+
+interface FavoriteButtonProps {
+    isFavorite: boolean;
+    elementId: string;
+}
+
+function FavoriteButton(props: FavoriteButtonProps): ReactNode {
+    const { isFavorite, elementId } = props;
+    const onshapeData = useOnshapeData();
+    const mutation = useMutation({
+        mutationKey: ["toggle-favorite", isFavorite],
+        mutationFn: () => {
+            const query = { elementId };
+            if (isFavorite) {
+                return apiDelete(
+                    "/favorites" + toUserApiPath(onshapeData),
+                    query
+                );
+            } else {
+                return apiPost("/favorites" + toUserApiPath(onshapeData), {
+                    query
+                });
+            }
+        },
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ["favorites"] });
+            router.invalidate();
+        }
+    });
+    return (
+        <Button
+            icon="heart"
+            text="Favorite"
+            intent={Intent.SUCCESS}
+            onClick={() => mutation.mutate()}
         />
     );
 }

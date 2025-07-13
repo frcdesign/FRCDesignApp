@@ -1,22 +1,12 @@
-import {
-    Card,
-    CardList,
-    Classes,
-    Colors,
-    EntityTitle,
-    Icon,
-    Section,
-    SectionCard
-} from "@blueprintjs/core";
+import { CardList, Classes, Section, SectionCard } from "@blueprintjs/core";
 import {
     Outlet,
     useLoaderData,
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementObj } from "../api/backend-types";
-import { CardThumbnail } from "./thumbnail";
+import { ReactNode, useLayoutEffect, useRef } from "react";
+import { ElementCard } from "./cards";
 
 /**
  * A list of elements in a document.
@@ -69,50 +59,5 @@ export function DocumentList(): ReactNode {
             </Section>
             <Outlet />
         </>
-    );
-}
-
-interface ElementCardProps extends PropsWithChildren {
-    element: ElementObj;
-}
-
-/**
- * A card representing a part studio or assembly.
- */
-function ElementCard(props: ElementCardProps): ReactNode {
-    const { element } = props;
-    const navigate = useNavigate({
-        from: "/app/documents/$documentId"
-    });
-
-    const thumbnail = <CardThumbnail path={element} />;
-
-    const favoriteIcon = <Icon icon="heart" color={Colors.RED2} />;
-
-    return (
-        <Card
-            interactive
-            onClick={(event) => {
-                event.stopPropagation();
-                navigate({
-                    to: "./elements/$elementId",
-                    params: {
-                        elementId: element.id
-                    }
-                });
-            }}
-            className="item-card"
-        >
-            <EntityTitle
-                title={
-                    <span style={{ lineHeight: "normal" }} title={element.name}>
-                        {element.name}
-                    </span>
-                }
-                icon={thumbnail}
-                ellipsize
-            />
-            {favoriteIcon}
-        </Card>
     );
 }

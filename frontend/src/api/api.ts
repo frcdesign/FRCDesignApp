@@ -69,7 +69,6 @@ async function handleImageResponse(response: Response) {
 
 /**
  * Makes a delete request to a backend /api route.
- * Note delete is a reserved keyword in JavaScript.
  */
 export async function apiDelete(
     path: string,

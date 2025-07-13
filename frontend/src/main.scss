@@ -110,6 +110,11 @@ $frc-design-green: #4cae4f;
     outline-color: bp.$red2;
 }
 
+.home-error-state {
+    padding-top: 10px;
+    padding-bottom: 25px;
+}
+
 .home-card {
     display: flex;
     justify-content: space-between;

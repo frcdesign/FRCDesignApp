@@ -116,6 +116,16 @@ export interface ElementObj extends ElementPath {
     configurationId: string | null;
 }
 
+export interface FavoritesResult {
+    favorites: Record<string, Favorite>;
+}
+
+/**
+ * A favorite is currently just an empty object.
+ * We may add additional information in the future.
+ */
+export interface Favorite {}
+
 export enum ThumbnailSize {
     STANDARD = "300x300",
     LARGE = "600x340",

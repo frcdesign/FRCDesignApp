@@ -1,6 +1,5 @@
 import { App } from "./app/app";
 import { HomeList } from "./app/home-list";
-import { SearchParams } from "./api/search-params";
 import { GrantDenied } from "./pages/grant-denied";
 import { License } from "./pages/license";
 import {
@@ -11,12 +10,18 @@ import {
     SearchSchemaInput
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import { ConfigurationResult, DocumentResult } from "./api/backend-types";
+import {
+    ConfigurationResult,
+    DocumentResult,
+    FavoritesResult
+} from "./api/backend-types";
 import { ConfigurationDialog } from "./app/insert-dialog";
 import { queryOptions } from "@tanstack/react-query";
 import { apiGet } from "./api/api";
 import { DocumentList } from "./app/document-list";
 import { AdminPanel } from "./app/admin-panel";
+import { toUserApiPath } from "./api/path";
+import { onshapeDataStore } from "./api/onshape-data";
 
 const rootRoute = createRootRoute();
 
@@ -29,10 +34,8 @@ const appRoute = createRoute({
     path: "app",
     component: App,
     // Add SearchSchemaInput so search parameters become optional
-    validateSearch: (
-        search: Record<string, unknown> & SearchSchemaInput
-    ): SearchParams => {
-        return search as unknown as SearchParams;
+    validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
+        return search;
     },
     search: {
         middlewares: [retainSearchParams(true)]
@@ -42,14 +45,26 @@ const appRoute = createRoute({
 const documentsRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "documents",
-    beforeLoad: ({ abortController }) => {
+    beforeLoad: async ({ abortController }) => {
         const loadDocuments = queryOptions<DocumentResult>({
             queryKey: ["documents"],
             queryFn: () => apiGet("/documents", {}, abortController.signal)
         });
-        return queryClient.ensureQueryData(loadDocuments);
+        const loadFavorites = queryOptions<FavoritesResult>({
+            queryKey: ["favorites"],
+            queryFn: () =>
+                apiGet(
+                    "/favorites" + toUserApiPath(onshapeDataStore.state),
+                    {},
+                    abortController.signal
+                )
+        });
+        return {
+            ...(await queryClient.ensureQueryData(loadFavorites)),
+            ...(await queryClient.ensureQueryData(loadDocuments))
+        };
     },
-    loader: ({ context }) => {
+    loader: async ({ context }) => {
         return context;
     }
 });

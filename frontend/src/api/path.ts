@@ -49,3 +49,11 @@ export function toInstanceApiPath(path: WorkspacePath): string {
 export function toElementApiPath(path: ElementPath): string {
     return toInstanceApiPath(path) + `/e/${path.elementId}`;
 }
+
+export interface UserPath {
+    userId: string;
+}
+
+export function toUserApiPath(path: UserPath): string {
+    return `/users/${path.userId}`;
+}

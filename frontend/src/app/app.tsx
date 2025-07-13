@@ -8,22 +8,30 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { getThemeClass } from "../api/search-params";
+import {
+    getThemeClass,
+    saveOnshapeData,
+    useOnshapeData
+} from "../api/onshape-data";
 import { BlueprintProvider, Section } from "@blueprintjs/core";
 
 export function App() {
     const matchRoute = useMatchRoute();
     const search = useSearch({ from: "/app" });
+    const onshapeData = useOnshapeData();
 
     if (matchRoute({ to: "/app" })) {
+        saveOnshapeData(search);
         return <Navigate to="/app/documents" />;
     }
 
     return (
-        <BlueprintProvider portalClassName={getThemeClass(search.theme)}>
+        <BlueprintProvider portalClassName={getThemeClass(onshapeData.theme)}>
             <QueryClientProvider client={queryClient}>
                 <Section
-                    className={getThemeClass(search.theme) + " app-background"}
+                    className={
+                        getThemeClass(onshapeData.theme) + " app-background"
+                    }
                 >
                     <AppNavbar />
                     <div className="app-content">

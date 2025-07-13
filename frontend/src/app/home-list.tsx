@@ -1,17 +1,17 @@
 import {
     Card,
     CardList,
-    Classes,
     Collapse,
     Colors,
-    EntityTitle,
     H6,
-    Icon
+    Icon,
+    Intent,
+    NonIdealState,
+    NonIdealStateIconSize
 } from "@blueprintjs/core";
-import { Outlet, useLoaderData, useNavigate } from "@tanstack/react-router";
+import { Outlet, useLoaderData } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentObj } from "../api/backend-types";
-import { CardThumbnail } from "./thumbnail";
+import { DocumentCard, ElementCard } from "./cards";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -19,145 +19,93 @@ import { CardThumbnail } from "./thumbnail";
 export function HomeList(): ReactNode {
     const data = useLoaderData({ from: "/app/documents" });
 
-    const cards = Object.entries(data.documents).map(([id, document]) => {
-        return <DocumentCard key={id} document={document} />;
-    });
+    const documentCards = Object.entries(data.documents).map(
+        ([id, document]) => {
+            return <DocumentCard key={id} document={document} />;
+        }
+    );
 
-    const [isOpen, setIsOpen] = useState(false);
+    let favoritesContent;
+    if (Object.keys(data.favorites).length > 0) {
+        favoritesContent = Object.keys(data.favorites).map((id: string) => {
+            // Have to guard against elements in case we ever deprecate a document
+            const element = data.elements[id];
+            console.log(element);
+            if (!element) {
+                return null;
+            }
+            return <ElementCard key={id} element={element} />;
+        });
+        console.log(data.favorites);
+        console.log(data.elements);
+    } else {
+        favoritesContent = (
+            <NonIdealState
+                icon={
+                    <Icon
+                        icon="cross"
+                        size={NonIdealStateIconSize.STANDARD}
+                        intent={Intent.DANGER}
+                    />
+                }
+                iconMuted={false}
+                title="No favorites"
+                description="Favorite some stuff first!"
+                className="home-error-state"
+            />
+        );
+    }
 
     return (
         <>
             <CardList compact bordered={false}>
-                <Card
-                    className="home-card"
-                    onClick={() => setIsOpen(!isOpen)}
-                    interactive
+                <ListContainer
+                    icon={<Icon icon="heart" color={Colors.RED3} />}
+                    title="Favorites"
                 >
-                    <div className="home-card-title">
-                        <Icon icon="heart" color={Colors.RED3} />
-                        <H6 style={{ marginBottom: "1px" }}>Favorites</H6>
-                    </div>
-                    <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
-                </Card>
-                <Collapse isOpen={isOpen}>
-                    <CardList compact>{cards}</CardList>
-                </Collapse>
-                <Card
-                    className="home-card"
-                    interactive
-                    onClick={() => setIsOpen(!isOpen)}
+                    {favoritesContent}
+                </ListContainer>
+                <ListContainer
+                    icon={<Icon icon="manual" className="frc-design-green" />}
+                    title="Library"
                 >
-                    <div className="home-card-title">
-                        <Icon icon="manual" className="frc-design-green" />
-                        <H6 style={{ marginBottom: "1px" }}>Library</H6>
-                    </div>
-                    <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
-                </Card>
-                <Collapse isOpen={isOpen}>
-                    <CardList compact>{cards}</CardList>
-                </Collapse>
+                    {documentCards}
+                </ListContainer>
             </CardList>
-
-            {/* <Section
-                title="Favorites"
-                icon={<Icon icon="heart" color={Colors.RED3} />}
-                collapsible
-                collapseProps={{ defaultIsOpen: false }}
-                compact
-            >
-                <SectionCard padded={false}>
-                    <NonIdealState
-                        className="no-items-error"
-                        icon={
-                            <Icon
-                                intent={Intent.DANGER}
-                                icon="cross"
-                                size={NonIdealStateIconSize.STANDARD}
-                            />
-                        }
-                        title="No Items Found"
-                        description="Parts you've marked as favorites will appear here."
-                    />
-                </SectionCard>
-            </Section>
-            <Section
-                title="Recently Used"
-                icon={<Icon icon="time" color={Colors.BLUE3} />}
-                collapsible
-                collapseProps={{ defaultIsOpen: false }}
-                compact
-            >
-                <SectionCard padded={false}>
-                    <NonIdealState
-                        className="no-items-error"
-                        icon={
-                            <Icon
-                                intent={Intent.DANGER}
-                                icon="cross"
-                                size={NonIdealStateIconSize.STANDARD}
-                            />
-                        }
-                        title="No Items Found"
-                        description="Parts you've recently used will appear here."
-                    />
-                </SectionCard>
-            </Section>
-            <Section
-                title="Library"
-                icon={<Icon icon="manual" className="frc-design-green" />}
-                collapsible
-                compact
-            >
-                <SectionCard padded={false}>
-                    <CardList bordered={false} compact>
-                        {cards}
-                    </CardList>
-                </SectionCard>
-            </Section> */}
             <Outlet />
         </>
     );
 }
 
-interface DocumentContainerProps extends PropsWithChildren {
-    document: DocumentObj;
+interface ListContainerProps extends PropsWithChildren {
+    /**
+     * Whether the section is open by default.
+     * Defaults to true.
+     */
+    defaultIsOpen?: boolean;
+    icon: ReactNode;
+    title: string;
 }
 
-/**
- * A collapsible card representing a single document.
- */
-function DocumentCard(props: DocumentContainerProps): ReactNode {
-    const { document } = props;
-    const navigate = useNavigate();
-
-    const thumbnail = <CardThumbnail path={document} />;
-
+export function ListContainer(props: ListContainerProps): ReactNode {
+    const { icon, title, children } = props;
+    const [isOpen, setIsOpen] = useState(props.defaultIsOpen ?? true);
     return (
-        <Card
-            interactive
-            onClick={() =>
-                navigate({
-                    to: "/app/documents/$documentId",
-                    params: { documentId: document.id }
-                })
-            }
-            className="item-card"
-        >
-            <EntityTitle
-                title={
-                    <span
-                        style={{
-                            lineHeight: "normal"
-                        }}
-                        title={document.name}
-                    >
-                        {document.name}
-                    </span>
-                }
-                icon={thumbnail}
-                ellipsize
-            />
-            <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
-        </Card>
+        <>
+            <Card
+                className="home-card"
+                onClick={() => setIsOpen(!isOpen)}
+                interactive
+            >
+                <div className="home-card-title">
+                    {icon}
+                    <H6 style={{ marginBottom: "1px" }}>{title}</H6>
+                </div>
+                <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
+            </Card>
+            <Collapse isOpen={isOpen}>
+                <CardList compact>{children}</CardList>
+            </Collapse>
+        </>
     );
 }
