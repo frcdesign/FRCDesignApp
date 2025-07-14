@@ -50,6 +50,12 @@ $frc-design-green: #4cae4f;
     justify-content: center;
 }
 
+.split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 // Make checkbox green when hovered/checked
 // .checkbox {
 //     input:checked ~ .bp6-control-indicator {
@@ -97,13 +103,8 @@ $frc-design-green: #4cae4f;
     padding-bottom: 25px;
 }
 
-.home-card {
+.home-card-title {
     display: flex;
-    justify-content: space-between;
-
-    .home-card-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
+    align-items: center;
+    gap: 10px;
 }

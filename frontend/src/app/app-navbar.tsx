@@ -104,7 +104,7 @@ export function AppNavbar(): ReactNode {
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
                 <Collapse isOpen={showFilters}>
-                    <div className="center">
+                    <div className="split">
                         <div style={{ display: "flex", gap: "5px" }}>
                             {filterTags}
                         </div>

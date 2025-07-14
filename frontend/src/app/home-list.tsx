@@ -96,7 +96,7 @@ function ListContainer(props: ListContainerProps): ReactNode {
     return (
         <>
             <Card
-                className="home-card"
+                className="split"
                 onClick={() => setIsOpen(!isOpen)}
                 interactive
             >
