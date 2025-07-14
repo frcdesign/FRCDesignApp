@@ -4,7 +4,7 @@ from http import HTTPStatus
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.permissions import Permission, get_permissions
-from onshape_api.paths.paths import DocumentPath
+from onshape_api.paths.doc_path import DocumentPath
 
 
 class BackendException(Exception):
@@ -88,10 +88,3 @@ def require_permissions(api: Api, path: DocumentPath, *needed_permissions: Permi
             raise MissingPermissionException(
                 permission, path.document_id, document_name
             )
-
-
-class LinkedCycleException(ReportedException):
-    """An exception indicating the current document's linked document graph contains a cycle."""
-
-    def __init__(self):
-        super().__init__("LINKED_CYCLE")

@@ -8,7 +8,7 @@ from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import encode_configuration, get_configuration
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.versions import get_latest_version_path
-from onshape_api.paths.paths import (
+from onshape_api.paths.doc_path import (
     ElementPath,
     InstancePath,
     url_to_document_path,

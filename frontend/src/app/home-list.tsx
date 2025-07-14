@@ -1,23 +1,33 @@
 import {
     Card,
     CardList,
+    Classes,
     Collapse,
     Colors,
     H6,
     Icon,
-    Intent,
     NonIdealState,
     NonIdealStateIconSize
 } from "@blueprintjs/core";
-import { Outlet, useLoaderData } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard, ElementCard } from "./cards";
+import { FavoriteIcon } from "./favorite";
+import { getDocumentLoader, getFavoritesLoader } from "../queries";
+import { useQuery } from "@tanstack/react-query";
+import { useOnshapeData } from "../api/onshape-data";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
-    const data = useLoaderData({ from: "/app/documents" });
+    const data = useQuery(getDocumentLoader()).data;
+    const onshapeData = useOnshapeData();
+    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+
+    if (!data || !favorites) {
+        return null;
+    }
 
     const documentCards = Object.entries(data.documents).map(
         ([id, document]) => {
@@ -26,31 +36,27 @@ export function HomeList(): ReactNode {
     );
 
     let favoritesContent;
-    if (Object.keys(data.favorites).length > 0) {
-        favoritesContent = Object.keys(data.favorites).map((id: string) => {
+    if (Object.keys(favorites).length > 0) {
+        favoritesContent = Object.keys(favorites).map((id: string) => {
             // Have to guard against elements in case we ever deprecate a document
             const element = data.elements[id];
-            console.log(element);
             if (!element) {
                 return null;
             }
             return <ElementCard key={id} element={element} />;
         });
-        console.log(data.favorites);
-        console.log(data.elements);
     } else {
         favoritesContent = (
             <NonIdealState
                 icon={
                     <Icon
-                        icon="cross"
-                        size={NonIdealStateIconSize.STANDARD}
-                        intent={Intent.DANGER}
+                        icon="heart-broken"
+                        size={NonIdealStateIconSize.SMALL}
+                        color={Colors.RED3}
+                        style={{ marginBottom: "-5px" }}
                     />
                 }
-                iconMuted={false}
                 title="No favorites"
-                description="Favorite some stuff first!"
                 className="home-error-state"
             />
         );
@@ -59,10 +65,7 @@ export function HomeList(): ReactNode {
     return (
         <>
             <CardList compact bordered={false}>
-                <ListContainer
-                    icon={<Icon icon="heart" color={Colors.RED3} />}
-                    title="Favorites"
-                >
+                <ListContainer icon={<FavoriteIcon />} title="Favorites">
                     {favoritesContent}
                 </ListContainer>
                 <ListContainer
@@ -87,7 +90,7 @@ interface ListContainerProps extends PropsWithChildren {
     title: string;
 }
 
-export function ListContainer(props: ListContainerProps): ReactNode {
+function ListContainer(props: ListContainerProps): ReactNode {
     const { icon, title, children } = props;
     const [isOpen, setIsOpen] = useState(props.defaultIsOpen ?? true);
     return (
@@ -101,7 +104,10 @@ export function ListContainer(props: ListContainerProps): ReactNode {
                     {icon}
                     <H6 style={{ marginBottom: "1px" }}>{title}</H6>
                 </div>
-                <Icon icon={isOpen ? "chevron-up" : "chevron-down"} />
+                <Icon
+                    icon={isOpen ? "chevron-up" : "chevron-down"}
+                    className={Classes.TEXT_MUTED}
+                />
             </Card>
             <Collapse isOpen={isOpen}>
                 <CardList compact>{children}</CardList>

@@ -1,6 +1,6 @@
 import unittest
 
-from onshape_api.paths.paths import DocumentPath, ElementPath, InstancePath
+from onshape_api.paths.doc_path import DocumentPath, ElementPath, InstancePath
 
 inst_path = InstancePath("1", "2")
 same_path = InstancePath("1", "2")

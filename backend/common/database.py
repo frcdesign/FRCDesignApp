@@ -1,9 +1,6 @@
 from google.cloud import firestore
 from google.cloud.firestore import CollectionReference
 
-from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import ElementPath
-
 
 class Database:
     def __init__(self):

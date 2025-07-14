@@ -1,5 +1,5 @@
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import InstancePath
+from onshape_api.paths.doc_path import InstancePath
 
 
 def assert_instance_type(path: InstancePath, *instance_types: InstanceType) -> None:

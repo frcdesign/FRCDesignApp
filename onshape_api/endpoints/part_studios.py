@@ -4,7 +4,7 @@ from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_instance_type, assert_workspace
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import ElementPath, InstancePath
+from onshape_api.paths.doc_path import ElementPath, InstancePath
 
 
 def create_part_studio(api: Api, instance_path: InstancePath, name: str) -> dict:

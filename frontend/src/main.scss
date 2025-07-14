@@ -82,17 +82,6 @@ $frc-design-green: #4cae4f;
     background-color: bp.$light-gray4;
 }
 
-// .document-section {
-//     display: flex;
-//     align-items: center;
-//     justify-content: space-between;
-//     margin-bottom: 10px;
-
-//     .bp6-section-header {
-//         padding-left: 10px;
-//     }
-// }
-
 .no-items-error {
     padding-top: 25px;
     padding-bottom: 40px;
@@ -104,14 +93,7 @@ $frc-design-green: #4cae4f;
     margin-left: -3px;
 }
 
-.empty-heart {
-    color: none;
-    background-color: none;
-    outline-color: bp.$red2;
-}
-
 .home-error-state {
-    padding-top: 10px;
     padding-bottom: 25px;
 }
 

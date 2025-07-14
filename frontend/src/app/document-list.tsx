@@ -1,31 +1,19 @@
 import { CardList, Classes, Section, SectionCard } from "@blueprintjs/core";
-import {
-    Outlet,
-    useLoaderData,
-    useNavigate,
-    useParams
-} from "@tanstack/react-router";
+import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { ReactNode, useLayoutEffect, useRef } from "react";
 import { ElementCard } from "./cards";
+import { getDocumentLoader } from "../queries";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * A list of elements in a document.
  */
 export function DocumentList(): ReactNode {
     const navigate = useNavigate();
-    const data = useLoaderData({ from: "/app/documents" });
+    const data = useQuery(getDocumentLoader()).data;
     const documentId = useParams({
         from: "/app/documents/$documentId"
     }).documentId;
-
-    const document = data.documents[documentId];
-    const elements = document.elementIds.map(
-        (elementId) => data.elements[elementId]
-    );
-
-    const cards = elements.map((element) => {
-        return <ElementCard key={element.id} element={element} />;
-    });
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -37,6 +25,19 @@ export function DocumentList(): ReactNode {
         const child = section.children[0];
         child.className += " " + Classes.INTERACTIVE;
     }, [sectionRef]);
+
+    if (!data) {
+        return null;
+    }
+
+    const document = data.documents[documentId];
+    const elements = document.elementIds.map(
+        (elementId) => data.elements[elementId]
+    );
+
+    const cards = elements.map((element) => {
+        return <ElementCard key={element.id} element={element} />;
+    });
 
     return (
         <>

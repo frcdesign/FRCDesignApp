@@ -79,24 +79,6 @@ export interface QuantityParameterObj extends ParameterBase {
     unit: Unit;
 }
 
-// export const getConfiguration = queryOptions<ConfigurationResult>({
-//     queryKey: ["configuration", configurationId],
-//     queryFn: ({queryKey }) => apiGet("/configuration/" + queryKey[1]),
-//     staleTime: Infinity
-// });
-
-// class ParameterType(StrEnum):
-//     ENUM = "BTMConfigurationParameterEnum-105"
-//     QUANTITY = "BTMConfigurationParameterQuantity-1826"
-//     BOOLEAN = "BTMConfigurationParameterBoolean-2550"
-//     STRING = "BTMConfigurationParameterString-872"
-
-// class QuantityType(StrEnum):
-//     LENGTH = "LENGTH"
-//     ANGLE = "ANGLE"
-//     INTEGER = "INTEGER"
-//     REAL = "REAL"
-
 export interface DocumentResult {
     documents: Record<string, DocumentObj>;
     elements: Record<string, ElementObj>;
@@ -116,9 +98,7 @@ export interface ElementObj extends ElementPath {
     configurationId: string | null;
 }
 
-export interface FavoritesResult {
-    favorites: Record<string, Favorite>;
-}
+export type FavoritesResult = Record<string, Favorite>;
 
 /**
  * A favorite is currently just an empty object.
@@ -140,10 +120,6 @@ export function getHeightAndWidth(size: ThumbnailSize): {
     const parts = size.split("x");
     return { width: parseInt(parts[0]), height: parseInt(parts[1]) };
 }
-
-// function quotePlus(value: string): string {
-//     return encodeURIComponent(value).replace(/%20/g, "+");
-// }
 
 /**
  * Encodes a configuration into a string.

@@ -1,7 +1,7 @@
 import logging
 import os
 import flask
-from onshape_api.endpoints import users
+from onshape_api.endpoints import settings
 from backend.endpoints import api
 from backend.common import connect, database, env
 from backend import oauth
@@ -33,7 +33,7 @@ def create_app():
         """The base route used by Onshape."""
         db = database.Database()
         api = connect.get_api(db)
-        authorized = api.oauth.authorized and users.ping(api, catch=True)
+        authorized = api.oauth.authorized and settings.ping(api, catch=True)
         if not authorized:
             # In Google Cloud the request url is always http
             # But when we redirect we need https to avoid getting blocked by the browser
@@ -61,6 +61,7 @@ def create_app():
         # Development hmr handler
         @app.get("/app/<path:current_path>")
         def serve_app_hmr(current_path: str):
+            # The specific path doesn't matter, the template handles all
             return flask.render_template("index.html")
 
     return app

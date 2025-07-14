@@ -7,7 +7,7 @@ from onshape_api.endpoints.configurations import encode_configuration
 router = flask.Blueprint("insert", __name__)
 
 
-@router.post("/add-to-assembly" + connect.element_route())
+@router.post("/add-to-assembly" + connect.element_path_route())
 def add_to_assembly(**kwargs):
     """Adds the contents of an element to the current assembly."""
     db = database.Database()
@@ -23,7 +23,7 @@ def add_to_assembly(**kwargs):
     return {"success": True}
 
 
-@router.post("/add-to-part-studio" + connect.element_route())
+@router.post("/add-to-part-studio" + connect.element_path_route())
 def add_to_part_studio(**kwargs):
     """Adds the contents of an element to the current part studio."""
     db = database.Database()

@@ -25,6 +25,9 @@ class OAuthApi(Api):
     def __init__(self, oauth: OAuth2Session, **kwargs: Unpack[ApiArgs]):
         super().__init__(**kwargs)
         self.oauth = oauth
+        if oauth.client_id == None:
+            raise ValueError("The OAuth2Session must have a client_id")
+        self.client_id: str = oauth.client_id
 
     @override
     def _request(

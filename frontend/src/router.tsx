@@ -10,18 +10,9 @@ import {
     SearchSchemaInput
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import {
-    ConfigurationResult,
-    DocumentResult,
-    FavoritesResult
-} from "./api/backend-types";
-import { ConfigurationDialog } from "./app/insert-dialog";
-import { queryOptions } from "@tanstack/react-query";
-import { apiGet } from "./api/api";
 import { DocumentList } from "./app/document-list";
-import { AdminPanel } from "./app/admin-panel";
-import { toUserApiPath } from "./api/path";
-import { onshapeDataStore } from "./api/onshape-data";
+import { AppSearch } from "./api/app-search";
+import { getDocumentLoader, getFavoritesLoader } from "./queries";
 
 const rootRoute = createRootRoute();
 
@@ -35,73 +26,38 @@ const appRoute = createRoute({
     component: App,
     // Add SearchSchemaInput so search parameters become optional
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        return search;
+        return search as unknown as AppSearch;
     },
     search: {
         middlewares: [retainSearchParams(true)]
     }
 });
 
-const documentsRoute = createRoute({
+const homeRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "documents",
-    beforeLoad: async ({ abortController }) => {
-        const loadDocuments = queryOptions<DocumentResult>({
-            queryKey: ["documents"],
-            queryFn: () => apiGet("/documents", {}, abortController.signal)
-        });
-        const loadFavorites = queryOptions<FavoritesResult>({
-            queryKey: ["favorites"],
-            queryFn: () =>
-                apiGet(
-                    "/favorites" + toUserApiPath(onshapeDataStore.state),
-                    {},
-                    abortController.signal
-                )
-        });
-        return {
-            ...(await queryClient.ensureQueryData(loadFavorites)),
-            ...(await queryClient.ensureQueryData(loadDocuments))
-        };
-    },
-    loader: async ({ context }) => {
-        return context;
+    loaderDeps: ({ search }) => ({ userId: search.userId }),
+    loader: async ({ deps }) => {
+        const loadDocuments = getDocumentLoader();
+        const loadFavorites = getFavoritesLoader(deps);
+
+        return Promise.all([
+            queryClient.ensureQueryData(loadFavorites),
+            queryClient.ensureQueryData(loadDocuments)
+        ]);
     }
 });
 
 const homeListRoute = createRoute({
-    getParentRoute: () => documentsRoute,
+    getParentRoute: () => homeRoute,
     path: "/",
     component: HomeList
 });
 
 const documentListRoute = createRoute({
-    getParentRoute: () => documentsRoute,
+    getParentRoute: () => homeRoute,
     path: "$documentId",
     component: DocumentList
-});
-
-const insertDialogRoute = createRoute({
-    getParentRoute: () => documentListRoute,
-    path: "elements/$elementId",
-    component: ConfigurationDialog,
-    loader: ({ params, abortController, context }) => {
-        const element = context.elements[params.elementId];
-        const configurationId = element?.configurationId;
-        if (!configurationId) {
-            return undefined;
-        }
-        const loadConfiguration = queryOptions<ConfigurationResult>({
-            queryKey: ["configuration", configurationId],
-            queryFn: () =>
-                apiGet(
-                    "/configuration/" + configurationId,
-                    {},
-                    abortController.signal
-                )
-        });
-        return queryClient.ensureQueryData(loadConfiguration);
-    }
 });
 
 const grantDeniedRoute = createRoute({
@@ -116,34 +72,16 @@ const licenseRoute = createRoute({
     component: License
 });
 
-const homeListAdminRoute = createRoute({
-    getParentRoute: () => homeListRoute,
-    path: "admin",
-    component: AdminPanel
-});
-
-const documentListAdminRoute = createRoute({
-    getParentRoute: () => documentListRoute,
-    path: "admin",
-    component: AdminPanel
-});
-
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
-        documentsRoute.addChildren([
-            homeListRoute.addChildren([homeListAdminRoute]),
-            documentListRoute.addChildren([
-                documentListAdminRoute,
-                insertDialogRoute
-            ])
-        ])
+        homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,
     licenseRoute
 ]);
 
 export const router = createRouter({
-    routeTree,
+    routeTree
     // Database is immutable, so no need to refetch things
-    defaultStaleTime: Infinity
+    // defaultStaleTime: Infinity
 });

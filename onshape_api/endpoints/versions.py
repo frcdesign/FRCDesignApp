@@ -1,7 +1,7 @@
 from onshape_api.paths.api_path import api_path
 from onshape_api.api.api_base import Api
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import DocumentPath, InstancePath
+from onshape_api.paths.doc_path import DocumentPath, InstancePath
 
 
 def get_versions(

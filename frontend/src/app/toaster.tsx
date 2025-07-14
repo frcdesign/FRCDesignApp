@@ -1,10 +1,8 @@
 import { Icon, Intent, OverlayToaster } from "@blueprintjs/core";
 
-export const toaster = OverlayToaster.create({
+export const toaster = await OverlayToaster.create({
     maxToasts: 3
 });
-
-// Use Blueprint types to prevent type issues
 
 export const infoToastArgs = {
     icon: <Icon icon="info-sign" />,

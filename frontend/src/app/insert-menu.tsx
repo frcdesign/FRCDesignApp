@@ -1,4 +1,4 @@
-import { useLoaderData, useNavigate, useParams } from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import { Dispatch, ReactNode, useState } from "react";
 import {
     BooleanParameterObj,
@@ -24,53 +24,61 @@ import {
     InputGroup,
     Intent,
     MenuItem,
-    NumericInput
+    NumericInput,
+    Spinner
 } from "@blueprintjs/core";
-import { useMutation } from "@tanstack/react-query";
-import { apiDelete, apiPost } from "../api/api";
-import { toUserApiPath, toElementApiPath } from "../api/path";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../api/api";
+import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/handlers";
 import { useOnshapeData } from "../api/onshape-data";
 import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
-import { queryClient } from "../query-client";
-import { router } from "../router";
+import { FavoriteButton } from "./favorite";
+import { AppDialog, useCloseDialog } from "../api/app-search";
+import { getDocumentLoader, getFavoritesLoader } from "../queries";
 
-export function ConfigurationDialog(): ReactNode {
-    const data = useLoaderData({
-        from: "/app/documents"
-    });
-    const configurationResult = useLoaderData({
-        from: "/app/documents/$documentId/elements/$elementId"
-    });
-    const elementId = useParams({
-        from: "/app/documents/$documentId/elements/$elementId"
-    }).elementId;
+export function InsertMenu(): ReactNode {
+    const search = useSearch({ from: "/app" });
+    if (search.activeDialog !== AppDialog.INSERT_MENU) {
+        return null;
+    }
+    return <InsertMenuDialog elementId={search.activeElementId} />;
+}
+
+interface InsertMenuDialogProps {
+    elementId: string;
+}
+
+function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
+    const elementId = props.elementId;
+
+    const data = useQuery(getDocumentLoader()).data;
+    const onshapeData = useOnshapeData();
+    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+
+    const closeDialog = useCloseDialog();
 
     const [configuration, setConfiguration] = useState<Record<string, string>>(
-        () => {
-            const configuration: Record<string, string> = {};
-            configurationResult?.parameters.forEach((parameter) => {
-                configuration[parameter.id] = parameter.default;
-            });
-            return configuration;
-        }
+        {}
     );
 
-    const navigate = useNavigate();
+    if (!data || !favorites) {
+        return null;
+    }
 
     const element = data.elements[elementId];
-    const isFavorite = data.favorites[elementId] !== undefined;
+    const isFavorite = favorites[elementId] !== undefined;
 
     let parameters = null;
-    if (configurationResult) {
+    if (element.configurationId) {
         parameters = (
             <ConfigurationParameters
-                configurationResult={configurationResult}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
+                element={element}
             />
         );
     }
@@ -94,12 +102,7 @@ export function ConfigurationDialog(): ReactNode {
         <Dialog
             isOpen
             title={element.name}
-            onClose={() =>
-                navigate({
-                    from: "/app/documents/$documentId/elements/$elementId",
-                    to: "../.."
-                })
-            }
+            onClose={closeDialog}
             style={{ maxHeight: "90vh", maxWidth: "400px" }}
         >
             <Card className="center preview-image-card">
@@ -114,19 +117,30 @@ export function ConfigurationDialog(): ReactNode {
 }
 
 interface ConfigurationParameterProps {
-    configurationResult: ConfigurationResult;
+    element: ElementObj;
     configuration: Record<string, string>;
     setConfiguration: Dispatch<Record<string, string>>;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
-    const { configurationResult, configuration, setConfiguration } = props;
+    const { element, configuration, setConfiguration } = props;
+
+    const query = useQuery<ConfigurationResult>({
+        queryKey: ["configuration", element.configurationId],
+        queryFn: () => apiGet("/configuration/" + element.configurationId),
+        enabled: !!element.configurationId
+    });
+
+    if (!query.isSuccess) {
+        return <Spinner intent={Intent.PRIMARY} />;
+    }
+    const configurationResult = query.data;
 
     const parameters = configurationResult.parameters.map((parameter) => (
         <ConfigurationParameter
             key={parameter.id}
             parameter={parameter}
-            value={configuration[parameter.id]}
+            value={configuration[parameter.id] ?? parameter.default}
             onValueChange={(newValue) => {
                 const newConfiguration = {
                     ...configuration,
@@ -187,9 +201,15 @@ function ConfigurationParameter(
 
 function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
+
     const selectedItem = parameter.options.find(
         (enumOption) => enumOption.id === value
     );
+
+    const [activeItem, setActiveItem] = useState<EnumOption | null>(
+        selectedItem ?? null
+    );
+
     return (
         <FormGroup
             label={parameter.name}
@@ -200,7 +220,10 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         >
             <Select<EnumOption>
                 items={parameter.options}
+                activeItem={activeItem}
+                onActiveItemChange={setActiveItem}
                 filterable={false}
+                fill
                 popoverProps={{
                     minimal: true,
                     popoverClassName: "enum-menu"
@@ -310,7 +333,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
     const { element, configuration } = props;
 
     const onshapeData = useOnshapeData();
-    const navigate = useNavigate();
+    const closeDialog = useCloseDialog();
 
     const insertMutation = useMutation({
         mutationKey: ["insert", element.id],
@@ -328,12 +351,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
                 }
             });
         },
-        onSuccess: () => {
-            navigate({
-                from: "/app/documents/$documentId/elements/$elementId",
-                to: "../.."
-            });
-        }
+        onSuccess: closeDialog
     });
 
     return (
@@ -343,44 +361,6 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
             intent={Intent.SUCCESS}
             loading={insertMutation.isPending}
             onClick={() => insertMutation.mutate()}
-        />
-    );
-}
-
-interface FavoriteButtonProps {
-    isFavorite: boolean;
-    elementId: string;
-}
-
-function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { isFavorite, elementId } = props;
-    const onshapeData = useOnshapeData();
-    const mutation = useMutation({
-        mutationKey: ["toggle-favorite", isFavorite],
-        mutationFn: () => {
-            const query = { elementId };
-            if (isFavorite) {
-                return apiDelete(
-                    "/favorites" + toUserApiPath(onshapeData),
-                    query
-                );
-            } else {
-                return apiPost("/favorites" + toUserApiPath(onshapeData), {
-                    query
-                });
-            }
-        },
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ["favorites"] });
-            router.invalidate();
-        }
-    });
-    return (
-        <Button
-            icon="heart"
-            text="Favorite"
-            intent={Intent.SUCCESS}
-            onClick={() => mutation.mutate()}
         />
     );
 }

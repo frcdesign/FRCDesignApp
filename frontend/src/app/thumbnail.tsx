@@ -87,7 +87,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     );
 }
 
-export interface PreviewImageProps {
+interface PreviewImageProps {
     elementPath: ElementPath;
     configuration?: Record<string, string>;
     isDialogPreview?: boolean;
@@ -115,7 +115,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     });
 
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", toElementApiPath(elementPath), configuration],
+        queryKey: ["thumbnail", toElementApiPath(elementPath)],
         queryFn: () => {
             const query: Record<string, string> = {
                 size,
@@ -138,5 +138,21 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             </div>
         );
     }
-    return <img src={thumbnailQuery.data} {...heightAndWidth} />;
+
+    return (
+        <div style={{ position: "relative" }}>
+            {thumbnailQuery.isFetching && (
+                <Spinner
+                    size={SpinnerSize.SMALL}
+                    intent={Intent.PRIMARY}
+                    style={{
+                        position: "absolute",
+                        bottom: "-5px",
+                        right: "-25px"
+                    }}
+                />
+            )}
+            <img src={thumbnailQuery.data} {...heightAndWidth} />
+        </div>
+    );
 }

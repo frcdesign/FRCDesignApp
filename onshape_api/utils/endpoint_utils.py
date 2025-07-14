@@ -1,4 +1,4 @@
-from onshape_api.paths.paths import ElementPath, InstancePath
+from onshape_api.paths.doc_path import ElementPath, InstancePath
 
 
 def make_name_to_path_map(

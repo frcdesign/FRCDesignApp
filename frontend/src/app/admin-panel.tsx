@@ -1,24 +1,27 @@
 import { Button, Dialog, DialogFooter } from "@blueprintjs/core";
-import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { router } from "../router";
+import { AppDialog, useCloseDialog } from "../api/app-search";
+import { useSearch } from "@tanstack/react-router";
 
-export function AdminPanel() {
-    const navigate = useNavigate();
+export function AdminPanel(): ReactNode {
+    const search = useSearch({ from: "/app" });
+    if (search.activeDialog !== AppDialog.ADMIN_PANEL) {
+        return null;
+    }
+    return <AdminPanelDialog />;
+}
+
+function AdminPanelDialog(): ReactNode {
+    const closeDialog = useCloseDialog();
 
     const reloadButton = <ReloadAllDocumentsButton />;
-
     const actions = <>{reloadButton}</>;
-
     return (
-        <Dialog
-            isOpen
-            title="Admin Settings"
-            onClose={() => navigate({ to: ".." })}
-        >
+        <Dialog isOpen title="Admin Settings" onClose={closeDialog}>
             <DialogFooter minimal actions={actions} />
         </Dialog>
     );

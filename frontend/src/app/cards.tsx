@@ -1,8 +1,13 @@
-import { Icon, Colors, Card, EntityTitle, Classes } from "@blueprintjs/core";
-import { useLoaderData, useNavigate } from "@tanstack/react-router";
+import { Icon, Card, EntityTitle, Classes } from "@blueprintjs/core";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj, ElementObj } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
+import { FavoriteButton } from "./favorite";
+import { AppDialog } from "../api/app-search";
+import { useQuery } from "@tanstack/react-query";
+import { getDocumentLoader, getFavoritesLoader } from "../queries";
+import { useOnshapeData } from "../api/onshape-data";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -31,9 +36,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
             <EntityTitle
                 title={
                     <span
-                        style={{
-                            lineHeight: "normal"
-                        }}
+                        style={{ lineHeight: "normal" }}
                         title={document.name}
                     >
                         {document.name}
@@ -56,28 +59,33 @@ interface ElementCardProps extends PropsWithChildren {
  */
 export function ElementCard(props: ElementCardProps): ReactNode {
     const { element } = props;
-    const navigate = useNavigate({
-        from: "/app/documents/$documentId"
-    });
-    const data = useLoaderData({ from: "/app/documents" });
-    const isFavorite = data.favorites[element.elementId] !== undefined;
+    const navigate = useNavigate();
+    const onshapeData = useOnshapeData();
+    const data = useQuery(getDocumentLoader()).data;
+    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+
+    if (!data || !favorites) {
+        return null;
+    }
+
+    const isFavorite = favorites[element.elementId] !== undefined;
 
     const thumbnail = <CardThumbnail path={element} />;
 
-    const favoriteIcon = isFavorite ? (
-        <Icon icon="heart" color={Colors.RED2} />
-    ) : null;
+    const favoriteButton = (
+        <FavoriteButton isFavorite={isFavorite} elementId={element.elementId} />
+    );
 
     return (
         <Card
-            compact
             interactive
             onClick={(event) => {
                 event.stopPropagation();
                 navigate({
-                    to: "./elements/$elementId",
-                    params: {
-                        elementId: element.id
+                    to: ".",
+                    search: {
+                        activeDialog: AppDialog.INSERT_MENU,
+                        activeElementId: element.elementId
                     }
                 });
             }}
@@ -92,7 +100,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                 icon={thumbnail}
                 ellipsize
             />
-            {favoriteIcon}
+            {favoriteButton}
         </Card>
     );
 }

@@ -1,7 +1,7 @@
 """Serves as an abstraction layer for connecting with the Onshape API and the current flask request."""
 
 import enum
-from typing import Any
+from typing import Any, cast
 
 from uuid import uuid4
 import flask
@@ -11,6 +11,7 @@ from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
 from onshape_api.paths.instance_type import InstanceType
+from onshape_api.paths.user_path import UserPath, UserType
 
 
 def get_session_id() -> str:
@@ -80,12 +81,24 @@ def get_oauth_session(
     )
 
 
-def instance_route():
-    return f"/d/<document_id>/<instance_type>/<workspace_id>"
+def user_path_route():
+    """A route with components necessary to receive a UserPath."""
+    return "/<user_type>/<user_id>"
 
 
-def element_route():
-    return instance_route() + "/e/<element_id>"
+def get_route_user_path() -> UserPath:
+    return UserPath(
+        get_route("user_id"),
+        get_route("user_type"),
+    )
+
+
+def instance_path_route():
+    return "/d/<document_id>/<instance_type>/<instance_id>"
+
+
+def element_path_route():
+    return instance_path_route() + "/e/<element_id>"
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:
@@ -95,7 +108,7 @@ def get_api(db: Database) -> onshape_api.OAuthApi:
 def get_route_instance_path() -> onshape_api.InstancePath:
     return onshape_api.InstancePath(
         get_route("document_id"),
-        get_route("workspace_id"),
+        get_route("instance_id"),
         get_route("instance_type"),
     )
 
@@ -107,7 +120,7 @@ def get_route_element_path(wvm_param: str = "w") -> onshape_api.ElementPath:
     )
 
 
-def get_body_instance_path(*instance_types: InstanceType) -> onshape_api.InstancePath:
+def get_body_instance_path() -> onshape_api.InstancePath:
     instance_type = get_optional_body_arg("instanceType", InstanceType.WORKSPACE)
     return onshape_api.InstancePath(
         get_body_arg("documentId"),
@@ -123,7 +136,7 @@ def get_body_element_path() -> onshape_api.ElementPath:
     )
 
 
-def get_route(route_param: str) -> str:
+def get_route(route_param: str) -> Any:
     """Returns the value of a path parameter.
 
     Throws if it doesn't exist.

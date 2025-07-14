@@ -15,14 +15,14 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { AppDialog } from "../api/app-search";
 
 /**
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
     const navigate = useNavigate();
-    const currentPath = useLocation().pathname;
 
     const [showFilters, setShowFilters] = useState(false);
 
@@ -90,7 +90,13 @@ export function AppNavbar(): ReactNode {
                         variant={ButtonVariant.MINIMAL}
                         onClick={() =>
                             navigate({
-                                to: currentPath + "/admin"
+                                to: ".",
+                                search: (prev) => {
+                                    return {
+                                        ...prev,
+                                        activeDialog: AppDialog.ADMIN_PANEL
+                                    };
+                                }
                             })
                         }
                     />
@@ -98,13 +104,7 @@ export function AppNavbar(): ReactNode {
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
                 <Collapse isOpen={showFilters}>
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center"
-                        }}
-                    >
+                    <div className="center">
                         <div style={{ display: "flex", gap: "5px" }}>
                             {filterTags}
                         </div>

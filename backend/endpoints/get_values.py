@@ -1,15 +1,14 @@
 import logging
-from urllib import parse
 import flask
 
 from backend.common import database
 from backend.common import connect
 from backend.common.connect import (
-    element_route,
+    element_path_route,
     get_optional_query_arg,
     get_route_element_path,
     get_route_instance_path,
-    instance_route,
+    instance_path_route,
 )
 from onshape_api.endpoints import thumbnails
 from onshape_api.endpoints.configurations import encode_configuration
@@ -71,7 +70,7 @@ def get_configuration(configuration_id: str):
     return result
 
 
-@router.get("/thumbnail" + instance_route())
+@router.get("/thumbnail" + instance_path_route())
 def get_document_thumbnail(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
@@ -81,7 +80,7 @@ def get_document_thumbnail(**kwargs):
     return flask.send_file(thumbnail, mimetype="image/gif")
 
 
-@router.get("/thumbnail" + element_route())
+@router.get("/thumbnail" + element_path_route())
 def get_element_thumbnail(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
@@ -97,7 +96,7 @@ def get_element_thumbnail(**kwargs):
     return flask.send_file(thumbnail, mimetype="image/gif")
 
 
-@router.get("/thumbnail-id" + element_route())
+@router.get("/thumbnail-id" + element_path_route())
 def get_thumbnail_id(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
