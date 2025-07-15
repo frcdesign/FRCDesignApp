@@ -1,7 +1,15 @@
-import { Icon, Card, EntityTitle, Classes } from "@blueprintjs/core";
+import {
+    Icon,
+    Card,
+    EntityTitle,
+    Classes,
+    Text,
+    Alert,
+    Intent
+} from "@blueprintjs/core";
 import { useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode } from "react";
-import { DocumentObj, ElementObj } from "../api/backend-types";
+import { PropsWithChildren, ReactNode, useState } from "react";
+import { DocumentObj, ElementObj, ElementType } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
 import { AppDialog } from "../api/app-search";
@@ -25,25 +33,17 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     return (
         <Card
             interactive
-            onClick={() =>
+            onClick={() => {
                 navigate({
                     to: "/app/documents/$documentId",
                     params: { documentId: document.id }
-                })
-            }
+                });
+            }}
             className="item-card"
         >
             <EntityTitle
-                title={
-                    <span
-                        style={{ lineHeight: "normal" }}
-                        title={document.name}
-                    >
-                        {document.name}
-                    </span>
-                }
+                title={<Text>{document.name}</Text>}
                 icon={thumbnail}
-                ellipsize
             />
             <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
         </Card>
@@ -64,16 +64,39 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     const data = useQuery(getDocumentLoader()).data;
     const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
 
+    const [isAlertOpen, setIsAlertOpen] = useState(false);
+
     if (!data || !favorites) {
         return null;
     }
+
+    const isAssemblyInPartStudio =
+        element.elementType === ElementType.ASSEMBLY &&
+        onshapeData.elementType == ElementType.PART_STUDIO;
 
     const isFavorite = favorites[element.elementId] !== undefined;
 
     const thumbnail = <CardThumbnail path={element} />;
 
     const favoriteButton = (
-        <FavoriteButton isFavorite={isFavorite} elementId={element.elementId} />
+        <FavoriteButton isFavorite={isFavorite} element={element} />
+    );
+
+    const alert = (
+        <Alert
+            isOpen={isAlertOpen}
+            canEscapeKeyCancel
+            canOutsideClickCancel
+            onClose={(_, event) => {
+                event?.stopPropagation();
+                setIsAlertOpen(false);
+            }}
+            confirmButtonText="Close"
+            icon="cross"
+            intent={Intent.DANGER}
+        >
+            This part is an assembly and cannot be derived into a part studio.
+        </Alert>
     );
 
     return (
@@ -81,26 +104,29 @@ export function ElementCard(props: ElementCardProps): ReactNode {
             interactive
             onClick={(event) => {
                 event.stopPropagation();
-                navigate({
-                    to: ".",
-                    search: {
-                        activeDialog: AppDialog.INSERT_MENU,
-                        activeElementId: element.elementId
-                    }
-                });
+                if (isAssemblyInPartStudio) {
+                    setIsAlertOpen(true);
+                } else {
+                    navigate({
+                        to: ".",
+                        search: {
+                            activeDialog: AppDialog.INSERT_MENU,
+                            activeElementId: element.elementId
+                        }
+                    });
+                }
             }}
             className="item-card"
         >
             <EntityTitle
-                title={
-                    <span style={{ lineHeight: "normal" }} title={element.name}>
-                        {element.name}
-                    </span>
+                className={
+                    isAssemblyInPartStudio ? Classes.TEXT_DISABLED : undefined
                 }
+                title={<Text>{element.name}</Text>}
                 icon={thumbnail}
-                ellipsize
             />
             {favoriteButton}
+            {alert}
         </Card>
     );
 }

@@ -37,7 +37,7 @@ import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
 import { FavoriteButton } from "./favorite";
-import { AppDialog, useCloseDialog } from "../api/app-search";
+import { AppDialog, useHandleCloseDialog } from "../api/app-search";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 
 export function InsertMenu(): ReactNode {
@@ -59,7 +59,7 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
     const onshapeData = useOnshapeData();
     const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
 
-    const closeDialog = useCloseDialog();
+    const closeDialog = useHandleCloseDialog();
 
     const [configuration, setConfiguration] = useState<Record<string, string>>(
         {}
@@ -110,7 +110,7 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
             </Card>
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
-                <FavoriteButton isFavorite={isFavorite} elementId={elementId} />
+                <FavoriteButton isFavorite={isFavorite} element={element} />
             </DialogFooter>
         </Dialog>
     );
@@ -333,7 +333,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
     const { element, configuration } = props;
 
     const onshapeData = useOnshapeData();
-    const closeDialog = useCloseDialog();
+    const closeDialog = useHandleCloseDialog();
 
     const insertMutation = useMutation({
         mutationKey: ["insert", element.id],

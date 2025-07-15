@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { router } from "../router";
-import { AppDialog, useCloseDialog } from "../api/app-search";
+import { AppDialog, useHandleCloseDialog } from "../api/app-search";
 import { useSearch } from "@tanstack/react-router";
 
 export function AdminPanel(): ReactNode {
@@ -16,12 +16,17 @@ export function AdminPanel(): ReactNode {
 }
 
 function AdminPanelDialog(): ReactNode {
-    const closeDialog = useCloseDialog();
+    const closeDialog = useHandleCloseDialog();
 
     const reloadButton = <ReloadAllDocumentsButton />;
     const actions = <>{reloadButton}</>;
     return (
-        <Dialog isOpen title="Admin Settings" onClose={closeDialog}>
+        <Dialog
+            className="admin-panel"
+            isOpen
+            title="Admin Settings"
+            onClose={closeDialog}
+        >
             <DialogFooter minimal actions={actions} />
         </Dialog>
     );

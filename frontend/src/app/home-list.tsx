@@ -64,17 +64,32 @@ export function HomeList(): ReactNode {
 
     return (
         <>
-            <CardList compact bordered={false}>
-                <ListContainer icon={<FavoriteIcon />} title="Favorites">
-                    {favoritesContent}
-                </ListContainer>
-                <ListContainer
-                    icon={<Icon icon="manual" className="frc-design-green" />}
-                    title="Library"
-                >
-                    {documentCards}
-                </ListContainer>
-            </CardList>
+            <div
+                style={{ overflow: "scroll" }}
+                // style={{
+                //     height: "100%",
+                //     display: "flex",
+                //     flexDirection: "column"
+                // }}
+            >
+                <CardList compact bordered={false}>
+                    <ListContainer
+                        icon={<FavoriteIcon />}
+                        title="Favorites"
+                        defaultIsOpen={false}
+                    >
+                        {favoritesContent}
+                    </ListContainer>
+                    <ListContainer
+                        icon={
+                            <Icon icon="manual" className="frc-design-green" />
+                        }
+                        title="Library"
+                    >
+                        {documentCards}
+                    </ListContainer>
+                </CardList>
+            </div>
             <Outlet />
         </>
     );

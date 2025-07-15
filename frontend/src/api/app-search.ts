@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { OnshapeData } from "./onshape-data";
 import { useCallback } from "react";
 
@@ -28,11 +28,12 @@ export interface BaseSearch {
 /**
  * A hook that returns a function that can be invoked to close the current dialog.
  */
-export function useCloseDialog() {
+export function useHandleCloseDialog() {
     const navigate = useNavigate();
+    const pathname = useLocation().pathname;
     return useCallback(() => {
         navigate({
-            to: ".",
+            to: pathname,
             search: (prev) => {
                 return {
                     ...prev,
@@ -40,5 +41,5 @@ export function useCloseDialog() {
                 };
             }
         });
-    }, [navigate]);
+    }, [pathname, navigate]);
 }

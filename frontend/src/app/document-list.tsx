@@ -45,14 +45,22 @@ export function DocumentList(): ReactNode {
                 icon="arrow-left"
                 ref={sectionRef}
                 title={document.name}
-                onClick={() => navigate({ to: "/app/documents" })}
+                onClick={() => {
+                    navigate({ to: "/app/documents" });
+                }}
                 style={{
                     display: "flex",
                     flexDirection: "column",
-                    height: "100%"
+                    flexGrow: 0,
+                    maxHeight: "100%"
                 }}
             >
-                <SectionCard padded={false} style={{ overflow: "scroll" }}>
+                <SectionCard
+                    padded={false}
+                    style={{
+                        overflow: "scroll"
+                    }}
+                >
                     <CardList bordered={false} compact>
                         {cards}
                     </CardList>
