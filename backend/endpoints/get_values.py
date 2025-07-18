@@ -64,7 +64,6 @@ def get_configuration(configuration_id: str):
     """Returns a specific configuration."""
     db = database.Database()
     result = db.configurations.document(configuration_id).get().to_dict()
-    logging.info(result)
     if result == None:
         raise ValueError(f"Failed to find configuration with id {configuration_id}")
     return result

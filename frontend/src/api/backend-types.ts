@@ -37,8 +37,55 @@ export enum Unit {
     UNITLESS = ""
 }
 
+export enum ConditionType {
+    LOGICAL = "BTParameterVisibilityLogical-178",
+    EQUAL = "BTParameterVisibilityOnEqual-180"
+}
+
+export enum LogicalOp {
+    AND = "AND",
+    OR = "OR"
+}
+
+export type VisibilityCondition = LogicalCondition | EqualCondition;
+
+interface LogicalCondition {
+    type: ConditionType.LOGICAL;
+    operation: LogicalOp;
+    children: VisibilityCondition[];
+}
+
+interface EqualCondition {
+    type: ConditionType.EQUAL;
+    id: string;
+    value: string;
+}
+
+export function evaluateCondition(
+    condition: VisibilityCondition | null,
+    configuration: Record<string, string>
+): boolean {
+    if (!condition) {
+        return true;
+    }
+
+    if (condition.type == ConditionType.LOGICAL) {
+        if (condition.operation == LogicalOp.AND) {
+            return condition.children.every((child) =>
+                evaluateCondition(child, configuration)
+            );
+        } else {
+            return condition.children.some((child) =>
+                evaluateCondition(child, configuration)
+            );
+        }
+    } else {
+        return configuration[condition.id] == condition.value;
+    }
+}
+
 export interface ConfigurationResult {
-    defaultConfiguration: string;
+    // defaultConfiguration: string;
     parameters: ParameterObj[];
 }
 
@@ -52,6 +99,7 @@ export interface ParameterBase {
     id: string;
     name: string;
     default: string;
+    visibilityCondition: VisibilityCondition | null;
 }
 export interface BooleanParameterObj extends ParameterBase {
     type: ParameterType.BOOLEAN;

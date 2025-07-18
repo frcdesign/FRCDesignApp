@@ -7,6 +7,7 @@ import {
     ElementType,
     EnumOption,
     EnumParameterObj,
+    evaluateCondition,
     ParameterObj,
     ParameterType,
     QuantityParameterObj,
@@ -61,9 +62,9 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
 
     const closeDialog = useHandleCloseDialog();
 
-    const [configuration, setConfiguration] = useState<Record<string, string>>(
-        {}
-    );
+    const [configuration, setConfiguration] = useState<
+        Record<string, string> | undefined
+    >(undefined);
 
     if (!data || !favorites) {
         return null;
@@ -75,10 +76,10 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
     let parameters = null;
     if (element.configurationId) {
         parameters = (
-            <ConfigurationParameters
+            <ConfigurationWrapper
+                configurationId={element.configurationId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
-                element={element}
             />
         );
     }
@@ -115,41 +116,75 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
         </Dialog>
     );
 }
+interface ConfigurationWrapperProps {
+    configurationId: string;
+    configuration?: Record<string, string>;
+    setConfiguration: Dispatch<Record<string, string>>;
+}
+
+function ConfigurationWrapper(props: ConfigurationWrapperProps) {
+    const { configurationId, configuration, setConfiguration } = props;
+
+    const query = useQuery<ConfigurationResult>({
+        queryKey: ["configuration", configurationId],
+        queryFn: async () => {
+            const result = apiGet("/configuration/" + configurationId);
+            return result.then((result: ConfigurationResult) => {
+                const defaultConfiguration = result.parameters.reduce(
+                    (configuration, parameter) => {
+                        configuration[parameter.id] = parameter.default;
+                        return configuration;
+                    },
+                    {} as Record<string, string>
+                );
+                setConfiguration(defaultConfiguration);
+                return result;
+            });
+        },
+        // Disable refetch to avoid resetting defaults
+        refetchInterval: false
+    });
+
+    if (!query.isSuccess || !configuration) {
+        return <Spinner intent={Intent.PRIMARY} />;
+    }
+    return (
+        <ConfigurationParameters
+            configurationResult={query.data}
+            configuration={configuration}
+            setConfiguration={setConfiguration}
+        />
+    );
+}
 
 interface ConfigurationParameterProps {
-    element: ElementObj;
+    configurationResult: ConfigurationResult;
     configuration: Record<string, string>;
     setConfiguration: Dispatch<Record<string, string>>;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
-    const { element, configuration, setConfiguration } = props;
+    const { configurationResult, configuration, setConfiguration } = props;
 
-    const query = useQuery<ConfigurationResult>({
-        queryKey: ["configuration", element.configurationId],
-        queryFn: () => apiGet("/configuration/" + element.configurationId),
-        enabled: !!element.configurationId
+    const parameters = configurationResult.parameters.map((parameter) => {
+        if (!evaluateCondition(parameter.visibilityCondition, configuration)) {
+            return null;
+        }
+        return (
+            <ConfigurationParameter
+                key={parameter.id}
+                parameter={parameter}
+                value={configuration[parameter.id]}
+                onValueChange={(newValue) => {
+                    const newConfiguration = {
+                        ...configuration,
+                        [parameter.id]: newValue
+                    };
+                    setConfiguration(newConfiguration);
+                }}
+            />
+        );
     });
-
-    if (!query.isSuccess) {
-        return <Spinner intent={Intent.PRIMARY} />;
-    }
-    const configurationResult = query.data;
-
-    const parameters = configurationResult.parameters.map((parameter) => (
-        <ConfigurationParameter
-            key={parameter.id}
-            parameter={parameter}
-            value={configuration[parameter.id] ?? parameter.default}
-            onValueChange={(newValue) => {
-                const newConfiguration = {
-                    ...configuration,
-                    [parameter.id]: newValue
-                };
-                setConfiguration(newConfiguration);
-            }}
-        />
-    ));
     return <div style={{ width: "100%" }}>{parameters}</div>;
 }
 
@@ -209,6 +244,13 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const [activeItem, setActiveItem] = useState<EnumOption | null>(
         selectedItem ?? null
     );
+
+    if (parameter.name == "Input") {
+        console.log(parameter);
+        console.log(value);
+        console.log(activeItem);
+        console.log(selectedItem);
+    }
 
     return (
         <FormGroup

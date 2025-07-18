@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import StrEnum
 import flask
 import json5
@@ -65,15 +66,66 @@ def get_abbreviation(unit: Unit) -> str:
             return ""
 
 
+class ConditionType(StrEnum):
+    LOGICAL = "BTParameterVisibilityLogical-178"
+    EQUAL = "BTParameterVisibilityOnEqual-180"
+
+
+NONE_CONDITION = "BTParameterVisibilityCondition-177"
+
+
+class LogicalOp(StrEnum):
+    AND = "AND"
+    OR = "OR"
+
+
+def evaluate(condition_dict: dict | None, configuration: dict[str, str]) -> bool:
+    if condition_dict == None:
+        return True
+
+    if condition_dict["type"] == ConditionType.LOGICAL:
+        func = all if condition_dict["operation"] == LogicalOp.AND else any
+        return func(
+            evaluate(child, configuration) for child in condition_dict["children"]
+        )
+    else:
+        return configuration.get(condition_dict["id"], None) == condition_dict["value"]
+
+
+def parse_condition(visibility_condition: dict | None) -> dict | None:
+    """Transforms a visibility condition returned by the getConfiguration endpoint into a condition_dict."""
+    if visibility_condition == None:
+        return None
+    elif visibility_condition["btType"] == NONE_CONDITION:
+        return None
+
+    result = {"type": visibility_condition["btType"]}
+    if result["type"] == ConditionType.LOGICAL:
+        result["operation"] = visibility_condition["operation"]
+        children = [
+            parse_condition(child) for child in visibility_condition["children"]
+        ]
+        result["children"] = children
+    elif result["type"] == ConditionType.EQUAL:
+        result["id"] = visibility_condition["parameterId"]
+        result["value"] = visibility_condition["value"]
+    else:
+        raise ValueError(f"Unrecognized visibility condition type: {result["type"]}")
+    return result
+
+
 def parse_configuration(configuration: dict) -> dict:
     parameters = []
     for parameter in configuration["configurationParameters"]:
         parameter_type = parameter["btType"]
+        condition_dict = parse_condition(parameter["visibilityCondition"])
         result = {
             "id": parameter["parameterId"],
             "name": parameter["parameterName"],
             "type": parameter_type,
+            "visibilityCondition": condition_dict,
         }
+
         if parameter_type == ParameterType.ENUM:
             result["default"] = parameter["defaultValue"]
             result["options"] = [
@@ -103,10 +155,7 @@ def parse_configuration(configuration: dict) -> dict:
 
         parameters.append(result)
 
-    default_value = encode_configuration(
-        {param["id"]: param["default"] for param in parameters}
-    )
-    return {"defaultConfigurationId": default_value, "parameters": parameters}
+    return {"parameters": parameters}
 
 
 def save_element(
@@ -170,6 +219,8 @@ def save_all_documents(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
 
+    force = connect.get_optional_query_arg("force", False)
+
     with open("config.json") as file:
         config = json5.load(file)
 
@@ -189,8 +240,9 @@ def save_all_documents(**kwargs):
             # Document doesn't exist, create it immediately
             count += save_document(api, db, latest_version_path)
             continue
+
         # Version is already saved
-        if document.get("instanceId") == latest_version_path.instance_id:
+        if not force and document.get("instanceId") == latest_version_path.instance_id:
             continue
 
         # Refresh document

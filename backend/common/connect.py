@@ -162,7 +162,7 @@ def get_query_arg(key: str) -> Any:
     return value
 
 
-def get_optional_query_arg(key: str, default: str | None = None) -> Any:
+def get_optional_query_arg(key: str, default: Any | None = None) -> Any:
     """Returns a value from the request query, or None if it doesn't exist."""
     return flask.request.args.get(key, default)
 

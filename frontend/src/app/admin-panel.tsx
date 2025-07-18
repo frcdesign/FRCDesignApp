@@ -1,4 +1,10 @@
-import { Button, Dialog, DialogFooter } from "@blueprintjs/core";
+import {
+    Button,
+    Dialog,
+    DialogBody,
+    DialogFooter,
+    Intent
+} from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { apiPost } from "../api/api";
@@ -18,8 +24,20 @@ export function AdminPanel(): ReactNode {
 function AdminPanelDialog(): ReactNode {
     const closeDialog = useHandleCloseDialog();
 
-    const reloadButton = <ReloadAllDocumentsButton />;
-    const actions = <>{reloadButton}</>;
+    const body = (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <ReloadAllDocumentsButton force />
+            <ReloadAllDocumentsButton />
+        </div>
+    );
+    const closeButton = (
+        <Button
+            text="Close"
+            icon="cross"
+            intent={Intent.SUCCESS}
+            onClick={closeDialog}
+        />
+    );
     return (
         <Dialog
             className="admin-panel"
@@ -27,17 +45,26 @@ function AdminPanelDialog(): ReactNode {
             title="Admin Settings"
             onClose={closeDialog}
         >
-            <DialogFooter minimal actions={actions} />
+            <DialogBody>{body}</DialogBody>
+            <DialogFooter minimal actions={closeButton} />
         </Dialog>
     );
 }
 
-function ReloadAllDocumentsButton(): ReactNode {
+interface ReloadAllDocumentsButtonProps {
+    force?: boolean;
+}
+
+function ReloadAllDocumentsButton(
+    props: ReloadAllDocumentsButtonProps
+): ReactNode {
+    const force = props.force ?? false;
     const mutation = useMutation({
         mutationKey: ["save-all-documents"],
         mutationFn: () => {
             return apiPost("/save-all-documents", {
                 // Set a timeout of 5 minutes
+                query: { force: force.toString() },
                 signal: AbortSignal.timeout(5 * 60000)
             });
         },
@@ -50,7 +77,7 @@ function ReloadAllDocumentsButton(): ReactNode {
     return (
         <Button
             icon="refresh"
-            text="Reload all documents"
+            text={force ? "Force reload all documents" : "Reload all documents"}
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
             intent="primary"

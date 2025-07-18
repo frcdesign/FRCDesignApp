@@ -16,7 +16,7 @@ export function makeUrl(path: InstancePath): string;
 export function makeUrl(path: ElementPath): string;
 export function makeUrl(
     path: ElementPath,
-    configuration: Record<string, string>
+    configuration?: Record<string, string>
 ): string;
 // Impelmentation handler
 export function makeUrl(

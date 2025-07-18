@@ -77,7 +77,8 @@ export function AppNavbar(): ReactNode {
     );
 
     return (
-        <Navbar className="navbar">
+        <Navbar className="app-navbar">
+            {/* Add div to make display: flex work */}
             <div>
                 <NavbarGroup>
                     {frcDesignIcon}
