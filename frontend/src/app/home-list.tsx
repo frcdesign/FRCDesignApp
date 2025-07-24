@@ -9,13 +9,14 @@ import {
     NonIdealState,
     NonIdealStateIconSize
 } from "@blueprintjs/core";
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard, ElementCard } from "./cards";
 import { FavoriteIcon } from "./favorite";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 import { useQuery } from "@tanstack/react-query";
 import { useOnshapeData } from "../api/onshape-data";
+import { apiGet } from "../api/api";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -25,18 +26,30 @@ export function HomeList(): ReactNode {
     const onshapeData = useOnshapeData();
     const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
 
+    const query = useSearch({ from: "/app" }).query;
+    const searchQuery = useQuery<string[]>({
+        queryKey: ["search", query],
+        queryFn: () =>
+            apiGet("/search", { query }).then((result) => result.elements),
+        enabled: query !== ""
+    });
+
     if (!data || !favorites) {
         return null;
     }
 
-    const documentCards = Object.entries(data.documents).map(
-        ([id, document]) => {
-            return <DocumentCard key={id} document={document} />;
-        }
-    );
+    console.log(searchQuery.data);
 
     let favoritesContent;
-    if (Object.keys(favorites).length > 0) {
+    if (query !== "" && searchQuery.isSuccess) {
+        favoritesContent = searchQuery.data.map((elementId) => {
+            if (favorites[elementId] === undefined) {
+                return null;
+            }
+            const element = data.elements[elementId];
+            return <ElementCard key={elementId} element={element} />;
+        });
+    } else if (Object.keys(favorites).length > 0) {
         favoritesContent = Object.keys(favorites).map((id: string) => {
             // Have to guard against elements in case we ever deprecate a document
             const element = data.elements[id];
@@ -62,16 +75,23 @@ export function HomeList(): ReactNode {
         );
     }
 
+    let libraryContent;
+    if (query !== "" && searchQuery.isSuccess) {
+        libraryContent = searchQuery.data.map((elementId) => {
+            const element = data.elements[elementId];
+            return <ElementCard key={elementId} element={element} />;
+        });
+    } else {
+        libraryContent = Object.entries(data.documents).map(
+            ([id, document]) => {
+                return <DocumentCard key={id} document={document} />;
+            }
+        );
+    }
+
     return (
         <>
-            <div
-                style={{ overflow: "scroll" }}
-                // style={{
-                //     height: "100%",
-                //     display: "flex",
-                //     flexDirection: "column"
-                // }}
-            >
+            <div style={{ overflow: "scroll" }}>
                 <CardList compact bordered={false}>
                     <ListContainer
                         icon={<FavoriteIcon />}
@@ -86,7 +106,7 @@ export function HomeList(): ReactNode {
                         }
                         title="Library"
                     >
-                        {documentCards}
+                        {libraryContent}
                     </ListContainer>
                 </CardList>
             </div>

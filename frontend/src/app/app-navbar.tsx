@@ -52,10 +52,9 @@ export function AppNavbar(): ReactNode {
                 leftIcon="search"
                 placeholder="Search library..."
                 onValueChange={(value) => {
-                    const query = value === "" ? undefined : value;
                     navigate({
                         to: pathname,
-                        search: { query }
+                        search: { query: value }
                     });
                 }}
             />

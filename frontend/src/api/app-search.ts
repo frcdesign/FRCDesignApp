@@ -23,7 +23,7 @@ export type AppSearch = OnshapeData &
 
 export interface BaseSearch {
     activeDialog?: AppDialog;
-    query?: string;
+    query: string;
 }
 
 /**
