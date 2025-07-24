@@ -15,13 +15,14 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { AppDialog } from "../api/app-search";
 
 /**
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
+    const pathname = useLocation().pathname;
     const navigate = useNavigate();
 
     const [showFilters, setShowFilters] = useState(false);
@@ -50,6 +51,13 @@ export function AppNavbar(): ReactNode {
                 type="search"
                 leftIcon="search"
                 placeholder="Search library..."
+                onValueChange={(value) => {
+                    const query = value === "" ? undefined : value;
+                    navigate({
+                        to: pathname,
+                        search: { query }
+                    });
+                }}
             />
         </ControlGroup>
     );
@@ -91,13 +99,10 @@ export function AppNavbar(): ReactNode {
                         variant={ButtonVariant.MINIMAL}
                         onClick={() =>
                             navigate({
-                                to: ".",
-                                search: (prev) => {
-                                    return {
-                                        ...prev,
-                                        activeDialog: AppDialog.ADMIN_PANEL
-                                    };
-                                }
+                                to: pathname,
+                                search: () => ({
+                                    activeDialog: AppDialog.ADMIN_PANEL
+                                })
                             })
                         }
                     />

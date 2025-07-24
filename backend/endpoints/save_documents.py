@@ -4,9 +4,10 @@ import flask
 import json5
 
 from backend.common import connect, database
+from backend.common.elasticsearch import SearchIndex, get_search_client
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
-from onshape_api.endpoints.configurations import encode_configuration, get_configuration
+from onshape_api.endpoints.configurations import get_configuration
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import (
@@ -161,6 +162,7 @@ def parse_configuration(configuration: dict) -> dict:
 def save_element(
     db: database.Database,
     api: Api,
+    search_index: SearchIndex,
     version_path: InstancePath,
     element: dict,
 ) -> str:
@@ -177,22 +179,38 @@ def save_element(
     }
 
     configuration = get_configuration(api, path)
+    configuration_names = []
     if len(configuration["configurationParameters"]) > 0:
-        configuration_value = parse_configuration(configuration)
+        configurations = parse_configuration(configuration)
         # Re-use element db id since configurations can't be shared
-        db.configurations.document(element_id).set(configuration_value)
+        db.configurations.document(element_id).set(configurations)
         element_db_value["configurationId"] = element_id
+        for configuration in configurations:
+            if configuration["type"] != ParameterType.ENUM:
+                continue
+            for option in configuration["options"]:
+                name = option["name"]
+                if name in configuration_names:
+                    continue
+                configuration_names.append(name)
+
+    search_index.add_element(element_id, name, configuration_names)
 
     db.elements.document(element_id).set(element_db_value)
     return element_id
 
 
-def save_document(api: Api, db: database.Database, version_path: InstancePath) -> int:
+def save_document(
+    api: Api,
+    db: database.Database,
+    search_index: SearchIndex,
+    version_path: InstancePath,
+) -> int:
     """Loads all of the elements of a given document into the database."""
     contents = documents.get_contents(api, version_path)
 
     element_ids = [
-        save_element(db, api, version_path, element)
+        save_element(db, api, search_index, version_path, element)
         for element in contents["elements"]
         if element["elementType"] in [ElementType.ASSEMBLY, ElementType.PART_STUDIO]
     ]
@@ -202,14 +220,16 @@ def save_document(api: Api, db: database.Database, version_path: InstancePath) -
         # TODO: Report an error
         pass
 
+    document_id = version_path.document_id
     document_name = document["name"]
-    db.documents.document(version_path.document_id).set(
+    db.documents.document(document_id).set(
         {
             "name": document_name,
             "instanceId": version_path.instance_id,
             "elementIds": element_ids,
         }
     )
+    search_index.add_document(document_id, document_name)
     return len(element_ids)
 
 
@@ -218,6 +238,7 @@ def save_all_documents(**kwargs):
     """Saves the contents of the latest versions of all documents managed by FRC Design Lib into the database."""
     db = database.Database()
     api = connect.get_api(db)
+    search_index = SearchIndex(get_search_client())
 
     force = connect.get_optional_query_arg("force", False)
 
@@ -238,7 +259,7 @@ def save_all_documents(**kwargs):
         document = db.documents.document(document_path.document_id).get().to_dict()
         if document == None:
             # Document doesn't exist, create it immediately
-            count += save_document(api, db, latest_version_path)
+            count += save_document(api, db, search_index, latest_version_path)
             continue
 
         # Version is already saved
@@ -247,7 +268,7 @@ def save_all_documents(**kwargs):
 
         # Refresh document
         db.delete_document(document_path.document_id)
-        count += save_document(api, db, latest_version_path)
+        count += save_document(api, db, search_index, latest_version_path)
 
     # Clean up any documents that are no longer in the config
     for doc_ref in db.documents.stream():

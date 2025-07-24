@@ -23,6 +23,7 @@ export type AppSearch = OnshapeData &
 
 export interface BaseSearch {
     activeDialog?: AppDialog;
+    query?: string;
 }
 
 /**
@@ -34,11 +35,8 @@ export function useHandleCloseDialog() {
     return useCallback(() => {
         navigate({
             to: pathname,
-            search: (prev) => {
-                return {
-                    ...prev,
-                    activeDialog: undefined
-                };
+            search: {
+                activeDialog: undefined
             }
         });
     }, [pathname, navigate]);

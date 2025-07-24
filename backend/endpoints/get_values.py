@@ -11,7 +11,6 @@ from backend.common.connect import (
     instance_path_route,
 )
 from onshape_api.endpoints import thumbnails
-from onshape_api.endpoints.configurations import encode_configuration
 from onshape_api.paths.instance_type import InstanceType
 
 router = flask.Blueprint("get-values", __name__)
