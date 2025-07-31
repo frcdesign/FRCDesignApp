@@ -38,7 +38,7 @@ import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
 import { FavoriteButton } from "./favorite";
-import { AppDialog, useHandleCloseDialog } from "../api/app-search";
+import { AppDialog, useHandleCloseDialog } from "../api/search-params";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 
 export function InsertMenu(): ReactNode {
@@ -244,13 +244,6 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const [activeItem, setActiveItem] = useState<EnumOption | null>(
         selectedItem ?? null
     );
-
-    if (parameter.name == "Input") {
-        console.log(parameter);
-        console.log(value);
-        console.log(activeItem);
-        console.log(selectedItem);
-    }
 
     return (
         <FormGroup

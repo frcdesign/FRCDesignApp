@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
-import { AppSearch } from "./api/app-search";
+import { SearchParams } from "./api/search-params";
 import { getDocumentLoader, getFavoritesLoader } from "./queries";
 
 const rootRoute = createRootRoute();
@@ -26,7 +26,7 @@ const appRoute = createRoute({
     component: App,
     // Add SearchSchemaInput so search parameters become optional
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        return search as unknown as AppSearch;
+        return search as unknown as SearchParams;
     },
     search: {
         middlewares: [retainSearchParams(true)]

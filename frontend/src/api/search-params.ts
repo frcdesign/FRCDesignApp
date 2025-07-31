@@ -1,29 +1,31 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { OnshapeData } from "./onshape-data";
 import { useCallback } from "react";
+import { Vendor } from "./backend-types";
 
 export enum AppDialog {
     INSERT_MENU = "insert-menu",
     ADMIN_PANEL = "admin-panel"
 }
 
-export interface InsertMenuSearch {
+export interface InsertMenuParams {
     activeDialog: AppDialog.INSERT_MENU;
     // Cannot use elementId since that's already used by OnshapeData
     activeElementId: string;
 }
 
-export interface AdminPanelSearch {
+export interface AdminPanelParams {
     activeDialog: AppDialog.ADMIN_PANEL;
 }
 
-export type AppSearch = OnshapeData &
-    BaseSearch &
-    (InsertMenuSearch | AdminPanelSearch);
+export type SearchParams = OnshapeData &
+    BaseParams &
+    (InsertMenuParams | AdminPanelParams);
 
-export interface BaseSearch {
+export interface BaseParams {
     activeDialog?: AppDialog;
-    query: string;
+    query?: string;
+    vendors?: Vendor[];
 }
 
 /**

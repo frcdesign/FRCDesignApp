@@ -3,6 +3,47 @@
  */
 import { ElementPath, InstancePath } from "./path";
 
+export enum Vendor {
+    AM = "AM",
+    WCP = "WCP",
+    REV = "REV",
+    TTB = "TTB",
+    MCM = "MCM",
+    SDS = "SDS",
+    VEX = "VEX",
+    REDUX = "Redux",
+    LAI = "LAI",
+    SWYFT = "Swyft"
+}
+
+/**
+ * Gets the full name of a vendor.
+ */
+export function getVendorName(vendor: Vendor) {
+    switch (vendor) {
+        case Vendor.AM:
+            return "AndyMark";
+        case Vendor.WCP:
+            return "West Coast Products";
+        case Vendor.REV:
+            return "REV Robotics";
+        case Vendor.TTB:
+            return "The Thrifty Bot";
+        case Vendor.MCM:
+            return "McMaster-Carr";
+        case Vendor.SDS:
+            return "Swerve Drive Specialties";
+        case Vendor.VEX:
+            return "VEXpro";
+        case Vendor.REDUX:
+            return "Redux Robotics";
+        case Vendor.LAI:
+            return "Last Anvil Innovations";
+        case Vendor.SWYFT:
+            return "Swyft";
+    }
+}
+
 /**
  * The type of the Onshape tab the app is open in.
  */
@@ -142,8 +183,8 @@ export interface ElementObj extends ElementPath {
     id: string;
     name: string;
     elementType: ElementType;
-    // By default missing elements are null
-    configurationId: string | null;
+    vendor?: string;
+    configurationId?: string;
 }
 
 export type FavoritesResult = Record<string, Favorite>;

@@ -10,7 +10,7 @@ import { ReactNode } from "react";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { router } from "../router";
-import { AppDialog, useHandleCloseDialog } from "../api/app-search";
+import { AppDialog, useHandleCloseDialog } from "../api/search-params";
 import { useSearch } from "@tanstack/react-router";
 
 export function AdminPanel(): ReactNode {
@@ -28,14 +28,13 @@ function AdminPanelDialog(): ReactNode {
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <ReloadAllDocumentsButton force />
             <ReloadAllDocumentsButton />
-            <RebuildSearchIndexButton />
         </div>
     );
     const closeButton = (
         <Button
             text="Close"
             icon="cross"
-            intent={Intent.SUCCESS}
+            intent={Intent.PRIMARY}
             onClick={closeDialog}
         />
     );
@@ -81,29 +80,7 @@ function ReloadAllDocumentsButton(
             text={force ? "Force reload all documents" : "Reload all documents"}
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
-            intent="primary"
-        />
-    );
-}
-
-function RebuildSearchIndexButton(): ReactNode {
-    const mutation = useMutation({
-        mutationKey: ["rebuild-search-index"],
-        mutationFn: () => {
-            return apiPost("/rebuild-search-index", {
-                // Set a timeout of 5 minutes
-                signal: AbortSignal.timeout(5 * 60000)
-            });
-        }
-    });
-
-    return (
-        <Button
-            icon="refresh"
-            text="Rebuild search index"
-            onClick={() => mutation.mutate()}
-            loading={mutation.isPending}
-            intent="primary"
+            intent={force ? Intent.DANGER : Intent.PRIMARY}
         />
     );
 }

@@ -1,7 +1,12 @@
 import { CardList, Classes, Section, SectionCard } from "@blueprintjs/core";
-import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import {
+    Outlet,
+    useNavigate,
+    useParams,
+    useSearch
+} from "@tanstack/react-router";
 import { ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementCard } from "./cards";
+import { ElementCard, SearchResults } from "./cards";
 import { getDocumentLoader } from "../queries";
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,6 +19,8 @@ export function DocumentList(): ReactNode {
     const documentId = useParams({
         from: "/app/documents/$documentId"
     }).documentId;
+
+    const search = useSearch({ from: "/app" });
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -31,13 +38,32 @@ export function DocumentList(): ReactNode {
     }
 
     const document = data.documents[documentId];
-    const elements = document.elementIds.map(
-        (elementId) => data.elements[elementId]
-    );
 
-    const cards = elements.map((element) => {
-        return <ElementCard key={element.id} element={element} />;
-    });
+    let content;
+    if (search.query) {
+        content = (
+            <CardList compact>
+                <SearchResults
+                    query={search.query}
+                    data={data}
+                    vendors={search.vendors}
+                    documentId={documentId}
+                />
+            </CardList>
+        );
+    } else {
+        const elements = document.elementIds.map(
+            (elementId) => data.elements[elementId]
+        );
+        const cards = elements.map((element) => {
+            return <ElementCard key={element.id} element={element} />;
+        });
+        content = (
+            <CardList bordered={false} compact>
+                {cards}
+            </CardList>
+        );
+    }
 
     return (
         <>
@@ -61,9 +87,7 @@ export function DocumentList(): ReactNode {
                         overflow: "scroll"
                     }}
                 >
-                    <CardList bordered={false} compact>
-                        {cards}
-                    </CardList>
+                    {content}
                 </SectionCard>
             </Section>
             <Outlet />
