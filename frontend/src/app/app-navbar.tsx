@@ -15,8 +15,9 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate } from "@tanstack/react-router";
-import { AppDialog } from "../api/app-search";
+import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { AppDialog } from "../api/search-params";
+import { getVendorName, Vendor } from "../api/backend-types";
 
 /**
  * Provides top-level navigation for the app.
@@ -26,6 +27,8 @@ export function AppNavbar(): ReactNode {
     const navigate = useNavigate();
 
     const [showFilters, setShowFilters] = useState(false);
+    const search = useSearch({ from: "/app" });
+    const vendors = search.vendors ?? [];
 
     const frcDesignIcon = (
         <a href="https://frcdesign.org" target="_blank">
@@ -52,23 +55,34 @@ export function AppNavbar(): ReactNode {
                 leftIcon="search"
                 placeholder="Search library..."
                 onValueChange={(value) => {
+                    const query = value === "" ? undefined : value;
                     navigate({
                         to: pathname,
-                        search: { query: value }
+                        search: { query }
                     });
                 }}
             />
         </ControlGroup>
     );
 
-    const filterTags = [
-        "REV",
-        "West Coast Products",
-        "The Thrifty Bot",
-        "AndyMark"
-    ].map((vendor) => {
+    const filterTags = Object.values(Vendor).map((vendor) => {
         return (
-            <Tag round interactive key={vendor} intent={Intent.PRIMARY}>
+            <Tag
+                round
+                interactive
+                key={vendor}
+                intent={Intent.PRIMARY}
+                title={getVendorName(vendor)}
+                onClick={() => {
+                    const newVendors = [...vendors, vendor];
+                    navigate({ to: pathname, search: { vendors: newVendors } });
+                }}
+                active={
+                    vendors.length === 0
+                        ? false
+                        : !vendors.find((curr) => curr === vendor)
+                }
+            >
                 {vendor}
             </Tag>
         );
@@ -77,9 +91,12 @@ export function AppNavbar(): ReactNode {
     const clearButton = (
         <Button
             text="Clear"
-            disabled
+            disabled={vendors.length === 0}
             variant={ButtonVariant.OUTLINED}
             icon="small-cross"
+            onClick={() => {
+                navigate({ to: pathname, search: { vendors: [] } });
+            }}
         />
     );
 
@@ -109,8 +126,14 @@ export function AppNavbar(): ReactNode {
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
                 <Collapse isOpen={showFilters}>
-                    <div className="split">
-                        <div style={{ display: "flex", gap: "5px" }}>
+                    <div className="split" style={{ gap: "5x" }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: "5px",
+                                flexWrap: "wrap"
+                            }}
+                        >
                             {filterTags}
                         </div>
                         {clearButton}

@@ -6,60 +6,100 @@ import {
     Colors,
     H6,
     Icon,
+    Intent,
     NonIdealState,
     NonIdealStateIconSize
 } from "@blueprintjs/core";
 import { Outlet, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentCard, ElementCard } from "./cards";
+import { DocumentCard, ElementCard, SearchResults } from "./cards";
 import { FavoriteIcon } from "./favorite";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 import { useQuery } from "@tanstack/react-query";
-import { useOnshapeData } from "../api/onshape-data";
-import { apiGet } from "../api/api";
+import { DocumentResult } from "../api/backend-types";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
     const data = useQuery(getDocumentLoader()).data;
-    const onshapeData = useOnshapeData();
-    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+    const search = useSearch({ from: "/app" });
 
-    const query = useSearch({ from: "/app" }).query;
-    const searchQuery = useQuery<string[]>({
-        queryKey: ["search", query],
-        queryFn: () =>
-            apiGet("/search", { query }).then((result) => result.elements),
-        enabled: query !== ""
-    });
-
-    if (!data || !favorites) {
+    if (!data) {
         return null;
     }
 
-    console.log(searchQuery.data);
-
-    let favoritesContent;
-    if (query !== "" && searchQuery.isSuccess) {
-        favoritesContent = searchQuery.data.map((elementId) => {
-            if (favorites[elementId] === undefined) {
-                return null;
-            }
-            const element = data.elements[elementId];
-            return <ElementCard key={elementId} element={element} />;
-        });
-    } else if (Object.keys(favorites).length > 0) {
-        favoritesContent = Object.keys(favorites).map((id: string) => {
-            // Have to guard against elements in case we ever deprecate a document
-            const element = data.elements[id];
-            if (!element) {
-                return null;
-            }
-            return <ElementCard key={id} element={element} />;
-        });
+    let content;
+    if (search.query) {
+        // Key is needed to differentiate between Favorites
+        // Otherwise the useState in ListContainer can get confused
+        content = (
+            <ListContainer
+                key="search"
+                icon={<Icon icon="search" intent={Intent.PRIMARY} />}
+                title="Search Results"
+            >
+                <SearchResults
+                    data={data}
+                    query={search.query}
+                    vendors={search.vendors}
+                />
+            </ListContainer>
+        );
     } else {
-        favoritesContent = (
+        const libraryContent = Object.entries(data.documents).map(
+            ([id, document]) => {
+                return <DocumentCard key={id} document={document} />;
+            }
+        );
+
+        content = (
+            <>
+                <ListContainer
+                    icon={<FavoriteIcon />}
+                    title="Favorites"
+                    defaultIsOpen={false}
+                >
+                    <FavoritesList data={data} />
+                </ListContainer>
+                <ListContainer
+                    icon={<Icon icon="manual" className="frc-design-green" />}
+                    title="Library"
+                >
+                    {libraryContent}
+                </ListContainer>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <div style={{ overflow: "scroll" }}>
+                <CardList compact bordered={false}>
+                    {content}
+                </CardList>
+            </div>
+            <Outlet />
+        </>
+    );
+}
+
+interface FavoritesListProps {
+    data: DocumentResult;
+}
+
+function FavoritesList(props: FavoritesListProps) {
+    const { data } = props;
+
+    const onshapeData = useSearch({ from: "/app" });
+    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+
+    if (!favorites) {
+        return null;
+    }
+
+    if (Object.keys(favorites).length == 0) {
+        return (
             <NonIdealState
                 icon={
                     <Icon
@@ -75,50 +115,20 @@ export function HomeList(): ReactNode {
         );
     }
 
-    let libraryContent;
-    if (query !== "" && searchQuery.isSuccess) {
-        libraryContent = searchQuery.data.map((elementId) => {
-            const element = data.elements[elementId];
-            return <ElementCard key={elementId} element={element} />;
-        });
-    } else {
-        libraryContent = Object.entries(data.documents).map(
-            ([id, document]) => {
-                return <DocumentCard key={id} document={document} />;
-            }
-        );
-    }
-
-    return (
-        <>
-            <div style={{ overflow: "scroll" }}>
-                <CardList compact bordered={false}>
-                    <ListContainer
-                        icon={<FavoriteIcon />}
-                        title="Favorites"
-                        defaultIsOpen={false}
-                    >
-                        {favoritesContent}
-                    </ListContainer>
-                    <ListContainer
-                        icon={
-                            <Icon icon="manual" className="frc-design-green" />
-                        }
-                        title="Library"
-                    >
-                        {libraryContent}
-                    </ListContainer>
-                </CardList>
-            </div>
-            <Outlet />
-        </>
-    );
+    return Object.keys(favorites).map((id: string) => {
+        // Have to guard against elements in case we ever deprecate a document
+        const element = data.elements[id];
+        if (!element) {
+            return null;
+        }
+        return <ElementCard key={id} element={element} />;
+    });
 }
 
 interface ListContainerProps extends PropsWithChildren {
     /**
      * Whether the section is open by default.
-     * Defaults to true.
+     * @default true
      */
     defaultIsOpen?: boolean;
     icon: ReactNode;

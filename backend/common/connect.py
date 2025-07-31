@@ -1,7 +1,7 @@
 """Serves as an abstraction layer for connecting with the Onshape API and the current flask request."""
 
 import enum
-from typing import Any, cast
+from typing import Any
 
 from uuid import uuid4
 import flask
@@ -11,7 +11,7 @@ from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.user_path import UserPath, UserType
+from onshape_api.paths.user_path import UserPath
 
 
 def get_session_id() -> str:
@@ -183,24 +183,3 @@ def get_body_arg(key: str) -> Any:
 def get_optional_body_arg(key: str, default: Any | None = None) -> Any:
     """Returns a value from the request body, or default if it doesn't exist."""
     return flask.request.get_json().get(key, default)
-
-
-# def extract_body(
-#     required_keys: Iterable[str] = [],
-#     optional_keys: Iterable[str] = [],
-# ) -> dict:
-#     required_key_set = set(required_keys)
-#     optional_key_set = set(optional_keys)
-
-#     body = request.get_json()
-#     for key in body:
-#         if key in required_key_set:
-#             required_key_set.remove(key)
-#             continue
-#         elif key in optional_key_set:
-#             continue
-#         message = "Required arguments are missing: {}".format(
-#             ", ".join(required_key_set)
-#         )
-#         raise exceptions.ApiException(message)
-#     return body

@@ -1,10 +1,10 @@
 from __future__ import annotations
 from enum import StrEnum
+import re
 import flask
 import json5
 
 from backend.common import connect, database
-from backend.common.search import SearchIndex, get_search_client
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
@@ -17,6 +17,27 @@ from onshape_api.paths.doc_path import (
 )
 
 router = flask.Blueprint("save-documents", __name__)
+
+
+class Vendor(StrEnum):
+    AM = "AM"
+    WCP = "WCP"
+    REV = "REV"
+    TTB = "TTB"
+    MCM = "MCM"
+    SDS = "SDS"
+    VEX = "VEX"
+    REDUX = "Redux"
+    LAI = "LAI"
+    SWYFT = "Swyft"
+
+
+def parse_vendor(name: str) -> Vendor | None:
+    match = re.search(r"\((\w+)\)$", name)
+    if not match:
+        return None
+    vendor_str = match.group(1)
+    return next((vendor for vendor in Vendor if vendor == vendor_str), None)
 
 
 class ParameterType(StrEnum):
@@ -166,12 +187,13 @@ def save_element(
     element: dict,
 ) -> str:
     element_type: ElementType = element["elementType"]
-    name = element["name"]  # Use the name of the tab
+    element_name = element["name"]  # Use the name of the tab
     element_id = element["id"]
     path = ElementPath.from_path(version_path, element_id)
 
     element_db_value = {
-        "name": name,
+        "name": element_name,
+        "vendor": parse_vendor(element_name),
         "elementType": element_type,
         "documentId": version_path.document_id,
         "elementType": element_type,
@@ -204,8 +226,9 @@ def save_document(
 
     document = documents.get_document(api, version_path)
     if document["documentThumbnailElementId"] == None:
-        # TODO: Report an error
-        pass
+        raise ValueError(
+            "Document " + document["name"] + " does not have a thumbnail tab set"
+        )
 
     document_id = version_path.document_id
     document_name = document["name"]
@@ -262,34 +285,3 @@ def save_all_documents(**kwargs):
         db.delete_document(doc_ref.id)
 
     return {"savedElements": count}
-
-
-@router.post("/rebuild-search-index")
-def rebuild_search_index(**kwargs):
-    """Rebuilds the search index."""
-    search_index = SearchIndex(get_search_client())
-    db = database.Database()
-    for element_ref in db.elements.stream():
-        element_id = element_ref.id
-        element = db.elements.document(element_id).get().to_dict()
-        if element == None:
-            continue
-
-        enum_option_names = []
-        configuration_id = element.get("configurationId")
-        if configuration_id:
-            configuration = db.configurations.document(configuration_id).get().to_dict()
-            if configuration == None:
-                continue
-            for parameter in configuration["parameters"]:
-                if parameter["type"] != ParameterType.ENUM:
-                    continue
-                for option in parameter["options"]:
-                    name = option["name"]
-                    if name in enum_option_names:
-                        continue
-            enum_option_names.append(name)
-
-        search_index.add_element(element_id, element["name"], enum_option_names)
-
-    return {"success": True}

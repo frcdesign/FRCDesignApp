@@ -5,17 +5,34 @@ import {
     Classes,
     Text,
     Alert,
-    Intent
+    Intent,
+    NonIdealState,
+    NonIdealStateIconSize
 } from "@blueprintjs/core";
 import { useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentObj, ElementObj, ElementType } from "../api/backend-types";
+import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
+import {
+    DocumentObj,
+    DocumentResult,
+    ElementObj,
+    ElementType
+} from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
-import { AppDialog } from "../api/app-search";
+import { AppDialog } from "../api/search-params";
 import { useQuery } from "@tanstack/react-query";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 import { useOnshapeData } from "../api/onshape-data";
+import {
+    buildSearchDb,
+    getCachedSearchDb,
+    getSearchHitTitle,
+    SearchFilters,
+    SearchHit,
+    setCachedSearchDb,
+    doSearch
+} from "../api/search";
+import { AnyOrama } from "@orama/orama";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -49,16 +66,16 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
         </Card>
     );
 }
-
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
+    searchHit?: SearchHit;
 }
 
 /**
  * A card representing a part studio or assembly.
  */
 export function ElementCard(props: ElementCardProps): ReactNode {
-    const { element } = props;
+    const { element, searchHit } = props;
     const navigate = useNavigate();
     const onshapeData = useOnshapeData();
     const data = useQuery(getDocumentLoader()).data;
@@ -99,6 +116,13 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         </Alert>
     );
 
+    let title;
+    if (searchHit) {
+        title = getSearchHitTitle(searchHit);
+    } else {
+        title = <Text>{element.name}</Text>;
+    }
+
     return (
         <Card
             interactive
@@ -120,13 +144,88 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         >
             <EntityTitle
                 className={
-                    isAssemblyInPartStudio ? Classes.TEXT_DISABLED : undefined
+                    isAssemblyInPartStudio ? Classes.TEXT_MUTED : undefined
                 }
-                title={<Text>{element.name}</Text>}
+                title={title}
                 icon={thumbnail}
             />
             {favoriteButton}
             {alert}
         </Card>
     );
+}
+
+interface SearchResultsProps extends SearchFilters {
+    data: DocumentResult;
+    query: string;
+}
+
+export function SearchResults(props: SearchResultsProps): ReactNode {
+    const { data, query, documentId, vendors } = props;
+
+    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
+        getCachedSearchDb()
+    );
+    const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
+        undefined
+    );
+
+    useEffect(() => {
+        if (getCachedSearchDb()) {
+            setSearchDb(getCachedSearchDb());
+        } else {
+            const searchDb = buildSearchDb(data);
+            setCachedSearchDb(searchDb);
+            setSearchDb(searchDb);
+        }
+    }, [data]);
+
+    useEffect(() => {
+        const search = async () => {
+            if (!searchDb) {
+                return;
+            }
+            setSearchHits(
+                await doSearch(searchDb, query, { documentId, vendors })
+            );
+        };
+
+        search();
+    }, [searchDb, query, documentId, vendors]);
+
+    if (!searchDb || !searchHits) {
+        return null;
+    }
+
+    let content = null;
+    if (searchHits.length === 0) {
+        content = (
+            <div style={{ height: "150px" }}>
+                <NonIdealState
+                    icon={
+                        <Icon
+                            icon="search"
+                            size={NonIdealStateIconSize.STANDARD}
+                            intent={Intent.DANGER}
+                        />
+                    }
+                    title="No search results"
+                />
+            </div>
+        );
+    } else {
+        content = searchHits.map((searchHit: SearchHit) => {
+            const elementId = searchHit.id;
+            const element = data.elements[elementId];
+            return (
+                <ElementCard
+                    key={elementId}
+                    element={element}
+                    searchHit={searchHit}
+                />
+            );
+        });
+    }
+
+    return content;
 }

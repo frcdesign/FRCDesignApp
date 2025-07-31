@@ -42,11 +42,10 @@ def get_documents(**kwargs):
             if element == None:
                 raise ValueError(f"Missing element with id {element_id}")
 
-            elements[element_id] = {
+            element_obj = {
                 "id": element_id,
                 "name": element["name"],
                 "elementType": element["elementType"],
-                "configurationId": element.get("configurationId"),
                 # Copy properties from document so we don't have to parse backreference on client
                 "documentId": doc_ref.id,
                 "instanceId": document["instanceId"],
@@ -54,6 +53,15 @@ def get_documents(**kwargs):
                 # Include element id again out of laziness so we can parse it on the client
                 "elementId": element_id,
             }
+
+            # Do not send a property with value None, as this results in a null on the client
+            if element.get("configurationId") != None:
+                element_obj["configurationId"] = element["configurationId"]
+
+            if element.get("vendor") != None:
+                element_obj["vendor"] = element["vendor"]
+
+            elements[element_id] = element_obj
 
     return {"documents": documents, "elements": elements}
 
