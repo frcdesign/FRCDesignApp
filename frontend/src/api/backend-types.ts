@@ -5,15 +5,15 @@ import { ElementPath, InstancePath } from "./path";
 
 export enum Vendor {
     AM = "AM",
-    WCP = "WCP",
-    REV = "REV",
-    TTB = "TTB",
-    MCM = "MCM",
-    SDS = "SDS",
-    VEX = "VEX",
-    REDUX = "Redux",
     LAI = "LAI",
-    SWYFT = "Swyft"
+    MCM = "MCM",
+    REDUX = "Redux",
+    REV = "REV",
+    SDS = "SDS",
+    SWYFT = "Swyft",
+    TTB = "TTB",
+    VEX = "VEX",
+    WCP = "WCP"
 }
 
 /**
@@ -23,24 +23,24 @@ export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AM:
             return "AndyMark";
-        case Vendor.WCP:
-            return "West Coast Products";
-        case Vendor.REV:
-            return "REV Robotics";
-        case Vendor.TTB:
-            return "The Thrifty Bot";
-        case Vendor.MCM:
-            return "McMaster-Carr";
-        case Vendor.SDS:
-            return "Swerve Drive Specialties";
-        case Vendor.VEX:
-            return "VEXpro";
-        case Vendor.REDUX:
-            return "Redux Robotics";
         case Vendor.LAI:
             return "Last Anvil Innovations";
+        case Vendor.MCM:
+            return "McMaster-Carr";
+        case Vendor.REDUX:
+            return "Redux Robotics";
+        case Vendor.REV:
+            return "REV Robotics";
+        case Vendor.SDS:
+            return "Swerve Drive Specialties";
         case Vendor.SWYFT:
             return "Swyft";
+        case Vendor.TTB:
+            return "The Thrifty Bot";
+        case Vendor.VEX:
+            return "VEXpro";
+        case Vendor.WCP:
+            return "West Coast Products";
     }
 }
 

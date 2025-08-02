@@ -9,4 +9,4 @@ session_secret = os.environ["SESSION_SECRET"]
 
 is_production = os.getenv("NODE_ENV", "production") == "production"
 
-search_key = os.environ["ELASTICSEARCH_KEY"]
+# search_key = os.environ["ELASTICSEARCH_KEY"]
