@@ -29,8 +29,6 @@ OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 SESSION_SECRET=literallyAnythingWillDo
 
-ELASTICSEARCH_KEY=<Your elasticsearch API key>
-
 NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
@@ -174,7 +172,6 @@ env_variables:
     OAUTH_CLIENT_ID: "<YOUR PRODUCTION OAUTH CLIENT ID IN QUOTES>"
     OAUTH_CLIENT_SECRET: "<YOUR PRODUCTION OAUTH CLIENT SECRET IN QUOTES>"
     SESSION_SECRET: "<AN ARBITRARY SECRET YOU MAKE UP>"
-    ELASTICSEARCH_KEY: "<ELASTICSEARCH API KEY>"
 
 # Ran out of memory with F1 instance and 2 workers, so only 2 workers on F2
 entrypoint: uv run gunicorn -b :8080 -w 2 -t 60 "backend.server:create_app()"
