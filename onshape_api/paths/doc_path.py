@@ -278,3 +278,7 @@ def path_to_frontend_dict(path: ElementPath) -> dict:
 
     result.update({"elementId": path.element_id})
     return result
+
+
+def path_to_namespace(path: ElementPath, microversion_id: str) -> str:
+    return f"d{path.document_id}::{path.instance_type}{path.instance_id}::e{path.element_id}::m{microversion_id}"

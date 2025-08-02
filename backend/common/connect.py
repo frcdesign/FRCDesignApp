@@ -143,27 +143,44 @@ def get_route(route_param: str) -> Any:
     """
     view_args = flask.request.view_args
     if view_args is None or (param := view_args.get(route_param)) is None:
-        raise backend_exceptions.ReportedException(
+        raise backend_exceptions.FrontendException(
             "Missing required path parameter {}.".format(route_param)
         )
     return param
 
 
-def get_query_arg(key: str) -> Any:
+def get_query_param(key: str) -> Any:
     """Returns a value from the request query.
 
     Throws if it doesn't exist.
     """
     value = flask.request.args.get(key)
     if value is None:
-        raise backend_exceptions.ReportedException(
+        raise backend_exceptions.FrontendException(
             "Missing required query parameter {}.".format(key)
         )
     return value
 
 
-def get_optional_query_arg(key: str, default: Any | None = None) -> Any:
-    """Returns a value from the request query, or None if it doesn't exist."""
+def get_query_bool(key: str, default: bool | None = None) -> bool:
+    """Returns a boolean from the request query. Throws if a boolean isn't found and default is None."""
+    value = flask.request.args.get(key)
+    if value == None:
+        if default == None:
+            raise backend_exceptions.FrontendException(
+                "Missing required query parameter {}.".format(key)
+            )
+        return default
+
+    return str_to_bool(value)
+
+
+def str_to_bool(s: str) -> bool:
+    return s.lower() == "true"
+
+
+def get_optional_query_param(key: str, default: Any | None = None) -> Any:
+    """Returns a value from the request query, or default if it doesn't exist."""
     return flask.request.args.get(key, default)
 
 
@@ -174,7 +191,7 @@ def get_body_arg(key: str) -> Any:
     """
     value = flask.request.get_json().get(key, None)
     if not value:
-        raise backend_exceptions.ReportedException(
+        raise backend_exceptions.FrontendException(
             "Missing required body parameter {}.".format(key)
         )
     return value

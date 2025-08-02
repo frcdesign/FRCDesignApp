@@ -14,7 +14,6 @@ def api_exception(e: ApiError):
     return e.to_dict(), e.status_code
 
 
-
 @router.errorhandler(backend_exceptions.ReportedException)
 def reported_exception(e: backend_exceptions.ReportedException):
     return e.to_dict(), e.status_code

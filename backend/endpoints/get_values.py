@@ -3,9 +3,10 @@ import flask
 
 from backend.common import database
 from backend.common import connect
+from backend.common.backend_exceptions import BackendException, FrontendException
 from backend.common.connect import (
     element_path_route,
-    get_optional_query_arg,
+    get_optional_query_param,
     get_route_element_path,
     get_route_instance_path,
     instance_path_route,
@@ -40,7 +41,7 @@ def get_documents(**kwargs):
         for element_id in document["elementIds"]:
             element = db.elements.document(element_id).get().to_dict()
             if element == None:
-                raise ValueError(f"Missing element with id {element_id}")
+                raise BackendException(f"Missing element with id {element_id}")
 
             element_obj = {
                 "id": element_id,
@@ -50,8 +51,9 @@ def get_documents(**kwargs):
                 "documentId": doc_ref.id,
                 "instanceId": document["instanceId"],
                 "instanceType": InstanceType.VERSION,
-                # Include element id again out of laziness so we can parse it on the client
+                # Include element id again out of laziness so this becomes a valid ElementPath
                 "elementId": element_id,
+                "microversionId": element["microversionId"],
                 "isVisible": element["isVisible"],
             }
 
@@ -73,7 +75,9 @@ def get_configuration(configuration_id: str):
     db = database.Database()
     result = db.configurations.document(configuration_id).get().to_dict()
     if result == None:
-        raise ValueError(f"Failed to find configuration with id {configuration_id}")
+        raise FrontendException(
+            f"Failed to find configuration with id {configuration_id}"
+        )
     return result
 
 
@@ -82,7 +86,7 @@ def get_document_thumbnail(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
     instance_path = get_route_instance_path()
-    size = get_optional_query_arg("size")
+    size = get_optional_query_param("size")
     thumbnail = thumbnails.get_instance_thumbnail(api, instance_path, size)
     return flask.send_file(thumbnail, mimetype="image/gif")
 
@@ -93,8 +97,8 @@ def get_element_thumbnail(**kwargs):
     api = connect.get_api(db)
     element_path = get_route_element_path()
 
-    size = get_optional_query_arg("size")
-    thumbnail_id = get_optional_query_arg("thumbnailId")
+    size = get_optional_query_param("size")
+    thumbnail_id = get_optional_query_param("thumbnailId")
 
     if thumbnail_id == None:
         thumbnail = thumbnails.get_element_thumbnail(api, element_path, size)
@@ -109,7 +113,7 @@ def get_thumbnail_id(**kwargs):
     api = connect.get_api(db)
     element_path = get_route_element_path()
 
-    configuration = get_optional_query_arg("configuration")
+    configuration = get_optional_query_param("configuration")
     logging.info(configuration)
     return {
         "thumbnailId": thumbnails.get_thumbnail_id(api, element_path, configuration)

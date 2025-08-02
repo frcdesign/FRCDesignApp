@@ -264,3 +264,10 @@ def get_contents(
     return api.get(
         api_path("documents", instance_path, InstancePath, "contents"), query=query
     )
+
+
+def get_microversion_id(api: Api, instance_path: InstancePath) -> str:
+    """Returns the latest microversion of a given workspace or version."""
+    return api.get(
+        api_path("documents", instance_path, InstancePath, "currentmicroversion")
+    )["microversion"]

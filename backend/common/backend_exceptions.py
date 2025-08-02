@@ -32,6 +32,16 @@ class AuthException(BackendException):
         )
 
 
+class FrontendException(BackendException):
+    """An unexpected exception caused by the frontend."""
+
+    def __init__(self, message: str):
+        super().__init__(
+            message,
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+
 class ReportedException(ABC, Exception):
     """An exception which is exposed to the user."""
 

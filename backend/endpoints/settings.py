@@ -2,7 +2,7 @@ import flask
 
 from backend.common.connect import (
     get_api,
-    get_query_arg,
+    get_query_param,
     get_route_user_path,
     user_path_route,
 )
@@ -38,7 +38,7 @@ def add_favorite(**kwargs):
     client_path = get_route_user_path()
     db = Database()
     api = get_api(db)
-    element_id = get_query_arg("elementId")
+    element_id = get_query_param("elementId")
 
     update: Update = {
         "key": "favorites",
@@ -56,7 +56,7 @@ def remove_favorite(**kwargs):
     api = get_api(db)
 
     client_path = get_route_user_path()
-    element_id = get_query_arg("elementId")
+    element_id = get_query_param("elementId")
 
     update: Update = {
         "key": "favorites",

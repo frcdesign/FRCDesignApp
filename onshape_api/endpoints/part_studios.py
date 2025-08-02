@@ -29,25 +29,11 @@ def evaluate_feature_script(
     return json.loads(result["console"])
 
 
-def add_feature(
-    api: Api,
-    part_studio_path: ElementPath,
-    name: str,
-    namespace: str,
-    feature_type: str,
-):
+def add_feature(api: Api, part_studio_path: ElementPath, feature: dict):
     """Adds a feature to a part studio."""
     assert_instance_type(part_studio_path, InstanceType.WORKSPACE)
 
-    body = {
-        "btType": "BTFeatureDefinitionCall-1406",
-        "feature": {
-            "btType": "BTMFeature-134",
-            "namespace": namespace,
-            "name": name,
-            "featureType": feature_type,
-        },
-    }
+    body = {"feature": feature}
 
     return api.post(
         api_path("partstudios", part_studio_path, ElementPath, "features"), body=body

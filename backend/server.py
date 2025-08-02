@@ -2,7 +2,7 @@ import logging
 import os
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import flask
-from backend.common.access import get_app_access_level
+from backend.common.app_access import get_app_access_level
 from onshape_api.endpoints import users
 from backend.endpoints import api
 from backend.common import connect, database, env

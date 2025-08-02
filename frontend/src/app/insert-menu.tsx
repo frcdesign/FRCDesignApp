@@ -9,7 +9,7 @@ import {
     EnumParameterObj,
     evaluateCondition,
     ParameterObj,
-    ParameterType,
+    ConfigurationType,
     QuantityParameterObj,
     StringParameterObj
 } from "../api/backend-types";
@@ -199,7 +199,7 @@ function ConfigurationParameter(
 ): ReactNode {
     // Need to expose parameter directly to get type narrowing
     const { parameter, value, onValueChange } = props;
-    if (parameter.type === ParameterType.ENUM) {
+    if (parameter.type === ConfigurationType.ENUM) {
         return (
             <EnumParameter
                 parameter={parameter}
@@ -207,7 +207,7 @@ function ConfigurationParameter(
                 onValueChange={onValueChange}
             />
         );
-    } else if (parameter.type === ParameterType.BOOLEAN) {
+    } else if (parameter.type === ConfigurationType.BOOLEAN) {
         return (
             <BooleanParameter
                 parameter={parameter}
@@ -215,7 +215,7 @@ function ConfigurationParameter(
                 onValueChange={onValueChange}
             />
         );
-    } else if (parameter.type === ParameterType.STRING) {
+    } else if (parameter.type === ConfigurationType.STRING) {
         return (
             <StringParameter
                 parameter={parameter}
@@ -223,7 +223,7 @@ function ConfigurationParameter(
                 onValueChange={onValueChange}
             />
         );
-    } else if (parameter.type === ParameterType.QUANTITY) {
+    } else if (parameter.type === ConfigurationType.QUANTITY) {
         return (
             <QuantityParameter
                 parameter={parameter}
@@ -374,16 +374,24 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
         mutationKey: ["insert", element.id],
         mutationFn: async () => {
             let endpoint;
+            const body: Record<string, any> = {
+                documentId: element.documentId,
+                instanceType: element.instanceType,
+                instanceId: element.instanceId,
+                elementId: element.id,
+                configuration
+            };
             if (onshapeData.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
+                body.elementType = element.elementType;
             } else {
+                // Part studio derive also needs name and microversion id
                 endpoint = "/add-to-part-studio";
+                body.name = element.name;
+                body.microversionId = element.microversionId;
             }
             return apiPost(endpoint + toElementApiPath(onshapeData), {
-                body: {
-                    ...element,
-                    configuration
-                }
+                body
             });
         },
         onSuccess: closeDialog

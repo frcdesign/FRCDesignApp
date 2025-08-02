@@ -23,11 +23,30 @@ def parse_vendor(name: str) -> Vendor | None:
     return next((vendor for vendor in Vendor if vendor == vendor_str), None)
 
 
-class ParameterType(StrEnum):
+class ConfigurationType(StrEnum):
     ENUM = "BTMConfigurationParameterEnum-105"
     QUANTITY = "BTMConfigurationParameterQuantity-1826"
     BOOLEAN = "BTMConfigurationParameterBoolean-2550"
     STRING = "BTMConfigurationParameterString-872"
+
+
+class ParameterType(StrEnum):
+    ENUM = "BTMParameterEnum-145"
+    QUANTITY = "BTMParameterQuantity-147"
+    BOOLEAN = "BTMParameterBoolean-144"
+    STRING = "BTMParameterString-149"
+
+
+type_mapping = {
+    ConfigurationType.ENUM: ParameterType.ENUM,
+    ConfigurationType.QUANTITY: ParameterType.QUANTITY,
+    ConfigurationType.BOOLEAN: ParameterType.BOOLEAN,
+    ConfigurationType.STRING: ParameterType.STRING,
+}
+
+
+def config_type_to_parameter_type(config_type: ConfigurationType) -> ParameterType:
+    return type_mapping[config_type]
 
 
 class QuantityType(StrEnum):

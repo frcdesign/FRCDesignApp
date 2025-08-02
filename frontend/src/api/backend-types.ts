@@ -68,7 +68,7 @@ export enum ElementType {
     ASSEMBLY = "ASSEMBLY"
 }
 
-export enum ParameterType {
+export enum ConfigurationType {
     ENUM = "BTMConfigurationParameterEnum-105",
     QUANTITY = "BTMConfigurationParameterQuantity-1826",
     BOOLEAN = "BTMConfigurationParameterBoolean-2550",
@@ -159,11 +159,11 @@ export interface ParameterBase {
     visibilityCondition: VisibilityCondition | null;
 }
 export interface BooleanParameterObj extends ParameterBase {
-    type: ParameterType.BOOLEAN;
+    type: ConfigurationType.BOOLEAN;
 }
 
 export interface StringParameterObj extends ParameterBase {
-    type: ParameterType.STRING;
+    type: ConfigurationType.STRING;
 }
 
 export interface EnumOption {
@@ -172,12 +172,12 @@ export interface EnumOption {
 }
 
 export interface EnumParameterObj extends ParameterBase {
-    type: ParameterType.ENUM;
+    type: ConfigurationType.ENUM;
     options: EnumOption[];
 }
 
 export interface QuantityParameterObj extends ParameterBase {
-    type: ParameterType.QUANTITY;
+    type: ConfigurationType.QUANTITY;
     quantityType: QuantityType;
     min: number;
     max: number;
@@ -199,6 +199,8 @@ export interface ElementObj extends ElementPath {
     id: string;
     name: string;
     elementType: ElementType;
+    microversionId: string;
+    isVisible: boolean;
     vendor?: string;
     configurationId?: string;
 }

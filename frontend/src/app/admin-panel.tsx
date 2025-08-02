@@ -12,6 +12,7 @@ import { queryClient } from "../query-client";
 import { router } from "../router";
 import { AppDialog, useHandleCloseDialog } from "../api/search-params";
 import { useSearch } from "@tanstack/react-router";
+import { showSuccessToast } from "./toaster";
 
 export function AdminPanel(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -64,11 +65,19 @@ function ReloadAllDocumentsButton(
         mutationFn: () => {
             return apiPost("/save-all-documents", {
                 // Set a timeout of 5 minutes
-                query: { force: force.toString() },
+                query: { force },
                 signal: AbortSignal.timeout(5 * 60000)
             });
         },
-        onSuccess: async () => {
+        onSuccess: async (result) => {
+            const savedElements = result["savedElements"];
+            if (savedElements === 0) {
+                showSuccessToast("All documents were already up to date.");
+            } else {
+                showSuccessToast(
+                    "Successfully reloaded " + savedElements + " tabs."
+                );
+            }
             await queryClient.refetchQueries({ queryKey: ["documents"] });
             router.invalidate(); // Trigger page reload
         }

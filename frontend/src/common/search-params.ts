@@ -3,7 +3,7 @@ export type ParamKeyValuePair = [string, string];
 export type URLSearchParamsInit =
     | string
     | ParamKeyValuePair[]
-    | Record<string, string | string[]>
+    | Record<string, boolean | string | string[]>
     | URLSearchParams;
 
 /**
@@ -22,7 +22,7 @@ export function createSearchParams(
                   return memo.concat(
                       Array.isArray(value)
                           ? value.map((v) => [key, v])
-                          : [[key, value]]
+                          : [[key, value.toString()]]
                   );
               }, [] as ParamKeyValuePair[])
     );

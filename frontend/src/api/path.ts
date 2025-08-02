@@ -6,10 +6,6 @@ export interface WorkspacePath extends DocumentPath {
     instanceId: string;
 }
 
-export interface Workspace extends WorkspacePath {
-    name: string;
-}
-
 export type InstanceType = "w" | "v" | "m";
 
 export interface InstancePath extends WorkspacePath {

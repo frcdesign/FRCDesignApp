@@ -1,14 +1,15 @@
 from __future__ import annotations
+import logging
 import flask
 import json5
 
 from backend.common import connect, database
-from backend.common.access import require_admin_access, require_member_access
+from backend.common.app_access import require_member_access
 from backend.endpoints.backend_types import (
     NONE_CONDITION,
     ConditionType,
     LogicalOp,
-    ParameterType,
+    ConfigurationType,
     Unit,
     get_abbreviation,
     parse_vendor,
@@ -69,27 +70,27 @@ def parse_condition(visibility_condition: dict | None) -> dict | None:
 def parse_configuration(configuration: dict) -> dict:
     parameters = []
     for parameter in configuration["configurationParameters"]:
-        parameter_type = parameter["btType"]
+        config_type = parameter["btType"]
         condition_dict = parse_condition(parameter["visibilityCondition"])
         result = {
             "id": parameter["parameterId"],
             "name": parameter["parameterName"],
-            "type": parameter_type,
+            "type": config_type,
             "visibilityCondition": condition_dict,
         }
 
-        if parameter_type == ParameterType.ENUM:
+        if config_type == ConfigurationType.ENUM:
             result["default"] = parameter["defaultValue"]
             result["options"] = [
                 {"id": option["option"], "name": option["optionName"]}
                 for option in parameter["options"]
             ]
-        elif parameter_type == ParameterType.BOOLEAN:
+        elif config_type == ConfigurationType.BOOLEAN:
             # Convert to "true" or "false" for simplicity
             result["default"] = str(parameter["defaultValue"]).lower()
-        elif parameter_type == ParameterType.STRING:
+        elif config_type == ConfigurationType.STRING:
             result["default"] = parameter["defaultValue"]
-        elif parameter_type == ParameterType.QUANTITY:
+        elif config_type == ConfigurationType.QUANTITY:
             quantity_type = parameter["quantityType"]
             range = parameter["rangeAndDefault"]
 
@@ -117,7 +118,12 @@ def save_element(
     element: dict,
     preserved_info: PreservedInfo,
 ) -> str:
+    """
+    Parameters:
+        element: A part studio or assembly returned by the /elements endpoint.
+    """
     element_type: ElementType = element["elementType"]
+
     element_name = element["name"]  # Use the name of the tab
     element_id = element["id"]
     path = ElementPath.from_path(version_path, element_id)
@@ -130,6 +136,7 @@ def save_element(
         "elementType": element_type,
         "documentId": version_path.document_id,
         "elementType": element_type,
+        "microversionId": element["microversionId"],
         "isVisible": preserved["isVisible"],
     }
 
@@ -199,13 +206,15 @@ def save_all_documents(**kwargs):
     db = database.Database()
     api = connect.get_api(db)
 
-    force = connect.get_optional_query_arg("force", False)
+    force = connect.get_query_bool("force", False)
 
     with open("config.json") as file:
         config = json5.load(file)
 
     # Iterate in reverse so the result is ordered
     documents_list = reversed(config["documents"])
+
+    preserved_info = preserve_info(db)
 
     count = 0
     visited = set()
@@ -226,7 +235,6 @@ def save_all_documents(**kwargs):
             continue
 
         # Refresh document
-        preserved_info = preserve_info(db)
         db.delete_document(document_path.document_id)
         count += save_document(api, db, latest_version_path, preserved_info)
 
