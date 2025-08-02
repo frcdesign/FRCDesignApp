@@ -3,6 +3,22 @@
  */
 import { ElementPath, InstancePath } from "./path";
 
+export enum AccessLevel {
+    ADMIN = "admin",
+    MEMBER = "member",
+    USER = "user"
+}
+
+export function hasAdminAccess(accessLevel: AccessLevel) {
+    return accessLevel === AccessLevel.ADMIN;
+}
+
+export function hasMemberAccess(accessLevel: AccessLevel) {
+    return (
+        accessLevel === AccessLevel.ADMIN || accessLevel === AccessLevel.MEMBER
+    );
+}
+
 export enum Vendor {
     AM = "AM",
     LAI = "LAI",

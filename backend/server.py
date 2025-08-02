@@ -1,7 +1,9 @@
 import logging
 import os
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import flask
-from onshape_api.endpoints import settings
+from backend.common.access import get_app_access_level
+from onshape_api.endpoints import users
 from backend.endpoints import api
 from backend.common import connect, database, env
 from backend import oauth
@@ -10,7 +12,7 @@ from backend import oauth
 def create_app():
     app = flask.Flask(__name__)
     app.config.update(
-        SESSION_COOKIE_NAME="robot-manager",
+        SESSION_COOKIE_NAME="frc-design-lib",
         SECRET_KEY=env.session_secret,
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
@@ -33,13 +35,21 @@ def create_app():
         """The base route used by Onshape."""
         db = database.Database()
         api = connect.get_api(db)
-        authorized = api.oauth.authorized and settings.ping(api, catch=True)
+        authorized = api.oauth.authorized and users.ping(api, catch=True)
         if not authorized:
             # In Google Cloud the request url is always http
             # But when we redirect we need https to avoid getting blocked by the browser
             secure_url = flask.request.url.replace("http://", "https://", 1)
             flask.session["redirect_url"] = secure_url
             return flask.redirect("/sign-in")
+
+        if "accessLevel" not in flask.request.args:
+            # Redirect to add accessLevel to flask request
+            url = flask.request.url
+            access_level = get_app_access_level(api)
+            new_url = add_query_params(url, {"accessLevel": access_level})
+            return flask.redirect(new_url)
+
         return serve_index()
 
     @app.get("/license")
@@ -65,3 +75,17 @@ def create_app():
             return flask.render_template("index.html")
 
     return app
+
+    # logging.info(redirect_url)
+    # Add accessLevel to search params so it's available in the UI
+    # api = connect.get_api(db)
+    # logging.info(new_url)
+
+
+def add_query_params(url: str, params: dict) -> str:
+    """Adds params in params to url."""
+    parsed_url = urlparse(url)
+    query_params = dict(parse_qsl(parsed_url.query))
+    query_params.update(params)
+    new_query = urlencode(query_params)
+    return urlunparse(parsed_url._replace(query=new_query))

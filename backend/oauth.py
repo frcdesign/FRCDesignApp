@@ -7,6 +7,7 @@ The frontend should have a /sign-in route which redirects to the /sign-in route 
 The frontend should have a /redirect route which calls the /redirect route below.
 """
 
+import logging
 import flask
 from flask import request
 from backend.common import connect, database, env

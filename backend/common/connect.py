@@ -113,7 +113,7 @@ def get_route_instance_path() -> onshape_api.InstancePath:
     )
 
 
-def get_route_element_path(wvm_param: str = "w") -> onshape_api.ElementPath:
+def get_route_element_path() -> onshape_api.ElementPath:
     return onshape_api.ElementPath.from_path(
         get_route_instance_path(),
         get_route("element_id"),

@@ -14,9 +14,10 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { AppDialog } from "../api/search-params";
 import { VendorFilters } from "./vendor-filters";
+import { hasMemberAccess } from "../api/backend-types";
 
 /**
  * Provides top-level navigation for the app.
@@ -24,6 +25,7 @@ import { VendorFilters } from "./vendor-filters";
 export function AppNavbar(): ReactNode {
     const pathname = useLocation().pathname;
     const navigate = useNavigate();
+    const search = useSearch({ from: "/app" });
 
     const [showFilters, setShowFilters] = useState(false);
 
@@ -62,6 +64,10 @@ export function AppNavbar(): ReactNode {
         </ControlGroup>
     );
 
+    const settingsButton = hasMemberAccess(search.accessLevel) ? (
+        <SettingsButton />
+    ) : null;
+
     return (
         <Navbar className="app-navbar">
             {/* Add div to make display: flex work */}
@@ -72,18 +78,7 @@ export function AppNavbar(): ReactNode {
                     {searchGroup}
                 </NavbarGroup>
                 <NavbarGroup align={Alignment.END}>
-                    <Button
-                        icon="cog"
-                        variant={ButtonVariant.MINIMAL}
-                        onClick={() =>
-                            navigate({
-                                to: pathname,
-                                search: () => ({
-                                    activeDialog: AppDialog.ADMIN_PANEL
-                                })
-                            })
-                        }
-                    />
+                    {settingsButton}
                 </NavbarGroup>
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
@@ -92,5 +87,25 @@ export function AppNavbar(): ReactNode {
                 </Collapse>
             </div>
         </Navbar>
+    );
+}
+
+export function SettingsButton() {
+    const pathname = useLocation().pathname;
+    const navigate = useNavigate();
+
+    return (
+        <Button
+            icon="cog"
+            variant={ButtonVariant.MINIMAL}
+            onClick={() =>
+                navigate({
+                    to: pathname,
+                    search: () => ({
+                        activeDialog: AppDialog.ADMIN_PANEL
+                    })
+                })
+            }
+        />
     );
 }

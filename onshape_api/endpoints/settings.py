@@ -1,26 +1,8 @@
 from enum import StrEnum
 from typing import Any, Iterable, NotRequired, TypedDict
-from onshape_api.api.api_base import Api
 from onshape_api.api.oauth_api import OAuthApi
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.user_path import UserPath
-
-
-def ping(api: Api, catch: bool = False) -> bool:
-    """Pings the Onshape API's users/sessioninfo endpoint.
-
-    Returns true if the ping was successful, and false if it was not.
-
-    Args:
-        catch: True to return False in place of any thrown exceptions.
-    """
-    try:
-        api.get(api_path("users", end_route="sessioninfo"))
-        return True
-    except Exception as e:
-        if catch:
-            return False
-        raise e
 
 
 def get_setting(api: OAuthApi, user_path: UserPath, key: str) -> dict | None:

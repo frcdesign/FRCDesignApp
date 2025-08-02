@@ -18,7 +18,7 @@ First, create a new file in the root of this project named `.env` and add the fo
 # Server config
 API_LOGGING=true # Enable or disable logging
 API_BASE_PATH=https://cad.onshape.com
-API_VERSION=11 # Control which version of the Onshape API the app uses
+API_VERSION=12 # Control which version of the Onshape API the app uses
 
 # API Keys (Optional)
 API_ACCESS_KEY=<Your API Access Key>
@@ -29,12 +29,20 @@ OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 SESSION_SECRET=literallyAnythingWillDo
 
+# One of admin, member, or user, depending on desired access to the app. Does nothing in production.
+ACCESS_LEVEL_OVERRIDE=admin
+# Team to use when determining access level (unless access level override is specified in development).
+ADMIN_TEAM=5b620150b2190f0fca90ec10
+
 NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
 
 You only need API keys if you plan on accessing the Onshape API via regular python script.
 You will likely need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
+
+Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
+You can manually retrigger an update by saving in backend/common/env.py or by killing and restarting the flask server.
 
 ## Python Setup
 
@@ -172,6 +180,7 @@ env_variables:
     OAUTH_CLIENT_ID: "<YOUR PRODUCTION OAUTH CLIENT ID IN QUOTES>"
     OAUTH_CLIENT_SECRET: "<YOUR PRODUCTION OAUTH CLIENT SECRET IN QUOTES>"
     SESSION_SECRET: "<AN ARBITRARY SECRET YOU MAKE UP>"
+    ADMIN_TEAM: "5b620150b2190f0fca90ec10"
 
 # Ran out of memory with F1 instance and 2 workers, so only 2 workers on F2
 entrypoint: uv run gunicorn -b :8080 -w 2 -t 60 "backend.server:create_app()"

@@ -1,11 +1,13 @@
 import { useSearch } from "@tanstack/react-router";
-import { ElementType } from "./backend-types";
+import { AccessLevel, ElementType } from "./backend-types";
 import { UserPath, ElementPath } from "./path";
 import { Classes } from "@blueprintjs/core";
 
 export interface OnshapeData extends ElementPath, UserPath {
     elementType: ElementType;
     theme: ColorTheme;
+    // Note: this is injected manually inside server.py
+    accessLevel: AccessLevel;
 }
 
 export enum ColorTheme {

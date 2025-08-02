@@ -52,9 +52,10 @@ def get_documents(**kwargs):
                 "instanceType": InstanceType.VERSION,
                 # Include element id again out of laziness so we can parse it on the client
                 "elementId": element_id,
+                "isVisible": element["isVisible"],
             }
 
-            # Do not send a property with value None, as this results in a null on the client
+            # Do not send a property with value None, as this results in a null (rather than undefined) on the client
             if element.get("configurationId") != None:
                 element_obj["configurationId"] = element["configurationId"]
 

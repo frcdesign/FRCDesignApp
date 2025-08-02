@@ -1,10 +1,21 @@
 from __future__ import annotations
-from enum import StrEnum
-import re
 import flask
 import json5
 
 from backend.common import connect, database
+from backend.common.access import require_admin_access, require_member_access
+from backend.endpoints.backend_types import (
+    NONE_CONDITION,
+    ConditionType,
+    LogicalOp,
+    ParameterType,
+    Unit,
+    get_abbreviation,
+    parse_vendor,
+)
+from backend.endpoints.preserved_info import (
+    PreservedInfo,
+)
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
@@ -19,89 +30,8 @@ from onshape_api.paths.doc_path import (
 router = flask.Blueprint("save-documents", __name__)
 
 
-class Vendor(StrEnum):
-    AM = "AM"
-    LAI = "LAI"
-    MCM = "MCM"
-    REDUX = "Redux"
-    REV = "REV"
-    SDS = "SDS"
-    SWYFT = "Swyft"
-    TTB = "TTB"
-    VEX = "VEX"
-    WCP = "WCP"
-
-
-def parse_vendor(name: str) -> Vendor | None:
-    match = re.search(r"\((\w+)\)$", name)
-    if not match:
-        return None
-    vendor_str = match.group(1)
-    return next((vendor for vendor in Vendor if vendor == vendor_str), None)
-
-
-class ParameterType(StrEnum):
-    ENUM = "BTMConfigurationParameterEnum-105"
-    QUANTITY = "BTMConfigurationParameterQuantity-1826"
-    BOOLEAN = "BTMConfigurationParameterBoolean-2550"
-    STRING = "BTMConfigurationParameterString-872"
-
-
-class QuantityType(StrEnum):
-    LENGTH = "LENGTH"
-    ANGLE = "ANGLE"
-    INTEGER = "INTEGER"
-    REAL = "REAL"
-
-
-class Unit(StrEnum):
-    METER = "meter"
-    CENTIMETER = "centimeter"
-    MILLIMETER = "millimeter"
-    YARD = "yard"
-    FOOT = "foot"
-    INCH = "inch"
-    DEGREE = "degree"
-    RADIAN = "radian"
-    UNITLESS = ""
-
-
-def get_abbreviation(unit: Unit) -> str:
-    match unit:
-        case Unit.METER:
-            return "m"
-        case Unit.CENTIMETER:
-            return "cm"
-        case Unit.MILLIMETER:
-            return "mm"
-        case Unit.YARD:
-            return "yd"
-        case Unit.FOOT:
-            return "ft"
-        case Unit.INCH:
-            return "in"
-        case Unit.DEGREE:
-            return "deg"
-        case Unit.RADIAN:
-            return "rad"
-        case Unit.UNITLESS:
-            return ""
-
-
-class ConditionType(StrEnum):
-    LOGICAL = "BTParameterVisibilityLogical-178"
-    EQUAL = "BTParameterVisibilityOnEqual-180"
-
-
-NONE_CONDITION = "BTParameterVisibilityCondition-177"
-
-
-class LogicalOp(StrEnum):
-    AND = "AND"
-    OR = "OR"
-
-
 def evaluate(condition_dict: dict | None, configuration: dict[str, str]) -> bool:
+    """Evaluates a configuration against a given configuration_dict."""
     if condition_dict == None:
         return True
 
@@ -185,11 +115,14 @@ def save_element(
     api: Api,
     version_path: InstancePath,
     element: dict,
+    preserved_info: PreservedInfo,
 ) -> str:
     element_type: ElementType = element["elementType"]
     element_name = element["name"]  # Use the name of the tab
     element_id = element["id"]
     path = ElementPath.from_path(version_path, element_id)
+
+    preserved = preserved_info.load_element(element_id)
 
     element_db_value = {
         "name": element_name,
@@ -197,6 +130,7 @@ def save_element(
         "elementType": element_type,
         "documentId": version_path.document_id,
         "elementType": element_type,
+        "isVisible": preserved["isVisible"],
     }
 
     configuration = get_configuration(api, path)
@@ -214,12 +148,13 @@ def save_document(
     api: Api,
     db: database.Database,
     version_path: InstancePath,
+    preserved_info: PreservedInfo,
 ) -> int:
     """Loads all of the elements of a given document into the database."""
     contents = documents.get_contents(api, version_path)
 
     element_ids = [
-        save_element(db, api, version_path, element)
+        save_element(db, api, version_path, element, preserved_info)
         for element in contents["elements"]
         if element["elementType"] in [ElementType.ASSEMBLY, ElementType.PART_STUDIO]
     ]
@@ -242,7 +177,23 @@ def save_document(
     return len(element_ids)
 
 
+def preserve_info(db: database.Database) -> PreservedInfo:
+    preserved_info = PreservedInfo()
+    # for doc_ref in db.documents.stream():
+    #     document_id = doc_ref.id
+    #     document_dict = doc_ref.to_dict()
+    #     preserved_docs.save_element(document_id, document_dict)
+
+    for element_ref in db.elements.stream():
+        element_id = element_ref.id
+        element_dict = element_ref.to_dict()
+        preserved_info.save_element(element_id, element_dict)
+
+    return preserved_info
+
+
 @router.post("/save-all-documents")
+@require_member_access()
 def save_all_documents(**kwargs):
     """Saves the contents of the latest versions of all documents managed by FRC Design Lib into the database."""
     db = database.Database()
@@ -267,7 +218,7 @@ def save_all_documents(**kwargs):
         document = db.documents.document(document_path.document_id).get().to_dict()
         if document == None:
             # Document doesn't exist, create it immediately
-            count += save_document(api, db, latest_version_path)
+            count += save_document(api, db, latest_version_path, PreservedInfo())
             continue
 
         # Version is already saved
@@ -275,8 +226,9 @@ def save_all_documents(**kwargs):
             continue
 
         # Refresh document
+        preserved_info = preserve_info(db)
         db.delete_document(document_path.document_id)
-        count += save_document(api, db, latest_version_path)
+        count += save_document(api, db, latest_version_path, preserved_info)
 
     # Clean up any documents that are no longer in the config
     for doc_ref in db.documents.stream():
@@ -285,3 +237,16 @@ def save_all_documents(**kwargs):
         db.delete_document(doc_ref.id)
 
     return {"savedElements": count}
+
+
+@router.post("/set-visibility" + connect.element_path_route())
+@require_member_access()
+def set_visibility(**kwargs):
+    db = database.Database()
+    element_path = connect.get_route_element_path()
+    is_visible = connect.get_body_arg("isVisible")
+
+    db.elements.document(element_path.element_id).set(
+        {"isVisible": is_visible}, merge=True
+    )
+    return {"success": True}
