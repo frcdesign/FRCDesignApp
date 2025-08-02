@@ -19,7 +19,7 @@ export function GrantDenied(): JSX.Element {
                     />
                 }
                 title="Grant denied"
-                description="Robot manager was denied access to your documents."
+                description="You denied FRCDesignLib access to your documents."
                 action={applicationAccessButton}
             />
         </div>
