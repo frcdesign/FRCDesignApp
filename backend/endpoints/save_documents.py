@@ -21,15 +21,15 @@ router = flask.Blueprint("save-documents", __name__)
 
 class Vendor(StrEnum):
     AM = "AM"
-    WCP = "WCP"
-    REV = "REV"
-    TTB = "TTB"
-    MCM = "MCM"
-    SDS = "SDS"
-    VEX = "VEX"
-    REDUX = "Redux"
     LAI = "LAI"
+    MCM = "MCM"
+    REDUX = "Redux"
+    REV = "REV"
+    SDS = "SDS"
     SWYFT = "Swyft"
+    TTB = "TTB"
+    VEX = "VEX"
+    WCP = "WCP"
 
 
 def parse_vendor(name: str) -> Vendor | None:

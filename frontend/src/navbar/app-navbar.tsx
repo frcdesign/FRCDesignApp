@@ -9,15 +9,14 @@ import {
     Intent,
     Navbar,
     NavbarDivider,
-    NavbarGroup,
-    Tag
+    NavbarGroup
 } from "@blueprintjs/core";
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { AppDialog } from "../api/search-params";
-import { getVendorName, Vendor } from "../api/backend-types";
+import { VendorFilters } from "./vendor-filters";
 
 /**
  * Provides top-level navigation for the app.
@@ -27,8 +26,6 @@ export function AppNavbar(): ReactNode {
     const navigate = useNavigate();
 
     const [showFilters, setShowFilters] = useState(false);
-    const search = useSearch({ from: "/app" });
-    const vendors = search.vendors ?? [];
 
     const frcDesignIcon = (
         <a href="https://frcdesign.org" target="_blank">
@@ -65,41 +62,6 @@ export function AppNavbar(): ReactNode {
         </ControlGroup>
     );
 
-    const filterTags = Object.values(Vendor).map((vendor) => {
-        return (
-            <Tag
-                round
-                interactive
-                key={vendor}
-                intent={Intent.PRIMARY}
-                title={getVendorName(vendor)}
-                onClick={() => {
-                    const newVendors = [...vendors, vendor];
-                    navigate({ to: pathname, search: { vendors: newVendors } });
-                }}
-                active={
-                    vendors.length === 0
-                        ? false
-                        : !vendors.find((curr) => curr === vendor)
-                }
-            >
-                {vendor}
-            </Tag>
-        );
-    });
-
-    const clearButton = (
-        <Button
-            text="Clear"
-            disabled={vendors.length === 0}
-            variant={ButtonVariant.OUTLINED}
-            icon="small-cross"
-            onClick={() => {
-                navigate({ to: pathname, search: { vendors: [] } });
-            }}
-        />
-    );
-
     return (
         <Navbar className="app-navbar">
             {/* Add div to make display: flex work */}
@@ -126,18 +88,7 @@ export function AppNavbar(): ReactNode {
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
                 <Collapse isOpen={showFilters}>
-                    <div className="split" style={{ gap: "5x" }}>
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "5px",
-                                flexWrap: "wrap"
-                            }}
-                        >
-                            {filterTags}
-                        </div>
-                        {clearButton}
-                    </div>
+                    <VendorFilters />
                 </Collapse>
             </div>
         </Navbar>

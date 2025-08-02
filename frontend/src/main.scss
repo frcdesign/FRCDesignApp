@@ -37,6 +37,12 @@ $frc-design-green: #4cae4f;
     height: unset;
 }
 
+.vendor-filter-tags {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
 .app-content {
     flex-grow: 1;
     overflow: auto;
