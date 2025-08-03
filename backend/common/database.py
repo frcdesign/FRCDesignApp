@@ -24,10 +24,13 @@ class Database:
 
     def delete_document(self, document_id: str):
         """Deletes a document and all elements and configurations which depend on it."""
-        element = self.documents.document(document_id).get().to_dict()
-        if element == None:
+        document = self.documents.document(document_id).get().to_dict()
+        self.documents.document(document_id).delete()
+
+        if document == None:
             return
-        for element_id in element.get("elementIds", []):
+        # Delete all children as well
+        for element_id in document.get("elementIds", []):
             self.elements.document(element_id).delete()
             self.configurations.document(element_id).delete()
 
