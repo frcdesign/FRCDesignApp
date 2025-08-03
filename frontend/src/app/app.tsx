@@ -23,25 +23,26 @@ export function App() {
     const themeClass = getThemeClass(onshapeData.theme);
 
     return (
-        <>
-            <BlueprintProvider portalClassName={themeClass}>
-                <QueryClientProvider client={queryClient}>
-                    <div className={themeClass + " app-background"}>
-                        <AppNavbar />
-                        <div
-                            className={
-                                getBackgroundClass(onshapeData.theme) +
-                                " app-content"
-                            }
-                        >
-                            <Outlet />
-                            <AdminPanel />
-                            <InsertMenu />
-                            <TanStackRouterDevtools />
-                        </div>
+        <BlueprintProvider
+            portalClassName={themeClass}
+            portalContainer={document.getElementById("root")!}
+        >
+            <QueryClientProvider client={queryClient}>
+                <div className={themeClass + " app-background"}>
+                    <AppNavbar />
+                    <div
+                        className={
+                            getBackgroundClass(onshapeData.theme) +
+                            " app-content"
+                        }
+                    >
+                        <Outlet />
+                        <AdminPanel />
+                        <InsertMenu />
+                        <TanStackRouterDevtools />
                     </div>
-                </QueryClientProvider>
-            </BlueprintProvider>
-        </>
+                </div>
+            </QueryClientProvider>
+        </BlueprintProvider>
     );
 }

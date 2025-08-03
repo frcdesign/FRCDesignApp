@@ -9,7 +9,6 @@ import { useMutation } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import { router } from "../router";
 import { AppDialog, useHandleCloseDialog } from "../api/search-params";
 import { useSearch } from "@tanstack/react-router";
 import { showSuccessToast } from "./toaster";
@@ -79,7 +78,6 @@ function ReloadAllDocumentsButton(
                 );
             }
             await queryClient.refetchQueries({ queryKey: ["documents"] });
-            router.invalidate(); // Trigger page reload
         }
     });
 

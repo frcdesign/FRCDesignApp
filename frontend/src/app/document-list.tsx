@@ -42,27 +42,20 @@ export function DocumentList(): ReactNode {
     let content;
     if (search.query) {
         content = (
-            <CardList compact>
-                <SearchResults
-                    query={search.query}
-                    data={data}
-                    vendors={search.vendors}
-                    documentId={documentId}
-                />
-            </CardList>
+            <SearchResults
+                query={search.query}
+                data={data}
+                vendors={search.vendors}
+                documentId={documentId}
+            />
         );
     } else {
         const elements = document.elementIds.map(
             (elementId) => data.elements[elementId]
         );
-        const cards = elements.map((element) => {
+        content = elements.map((element) => {
             return <ElementCard key={element.id} element={element} />;
         });
-        content = (
-            <CardList bordered={false} compact>
-                {cards}
-            </CardList>
-        );
     }
 
     return (
@@ -81,13 +74,10 @@ export function DocumentList(): ReactNode {
                     maxHeight: "100%"
                 }}
             >
-                <SectionCard
-                    padded={false}
-                    style={{
-                        overflow: "scroll"
-                    }}
-                >
-                    {content}
+                <SectionCard padded={false} style={{ overflow: "scroll" }}>
+                    <CardList bordered={false} compact>
+                        {content}
+                    </CardList>
                 </SectionCard>
             </Section>
             <Outlet />

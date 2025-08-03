@@ -143,7 +143,7 @@ def get_route(route_param: str) -> Any:
     """
     view_args = flask.request.view_args
     if view_args is None or (param := view_args.get(route_param)) is None:
-        raise backend_exceptions.FrontendException(
+        raise backend_exceptions.ClientException(
             "Missing required path parameter {}.".format(route_param)
         )
     return param
@@ -156,7 +156,7 @@ def get_query_param(key: str) -> Any:
     """
     value = flask.request.args.get(key)
     if value is None:
-        raise backend_exceptions.FrontendException(
+        raise backend_exceptions.ClientException(
             "Missing required query parameter {}.".format(key)
         )
     return value
@@ -167,7 +167,7 @@ def get_query_bool(key: str, default: bool | None = None) -> bool:
     value = flask.request.args.get(key)
     if value == None:
         if default == None:
-            raise backend_exceptions.FrontendException(
+            raise backend_exceptions.ClientException(
                 "Missing required query parameter {}.".format(key)
             )
         return default
@@ -190,8 +190,8 @@ def get_body_arg(key: str) -> Any:
     Throws if key doesn't exist.
     """
     value = flask.request.get_json().get(key, None)
-    if not value:
-        raise backend_exceptions.FrontendException(
+    if value == None:
+        raise backend_exceptions.ClientException(
             "Missing required body parameter {}.".format(key)
         )
     return value

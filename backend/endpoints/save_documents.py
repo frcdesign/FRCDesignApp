@@ -122,8 +122,8 @@ def save_element(
     Parameters:
         element: A part studio or assembly returned by the /elements endpoint.
     """
-    element_type: ElementType = element["elementType"]
 
+    element_type: ElementType = element["elementType"]
     element_name = element["name"]  # Use the name of the tab
     element_id = element["id"]
     path = ElementPath.from_path(version_path, element_id)
@@ -247,14 +247,12 @@ def save_all_documents(**kwargs):
     return {"savedElements": count}
 
 
-@router.post("/set-visibility" + connect.element_path_route())
+@router.post("/set-visibility")
 @require_member_access()
 def set_visibility(**kwargs):
     db = database.Database()
-    element_path = connect.get_route_element_path()
+    element_id = connect.get_body_arg("elementId")
     is_visible = connect.get_body_arg("isVisible")
 
-    db.elements.document(element_path.element_id).set(
-        {"isVisible": is_visible}, merge=True
-    )
+    db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
     return {"success": True}

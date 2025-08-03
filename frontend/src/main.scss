@@ -1,5 +1,4 @@
 @use "@blueprintjs/core/lib/scss/variables" as bp;
-@use "tailwindcss" as tailwind;
 
 // Disable drag text highlighting
 * {
@@ -9,51 +8,11 @@
     -webkit-user-select: none;
 }
 
+// Generic classes
 $frc-design-green: #4cae4f;
 
 .frc-design-green {
     color: $frc-design-green;
-}
-
-.frc-design-icon {
-    background-color: $frc-design-green;
-    height: 28px;
-    width: 28px;
-    padding-left: 3px;
-    padding-right: 3px;
-    border-radius: 10%;
-}
-
-.app-background {
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-}
-
-.app-navbar {
-    display: flex;
-    flex-direction: column;
-    height: unset;
-}
-
-.vendor-filter-tags {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-}
-
-.app-content {
-    flex-grow: 1;
-    overflow: auto;
-}
-
-.app-background {
-    background-color: bp.$pt-app-background-color;
-}
-
-.app-dark-background {
-    background-color: bp.$pt-dark-app-background-color;
 }
 
 .center {
@@ -67,6 +26,56 @@ $frc-design-green: #4cae4f;
     align-items: center;
     justify-content: space-between;
 }
+
+// App specific classes
+#root {
+    position: relative;
+    height: 100vh;
+    width: 100vw;
+}
+
+.app-background {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-navbar {
+    display: flex;
+    flex-direction: column;
+    height: unset;
+
+    .frc-design-icon {
+        background-color: $frc-design-green;
+        height: 28px;
+        width: 28px;
+        padding-left: 3px;
+        padding-right: 3px;
+        border-radius: 10%;
+    }
+
+    .vendor-filter-tags {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+}
+
+.app-content {
+    flex-grow: 1;
+    overflow: auto;
+}
+
+.app-light-background {
+    background-color: bp.$pt-app-background-color;
+}
+
+.app-dark-background {
+    background-color: bp.$pt-dark-app-background-color;
+}
+
+// Insert dialog
 
 // Make checkbox green when hovered/checked
 // .checkbox {
@@ -94,21 +103,17 @@ $frc-design-green: #4cae4f;
     overflow: scroll;
 }
 
-.admin-panel {
-    max-width: 80%;
-}
-
 .preview-image-card {
     margin: 10px;
     margin-bottom: 0px;
     background-color: bp.$light-gray4;
 }
 
-.no-items-error {
-    padding-top: 25px;
-    padding-bottom: 40px;
+.admin-panel {
+    max-width: 80%;
 }
 
+// Home/document lists
 .item-card {
     display: flex;
     justify-content: space-between;

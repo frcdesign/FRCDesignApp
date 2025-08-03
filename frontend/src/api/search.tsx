@@ -6,7 +6,6 @@ import {
     ResultWithPositions,
     searchWithHighlight
 } from "@orama/plugin-match-highlight";
-import { Text } from "@blueprintjs/core";
 
 let cachedSearchDb: AnyOrama | undefined = undefined;
 
@@ -23,6 +22,7 @@ export function buildSearchDb(data: DocumentResult) {
         schema: {
             id: "string",
             documentId: "string",
+            isVisible: "boolean",
             vendor: "string",
             name: "string",
             spacedName: "string"
@@ -69,7 +69,8 @@ export function buildSearchDb(data: DocumentResult) {
             insert(searchDb, {
                 id: elementId,
                 documentId,
-                vendor: element.vendor ?? "",
+                isVisible: element.isVisible,
+                vendor: element.vendor,
                 name: element.name,
                 spacedName: addSpaces(element.name)
             });
@@ -88,10 +89,12 @@ export async function doSearch(
     query: string,
     filters?: SearchFilters
 ): Promise<SearchHit[]> {
-    let where: Record<string, string | string[]> | undefined = undefined;
+    const where: Record<string, string | string[] | boolean> = {
+        isVisible: false
+    };
+
     if (filters) {
         // Orama is very touchy about null/undefined/[] in a where clause
-        where = {};
         if (filters.documentId) {
             where.documentId = filters.documentId;
         }
@@ -217,7 +220,7 @@ function deduplicateRanges(ranges: Range[]): Range[] {
 }
 
 /**
- * Returns a Text component highlighted with a searchHit.
+ * Returns text highlighted with a searchHit.
  */
 export function getSearchHitTitle(searchHit: SearchHit): JSX.Element {
     const positions: SearchPositions = searchHit.positions;
@@ -230,5 +233,5 @@ export function getSearchHitTitle(searchHit: SearchHit): JSX.Element {
 
     ranges.push(...Object.values(positions.name).flat(1));
 
-    return <Text>{applyRanges(searchHit.document.name, ranges)}</Text>;
+    return <>{applyRanges(searchHit.document.name, ranges)}</>;
 }

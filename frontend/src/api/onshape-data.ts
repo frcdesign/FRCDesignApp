@@ -20,7 +20,9 @@ export function getThemeClass(theme: ColorTheme) {
 }
 
 export function getBackgroundClass(theme: ColorTheme) {
-    return theme === ColorTheme.DARK ? "app-dark-background" : "app-background";
+    return theme === ColorTheme.DARK
+        ? "app-dark-background"
+        : "app-light-background";
 }
 
 export function useOnshapeData(): OnshapeData {

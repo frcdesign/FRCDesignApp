@@ -3,7 +3,7 @@ import flask
 
 from backend.common import database
 from backend.common import connect
-from backend.common.backend_exceptions import BackendException, FrontendException
+from backend.common.backend_exceptions import ServerException, ClientException
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,
@@ -41,7 +41,7 @@ def get_documents(**kwargs):
         for element_id in document["elementIds"]:
             element = db.elements.document(element_id).get().to_dict()
             if element == None:
-                raise BackendException(f"Missing element with id {element_id}")
+                raise ServerException(f"Missing element with id {element_id}")
 
             element_obj = {
                 "id": element_id,
@@ -75,7 +75,7 @@ def get_configuration(configuration_id: str):
     db = database.Database()
     result = db.configurations.document(configuration_id).get().to_dict()
     if result == None:
-        raise FrontendException(
+        raise ClientException(
             f"Failed to find configuration with id {configuration_id}"
         )
     return result

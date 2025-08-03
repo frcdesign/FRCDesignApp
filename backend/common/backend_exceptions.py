@@ -8,8 +8,8 @@ from onshape_api.endpoints.users import AccessLevel
 from onshape_api.paths.doc_path import DocumentPath
 
 
-class BackendException(Exception):
-    """An unexpected exception thrown by the backend."""
+class ServerException(Exception):
+    """Exceptions representing situations which should never occur."""
 
     def __init__(
         self,
@@ -21,10 +21,10 @@ class BackendException(Exception):
         self.status_code = status_code
 
     def to_dict(self):
-        return {"type": "BACKEND_EXCEPTION", "message": self.message}
+        return {"message": self.message}
 
 
-class AuthException(BackendException):
+class AuthException(ServerException):
     def __init__(self, access_level: AccessLevel):
         super().__init__(
             f"User has {access_level} access, which is not sufficient to access this resource",
@@ -32,8 +32,8 @@ class AuthException(BackendException):
         )
 
 
-class FrontendException(BackendException):
-    """An unexpected exception caused by the frontend."""
+class ClientException(ServerException):
+    """An unexpected exception caused by the frontend doing something it never should do."""
 
     def __init__(self, message: str):
         super().__init__(
@@ -42,8 +42,8 @@ class FrontendException(BackendException):
         )
 
 
-class ReportedException(ABC, Exception):
-    """An exception which is exposed to the user."""
+class UserException(ABC, Exception):
+    """Exceptions which are returned to the frontend to be displayed to the user directly."""
 
     def __init__(self, type: str, status_code: HTTPStatus = HTTPStatus.BAD_REQUEST):
         super().__init__(type)
@@ -54,7 +54,7 @@ class ReportedException(ABC, Exception):
         return {"type": self.type}
 
 
-class DocumentPermissionException(ReportedException):
+class DocumentPermissionException(UserException):
     """An exception indicating a user does not have the necessary permissions for one or more resources used by an endpoint."""
 
     def __init__(

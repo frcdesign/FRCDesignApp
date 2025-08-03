@@ -28,8 +28,8 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                 <Card>
                     <Thumbnail
                         path={path}
-                        size={ThumbnailSize.STANDARD}
                         spinnerSize={SpinnerSize.LARGE}
+                        size={ThumbnailSize.STANDARD}
                         scale={0.6}
                     />
                 </Card>
@@ -39,8 +39,8 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
             <div style={{ marginRight: "5px" }}>
                 <Thumbnail
                     path={path}
-                    size={ThumbnailSize.TINY}
                     spinnerSize={25}
+                    size={ThumbnailSize.TINY}
                     scale={0.8}
                 />
             </div>
@@ -50,11 +50,20 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 
 interface ThumbnailProps {
     path: InstancePath | ElementPath;
+    /**
+     * The size (quality) of the given thumbnail.
+     */
     size: ThumbnailSize;
     spinnerSize: SpinnerSize | number;
+    /**
+     * A scale multiplier applied to the image.
+     */
     scale: number;
 }
 
+/**
+ * A generic thumbnail component.
+ */
 function Thumbnail(props: ThumbnailProps): ReactNode {
     const { path, size, spinnerSize, scale } = props;
 
@@ -70,16 +79,17 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
             })
     });
 
+    const heightAndWidth = getHeightAndWidth(size);
+    heightAndWidth.height *= scale;
+    heightAndWidth.width *= scale;
+
     let content;
     if (imageQuery.isPending) {
         content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
     } else {
-        content = <img src={imageQuery.data} />;
+        content = <img src={imageQuery.data} style={heightAndWidth} />;
     }
 
-    const heightAndWidth = getHeightAndWidth(size);
-    heightAndWidth.height *= scale;
-    heightAndWidth.width *= scale;
     return (
         <div className="center" style={heightAndWidth}>
             {content}

@@ -14,8 +14,14 @@ def api_exception(e: ApiError):
     return e.to_dict(), e.status_code
 
 
-@router.errorhandler(backend_exceptions.ReportedException)
-def reported_exception(e: backend_exceptions.ReportedException):
+@router.errorhandler(backend_exceptions.ServerException)
+def backend_exception(e: backend_exceptions.ServerException):
+    """A handler for uncaught exceptions thrown by the Api."""
+    return e.to_dict(), e.status_code
+
+
+@router.errorhandler(backend_exceptions.UserException)
+def reported_exception(e: backend_exceptions.UserException):
     return e.to_dict(), e.status_code
 
 

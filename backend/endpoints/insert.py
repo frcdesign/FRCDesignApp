@@ -2,7 +2,7 @@ import flask
 
 from backend.common import connect, database
 from backend.common.backend_exceptions import (
-    FrontendException,
+    ClientException,
 )
 from backend.endpoints.backend_types import (
     ConfigurationType,
@@ -47,7 +47,7 @@ def add_to_part_studio(**kwargs):
             db.configurations.document(part_studio_to_add.element_id).get().to_dict()
         )
         if parameters == None:
-            raise FrontendException("Failed to find configuration parameters")
+            raise ClientException("Failed to find configuration parameters")
 
     derived_feature = DerivedFeature(
         part_name, part_studio_to_add, microversion_id, configuration, parameters
