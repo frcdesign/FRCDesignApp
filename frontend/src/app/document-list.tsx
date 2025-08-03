@@ -74,7 +74,12 @@ export function DocumentList(): ReactNode {
                     maxHeight: "100%"
                 }}
             >
-                <SectionCard padded={false} style={{ overflow: "scroll" }}>
+                <SectionCard
+                    // Stop propagation in the card so clicks around the edge/inside child cards don't close the section
+                    onClick={(event) => event.stopPropagation()}
+                    padded={false}
+                    style={{ overflow: "scroll" }}
+                >
                     <CardList bordered={false} compact>
                         {content}
                     </CardList>

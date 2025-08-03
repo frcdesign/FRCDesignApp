@@ -14,7 +14,7 @@ import {
     ContextMenuChildrenProps,
     Tag
 } from "@blueprintjs/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
 import {
     AccessLevel,
@@ -83,6 +83,7 @@ interface ElementCardProps extends PropsWithChildren {
 export function ElementCard(props: ElementCardProps): ReactNode {
     const { element, searchHit } = props;
     const navigate = useNavigate();
+    const pathname = useLocation().pathname;
     const search = useSearch({ from: "/app" });
     const data = useQuery(getDocumentLoader()).data;
     const favorites = useQuery(getFavoritesLoader(search)).data;
@@ -108,8 +109,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
             isOpen={isAlertOpen}
             canEscapeKeyCancel
             canOutsideClickCancel
-            onClose={(_, event) => {
-                event?.stopPropagation();
+            onClose={() => {
                 setIsAlertOpen(false);
             }}
             confirmButtonText="Close"
@@ -143,18 +143,22 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                     ref={ctxMenuProps.ref}
                     interactive
                     onClick={(event) => {
-                        event.stopPropagation();
+                        // Add special handling here so context menu clicks don't bubble through
+                        if (event.target !== event.currentTarget) {
+                            return;
+                        }
                         if (isAssemblyInPartStudio) {
                             setIsAlertOpen(true);
-                        } else {
-                            navigate({
-                                to: ".",
-                                search: {
-                                    activeDialog: AppDialog.INSERT_MENU,
-                                    activeElementId: element.elementId
-                                }
-                            });
+                            return;
                         }
+
+                        navigate({
+                            to: pathname,
+                            search: {
+                                activeDialog: AppDialog.INSERT_MENU,
+                                activeElementId: element.elementId
+                            }
+                        });
                     }}
                 >
                     {ctxMenuProps.popover}
@@ -204,8 +208,7 @@ function ElementContextMenu(props: ElementContextMenuProps) {
         <Menu>
             <MenuItem
                 shouldDismissPopover
-                onClick={(event) => {
-                    event.stopPropagation();
+                onClick={() => {
                     mutation.mutate();
                 }}
                 intent={element.isVisible ? "danger" : "primary"}

@@ -19,7 +19,7 @@ export function GrantDenied(): JSX.Element {
                     />
                 }
                 title="Grant denied"
-                description="You denied FRCDesignLib access to your documents."
+                description="You denied the FRCDesignApp access to your documents."
                 action={applicationAccessButton}
             />
         </div>

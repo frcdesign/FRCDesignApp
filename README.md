@@ -1,6 +1,6 @@
-# FRC Design App
+# FRCDesignApp
 
-This repo hosts the code for the FRC Design Onshape App.
+This repo hosts the code for the FRCDesign Onshape App.
 
 ## Overview
 
@@ -15,8 +15,11 @@ While it should be possible to use other technologies, they aren't tested and ma
 First, create a new file in the root of this project named `.env` and add the following contents:
 
 ```
+# Note: API changes won't take effect until you trigger a refresh on the server.
+# The easiest way is to save backend/common/env.py again.
+
 # Server config
-API_LOGGING=true # Enable or disable logging
+API_LOGGING=true # Enable or disable Onshape API logging
 API_BASE_PATH=https://cad.onshape.com
 API_VERSION=12 # Control which version of the Onshape API the app uses
 
@@ -31,8 +34,6 @@ SESSION_SECRET=literallyAnythingWillDo
 
 # One of admin, member, or user, depending on desired access to the app. Does nothing in production.
 ACCESS_LEVEL_OVERRIDE=admin
-# Team to use when determining access level (unless access level override is specified in development).
-ADMIN_TEAM=5b620150b2190f0fca90ec10
 
 NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080

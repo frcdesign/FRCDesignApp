@@ -34,7 +34,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     />
                 </Card>
             }
-            interactionKind={"hover-target"}
+            interactionKind="hover"
         >
             <div style={{ marginRight: "5px" }}>
                 <Thumbnail
@@ -87,7 +87,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     if (imageQuery.isPending) {
         content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
     } else {
-        content = <img src={imageQuery.data} style={heightAndWidth} />;
+        content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
 
     return (
@@ -150,7 +150,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     }
 
     return (
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", ...heightAndWidth }}>
             {thumbnailQuery.isFetching && (
                 <Spinner
                     size={SpinnerSize.SMALL}
