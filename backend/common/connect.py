@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 import flask
 from requests_oauthlib import OAuth2Session
+from google.cloud import firestore
 
 from backend.common.database import Database
 import onshape_api
@@ -60,20 +61,20 @@ def get_oauth_session(
     db: Database, oauth_type: OAuthType = OAuthType.USE
 ) -> OAuth2Session:
     if oauth_type == OAuthType.SIGN_IN:
-        return OAuth2Session(env.client_id)
+        return OAuth2Session(env.CLIENT_ID)
     elif oauth_type == OAuthType.REDIRECT:
-        return OAuth2Session(env.client_id, state=flask.request.args["state"])
+        return OAuth2Session(env.CLIENT_ID, state=flask.request.args["state"])
 
     refresh_kwargs = {
-        "client_id": env.client_id,
-        "client_secret": env.client_secret,
+        "client_id": env.CLIENT_ID,
+        "client_secret": env.CLIENT_SECRET,
     }
 
     def _save_token(token) -> None:
         save_token(db, token)
 
     return OAuth2Session(
-        env.client_id,
+        env.CLIENT_ID,
         token=get_token(db),
         auto_refresh_url=token_url,
         auto_refresh_kwargs=refresh_kwargs,
@@ -99,6 +100,10 @@ def instance_path_route():
 
 def element_path_route():
     return instance_path_route() + "/e/<element_id>"
+
+
+def get_db() -> Database:
+    return Database(firestore.Client())
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:

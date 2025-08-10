@@ -2,11 +2,11 @@ import flask
 
 from backend.common.connect import (
     get_api,
+    get_db,
     get_query_param,
     get_route_user_path,
     user_path_route,
 )
-from backend.common.database import Database
 from onshape_api.endpoints.settings import (
     Operation,
     Update,
@@ -21,7 +21,7 @@ router = flask.Blueprint("settings", __name__)
 @router.get("/favorites" + user_path_route())
 def get_favorites(**kwargs):
     """Returns a list of all of the current user's favorites."""
-    db = Database()
+    db = get_db()
     api = get_api(db)
     client_path = get_route_user_path()
 
@@ -36,7 +36,7 @@ def get_favorites(**kwargs):
 @router.post("/favorites" + user_path_route())
 def add_favorite(**kwargs):
     client_path = get_route_user_path()
-    db = Database()
+    db = get_db()
     api = get_api(db)
     element_id = get_query_param("elementId")
 
@@ -52,7 +52,7 @@ def add_favorite(**kwargs):
 
 @router.delete("/favorites" + user_path_route())
 def remove_favorite(**kwargs):
-    db = Database()
+    db = get_db()
     api = get_api(db)
 
     client_path = get_route_user_path()

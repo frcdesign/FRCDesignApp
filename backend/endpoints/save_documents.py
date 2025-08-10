@@ -1,5 +1,4 @@
 from __future__ import annotations
-import logging
 import flask
 import json5
 
@@ -203,7 +202,7 @@ def preserve_info(db: database.Database) -> PreservedInfo:
 @require_member_access()
 def save_all_documents(**kwargs):
     """Saves the contents of the latest versions of all documents managed by FRC Design Lib into the database."""
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
 
     force = connect.get_query_bool("force", False)
@@ -250,7 +249,7 @@ def save_all_documents(**kwargs):
 @router.post("/set-visibility")
 @require_member_access()
 def set_visibility(**kwargs):
-    db = database.Database()
+    db = connect.get_db()
     element_id = connect.get_body_arg("elementId")
     is_visible = connect.get_body_arg("isVisible")
 

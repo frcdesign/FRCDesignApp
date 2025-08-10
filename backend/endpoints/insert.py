@@ -18,7 +18,7 @@ router = flask.Blueprint("insert", __name__)
 @router.post("/add-to-assembly" + connect.element_path_route())
 def add_to_assembly(**kwargs):
     """Adds the contents of an element to the current assembly."""
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
     assembly_path = connect.get_route_element_path()
     path_to_add = connect.get_body_element_path()
@@ -34,7 +34,7 @@ def add_to_assembly(**kwargs):
 @router.post("/add-to-part-studio" + connect.element_path_route())
 def add_to_part_studio(**kwargs):
     """Adds the contents of an element to the current part studio."""
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
     part_studio_path = connect.get_route_element_path()
     part_studio_to_add = connect.get_body_element_path()

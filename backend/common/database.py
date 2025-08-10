@@ -3,24 +3,24 @@ from google.cloud.firestore import CollectionReference
 
 
 class Database:
-    def __init__(self):
-        self.db = firestore.Client()
+    def __init__(self, client: firestore.Client):
+        self.client = client
 
     @property
     def sessions(self) -> CollectionReference:
-        return self.db.collection("sessions")
+        return self.client.collection("sessions")
 
     @property
     def documents(self) -> CollectionReference:
-        return self.db.collection("documents")
+        return self.client.collection("documents")
 
     @property
     def elements(self) -> CollectionReference:
-        return self.db.collection("elements")
+        return self.client.collection("elements")
 
     @property
     def configurations(self) -> CollectionReference:
-        return self.db.collection("configurations")
+        return self.client.collection("configurations")
 
     def delete_document(self, document_id: str):
         """Deletes a document and all elements and configurations which depend on it."""

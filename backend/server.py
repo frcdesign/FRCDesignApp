@@ -13,7 +13,7 @@ def create_app():
     app = flask.Flask(__name__)
     app.config.update(
         SESSION_COOKIE_NAME="frc-design-lib",
-        SECRET_KEY=env.session_secret,
+        SECRET_KEY=env.SESSION_SECRET,
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="None",
@@ -24,7 +24,7 @@ def create_app():
     app.register_blueprint(oauth.router)
 
     def serve_index():
-        if env.is_production:
+        if env.IS_PRODUCTION:
             return flask.send_from_directory("dist", "index.html")
         else:
             logging.info("App running in development mode!")
@@ -33,7 +33,7 @@ def create_app():
     @app.get("/app")
     def serve_app():
         """The base route used by Onshape."""
-        db = database.Database()
+        db = connect.get_db()
         api = connect.get_api(db)
         authorized = api.oauth.authorized and users.ping(api, catch=True)
         if not authorized:
@@ -57,7 +57,7 @@ def create_app():
     def serve_static_pages():
         return serve_index()
 
-    if env.is_production:
+    if env.IS_PRODUCTION:
         # Production only handlers:
         @app.get("/robot-icon.svg")
         def serve_icon():
@@ -75,11 +75,6 @@ def create_app():
             return flask.render_template("index.html")
 
     return app
-
-    # logging.info(redirect_url)
-    # Add accessLevel to search params so it's available in the UI
-    # api = connect.get_api(db)
-    # logging.info(new_url)
 
 
 def add_query_params(url: str, params: dict) -> str:

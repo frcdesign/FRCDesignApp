@@ -19,9 +19,10 @@ First, create a new file in the root of this project named `.env` and add the fo
 # The easiest way is to save backend/common/env.py again.
 
 # Server config
-API_LOGGING=true # Enable or disable Onshape API logging
 API_BASE_PATH=https://cad.onshape.com
 API_VERSION=12 # Control which version of the Onshape API the app uses
+
+VERBOSE_LOGGING=true # Set to false to reduce logging output
 
 # API Keys (Optional)
 API_ACCESS_KEY=<Your API Access Key>
@@ -163,11 +164,9 @@ You should also be able to launch the FRC Design App from the right panel of any
 
 # Deploying To Production
 
-The FRC Design App can be deployed to production by running the script `./scripts/deploy.sh`.
-
 Some notes:
 
--   To allow the App deployed in the App Engine to connect to Firestore, the App Engine service account must be given the Firestore user role in IAM.
+-   To allow the App deployed in the App Engine to connect to Firestore, the App Engine default service account must be given the Cloud Datastore User role in IAM.
 -   You'll need to create an app.yaml file to deploy. A suitable app.yaml is:
 
 ```
@@ -176,7 +175,7 @@ runtime: python312
 instance_class: F1
 
 env_variables:
-    API_VERSION: 11
+    API_VERSION: 12
     NODE_ENV: "production"
     OAUTH_CLIENT_ID: "<YOUR PRODUCTION OAUTH CLIENT ID IN QUOTES>"
     OAUTH_CLIENT_SECRET: "<YOUR PRODUCTION OAUTH CLIENT SECRET IN QUOTES>"

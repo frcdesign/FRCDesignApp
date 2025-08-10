@@ -1,7 +1,5 @@
-import logging
 import flask
 
-from backend.common import database
 from backend.common import connect
 from backend.common.backend_exceptions import ServerException, ClientException
 from backend.common.connect import (
@@ -20,7 +18,7 @@ router = flask.Blueprint("get-values", __name__)
 @router.get("/documents")
 def get_documents(**kwargs):
     """Returns a list of the top level documents and elements to display to the user."""
-    db = database.Database()
+    db = connect.get_db()
 
     documents: dict[str, dict] = dict()
     elements: dict[str, dict] = dict()
@@ -72,7 +70,7 @@ def get_documents(**kwargs):
 @router.get("/configuration/<configuration_id>")
 def get_configuration(configuration_id: str):
     """Returns a specific configuration."""
-    db = database.Database()
+    db = connect.get_db()
     result = db.configurations.document(configuration_id).get().to_dict()
     if result == None:
         raise ClientException(
@@ -83,7 +81,7 @@ def get_configuration(configuration_id: str):
 
 @router.get("/thumbnail" + instance_path_route())
 def get_document_thumbnail(**kwargs):
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
     instance_path = get_route_instance_path()
     size = get_optional_query_param("size")
@@ -93,7 +91,7 @@ def get_document_thumbnail(**kwargs):
 
 @router.get("/thumbnail" + element_path_route())
 def get_element_thumbnail(**kwargs):
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
     element_path = get_route_element_path()
 
@@ -109,12 +107,11 @@ def get_element_thumbnail(**kwargs):
 
 @router.get("/thumbnail-id" + element_path_route())
 def get_thumbnail_id(**kwargs):
-    db = database.Database()
+    db = connect.get_db()
     api = connect.get_api(db)
     element_path = get_route_element_path()
 
     configuration = get_optional_query_param("configuration")
-    logging.info(configuration)
     return {
         "thumbnailId": thumbnails.get_thumbnail_id(api, element_path, configuration)
     }
