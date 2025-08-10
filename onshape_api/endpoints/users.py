@@ -36,7 +36,7 @@ class AccessLevel(StrEnum):
 
 
 def get_access_level(api: Api, team_id: str) -> AccessLevel:
-    """Returns the access level of a user on a given team."""
+    """Returns the access level of a user respective to a given team."""
     team_info = api.get(api_path("teams", end_id=team_id))
     if team_info["admin"]:
         return AccessLevel.ADMIN

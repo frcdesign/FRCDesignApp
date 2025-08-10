@@ -13,7 +13,7 @@ def get_app_access_level(api: Api) -> AccessLevel:
         # In production get the user's access level, no ifs or buts
         return get_access_level(api, env.ADMIN_TEAM)
 
-    if env.ACCESS_LEVEL_OVERRIDE:
+    if env.ACCESS_LEVEL_OVERRIDE != None:
         return AccessLevel(env.ACCESS_LEVEL_OVERRIDE)
 
     if env.ADMIN_TEAM == None:

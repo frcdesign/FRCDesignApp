@@ -104,21 +104,9 @@ export function ElementCard(props: ElementCardProps): ReactNode {
 
     const isFavorite = favorites[element.elementId] !== undefined;
 
-    const alert = (
-        <Alert
-            isOpen={isAlertOpen}
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            onClose={() => {
-                setIsAlertOpen(false);
-            }}
-            confirmButtonText="Close"
-            icon="cross"
-            intent={Intent.DANGER}
-        >
-            This part is an assembly and cannot be derived into a part studio.
-        </Alert>
-    );
+    const alert = isAlertOpen ? (
+        <CannotDeriveAssemblyAlert onClose={() => setIsAlertOpen(false)} />
+    ) : null;
 
     let title;
     if (searchHit) {
@@ -137,47 +125,69 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     return (
         <ElementContextMenu element={element}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
-                <Card
-                    className="item-card"
-                    onContextMenu={ctxMenuProps.onContextMenu}
-                    ref={ctxMenuProps.ref}
-                    interactive
-                    onClick={(event) => {
-                        // Add special handling here so context menu clicks don't bubble through
-                        if (event.target !== event.currentTarget) {
-                            return;
-                        }
-                        if (isAssemblyInPartStudio) {
-                            setIsAlertOpen(true);
-                            return;
-                        }
-
-                        navigate({
-                            to: pathname,
-                            search: {
-                                activeDialog: AppDialog.INSERT_MENU,
-                                activeElementId: element.elementId
+                <>
+                    <Card
+                        className="item-card"
+                        onContextMenu={ctxMenuProps.onContextMenu}
+                        ref={ctxMenuProps.ref}
+                        interactive
+                        onClick={() => {
+                            if (isAssemblyInPartStudio) {
+                                setIsAlertOpen(true);
+                                return;
                             }
-                        });
-                    }}
-                >
+
+                            navigate({
+                                to: pathname,
+                                search: {
+                                    activeDialog: AppDialog.INSERT_MENU,
+                                    activeElementId: element.elementId
+                                }
+                            });
+                        }}
+                    >
+                        <EntityTitle
+                            className={
+                                isAssemblyInPartStudio
+                                    ? Classes.TEXT_MUTED
+                                    : undefined
+                            }
+                            ellipsize
+                            title={title}
+                            icon={<CardThumbnail path={element} />}
+                            tags={hiddenTag}
+                        />
+                        <FavoriteButton
+                            isFavorite={isFavorite}
+                            element={element}
+                        />
+                    </Card>
                     {ctxMenuProps.popover}
-                    <EntityTitle
-                        className={
-                            isAssemblyInPartStudio
-                                ? Classes.TEXT_MUTED
-                                : undefined
-                        }
-                        ellipsize
-                        title={title}
-                        icon={<CardThumbnail path={element} />}
-                        tags={hiddenTag}
-                    />
-                    <FavoriteButton isFavorite={isFavorite} element={element} />
                     {alert}
-                </Card>
+                </>
             )}
         </ElementContextMenu>
+    );
+}
+
+interface CannotDeriveAssemblyAlertProps {
+    onClose: () => void;
+}
+
+function CannotDeriveAssemblyAlert(props: CannotDeriveAssemblyAlertProps) {
+    const { onClose } = props;
+    return (
+        <Alert
+            isOpen
+            canEscapeKeyCancel
+            canOutsideClickCancel
+            onClose={onClose}
+            confirmButtonText="Close"
+            icon="cross"
+            intent={Intent.DANGER}
+        >
+            This part is an assembly and cannot be derived into a part studio.
+        </Alert>
     );
 }
 
@@ -207,7 +217,6 @@ function ElementContextMenu(props: ElementContextMenuProps) {
     const menu = (
         <Menu>
             <MenuItem
-                shouldDismissPopover
                 onClick={() => {
                     mutation.mutate();
                 }}

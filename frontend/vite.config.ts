@@ -11,6 +11,8 @@ export default defineConfig({
     },
     build: {
         outDir: "../backend/dist",
-        emptyOutDir: true
+        emptyOutDir: true,
+        // Target esnext so, e.g., top level await is available
+        target: "esnext"
     }
 });

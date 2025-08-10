@@ -1,11 +1,14 @@
 import logging
 
-from backend.common.env import VERBOSE_LOGGING
+from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 
 APP_LOGGER = logging.getLogger("app")
 # werkzeug is the api library used by flask
 FLASK_LOGGER = logging.getLogger("werkzeug")
+
+if IS_PRODUCTION:
+    logging.disable()
 
 
 def set_logging_level(logger: logging.Logger):
