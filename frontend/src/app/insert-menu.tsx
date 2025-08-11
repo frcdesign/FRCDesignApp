@@ -38,12 +38,12 @@ import { PreviewImage } from "./thumbnail";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
 import { FavoriteButton } from "./favorite";
-import { AppDialog, useHandleCloseDialog } from "../api/search-params";
+import { AppMenu, useHandleCloseDialog } from "../api/search-params";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
-    if (search.activeDialog !== AppDialog.INSERT_MENU) {
+    if (search.activeMenu !== AppMenu.INSERT_MENU) {
         return null;
     }
     return <InsertMenuDialog elementId={search.activeElementId} />;
@@ -102,6 +102,7 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
     return (
         <Dialog
             isOpen
+            canOutsideClickClose={false}
             title={element.name}
             onClose={closeDialog}
             style={{ maxHeight: "90vh", maxWidth: "400px" }}
@@ -251,7 +252,6 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             labelFor={parameter.id}
             inline
             className="full-width"
-            intent={Intent.SUCCESS}
         >
             <Select<EnumOption>
                 items={parameter.options}
@@ -265,12 +265,13 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                 }}
                 itemRenderer={(
                     enumOption,
-                    { handleClick, handleFocus, modifiers }
+                    { handleClick, handleFocus, modifiers, ref }
                 ) => {
                     const selected = value === enumOption.id;
                     return (
                         <MenuItem
                             key={enumOption.id}
+                            ref={ref}
                             onClick={handleClick}
                             onFocus={handleFocus}
                             active={modifiers.active}

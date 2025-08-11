@@ -6,9 +6,10 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementCard, SearchResults } from "./cards";
+import { ElementCard } from "./cards";
 import { getDocumentLoader } from "../queries";
 import { useQuery } from "@tanstack/react-query";
+import { SearchResults } from "./search-results";
 
 /**
  * A list of elements in a document.
@@ -45,8 +46,7 @@ export function DocumentList(): ReactNode {
             <SearchResults
                 query={search.query}
                 data={data}
-                vendors={search.vendors}
-                documentId={documentId}
+                filters={{ vendors: search.vendors, documentId }}
             />
         );
     } else {

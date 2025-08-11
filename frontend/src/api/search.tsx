@@ -6,15 +6,39 @@ import {
     ResultWithPositions,
     searchWithHighlight
 } from "@orama/plugin-match-highlight";
+import { useState, useEffect } from "react";
 
 let cachedSearchDb: AnyOrama | undefined = undefined;
 
-export function getCachedSearchDb() {
+function getCachedSearchDb() {
     return cachedSearchDb;
 }
 
-export function setCachedSearchDb(searchDb: AnyOrama) {
+function setCachedSearchDb(searchDb: AnyOrama) {
     cachedSearchDb = searchDb;
+}
+
+/**
+ * Returns the current cached search database.
+ * If the database hasn't been accessed yet, this function will synchronously build it first.
+ * This could produce a small latency on initial load, which we will ignore for now.
+ */
+export function useSearchDb(data: DocumentResult) {
+    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
+        getCachedSearchDb()
+    );
+
+    useEffect(() => {
+        if (getCachedSearchDb()) {
+            setSearchDb(getCachedSearchDb());
+        } else {
+            const searchDb = buildSearchDb(data);
+            setCachedSearchDb(searchDb);
+            setSearchDb(searchDb);
+        }
+    }, [data]);
+
+    return searchDb;
 }
 
 export function buildSearchDb(data: DocumentResult) {

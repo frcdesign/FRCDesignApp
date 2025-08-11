@@ -1,6 +1,8 @@
+"""Routes for inserting elements into documents."""
+
 import flask
 
-from backend.common import connect, database
+from backend.common import connect
 from backend.common.backend_exceptions import (
     ClientException,
 )

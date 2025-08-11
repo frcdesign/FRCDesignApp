@@ -12,7 +12,7 @@ from backend.common.connect import (
 from onshape_api.endpoints import thumbnails
 from onshape_api.paths.instance_type import InstanceType
 
-router = flask.Blueprint("get-values", __name__)
+router = flask.Blueprint("load", __name__)
 
 
 @router.get("/documents")
@@ -24,43 +24,45 @@ def get_documents(**kwargs):
     elements: dict[str, dict] = dict()
 
     for doc_ref in db.documents.stream():
-        document = doc_ref.to_dict()
+        document_dict = doc_ref.to_dict()
         document_id = doc_ref.id
-        element_ids = document["elementIds"]
+
         documents[document_id] = {
             "id": document_id,
-            "name": document["name"],
-            "elementIds": element_ids,
+            "name": document_dict["name"],
+            "elementIds": document_dict["elementIds"],
+            "sortByDefault": document_dict["sortByDefault"],
             # InstancePath properties
             "documentId": doc_ref.id,
-            "instanceId": document["instanceId"],
+            "instanceId": document_dict["instanceId"],
             "instanceType": InstanceType.VERSION,
         }
-        for element_id in document["elementIds"]:
-            element = db.elements.document(element_id).get().to_dict()
-            if element == None:
+
+        for element_id in document_dict["elementIds"]:
+            element_dict = db.elements.document(element_id).get().to_dict()
+            if element_dict == None:
                 raise ServerException(f"Missing element with id {element_id}")
 
             element_obj = {
                 "id": element_id,
-                "name": element["name"],
-                "elementType": element["elementType"],
+                "name": element_dict["name"],
+                "elementType": element_dict["elementType"],
                 # Copy properties from document so we don't have to parse backreference on client
                 "documentId": doc_ref.id,
-                "instanceId": document["instanceId"],
+                "instanceId": document_dict["instanceId"],
                 "instanceType": InstanceType.VERSION,
                 # Include element id again out of laziness so this becomes a valid ElementPath
                 "elementId": element_id,
-                "microversionId": element["microversionId"],
-                "isVisible": element["isVisible"],
+                "microversionId": element_dict["microversionId"],
+                "isVisible": element_dict["isVisible"],
             }
 
             # Do not send a property with value None, as this results in a null (rather than undefined) on the client
-            if element.get("configurationId") != None:
-                element_obj["configurationId"] = element["configurationId"]
+            if element_dict.get("configurationId") != None:
+                element_obj["configurationId"] = element_dict["configurationId"]
 
-            if element.get("vendor") != None:
-                element_obj["vendor"] = element["vendor"]
+            if element_dict.get("vendor") != None:
+                element_obj["vendor"] = element_dict["vendor"]
 
             elements[element_id] = element_obj
 

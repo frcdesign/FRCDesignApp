@@ -14,10 +14,9 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { AppDialog } from "../api/search-params";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { AppMenu } from "../api/search-params";
 import { VendorFilters } from "./vendor-filters";
-import { hasMemberAccess } from "../api/backend-types";
 
 /**
  * Provides top-level navigation for the app.
@@ -25,7 +24,6 @@ import { hasMemberAccess } from "../api/backend-types";
 export function AppNavbar(): ReactNode {
     const pathname = useLocation().pathname;
     const navigate = useNavigate();
-    const search = useSearch({ from: "/app" });
 
     const [showFilters, setShowFilters] = useState(false);
 
@@ -64,10 +62,6 @@ export function AppNavbar(): ReactNode {
         </ControlGroup>
     );
 
-    const settingsButton = hasMemberAccess(search.accessLevel) ? (
-        <SettingsButton />
-    ) : null;
-
     return (
         <Navbar className="app-navbar">
             {/* Add div to make display: flex work */}
@@ -78,7 +72,7 @@ export function AppNavbar(): ReactNode {
                     {searchGroup}
                 </NavbarGroup>
                 <NavbarGroup align={Alignment.END}>
-                    {settingsButton}
+                    <SettingsButton />
                 </NavbarGroup>
             </div>
             <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
@@ -102,7 +96,7 @@ export function SettingsButton() {
                 navigate({
                     to: pathname,
                     search: () => ({
-                        activeDialog: AppDialog.ADMIN_PANEL
+                        activeMenu: AppMenu.SETTINGS_MENU
                     })
                 })
             }

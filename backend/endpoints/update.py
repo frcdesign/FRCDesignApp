@@ -1,3 +1,8 @@
+"""Routes for updating the database.
+
+Every route in this file is access controlled.
+"""
+
 from __future__ import annotations
 import flask
 import json5
@@ -27,7 +32,7 @@ from onshape_api.paths.doc_path import (
     url_to_document_path,
 )
 
-router = flask.Blueprint("save-documents", __name__)
+router = flask.Blueprint("update", __name__)
 
 
 def evaluate(condition_dict: dict | None, configuration: dict[str, str]) -> bool:
@@ -129,7 +134,7 @@ def save_element(
 
     preserved = preserved_info.load_element(element_id)
 
-    element_db_value = {
+    element_dict = {
         "name": element_name,
         "vendor": parse_vendor(element_name),
         "elementType": element_type,
@@ -144,9 +149,9 @@ def save_element(
         configurations = parse_configuration(configuration)
         # Re-use element db id since configurations can't be shared
         db.configurations.document(element_id).set(configurations)
-        element_db_value["configurationId"] = element_id
+        element_dict["configurationId"] = element_id
 
-    db.elements.document(element_id).set(element_db_value)
+    db.elements.document(element_id).set(element_dict)
     return element_id
 
 
@@ -172,23 +177,24 @@ def save_document(
         )
 
     document_id = version_path.document_id
-    document_name = document["name"]
-    db.documents.document(document_id).set(
-        {
-            "name": document_name,
-            "instanceId": version_path.instance_id,
-            "elementIds": element_ids,
-        }
-    )
+    preserved = preserved_info.load_document(document_id)
+    document_dict = {
+        "name": document["name"],
+        "instanceId": version_path.instance_id,
+        "elementIds": element_ids,
+        "sortByDefault": preserved["sortByDefault"],
+    }
+
+    db.documents.document(document_id).set(document_dict)
     return len(element_ids)
 
 
 def preserve_info(db: database.Database) -> PreservedInfo:
     preserved_info = PreservedInfo()
-    # for doc_ref in db.documents.stream():
-    #     document_id = doc_ref.id
-    #     document_dict = doc_ref.to_dict()
-    #     preserved_docs.save_element(document_id, document_dict)
+    for doc_ref in db.documents.stream():
+        document_id = doc_ref.id
+        document_dict = doc_ref.to_dict()
+        preserved_info.save_document(document_id, document_dict)
 
     for element_ref in db.elements.stream():
         element_id = element_ref.id
@@ -254,4 +260,17 @@ def set_visibility(**kwargs):
     is_visible = connect.get_body_arg("isVisible")
 
     db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
+    return {"success": True}
+
+
+@router.post("/set-sort-order")
+@require_member_access()
+def set_sort_order(**kwargs):
+    db = connect.get_db()
+    document_id = connect.get_body_arg("documentId")
+    sort_by_default = connect.get_body_arg("sortByDefault")
+
+    db.documents.document(document_id).set(
+        {"sortByDefault": sort_by_default}, merge=True
+    )
     return {"success": True}

@@ -1,29 +1,37 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { OnshapeData } from "./onshape-data";
 import { useCallback } from "react";
-import { Vendor } from "./backend-types";
+import { AccessLevel, Vendor } from "./backend-types";
 
-export enum AppDialog {
+export enum AppMenu {
     INSERT_MENU = "insert-menu",
-    ADMIN_PANEL = "admin-panel"
+    SETTINGS_MENU = "settings-menu"
 }
 
 export interface InsertMenuParams {
-    activeDialog: AppDialog.INSERT_MENU;
+    activeMenu: AppMenu.INSERT_MENU;
     // Cannot use elementId since that's already used by OnshapeData
     activeElementId: string;
 }
 
-export interface AdminPanelParams {
-    activeDialog: AppDialog.ADMIN_PANEL;
+export interface SettingsMenuParams {
+    activeMenu: AppMenu.SETTINGS_MENU;
 }
 
 export type SearchParams = OnshapeData &
     BaseParams &
-    (InsertMenuParams | AdminPanelParams);
+    (InsertMenuParams | SettingsMenuParams);
 
 export interface BaseParams {
-    activeDialog?: AppDialog;
+    /**
+     * The maximum access level the user can have.
+     */
+    maxAccessLevel: AccessLevel;
+    /**
+     * The access level the user is currently using.
+     */
+    accessLevel: AccessLevel;
+    activeMenu?: AppMenu;
     query?: string;
     vendors?: Vendor[];
 }
@@ -38,7 +46,7 @@ export function useHandleCloseDialog() {
         navigate({
             to: pathname,
             search: {
-                activeDialog: undefined
+                activeMenu: undefined
             }
         });
     }, [pathname, navigate]);

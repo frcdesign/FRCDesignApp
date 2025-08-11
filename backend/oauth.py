@@ -10,6 +10,7 @@ The frontend should have a /redirect route which calls the /redirect route below
 import flask
 from flask import request
 from backend.common import connect, env
+from backend.common.backend_exceptions import AuthException, ServerException
 
 
 router = flask.Blueprint("oauth", __name__)
@@ -35,8 +36,7 @@ def sign_in():
 def redirect():
     """The Onshape redirect route.
 
-    Parameters:
-        The code and state parameters received from Onshape.
+    Parameters the values received from Onshape.
     """
     if request.args.get("error") == "access_denied":
         return flask.redirect("/grant-denied")
@@ -51,5 +51,11 @@ def redirect():
     )
     connect.save_token(db, token)
 
-    redirect_url = flask.session["redirect_url"]
+    redirect_url = flask.session.get("redirect_url")
+    if redirect_url == None:
+        if connect.is_safari_webkit():
+            return flask.redirect("/safari-error")
+        raise ServerException(
+            "Failed to find redirect_url, there may be an issue with cookie handling"
+        )
     return flask.redirect(redirect_url)

@@ -8,7 +8,7 @@ import {
     useOnshapeData
 } from "../api/onshape-data";
 import { BlueprintProvider } from "@blueprintjs/core";
-import { AdminPanel } from "./admin-panel";
+import { SettingsMenu } from "./settings-menu";
 import { InsertMenu } from "./insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
@@ -37,7 +37,7 @@ export function App() {
                         }
                     >
                         <Outlet />
-                        <AdminPanel />
+                        <SettingsMenu />
                         <InsertMenu />
                         <TanStackRouterDevtools />
                     </div>

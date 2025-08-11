@@ -12,11 +12,12 @@ import {
 } from "@blueprintjs/core";
 import { Outlet, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentCard, ElementCard, SearchResults } from "./cards";
+import { DocumentCard, ElementCard } from "./cards";
 import { FavoriteIcon } from "./favorite";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
 import { useQuery } from "@tanstack/react-query";
 import { DocumentResult } from "../api/backend-types";
+import { SearchResults } from "./search-results";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -42,14 +43,17 @@ export function HomeList(): ReactNode {
                 <SearchResults
                     data={data}
                     query={search.query}
-                    vendors={search.vendors}
+                    filters={{
+                        vendors: search.vendors,
+                        documentId: search.documentId
+                    }}
                 />
             </ListContainer>
         );
     } else {
         const libraryContent = Object.entries(data.documents).map(
-            ([id, document]) => {
-                return <DocumentCard key={id} document={document} />;
+            ([documentId, document]) => {
+                return <DocumentCard key={documentId} document={document} />;
             }
         );
 

@@ -193,6 +193,7 @@ export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
     elementIds: string[];
+    sortByDefault: boolean;
 }
 
 export interface ElementObj extends ElementPath {

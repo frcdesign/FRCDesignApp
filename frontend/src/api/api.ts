@@ -42,7 +42,6 @@ export async function apiGet(
     signal?: AbortSignal
 ): Promise<any> {
     return fetch(getUrl(path, query), {
-        cache: "no-store",
         signal
     }).then(handleResponse);
 }

@@ -1,3 +1,5 @@
+"""User settings saved in Onshape directly."""
+
 import flask
 
 from backend.common.connect import (

@@ -6,8 +6,6 @@ import {
     Text,
     Alert,
     Intent,
-    NonIdealState,
-    NonIdealStateIconSize,
     Menu,
     MenuItem,
     ContextMenu,
@@ -15,30 +13,20 @@ import {
     Tag
 } from "@blueprintjs/core";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useEffect, useState } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import {
     AccessLevel,
     DocumentObj,
-    DocumentResult,
     ElementObj,
     ElementType,
     hasMemberAccess
 } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
-import { AppDialog } from "../api/search-params";
+import { AppMenu } from "../api/search-params";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getDocumentLoader, getFavoritesLoader } from "../queries";
-import {
-    buildSearchDb,
-    getCachedSearchDb,
-    getSearchHitTitle,
-    SearchFilters,
-    SearchHit,
-    setCachedSearchDb,
-    doSearch
-} from "../api/search";
-import { AnyOrama } from "@orama/orama";
+import { getSearchHitTitle, SearchHit } from "../api/search";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 
@@ -54,24 +42,87 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     const navigate = useNavigate();
 
     return (
-        <Card
-            interactive
-            onClick={() => {
-                navigate({
-                    to: "/app/documents/$documentId",
-                    params: { documentId: document.id }
-                });
-            }}
-            className="item-card"
-        >
-            <EntityTitle
-                title={<Text>{document.name}</Text>}
-                icon={<CardThumbnail path={document} />}
-            />
-            <Icon icon="arrow-right" className={Classes.TEXT_MUTED} />
-        </Card>
+        <DocumentContextMenu document={document}>
+            {(ctxMenuProps: ContextMenuChildrenProps) => (
+                <>
+                    <Card
+                        onContextMenu={ctxMenuProps.onContextMenu}
+                        ref={ctxMenuProps.ref}
+                        interactive
+                        onClick={() => {
+                            navigate({
+                                to: "/app/documents/$documentId",
+                                params: { documentId: document.id }
+                            });
+                        }}
+                        className="item-card"
+                    >
+                        <EntityTitle
+                            title={<Text>{document.name}</Text>}
+                            icon={<CardThumbnail path={document} />}
+                        />
+                        <Icon
+                            icon="arrow-right"
+                            className={Classes.TEXT_MUTED}
+                        />
+                    </Card>
+                    {ctxMenuProps.popover}
+                </>
+            )}
+        </DocumentContextMenu>
     );
 }
+
+interface DocumentContextMenuProps {
+    document: DocumentObj;
+    children: any;
+}
+
+function DocumentContextMenu(props: DocumentContextMenuProps) {
+    const { children, document } = props;
+
+    const search = useSearch({ from: "/app" });
+
+    const mutation = useMutation({
+        mutationKey: ["set-sort-order"],
+        mutationFn: () => {
+            return apiPost("/set-sort-order", {
+                body: {
+                    documentId: document.id,
+                    sortByDefault: !document.sortByDefault
+                }
+            });
+        },
+        onSuccess: () => {
+            queryClient.refetchQueries({ queryKey: ["documents"] });
+        }
+    });
+
+    const menu = (
+        <Menu>
+            <MenuItem
+                onClick={() => {
+                    mutation.mutate();
+                }}
+                intent="primary"
+                icon={document.sortByDefault ? "list" : "sort-alphabetical"}
+                text={
+                    document.sortByDefault ? "Use tab order" : "Sort by default"
+                }
+            />
+        </Menu>
+    );
+
+    return (
+        <ContextMenu
+            content={menu}
+            disabled={!hasMemberAccess(search.accessLevel)}
+        >
+            {children}
+        </ContextMenu>
+    );
+}
+
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
     searchHit?: SearchHit;
@@ -140,7 +191,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             navigate({
                                 to: pathname,
                                 search: {
-                                    activeDialog: AppDialog.INSERT_MENU,
+                                    activeMenu: AppMenu.INSERT_MENU,
                                     activeElementId: element.elementId
                                 }
                             });
@@ -199,6 +250,8 @@ interface ElementContextMenuProps {
 function ElementContextMenu(props: ElementContextMenuProps) {
     const { children, element } = props;
 
+    const search = useSearch({ from: "/app" });
+
     const mutation = useMutation({
         mutationKey: ["set-visibility"],
         mutationFn: () => {
@@ -227,80 +280,12 @@ function ElementContextMenu(props: ElementContextMenuProps) {
         </Menu>
     );
 
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
-}
-
-interface SearchResultsProps extends SearchFilters {
-    data: DocumentResult;
-    query: string;
-}
-
-export function SearchResults(props: SearchResultsProps): ReactNode {
-    const { data, query, documentId, vendors } = props;
-
-    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
-        getCachedSearchDb()
+    return (
+        <ContextMenu
+            content={menu}
+            disabled={!hasMemberAccess(search.accessLevel)}
+        >
+            {children}
+        </ContextMenu>
     );
-    const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
-        undefined
-    );
-
-    useEffect(() => {
-        if (getCachedSearchDb()) {
-            setSearchDb(getCachedSearchDb());
-        } else {
-            const searchDb = buildSearchDb(data);
-            setCachedSearchDb(searchDb);
-            setSearchDb(searchDb);
-        }
-    }, [data]);
-
-    useEffect(() => {
-        const search = async () => {
-            if (!searchDb) {
-                return;
-            }
-            setSearchHits(
-                await doSearch(searchDb, query, { documentId, vendors })
-            );
-        };
-
-        search();
-    }, [searchDb, query, documentId, vendors]);
-
-    if (!searchDb || !searchHits) {
-        return null;
-    }
-
-    let content = null;
-    if (searchHits.length === 0) {
-        content = (
-            <div style={{ height: "150px" }}>
-                <NonIdealState
-                    icon={
-                        <Icon
-                            icon="search"
-                            size={NonIdealStateIconSize.STANDARD}
-                            intent={Intent.DANGER}
-                        />
-                    }
-                    title="No search results"
-                />
-            </div>
-        );
-    } else {
-        content = searchHits.map((searchHit: SearchHit) => {
-            const elementId = searchHit.id;
-            const element = data.elements[elementId];
-            return (
-                <ElementCard
-                    key={elementId}
-                    element={element}
-                    searchHit={searchHit}
-                />
-            );
-        });
-    }
-
-    return content;
 }

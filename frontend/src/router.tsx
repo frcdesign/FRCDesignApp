@@ -13,6 +13,7 @@ import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
 import { SearchParams } from "./api/search-params";
 import { getDocumentLoader, getFavoritesLoader } from "./queries";
+import { SafariError } from "./pages/safari-error";
 
 const rootRoute = createRootRoute();
 
@@ -72,12 +73,19 @@ const licenseRoute = createRoute({
     component: License
 });
 
+const safariErrorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "safari-error",
+    component: SafariError
+});
+
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,
-    licenseRoute
+    licenseRoute,
+    safariErrorRoute
 ]);
 
 export const router = createRouter({
