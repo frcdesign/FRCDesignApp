@@ -9,7 +9,11 @@ SESSION_SECRET = os.environ["SESSION_SECRET"]
 
 IS_PRODUCTION = os.getenv("NODE_ENV", "production") == "production"
 
-ACCESS_LEVEL_OVERRIDE = os.getenv("ACCESS_LEVEL_OVERRIDE")
+VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
+
+ACCESS_LEVEL_OVERRIDE = None if IS_PRODUCTION else os.getenv("ACCESS_LEVEL_OVERRIDE")
 ADMIN_TEAM = os.getenv("ADMIN_TEAM")
 
-VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
+USE_LOCAL_CONFIG = (
+    False if IS_PRODUCTION else os.getenv("USE_LOCAL_CONFIG", "false").lower() == "true"
+)

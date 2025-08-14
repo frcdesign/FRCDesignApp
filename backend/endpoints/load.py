@@ -31,7 +31,7 @@ def get_documents(**kwargs):
             "id": document_id,
             "name": document_dict["name"],
             "elementIds": document_dict["elementIds"],
-            "sortByDefault": document_dict["sortByDefault"],
+            "sortByDefault": document_dict.get("sortByDefault"),
             # InstancePath properties
             "documentId": doc_ref.id,
             "instanceId": document_dict["instanceId"],

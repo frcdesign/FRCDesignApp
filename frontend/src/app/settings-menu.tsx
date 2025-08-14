@@ -8,18 +8,20 @@ import {
     FormGroup,
     H6,
     Intent,
-    MenuItem
+    MenuItem,
+    TextArea
 } from "@blueprintjs/core";
 import { ReactNode, useMemo, useState } from "react";
 import { AppMenu, useHandleCloseDialog } from "../api/search-params";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { showSuccessToast } from "./toaster";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiGet, apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { AccessLevel, hasMemberAccess } from "../api/backend-types";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
+import { handleStringChange } from "../common/handlers";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -78,6 +80,7 @@ function AdminSettings(): ReactNode {
                 <>
                     <ReloadAllDocumentsButton force />
                     <ReloadAllDocumentsButton />
+                    <AppConfig />
                 </>
             ) : null}
         </>
@@ -226,4 +229,68 @@ function ReloadAllDocumentsButton(
             {alert}
         </>
     );
+}
+
+function AppConfig() {
+    const [appConfig, setAppConfig] = useState({});
+    const [currentValue, setCurrentValue] = useState("");
+
+    const appConfigQuery = useQuery<object>({
+        queryKey: ["app-config"],
+        queryFn: async ({ signal }) => {
+            const result = await apiGet("/app-config", {}, signal);
+            setAppConfig(result);
+            setCurrentValue(JSON.stringify(result, undefined, 4));
+            return result;
+        },
+        refetchInterval: false
+    });
+
+    const mutation = useMutation({
+        mutationKey: ["app-config"],
+        mutationFn: () =>
+            apiPost("/app-config", { body: JSON.parse(currentValue) }),
+        onSuccess: () => {
+            queryClient.refetchQueries({ queryKey: ["app-config"] });
+        }
+    });
+
+    if (appConfigQuery.isPending || !appConfig) {
+        return null;
+    }
+
+    const submitButton = (
+        <Button
+            text="Save changes"
+            icon="floppy-disk"
+            intent="primary"
+            disabled={
+                !isValidJSON(currentValue) ||
+                JSON.parse(currentValue) === appConfig
+            }
+            onClick={async () => {
+                mutation.mutate();
+            }}
+        />
+    );
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+            <TextArea
+                value={currentValue}
+                onChange={handleStringChange(setCurrentValue)}
+                autoResize
+            />
+            {submitButton}
+        </div>
+    );
+}
+
+function isValidJSON(text: string) {
+    try {
+        JSON.parse(text);
+        return true;
+    } catch (e) {
+        return false;
+    }
 }

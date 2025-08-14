@@ -25,6 +25,7 @@ export function App() {
     return (
         <BlueprintProvider
             portalClassName={themeClass}
+            // Very important, context menus do not work with the default container :(
             portalContainer={document.getElementById("root")!}
         >
             <QueryClientProvider client={queryClient}>

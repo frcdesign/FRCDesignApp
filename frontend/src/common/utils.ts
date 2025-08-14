@@ -1,5 +1,6 @@
+/**
+ * Capitalizes the first letter of a string and lower cases everything else.
+ */
 export function capitalize(val: string) {
-    return (
-        String(val).charAt(0).toUpperCase() + String(val).slice(1).toLowerCase()
-    );
+    return val[0].toUpperCase() + val.slice(1).toLowerCase();
 }

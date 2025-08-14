@@ -106,9 +106,7 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
                 }}
                 intent="primary"
                 icon={document.sortByDefault ? "list" : "sort-alphabetical"}
-                text={
-                    document.sortByDefault ? "Use tab order" : "Sort by default"
-                }
+                text={document.sortByDefault ? "Use tab order" : "Sort A-Z"}
             />
         </Menu>
     );

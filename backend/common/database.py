@@ -22,6 +22,10 @@ class Database:
     def configurations(self) -> CollectionReference:
         return self.client.collection("configurations")
 
+    @property
+    def app_config(self) -> CollectionReference:
+        return self.client.collection("appConfig")
+
     def delete_document(self, document_id: str):
         """Deletes a document and all elements and configurations which depend on it."""
         document = self.documents.document(document_id).get().to_dict()
