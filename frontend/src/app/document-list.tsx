@@ -35,7 +35,7 @@ export function DocumentList(): ReactNode {
         }
         const child = section.children[0];
         child.className += " " + Classes.INTERACTIVE;
-    }, [sectionRef]);
+    }, [sectionRef, searchDb, documents, elements]);
 
     if (!documents || !elements || !searchDb) {
         return null;

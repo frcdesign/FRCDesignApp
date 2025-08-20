@@ -173,9 +173,13 @@ export function getElementOrder(
     const result = notPromise(
         search(searchDb, {
             sortBy,
-            where
+            where,
+            // Can't use Infinity because Orama crashes and limit defaults to 10...
+            limit: 100000
         })
     );
+
+    console.log(result.hits);
 
     return result.hits.map((hit) => hit.id);
 }
