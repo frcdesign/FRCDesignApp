@@ -24,9 +24,13 @@ import {
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
 import { AppMenu } from "../api/search-params";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { getDocumentLoader, getFavoritesLoader } from "../queries";
-import { getSearchHitTitle, SearchHit } from "../api/search";
+import { useMutation } from "@tanstack/react-query";
+import { useDocumentsQuery, useFavoritesQuery } from "../queries";
+import {
+    getSearchHitTitle,
+    invalidateSearchDb,
+    SearchHit
+} from "../api/search";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 
@@ -134,8 +138,8 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     const navigate = useNavigate();
     const pathname = useLocation().pathname;
     const search = useSearch({ from: "/app" });
-    const data = useQuery(getDocumentLoader()).data;
-    const favorites = useQuery(getFavoritesLoader(search)).data;
+    const data = useDocumentsQuery().data;
+    const favorites = useFavoritesQuery(search).data;
 
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
@@ -260,8 +264,9 @@ function ElementContextMenu(props: ElementContextMenuProps) {
                 }
             });
         },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: ["elements"] });
+            invalidateSearchDb();
         }
     });
 

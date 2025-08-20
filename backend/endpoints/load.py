@@ -15,28 +15,14 @@ from onshape_api.paths.instance_type import InstanceType
 router = flask.Blueprint("load", __name__)
 
 
-@router.get("/documents")
-def get_documents(**kwargs):
-    """Returns a list of the top level documents and elements to display to the user."""
+@router.get("/elements")
+def get_elements(**kwargs):
+    """Returns a list of the top level elements to display to the user."""
     db = connect.get_db()
-
-    documents: dict[str, dict] = dict()
-    elements: dict[str, dict] = dict()
+    elements: list[dict] = []
 
     for doc_ref in db.documents.stream():
         document_dict = doc_ref.to_dict()
-        document_id = doc_ref.id
-
-        documents[document_id] = {
-            "id": document_id,
-            "name": document_dict["name"],
-            "elementIds": document_dict["elementIds"],
-            "sortByDefault": document_dict.get("sortByDefault"),
-            # InstancePath properties
-            "documentId": doc_ref.id,
-            "instanceId": document_dict["instanceId"],
-            "instanceType": InstanceType.VERSION,
-        }
 
         for element_id in document_dict["elementIds"]:
             element_dict = db.elements.document(element_id).get().to_dict()
@@ -64,14 +50,45 @@ def get_documents(**kwargs):
             if element_dict.get("vendor") != None:
                 element_obj["vendor"] = element_dict["vendor"]
 
-            elements[element_id] = element_obj
+            elements.append(element_obj)
 
-    return {"documents": documents, "elements": elements}
+    return {"elements": elements}
+
+
+@router.get("/documents")
+def get_documents(**kwargs):
+    """Returns a list of the top level documents to display to the user."""
+    db = connect.get_db()
+
+    documents: list[dict] = []
+
+    for doc_ref in db.documents.stream():
+        document_dict = doc_ref.to_dict()
+        document_id = doc_ref.id
+
+        documents.append(
+            {
+                "id": document_id,
+                "name": document_dict["name"],
+                "elementIds": document_dict["elementIds"],
+                "sortByDefault": document_dict.get("sortByDefault"),
+                # InstancePath properties
+                "documentId": doc_ref.id,
+                "instanceId": document_dict["instanceId"],
+                "instanceType": InstanceType.VERSION,
+            }
+        )
+
+    return {"documents": documents}
 
 
 @router.get("/configuration/<configuration_id>")
 def get_configuration(configuration_id: str):
-    """Returns a specific configuration."""
+    """Returns a specific configuration.
+
+    Returns:
+        parameters: A list of configuration parameters.
+    """
     db = connect.get_db()
     result = db.configurations.document(configuration_id).get().to_dict()
     if result == None:

@@ -7,21 +7,24 @@ import {
 } from "@tanstack/react-router";
 import { ReactNode, useLayoutEffect, useRef } from "react";
 import { ElementCard } from "./cards";
-import { getDocumentLoader } from "../queries";
-import { useQuery } from "@tanstack/react-query";
 import { SearchResults } from "./search-results";
+import { getElementOrder, SortOrder, useSearchDb } from "../api/search";
+import { hasMemberAccess } from "../api/backend-types";
+import { useDocumentsQuery, useElementsQuery } from "../queries";
 
 /**
  * A list of elements in a document.
  */
 export function DocumentList(): ReactNode {
     const navigate = useNavigate();
-    const data = useQuery(getDocumentLoader()).data;
+    const documents = useDocumentsQuery().data;
+    const elements = useElementsQuery().data;
     const documentId = useParams({
         from: "/app/documents/$documentId"
     }).documentId;
 
     const search = useSearch({ from: "/app" });
+    const searchDb = useSearchDb(documents, elements);
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -34,26 +37,41 @@ export function DocumentList(): ReactNode {
         child.className += " " + Classes.INTERACTIVE;
     }, [sectionRef]);
 
-    if (!data) {
+    if (!documents || !elements || !searchDb) {
         return null;
     }
 
-    const document = data.documents[documentId];
+    const document = documents[documentId];
 
     let content;
     if (search.query) {
         content = (
             <SearchResults
+                documents={documents}
+                elements={elements}
                 query={search.query}
-                data={data}
                 filters={{ vendors: search.vendors, documentId }}
             />
         );
     } else {
-        const elements = document.elementIds.map(
-            (elementId) => data.elements[elementId]
+        // if (search.sortOrder == SortOrder.DEFAULT) {
+        const documentSortOrder = document.sortByDefault
+            ? SortOrder.ASCENDING
+            : SortOrder.DEFAULT;
+        // }
+
+        const orderedElementIds = getElementOrder(searchDb, {
+            sortOrder: documentSortOrder,
+            elementIds: document.elementIds,
+            vendors: search.vendors,
+            // Only show visible elements to users
+            isVisible: !hasMemberAccess(search.accessLevel)
+        });
+
+        const orderedElements = orderedElementIds.map(
+            (elementId) => elements[elementId]
         );
-        content = elements.map((element) => {
+        content = orderedElements.map((element) => {
             return <ElementCard key={element.id} element={element} />;
         });
     }

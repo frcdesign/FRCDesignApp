@@ -8,25 +8,35 @@ import {
     Icon,
     Intent,
     NonIdealState,
-    NonIdealStateIconSize
+    NonIdealStateIconSize,
+    Spinner
 } from "@blueprintjs/core";
 import { Outlet, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard, ElementCard } from "./cards";
 import { FavoriteIcon } from "./favorite";
-import { getDocumentLoader, getFavoritesLoader } from "../queries";
-import { useQuery } from "@tanstack/react-query";
-import { DocumentResult } from "../api/backend-types";
+import {
+    useDocumentsQuery,
+    useElementsQuery,
+    useFavoritesQuery
+} from "../queries";
+import {
+    DocumentsResult,
+    ElementsResult,
+    hasMemberAccess
+} from "../api/backend-types";
 import { SearchResults } from "./search-results";
+import { getElementOrder, useSearchDb } from "../api/search";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
-    const data = useQuery(getDocumentLoader()).data;
+    const documents = useDocumentsQuery().data;
+    const elements = useElementsQuery().data;
     const search = useSearch({ from: "/app" });
 
-    if (!data) {
+    if (!documents || !elements) {
         return null;
     }
 
@@ -41,7 +51,8 @@ export function HomeList(): ReactNode {
                 title="Search Results"
             >
                 <SearchResults
-                    data={data}
+                    documents={documents}
+                    elements={elements}
                     query={search.query}
                     filters={{
                         vendors: search.vendors,
@@ -51,11 +62,9 @@ export function HomeList(): ReactNode {
             </ListContainer>
         );
     } else {
-        const libraryContent = Object.entries(data.documents).map(
-            ([documentId, document]) => {
-                return <DocumentCard key={documentId} document={document} />;
-            }
-        );
+        const libraryContent = Object.values(documents).map((document) => {
+            return <DocumentCard key={document.id} document={document} />;
+        });
 
         content = (
             <>
@@ -64,7 +73,7 @@ export function HomeList(): ReactNode {
                     title="Favorites"
                     defaultIsOpen={false}
                 >
-                    <FavoritesList data={data} />
+                    <FavoritesList documents={documents} elements={elements} />
                 </ListContainer>
                 <ListContainer
                     icon={<Icon icon="manual" className="frc-design-green" />}
@@ -89,20 +98,49 @@ export function HomeList(): ReactNode {
 }
 
 interface FavoritesListProps {
-    data: DocumentResult;
+    documents: DocumentsResult;
+    elements: ElementsResult;
 }
 
 function FavoritesList(props: FavoritesListProps) {
-    const { data } = props;
+    const { documents, elements } = props;
 
-    const onshapeData = useSearch({ from: "/app" });
-    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+    const search = useSearch({ from: "/app" });
+    const favoritesQuery = useFavoritesQuery(search);
 
-    if (!favorites) {
-        return null;
+    const searchDb = useSearchDb(documents, elements);
+
+    if (favoritesQuery.isPending || !searchDb) {
+        return (
+            <NonIdealState
+                icon={<Spinner intent="primary" />}
+                title="Loading..."
+            />
+        );
+    } else if (favoritesQuery.isError) {
+        return (
+            <NonIdealState
+                icon={
+                    <Icon
+                        icon="heart-broken"
+                        size={NonIdealStateIconSize.SMALL}
+                        color={Colors.RED3}
+                        style={{ marginBottom: "-5px" }}
+                    />
+                }
+                title="Failed to load favorites"
+            />
+        );
     }
 
-    if (Object.keys(favorites).length == 0) {
+    const orderedFavorites = getElementOrder(searchDb, {
+        elementIds: Object.keys(favoritesQuery.data),
+        vendors: search.vendors,
+        // Only show visible elements
+        isVisible: !hasMemberAccess(search.accessLevel)
+    });
+
+    if (orderedFavorites.length == 0) {
         return (
             <NonIdealState
                 icon={
@@ -119,13 +157,13 @@ function FavoritesList(props: FavoritesListProps) {
         );
     }
 
-    return Object.keys(favorites).map((id: string) => {
+    return orderedFavorites.map((elementId: string) => {
         // Have to guard against elements in case we ever deprecate a document
-        const element = data.elements[id];
+        const element = elements[elementId];
         if (!element) {
             return null;
         }
-        return <ElementCard key={id} element={element} />;
+        return <ElementCard key={elementId} element={element} />;
     });
 }
 

@@ -22,6 +22,7 @@ import { AccessLevel, hasMemberAccess } from "../api/backend-types";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { handleStringChange } from "../common/handlers";
+import { invalidateSearchDb } from "../api/search";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -181,7 +182,11 @@ function ReloadAllDocumentsButton(
                     "Successfully reloaded " + savedElements + " tabs."
                 );
             }
-            await queryClient.refetchQueries({ queryKey: ["documents"] });
+            await Promise.all([
+                queryClient.refetchQueries({ queryKey: ["documents"] }),
+                queryClient.refetchQueries({ queryKey: ["elements"] })
+            ]);
+            invalidateSearchDb();
         }
     });
 
@@ -264,11 +269,8 @@ function AppConfig() {
             text="Save changes"
             icon="floppy-disk"
             intent="primary"
-            disabled={
-                !isValidJSON(currentValue) ||
-                JSON.parse(currentValue) === appConfig
-            }
-            onClick={async () => {
+            disabled={!isValidJSON(currentValue)}
+            onClick={() => {
                 mutation.mutate();
             }}
         />

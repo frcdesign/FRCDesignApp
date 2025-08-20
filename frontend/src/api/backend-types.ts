@@ -184,10 +184,7 @@ export interface QuantityParameterObj extends ParameterBase {
     unit: Unit;
 }
 
-export interface DocumentResult {
-    documents: Record<string, DocumentObj>;
-    elements: Record<string, ElementObj>;
-}
+export type DocumentsResult = Record<string, DocumentObj>;
 
 export interface DocumentObj extends InstancePath {
     id: string;
@@ -195,6 +192,8 @@ export interface DocumentObj extends InstancePath {
     elementIds: string[];
     sortByDefault: boolean;
 }
+
+export type ElementsResult = Record<string, ElementObj>;
 
 export interface ElementObj extends ElementPath {
     id: string;
@@ -212,7 +211,9 @@ export type FavoritesResult = Record<string, Favorite>;
  * A favorite is currently just an empty object.
  * We may add additional information in the future.
  */
-export interface Favorite {}
+export interface Favorite {
+    id: string;
+}
 
 export enum ThumbnailSize {
     STANDARD = "300x300",

@@ -27,11 +27,15 @@ def get_favorites(**kwargs):
     api = get_api(db)
     client_path = get_route_user_path()
 
-    favorites = get_setting(api, client_path, "favorites")
-    if favorites == None:
+    favorites_result = get_setting(api, client_path, "favorites")
+    if favorites_result == None:
         favorites = []
+
     else:
-        favorites = favorites["value"]
+        # Convert from dict mapping ids to {} to array
+        # This is a bit goofy since we immediately convert back in the frontend, but it's uniform with /documents and /elements
+        favorites = [{"id": id} for id in favorites_result["value"].keys()]
+
     return {"favorites": favorites}
 
 

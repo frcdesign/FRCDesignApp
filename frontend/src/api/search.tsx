@@ -1,5 +1,5 @@
-import { AnyOrama, create, insert } from "@orama/orama";
-import { DocumentResult, Vendor } from "./backend-types";
+import { AnyOrama, create, insert, search } from "@orama/orama";
+import { DocumentsResult, ElementsResult, Vendor } from "./backend-types";
 import {
     afterInsert as highlightAfterInsert,
     Position,
@@ -18,30 +18,41 @@ function setCachedSearchDb(searchDb: AnyOrama) {
     cachedSearchDb = searchDb;
 }
 
+export function invalidateSearchDb() {
+    cachedSearchDb = undefined;
+}
+
 /**
  * Returns the current cached search database.
  * If the database hasn't been accessed yet, this function will synchronously build it first.
  * This could produce a small latency on initial load, which we will ignore for now.
  */
-export function useSearchDb(data: DocumentResult) {
-    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
-        getCachedSearchDb()
-    );
+export function useSearchDb(
+    documents?: DocumentsResult,
+    elements?: ElementsResult
+) {
+    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(); // getCachedSearchDb()
 
     useEffect(() => {
+        if (!documents || !elements) {
+            return;
+        }
         if (getCachedSearchDb()) {
             setSearchDb(getCachedSearchDb());
         } else {
-            const searchDb = buildSearchDb(data);
+            const searchDb = buildSearchDb(documents, elements);
             setCachedSearchDb(searchDb);
             setSearchDb(searchDb);
         }
-    }, [data]);
+    }, [documents, elements]);
 
     return searchDb;
 }
 
-export function buildSearchDb(data: DocumentResult) {
+export function buildSearchDb(
+    documents: DocumentsResult,
+    elements: ElementsResult
+) {
     const searchDb = create({
         schema: {
             id: "string",
@@ -87,9 +98,9 @@ export function buildSearchDb(data: DocumentResult) {
         ]
     });
     // Cannot use insertMultiple since it doesn't return a Promise and there isn't a way to tell when it's actually finished...
-    Object.entries(data.documents).forEach(([documentId, document]) => {
+    Object.entries(documents).forEach(([documentId, document]) => {
         document.elementIds.forEach((elementId) => {
-            const element = data.elements[elementId];
+            const element = elements[elementId];
             insert(searchDb, {
                 id: elementId,
                 documentId,
@@ -101,6 +112,72 @@ export function buildSearchDb(data: DocumentResult) {
         });
     });
     return searchDb;
+}
+
+/**
+ * Asserts a given value is not a Promise.
+ */
+function notPromise<T>(value: T | Promise<T>): T {
+    if (value instanceof Promise) {
+        throw new Error("Value cannot be a promise");
+    }
+    return value;
+}
+
+export enum SortOrder {
+    DEFAULT = "default",
+    ASCENDING = "ASC",
+    DESCENDING = "DESC"
+}
+
+export interface ElementOrderArgs {
+    elementIds?: string[];
+    sortOrder?: SortOrder;
+    vendors?: Vendor[];
+    /**
+     * @default false
+     */
+    isVisible?: boolean;
+}
+
+/**
+ * Returns an ordered list of elements in a document.
+ */
+export function getElementOrder(
+    searchDb: AnyOrama,
+    args: ElementOrderArgs
+): string[] {
+    const where: Record<string, string | string[] | boolean> = {};
+    if (args.isVisible) {
+        where.isVisible = true;
+    }
+
+    if (args.elementIds) {
+        where.id = args.elementIds;
+    }
+
+    if (args.vendors) {
+        where.vendor = args.vendors;
+    }
+
+    let sortBy = undefined;
+    if (args.sortOrder) {
+        if (args.sortOrder != SortOrder.DEFAULT) {
+            sortBy = {
+                property: "name",
+                order: args.sortOrder
+            };
+        }
+    }
+
+    const result = notPromise(
+        search(searchDb, {
+            sortBy,
+            where
+        })
+    );
+
+    return result.hits.map((hit) => hit.id);
 }
 
 export interface SearchFilters {

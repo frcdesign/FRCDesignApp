@@ -39,7 +39,11 @@ import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
 import { FavoriteButton } from "./favorite";
 import { AppMenu, useHandleCloseDialog } from "../api/search-params";
-import { getDocumentLoader, getFavoritesLoader } from "../queries";
+import {
+    useDocumentsQuery,
+    useElementsQuery,
+    useFavoritesQuery
+} from "../queries";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -56,9 +60,10 @@ interface InsertMenuDialogProps {
 function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
     const elementId = props.elementId;
 
-    const data = useQuery(getDocumentLoader()).data;
+    const documents = useDocumentsQuery().data;
+    const elements = useElementsQuery().data;
     const onshapeData = useOnshapeData();
-    const favorites = useQuery(getFavoritesLoader(onshapeData)).data;
+    const favorites = useFavoritesQuery(onshapeData).data;
 
     const closeDialog = useHandleCloseDialog();
 
@@ -66,11 +71,11 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
         Record<string, string> | undefined
     >(undefined);
 
-    if (!data || !favorites) {
+    if (!documents || !elements || !favorites) {
         return null;
     }
 
-    const element = data.elements[elementId];
+    const element = elements[elementId];
     const isFavorite = favorites[elementId] !== undefined;
 
     let parameters = null;

@@ -1,19 +1,20 @@
 import { NonIdealState, Icon, NonIdealStateIconSize } from "@blueprintjs/core";
 import { ReactNode, useState, useEffect } from "react";
-import { DocumentResult } from "../api/backend-types";
 import { SearchFilters, SearchHit, doSearch, useSearchDb } from "../api/search";
 import { ElementCard } from "./cards";
+import { DocumentsResult, ElementsResult } from "../api/backend-types";
 
 interface SearchResultsProps {
-    data: DocumentResult;
+    documents: DocumentsResult;
+    elements: ElementsResult;
     query: string;
     filters: SearchFilters;
 }
 
 export function SearchResults(props: SearchResultsProps): ReactNode {
-    const { data, query, filters } = props;
+    const { documents, elements, query, filters } = props;
 
-    const searchDb = useSearchDb(data);
+    const searchDb = useSearchDb(documents, elements);
 
     const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
         undefined
@@ -52,7 +53,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     } else {
         content = searchHits.map((searchHit: SearchHit) => {
             const elementId = searchHit.id;
-            const element = data.elements[elementId];
+            const element = elements[elementId];
             return (
                 <ElementCard
                     key={elementId}

@@ -12,7 +12,11 @@ import {
 import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
 import { SearchParams } from "./api/search-params";
-import { getDocumentLoader, getFavoritesLoader } from "./queries";
+import {
+    getDocumentsQuery,
+    getElementsQuery,
+    getFavoritesQuery
+} from "./queries";
 import { SafariError } from "./pages/safari-error";
 
 const rootRoute = createRootRoute();
@@ -39,12 +43,14 @@ const homeRoute = createRoute({
     path: "documents",
     loaderDeps: ({ search }) => ({ userId: search.userId }),
     loader: async ({ deps }) => {
-        const loadDocuments = getDocumentLoader();
-        const loadFavorites = getFavoritesLoader(deps);
+        const loadDocuments = getDocumentsQuery();
+        const loadElements = getElementsQuery();
+        const loadFavorites = getFavoritesQuery(deps);
 
         return Promise.all([
-            queryClient.ensureQueryData(loadFavorites),
-            queryClient.ensureQueryData(loadDocuments)
+            queryClient.ensureQueryData(loadDocuments),
+            queryClient.ensureQueryData(loadElements),
+            queryClient.ensureQueryData(loadFavorites)
         ]);
     }
 });

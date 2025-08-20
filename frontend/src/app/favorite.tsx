@@ -13,6 +13,10 @@ enum Operation {
     REMOVE
 }
 
+function getOppositeOperation(operation: Operation) {
+    return operation == Operation.ADD ? Operation.REMOVE : Operation.ADD;
+}
+
 interface UpdateFavoritesArgs {
     operation: Operation;
     elementId: string;
@@ -21,7 +25,7 @@ interface UpdateFavoritesArgs {
 function updateFavorites(data: FavoritesResult, args: UpdateFavoritesArgs) {
     const favorites = { ...data };
     if (args.operation === Operation.ADD) {
-        favorites[args.elementId] = {};
+        favorites[args.elementId] = { id: args.elementId };
     } else {
         delete favorites[args.elementId];
     }
@@ -61,10 +65,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             const action =
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
             showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
-            args.operation =
-                args.operation === Operation.ADD
-                    ? Operation.REMOVE
-                    : Operation.ADD;
+            args.operation = getOppositeOperation(args.operation);
             queryClient.setQueryData(["favorites"], (data: FavoritesResult) =>
                 updateFavorites(data, args)
             );
