@@ -26,8 +26,8 @@ export function getDocumentsQuery() {
     });
 }
 
-export function useDocumentOrderQuery() {
-    return useQuery(getDocumentOrderQuery());
+export function useDocumentsQuery() {
+    return useQuery(getDocumentsQuery());
 }
 
 export function getDocumentOrderQuery() {
@@ -35,13 +35,13 @@ export function getDocumentOrderQuery() {
         queryKey: ["document-order"],
         queryFn: () =>
             apiGet("/document-order").then(
-                (result) => result.order
+                (result) => result.documentOrder
             ) as Promise<DocumentOrderResult>
     });
 }
 
-export function useDocumentsQuery() {
-    return useQuery(getDocumentsQuery());
+export function useDocumentOrderQuery() {
+    return useQuery(getDocumentOrderQuery());
 }
 
 export function getElementsQuery() {
@@ -74,7 +74,9 @@ export function getFavoritesQuery(userPath: UserPath) {
                         favorite
                     ])
                 )
-            ) as Promise<FavoritesResult>
+            ) as Promise<FavoritesResult>,
+        // Favorites shouldn't go stale, although they can get set externally
+        staleTime: 60 * 1000
     });
 }
 

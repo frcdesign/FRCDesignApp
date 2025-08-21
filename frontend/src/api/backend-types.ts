@@ -186,27 +186,27 @@ export interface QuantityParameterObj extends ParameterBase {
 
 export type DocumentsResult = Record<string, DocumentObj>;
 
-export enum ListElementType {
-    DOCUMENT = "document",
-    // We don't currently support folders, but we'll define them now so it's easier to add them later
-    FOLDER = "folder"
-}
+// export enum ListElementType {
+//     DOCUMENT = "document",
+//     // We don't currently support folders, but we'll define them now so it's easier to add them later
+//     FOLDER = "folder"
+// }
 
-export type ListElement = DocumentListElement | FolderListElement;
+// export type ListElement = DocumentListElement | FolderListElement;
 
-export interface DocumentListElement {
-    type: ListElementType.DOCUMENT;
-    id: string;
-}
+// export interface DocumentListElement {
+//     type: ListElementType.DOCUMENT;
+//     id: string;
+// }
 
-export interface FolderListElement {
-    type: ListElementType.FOLDER;
-    id: string;
-    // Only allowed to be documentIds
-    childrenIds: string[];
-}
+// export interface FolderListElement {
+//     type: ListElementType.FOLDER;
+//     id: string;
+//     // Only allowed to be documentIds
+//     childrenIds: string[];
+// }
 
-export type DocumentOrderResult = ListElement[];
+export type DocumentOrderResult = string[];
 
 export interface DocumentObj extends InstancePath {
     id: string;

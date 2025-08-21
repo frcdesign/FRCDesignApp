@@ -36,9 +36,6 @@ SESSION_SECRET=literallyAnythingWillDo
 # One of admin, member, or user, depending on desired access to the app. Does nothing in production.
 ACCESS_LEVEL_OVERRIDE=admin
 
-# true to use config.json rather than the app_config saved to the database. Does nothing in production.
-USE_LOCAL_CONFIG=false
-
 NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```

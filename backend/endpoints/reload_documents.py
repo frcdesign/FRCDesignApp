@@ -5,11 +5,9 @@ Every route in this file is access controlled.
 
 from __future__ import annotations
 import flask
-import json5
 
 from backend.common import connect, database
 from backend.common.app_access import require_member_access
-from backend.common.env import USE_LOCAL_CONFIG
 from backend.endpoints.backend_types import (
     NONE_CONDITION,
     ConditionType,
@@ -31,10 +29,9 @@ from onshape_api.paths.doc_path import (
     DocumentPath,
     ElementPath,
     InstancePath,
-    url_to_document_path,
 )
 
-router = flask.Blueprint("update", __name__)
+router = flask.Blueprint("reload-documents", __name__)
 
 
 def evaluate(condition_dict: dict | None, configuration: dict[str, str]) -> bool:
@@ -210,23 +207,16 @@ def preserve_info(db: database.Database) -> PreservedInfo:
     return preserved_info
 
 
-@router.post("/save-all-documents")
+@router.post("/reload-documents")
 @require_member_access()
-def save_all_documents(**kwargs):
+def reload_documents(**kwargs):
     """Saves the contents of the latest versions of all documents managed by FRC Design Lib into the database."""
     db = connect.get_db()
     api = connect.get_api(db)
 
-    force = connect.get_query_bool("force", False)
+    reload_all = connect.get_query_bool("reloadAll", False)
 
-    if USE_LOCAL_CONFIG:
-        with open("config.json") as file:
-            document_urls = json5.load(file)["documents"]
-            document_order = [
-                url_to_document_path(url).document_id for url in document_urls
-            ]
-    else:
-        document_order = db.get_document_order()
+    document_order = db.get_document_order()
 
     # Iterate in reverse so the result is ordered
 
@@ -240,6 +230,12 @@ def save_all_documents(**kwargs):
         visited.add(document_path.document_id)
 
         latest_version_path = get_latest_version_path(api, document_path)
+
+        if reload_all:
+            db.delete_document(document_path.document_id)
+            count += save_document(api, db, latest_version_path, preserved_info)
+            continue
+
         document = db.documents.document(document_path.document_id).get().to_dict()
         if document == None:
             # Document doesn't exist, create it immediately
@@ -247,7 +243,7 @@ def save_all_documents(**kwargs):
             continue
 
         # Version is already saved
-        if document.get("instanceId") == latest_version_path.instance_id and not force:
+        if document.get("instanceId") == latest_version_path.instance_id:
             continue
 
         # Refresh document

@@ -1,11 +1,16 @@
 import os
 import flask
+import json5
 from backend.common.app_access import get_app_access_level
 from backend.common.app_logging import APP_LOGGER
 from backend.endpoints import api
 from backend.common import connect, env
 from backend import oauth
+from backend.endpoints.document_order import set_document_order
+from backend.endpoints.reload_documents import save_document
 from onshape_api.endpoints.users import AccessLevel, ping
+from onshape_api.endpoints.versions import get_latest_version_path
+from onshape_api.paths.doc_path import url_to_document_path
 
 
 def create_app():
@@ -56,6 +61,17 @@ def create_app():
                 },
             )
             return flask.redirect(new_url)
+
+        # Load config.json into the database when app is opened for the first time
+        if not env.IS_PRODUCTION and db.get_document_order() == []:
+            APP_LOGGER.info("Initializing database using config.json")
+            with open("config.json") as file:
+                document_urls = json5.load(file)["documents"]
+                document_paths = [url_to_document_path(url) for url in document_urls]
+                db.set_document_order([path.document_id for path in document_paths])
+                for path in document_paths:
+                    version_path = get_latest_version_path(api, path)
+                    save_document(api, db, version_path)
 
         return serve_index()
 

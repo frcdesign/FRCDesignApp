@@ -8,20 +8,18 @@ import {
     FormGroup,
     H6,
     Intent,
-    MenuItem,
-    TextArea
+    MenuItem
 } from "@blueprintjs/core";
 import { ReactNode, useMemo, useState } from "react";
 import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { showSuccessToast } from "../common/toaster";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiGet, apiPost } from "../api/api";
+import { useMutation } from "@tanstack/react-query";
+import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { AccessLevel, hasMemberAccess } from "../api/backend-types";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { handleStringChange } from "../common/utils";
 import { invalidateSearchDb } from "../api/search";
 
 export function SettingsMenu(): ReactNode {
@@ -79,9 +77,8 @@ function AdminSettings(): ReactNode {
             <AccessLevelSelect />
             {hasMemberAccess(search.accessLevel) ? (
                 <>
-                    <ReloadAllDocumentsButton force />
-                    <ReloadAllDocumentsButton />
-                    <AppConfig />
+                    <ReloadDocumentsButton reloadAll />
+                    <ReloadDocumentsButton />
                 </>
             ) : null}
         </>
@@ -156,20 +153,18 @@ function AccessLevelSelect(): ReactNode {
     );
 }
 
-interface ReloadAllDocumentsButtonProps {
-    force?: boolean;
+interface ReloadDocumentsButtonProps {
+    reloadAll?: boolean;
 }
 
-function ReloadAllDocumentsButton(
-    props: ReloadAllDocumentsButtonProps
-): ReactNode {
-    const force = props.force ?? false;
+function ReloadDocumentsButton(props: ReloadDocumentsButtonProps): ReactNode {
+    const reloadAll = props.reloadAll ?? false;
     const mutation = useMutation({
-        mutationKey: ["save-all-documents"],
+        mutationKey: ["reload-documents"],
         mutationFn: () => {
-            return apiPost("/save-all-documents", {
+            return apiPost("/reload-documents", {
                 // Set a timeout of 5 minutes
-                query: { force },
+                query: { reloadAll },
                 signal: AbortSignal.timeout(5 * 60000)
             });
         },
@@ -179,7 +174,7 @@ function ReloadAllDocumentsButton(
                 showSuccessToast("All documents were already up to date.");
             } else {
                 showSuccessToast(
-                    "Successfully reloaded " + savedElements + " tabs."
+                    "Successfully reloaded " + savedElements + " elements."
                 );
             }
             await Promise.all([
@@ -196,7 +191,7 @@ function ReloadAllDocumentsButton(
         <Alert
             confirmButtonText="Reload"
             icon="refresh"
-            intent={force ? Intent.DANGER : Intent.PRIMARY}
+            intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
             isOpen={isAlertOpen}
             canEscapeKeyCancel
             canOutsideClickCancel
@@ -208,8 +203,10 @@ function ReloadAllDocumentsButton(
                 setIsAlertOpen(false);
             }}
         >
-            Are you sure you want to {force ? "force " : ""}reload all
-            documents?
+            Are you sure you want to
+            {reloadAll
+                ? " reload all documents?"
+                : " reload outdated documents?"}
         </Alert>
     );
 
@@ -217,9 +214,9 @@ function ReloadAllDocumentsButton(
         <>
             <FormGroup
                 label={
-                    force
-                        ? "Force reload all documents"
-                        : "Reload all documents"
+                    reloadAll
+                        ? "Reload all documents"
+                        : "Reload outdated documents"
                 }
                 inline
             >
@@ -228,71 +225,10 @@ function ReloadAllDocumentsButton(
                     text="Reload"
                     onClick={() => setIsAlertOpen(true)}
                     loading={mutation.isPending}
-                    intent={force ? Intent.DANGER : Intent.PRIMARY}
+                    intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
                 />
             </FormGroup>
             {alert}
         </>
     );
-}
-
-function AppConfig() {
-    const [appConfig, setAppConfig] = useState({});
-    const [currentValue, setCurrentValue] = useState("");
-
-    const appConfigQuery = useQuery<object>({
-        queryKey: ["app-config"],
-        queryFn: async ({ signal }) => {
-            const result = await apiGet("/app-config", {}, signal);
-            setAppConfig(result);
-            setCurrentValue(JSON.stringify(result, undefined, 4));
-            return result;
-        },
-        refetchInterval: false
-    });
-
-    const mutation = useMutation({
-        mutationKey: ["app-config"],
-        mutationFn: () =>
-            apiPost("/app-config", { body: JSON.parse(currentValue) }),
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["app-config"] });
-        }
-    });
-
-    if (appConfigQuery.isPending || !appConfig) {
-        return null;
-    }
-
-    const submitButton = (
-        <Button
-            text="Save changes"
-            icon="floppy-disk"
-            intent="primary"
-            disabled={!isValidJSON(currentValue)}
-            onClick={() => {
-                mutation.mutate();
-            }}
-        />
-    );
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-            <TextArea
-                value={currentValue}
-                onChange={handleStringChange(setCurrentValue)}
-                autoResize
-            />
-            {submitButton}
-        </div>
-    );
-}
-
-function isValidJSON(text: string) {
-    try {
-        JSON.parse(text);
-        return true;
-    } catch (e) {
-        return false;
-    }
 }

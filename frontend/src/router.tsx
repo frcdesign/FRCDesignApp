@@ -12,6 +12,7 @@ import {
 import { queryClient } from "./query-client";
 import { DocumentList } from "./document/document-list";
 import {
+    getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
     getFavoritesQuery
@@ -61,11 +62,13 @@ const homeRoute = createRoute({
     loaderDeps: ({ search }) => ({ userId: search.userId }),
     loader: async ({ deps }) => {
         const loadDocuments = getDocumentsQuery();
+        const loadDocumentOrder = getDocumentOrderQuery();
         const loadElements = getElementsQuery();
         const loadFavorites = getFavoritesQuery(deps);
 
         return Promise.all([
             queryClient.ensureQueryData(loadDocuments),
+            queryClient.ensureQueryData(loadDocumentOrder),
             queryClient.ensureQueryData(loadElements),
             queryClient.ensureQueryData(loadFavorites)
         ]);
@@ -112,7 +115,7 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({
-    routeTree
-    // Database is immutable, so no need to refetch things
-    // defaultStaleTime: Infinity
+    routeTree,
+    // Data is persistent, so assume it doesn't go stale
+    defaultStaleTime: Infinity
 });

@@ -23,7 +23,6 @@ import {
 } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
-import { AppMenu } from "../api/menu-params";
 import { useMutation } from "@tanstack/react-query";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";
 import {
@@ -31,8 +30,9 @@ import {
     invalidateSearchDb,
     SearchHit
 } from "../api/search";
-import { apiPost } from "../api/api";
+import { apiDelete, apiPost } from "../api/api";
 import { queryClient } from "../query-client";
+import { AppMenu } from "../api/menu-params";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -88,7 +88,7 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
     const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
 
-    const mutation = useMutation({
+    const setSortOrderMutation = useMutation({
         mutationKey: ["set-sort-order"],
         mutationFn: () => {
             return apiPost("/set-sort-order", {
@@ -103,11 +103,23 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
         }
     });
 
+    const deleteDocumentMutation = useMutation({
+        mutationKey: ["delete-document"],
+        mutationFn: () => {
+            return apiDelete("/document", { documentId: document.id });
+        },
+        onSuccess: () => {
+            queryClient.refetchQueries({ queryKey: ["documents"] });
+            queryClient.refetchQueries({ queryKey: ["document-order"] });
+            queryClient.refetchQueries({ queryKey: ["elements"] });
+        }
+    });
+
     const menu = (
         <Menu>
             <MenuItem
                 onClick={() => {
-                    mutation.mutate();
+                    setSortOrderMutation.mutate();
                 }}
                 icon={document.sortByDefault ? "list" : "sort-alphabetical"}
                 text={document.sortByDefault ? "Use tab order" : "Sort A-Z"}
@@ -124,6 +136,14 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
                             selectedDocumentId: document.id
                         }
                     });
+                }}
+            />
+            <MenuItem
+                icon="delete"
+                text="Delete"
+                intent="danger"
+                onClick={() => {
+                    deleteDocumentMutation.mutate();
                 }}
             />
         </Menu>

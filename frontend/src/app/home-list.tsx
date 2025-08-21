@@ -16,6 +16,7 @@ import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard, ElementCard } from "./cards";
 import { FavoriteIcon } from "./favorite";
 import {
+    useDocumentOrderQuery,
     useDocumentsQuery,
     useElementsQuery,
     useFavoritesQuery
@@ -33,10 +34,11 @@ import { getElementOrder, useSearchDb } from "../api/search";
  */
 export function HomeList(): ReactNode {
     const documents = useDocumentsQuery().data;
+    const documentOrder = useDocumentOrderQuery().data;
     const elements = useElementsQuery().data;
     const search = useSearch({ from: "/app" });
 
-    if (!documents || !elements) {
+    if (!documents || !elements || !documentOrder) {
         return null;
     }
 
@@ -62,7 +64,11 @@ export function HomeList(): ReactNode {
             </ListContainer>
         );
     } else {
-        const libraryContent = Object.values(documents).map((document) => {
+        const libraryContent = documentOrder.map((documentId) => {
+            const document = documents[documentId];
+            if (!document) {
+                return null;
+            }
             return <DocumentCard key={document.id} document={document} />;
         });
 

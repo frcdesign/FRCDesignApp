@@ -1,8 +1,9 @@
 import flask
 
 from backend.common import connect
+from backend.common.app_access import require_member_access
 from backend.common.backend_exceptions import ClientException
-from backend.endpoints.update import save_document
+from backend.endpoints.reload_documents import save_document
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import DocumentPath
@@ -17,7 +18,17 @@ def get_document_order():
     return {"documentOrder": db.get_document_order()}
 
 
-@router.post("/add-document")
+@router.post("/document-order")
+@require_member_access()
+def set_document_order():
+    db = connect.get_db()
+    new_document_order = connect.get_body_arg("documentOrder")
+    db.set_document_order(new_document_order)
+    return {"success": True}
+
+
+@router.post("/document")
+@require_member_access()
 def add_document():
     db = connect.get_db()
     api = connect.get_api(db)
@@ -48,3 +59,18 @@ def add_document():
     save_document(api, db, latest_version)
 
     return {"name": document_name}
+
+
+@router.delete("/document")
+@require_member_access()
+def delete_document():
+    db = connect.get_db()
+
+    document_id = connect.get_query_param("documentId")
+
+    order = db.get_document_order()
+    index = order.index(document_id)
+    order.pop(index)
+    db.set_document_order(order)
+    db.delete_document(document_id)
+    return {"Success": True}

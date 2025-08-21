@@ -13,7 +13,3 @@ VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
 
 ACCESS_LEVEL_OVERRIDE = None if IS_PRODUCTION else os.getenv("ACCESS_LEVEL_OVERRIDE")
 ADMIN_TEAM = os.getenv("ADMIN_TEAM")
-
-USE_LOCAL_CONFIG = (
-    False if IS_PRODUCTION else os.getenv("USE_LOCAL_CONFIG", "false").lower() == "true"
-)
