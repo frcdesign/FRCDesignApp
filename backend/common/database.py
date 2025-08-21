@@ -1,5 +1,5 @@
 from google.cloud import firestore
-from google.cloud.firestore import CollectionReference
+from google.cloud.firestore import CollectionReference, DocumentReference
 
 
 class Database:
@@ -23,8 +23,19 @@ class Database:
         return self.client.collection("configurations")
 
     @property
-    def app_config(self) -> CollectionReference:
-        return self.client.collection("appConfig")
+    def document_order(self) -> DocumentReference:
+        # Yes, there are three layers of documentOrder...
+        return self.client.collection("documentOrder").document("documentOrder")
+
+    def get_document_order(self) -> list[str]:
+        result = self.document_order.get().to_dict()
+        if result == None:
+            return []
+        # We have to nest to satisfy Google Cloud
+        return result.get("documentOrder", [])
+
+    def set_document_order(self, order: list[str]) -> None:
+        self.document_order.set({"documentOrder": order})
 
     def delete_document(self, document_id: str):
         """Deletes a document and all elements and configurations which depend on it."""

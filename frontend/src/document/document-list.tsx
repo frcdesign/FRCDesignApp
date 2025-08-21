@@ -6,8 +6,8 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementCard } from "./cards";
-import { SearchResults } from "./search-results";
+import { ElementCard } from "../app/cards";
+import { SearchResults } from "../app/search-results";
 import { getElementOrder, SortOrder, useSearchDb } from "../api/search";
 import { hasMemberAccess } from "../api/backend-types";
 import { useDocumentsQuery, useElementsQuery } from "../queries";

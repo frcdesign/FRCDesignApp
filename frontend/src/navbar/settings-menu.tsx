@@ -12,16 +12,16 @@ import {
     TextArea
 } from "@blueprintjs/core";
 import { ReactNode, useMemo, useState } from "react";
-import { AppMenu, useHandleCloseDialog } from "../api/search-params";
+import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { showSuccessToast } from "./toaster";
+import { showSuccessToast } from "../common/toaster";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { AccessLevel, hasMemberAccess } from "../api/backend-types";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { handleStringChange } from "../common/handlers";
+import { handleStringChange } from "../common/utils";
 import { invalidateSearchDb } from "../api/search";
 
 export function SettingsMenu(): ReactNode {

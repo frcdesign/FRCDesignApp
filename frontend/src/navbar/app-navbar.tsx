@@ -15,7 +15,7 @@ import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { AppMenu } from "../api/search-params";
+import { AppMenu } from "../api/menu-params";
 import { VendorFilters } from "./vendor-filters";
 
 /**

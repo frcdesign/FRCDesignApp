@@ -11,7 +11,8 @@ import {
     ParameterObj,
     ConfigurationType,
     QuantityParameterObj,
-    StringParameterObj
+    StringParameterObj,
+    Configuration
 } from "../api/backend-types";
 import {
     Alignment,
@@ -26,49 +27,55 @@ import {
     Intent,
     MenuItem,
     NumericInput,
-    Spinner
+    Spinner,
+    Tooltip
 } from "@blueprintjs/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
-import { handleBooleanChange } from "../common/handlers";
-import { useOnshapeData } from "../api/onshape-data";
-import { PreviewImage } from "./thumbnail";
+import { handleBooleanChange } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
-import { FavoriteButton } from "./favorite";
-import { AppMenu, useHandleCloseDialog } from "../api/search-params";
 import {
     useDocumentsQuery,
     useElementsQuery,
     useFavoritesQuery
 } from "../queries";
+import {
+    AppMenu,
+    InsertMenuParams,
+    MenuDialogProps,
+    useHandleCloseDialog
+} from "../api/menu-params";
+import { PreviewImage } from "../app/thumbnail";
+import { FavoriteButton } from "../app/favorite";
+import {
+    showErrorToast,
+    showLoadingToast,
+    showSuccessToast
+} from "../common/toaster";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
     if (search.activeMenu !== AppMenu.INSERT_MENU) {
         return null;
     }
-    return <InsertMenuDialog elementId={search.activeElementId} />;
+    return <InsertMenuDialog activeElementId={search.activeElementId} />;
 }
 
-interface InsertMenuDialogProps {
-    elementId: string;
-}
-
-function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
-    const elementId = props.elementId;
+function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
+    const elementId = props.activeElementId;
 
     const documents = useDocumentsQuery().data;
     const elements = useElementsQuery().data;
-    const onshapeData = useOnshapeData();
-    const favorites = useFavoritesQuery(onshapeData).data;
+    const search = useSearch({ from: "/app" });
+    const favorites = useFavoritesQuery(search).data;
 
     const closeDialog = useHandleCloseDialog();
 
     const [configuration, setConfiguration] = useState<
-        Record<string, string> | undefined
+        Configuration | undefined
     >(undefined);
 
     if (!documents || !elements || !favorites) {
@@ -122,10 +129,11 @@ function InsertMenuDialog(props: InsertMenuDialogProps): ReactNode {
         </Dialog>
     );
 }
+
 interface ConfigurationWrapperProps {
     configurationId: string;
-    configuration?: Record<string, string>;
-    setConfiguration: Dispatch<Record<string, string>>;
+    configuration?: Configuration;
+    setConfiguration: Dispatch<Configuration>;
 }
 
 function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -141,7 +149,7 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                         configuration[parameter.id] = parameter.default;
                         return configuration;
                     },
-                    {} as Record<string, string>
+                    {} as Configuration
                 );
                 setConfiguration(defaultConfiguration);
                 return result;
@@ -165,8 +173,8 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: Record<string, string>;
-    setConfiguration: Dispatch<Record<string, string>>;
+    configuration: Configuration;
+    setConfiguration: Dispatch<Configuration>;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
@@ -342,39 +350,55 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     );
 }
 
+function isNumeric(str: string): boolean {
+    return !isNaN(Number(str));
+}
+
 function QuantityParameter(
     props: ParameterProps<QuantityParameterObj>
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
+
+    const isInvalid = isNumeric(value) || value.trim() == "";
+
     return (
-        <FormGroup
-            label={parameter.name}
-            inline
-            labelFor={parameter.id}
-            className="full-width"
+        <Tooltip
+            disabled={!isInvalid}
+            content="Enter a valid expression with units"
+            isOpen
         >
-            <NumericInput
-                id={parameter.id}
-                value={value}
-                fill
-                allowNumericCharactersOnly={false}
-                onValueChange={(_, value) => onValueChange(value)}
-                buttonPosition="none"
-            />
-        </FormGroup>
+            <FormGroup
+                label={parameter.name}
+                inline
+                labelFor={parameter.id}
+                className="full-width"
+            >
+                <NumericInput
+                    id={parameter.id}
+                    value={value}
+                    fill
+                    intent={isInvalid ? "danger" : undefined}
+                    allowNumericCharactersOnly={false}
+                    onValueChange={(_, value) => onValueChange(value)}
+                    buttonPosition="none"
+                />
+            </FormGroup>
+        </Tooltip>
     );
 }
 
 interface SubmitButtonProps {
     element: ElementObj;
-    configuration?: Record<string, string>;
+    configuration?: Configuration;
 }
 
 function InsertButton(props: SubmitButtonProps): ReactNode {
     const { element, configuration } = props;
 
-    const onshapeData = useOnshapeData();
+    const search = useSearch({ from: "/app" });
     const closeDialog = useHandleCloseDialog();
+
+    const toastId = "insert" + element.id;
 
     const insertMutation = useMutation({
         mutationKey: ["insert", element.id],
@@ -387,7 +411,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
                 elementId: element.id,
                 configuration
             };
-            if (onshapeData.elementType == ElementType.ASSEMBLY) {
+            if (search.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
                 body.elementType = element.elementType;
             } else {
@@ -396,11 +420,21 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
                 body.name = element.name;
                 body.microversionId = element.microversionId;
             }
-            return apiPost(endpoint + toElementApiPath(onshapeData), {
+            showLoadingToast(`Inserting ${element.name}...`, toastId);
+            closeDialog();
+            return apiPost(endpoint + toElementApiPath(search), {
                 body
             });
         },
-        onSuccess: closeDialog
+        onError: () => {
+            showErrorToast(
+                `Unexpectedly failed to insert ${element.name}.`,
+                toastId
+            );
+        },
+        onSuccess: () => {
+            showSuccessToast(`Successfully inserted ${element.name}.`, toastId);
+        }
     });
 
     return (

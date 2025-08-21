@@ -9,7 +9,6 @@ import json5
 
 from backend.common import connect, database
 from backend.common.app_access import require_member_access
-from backend.common.app_logging import APP_LOGGER
 from backend.common.env import USE_LOCAL_CONFIG
 from backend.endpoints.backend_types import (
     NONE_CONDITION,
@@ -26,9 +25,10 @@ from backend.endpoints.preserved_info import (
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
-from onshape_api.endpoints.documents import ElementType, get_document
+from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import (
+    DocumentPath,
     ElementPath,
     InstancePath,
     url_to_document_path,
@@ -161,9 +161,13 @@ def save_document(
     api: Api,
     db: database.Database,
     version_path: InstancePath,
-    preserved_info: PreservedInfo,
+    preserved_info: PreservedInfo | None = None,
 ) -> int:
     """Loads all of the elements of a given document into the database."""
+    # Fill in PreservedInfo to get access to defaults
+    if preserved_info == None:
+        preserved_info = PreservedInfo()
+
     contents = documents.get_contents(api, version_path)
 
     element_ids = [
@@ -217,21 +221,21 @@ def save_all_documents(**kwargs):
 
     if USE_LOCAL_CONFIG:
         with open("config.json") as file:
-            config = json5.load(file)
+            document_urls = json5.load(file)["documents"]
+            document_order = [
+                url_to_document_path(url).document_id for url in document_urls
+            ]
     else:
-        config = db.app_config.document("config").get().to_dict()
-        if config == None:
-            config = {"documents": []}
+        document_order = db.get_document_order()
 
     # Iterate in reverse so the result is ordered
-    documents_list = reversed(config["documents"])
 
     preserved_info = preserve_info(db)
 
     count = 0
     visited = set()
-    for document_obj in documents_list:
-        document_path = url_to_document_path(document_obj["url"])
+    for document_id in document_order:
+        document_path = DocumentPath(document_id)
 
         visited.add(document_path.document_id)
 
@@ -280,37 +284,4 @@ def set_sort_order(**kwargs):
     db.documents.document(document_id).set(
         {"sortByDefault": sort_by_default}, merge=True
     )
-    return {"success": True}
-
-
-@router.get("/app-config")
-@require_member_access()
-def get_app_config(**kwargs):
-    if USE_LOCAL_CONFIG:
-        return {"error": "LOCAL CONFIG IN USE, CHANGES WILL HAVE NO EFFECT!"}
-
-    db = connect.get_db()
-    result = db.app_config.document("config").get().to_dict()
-    if result == None:
-        return {"documents": []}
-    return result
-
-
-@router.post("/app-config")
-@require_member_access()
-def update_app_config(**kwargs):
-    db = connect.get_db()
-    api = connect.get_api(db)
-    new_config = flask.request.get_json()
-    documents = []
-    for document_config in new_config["documents"]:
-        url = document_config["url"]
-
-        # Automatically fill in the name so it's not just a big list of random urls
-        name = get_document(api, url_to_document_path(url))["name"]
-        documents.append({"url": url, "parsedDocumentName": name})
-
-    config_dict = {"documents": documents}
-    db.app_config.document("config").set(config_dict)
-
     return {"success": True}

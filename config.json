@@ -1,16 +1,10 @@
 {
     "documents": [
-        {
-            // Gearboxes
-            "url": "https://cad.onshape.com/documents/f984b6b78196881d9906e72e/w/c2d92b345eb5fac5003034dd/e/1575c66235b42fab1945642f"
-        },
-        {
-            // Bearings & Bushings
-            "url": "https://cad.onshape.com/documents/836cd26e60025118646fa104/w/226063c76cc7a932571f61c4/e/92ccbbb96eb371eec784d7f2"
-        },
-        {
-            // Linear Mechanism Components
-            "url": "https://cad.onshape.com/documents/5661b13bbebaf6fd4bef03aa/w/63e86c35a9677d8021ccbc9c/e/c424782cb9875b6f79c885a3"
-        }
+        // Gearboxes
+        "https://cad.onshape.com/documents/f984b6b78196881d9906e72e/w/c2d92b345eb5fac5003034dd/e/1575c66235b42fab1945642f",
+        // Bearings & Bushings
+        "https://cad.onshape.com/documents/836cd26e60025118646fa104/w/226063c76cc7a932571f61c4/e/92ccbbb96eb371eec784d7f2",
+        // Linear Mechanism Components
+        "https://cad.onshape.com/documents/5661b13bbebaf6fd4bef03aa/w/63e86c35a9677d8021ccbc9c/e/c424782cb9875b6f79c885a3"
     ]
 }

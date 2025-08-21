@@ -174,12 +174,10 @@ export function getElementOrder(
         search(searchDb, {
             sortBy,
             where,
-            // Can't use Infinity because Orama crashes and limit defaults to 10...
-            limit: 100000
+            // Limit defaults to 10, can't use Infinity or Number.MAX_VALUE because Orama crashes
+            limit: 9999999
         })
     );
-
-    console.log(result.hits);
 
     return result.hits.map((hit) => hit.id);
 }
@@ -231,7 +229,7 @@ export type SearchHit = ResultWithPositions<any>;
 export type SearchPositions = Record<string, Record<string, Position[]>>;
 
 // Most of the following code is generated using ChatGPT with some modifications
-export function addSpaces(str: string) {
+function addSpaces(str: string) {
     return (
         str
             // Insert space between lowercase-to-uppercase (camelCase)

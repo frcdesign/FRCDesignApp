@@ -1,8 +1,5 @@
 import { reportMissingPermissionError } from "./errors";
-import {
-    createSearchParams,
-    URLSearchParamsInit
-} from "../common/search-params";
+import { createSearchParams, URLSearchParamsInit } from "../common/utils";
 
 function getUrl(path: string, query?: URLSearchParamsInit): string {
     path = "/api" + path;

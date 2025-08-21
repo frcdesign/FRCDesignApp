@@ -3,10 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
 import { ElementObj, FavoritesResult } from "../api/backend-types";
-import { useOnshapeData } from "../api/onshape-data";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
-import { showErrorToast } from "./toaster";
+import { showErrorToast } from "../common/toaster";
+import { useSearch } from "@tanstack/react-router";
 
 enum Operation {
     ADD,
@@ -39,21 +39,18 @@ interface FavoriteButtonProps {
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     const { isFavorite, element } = props;
-    const onshapeData = useOnshapeData();
+    const search = useSearch({ from: "/app" });
 
     const mutation = useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorites", isFavorite],
         mutationFn: (args) => {
             const query = { elementId: args.elementId };
             if (args.operation === Operation.ADD) {
-                return apiPost("/favorites" + toUserApiPath(onshapeData), {
+                return apiPost("/favorites" + toUserApiPath(search), {
                     query
                 });
             } else {
-                return apiDelete(
-                    "/favorites" + toUserApiPath(onshapeData),
-                    query
-                );
+                return apiDelete("/favorites" + toUserApiPath(search), query);
             }
         },
         onMutate: (args) => {

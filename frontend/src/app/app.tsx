@@ -1,26 +1,28 @@
 import { queryClient } from "../query-client";
 import { AppNavbar } from "../navbar/app-navbar";
-import { Navigate, Outlet, useMatchRoute } from "@tanstack/react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
 import {
-    getBackgroundClass,
-    getThemeClass,
-    useOnshapeData
-} from "../api/onshape-data";
+    Navigate,
+    Outlet,
+    useMatchRoute,
+    useSearch
+} from "@tanstack/react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { getBackgroundClass, getThemeClass } from "../api/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
-import { SettingsMenu } from "./settings-menu";
-import { InsertMenu } from "./insert-menu";
+import { SettingsMenu } from "../navbar/settings-menu";
+import { InsertMenu } from "../document/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { AddDocumentMenu } from "../document/add-document-menu";
 
 export function App() {
     const matchRoute = useMatchRoute();
-    const onshapeData = useOnshapeData();
+    const search = useSearch({ from: "/app" });
 
     if (matchRoute({ to: "/app" })) {
         return <Navigate to="/app/documents" />;
     }
 
-    const themeClass = getThemeClass(onshapeData.theme);
+    const themeClass = getThemeClass(search.theme);
 
     return (
         <BlueprintProvider
@@ -33,13 +35,13 @@ export function App() {
                     <AppNavbar />
                     <div
                         className={
-                            getBackgroundClass(onshapeData.theme) +
-                            " app-content"
+                            getBackgroundClass(search.theme) + " app-content"
                         }
                     >
                         <Outlet />
                         <SettingsMenu />
                         <InsertMenu />
+                        <AddDocumentMenu />
                         <TanStackRouterDevtools />
                     </div>
                 </div>

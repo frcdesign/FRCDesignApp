@@ -6,7 +6,8 @@ import {
     ElementsResult,
     Favorite,
     FavoritesResult,
-    ElementObj
+    ElementObj,
+    DocumentOrderResult
 } from "./api/backend-types";
 import { toUserApiPath, UserPath } from "./api/path";
 
@@ -22,6 +23,20 @@ export function getDocumentsQuery() {
                     ])
                 )
             ) as Promise<DocumentsResult>
+    });
+}
+
+export function useDocumentOrderQuery() {
+    return useQuery(getDocumentOrderQuery());
+}
+
+export function getDocumentOrderQuery() {
+    return queryOptions({
+        queryKey: ["document-order"],
+        queryFn: () =>
+            apiGet("/document-order").then(
+                (result) => result.order
+            ) as Promise<DocumentOrderResult>
     });
 }
 

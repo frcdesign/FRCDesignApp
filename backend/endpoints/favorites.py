@@ -17,7 +17,7 @@ from onshape_api.endpoints.settings import (
 )
 
 
-router = flask.Blueprint("settings", __name__)
+router = flask.Blueprint("favorites", __name__)
 
 
 @router.get("/favorites" + user_path_route())

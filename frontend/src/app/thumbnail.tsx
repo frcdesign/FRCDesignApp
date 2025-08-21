@@ -3,7 +3,8 @@ import { apiGet, apiGetImage } from "../api/api";
 import {
     getHeightAndWidth,
     encodeConfigurationForQuery,
-    ThumbnailSize
+    ThumbnailSize,
+    Configuration
 } from "../api/backend-types";
 import {
     ElementPath,
@@ -99,7 +100,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
 interface PreviewImageProps {
     elementPath: ElementPath;
-    configuration?: Record<string, string>;
+    configuration?: Configuration;
     isDialogPreview?: boolean;
 }
 

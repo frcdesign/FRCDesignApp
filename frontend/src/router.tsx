@@ -10,14 +10,31 @@ import {
     SearchSchemaInput
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import { DocumentList } from "./app/document-list";
-import { SearchParams } from "./api/search-params";
+import { DocumentList } from "./document/document-list";
 import {
     getDocumentsQuery,
     getElementsQuery,
     getFavoritesQuery
 } from "./queries";
 import { SafariError } from "./pages/safari-error";
+import { MenuParams } from "./api/menu-params";
+import { OnshapeParams } from "./api/onshape-params";
+import { AccessLevel, Vendor } from "./api/backend-types";
+
+export interface BaseSearchParams {
+    /**
+     * The maximum access level the user can have.
+     */
+    maxAccessLevel: AccessLevel;
+    /**
+     * The access level the user is currently using.
+     */
+    accessLevel: AccessLevel;
+    query?: string;
+    vendors?: Vendor[];
+}
+
+type SearchParams = OnshapeParams & BaseSearchParams & MenuParams;
 
 const rootRoute = createRootRoute();
 

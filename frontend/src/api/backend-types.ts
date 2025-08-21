@@ -186,6 +186,28 @@ export interface QuantityParameterObj extends ParameterBase {
 
 export type DocumentsResult = Record<string, DocumentObj>;
 
+export enum ListElementType {
+    DOCUMENT = "document",
+    // We don't currently support folders, but we'll define them now so it's easier to add them later
+    FOLDER = "folder"
+}
+
+export type ListElement = DocumentListElement | FolderListElement;
+
+export interface DocumentListElement {
+    type: ListElementType.DOCUMENT;
+    id: string;
+}
+
+export interface FolderListElement {
+    type: ListElementType.FOLDER;
+    id: string;
+    // Only allowed to be documentIds
+    childrenIds: string[];
+}
+
+export type DocumentOrderResult = ListElement[];
+
 export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
@@ -235,12 +257,20 @@ export function getHeightAndWidth(size: ThumbnailSize): {
  * Used to send configurations as a query parameter to the backend.
  */
 export function encodeConfigurationForQuery(
-    values?: Record<string, string>
+    configuration?: Configuration
 ): string {
-    if (!values) {
+    if (!configuration) {
         return "";
     }
-    return Object.entries(values)
+    return Object.entries(configuration)
         .map(([id, value]) => `${id}=${value}`)
         .join(";");
 }
+
+export type Configuration = Record<string, string>;
+
+// export function isConfigurationValid(
+//     configuration: Configuration
+// ): configuration is Record<string, string> {
+//     return Object.values(configuration).every((value) => value !== undefined);
+// }

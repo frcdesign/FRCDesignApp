@@ -1,28 +1,33 @@
-import { Icon, Intent, OverlayToaster } from "@blueprintjs/core";
+import { Intent, OverlayToaster } from "@blueprintjs/core";
 
 export const toaster = await OverlayToaster.create({
     maxToasts: 3
 });
 
-export const infoToastArgs = {
-    icon: <Icon icon="info-sign" />,
-    intent: Intent.PRIMARY
-};
-
-export const successToastArgs = {
-    icon: <Icon icon="tick-circle" />,
-    intent: Intent.SUCCESS
-};
-
-export const errorToastArgs = {
-    icon: <Icon icon="error" />,
-    intent: Intent.DANGER
-};
+export function closeToast(key: string) {
+    toaster.dismiss(key);
+}
 
 export function showInfoToast(message: string, key?: string): string {
     return toaster.show(
         {
-            ...infoToastArgs,
+            icon: "info-sign",
+            intent: Intent.PRIMARY,
+            message
+        },
+        key
+    );
+}
+
+/**
+ * Displays a loading toast with no timeout.
+ */
+export function showLoadingToast(message: string, key: string): string {
+    return toaster.show(
+        {
+            intent: "primary",
+            icon: "repeat",
+            timeout: -1,
             message
         },
         key
@@ -32,7 +37,8 @@ export function showInfoToast(message: string, key?: string): string {
 export function showSuccessToast(message: string, key?: string): string {
     return toaster.show(
         {
-            ...successToastArgs,
+            icon: "tick-circle",
+            intent: Intent.SUCCESS,
             message
         },
         key
@@ -46,7 +52,8 @@ export function showSuccessToast(message: string, key?: string): string {
 export function showErrorToast(message: string, key?: string): string {
     return toaster.show(
         {
-            ...errorToastArgs,
+            icon: "error",
+            intent: Intent.DANGER,
             message
         },
         key

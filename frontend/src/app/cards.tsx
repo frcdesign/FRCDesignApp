@@ -12,7 +12,7 @@ import {
     ContextMenuChildrenProps,
     Tag
 } from "@blueprintjs/core";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import {
     AccessLevel,
@@ -23,7 +23,7 @@ import {
 } from "../api/backend-types";
 import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
-import { AppMenu } from "../api/search-params";
+import { AppMenu } from "../api/menu-params";
 import { useMutation } from "@tanstack/react-query";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";
 import {
@@ -86,6 +86,7 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
     const { children, document } = props;
 
     const search = useSearch({ from: "/app" });
+    const navigate = useNavigate();
 
     const mutation = useMutation({
         mutationKey: ["set-sort-order"],
@@ -108,9 +109,22 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
                 onClick={() => {
                     mutation.mutate();
                 }}
-                intent="primary"
                 icon={document.sortByDefault ? "list" : "sort-alphabetical"}
                 text={document.sortByDefault ? "Use tab order" : "Sort A-Z"}
+            />
+            <MenuItem
+                icon="add"
+                text="Add document"
+                labelElement={<Icon icon="share" />}
+                onClick={() => {
+                    navigate({
+                        to: ".",
+                        search: {
+                            activeMenu: AppMenu.ADD_DOCUMENT_MENU,
+                            selectedDocumentId: document.id
+                        }
+                    });
+                }}
             />
         </Menu>
     );
@@ -136,7 +150,6 @@ interface ElementCardProps extends PropsWithChildren {
 export function ElementCard(props: ElementCardProps): ReactNode {
     const { element, searchHit } = props;
     const navigate = useNavigate();
-    const pathname = useLocation().pathname;
     const search = useSearch({ from: "/app" });
     const data = useDocumentsQuery().data;
     const favorites = useFavoritesQuery(search).data;
@@ -191,7 +204,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             }
 
                             navigate({
-                                to: pathname,
+                                to: ".",
                                 search: {
                                     activeMenu: AppMenu.INSERT_MENU,
                                     activeElementId: element.elementId

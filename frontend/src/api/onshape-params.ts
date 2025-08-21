@@ -1,9 +1,11 @@
-import { useSearch } from "@tanstack/react-router";
 import { ElementType } from "./backend-types";
 import { UserPath, ElementPath } from "./path";
 import { Classes } from "@blueprintjs/core";
 
-export interface OnshapeData extends ElementPath, UserPath {
+/**
+ * Documents search parameter values received from Onshape.
+ */
+export interface OnshapeParams extends ElementPath, UserPath {
     elementType: ElementType;
     theme: ColorTheme;
 }
@@ -21,8 +23,4 @@ export function getBackgroundClass(theme: ColorTheme) {
     return theme === ColorTheme.DARK
         ? "app-dark-background"
         : "app-light-background";
-}
-
-export function useOnshapeData(): OnshapeData {
-    return useSearch({ from: "/app" });
 }
