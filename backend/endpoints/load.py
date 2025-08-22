@@ -27,25 +27,28 @@ def get_elements(**kwargs):
         if element_dict == None:
             raise ServerException(f"Missing element with id {element_id}")
 
-        element_obj = {
-            "id": element_id,
-            "name": element_dict["name"],
-            "elementType": element_dict["elementType"],
-            "documentId": element_dict["documentId"],
-            "instanceId": element_dict["instanceId"],
-            "instanceType": InstanceType.VERSION,
-            # Include element id again out of laziness so this becomes a valid ElementPath
-            "elementId": element_id,
-            "microversionId": element_dict["microversionId"],
-            "isVisible": element_dict["isVisible"],
-        }
+        try:
+            element_obj = {
+                "id": element_id,
+                "name": element_dict["name"],
+                "elementType": element_dict["elementType"],
+                "documentId": element_dict["documentId"],
+                "instanceId": element_dict["instanceId"],
+                "instanceType": InstanceType.VERSION,
+                # Include element id again out of laziness so this becomes a valid ElementPath
+                "elementId": element_id,
+                "microversionId": element_dict["microversionId"],
+                "isVisible": element_dict["isVisible"],
+            }
 
-        # Do not send a property with value None, as this results in a null (rather than undefined) on the client
-        if element_dict.get("configurationId") != None:
-            element_obj["configurationId"] = element_dict["configurationId"]
+            # Do not send a property with value None, as this results in a null (rather than undefined) on the client
+            if element_dict.get("configurationId") != None:
+                element_obj["configurationId"] = element_dict["configurationId"]
 
-        if element_dict.get("vendor") != None:
-            element_obj["vendor"] = element_dict["vendor"]
+            if element_dict.get("vendor") != None:
+                element_obj["vendor"] = element_dict["vendor"]
+        except:
+            raise ServerException("Failed to load element")
 
         elements.append(element_obj)
 
@@ -63,18 +66,21 @@ def get_documents(**kwargs):
         document_dict = doc_ref.to_dict()
         document_id = doc_ref.id
 
-        documents.append(
-            {
-                "id": document_id,
-                "name": document_dict["name"],
-                "elementIds": document_dict["elementIds"],
-                "sortByDefault": document_dict.get("sortByDefault"),
-                # InstancePath properties
-                "documentId": doc_ref.id,
-                "instanceId": document_dict["instanceId"],
-                "instanceType": InstanceType.VERSION,
-            }
-        )
+        try:
+            documents.append(
+                {
+                    "id": document_id,
+                    "name": document_dict["name"],
+                    "elementIds": document_dict["elementIds"],
+                    "sortByDefault": document_dict.get("sortByDefault"),
+                    # InstancePath properties
+                    "documentId": doc_ref.id,
+                    "instanceId": document_dict["instanceId"],
+                    "instanceType": InstanceType.VERSION,
+                }
+            )
+        except:
+            raise ServerException("Failed to load document")
 
     return {"documents": documents}
 

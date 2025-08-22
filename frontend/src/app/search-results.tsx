@@ -26,15 +26,10 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     useEffect(() => {
         const executeSearch = async () => {
-            console.log(searchDb);
             if (!searchDb) {
                 return;
             }
-            console.log("DO search!");
-            console.log(query);
-            console.log(filters);
             const hits = await doSearch(searchDb, query, filters);
-            console.log(hits);
             setSearchHits(hits);
         };
 

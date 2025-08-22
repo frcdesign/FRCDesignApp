@@ -9,8 +9,7 @@ export const queryClient = new QueryClient({
             retry: (count, error) => {
                 if (count >= 3) {
                     return false;
-                }
-                if (error instanceof ReportedError) {
+                } else if (error instanceof ReportedError) {
                     return false;
                 }
                 return true;

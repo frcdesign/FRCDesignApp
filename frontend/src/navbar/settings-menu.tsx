@@ -155,10 +155,15 @@ function AccessLevelSelect(): ReactNode {
 
 interface ReloadDocumentsButtonProps {
     reloadAll?: boolean;
+    hideFormGroup?: boolean;
 }
 
-function ReloadDocumentsButton(props: ReloadDocumentsButtonProps): ReactNode {
+export function ReloadDocumentsButton(
+    props: ReloadDocumentsButtonProps
+): ReactNode {
     const reloadAll = props.reloadAll ?? false;
+    const hideFormGroup = props.hideFormGroup ?? false;
+
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
         mutationFn: () => {
@@ -210,24 +215,32 @@ function ReloadDocumentsButton(props: ReloadDocumentsButtonProps): ReactNode {
         </Alert>
     );
 
+    const button = (
+        <Button
+            icon="refresh"
+            text="Reload"
+            onClick={() => setIsAlertOpen(true)}
+            loading={mutation.isPending}
+            intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
+        />
+    );
+
+    const formGroup = hideFormGroup ? (
+        button
+    ) : (
+        <FormGroup
+            label={
+                reloadAll ? "Reload all documents" : "Reload outdated documents"
+            }
+            inline
+        >
+            {button}
+        </FormGroup>
+    );
+
     return (
         <>
-            <FormGroup
-                label={
-                    reloadAll
-                        ? "Reload all documents"
-                        : "Reload outdated documents"
-                }
-                inline
-            >
-                <Button
-                    icon="refresh"
-                    text="Reload"
-                    onClick={() => setIsAlertOpen(true)}
-                    loading={mutation.isPending}
-                    intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
-                />
-            </FormGroup>
+            {formGroup}
             {alert}
         </>
     );

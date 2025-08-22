@@ -51,6 +51,7 @@ function AddDocumentMenuDialog(
                 throw new HandledError("Failed to parse document id.");
             }
             showLoadingToast("Adding document...", "add-document");
+            closeDialog();
             return apiPost("/document", {
                 body: {
                     newDocumentId,
@@ -79,7 +80,6 @@ function AddDocumentMenuDialog(
                 `Successfully added ${result.name}.`,
                 "add-document"
             );
-            closeDialog();
         }
     });
 

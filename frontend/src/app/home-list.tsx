@@ -88,7 +88,22 @@ function LibraryList() {
     const documentsQuery = useDocumentsQuery();
     const documentOrderQuery = useDocumentOrderQuery();
 
-    if (documentsQuery.isPending || documentOrderQuery.isPending) {
+    if (documentsQuery.isError || documentOrderQuery.isError) {
+        return (
+            <NonIdealState
+                icon={
+                    <Icon
+                        icon="cross"
+                        size={NonIdealStateIconSize.SMALL}
+                        intent="danger"
+                    />
+                }
+                title="Failed to load documents."
+                description="If the problem persists, contact the FRCDesign App developers."
+                className="home-error-state"
+            />
+        );
+    } else if (documentsQuery.isPending || documentOrderQuery.isPending) {
         return (
             <NonIdealState
                 icon={<Spinner intent="primary" />}
@@ -96,7 +111,12 @@ function LibraryList() {
                 className="home-loading-state"
             />
         );
-    } else if (documentsQuery.isError || documentOrderQuery.isError) {
+    }
+
+    const documents = documentsQuery.data;
+    const documentOrder = documentOrderQuery.data;
+
+    if (documentOrder.length <= 0) {
         // Add an escape hatch for when no documents are in the database
         const action = hasMemberAccess(search.maxAccessLevel) ? (
             <Button
@@ -111,7 +131,6 @@ function LibraryList() {
                 }}
             />
         ) : undefined;
-
         return (
             <NonIdealState
                 icon={
@@ -119,19 +138,14 @@ function LibraryList() {
                         icon="cross"
                         size={NonIdealStateIconSize.SMALL}
                         intent="danger"
-                        style={{ marginBottom: "-5px" }}
                     />
                 }
-                title="Failed to load documents!"
-                description="If the problem persists, contact the FRCDesign App developers."
+                title="No documents found"
                 action={action}
                 className="home-error-state"
             />
         );
     }
-
-    const documents = documentsQuery.data;
-    const documentOrder = documentOrderQuery.data;
 
     return documentOrder.map((documentId) => {
         const document = documents[documentId];
@@ -150,15 +164,7 @@ function FavoritesList() {
 
     const searchDb = useSearchDb(elementsQuery.data);
 
-    if (favoritesQuery.isPending || elementsQuery.isPending || !searchDb) {
-        return (
-            <NonIdealState
-                icon={<Spinner intent="primary" />}
-                title="Loading favorites..."
-                className="home-loading-state"
-            />
-        );
-    } else if (favoritesQuery.isError || elementsQuery.isError) {
+    if (favoritesQuery.isError || elementsQuery.isError) {
         return (
             <NonIdealState
                 icon={
@@ -168,9 +174,21 @@ function FavoritesList() {
                         color={Colors.RED3}
                     />
                 }
-                title="Failed to load favorites!"
+                title="Failed to load favorites."
                 description="If the problem persists, contact the FRCDesign App developers."
                 className="home-error-state"
+            />
+        );
+    } else if (
+        favoritesQuery.isPending ||
+        elementsQuery.isPending ||
+        !searchDb
+    ) {
+        return (
+            <NonIdealState
+                icon={<Spinner intent="primary" />}
+                title="Loading favorites..."
+                className="home-loading-state"
             />
         );
     }

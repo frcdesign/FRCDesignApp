@@ -35,7 +35,7 @@ def add_document():
 
     new_document_id = connect.get_body_arg("newDocumentId")
     new_path = DocumentPath(new_document_id)
-    selected_document_id = connect.get_body_arg("selectedDocumentId")
+    selected_document_id = connect.get_optional_body_arg("selectedDocumentId")
 
     try:
         document_name = get_document(api, new_path)["name"]
@@ -48,12 +48,16 @@ def add_document():
         raise ClientException("Failed to find a document version to use.")
 
     order = db.get_document_order()
-    try:
-        index = order.index(selected_document_id)
-        # Append after selected_document_id
-        order.insert(index + 1, new_document_id)
-    except ValueError:
+
+    if selected_document_id == None:
         order.append(new_document_id)
+    else:
+        try:
+            index = order.index(selected_document_id)
+            # Append after selected_document_id
+            order.insert(index + 1, new_document_id)
+        except ValueError:
+            order.append(new_document_id)
 
     db.set_document_order(order)
     save_document(api, db, latest_version)

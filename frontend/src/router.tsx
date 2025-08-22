@@ -21,6 +21,7 @@ import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
 import { AccessLevel, Vendor } from "./api/backend-types";
+import { AppError } from "./app/app-error";
 
 export interface BaseSearchParams {
     /**
@@ -66,13 +67,14 @@ const homeRoute = createRoute({
         const loadElements = getElementsQuery();
         const loadFavorites = getFavoritesQuery(deps);
 
-        return Promise.all([
-            queryClient.ensureQueryData(loadDocuments),
-            queryClient.ensureQueryData(loadDocumentOrder),
-            queryClient.ensureQueryData(loadElements),
-            queryClient.ensureQueryData(loadFavorites)
-        ]);
-    }
+        return [
+            queryClient.fetchQuery(loadDocuments),
+            queryClient.fetchQuery(loadDocumentOrder),
+            queryClient.fetchQuery(loadElements),
+            queryClient.fetchQuery(loadFavorites)
+        ];
+    },
+    errorComponent: AppError
 });
 
 const homeListRoute = createRoute({
