@@ -21,36 +21,33 @@ def get_elements(**kwargs):
     db = connect.get_db()
     elements: list[dict] = []
 
-    for doc_ref in db.documents.stream():
-        document_dict = doc_ref.to_dict()
+    for element_ref in db.elements.stream():
+        element_id = element_ref.id
+        element_dict = element_ref.to_dict()
+        if element_dict == None:
+            raise ServerException(f"Missing element with id {element_id}")
 
-        for element_id in document_dict["elementIds"]:
-            element_dict = db.elements.document(element_id).get().to_dict()
-            if element_dict == None:
-                raise ServerException(f"Missing element with id {element_id}")
+        element_obj = {
+            "id": element_id,
+            "name": element_dict["name"],
+            "elementType": element_dict["elementType"],
+            "documentId": element_dict["documentId"],
+            "instanceId": element_dict["instanceId"],
+            "instanceType": InstanceType.VERSION,
+            # Include element id again out of laziness so this becomes a valid ElementPath
+            "elementId": element_id,
+            "microversionId": element_dict["microversionId"],
+            "isVisible": element_dict["isVisible"],
+        }
 
-            element_obj = {
-                "id": element_id,
-                "name": element_dict["name"],
-                "elementType": element_dict["elementType"],
-                # Copy properties from document so we don't have to parse backreference on client
-                "documentId": doc_ref.id,
-                "instanceId": document_dict["instanceId"],
-                "instanceType": InstanceType.VERSION,
-                # Include element id again out of laziness so this becomes a valid ElementPath
-                "elementId": element_id,
-                "microversionId": element_dict["microversionId"],
-                "isVisible": element_dict["isVisible"],
-            }
+        # Do not send a property with value None, as this results in a null (rather than undefined) on the client
+        if element_dict.get("configurationId") != None:
+            element_obj["configurationId"] = element_dict["configurationId"]
 
-            # Do not send a property with value None, as this results in a null (rather than undefined) on the client
-            if element_dict.get("configurationId") != None:
-                element_obj["configurationId"] = element_dict["configurationId"]
+        if element_dict.get("vendor") != None:
+            element_obj["vendor"] = element_dict["vendor"]
 
-            if element_dict.get("vendor") != None:
-                element_obj["vendor"] = element_dict["vendor"]
-
-            elements.append(element_obj)
+        elements.append(element_obj)
 
     return {"elements": elements}
 

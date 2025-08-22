@@ -39,7 +39,7 @@ export async function apiGet(
     signal?: AbortSignal
 ): Promise<any> {
     return fetch(getUrl(path, query), {
-        signal,
+        signal
     }).then(handleResponse);
 }
 

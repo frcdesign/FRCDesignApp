@@ -8,30 +8,6 @@
     -webkit-user-select: none;
 }
 
-// .bp6-portal,
-// .bp6-overlay,
-// .bp6-popover,
-// .bp6-dialog,
-// .bp6-overlay-backdrop {
-//     z-index: 1000 !important;
-//     pointer-events: auto !important;
-// }
-
-// .bp6-portal {
-//     z-index: 1000 !important;
-// }
-
-// .bp6-overlay-backdrop {
-//     z-index: 999 !important;
-// }
-
-// .bp6-overlay,
-// .bp6-dialog,
-// .bp6-popover {
-//     z-index: 1000 !important;
-//     pointer-events: auto !important;
-// }
-
 // Generic classes
 $frc-design-green: #4cae4f;
 
@@ -144,8 +120,14 @@ $frc-design-green: #4cae4f;
     margin-left: -3px;
 }
 
+.home-loading-state {
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
 .home-error-state {
-    padding-bottom: 25px;
+    padding-top: 25px;
+    padding-bottom: 50px;
 }
 
 .home-card-title {

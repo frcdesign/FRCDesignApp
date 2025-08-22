@@ -75,7 +75,7 @@ export function getFavoritesQuery(userPath: UserPath) {
                     ])
                 )
             ) as Promise<FavoritesResult>,
-        // Favorites shouldn't go stale, although they can get set externally
+        // Favorites shouldn't go stale, although they can get changed in another tab
         staleTime: 60 * 1000
     });
 }

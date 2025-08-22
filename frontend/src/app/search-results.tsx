@@ -1,37 +1,47 @@
 import { NonIdealState, Icon, NonIdealStateIconSize } from "@blueprintjs/core";
 import { ReactNode, useState, useEffect } from "react";
-import { SearchFilters, SearchHit, doSearch, useSearchDb } from "../api/search";
+import { SearchHit, doSearch, useSearchDb } from "../api/search";
 import { ElementCard } from "./cards";
-import { DocumentsResult, ElementsResult } from "../api/backend-types";
+import { useElementsQuery } from "../queries";
+import { Vendor } from "../api/backend-types";
 
 interface SearchResultsProps {
-    documents: DocumentsResult;
-    elements: ElementsResult;
     query: string;
-    filters: SearchFilters;
+    filters: {
+        vendors?: Vendor[];
+        documentId?: string;
+    };
 }
 
 export function SearchResults(props: SearchResultsProps): ReactNode {
-    const { documents, elements, query, filters } = props;
+    const { query, filters } = props;
 
-    const searchDb = useSearchDb(documents, elements);
+    const elements = useElementsQuery().data;
+
+    const searchDb = useSearchDb(elements);
 
     const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
         undefined
     );
 
     useEffect(() => {
-        const search = async () => {
+        const executeSearch = async () => {
+            console.log(searchDb);
             if (!searchDb) {
                 return;
             }
-            setSearchHits(await doSearch(searchDb, query, filters));
+            console.log("DO search!");
+            console.log(query);
+            console.log(filters);
+            const hits = await doSearch(searchDb, query, filters);
+            console.log(hits);
+            setSearchHits(hits);
         };
 
-        search();
+        executeSearch();
     }, [searchDb, query, filters]);
 
-    if (!searchDb || !searchHits) {
+    if (!searchDb || !searchHits || !elements) {
         return null;
     }
 

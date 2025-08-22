@@ -116,6 +116,6 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({
     routeTree,
-    // Data is persistent, so assume it doesn't go stale
-    defaultStaleTime: Infinity
+    defaultStaleTime: Infinity,
+    defaultGcTime: 6 * 1000
 });

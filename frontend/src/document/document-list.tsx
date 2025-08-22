@@ -24,7 +24,7 @@ export function DocumentList(): ReactNode {
     }).documentId;
 
     const search = useSearch({ from: "/app" });
-    const searchDb = useSearchDb(documents, elements);
+    const searchDb = useSearchDb(elements);
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -35,6 +35,7 @@ export function DocumentList(): ReactNode {
         }
         const child = section.children[0];
         child.className += " " + Classes.INTERACTIVE;
+        // Include documents and elements so it stays injected even if the query isn't complete
     }, [sectionRef, searchDb, documents, elements]);
 
     if (!documents || !elements || !searchDb) {
@@ -47,10 +48,11 @@ export function DocumentList(): ReactNode {
     if (search.query) {
         content = (
             <SearchResults
-                documents={documents}
-                elements={elements}
                 query={search.query}
-                filters={{ vendors: search.vendors, documentId }}
+                filters={{
+                    vendors: search.vendors,
+                    documentId: document.documentId
+                }}
             />
         );
     } else {

@@ -138,6 +138,7 @@ def save_element(
         "vendor": parse_vendor(element_name),
         "elementType": element_type,
         "documentId": version_path.document_id,
+        "instanceId": version_path.instance_id,
         "elementType": element_type,
         "microversionId": element["microversionId"],
         "isVisible": preserved["isVisible"],

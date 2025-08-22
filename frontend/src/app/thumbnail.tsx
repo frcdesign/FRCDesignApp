@@ -152,7 +152,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     return (
         <div style={{ position: "relative", ...heightAndWidth }}>
-            {thumbnailQuery.isFetching && (
+            {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
                 <Spinner
                     size={SpinnerSize.SMALL}
                     intent={Intent.PRIMARY}

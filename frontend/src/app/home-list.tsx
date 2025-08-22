@@ -1,4 +1,5 @@
 import {
+    Button,
     Card,
     CardList,
     Classes,
@@ -11,7 +12,7 @@ import {
     NonIdealStateIconSize,
     Spinner
 } from "@blueprintjs/core";
-import { Outlet, useSearch } from "@tanstack/react-router";
+import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard, ElementCard } from "./cards";
 import { FavoriteIcon } from "./favorite";
@@ -21,26 +22,16 @@ import {
     useElementsQuery,
     useFavoritesQuery
 } from "../queries";
-import {
-    DocumentsResult,
-    ElementsResult,
-    hasMemberAccess
-} from "../api/backend-types";
+import { hasMemberAccess } from "../api/backend-types";
 import { SearchResults } from "./search-results";
 import { getElementOrder, useSearchDb } from "../api/search";
+import { AppMenu } from "../api/menu-params";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
-    const documents = useDocumentsQuery().data;
-    const documentOrder = useDocumentOrderQuery().data;
-    const elements = useElementsQuery().data;
     const search = useSearch({ from: "/app" });
-
-    if (!documents || !elements || !documentOrder) {
-        return null;
-    }
 
     let content;
     if (search.query) {
@@ -53,25 +44,12 @@ export function HomeList(): ReactNode {
                 title="Search Results"
             >
                 <SearchResults
-                    documents={documents}
-                    elements={elements}
                     query={search.query}
-                    filters={{
-                        vendors: search.vendors,
-                        documentId: search.documentId
-                    }}
+                    filters={{ vendors: search.vendors }}
                 />
             </ListContainer>
         );
     } else {
-        const libraryContent = documentOrder.map((documentId) => {
-            const document = documents[documentId];
-            if (!document) {
-                return null;
-            }
-            return <DocumentCard key={document.id} document={document} />;
-        });
-
         content = (
             <>
                 <ListContainer
@@ -79,13 +57,13 @@ export function HomeList(): ReactNode {
                     title="Favorites"
                     defaultIsOpen={false}
                 >
-                    <FavoritesList documents={documents} elements={elements} />
+                    <FavoritesList />
                 </ListContainer>
                 <ListContainer
                     icon={<Icon icon="manual" className="frc-design-green" />}
                     title="Library"
                 >
-                    {libraryContent}
+                    <LibraryList />
                 </ListContainer>
             </>
         );
@@ -103,27 +81,84 @@ export function HomeList(): ReactNode {
     );
 }
 
-interface FavoritesListProps {
-    documents: DocumentsResult;
-    elements: ElementsResult;
-}
-
-function FavoritesList(props: FavoritesListProps) {
-    const { documents, elements } = props;
-
+function LibraryList() {
     const search = useSearch({ from: "/app" });
-    const favoritesQuery = useFavoritesQuery(search);
+    const navigate = useNavigate();
 
-    const searchDb = useSearchDb(documents, elements);
+    const documentsQuery = useDocumentsQuery();
+    const documentOrderQuery = useDocumentOrderQuery();
 
-    if (favoritesQuery.isPending || !searchDb) {
+    if (documentsQuery.isPending || documentOrderQuery.isPending) {
         return (
             <NonIdealState
                 icon={<Spinner intent="primary" />}
-                title="Loading..."
+                title="Loading documents..."
+                className="home-loading-state"
             />
         );
-    } else if (favoritesQuery.isError) {
+    } else if (documentsQuery.isError || documentOrderQuery.isError) {
+        // Add an escape hatch for when no documents are in the database
+        const action = hasMemberAccess(search.maxAccessLevel) ? (
+            <Button
+                icon="add"
+                text="Add document"
+                intent="primary"
+                onClick={() => {
+                    navigate({
+                        to: ".",
+                        search: { activeMenu: AppMenu.ADD_DOCUMENT_MENU }
+                    });
+                }}
+            />
+        ) : undefined;
+
+        return (
+            <NonIdealState
+                icon={
+                    <Icon
+                        icon="cross"
+                        size={NonIdealStateIconSize.SMALL}
+                        intent="danger"
+                        style={{ marginBottom: "-5px" }}
+                    />
+                }
+                title="Failed to load documents!"
+                description="If the problem persists, contact the FRCDesign App developers."
+                action={action}
+                className="home-error-state"
+            />
+        );
+    }
+
+    const documents = documentsQuery.data;
+    const documentOrder = documentOrderQuery.data;
+
+    return documentOrder.map((documentId) => {
+        const document = documents[documentId];
+        if (!document) {
+            return null;
+        }
+        return <DocumentCard key={document.id} document={document} />;
+    });
+}
+
+function FavoritesList() {
+    const search = useSearch({ from: "/app" });
+
+    const elementsQuery = useElementsQuery();
+    const favoritesQuery = useFavoritesQuery(search);
+
+    const searchDb = useSearchDb(elementsQuery.data);
+
+    if (favoritesQuery.isPending || elementsQuery.isPending || !searchDb) {
+        return (
+            <NonIdealState
+                icon={<Spinner intent="primary" />}
+                title="Loading favorites..."
+                className="home-loading-state"
+            />
+        );
+    } else if (favoritesQuery.isError || elementsQuery.isError) {
         return (
             <NonIdealState
                 icon={
@@ -131,16 +166,20 @@ function FavoritesList(props: FavoritesListProps) {
                         icon="heart-broken"
                         size={NonIdealStateIconSize.SMALL}
                         color={Colors.RED3}
-                        style={{ marginBottom: "-5px" }}
                     />
                 }
-                title="Failed to load favorites"
+                title="Failed to load favorites!"
+                description="If the problem persists, contact the FRCDesign App developers."
+                className="home-error-state"
             />
         );
     }
 
+    const favorites = favoritesQuery.data;
+    const elements = elementsQuery.data;
+
     const orderedFavorites = getElementOrder(searchDb, {
-        elementIds: Object.keys(favoritesQuery.data),
+        elementIds: Object.keys(favorites),
         vendors: search.vendors,
         // Only show visible elements
         isVisible: !hasMemberAccess(search.accessLevel)
@@ -154,7 +193,6 @@ function FavoritesList(props: FavoritesListProps) {
                         icon="heart-broken"
                         size={NonIdealStateIconSize.SMALL}
                         color={Colors.RED3}
-                        style={{ marginBottom: "-5px" }}
                     />
                 }
                 title="No favorites"

@@ -220,6 +220,7 @@ export type ElementsResult = Record<string, ElementObj>;
 export interface ElementObj extends ElementPath {
     id: string;
     name: string;
+    documentId: string;
     elementType: ElementType;
     microversionId: string;
     isVisible: boolean;

@@ -1,5 +1,5 @@
 import { AnyOrama, create, insert, search } from "@orama/orama";
-import { DocumentsResult, ElementsResult, Vendor } from "./backend-types";
+import { ElementsResult, Vendor } from "./backend-types";
 import {
     afterInsert as highlightAfterInsert,
     Position,
@@ -27,32 +27,27 @@ export function invalidateSearchDb() {
  * If the database hasn't been accessed yet, this function will synchronously build it first.
  * This could produce a small latency on initial load, which we will ignore for now.
  */
-export function useSearchDb(
-    documents?: DocumentsResult,
-    elements?: ElementsResult
-) {
-    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(); // getCachedSearchDb()
+export function useSearchDb(elements?: ElementsResult) {
+    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
+        getCachedSearchDb()
+    );
 
     useEffect(() => {
-        if (!documents || !elements) {
+        if (!elements) {
             return;
         }
         if (getCachedSearchDb()) {
-            setSearchDb(getCachedSearchDb());
-        } else {
-            const searchDb = buildSearchDb(documents, elements);
-            setCachedSearchDb(searchDb);
-            setSearchDb(searchDb);
+            return;
         }
-    }, [documents, elements]);
+        const searchDb = buildSearchDb(elements);
+        setCachedSearchDb(searchDb);
+        setSearchDb(searchDb);
+    }, [elements]);
 
     return searchDb;
 }
 
-export function buildSearchDb(
-    documents: DocumentsResult,
-    elements: ElementsResult
-) {
+export function buildSearchDb(elements: ElementsResult) {
     const searchDb = create({
         schema: {
             id: "string",
@@ -97,18 +92,16 @@ export function buildSearchDb(
             // }
         ]
     });
+
     // Cannot use insertMultiple since it doesn't return a Promise and there isn't a way to tell when it's actually finished...
-    Object.entries(documents).forEach(([documentId, document]) => {
-        document.elementIds.forEach((elementId) => {
-            const element = elements[elementId];
-            insert(searchDb, {
-                id: elementId,
-                documentId,
-                isVisible: element.isVisible,
-                vendor: element.vendor,
-                name: element.name,
-                spacedName: addSpaces(element.name)
-            });
+    Object.values(elements).forEach((element) => {
+        insert(searchDb, {
+            id: element.id,
+            documentId: element.documentId,
+            isVisible: element.isVisible,
+            vendor: element.vendor,
+            name: element.name,
+            spacedName: addSpaces(element.name)
         });
     });
     return searchDb;
@@ -189,7 +182,7 @@ export interface SearchFilters {
 
 export async function doSearch(
     searchDb: AnyOrama,
-    query: string,
+    query?: string, // Shouldn't really be undefined but makes life easier in component
     filters?: SearchFilters
 ): Promise<SearchHit[]> {
     const where: Record<string, string | string[] | boolean> = {
