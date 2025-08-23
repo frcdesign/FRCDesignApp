@@ -12,9 +12,7 @@ export function OpenUrlButton(props: UrlButtonProps) {
             text={props.text}
             intent="primary"
             icon="share"
-            onClick={() => {
-                openUrlInNewTab(props.url);
-            }}
+            onClick={() => openUrlInNewTab(props.url)}
         />
     );
 }

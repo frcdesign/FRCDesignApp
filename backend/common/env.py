@@ -3,8 +3,13 @@ import dotenv
 
 dotenv.load_dotenv(override=True)
 
-client_id = os.environ["OAUTH_CLIENT_ID"]
-client_secret = os.environ["OAUTH_CLIENT_SECRET"]
-session_secret = os.environ["SESSION_SECRET"]
+CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]
+CLIENT_SECRET = os.environ["OAUTH_CLIENT_SECRET"]
+SESSION_SECRET = os.environ["SESSION_SECRET"]
 
-is_production = os.getenv("NODE_ENV", "production") == "production"
+IS_PRODUCTION = os.getenv("NODE_ENV", "production") == "production"
+
+VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "false").lower() == "true"
+
+ACCESS_LEVEL_OVERRIDE = None if IS_PRODUCTION else os.getenv("ACCESS_LEVEL_OVERRIDE")
+ADMIN_TEAM = os.getenv("ADMIN_TEAM")

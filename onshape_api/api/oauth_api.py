@@ -8,6 +8,7 @@ from urllib import parse
 from requests_oauthlib import OAuth2Session
 
 from onshape_api import exceptions
+from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.utils import env_utils
 from onshape_api.api.api_base import Api, ApiArgs, get_api_base_args
 
@@ -25,6 +26,9 @@ class OAuthApi(Api):
     def __init__(self, oauth: OAuth2Session, **kwargs: Unpack[ApiArgs]):
         super().__init__(**kwargs)
         self.oauth = oauth
+        if oauth.client_id == None:
+            raise ValueError("The OAuth2Session must have a client_id")
+        self.client_id: str = oauth.client_id
 
     @override
     def _request(
@@ -41,10 +45,9 @@ class OAuthApi(Api):
 
         url = self._base_url + path + "?" + query_str
 
-        if self._logging:
-            if body != {} and body != "":
-                logging.info(body)
-            logging.info("request url: " + url)
+        ONSHAPE_LOGGER.info("Request url: " + url)
+        if body != {} and body != "":
+            ONSHAPE_LOGGER.info(body)
 
         req_headers = headers.copy()
         req_headers["Content-Type"] = headers.get("Content-Type", "application/json")
@@ -57,14 +60,12 @@ class OAuthApi(Api):
         )
         status = http.HTTPStatus(res.status_code)
         if status.is_success:
-            if self._logging:
-                if is_json:
-                    logging.info("request succeeded, details: " + res.text)
-                else:
-                    logging.info("request succeeded")
+            if is_json:
+                logging.info("request succeeded, details: " + res.text)
+            else:
+                ONSHAPE_LOGGER.info("request succeeded")
         else:
-            if self._logging:
-                logging.error("request failed, details: " + res.text)
+            ONSHAPE_LOGGER.exception("request failed, details: " + res.text)
             raise exceptions.ApiError(res.text, status)
 
         return res.json() if is_json else res

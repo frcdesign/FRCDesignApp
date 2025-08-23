@@ -3,7 +3,8 @@ import { apiGet, apiGetImage } from "../api/api";
 import {
     getHeightAndWidth,
     encodeConfigurationForQuery,
-    ThumbnailSize
+    ThumbnailSize,
+    Configuration
 } from "../api/backend-types";
 import {
     ElementPath,
@@ -12,52 +13,98 @@ import {
     toElementApiPath,
     toInstanceApiPath
 } from "../api/path";
-import { Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
+import { Card, Intent, Popover, Spinner, SpinnerSize } from "@blueprintjs/core";
 import { ReactNode } from "react";
 
-export interface ThumbnailProps {
+interface CardThumbnailProps {
     path: InstancePath | ElementPath;
 }
 
-export function Thumbnail(props: ThumbnailProps): ReactNode {
+export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { path } = props;
-    const size = ThumbnailSize.TINY;
+
+    return (
+        <Popover
+            content={
+                <Card>
+                    <Thumbnail
+                        path={path}
+                        spinnerSize={SpinnerSize.LARGE}
+                        size={ThumbnailSize.STANDARD}
+                        scale={0.6}
+                    />
+                </Card>
+            }
+            interactionKind="hover"
+        >
+            <div style={{ marginRight: "5px" }}>
+                <Thumbnail
+                    path={path}
+                    spinnerSize={25}
+                    size={ThumbnailSize.TINY}
+                    scale={0.8}
+                />
+            </div>
+        </Popover>
+    );
+}
+
+interface ThumbnailProps {
+    path: InstancePath | ElementPath;
+    /**
+     * The size (quality) of the given thumbnail.
+     */
+    size: ThumbnailSize;
+    spinnerSize: SpinnerSize | number;
+    /**
+     * A scale multiplier applied to the image.
+     */
+    scale: number;
+}
+
+/**
+ * A generic thumbnail component.
+ */
+function Thumbnail(props: ThumbnailProps): ReactNode {
+    const { path, size, spinnerSize, scale } = props;
 
     const apiPath = isElementPath(path)
         ? toElementApiPath(path)
         : toInstanceApiPath(path);
 
     const imageQuery = useQuery({
-        queryKey: ["document-thumbnail", apiPath],
+        queryKey: ["document-thumbnail", apiPath, size],
         queryFn: () =>
             apiGetImage("/thumbnail" + apiPath, {
                 size
             })
     });
 
+    const heightAndWidth = getHeightAndWidth(size);
+    heightAndWidth.height *= scale;
+    heightAndWidth.width *= scale;
+
     let content;
     if (imageQuery.isPending) {
-        content = <Spinner intent={Intent.PRIMARY} size={25} />;
+        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
     } else {
-        content = <img src={imageQuery.data} />;
+        content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
 
-    const heightAndWidth = getHeightAndWidth(size);
     return (
         <div className="center" style={heightAndWidth}>
             {content}
         </div>
     );
-    return;
 }
 
-export interface PreviewThumbnailProps {
+interface PreviewImageProps {
     elementPath: ElementPath;
-    configuration?: Record<string, string>;
+    configuration?: Configuration;
     isDialogPreview?: boolean;
 }
 
-export function PreviewThumbnail(props: PreviewThumbnailProps): ReactNode {
+export function PreviewImage(props: PreviewImageProps): ReactNode {
     const { elementPath, configuration } = props;
     const size = ThumbnailSize.SMALL;
 
@@ -79,7 +126,7 @@ export function PreviewThumbnail(props: PreviewThumbnailProps): ReactNode {
     });
 
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", toElementApiPath(elementPath), configuration],
+        queryKey: ["thumbnail", toElementApiPath(elementPath)],
         queryFn: () => {
             const query: Record<string, string> = {
                 size,
@@ -102,5 +149,21 @@ export function PreviewThumbnail(props: PreviewThumbnailProps): ReactNode {
             </div>
         );
     }
-    return <img src={thumbnailQuery.data} {...heightAndWidth} />;
+
+    return (
+        <div style={{ position: "relative", ...heightAndWidth }}>
+            {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
+                <Spinner
+                    size={SpinnerSize.SMALL}
+                    intent={Intent.PRIMARY}
+                    style={{
+                        position: "absolute",
+                        bottom: "-5px",
+                        right: "-25px"
+                    }}
+                />
+            )}
+            <img src={thumbnailQuery.data} {...heightAndWidth} />
+        </div>
+    );
 }

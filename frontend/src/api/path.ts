@@ -6,10 +6,6 @@ export interface WorkspacePath extends DocumentPath {
     instanceId: string;
 }
 
-export interface Workspace extends WorkspacePath {
-    name: string;
-}
-
 export type InstanceType = "w" | "v" | "m";
 
 export interface InstancePath extends WorkspacePath {
@@ -48,4 +44,12 @@ export function toInstanceApiPath(path: WorkspacePath): string {
 
 export function toElementApiPath(path: ElementPath): string {
     return toInstanceApiPath(path) + `/e/${path.elementId}`;
+}
+
+export interface UserPath {
+    userId: string;
+}
+
+export function toUserApiPath(path: UserPath): string {
+    return `/users/${path.userId}`;
 }

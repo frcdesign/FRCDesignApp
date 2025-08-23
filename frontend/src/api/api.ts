@@ -1,8 +1,5 @@
 import { reportMissingPermissionError } from "./errors";
-import {
-    createSearchParams,
-    URLSearchParamsInit
-} from "../common/search-params";
+import { createSearchParams, URLSearchParamsInit } from "../common/utils";
 
 function getUrl(path: string, query?: URLSearchParamsInit): string {
     path = "/api" + path;
@@ -42,7 +39,6 @@ export async function apiGet(
     signal?: AbortSignal
 ): Promise<any> {
     return fetch(getUrl(path, query), {
-        cache: "no-store",
         signal
     }).then(handleResponse);
 }
@@ -69,7 +65,6 @@ async function handleImageResponse(response: Response) {
 
 /**
  * Makes a delete request to a backend /api route.
- * Note delete is a reserved keyword in JavaScript.
  */
 export async function apiDelete(
     path: string,

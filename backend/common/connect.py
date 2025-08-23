@@ -1,16 +1,20 @@
 """Serves as an abstraction layer for connecting with the Onshape API and the current flask request."""
 
 import enum
+import re
 from typing import Any
 
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
 import flask
 from requests_oauthlib import OAuth2Session
+from google.cloud import firestore
 
 from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
 from onshape_api.paths.instance_type import InstanceType
+from onshape_api.paths.user_path import UserPath
 
 
 def get_session_id() -> str:
@@ -25,7 +29,7 @@ def get_token(db: Database) -> dict | None:
     return get_session_data(db).get("token")
 
 
-def save_token(db: Database, token) -> None:
+def save_token(db: Database, token: dict) -> None:
     set_session_data(db, {"token": token})
 
 
@@ -59,20 +63,20 @@ def get_oauth_session(
     db: Database, oauth_type: OAuthType = OAuthType.USE
 ) -> OAuth2Session:
     if oauth_type == OAuthType.SIGN_IN:
-        return OAuth2Session(env.client_id)
+        return OAuth2Session(env.CLIENT_ID)
     elif oauth_type == OAuthType.REDIRECT:
-        return OAuth2Session(env.client_id, state=flask.request.args["state"])
+        return OAuth2Session(env.CLIENT_ID, state=flask.request.args["state"])
 
     refresh_kwargs = {
-        "client_id": env.client_id,
-        "client_secret": env.client_secret,
+        "client_id": env.CLIENT_ID,
+        "client_secret": env.CLIENT_SECRET,
     }
 
     def _save_token(token) -> None:
         save_token(db, token)
 
     return OAuth2Session(
-        env.client_id,
+        env.CLIENT_ID,
         token=get_token(db),
         auto_refresh_url=token_url,
         auto_refresh_kwargs=refresh_kwargs,
@@ -80,12 +84,38 @@ def get_oauth_session(
     )
 
 
-def instance_route():
-    return f"/d/<document_id>/<instance_type>/<workspace_id>"
+def get_current_url() -> str:
+    """Returns the url of the current request.
+
+    In Google Cloud, the current url is always http since GCP abstracts the security behind a proxy.
+    However, this doesn't work for external users since GCP doesn't allow http connections.
+    So, we need to replace http with https in those cases.
+    """
+    return flask.request.url.replace("http://", "https://", 1)
 
 
-def element_route():
-    return instance_route() + "/e/<element_id>"
+def user_path_route():
+    """A route with components necessary to receive a UserPath."""
+    return "/<user_type>/<user_id>"
+
+
+def get_route_user_path() -> UserPath:
+    return UserPath(
+        get_route("user_id"),
+        get_route("user_type"),
+    )
+
+
+def instance_path_route():
+    return "/d/<document_id>/<instance_type>/<instance_id>"
+
+
+def element_path_route():
+    return instance_path_route() + "/e/<element_id>"
+
+
+def get_db() -> Database:
+    return Database(firestore.Client())
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:
@@ -95,19 +125,19 @@ def get_api(db: Database) -> onshape_api.OAuthApi:
 def get_route_instance_path() -> onshape_api.InstancePath:
     return onshape_api.InstancePath(
         get_route("document_id"),
-        get_route("workspace_id"),
+        get_route("instance_id"),
         get_route("instance_type"),
     )
 
 
-def get_route_element_path(wvm_param: str = "w") -> onshape_api.ElementPath:
+def get_route_element_path() -> onshape_api.ElementPath:
     return onshape_api.ElementPath.from_path(
         get_route_instance_path(),
         get_route("element_id"),
     )
 
 
-def get_body_instance_path(*instance_types: InstanceType) -> onshape_api.InstancePath:
+def get_body_instance_path() -> onshape_api.InstancePath:
     instance_type = get_optional_body_arg("instanceType", InstanceType.WORKSPACE)
     return onshape_api.InstancePath(
         get_body_arg("documentId"),
@@ -123,34 +153,51 @@ def get_body_element_path() -> onshape_api.ElementPath:
     )
 
 
-def get_route(route_param: str) -> str:
+def get_route(route_param: str) -> Any:
     """Returns the value of a path parameter.
 
     Throws if it doesn't exist.
     """
     view_args = flask.request.view_args
     if view_args is None or (param := view_args.get(route_param)) is None:
-        raise backend_exceptions.ReportedException(
+        raise backend_exceptions.ClientException(
             "Missing required path parameter {}.".format(route_param)
         )
     return param
 
 
-def get_query_arg(key: str) -> Any:
+def get_query_param(key: str) -> Any:
     """Returns a value from the request query.
 
     Throws if it doesn't exist.
     """
     value = flask.request.args.get(key)
     if value is None:
-        raise backend_exceptions.ReportedException(
+        raise backend_exceptions.ClientException(
             "Missing required query parameter {}.".format(key)
         )
     return value
 
 
-def get_optional_query_arg(key: str, default: str | None = None) -> Any:
-    """Returns a value from the request query, or None if it doesn't exist."""
+def get_query_bool(key: str, default: bool | None = None) -> bool:
+    """Returns a boolean from the request query. Throws if a boolean isn't found and default is None."""
+    value = flask.request.args.get(key)
+    if value == None:
+        if default == None:
+            raise backend_exceptions.ClientException(
+                "Missing required query parameter {}.".format(key)
+            )
+        return default
+
+    return str_to_bool(value)
+
+
+def str_to_bool(s: str) -> bool:
+    return s.lower() == "true"
+
+
+def get_optional_query_param(key: str, default: Any | None = None) -> Any:
+    """Returns a value from the request query, or default if it doesn't exist."""
     return flask.request.args.get(key, default)
 
 
@@ -160,8 +207,8 @@ def get_body_arg(key: str) -> Any:
     Throws if key doesn't exist.
     """
     value = flask.request.get_json().get(key, None)
-    if not value:
-        raise backend_exceptions.ReportedException(
+    if value == None:
+        raise backend_exceptions.ClientException(
             "Missing required body parameter {}.".format(key)
         )
     return value
@@ -172,22 +219,24 @@ def get_optional_body_arg(key: str, default: Any | None = None) -> Any:
     return flask.request.get_json().get(key, default)
 
 
-# def extract_body(
-#     required_keys: Iterable[str] = [],
-#     optional_keys: Iterable[str] = [],
-# ) -> dict:
-#     required_key_set = set(required_keys)
-#     optional_key_set = set(optional_keys)
+def add_query_params(url: str, params: dict) -> str:
+    """Adds params in params to url.
 
-#     body = request.get_json()
-#     for key in body:
-#         if key in required_key_set:
-#             required_key_set.remove(key)
-#             continue
-#         elif key in optional_key_set:
-#             continue
-#         message = "Required arguments are missing: {}".format(
-#             ", ".join(required_key_set)
-#         )
-#         raise exceptions.ApiException(message)
-#     return body
+    Generated by ChatGPT.
+    """
+    parsed_url = urlparse(url)
+    query_params = dict(parse_qsl(parsed_url.query))
+    query_params.update(params)
+    new_query = urlencode(query_params)
+    return urlunparse(parsed_url._replace(query=new_query))
+
+
+def is_safari_webkit():
+    """Returns true if the user is on Apple's Safari.
+
+    Generated by ChatGPT.
+    """
+    ua = flask.request.headers.get("User-Agent", "")
+    # Must contain AppleWebKit
+    # Must NOT contain Edge, Edg, OPR (Opera), CriOS (Chrome iOS), or FxiOS (Firefox iOS)
+    return bool(re.search(r"AppleWebKit", ua)) and not re.search(r"Edge|Edg|OPR", ua)

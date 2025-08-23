@@ -1,4 +1,3 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { IconPaths, Icons } from "@blueprintjs/icons";
 
@@ -45,8 +44,5 @@ declare module "@tanstack/react-router" {
 
 const rootElement: HTMLElement = document.getElementById("root")!;
 const root = createRoot(rootElement);
-root.render(
-    <StrictMode>
-        <RouterProvider router={router} />
-    </StrictMode>
-);
+// Note: We can't use React StrictMode because it breaks Blueprint portals and hence, ContextMenus
+root.render(<RouterProvider router={router} />);

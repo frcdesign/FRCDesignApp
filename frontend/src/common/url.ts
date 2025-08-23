@@ -1,3 +1,4 @@
+import { encodeConfigurationForQuery } from "../api/backend-types";
 import {
     DocumentPath,
     InstancePath,
@@ -13,8 +14,15 @@ export function makeUrl(path: DocumentPath): string;
 export function makeUrl(path: WorkspacePath): string;
 export function makeUrl(path: InstancePath): string;
 export function makeUrl(path: ElementPath): string;
+export function makeUrl(
+    path: ElementPath,
+    configuration?: Record<string, string>
+): string;
 // Impelmentation handler
-export function makeUrl(path: DocumentPath): string {
+export function makeUrl(
+    path: DocumentPath,
+    configuration?: Record<string, string>
+): string {
     let url = `https://cad.onshape.com/documents/${path.documentId}`;
     // Match most specific match first
     if (isInstancePath(path)) {
@@ -24,6 +32,9 @@ export function makeUrl(path: DocumentPath): string {
     }
     if (isElementPath(path)) {
         url += `/e/${path.elementId}`;
+    }
+    if (configuration) {
+        url += "?configuration=" + encodeConfigurationForQuery(configuration);
     }
     return url;
 }

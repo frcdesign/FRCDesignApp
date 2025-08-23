@@ -3,7 +3,7 @@ import http
 from onshape_api.api.api_base import Api
 from onshape_api.exceptions import ApiError
 from onshape_api.paths.api_path import api_path
-from onshape_api.paths.paths import DocumentPath
+from onshape_api.paths.doc_path import DocumentPath
 
 
 class Permission(StrEnum):

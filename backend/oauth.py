@@ -9,7 +9,8 @@ The frontend should have a /redirect route which calls the /redirect route below
 
 import flask
 from flask import request
-from backend.common import connect, database, env
+from backend.common import connect, env
+from backend.common.backend_exceptions import AuthException, ServerException
 
 
 router = flask.Blueprint("oauth", __name__)
@@ -22,7 +23,7 @@ def sign_in():
         url = request.args.get("redirectOnshapeUri")
         flask.session["redirect_url"] = url
 
-    db = database.Database()
+    db = connect.get_db()
     oauth = connect.get_oauth_session(db, connect.OAuthType.SIGN_IN)
     # Saving state is unneeded since Onshape saves it for us
     auth_url, _ = oauth.authorization_url(connect.auth_base_url)
@@ -35,21 +36,26 @@ def sign_in():
 def redirect():
     """The Onshape redirect route.
 
-    Parameters:
-        The code and state parameters received from Onshape.
+    Parameters the values received from Onshape.
     """
     if request.args.get("error") == "access_denied":
         return flask.redirect("/grant-denied")
 
-    db = database.Database()
+    db = connect.get_db()
     oauth = connect.get_oauth_session(db, connect.OAuthType.REDIRECT)
 
     token = oauth.fetch_token(
         connect.token_url,
-        client_secret=env.client_secret,
+        client_secret=env.CLIENT_SECRET,
         code=request.args["code"],
     )
     connect.save_token(db, token)
 
-    redirect_url = flask.session["redirect_url"]
+    redirect_url = flask.session.get("redirect_url")
+    if redirect_url == None:
+        if connect.is_safari_webkit():
+            return flask.redirect("/safari-error")
+        raise ServerException(
+            "Failed to find redirect_url, there may be an issue with cookie handling"
+        )
     return flask.redirect(redirect_url)

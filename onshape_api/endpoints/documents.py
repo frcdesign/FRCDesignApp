@@ -11,7 +11,7 @@ from onshape_api.paths.api_path import api_path
 from onshape_api.paths.instance_type import (
     InstanceType,
 )
-from onshape_api.paths.paths import (
+from onshape_api.paths.doc_path import (
     DocumentPath,
     InstancePath,
     ElementPath,
@@ -264,3 +264,10 @@ def get_contents(
     return api.get(
         api_path("documents", instance_path, InstancePath, "contents"), query=query
     )
+
+
+def get_microversion_id(api: Api, instance_path: InstancePath) -> str:
+    """Returns the latest microversion of a given workspace or version."""
+    return api.get(
+        api_path("documents", instance_path, InstancePath, "currentmicroversion")
+    )["microversion"]

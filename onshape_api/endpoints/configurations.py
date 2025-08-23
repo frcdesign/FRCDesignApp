@@ -3,7 +3,7 @@ from urllib import parse
 
 from onshape_api.api.api_base import Api
 from onshape_api.paths.api_path import api_path
-from onshape_api.paths.paths import ElementPath
+from onshape_api.paths.doc_path import ElementPath
 
 
 def get_configuration(api: Api, element_path: ElementPath):

@@ -16,6 +16,7 @@ import requests
 
 from onshape_api import exceptions
 from onshape_api.api.api_base import Api, ApiArgs, get_api_base_args
+from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.utils import env_utils
 
 
@@ -50,10 +51,9 @@ class KeyApi(Api):
         self._access_key = access_key
         self._secret_key = secret_key
 
-        if self._logging:
-            logging.info(
-                "Onshape instance created: access key = {}".format(self._access_key)
-            )
+        ONSHAPE_LOGGER.info(
+            "Onshape instance created: access key = {}".format(self._access_key)
+        )
 
     @override
     def _request(
@@ -73,11 +73,10 @@ class KeyApi(Api):
 
         headers = make_headers(method, headers, url, self._access_key, self._secret_key)
 
-        if self._logging:
-            logging.info("request url: " + url)
-            logging.info("request headers: " + str(headers))
-            if len(body) > 0:
-                logging.info(body)
+        ONSHAPE_LOGGER.info("request url: " + url)
+        ONSHAPE_LOGGER.info("request headers: " + str(headers))
+        if len(body) > 0:
+            ONSHAPE_LOGGER.info(body)
 
         res = requests.request(
             method,
@@ -90,15 +89,13 @@ class KeyApi(Api):
         status = http.HTTPStatus(res.status_code)
 
         if status.is_success:
-            if self._logging:
-                if res.text == "" or not is_json:
-                    logging.info("request succeeded")
-                else:
-                    logging.info("request succeeded, details: " + res.text)
+            if res.text == "" or not is_json:
+                ONSHAPE_LOGGER.info("request succeeded")
+            else:
+                ONSHAPE_LOGGER.info("request succeeded, details: " + res.text)
         elif status is http.HTTPStatus.TEMPORARY_REDIRECT:
             # The official Onshape app has redirect handling here, we skip because lazy
-            if self._logging:
-                logging.error("unhandled redirect, details: " + res.text)
+            ONSHAPE_LOGGER.error("unhandled redirect, details: " + res.text)
             raise exceptions.ApiError(res.text, status)
 
             # location = parse.urlparse(res.headers["Location"])
@@ -119,8 +116,7 @@ class KeyApi(Api):
             #     new_query[key] = querystring[key][0]  # won't work for repeated query params
             # return self.request(method, location.path, query=new_query, headers=headers, base_url=new_base_url)
         else:
-            if self._logging:
-                logging.error("request failed, details: " + res.text)
+            ONSHAPE_LOGGER.error("request failed, details: " + res.text)
             raise exceptions.ApiError(res.text, status)
 
         return res.json() if is_json else res

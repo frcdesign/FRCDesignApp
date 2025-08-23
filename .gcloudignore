@@ -4,8 +4,10 @@
 # Re-add app.yaml
 !app.yaml
 # Re-add dist
-!/dist/
+!dist/
 
+# Folders which aren't in the gitignore which we don't need
 .vscode/
 frontend/
 scripts/
+tests/

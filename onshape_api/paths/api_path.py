@@ -1,50 +1,13 @@
 from typing import Type
 from urllib import parse
-from onshape_api.paths.paths import DocumentPath
-
-
-# class ApiRequestBuilder:
-#     """A builder class which can be used to construct a request to the Onshape API."""
-
-#     def __init__(
-#         self,
-#         route: str,
-#         path: PathBase | None = None,
-#         path_type: Type[PathBase] | None = None,
-#         end_route: str | None = None,
-#     ) -> None:
-#         self._route = route
-#         if path:
-#             if path_type == None:
-#                 raise ValueError("The path_type must be supplied alongside the path.")
-#             self._path = path_type.to_api_path(path)
-#         self._end_route = end_route
-
-#     def add_path(self, path: PathBase, path_type: type[PathBase]) -> Self:
-#         self._path = path_type.to_api_path(path)
-#         return self
-
-#     @property
-#     def route(self) -> str:
-#         return self._route
-
-#     @route.setter
-#     def route(self, route: str) -> None:
-#         self._route = route
-
-#     @property
-#     def end_route(self) -> str | None:
-#         return self._end_route
-
-#     @end_route.setter
-#     def end_route(self, end_route: str) -> None:
-#         self._end_route = end_route
+from onshape_api.paths.base_path import BasePath
+from onshape_api.paths.doc_path import DocumentPath
 
 
 def api_path(
     route: str,
-    path: DocumentPath | None = None,
-    path_type: Type[DocumentPath] | None = None,
+    path: BasePath | None = None,
+    path_type: Type[BasePath] | None = None,
     end_route: str | None = None,
     end_id: str | None = None,
     feature_id: str | None = None,
@@ -70,7 +33,7 @@ def api_path(
     if path is not None:
         if path_type is None:
             raise ValueError("path_type must be provided alongside path")
-        if path_type is DocumentPath and skip_document_d:
+        if isinstance(path, DocumentPath) and skip_document_d:
             api_path += "/" + path.document_id
         else:
             api_path += path_type.to_api_path(path)

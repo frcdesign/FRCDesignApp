@@ -1,4 +1,4 @@
-@import "@blueprintjs/core/lib/scss/variables";
+@use "@blueprintjs/core/lib/scss/variables" as bp;
 
 // Disable drag text highlighting
 * {
@@ -8,16 +8,11 @@
     -webkit-user-select: none;
 }
 
-.app-navbar {
-    background-color: $dark-gray4;
-}
+// Generic classes
+$frc-design-green: #4cae4f;
 
-.app-background {
-    padding-top: $pt-navbar-height;
-    height: 100vh;
-    width: 100vw;
-    background-color: $gray4;
-    overflow: scroll;
+.frc-design-green {
+    color: $frc-design-green;
 }
 
 .center {
@@ -26,54 +21,117 @@
     justify-content: center;
 }
 
-.bp5-control input:checked ~ .bp5-control-indicator {
-    background-color: $green3;
+.split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.bp5-control:hover input:checked ~ .bp5-control-indicator {
-    background-color: $green2;
+// App specific classes
+#root {
+    position: relative;
+    height: 100vh;
+    width: 100vw;
 }
 
+.app-background {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-navbar {
+    display: flex;
+    flex-direction: column;
+    height: unset;
+
+    .frc-design-icon {
+        background-color: $frc-design-green;
+        height: 28px;
+        width: 28px;
+        padding-left: 3px;
+        padding-right: 3px;
+        border-radius: 10%;
+    }
+
+    .vendor-filter-tags {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+}
+
+.app-content {
+    flex-grow: 1;
+    overflow: auto;
+}
+
+.app-light-background {
+    background-color: bp.$pt-app-background-color;
+}
+
+.app-dark-background {
+    background-color: bp.$pt-dark-app-background-color;
+}
+
+// Insert dialog
+
+// Make checkbox green when hovered/checked
+// .checkbox {
+//     input:checked ~ .bp6-control-indicator {
+//         background-color: bp.$green3;
+//     }
+// }
+// .checkbox:hover {
+//     input:checked ~ .bp6-control-indicator {
+//         background-color: bp.$green2 !important;
+//     }
+// }
+
+// Makes insert dialog inputs full width
 .full-width {
     display: flex;
-    width: 100%;
-    align-items: center;
+
+    .bp6-form-content {
+        flex: 1;
+    }
 }
 
-.full-width .bp5-form-content {
-    flex: 1;
-}
-
-.full-width .bp5-input-group {
-    width: 100%;
-}
-
-.full-width .bp5-button {
-    width: 100%;
+.enum-menu {
+    max-height: 250px;
+    overflow: scroll;
 }
 
 .preview-image-card {
     margin: 10px;
     margin-bottom: 0px;
-    background-color: $light-gray4;
+    background-color: bp.$light-gray4;
 }
 
-.max-size {
-    height: 100%;
-    width: 100%;
+.settings-dialog {
+    max-width: 80%;
 }
 
-.element-title {
-    margin-left: 20px;
+// Home/document lists
+.item-card {
+    display: flex;
+    justify-content: space-between;
+    margin-left: -3px;
 }
 
-.document-section {
+.home-loading-state {
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.home-error-state {
+    padding-top: 25px;
+    padding-bottom: 50px;
+}
+
+.home-card-title {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-
-    .bp5-section-header {
-        padding-left: 10px;
-    }
+    gap: 10px;
 }

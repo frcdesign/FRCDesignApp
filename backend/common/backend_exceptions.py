@@ -4,11 +4,12 @@ from http import HTTPStatus
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.permissions import Permission, get_permissions
-from onshape_api.paths.paths import DocumentPath
+from onshape_api.endpoints.users import AccessLevel
+from onshape_api.paths.doc_path import DocumentPath
 
 
-class BackendException(Exception):
-    """An unexpected exception thrown by the backend."""
+class ServerException(Exception):
+    """Exceptions representing situations which should never occur."""
 
     def __init__(
         self,
@@ -20,26 +21,29 @@ class BackendException(Exception):
         self.status_code = status_code
 
     def to_dict(self):
-        return {"type": "BACKEND_EXCEPTION", "message": self.message}
+        return {"message": self.message}
 
 
-class ClientException(Exception):
-    """An unexpected exception thrown by the backend which stems from an issue with the client code."""
-
-    def __init__(
-        self,
-        message: str,
-    ):
-        super().__init__()
-        self.message = message
-        self.status_code = HTTPStatus.EXPECTATION_FAILED
-
-    def to_dict(self):
-        return {"type": "CLIENT_EXCEPTION", "message": self.message}
+class AuthException(ServerException):
+    def __init__(self, access_level: AccessLevel):
+        super().__init__(
+            f"User has {access_level} access, which is not sufficient to access this resource",
+            status_code=HTTPStatus.UNAUTHORIZED,
+        )
 
 
-class ReportedException(ABC, Exception):
-    """An exception which is exposed to the user."""
+class ClientException(ServerException):
+    """An unexpected exception caused by the frontend doing something it never should do."""
+
+    def __init__(self, message: str):
+        super().__init__(
+            message,
+            status_code=HTTPStatus.BAD_REQUEST,
+        )
+
+
+class UserException(ABC, Exception):
+    """Exceptions which are returned to the frontend to be displayed to the user directly."""
 
     def __init__(self, type: str, status_code: HTTPStatus = HTTPStatus.BAD_REQUEST):
         super().__init__(type)
@@ -50,7 +54,7 @@ class ReportedException(ABC, Exception):
         return {"type": self.type}
 
 
-class MissingPermissionException(ReportedException):
+class DocumentPermissionException(UserException):
     """An exception indicating a user does not have the necessary permissions for one or more resources used by an endpoint."""
 
     def __init__(
@@ -77,7 +81,7 @@ def require_permissions(api: Api, path: DocumentPath, *needed_permissions: Permi
     """Throws an exception if the current user doesn't have given permissions for the given document."""
     permissions = get_permissions(api, path)
     if permissions == []:
-        raise MissingPermissionException(Permission.READ, path.document_id)
+        raise DocumentPermissionException(Permission.READ, path.document_id)
 
     for permission in needed_permissions:
         if permission not in permissions:
@@ -85,13 +89,6 @@ def require_permissions(api: Api, path: DocumentPath, *needed_permissions: Permi
                 document_name = get_document(api, path)["name"]
             except:
                 document_name = None
-            raise MissingPermissionException(
+            raise DocumentPermissionException(
                 permission, path.document_id, document_name
             )
-
-
-class LinkedCycleException(ReportedException):
-    """An exception indicating the current document's linked document graph contains a cycle."""
-
-    def __init__(self):
-        super().__init__("LINKED_CYCLE")

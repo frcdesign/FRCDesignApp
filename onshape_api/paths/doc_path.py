@@ -20,10 +20,11 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 from urllib import parse
+from onshape_api.paths.base_path import BasePath
 from onshape_api.paths.instance_type import InstanceType, get_instance_type_key
 
 
-class DocumentPath:
+class DocumentPath(BasePath):
     """Represents a path to an Onshape document.
 
     Note this isn't very useful on its own since Onshape documents are actually collections of different workspaces, versions, and microversions (instances).
@@ -51,9 +52,6 @@ class DocumentPath:
 
     def __eq__(self, other) -> bool:
         return isinstance(other, DocumentPath) and self.document_id == other.document_id
-
-    def __str__(self) -> str:
-        return DocumentPath.to_api_path(self)
 
 
 class InstancePath(DocumentPath):
@@ -120,9 +118,6 @@ class InstancePath(DocumentPath):
             and self.wvm == other.wvm
         )
 
-    def __str__(self) -> str:
-        return InstancePath.to_api_path(self)
-
 
 class ElementPath(InstancePath):
     """Represents a document tab in an instance."""
@@ -177,9 +172,6 @@ class ElementPath(InstancePath):
             and self.element_id == other.element_id
         )
 
-    def __str__(self) -> str:
-        return ElementPath.to_api_path(self)
-
 
 class PartPath(ElementPath):
     """Represents a part in a part studio."""
@@ -231,9 +223,6 @@ class PartPath(ElementPath):
             and self.__eq__(other)
             and self.part_id == other.part_id
         )
-
-    def __str__(self) -> str:
-        return PartPath.to_api_path(self)
 
 
 def url_to_document_path(url: str) -> DocumentPath:
@@ -289,3 +278,7 @@ def path_to_frontend_dict(path: ElementPath) -> dict:
 
     result.update({"elementId": path.element_id})
     return result
+
+
+def path_to_namespace(path: ElementPath, microversion_id: str) -> str:
+    return f"d{path.document_id}::{path.instance_type}{path.instance_id}::e{path.element_id}::m{microversion_id}"

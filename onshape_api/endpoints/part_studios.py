@@ -4,7 +4,7 @@ from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_instance_type, assert_workspace
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.instance_type import InstanceType
-from onshape_api.paths.paths import ElementPath, InstancePath
+from onshape_api.paths.doc_path import ElementPath, InstancePath
 
 
 def create_part_studio(api: Api, instance_path: InstancePath, name: str) -> dict:
@@ -29,25 +29,11 @@ def evaluate_feature_script(
     return json.loads(result["console"])
 
 
-def add_feature(
-    api: Api,
-    part_studio_path: ElementPath,
-    name: str,
-    namespace: str,
-    feature_type: str,
-):
+def add_feature(api: Api, part_studio_path: ElementPath, feature: dict):
     """Adds a feature to a part studio."""
     assert_instance_type(part_studio_path, InstanceType.WORKSPACE)
 
-    body = {
-        "btType": "BTFeatureDefinitionCall-1406",
-        "feature": {
-            "btType": "BTMFeature-134",
-            "namespace": namespace,
-            "name": name,
-            "featureType": feature_type,
-        },
-    }
+    body = {"feature": feature}
 
     return api.post(
         api_path("partstudios", part_studio_path, ElementPath, "features"), body=body

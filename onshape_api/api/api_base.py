@@ -1,17 +1,13 @@
 from abc import ABC, abstractmethod
-import logging
 from typing import Any, NotRequired, TypedDict, Unpack
 import os
 import http
-
-logging.basicConfig(level=logging.INFO)
 
 __all__ = ["Api"]
 
 
 class ApiArgs(TypedDict):
     base_url: NotRequired[str]
-    logging: NotRequired[bool]
     version: NotRequired[int | None]
 
 
@@ -24,13 +20,6 @@ class ApiRequestArgs(TypedDict):
 def get_api_base_args() -> ApiArgs:
     """Constructs ApiArgs from environment variables."""
     kwargs: ApiArgs = {}
-
-    # True if API_LOGGING exists and isn't "false". Default is "false".
-    logging = os.getenv("API_LOGGING")
-    if logging == None:
-        kwargs["logging"] = False
-    else:
-        kwargs["logging"] = logging.lower() == "true"
 
     if temp := os.getenv("API_VERSION"):
         kwargs["version"] = int(temp)
@@ -54,18 +43,15 @@ class Api(ABC):
     def __init__(
         self,
         base_url: str = "https://cad.onshape.com",
-        logging: bool = False,
         version: int | None = 8,
     ):
         """
         Args:
             base_url: The base url to use.
-            logging: Whether to enable logging.
             version: The version to use.
                 If the version is None, no version is specified in the url of API calls.
                 Note this does not result in using the latest version of the API automatically.
         """
-        self._logging = logging
         self._base_url = base_url + "/api"
         if version:
             self._base_url += "/v{}".format(version)

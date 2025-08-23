@@ -1,4 +1,4 @@
-from onshape_api.paths.paths import url_to_instance_path
+from onshape_api.paths.doc_path import url_to_instance_path
 
 STD_PATH = url_to_instance_path(
     "https://cad.onshape.com/documents/12312312345abcabcabcdeff/w/a855e4161c814f2e9ab3698a"

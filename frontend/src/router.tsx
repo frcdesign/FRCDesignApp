@@ -1,6 +1,5 @@
 import { App } from "./app/app";
-import { DocumentList } from "./app/document-list";
-import { SearchParams } from "./api/search-params";
+import { HomeList } from "./app/home-list";
 import { GrantDenied } from "./pages/grant-denied";
 import { License } from "./pages/license";
 import {
@@ -11,10 +10,33 @@ import {
     SearchSchemaInput
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import { ConfigurationResult, DocumentResult } from "./api/backend-types";
-import { ConfigurationDialog } from "./app/insert-dialog";
-import { queryOptions } from "@tanstack/react-query";
-import { apiGet } from "./api/api";
+import { DocumentList } from "./document/document-list";
+import {
+    getDocumentOrderQuery,
+    getDocumentsQuery,
+    getElementsQuery,
+    getFavoritesQuery
+} from "./queries";
+import { SafariError } from "./pages/safari-error";
+import { MenuParams } from "./api/menu-params";
+import { OnshapeParams } from "./api/onshape-params";
+import { AccessLevel, Vendor } from "./api/backend-types";
+import { AppError } from "./app/app-error";
+
+export interface BaseSearchParams {
+    /**
+     * The maximum access level the user can have.
+     */
+    maxAccessLevel: AccessLevel;
+    /**
+     * The access level the user is currently using.
+     */
+    accessLevel: AccessLevel;
+    query?: string;
+    vendors?: Vendor[];
+}
+
+type SearchParams = OnshapeParams & BaseSearchParams & MenuParams;
 
 const rootRoute = createRootRoute();
 
@@ -24,12 +46,10 @@ const rootRoute = createRootRoute();
  */
 const appRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/app",
+    path: "app",
     component: App,
     // Add SearchSchemaInput so search parameters become optional
-    validateSearch: (
-        search: Record<string, unknown> & SearchSchemaInput
-    ): SearchParams => {
+    validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
         return search as unknown as SearchParams;
     },
     search: {
@@ -37,66 +57,67 @@ const appRoute = createRoute({
     }
 });
 
-const documentsRoute = createRoute({
+const homeRoute = createRoute({
     getParentRoute: () => appRoute,
-    path: "/documents",
-    component: DocumentList,
-    beforeLoad: ({ abortController }) => {
-        const loadDocuments = queryOptions<DocumentResult>({
-            queryKey: ["documents"],
-            queryFn: () => apiGet("/documents", {}, abortController.signal)
-        });
-        return queryClient.ensureQueryData(loadDocuments);
+    path: "documents",
+    loaderDeps: ({ search }) => ({ userId: search.userId }),
+    loader: async ({ deps }) => {
+        const loadDocuments = getDocumentsQuery();
+        const loadDocumentOrder = getDocumentOrderQuery();
+        const loadElements = getElementsQuery();
+        const loadFavorites = getFavoritesQuery(deps);
+
+        return [
+            queryClient.fetchQuery(loadDocuments),
+            queryClient.fetchQuery(loadDocumentOrder),
+            queryClient.fetchQuery(loadElements),
+            queryClient.fetchQuery(loadFavorites)
+        ];
     },
-    loader: ({ context }) => {
-        return context;
-    }
+    errorComponent: AppError
 });
 
-const insertDialogRoute = createRoute({
-    getParentRoute: () => documentsRoute,
-    path: "/$elementId",
-    component: ConfigurationDialog,
-    loader: ({ params, abortController, context }) => {
-        const element = context.elements[params.elementId];
-        const configurationId = element?.configurationId;
-        if (!configurationId) {
-            return undefined;
-        }
-        const loadConfiguration = queryOptions<ConfigurationResult>({
-            queryKey: ["configuration", configurationId],
-            queryFn: () =>
-                apiGet(
-                    "/configuration/" + configurationId,
-                    {},
-                    abortController.signal
-                )
-        });
-        return queryClient.ensureQueryData(loadConfiguration);
-    }
+const homeListRoute = createRoute({
+    getParentRoute: () => homeRoute,
+    path: "/",
+    component: HomeList
+});
+
+const documentListRoute = createRoute({
+    getParentRoute: () => homeRoute,
+    path: "$documentId",
+    component: DocumentList
 });
 
 const grantDeniedRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/grant-denied",
+    path: "grant-denied",
     component: GrantDenied
 });
 
 const licenseRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/license",
+    path: "license",
     component: License
 });
 
+const safariErrorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "safari-error",
+    component: SafariError
+});
+
 const routeTree = rootRoute.addChildren([
-    appRoute.addChildren([documentsRoute.addChildren([insertDialogRoute])]),
+    appRoute.addChildren([
+        homeRoute.addChildren([homeListRoute, documentListRoute])
+    ]),
     grantDeniedRoute,
-    licenseRoute
+    licenseRoute,
+    safariErrorRoute
 ]);
 
 export const router = createRouter({
-    routeTree
-    // Database is immutable, so no need to refetch things
-    // defaultStaleTime: Infinity,
-    // defaultPreloadStaleTime: Infinity
+    routeTree,
+    defaultStaleTime: Infinity,
+    defaultGcTime: 6 * 1000
 });
