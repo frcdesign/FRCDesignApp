@@ -1,7 +1,7 @@
 import flask
 
 from backend.common import backend_exceptions
-from backend.endpoints import document_order, favorites, insert, load, reload_documents
+from backend.endpoints import document_order, documents, favorites, insert, load
 from onshape_api.exceptions import ApiError
 
 
@@ -25,7 +25,7 @@ def reported_exception(e: backend_exceptions.UserException):
     return e.to_dict(), e.status_code
 
 
-router.register_blueprint(reload_documents.router)
+router.register_blueprint(documents.router)
 router.register_blueprint(load.router)
 router.register_blueprint(insert.router)
 router.register_blueprint(favorites.router)

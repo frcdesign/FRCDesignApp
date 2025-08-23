@@ -2,7 +2,7 @@ import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, FavoritesResult } from "../api/backend-types";
+import { ElementObj, Favorites } from "../api/backend-types";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { showErrorToast } from "../common/toaster";
@@ -22,7 +22,7 @@ interface UpdateFavoritesArgs {
     elementId: string;
 }
 
-function updateFavorites(data: FavoritesResult, args: UpdateFavoritesArgs) {
+function updateFavorites(data: Favorites, args: UpdateFavoritesArgs) {
     const favorites = { ...data };
     if (args.operation === Operation.ADD) {
         favorites[args.elementId] = { id: args.elementId };
@@ -54,7 +54,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             }
         },
         onMutate: (args) => {
-            queryClient.setQueryData(["favorites"], (data: FavoritesResult) =>
+            queryClient.setQueryData(["favorites"], (data: Favorites) =>
                 updateFavorites(data, args)
             );
         },
@@ -63,7 +63,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
             showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
             args.operation = getOppositeOperation(args.operation);
-            queryClient.setQueryData(["favorites"], (data: FavoritesResult) =>
+            queryClient.setQueryData(["favorites"], (data: Favorites) =>
                 updateFavorites(data, args)
             );
         }

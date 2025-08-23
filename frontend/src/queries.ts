@@ -2,12 +2,12 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet } from "./api/api";
 import {
     DocumentObj,
-    DocumentsResult,
-    ElementsResult,
+    Documents,
+    Elements,
     Favorite,
-    FavoritesResult,
+    Favorites,
     ElementObj,
-    DocumentOrderResult
+    DocumentOrder
 } from "./api/backend-types";
 import { toUserApiPath, UserPath } from "./api/path";
 
@@ -22,7 +22,7 @@ export function getDocumentsQuery() {
                         document
                     ])
                 )
-            ) as Promise<DocumentsResult>
+            ) as Promise<Documents>
     });
 }
 
@@ -36,7 +36,7 @@ export function getDocumentOrderQuery() {
         queryFn: () =>
             apiGet("/document-order").then(
                 (result) => result.documentOrder
-            ) as Promise<DocumentOrderResult>
+            ) as Promise<DocumentOrder>
     });
 }
 
@@ -55,7 +55,7 @@ export function getElementsQuery() {
                         element
                     ])
                 )
-            ) as Promise<ElementsResult>
+            ) as Promise<Elements>
     });
 }
 
@@ -74,7 +74,7 @@ export function getFavoritesQuery(userPath: UserPath) {
                         favorite
                     ])
                 )
-            ) as Promise<FavoritesResult>,
+            ) as Promise<Favorites>,
         // Favorites shouldn't go stale, although they can get changed in another tab
         staleTime: 60 * 1000
     });

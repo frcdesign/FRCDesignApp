@@ -3,7 +3,7 @@ import flask
 from backend.common import connect
 from backend.common.app_access import require_member_access
 from backend.common.backend_exceptions import ClientException
-from backend.endpoints.reload_documents import save_document
+from backend.endpoints.documents import save_document
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import DocumentPath

@@ -10,7 +10,8 @@ import {
     MenuItem,
     ContextMenu,
     ContextMenuChildrenProps,
-    Tag
+    Tag,
+    MenuDivider
 } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
@@ -25,14 +26,11 @@ import { CardThumbnail } from "./thumbnail";
 import { FavoriteButton } from "./favorite";
 import { useMutation } from "@tanstack/react-query";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";
-import {
-    getSearchHitTitle,
-    invalidateSearchDb,
-    SearchHit
-} from "../api/search";
+import { getSearchHitTitle, SearchHit } from "../api/search";
 import { apiDelete, apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { AppMenu } from "../api/menu-params";
+import { ChangeDocumentOrderItems } from "./change-document-order";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -76,6 +74,43 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
         </DocumentContextMenu>
     );
 }
+function useToggleDocumentSortMutation(document: DocumentObj) {
+    return useMutation({
+        mutationKey: ["set-document-sort"],
+        mutationFn: () => {
+            return apiPost("/set-document-sort", {
+                body: {
+                    documentId: document.id,
+                    sortAlphabetically: !document.sortAlphabetically
+                }
+            });
+        },
+        onSuccess: () => {
+            queryClient.refetchQueries({ queryKey: ["documents"] });
+        }
+    });
+}
+
+interface ToggleDocumentSortItemProps {
+    document: DocumentObj;
+}
+
+function ToggleDocumentSortItem({ document }: ToggleDocumentSortItemProps) {
+    const toggleDocumentSortMutation = useToggleDocumentSortMutation(document);
+    return (
+        <MenuItem
+            onClick={() => {
+                toggleDocumentSortMutation.mutate();
+            }}
+            icon={document.sortAlphabetically ? "list" : "sort-alphabetical"}
+            text={
+                document.sortAlphabetically
+                    ? "Use tab order"
+                    : "Sort alphabetically"
+            }
+        />
+    );
+}
 
 interface DocumentContextMenuProps {
     document: DocumentObj;
@@ -87,21 +122,6 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
-
-    const setSortOrderMutation = useMutation({
-        mutationKey: ["set-sort-order"],
-        mutationFn: () => {
-            return apiPost("/set-sort-order", {
-                body: {
-                    documentId: document.id,
-                    sortByDefault: !document.sortByDefault
-                }
-            });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
-        }
-    });
 
     const deleteDocumentMutation = useMutation({
         mutationKey: ["delete-document"],
@@ -115,19 +135,43 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
         }
     });
 
+    const showAllMutation = useSetVisibilityMutation(
+        "show-all",
+        document.elementIds,
+        true
+    );
+
+    const hideAllMutation = useSetVisibilityMutation(
+        "hide-all",
+        document.elementIds,
+        false
+    );
+
     const menu = (
         <Menu>
+            <ChangeDocumentOrderItems documentId={document.id} />
+            <MenuDivider />
             <MenuItem
+                icon="eye-open"
+                text="Show all elements"
                 onClick={() => {
-                    setSortOrderMutation.mutate();
+                    showAllMutation.mutate();
                 }}
-                icon={document.sortByDefault ? "list" : "sort-alphabetical"}
-                text={document.sortByDefault ? "Use tab order" : "Sort A-Z"}
             />
+            <MenuItem
+                icon="eye-off"
+                text="Hide all elements"
+                onClick={() => {
+                    hideAllMutation.mutate();
+                }}
+            />
+            <ToggleDocumentSortItem document={document} />
+            <MenuDivider />
             <MenuItem
                 icon="add"
                 text="Add document"
                 labelElement={<Icon icon="share" />}
+                intent="primary"
                 onClick={() => {
                     navigate({
                         to: ".",
@@ -139,7 +183,7 @@ function DocumentContextMenu(props: DocumentContextMenuProps) {
                 }}
             />
             <MenuItem
-                icon="delete"
+                icon="trash"
                 text="Delete"
                 intent="danger"
                 onClick={() => {
@@ -276,6 +320,26 @@ function CannotDeriveAssemblyAlert(props: CannotDeriveAssemblyAlertProps) {
         </Alert>
     );
 }
+function useSetVisibilityMutation(
+    mutationKey: string,
+    elementIds: string[],
+    isVisible: boolean
+) {
+    return useMutation({
+        mutationKey: [mutationKey],
+        mutationFn: () => {
+            return apiPost("/set-visibility", {
+                body: {
+                    elementIds,
+                    isVisible
+                }
+            });
+        },
+        onSuccess: () => {
+            queryClient.refetchQueries({ queryKey: ["elements"] });
+        }
+    });
+}
 
 interface ElementContextMenuProps {
     element: ElementObj;
@@ -287,21 +351,11 @@ function ElementContextMenu(props: ElementContextMenuProps) {
 
     const search = useSearch({ from: "/app" });
 
-    const mutation = useMutation({
-        mutationKey: ["set-visibility"],
-        mutationFn: () => {
-            return apiPost("/set-visibility", {
-                body: {
-                    elementId: element.id,
-                    isVisible: !element.isVisible
-                }
-            });
-        },
-        onSuccess: async () => {
-            await queryClient.refetchQueries({ queryKey: ["elements"] });
-            invalidateSearchDb();
-        }
-    });
+    const mutation = useSetVisibilityMutation(
+        "set-visibility",
+        [element.id],
+        !element.isVisible
+    );
 
     const menu = (
         <Menu>

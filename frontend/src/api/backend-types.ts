@@ -184,7 +184,7 @@ export interface QuantityParameterObj extends ParameterBase {
     unit: Unit;
 }
 
-export type DocumentsResult = Record<string, DocumentObj>;
+export type Documents = Record<string, DocumentObj>;
 
 // export enum ListElementType {
 //     DOCUMENT = "document",
@@ -206,16 +206,16 @@ export type DocumentsResult = Record<string, DocumentObj>;
 //     childrenIds: string[];
 // }
 
-export type DocumentOrderResult = string[];
+export type DocumentOrder = string[];
 
 export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
     elementIds: string[];
-    sortByDefault: boolean;
+    sortAlphabetically: boolean;
 }
 
-export type ElementsResult = Record<string, ElementObj>;
+export type Elements = Record<string, ElementObj>;
 
 export interface ElementObj extends ElementPath {
     id: string;
@@ -228,7 +228,7 @@ export interface ElementObj extends ElementPath {
     configurationId?: string;
 }
 
-export type FavoritesResult = Record<string, Favorite>;
+export type Favorites = Record<string, Favorite>;
 
 /**
  * A favorite is currently just an empty object.

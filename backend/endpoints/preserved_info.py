@@ -21,8 +21,8 @@ class PreservedInfo:
 
     def save_document(self, document_id: str, document_dict: dict):
         self.preserved_documents[document_id] = {
-            "sortByDefault": document_dict.get("sortByDefault", True)
+            "sortAlphabetically": document_dict.get("sortAlphabetically", True)
         }
 
     def load_document(self, document_id: str) -> dict:
-        return self.preserved_elements.get(document_id, {"sortByDefault": True})
+        return self.preserved_elements.get(document_id, {"sortAlphabetically": True})

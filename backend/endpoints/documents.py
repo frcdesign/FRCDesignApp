@@ -8,6 +8,7 @@ import flask
 
 from backend.common import connect, database
 from backend.common.app_access import require_member_access
+from backend.common.backend_exceptions import ServerException
 from backend.endpoints.backend_types import (
     NONE_CONDITION,
     ConditionType,
@@ -30,8 +31,39 @@ from onshape_api.paths.doc_path import (
     ElementPath,
     InstancePath,
 )
+from onshape_api.paths.instance_type import InstanceType
 
-router = flask.Blueprint("reload-documents", __name__)
+router = flask.Blueprint("documents", __name__)
+
+
+@router.get("/documents")
+def get_documents(**kwargs):
+    """Returns a list of the top level documents to display to the user."""
+    db = connect.get_db()
+
+    documents: list[dict] = []
+
+    for doc_ref in db.documents.stream():
+        document_dict = doc_ref.to_dict()
+        document_id = doc_ref.id
+
+        try:
+            documents.append(
+                {
+                    "id": document_id,
+                    "name": document_dict["name"],
+                    "elementIds": document_dict["elementIds"],
+                    "sortAlphabetically": document_dict.get("sortAlphabetically"),
+                    # InstancePath properties
+                    "documentId": doc_ref.id,
+                    "instanceId": document_dict["instanceId"],
+                    "instanceType": InstanceType.VERSION,
+                }
+            )
+        except:
+            raise ServerException("Failed to load document")
+
+    return {"documents": documents}
 
 
 def evaluate(condition_dict: dict | None, configuration: dict[str, str]) -> bool:
@@ -186,7 +218,7 @@ def save_document(
         "name": document["name"],
         "instanceId": version_path.instance_id,
         "elementIds": element_ids,
-        "sortByDefault": preserved["sortByDefault"],
+        "sortAlphabetically": preserved["sortAlphabetically"],
     }
 
     db.documents.document(document_id).set(document_dict)
@@ -262,23 +294,24 @@ def reload_documents(**kwargs):
 
 @router.post("/set-visibility")
 @require_member_access()
-def set_visibility(**kwargs):
+def set_visibility():
     db = connect.get_db()
-    element_id = connect.get_body_arg("elementId")
+    element_ids = connect.get_body_arg("elementIds")
     is_visible = connect.get_body_arg("isVisible")
 
-    db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
+    for element_id in element_ids:
+        db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
     return {"success": True}
 
 
-@router.post("/set-sort-order")
+@router.post("/set-document-sort")
 @require_member_access()
-def set_sort_order(**kwargs):
+def set_document_sort():
     db = connect.get_db()
     document_id = connect.get_body_arg("documentId")
-    sort_by_default = connect.get_body_arg("sortByDefault")
+    sort_alphabetically = connect.get_body_arg("sortAlphabetically")
 
     db.documents.document(document_id).set(
-        {"sortByDefault": sort_by_default}, merge=True
+        {"sortAlphabetically": sort_alphabetically}, merge=True
     )
     return {"success": True}

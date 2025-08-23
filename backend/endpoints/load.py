@@ -55,34 +55,6 @@ def get_elements(**kwargs):
     return {"elements": elements}
 
 
-@router.get("/documents")
-def get_documents(**kwargs):
-    """Returns a list of the top level documents to display to the user."""
-    db = connect.get_db()
-
-    documents: list[dict] = []
-
-    for doc_ref in db.documents.stream():
-        document_dict = doc_ref.to_dict()
-        document_id = doc_ref.id
-
-        try:
-            documents.append(
-                {
-                    "id": document_id,
-                    "name": document_dict["name"],
-                    "elementIds": document_dict["elementIds"],
-                    "sortByDefault": document_dict.get("sortByDefault"),
-                    # InstancePath properties
-                    "documentId": doc_ref.id,
-                    "instanceId": document_dict["instanceId"],
-                    "instanceType": InstanceType.VERSION,
-                }
-            )
-        except:
-            raise ServerException("Failed to load document")
-
-    return {"documents": documents}
 
 
 @router.get("/configuration/<configuration_id>")

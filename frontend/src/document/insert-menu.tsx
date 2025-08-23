@@ -114,7 +114,6 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     return (
         <Dialog
             isOpen
-            canOutsideClickClose={false}
             title={element.name}
             onClose={closeDialog}
             style={{ maxHeight: "90vh", maxWidth: "400px" }}

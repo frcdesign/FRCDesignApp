@@ -1,5 +1,5 @@
 import { AnyOrama, create, insert, search } from "@orama/orama";
-import { ElementsResult, Vendor } from "./backend-types";
+import { Elements, Vendor } from "./backend-types";
 import {
     afterInsert as highlightAfterInsert,
     Position,
@@ -27,7 +27,7 @@ export function invalidateSearchDb() {
  * If the database hasn't been accessed yet, this function will synchronously build it first.
  * This could produce a small latency on initial load, which we will ignore for now.
  */
-export function useSearchDb(elements?: ElementsResult) {
+export function useSearchDb(elements?: Elements) {
     const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
         getCachedSearchDb()
     );
@@ -47,7 +47,7 @@ export function useSearchDb(elements?: ElementsResult) {
     return searchDb;
 }
 
-export function buildSearchDb(elements: ElementsResult) {
+export function buildSearchDb(elements: Elements) {
     const searchDb = create({
         schema: {
             id: "string",

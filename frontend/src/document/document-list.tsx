@@ -57,7 +57,7 @@ export function DocumentList(): ReactNode {
         );
     } else {
         // if (search.sortOrder == SortOrder.DEFAULT) {
-        const documentSortOrder = document.sortByDefault
+        const documentSortOrder = document.sortAlphabetically
             ? SortOrder.ASCENDING
             : SortOrder.DEFAULT;
         // }

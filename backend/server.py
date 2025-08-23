@@ -7,7 +7,7 @@ from backend.endpoints import api
 from backend.common import connect, env
 from backend import oauth
 from backend.endpoints.document_order import set_document_order
-from backend.endpoints.reload_documents import save_document
+from backend.endpoints.documents import save_document
 from onshape_api.endpoints.users import AccessLevel, ping
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import url_to_document_path
