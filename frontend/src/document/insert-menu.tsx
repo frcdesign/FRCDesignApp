@@ -432,10 +432,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
             });
         },
         onError: () => {
-            showErrorToast(
-                `Unexpectedly failed to insert ${element.name}.`,
-                toastId
-            );
+            showErrorToast(`Failed to insert ${element.name}.`, toastId);
         },
         onSuccess: () => {
             showSuccessToast(`Successfully inserted ${element.name}.`, toastId);
