@@ -186,7 +186,7 @@ export async function doSearch(
     filters?: SearchFilters
 ): Promise<SearchHit[]> {
     const where: Record<string, string | string[] | boolean> = {
-        isVisible: false
+        isVisible: true
     };
 
     if (filters) {
@@ -209,7 +209,7 @@ export async function doSearch(
             b: 0, // 0 - 0.2
             d: 1 // 1+
         },
-        limit: 30,
+        limit: 50,
         where
     });
     return result.hits;

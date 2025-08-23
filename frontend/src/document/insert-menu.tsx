@@ -12,7 +12,8 @@ import {
     ConfigurationType,
     QuantityParameterObj,
     StringParameterObj,
-    Configuration
+    Configuration,
+    QuantityType
 } from "../api/backend-types";
 import {
     Alignment,
@@ -27,8 +28,7 @@ import {
     Intent,
     MenuItem,
     NumericInput,
-    Spinner,
-    Tooltip
+    Spinner
 } from "@blueprintjs/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../api/api";
@@ -37,11 +37,7 @@ import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
 import { makeUrl } from "../common/url";
-import {
-    useDocumentsQuery,
-    useElementsQuery,
-    useFavoritesQuery
-} from "../queries";
+import { useElementsQuery, useFavoritesQuery } from "../queries";
 import {
     AppMenu,
     InsertMenuParams,
@@ -67,7 +63,6 @@ export function InsertMenu(): ReactNode {
 function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
 
-    const documents = useDocumentsQuery().data;
     const elements = useElementsQuery().data;
     const search = useSearch({ from: "/app" });
     const favorites = useFavoritesQuery(search).data;
@@ -78,7 +73,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         Configuration | undefined
     >(undefined);
 
-    if (!documents || !elements || !favorites) {
+    if (!elements || !favorites) {
         return null;
     }
 
@@ -358,31 +353,42 @@ function QuantityParameter(
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
 
-    const isInvalid = isNumeric(value) || value.trim() == "";
+    const requiresUnits =
+        parameter.quantityType === QuantityType.LENGTH ||
+        parameter.quantityType === QuantityType.ANGLE;
+    const hasUnits = !isNumeric(value);
+
+    const isEmpty = value.trim() == "";
+
+    let helperText = undefined;
+    if (isEmpty) {
+        helperText = "Enter a valid expression";
+    } else if (requiresUnits && !hasUnits) {
+        helperText = "Expression must include units";
+    }
+    const intent = helperText !== undefined ? "danger" : undefined;
 
     return (
-        <Tooltip
-            disabled={!isInvalid}
-            content="Enter a valid expression with units"
-            isOpen
+        <FormGroup
+            label={parameter.name}
+            inline
+            labelFor={parameter.id}
+            className="full-width"
+            helperText={helperText}
+            intent={intent}
         >
-            <FormGroup
-                label={parameter.name}
-                inline
-                labelFor={parameter.id}
-                className="full-width"
-            >
-                <NumericInput
-                    id={parameter.id}
-                    value={value}
-                    fill
-                    intent={isInvalid ? "danger" : undefined}
-                    allowNumericCharactersOnly={false}
-                    onValueChange={(_, value) => onValueChange(value)}
-                    buttonPosition="none"
-                />
-            </FormGroup>
-        </Tooltip>
+            <NumericInput
+                id={parameter.id}
+                value={value}
+                fill
+                intent={intent}
+                allowNumericCharactersOnly={
+                    parameter.quantityType == QuantityType.REAL
+                }
+                onValueChange={(_, value) => onValueChange(value)}
+                buttonPosition="none"
+            />
+        </FormGroup>
     );
 }
 
