@@ -6,7 +6,7 @@
         {
             "label": "Deploy app",
             "type": "shell",
-            "command": "gcloud app deploy --project=frc-design-lib",
+            "command": "gcloud run deploy frcdesignapp --project=frc-design-lib --source=. --region=us-central1",
             "problemMatcher": [],
             "group": {
                 "kind": "build"

@@ -29,9 +29,9 @@ $frc-design-green: #4cae4f;
 
 // App specific classes
 #root {
-    position: relative;
-    height: 100vh;
-    width: 100vw;
+    position: absolute;
+    height: 100%;
+    width: 100%;
 }
 
 .app-background {
@@ -63,8 +63,8 @@ $frc-design-green: #4cae4f;
 }
 
 .app-content {
+    overflow-y: auto;
     flex-grow: 1;
-    overflow: auto;
 }
 
 .app-light-background {
@@ -100,7 +100,7 @@ $frc-design-green: #4cae4f;
 
 .enum-menu {
     max-height: 250px;
-    overflow: scroll;
+    overflow: auto;
 }
 
 .preview-image-card {

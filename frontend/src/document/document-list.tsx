@@ -98,7 +98,7 @@ export function DocumentList(): ReactNode {
                     // Stop propagation in the card so clicks around the edge/inside child cards don't close the section
                     onClick={(event) => event.stopPropagation()}
                     padded={false}
-                    style={{ overflow: "scroll" }}
+                    style={{ overflowY: "auto" }}
                 >
                     <CardList bordered={false} compact>
                         {content}

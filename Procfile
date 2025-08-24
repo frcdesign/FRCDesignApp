@@ -1,0 +1,1 @@
+web: gunicorn --bind :$PORT --workers=4 "backend.server:create_app()"

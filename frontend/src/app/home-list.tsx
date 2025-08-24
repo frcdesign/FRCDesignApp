@@ -71,11 +71,9 @@ export function HomeList(): ReactNode {
 
     return (
         <>
-            <div style={{ overflow: "scroll" }}>
-                <CardList compact style={{ margin: "0px" }} bordered={false}>
-                    {content}
-                </CardList>
-            </div>
+            <CardList compact style={{ margin: "0px" }} bordered={false}>
+                {content}
+            </CardList>
             <Outlet />
         </>
     );

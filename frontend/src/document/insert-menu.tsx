@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { Dispatch, ReactNode, useState } from "react";
+import { Dispatch, ReactNode, useEffect, useState } from "react";
 import {
     BooleanParameterObj,
     ConfigurationResult,
@@ -24,9 +24,12 @@ import {
     DialogBody,
     DialogFooter,
     FormGroup,
+    Icon,
     InputGroup,
     Intent,
     MenuItem,
+    NonIdealState,
+    NonIdealStateIconSize,
     NumericInput,
     Spinner
 } from "@blueprintjs/core";
@@ -138,14 +141,6 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         queryFn: async () => {
             const result = apiGet("/configuration/" + configurationId);
             return result.then((result: ConfigurationResult) => {
-                const defaultConfiguration = result.parameters.reduce(
-                    (configuration, parameter) => {
-                        configuration[parameter.id] = parameter.default;
-                        return configuration;
-                    },
-                    {} as Configuration
-                );
-                setConfiguration(defaultConfiguration);
                 return result;
             });
         },
@@ -153,9 +148,39 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         refetchInterval: false
     });
 
-    if (!query.isSuccess || !configuration) {
+    useEffect(() => {
+        if (!query.data) {
+            return;
+        }
+        const defaultConfiguration = query.data.parameters.reduce(
+            (configuration, parameter) => {
+                configuration[parameter.id] = parameter.default;
+                return configuration;
+            },
+            {} as Configuration
+        );
+        setConfiguration(defaultConfiguration);
+    }, [query.data, setConfiguration]);
+
+    console.log(configuration);
+    if (query.isPending || !configuration) {
         return <Spinner intent={Intent.PRIMARY} />;
+    } else if (query.isError) {
+        return (
+            <NonIdealState
+                icon={
+                    <Icon
+                        intent="danger"
+                        icon="cross"
+                        size={NonIdealStateIconSize.STANDARD}
+                    />
+                }
+                title="Failed to load configuration"
+                description="If the problem persists, contact the FRCDesignApp developers."
+            />
+        );
     }
+
     return (
         <ConfigurationParameters
             configurationResult={query.data}
