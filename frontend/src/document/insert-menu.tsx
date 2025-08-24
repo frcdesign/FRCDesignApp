@@ -373,6 +373,10 @@ function isNumeric(str: string): boolean {
     return !isNaN(Number(str));
 }
 
+function isInteger(str: string): boolean {
+    return Number.isInteger(Number(str));
+}
+
 function QuantityParameter(
     props: ParameterProps<QuantityParameterObj>
 ): ReactNode {
@@ -381,15 +385,18 @@ function QuantityParameter(
     const requiresUnits =
         parameter.quantityType === QuantityType.LENGTH ||
         parameter.quantityType === QuantityType.ANGLE;
-    const hasUnits = !isNumeric(value);
+
+    const mustBeInteger = parameter.quantityType === QuantityType.INTEGER;
 
     const isEmpty = value.trim() == "";
 
     let helperText = undefined;
     if (isEmpty) {
         helperText = "Enter a valid expression";
-    } else if (requiresUnits && !hasUnits) {
+    } else if (requiresUnits && isNumeric(value)) {
         helperText = "Expression must include units";
+    } else if (mustBeInteger && !isInteger(value)) {
+        helperText = "Expression must be a whole number";
     }
     const intent = helperText !== undefined ? "danger" : undefined;
 
@@ -408,7 +415,8 @@ function QuantityParameter(
                 fill
                 intent={intent}
                 allowNumericCharactersOnly={
-                    parameter.quantityType == QuantityType.REAL
+                    parameter.quantityType == QuantityType.REAL ||
+                    parameter.quantityType == QuantityType.INTEGER
                 }
                 onValueChange={(_, value) => onValueChange(value)}
                 buttonPosition="none"

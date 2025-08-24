@@ -164,24 +164,5 @@ You should also be able to launch the FRC Design App from the right panel of any
 
 # Deploying To Production
 
-Some notes:
-
--   To allow the App deployed in the App Engine to connect to Firestore, the App Engine default service account must be given the Cloud Datastore User role in IAM.
--   You'll need to create an app.yaml file to deploy. A suitable app.yaml is:
-
-```
-runtime: python312
-
-instance_class: F1
-
-env_variables:
-    API_VERSION: 12
-    NODE_ENV: "production"
-    OAUTH_CLIENT_ID: "<YOUR PRODUCTION OAUTH CLIENT ID IN QUOTES>"
-    OAUTH_CLIENT_SECRET: "<YOUR PRODUCTION OAUTH CLIENT SECRET IN QUOTES>"
-    SESSION_SECRET: "<AN ARBITRARY SECRET YOU MAKE UP>"
-    ADMIN_TEAM: "5b620150b2190f0fca90ec10"
-
-# Ran out of memory with F1 instance and 2 workers, so only 2 workers on F2
-entrypoint: gunicorn -b :8080 -w 2 -t 60 "backend.server:create_app()"
-```
+To allow the App to connect to Firestore, the default compute service account must be given the Cloud Datastore User role in IAM.
+You will need to add relevant environment variables in the google cloud console after you deploy. This includes the Onshape OAuth client and secret as well as the admin team.
