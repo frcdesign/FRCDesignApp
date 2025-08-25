@@ -106,7 +106,7 @@ function LibraryList() {
     } else if (documentsQuery.isPending || documentOrderQuery.isPending) {
         return (
             <NonIdealState
-                icon={<Spinner intent="primary" />}
+                icon={<Spinner intent="primary" className="green-spinner" />}
                 title="Loading documents..."
                 className="home-loading-state"
             />
@@ -186,7 +186,7 @@ function FavoritesList() {
     ) {
         return (
             <NonIdealState
-                icon={<Spinner intent="primary" />}
+                icon={<Spinner intent="primary" className="green-spinner" />}
                 title="Loading favorites..."
                 className="home-loading-state"
             />

@@ -16,6 +16,8 @@ import {
 import { Card, Intent, Popover, Spinner, SpinnerSize } from "@blueprintjs/core";
 import { ReactNode } from "react";
 
+import "./../main.scss";
+
 interface CardThumbnailProps {
     path: InstancePath | ElementPath;
 }
@@ -86,7 +88,13 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     let content;
     if (imageQuery.isPending) {
-        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
+        content = (
+            <Spinner
+                intent={Intent.PRIMARY}
+                size={spinnerSize}
+                className="green-spinner"
+            />
+        );
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
@@ -145,7 +153,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     if (thumbnailQuery.isPending) {
         return (
             <div className="center" style={heightAndWidth}>
-                <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
+                <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} className="green-spinner"/>
             </div>
         );
     }
@@ -161,6 +169,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                         bottom: "-5px",
                         right: "-25px"
                     }}
+                    className="green-spinner"
                 />
             )}
             <img src={thumbnailQuery.data} {...heightAndWidth} />

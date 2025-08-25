@@ -159,7 +159,7 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     if (!query.isSuccess || !configuration) {
-        return <Spinner intent={Intent.PRIMARY} />;
+        return <Spinner intent={Intent.PRIMARY} className="green-spinner" />;
     }
     return (
         <ConfigurationParameters
@@ -282,6 +282,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                     const selected = value === enumOption.id;
                     return (
                         <MenuItem
+                            className="green-select"
                             key={enumOption.id}
                             ref={ref}
                             onClick={handleClick}
@@ -326,6 +327,7 @@ function BooleanParameter(
                 onChange={handleBooleanChange((checked) =>
                     onValueChange(checked ? "true" : "false")
                 )}
+                className="green-checkbox"
             />
         </div>
     );

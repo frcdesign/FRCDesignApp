@@ -13,6 +13,7 @@ export function OpenUrlButton(props: UrlButtonProps) {
             intent="primary"
             icon="share"
             onClick={() => openUrlInNewTab(props.url)}
+            className="green-button"
         />
     );
 }

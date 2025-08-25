@@ -135,3 +135,38 @@ $frc-design-green: #4cae4f;
     align-items: center;
     gap: 10px;
 }
+
+@mixin spinner-color($color) {
+    .bp6-spinner-head {
+        stroke: $color !important;
+    }
+}
+
+.green-spinner {
+    @include spinner-color($frc-design-green);
+}
+
+.green-checkbox {
+    input:checked ~ .bp6-control-indicator {
+        background-color: $frc-design-green !important; // green fill
+    }
+    input:checked ~ .bp6-control-indicator::before {
+        color: white !important; // checkmark color
+    }
+}
+
+.bp6-menu-item {
+    color: #fff !important;
+}
+
+.bp6-menu-item.bp6-active {
+    background-color: rgba(
+        $frc-design-green,
+        0.5
+    ) !important; // selected item color
+    color: #fff !important;
+}
+
+.green-button.bp6-button.bp6-intent-primary {
+    background-color: #238551 !important;
+}
