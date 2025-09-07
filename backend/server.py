@@ -1,15 +1,13 @@
 import os
 import flask
+import logging
 import json5
-from backend.common.app_access import get_app_access_level
-from backend.common.app_logging import APP_LOGGER
+from backend.common.app_logging import APP_LOGGER, log_app_opened
 from backend.endpoints import api
 from backend.common import connect, env
 from backend import oauth
-from backend.endpoints.document_order import set_document_order
-from backend.endpoints.documents import save_document
-from onshape_api.endpoints.users import AccessLevel, ping
-from onshape_api.endpoints.versions import get_latest_version_path
+from backend.endpoints.documents import reload_documents
+from onshape_api.endpoints.users import ping
 from onshape_api.paths.doc_path import url_to_document_path
 
 
@@ -35,43 +33,29 @@ def create_app():
             return flask.render_template("index.html")
 
     @app.get("/app")
-    def serve_app():
+    async def serve_app():
         """The base route used by Onshape."""
         db = connect.get_db()
         api = connect.get_api(db)
 
         authorized = api.oauth.authorized and ping(api, catch=True)
         if not authorized:
-            # Save redirect url to session so we can get back to /app after processing OAuth2 redirect
+            # Save redirect url to session so we can get back here after processing OAuth2 redirect
             flask.session["redirect_url"] = connect.get_current_url()
             return flask.redirect("/sign-in")
 
-        if "maxAccessLevel" not in flask.request.args:
-            # Redirect to add accessLevel to flask request
-            url = connect.get_current_url()  # Use current url to preserve query params
-            access_level = get_app_access_level(api)
-            new_url = connect.add_query_params(
-                url,
-                {
-                    "maxAccessLevel": access_level,
-                    # Default to user access in production, otherwise use max access for dev
-                    "accessLevel": (
-                        AccessLevel.USER if env.IS_PRODUCTION else access_level
-                    ),
-                },
-            )
-            return flask.redirect(new_url)
+        user_id = connect.get_query_param("userId")
+        log_app_opened(user_id)
 
-        # Load config.json into the database when app is opened for the first time
         if not env.IS_PRODUCTION and db.get_document_order() == []:
-            APP_LOGGER.info("Initializing database using config.json")
-            with open("config.json") as file:
-                document_urls = json5.load(file)["documents"]
-                document_paths = [url_to_document_path(url) for url in document_urls]
-                db.set_document_order([path.document_id for path in document_paths])
-                for path in document_paths:
-                    version_path = get_latest_version_path(api, path)
-                    save_document(api, db, version_path)
+            APP_LOGGER.info("Loading documents from config.json!")
+            with open("config.json") as f:
+                json = json5.load(f)
+                document_order = [
+                    url_to_document_path(url).document_id for url in json["documents"]
+                ]
+                db.set_document_order(document_order)
+                await reload_documents()
 
         return serve_index()
 

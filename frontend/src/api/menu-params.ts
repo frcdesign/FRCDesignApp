@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 export enum AppMenu {
@@ -44,15 +44,14 @@ export type MenuParams =
  */
 export function useHandleCloseDialog() {
     const navigate = useNavigate();
-    const pathname = useLocation().pathname;
     return useCallback(() => {
         navigate({
-            to: pathname,
+            to: ".",
             search: {
                 activeMenu: undefined,
                 activeElementId: undefined,
                 selectedDocumentId: undefined
             }
         });
-    }, [pathname, navigate]);
+    }, [navigate]);
 }

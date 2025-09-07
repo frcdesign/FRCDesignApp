@@ -1,7 +1,7 @@
 import flask
 
 from backend.common import connect
-from backend.common.app_access import require_member_access
+from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import ClientException
 from backend.endpoints.documents import save_document
 from onshape_api.endpoints.documents import get_document
@@ -19,7 +19,7 @@ def get_document_order():
 
 
 @router.post("/document-order")
-@require_member_access()
+@require_access_level()
 def set_document_order():
     db = connect.get_db()
     new_document_order = connect.get_body_arg("documentOrder")
@@ -28,8 +28,8 @@ def set_document_order():
 
 
 @router.post("/document")
-@require_member_access()
-def add_document():
+@require_access_level()
+async def add_document():
     db = connect.get_db()
     api = connect.get_api(db)
 
@@ -60,13 +60,13 @@ def add_document():
             order.append(new_document_id)
 
     db.set_document_order(order)
-    save_document(api, db, latest_version)
+    await save_document(api, db, latest_version)
 
     return {"name": document_name}
 
 
 @router.delete("/document")
-@require_member_access()
+@require_access_level()
 def delete_document():
     db = connect.get_db()
 

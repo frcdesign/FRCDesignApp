@@ -1,20 +1,16 @@
 """Routes for inserting elements into documents."""
 
+from enum import StrEnum
 import flask
 
 from backend.common import connect
-from backend.common.backend_exceptions import (
-    ClientException,
-)
-from backend.endpoints.backend_types import (
-    ConfigurationType,
-    config_type_to_parameter_type,
-)
-from onshape_api.endpoints import part_studios
-from onshape_api.endpoints.assemblies import add_element_to_assembly
+from backend.common.backend_exceptions import ClientException
+from backend.endpoints.configurations import ConfigurationType, OnshapeConfigurationType
+from onshape_api.endpoints import part_studios, assemblies
 from onshape_api.paths.doc_path import ElementPath, path_to_namespace
 
-router = flask.Blueprint("insert", __name__)
+
+router = flask.Blueprint("add-part", __name__)
 
 
 @router.post("/add-to-assembly" + connect.element_path_route())
@@ -27,7 +23,7 @@ def add_to_assembly(**kwargs):
     element_type = connect.get_body_arg("elementType")
     configuration = connect.get_optional_body_arg("configuration")
 
-    add_element_to_assembly(
+    assemblies.add_element_to_assembly(
         api, assembly_path, path_to_add, element_type, configuration=configuration
     )
     return {"success": True}
@@ -60,6 +56,29 @@ def add_to_part_studio(**kwargs):
     return {"success": True}
 
 
+class ParameterType(StrEnum):
+    """A backend-only class which is used by part studios to represent actual parameters."""
+
+    ENUM = "BTMParameterEnum-145"
+    QUANTITY = "BTMParameterQuantity-147"
+    BOOLEAN = "BTMParameterBoolean-144"
+    STRING = "BTMParameterString-149"
+
+
+type_mapping = {
+    ConfigurationType.ENUM: ParameterType.ENUM,
+    ConfigurationType.QUANTITY: ParameterType.QUANTITY,
+    ConfigurationType.BOOLEAN: ParameterType.BOOLEAN,
+    ConfigurationType.STRING: ParameterType.STRING,
+}
+
+
+def config_type_to_parameter_type(
+    config_type: ConfigurationType,
+) -> ParameterType:
+    return type_mapping[config_type]
+
+
 class DerivedFeature:
     def __init__(
         self,
@@ -88,11 +107,11 @@ class DerivedFeature:
                 "btType": str(config_type_to_parameter_type(config_type)),
                 "parameterId": parameter["id"],
             }
-            if config_type == ConfigurationType.ENUM:
+            if config_type == OnshapeConfigurationType.ENUM:
                 result["value"] = str_value
                 result["namespace"] = self.namespace
                 result["enumName"] = parameter["id"] + "_conf"
-            elif config_type == ConfigurationType.QUANTITY:
+            elif config_type == OnshapeConfigurationType.QUANTITY:
                 result["expression"] = str_value
             else:
                 result["value"] = str_value

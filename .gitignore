@@ -201,3 +201,5 @@ app.yaml
 .storage/
 credentials/
 temp/
+
+*.pem

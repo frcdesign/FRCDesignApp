@@ -81,7 +81,7 @@ def add_element_to_assembly(
     elif element_type == ElementType.PART_STUDIO:
         instance.update(
             {
-                "includePartTypes": ["PARTS"],
+                "includePartTypes": ["PARTS", "COMPOSITES"],
                 "isWholePartStudio": True,
             }
         )

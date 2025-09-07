@@ -14,7 +14,7 @@ import {
 } from "@blueprintjs/core";
 import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentCard, ElementCard } from "./cards";
+import { DocumentCard, ElementCard } from "../document/cards";
 import { FavoriteIcon } from "./favorite";
 import {
     useDocumentOrderQuery,

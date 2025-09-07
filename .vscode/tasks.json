@@ -65,9 +65,9 @@
                 "run",
                 "--debug",
                 "--cert",
-                "credentials/cert.pem",
+                "localhost.pem",
                 "--key",
-                "credentials/key.pem",
+                "localhost-key.pem",
                 "--port",
                 "3000"
             ],
@@ -83,12 +83,6 @@
             "presentation": {
                 "group": "server"
             },
-            "problemMatcher": []
-        },
-        {
-            "label": "Clear db",
-            "type": "shell",
-            "command": "curl -v -X DELETE 'http://127.0.0.1:8080/emulator/v1/projects/robot-manager-123/databases/(default)/documents'",
             "problemMatcher": []
         }
     ]

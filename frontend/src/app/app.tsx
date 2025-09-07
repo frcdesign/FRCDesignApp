@@ -3,7 +3,7 @@ import { AppNavbar } from "../navbar/app-navbar";
 import {
     Navigate,
     Outlet,
-    useMatchRoute,
+    useLoaderData,
     useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,13 +14,22 @@ import { InsertMenu } from "../document/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AddDocumentMenu } from "../document/add-document-menu";
 
-export function App() {
-    const matchRoute = useMatchRoute();
-    const search = useSearch({ from: "/app" });
+export function BaseApp() {
+    const result = useLoaderData({ from: "/app/" });
 
-    if (matchRoute({ to: "/app" })) {
-        return <Navigate to="/app/documents" />;
-    }
+    return (
+        <Navigate
+            to="/app/documents"
+            search={() => ({
+                maxAccessLevel: result.maxAccessLevel,
+                accessLevel: result.currentAccessLevel
+            })}
+        />
+    );
+}
+
+export function App() {
+    const search = useSearch({ from: "/app" });
 
     const themeClass = getThemeClass(search.theme);
 

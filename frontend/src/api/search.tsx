@@ -70,7 +70,7 @@ export function buildSearchDb(elements: Elements) {
                     // Filter removes empty strings
                     return raw
                         .toLowerCase()
-                        .split(/[-()\s^]+/)
+                        .split(/[-()#\s^]+/)
                         .filter(Boolean);
                 }
             }
@@ -154,13 +154,11 @@ export function getElementOrder(
     }
 
     let sortBy = undefined;
-    if (args.sortOrder) {
-        if (args.sortOrder != SortOrder.DEFAULT) {
-            sortBy = {
-                property: "name",
-                order: args.sortOrder
-            };
-        }
+    if (args.sortOrder != SortOrder.DEFAULT) {
+        sortBy = {
+            property: "name",
+            order: args.sortOrder
+        };
     }
 
     const result = notPromise(

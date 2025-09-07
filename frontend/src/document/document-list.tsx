@@ -1,16 +1,38 @@
-import { CardList, Classes, Section, SectionCard } from "@blueprintjs/core";
+import {
+    CardList,
+    Classes,
+    ContextMenuChildrenProps,
+    Section,
+    SectionCard
+} from "@blueprintjs/core";
 import {
     Outlet,
     useNavigate,
     useParams,
     useSearch
 } from "@tanstack/react-router";
-import { ReactNode, useLayoutEffect, useRef } from "react";
-import { ElementCard } from "../app/cards";
+import { ReactNode, RefObject, useLayoutEffect, useRef } from "react";
+import { ElementCard } from "./cards";
 import { SearchResults } from "../app/search-results";
 import { getElementOrder, SortOrder, useSearchDb } from "../api/search";
 import { hasMemberAccess } from "../api/backend-types";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
+import { DocumentContextMenu } from "./context-menus";
+
+function useInteractiveSection(
+    sectionRef: RefObject<HTMLDivElement>,
+    dependencies: any[]
+) {
+    useLayoutEffect(() => {
+        const section = sectionRef.current;
+        if (!section) {
+            return;
+        }
+        const child = section.children[0];
+        child.className += " " + Classes.INTERACTIVE;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sectionRef, ...dependencies]);
+}
 
 /**
  * A list of elements in a document.
@@ -28,15 +50,9 @@ export function DocumentList(): ReactNode {
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
-    useLayoutEffect(() => {
-        const section = sectionRef.current;
-        if (!section) {
-            return;
-        }
-        const child = section.children[0];
-        child.className += " " + Classes.INTERACTIVE;
-        // Include documents and elements so it stays injected even if the query isn't complete
-    }, [sectionRef, searchDb, documents, elements]);
+
+    // Include documents and elements as dependencies so it stays interactive even if the query isn't complete
+    useInteractiveSection(sectionRef, [documents, elements, searchDb]);
 
     if (!documents || !elements || !searchDb) {
         return null;
@@ -62,13 +78,19 @@ export function DocumentList(): ReactNode {
             : SortOrder.DEFAULT;
         // }
 
-        const orderedElementIds = getElementOrder(searchDb, {
+        let orderedElementIds = getElementOrder(searchDb, {
             sortOrder: documentSortOrder,
             elementIds: document.elementIds,
             vendors: search.vendors,
             // Only show visible elements to users
             isVisible: !hasMemberAccess(search.accessLevel)
         });
+
+        if (documentSortOrder == SortOrder.DEFAULT) {
+            orderedElementIds = document.elementIds.filter((elementId) =>
+                orderedElementIds.includes(elementId)
+            );
+        }
 
         const orderedElements = orderedElementIds.map(
             (elementId) => elements[elementId]
@@ -80,31 +102,39 @@ export function DocumentList(): ReactNode {
 
     return (
         <>
-            <Section
-                icon="arrow-left"
-                ref={sectionRef}
-                title={document.name}
-                onClick={() => {
-                    navigate({ to: "/app/documents" });
-                }}
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    flexGrow: 0,
-                    maxHeight: "100%"
-                }}
-            >
-                <SectionCard
-                    // Stop propagation in the card so clicks around the edge/inside child cards don't close the section
-                    onClick={(event) => event.stopPropagation()}
-                    padded={false}
-                    style={{ overflowY: "auto" }}
-                >
-                    <CardList bordered={false} compact>
-                        {content}
-                    </CardList>
-                </SectionCard>
-            </Section>
+            <DocumentContextMenu document={document}>
+                {(ctxMenuProps: ContextMenuChildrenProps) => (
+                    <>
+                        <Section
+                            icon="arrow-left"
+                            onContextMenu={ctxMenuProps.onContextMenu}
+                            ref={sectionRef}
+                            title={document.name}
+                            onClick={() => {
+                                navigate({ to: "/app/documents" });
+                            }}
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                flexGrow: 0,
+                                maxHeight: "100%"
+                            }}
+                        >
+                            <SectionCard
+                                // Stop propagation in the card so clicks around the edge/inside child cards don't close the section
+                                onClick={(event) => event.stopPropagation()}
+                                padded={false}
+                                style={{ overflowY: "auto" }}
+                            >
+                                <CardList bordered={false} compact>
+                                    {content}
+                                </CardList>
+                            </SectionCard>
+                        </Section>
+                        {ctxMenuProps.popover}
+                    </>
+                )}
+            </DocumentContextMenu>
             <Outlet />
         </>
     );

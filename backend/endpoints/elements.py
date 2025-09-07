@@ -1,7 +1,7 @@
 import flask
 
-from backend.common import connect
-from backend.common.backend_exceptions import ServerException, ClientException
+from backend.common import connect, env
+from backend.common.backend_exceptions import ServerException
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,
@@ -9,10 +9,11 @@ from backend.common.connect import (
     get_route_instance_path,
     instance_path_route,
 )
+from backend.endpoints.documents import Element
 from onshape_api.endpoints import thumbnails
 from onshape_api.paths.instance_type import InstanceType
 
-router = flask.Blueprint("load", __name__)
+router = flask.Blueprint("elements", __name__)
 
 
 @router.get("/elements")
@@ -23,54 +24,23 @@ def get_elements(**kwargs):
 
     for element_ref in db.elements.stream():
         element_id = element_ref.id
-        element_dict = element_ref.to_dict()
-        if element_dict == None:
-            raise ServerException(f"Missing element with id {element_id}")
+        if env.IS_PRODUCTION:
+            element = Element.model_construct(element_ref.to_dict())
+        else:
+            element = Element.model_validate(element_ref.to_dict())
 
         try:
-            element_obj = {
-                "id": element_id,
-                "name": element_dict["name"],
-                "elementType": element_dict["elementType"],
-                "documentId": element_dict["documentId"],
-                "instanceId": element_dict["instanceId"],
-                "instanceType": InstanceType.VERSION,
-                # Include element id again out of laziness so this becomes a valid ElementPath
-                "elementId": element_id,
-                "microversionId": element_dict["microversionId"],
-                "isVisible": element_dict["isVisible"],
-            }
-
-            # Do not send a property with value None, as this results in a null (rather than undefined) on the client
-            if element_dict.get("configurationId") != None:
-                element_obj["configurationId"] = element_dict["configurationId"]
-
-            if element_dict.get("vendor") != None:
-                element_obj["vendor"] = element_dict["vendor"]
+            element_obj = element.model_dump(exclude_none=True)
+            element_obj["id"] = element_id
+            # Add instanceType and elementId so it's a valid ElementPath on the frontend
+            element_obj["instanceType"] = InstanceType.VERSION
+            element_obj["elementId"] = element_id
         except:
             raise ServerException("Failed to load element")
 
         elements.append(element_obj)
 
     return {"elements": elements}
-
-
-
-
-@router.get("/configuration/<configuration_id>")
-def get_configuration(configuration_id: str):
-    """Returns a specific configuration.
-
-    Returns:
-        parameters: A list of configuration parameters.
-    """
-    db = connect.get_db()
-    result = db.configurations.document(configuration_id).get().to_dict()
-    if result == None:
-        raise ClientException(
-            f"Failed to find configuration with id {configuration_id}"
-        )
-    return result
 
 
 @router.get("/thumbnail" + instance_path_route())

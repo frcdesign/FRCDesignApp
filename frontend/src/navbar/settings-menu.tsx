@@ -12,8 +12,8 @@ import {
 } from "@blueprintjs/core";
 import { ReactNode, useMemo, useState } from "react";
 import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { showSuccessToast } from "../common/toaster";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
@@ -77,8 +77,8 @@ function AdminSettings(): ReactNode {
             <AccessLevelSelect />
             {hasMemberAccess(search.accessLevel) ? (
                 <>
-                    <ReloadDocumentsButton reloadAll />
                     <ReloadDocumentsButton />
+                    <ReloadDocumentsButton reloadAll />
                 </>
             ) : null}
         </>
@@ -87,7 +87,6 @@ function AdminSettings(): ReactNode {
 
 function AccessLevelSelect(): ReactNode {
     const search = useSearch({ from: "/app" });
-    const pathname = useLocation().pathname;
     const navigate = useNavigate();
 
     const maxAccessLevel = search.maxAccessLevel;
@@ -139,7 +138,7 @@ function AccessLevelSelect(): ReactNode {
             popoverProps={{ minimal: true }}
             itemRenderer={renderAccessLevel}
             onItemSelect={(accessLevel) => {
-                navigate({ to: pathname, search: { accessLevel } });
+                navigate({ to: ".", search: { accessLevel } });
             }}
         >
             {button}
@@ -172,6 +171,9 @@ export function ReloadDocumentsButton(
                 query: { reloadAll },
                 signal: AbortSignal.timeout(5 * 60000)
             });
+        },
+        onError: () => {
+            showErrorToast("Failed to reload documents!");
         },
         onSuccess: async (result) => {
             const savedElements = result["savedElements"];

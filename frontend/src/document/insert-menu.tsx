@@ -1,11 +1,10 @@
 import { useSearch } from "@tanstack/react-router";
-import { Dispatch, ReactNode, useEffect, useState } from "react";
+import { Dispatch, ReactNode, useEffect, useMemo, useState } from "react";
 import {
     BooleanParameterObj,
     ConfigurationResult,
     ElementObj,
     ElementType,
-    EnumOption,
     EnumParameterObj,
     evaluateCondition,
     ParameterObj,
@@ -162,7 +161,6 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         setConfiguration(defaultConfiguration);
     }, [query.data, setConfiguration]);
 
-    console.log(configuration);
     if (query.isPending || !configuration) {
         return <Spinner intent={Intent.PRIMARY} />;
     } else if (query.isError) {
@@ -201,7 +199,8 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
     const parameters = configurationResult.parameters.map((parameter) => {
         if (!evaluateCondition(parameter.visibilityCondition, configuration)) {
-            return null;
+            // Return empty div to suppress key error
+            return <div key={parameter.id} />;
         }
         return (
             <ConfigurationParameter
@@ -270,13 +269,14 @@ function ConfigurationParameter(
 function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
 
-    const selectedItem = parameter.options.find(
-        (enumOption) => enumOption.id === value
-    );
+    // The active option is the option currently focused by the user
+    // It should start out as the selected option but can change
+    const [activeOptionId, setActiveOptionId] = useState<string | null>(value);
 
-    const [activeItem, setActiveItem] = useState<EnumOption | null>(
-        selectedItem ?? null
-    );
+    // useMemo to stabilize options across re-renders so, e.g., active item changes work
+    const optionIds = useMemo(() => {
+        return Object.keys(parameter.options);
+    }, [parameter.options]);
 
     return (
         <FormGroup
@@ -285,10 +285,10 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             inline
             className="full-width"
         >
-            <Select<EnumOption>
-                items={parameter.options}
-                activeItem={activeItem}
-                onActiveItemChange={setActiveItem}
+            <Select<string>
+                items={optionIds}
+                activeItem={activeOptionId}
+                onActiveItemChange={setActiveOptionId}
                 filterable={false}
                 fill
                 popoverProps={{
@@ -296,33 +296,35 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                     popoverClassName: "enum-menu"
                 }}
                 itemRenderer={(
-                    enumOption,
+                    currentOptionId,
                     { handleClick, handleFocus, modifiers, ref }
                 ) => {
-                    const selected = value === enumOption.id;
+                    const selected = value === currentOptionId;
+                    const currentOptionName =
+                        parameter.options[currentOptionId];
                     return (
                         <MenuItem
-                            key={enumOption.id}
+                            key={currentOptionId}
                             ref={ref}
                             onClick={handleClick}
                             onFocus={handleFocus}
                             active={modifiers.active}
-                            text={enumOption.name}
+                            text={currentOptionName}
                             roleStructure="listoption"
                             selected={selected}
                             intent={selected ? Intent.PRIMARY : Intent.NONE}
                         />
                     );
                 }}
-                onItemSelect={(enumOption) => {
-                    onValueChange(enumOption.id);
+                onItemSelect={(optionId) => {
+                    onValueChange(optionId);
                 }}
             >
                 <Button
                     id={parameter.id}
                     alignText="start"
                     endIcon="caret-down"
-                    text={selectedItem?.name}
+                    text={parameter.options[value]}
                     fill
                 />
             </Select>

@@ -6,12 +6,8 @@ import {
     Text,
     Alert,
     Intent,
-    Menu,
-    MenuItem,
-    ContextMenu,
     ContextMenuChildrenProps,
-    Tag,
-    MenuDivider
+    Tag
 } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
@@ -22,15 +18,12 @@ import {
     ElementType,
     hasMemberAccess
 } from "../api/backend-types";
-import { CardThumbnail } from "./thumbnail";
-import { FavoriteButton } from "./favorite";
-import { useMutation } from "@tanstack/react-query";
+import { CardThumbnail } from "../app/thumbnail";
+import { FavoriteButton } from "../app/favorite";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";
 import { getSearchHitTitle, SearchHit } from "../api/search";
-import { apiDelete, apiPost } from "../api/api";
-import { queryClient } from "../query-client";
 import { AppMenu } from "../api/menu-params";
-import { ChangeDocumentOrderItems } from "./change-document-order";
+import { DocumentContextMenu, ElementContextMenu } from "./context-menus";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -72,134 +65,6 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                 </>
             )}
         </DocumentContextMenu>
-    );
-}
-function useToggleDocumentSortMutation(document: DocumentObj) {
-    return useMutation({
-        mutationKey: ["set-document-sort"],
-        mutationFn: () => {
-            return apiPost("/set-document-sort", {
-                body: {
-                    documentId: document.id,
-                    sortAlphabetically: !document.sortAlphabetically
-                }
-            });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
-        }
-    });
-}
-
-interface ToggleDocumentSortItemProps {
-    document: DocumentObj;
-}
-
-function ToggleDocumentSortItem({ document }: ToggleDocumentSortItemProps) {
-    const toggleDocumentSortMutation = useToggleDocumentSortMutation(document);
-    return (
-        <MenuItem
-            onClick={() => {
-                toggleDocumentSortMutation.mutate();
-            }}
-            icon={document.sortAlphabetically ? "list" : "sort-alphabetical"}
-            text={
-                document.sortAlphabetically
-                    ? "Use tab order"
-                    : "Sort alphabetically"
-            }
-        />
-    );
-}
-
-interface DocumentContextMenuProps {
-    document: DocumentObj;
-    children: any;
-}
-
-function DocumentContextMenu(props: DocumentContextMenuProps) {
-    const { children, document } = props;
-
-    const search = useSearch({ from: "/app" });
-    const navigate = useNavigate();
-
-    const deleteDocumentMutation = useMutation({
-        mutationKey: ["delete-document"],
-        mutationFn: () => {
-            return apiDelete("/document", { documentId: document.id });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
-            queryClient.refetchQueries({ queryKey: ["document-order"] });
-            queryClient.refetchQueries({ queryKey: ["elements"] });
-        }
-    });
-
-    const showAllMutation = useSetVisibilityMutation(
-        "show-all",
-        document.elementIds,
-        true
-    );
-
-    const hideAllMutation = useSetVisibilityMutation(
-        "hide-all",
-        document.elementIds,
-        false
-    );
-
-    const menu = (
-        <Menu>
-            <ChangeDocumentOrderItems documentId={document.id} />
-            <MenuDivider />
-            <MenuItem
-                icon="eye-open"
-                text="Show all elements"
-                onClick={() => {
-                    showAllMutation.mutate();
-                }}
-            />
-            <MenuItem
-                icon="eye-off"
-                text="Hide all elements"
-                onClick={() => {
-                    hideAllMutation.mutate();
-                }}
-            />
-            <ToggleDocumentSortItem document={document} />
-            <MenuDivider />
-            <MenuItem
-                icon="add"
-                text="Add document"
-                labelElement={<Icon icon="share" />}
-                intent="primary"
-                onClick={() => {
-                    navigate({
-                        to: ".",
-                        search: {
-                            activeMenu: AppMenu.ADD_DOCUMENT_MENU,
-                            selectedDocumentId: document.id
-                        }
-                    });
-                }}
-            />
-            <MenuItem
-                icon="trash"
-                text="Delete"
-                intent="danger"
-                onClick={() => {
-                    deleteDocumentMutation.mutate();
-                }}
-            />
-        </Menu>
-    );
-
-    return (
-        <ContextMenu
-            content={menu}
-            disabled={!hasMemberAccess(search.accessLevel)}
-        >
-            {children}
-        </ContextMenu>
     );
 }
 
@@ -318,64 +183,5 @@ function CannotDeriveAssemblyAlert(props: CannotDeriveAssemblyAlertProps) {
         >
             This part is an assembly and cannot be derived into a part studio.
         </Alert>
-    );
-}
-function useSetVisibilityMutation(
-    mutationKey: string,
-    elementIds: string[],
-    isVisible: boolean
-) {
-    return useMutation({
-        mutationKey: [mutationKey],
-        mutationFn: () => {
-            return apiPost("/set-visibility", {
-                body: {
-                    elementIds,
-                    isVisible
-                }
-            });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["elements"] });
-        }
-    });
-}
-
-interface ElementContextMenuProps {
-    element: ElementObj;
-    children: any;
-}
-
-function ElementContextMenu(props: ElementContextMenuProps) {
-    const { children, element } = props;
-
-    const search = useSearch({ from: "/app" });
-
-    const mutation = useSetVisibilityMutation(
-        "set-visibility",
-        [element.id],
-        !element.isVisible
-    );
-
-    const menu = (
-        <Menu>
-            <MenuItem
-                onClick={() => {
-                    mutation.mutate();
-                }}
-                intent={element.isVisible ? "danger" : "primary"}
-                icon={element.isVisible ? "eye-off" : "eye-open"}
-                text={element.isVisible ? "Hide element" : "Show element"}
-            />
-        </Menu>
-    );
-
-    return (
-        <ContextMenu
-            content={menu}
-            disabled={!hasMemberAccess(search.accessLevel)}
-        >
-            {children}
-        </ContextMenu>
     );
 }

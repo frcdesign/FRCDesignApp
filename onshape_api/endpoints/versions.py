@@ -1,3 +1,4 @@
+from onshape_api.assertions import assert_version
 from onshape_api.paths.api_path import api_path
 from onshape_api.api.api_base import Api
 from onshape_api.paths.instance_type import InstanceType
@@ -7,20 +8,30 @@ from onshape_api.paths.doc_path import DocumentPath, InstancePath
 def get_versions(
     api: Api,
     document_path: DocumentPath,
-    offset: int = 0,
-    limit: int = 0,
 ) -> list[dict]:
     """Fetches a list of versions of a document.
 
     Versions are returned in chronological order, with the oldest version ("Start") first.
-
-    Args:
-        offset: A starting offset to apply. Does not support negative indexing.
-        limit: The max number of versions to return.
     """
     return api.get(
         api_path("documents", document_path, DocumentPath, "versions"),
-        query={offset: offset, limit: limit},
+    )
+
+
+def get_version(api: Api, version_path: InstancePath) -> list[dict]:
+    """Fetches a list of versions of a document.
+
+    Versions are returned in chronological order, with the oldest version ("Start") first.
+    """
+    assert_version(version_path)
+    return api.get(
+        api_path(
+            "documents",
+            version_path,
+            DocumentPath,
+            "versions",
+            end_id=version_path.instance_id,
+        ),
     )
 
 

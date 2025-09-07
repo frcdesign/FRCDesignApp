@@ -1,4 +1,4 @@
-import { App } from "./app/app";
+import { App, BaseApp } from "./app/app";
 import { HomeList } from "./app/home-list";
 import { GrantDenied } from "./pages/grant-denied";
 import { License } from "./pages/license";
@@ -20,10 +20,12 @@ import {
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
-import { AccessLevel, Vendor } from "./api/backend-types";
+import { AccessLevel, AccessLevelResult, Vendor } from "./api/backend-types";
 import { AppError } from "./app/app-error";
+import { queryOptions } from "@tanstack/react-query";
+import { apiGet } from "./api/api";
 
-export interface BaseSearchParams {
+interface BaseSearchParams {
     /**
      * The maximum access level the user can have.
      */
@@ -54,6 +56,20 @@ const appRoute = createRoute({
     },
     search: {
         middlewares: [retainSearchParams(true)]
+    }
+});
+
+const baseAppRoute = createRoute({
+    getParentRoute: () => appRoute,
+    path: "/",
+    component: BaseApp,
+    loader: () => {
+        return queryClient.ensureQueryData(
+            queryOptions<AccessLevelResult>({
+                queryKey: ["access-level"],
+                queryFn: () => apiGet("/access-level")
+            })
+        );
     }
 });
 
@@ -109,6 +125,7 @@ const safariErrorRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
+        baseAppRoute,
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,

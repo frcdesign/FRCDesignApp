@@ -13,6 +13,7 @@ from google.cloud import firestore
 from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
+from onshape_api.endpoints.users import AccessLevel
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.user_path import UserPath
 
@@ -81,6 +82,7 @@ def get_oauth_session(
         auto_refresh_url=token_url,
         auto_refresh_kwargs=refresh_kwargs,
         token_updater=_save_token,
+        
     )
 
 

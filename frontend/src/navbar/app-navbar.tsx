@@ -14,7 +14,7 @@ import {
 import { ReactNode, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { AppMenu } from "../api/menu-params";
 import { VendorFilters } from "./vendor-filters";
 
@@ -22,7 +22,6 @@ import { VendorFilters } from "./vendor-filters";
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
-    const pathname = useLocation().pathname;
     const navigate = useNavigate();
 
     const [showFilters, setShowFilters] = useState(false);
@@ -54,7 +53,7 @@ export function AppNavbar(): ReactNode {
                 onValueChange={(value) => {
                     const query = value === "" ? undefined : value;
                     navigate({
-                        to: pathname,
+                        to: ".",
                         search: { query }
                     });
                 }}
@@ -85,7 +84,6 @@ export function AppNavbar(): ReactNode {
 }
 
 export function SettingsButton() {
-    const pathname = useLocation().pathname;
     const navigate = useNavigate();
 
     return (
@@ -94,7 +92,7 @@ export function SettingsButton() {
             variant={ButtonVariant.MINIMAL}
             onClick={() =>
                 navigate({
-                    to: pathname,
+                    to: ".",
                     search: () => ({
                         activeMenu: AppMenu.SETTINGS_MENU
                     })

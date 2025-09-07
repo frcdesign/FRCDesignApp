@@ -69,10 +69,10 @@ export enum ElementType {
 }
 
 export enum ConfigurationType {
-    ENUM = "BTMConfigurationParameterEnum-105",
-    QUANTITY = "BTMConfigurationParameterQuantity-1826",
-    BOOLEAN = "BTMConfigurationParameterBoolean-2550",
-    STRING = "BTMConfigurationParameterString-872"
+    ENUM = "ENUM",
+    QUANTITY = "QUANTITY",
+    BOOLEAN = "BOOLEAN",
+    STRING = "STRING"
 }
 
 export enum QuantityType {
@@ -94,9 +94,15 @@ export enum Unit {
     UNITLESS = ""
 }
 
+export enum OptionConditionType {
+    LIST = "BTEnumOptionVisibilityForList-1613",
+    RANGE = "BTEnumOptionVisibilityForRange-4297"
+}
+
 export enum ConditionType {
     LOGICAL = "BTParameterVisibilityLogical-178",
-    EQUAL = "BTParameterVisibilityOnEqual-180"
+    EQUAL = "BTParameterVisibilityOnEqual-180",
+    RANGE = "BTParameterVisibilityInRange-2980"
 }
 
 export enum LogicalOp {
@@ -115,7 +121,7 @@ interface LogicalCondition {
 interface EqualCondition {
     type: ConditionType.EQUAL;
     id: string;
-    value: string;
+    values: string[];
 }
 
 export function evaluateCondition(
@@ -136,10 +142,20 @@ export function evaluateCondition(
                 evaluateCondition(child, configuration)
             );
         }
-    } else {
-        return configuration[condition.id] == condition.value;
+    } else if (condition.type == ConditionType.EQUAL) {
+        return condition.values.includes(configuration[condition.id]);
     }
+    return true;
 }
+
+// export function evaluateVisibleOptions(
+//     condition: VisibilityCondition | null,
+//     configuration: Record<string, string>
+// ): boolean {
+//     if (!condition) {
+//         return true;
+//     }
+// }
 
 export interface ConfigurationResult {
     // defaultConfiguration: string;
@@ -171,9 +187,14 @@ export interface EnumOption {
     name: string;
 }
 
+export interface OptionCondition {
+    type: OptionConditionType;
+}
+
 export interface EnumParameterObj extends ParameterBase {
     type: ConfigurationType.ENUM;
-    options: EnumOption[];
+    options: Record<string, string>;
+    optionConditions: OptionCondition[];
 }
 
 export interface QuantityParameterObj extends ParameterBase {
@@ -238,6 +259,11 @@ export interface Favorite {
     id: string;
 }
 
+export interface AccessLevelResult {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
+}
+
 export enum ThumbnailSize {
     STANDARD = "300x300",
     LARGE = "600x340",
@@ -269,9 +295,3 @@ export function encodeConfigurationForQuery(
 }
 
 export type Configuration = Record<string, string>;
-
-// export function isConfigurationValid(
-//     configuration: Configuration
-// ): configuration is Record<string, string> {
-//     return Object.values(configuration).every((value) => value !== undefined);
-// }

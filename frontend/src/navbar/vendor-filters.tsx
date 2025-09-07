@@ -1,11 +1,10 @@
 import { Button, ButtonVariant, Intent, Tag } from "@blueprintjs/core";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { getVendorName, Vendor } from "../api/backend-types";
 
 export function VendorFilters(): ReactNode {
     const navigate = useNavigate();
-    const pathname = useLocation().pathname;
     const vendors = useSearch({ from: "/app" }).vendors;
 
     const areAllTagsActive = vendors === undefined;
@@ -31,7 +30,7 @@ export function VendorFilters(): ReactNode {
                     } else {
                         newVendors = [...vendors, vendor];
                     }
-                    navigate({ to: pathname, search: { vendors: newVendors } });
+                    navigate({ to: ".", search: { vendors: newVendors } });
                 }}
                 active={!isVendorActive} // The active prop of tags is backwards
             >
@@ -47,7 +46,7 @@ export function VendorFilters(): ReactNode {
             variant={ButtonVariant.OUTLINED}
             icon="small-cross"
             onClick={() => {
-                navigate({ to: pathname, search: { vendors: undefined } });
+                navigate({ to: ".", search: { vendors: undefined } });
             }}
         />
     );

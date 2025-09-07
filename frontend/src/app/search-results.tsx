@@ -1,7 +1,7 @@
 import { NonIdealState, Icon, NonIdealStateIconSize } from "@blueprintjs/core";
 import { ReactNode, useState, useEffect } from "react";
 import { SearchHit, doSearch, useSearchDb } from "../api/search";
-import { ElementCard } from "./cards";
+import { ElementCard } from "../document/cards";
 import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/backend-types";
 

@@ -1,4 +1,7 @@
 from functools import wraps
+import inspect
+
+import flask
 from backend.common import connect
 from backend.common import env
 from backend.common.backend_exceptions import AuthException
@@ -6,7 +9,7 @@ from onshape_api.api.api_base import Api
 from onshape_api.endpoints.users import AccessLevel, get_access_level
 
 
-def get_app_access_level(api: Api) -> AccessLevel:
+def compute_app_access_level(api: Api) -> AccessLevel:
     if env.IS_PRODUCTION:
         if env.ADMIN_TEAM == None:
             raise ValueError("ADMIN_TEAM must be set in production")
@@ -23,37 +26,49 @@ def get_app_access_level(api: Api) -> AccessLevel:
     return get_access_level(api, env.ADMIN_TEAM)
 
 
-def require_member_access():
+def get_app_access_level() -> AccessLevel:
+    access_level = flask.session.get("access_level")
+
+    if access_level == None:
+        db = connect.get_db()
+        api = connect.get_api(db)
+        access_level = compute_app_access_level(api)
+
+        flask.session["access_level"] = access_level
+
+    return access_level
+
+
+def check_access_level(required_access_level: AccessLevel = AccessLevel.MEMBER):
+    access_level = get_app_access_level()
+
+    if required_access_level == AccessLevel.MEMBER:
+        if access_level == AccessLevel.MEMBER or access_level == AccessLevel.ADMIN:
+            return
+    elif required_access_level == AccessLevel.ADMIN:
+        if access_level == AccessLevel.ADMIN:
+            return
+
+    raise AuthException(access_level)
+
+
+def require_access_level(required_access_level: AccessLevel = AccessLevel.MEMBER):
     def decorator(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            db = connect.get_db()
-            api = connect.get_api(db)
-            access_level = get_app_access_level(api)
+        if inspect.iscoroutinefunction(f):
+            # async route
+            @wraps(f)
+            async def wrapped_async(*args, **kwargs):
+                check_access_level(required_access_level)
+                return await f(*args, **kwargs)
 
-            if access_level != AccessLevel.MEMBER and access_level != AccessLevel.ADMIN:
-                raise AuthException(access_level)
+            return wrapped_async
+        else:
+            # sync route
+            @wraps(f)
+            def wrapped(*args, **kwargs):
+                check_access_level(required_access_level)
+                return f(*args, **kwargs)
 
-            return f(*args, **kwargs)
-
-        return wrapped
-
-    return decorator
-
-
-def require_admin_access():
-    def decorator(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            db = connect.get_db()
-            api = connect.get_api(db)
-            access_level = get_app_access_level(api)
-
-            if access_level != AccessLevel.ADMIN:
-                raise AuthException(access_level)
-
-            return f(*args, **kwargs)
-
-        return wrapped
+            return wrapped
 
     return decorator

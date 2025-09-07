@@ -24,7 +24,7 @@ API_VERSION=12 # Control which version of the Onshape API the app uses
 
 VERBOSE_LOGGING=true # Set to false to reduce logging output
 
-# API Keys (Optional)
+# Onshape API Keys (Optional)
 API_ACCESS_KEY=<Your API Access Key>
 API_SECRET_KEY=<Your API Secret Key>
 
@@ -41,10 +41,10 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
 
 You only need API keys if you plan on accessing the Onshape API via regular python script.
-You will likely need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
+You will need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
 
 Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
-You can manually retrigger an update by saving in backend/common/env.py or by killing and restarting the flask server.
+You can manually retrigger an update by saving any .py file or by killing and restarting the flask server.
 
 ## Python Setup
 
@@ -92,44 +92,54 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
 
 You should now be able to see your App in the right panel of any Part Studios or Assemblies you open.
 
-## Onshape API Key Setup (Optional)
+## Onshape API Key Setup
 
-This isn't required for running the FRC Design App, but will allow you to use the Onshape API with API keys via locally developed Python scripts.
+When the local development web server is first started, it will attempt to optimistically load the documents specified in `config.json` into the database.
+This is done using API keys specified in `.env`. This will also allow you to access the Onshape API using local Python scripts.
 
 1. Get an API key from the [Onshape developer portal](https://dev-portal.onshape.com/keys).
 1. Add your access key and secret key to `.env`.
 
-You can then call `make_key_api()` inside a locally running Python script to get an `Api` instance you can pass to endpoints in `onshape_api/endpoints`.
-
 ## Flask Credentials Setup
 
 Onshape requires all apps, even temporary test apps, to use https. This creates a big headache for local development.
-In order to solve this issue, you'll need to generate a certificate and add it to a folder named `credentials` in the root of this project:
+
+You can get around this by using [mkcert](https://github.com/FiloSottile/mkcert) to create a self signed certificate which your browser will trust.
+
+1. Install mkcert on your local machine (not in the dev container!).
+   If you are on Windows, this will likely mean installing [Chocolately](https://chocolatey.org/install) and running `choco install mkcert` using a Powershell terminal you run as an Administrator.
+1. Create a local Certificate Authority (CA):
 
 ```
-/credentials/cert.pem
-/credentials/key.pem
+mkcert -install
 ```
 
-This can be done automatically by running the script `make_credentials.sh`:
+1. Create a localhost certificate (localhost-key.pem and localhost.pem) and copy them into the root of this project:
 
 ```
-./scripts/make_credentials.sh
+cd ~ # Switch to your user directory
+cd Documents # Switch to the Documents folder, can also use any other folder you recognize, like Downloads
+mkcert localhost # Create a certificate which allows localhost to run
 ```
 
-If successful, this should create a folder named `credentials` in the root of the project containing `cert.pem` and `key.pem`.
+1. You can then open your Documents folder in File Explorer and copy and paste `localhost-key.pem` and `localhost.pem` into the root of this project.
 
-You'll then need to add a security exception to your browser to avoid getting blocked.
+Depending on your browser, this should automatically clear any security warnings. If it doesn't, you can manually add the Certificate Authority.
 In Firefox, the procedure is:
 
-1. Start the development servers using the `Launch servers` VSCode task.
-2. Open Firefox and go to `Settings > Certificates > View Certificates... > Servers > Add Exception...`
-3. Enter `https://localhost:3000` as the Location and click `Get Certificate`.
-4. Check `Permanently store this exception` and then click `Confirm Security Exception`.
+1. In PowerShell, run `mkcert -CAROOT` and note down the path.
+1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
+1. Navigate to the `CAROOT` path and select `rootCA.pem`.
 
 ## Frontend Setup
 
-Install Node.js on your computer, then use npm to install the dependencies in `frontend`:
+First, install npm in your WSL container:
+
+```
+sudo apt install npm
+```
+
+Next, use npm to install the dependencies in `frontend`:
 
 ```
 cd frontend
