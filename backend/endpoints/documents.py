@@ -7,14 +7,12 @@ from __future__ import annotations
 import asyncio
 from enum import StrEnum
 from typing import Iterator
-from click import Group
 import flask
 from pydantic import BaseModel, ConfigDict
 
 from backend.common import connect, database, env
 from backend.common.app_access import require_access_level
-from backend.common.app_logging import APP_LOGGER
-from backend.endpoints import preserved_info
+from backend.common.app_logging import log_search
 from backend.endpoints.backend_types import (
     Vendor,
     parse_vendor,
@@ -46,11 +44,7 @@ def get_documents(**kwargs):
     documents: list[dict] = []
 
     for doc_ref in db.documents.stream():
-        if env.IS_PRODUCTION:
-            document = Document.model_construct(doc_ref.to_dict())
-        else:
-            document = Document.model_validate(doc_ref.to_dict())
-
+        document = Document.model_validate(doc_ref.to_dict())
         document_id = doc_ref.id
 
         document_obj = document.model_dump(exclude_none=True)
@@ -62,6 +56,27 @@ def get_documents(**kwargs):
         documents.append(document_obj)
 
     return {"documents": documents}
+
+
+@router.get("/elements")
+def get_elements(**kwargs):
+    """Returns a list of the top level elements to display to the user."""
+    db = connect.get_db()
+    elements: list[dict] = []
+
+    for element_ref in db.elements.stream():
+        element_id = element_ref.id
+        element = Element.model_validate(element_ref.to_dict())
+
+        element_obj = element.model_dump(exclude_none=True)
+        element_obj["id"] = element_id
+        # Add instanceType and elementId so it's a valid ElementPath on the frontend
+        element_obj["instanceType"] = InstanceType.VERSION
+        element_obj["elementId"] = element_id
+
+        elements.append(element_obj)
+
+    return {"elements": elements}
 
 
 class Element(BaseModel):
@@ -122,7 +137,7 @@ def save_element(
 class Document(BaseModel):
     name: str
     instanceId: str
-    thumbnailId: str
+    thumbnailElementId: str
     elementIds: list[str]
     sortAlphabetically: bool
 
@@ -184,8 +199,8 @@ async def save_document(
     ]
 
     onshape_document = documents.get_document(api, version_path)
-    thumbnail_id = onshape_document["documentThumbnailElementId"]
-    if thumbnail_id == None:
+    thumbnail_element_id = onshape_document["documentThumbnailElementId"]
+    if thumbnail_element_id == None:
         raise ValueError(
             "Document "
             + onshape_document["name"]
@@ -200,7 +215,7 @@ async def save_document(
     db.documents.document(document_id).set(
         Document(
             name=onshape_document["name"],
-            thumbnailId=thumbnail_id,
+            thumbnailElementId=thumbnail_element_id,
             instanceId=version_path.instance_id,
             elementIds=ordered_element_ids,
             sortAlphabetically=preserved["sortAlphabetically"],
@@ -230,10 +245,8 @@ async def refresh_document(
     latest_version_path: InstancePath,
     preserved_info: PreservedInfo,
 ) -> int:
-    result = await save_document(api, db, latest_version_path, preserved_info)
-    # Save before deleting so errors are less disruptive
     db.delete_document(latest_version_path.document_id)
-    return result
+    return await save_document(api, db, latest_version_path, preserved_info)
 
 
 async def reload_document(
@@ -297,8 +310,7 @@ async def reload_documents(**kwargs):
             continue
         db.delete_document(doc_ref.id)
 
-    # return {"savedElements": count}
-    return flask.jsonify(savedElements=count)
+    return {"savedElements": count}
 
 
 @router.post("/set-visibility")
@@ -323,4 +335,11 @@ def set_document_sort():
     db.documents.document(document_id).set(
         {"sortAlphabetically": sort_alphabetically}, merge=True
     )
+    return {"success": True}
+
+
+@router.post("/search-result-selected")
+def search_result_selected():
+    """Logs that a search result was selected."""
+    log_search()
     return {"success": True}

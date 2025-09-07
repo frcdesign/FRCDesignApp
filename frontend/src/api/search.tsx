@@ -1,5 +1,5 @@
 import { AnyOrama, create, insert, search } from "@orama/orama";
-import { Elements, Vendor } from "./backend-types";
+import { Documents, Elements, Vendor } from "./backend-types";
 import {
     afterInsert as highlightAfterInsert,
     Position,
@@ -27,27 +27,27 @@ export function invalidateSearchDb() {
  * If the database hasn't been accessed yet, this function will synchronously build it first.
  * This could produce a small latency on initial load, which we will ignore for now.
  */
-export function useSearchDb(elements?: Elements) {
+export function useSearchDb(documents?: Documents, elements?: Elements) {
     const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
         getCachedSearchDb()
     );
 
     useEffect(() => {
-        if (!elements) {
+        if (!elements || !documents) {
             return;
         }
         if (getCachedSearchDb()) {
             return;
         }
-        const searchDb = buildSearchDb(elements);
+        const searchDb = buildSearchDb(documents, elements);
         setCachedSearchDb(searchDb);
         setSearchDb(searchDb);
-    }, [elements]);
+    }, [documents, elements]);
 
     return searchDb;
 }
 
-export function buildSearchDb(elements: Elements) {
+export function buildSearchDb(documents: Documents, elements: Elements) {
     const searchDb = create({
         schema: {
             id: "string",
@@ -55,7 +55,8 @@ export function buildSearchDb(elements: Elements) {
             isVisible: "boolean",
             vendor: "string",
             name: "string",
-            spacedName: "string"
+            spacedName: "string",
+            documentName: "string"
         },
         components: {
             tokenizer: {
@@ -95,13 +96,15 @@ export function buildSearchDb(elements: Elements) {
 
     // Cannot use insertMultiple since it doesn't return a Promise and there isn't a way to tell when it's actually finished...
     Object.values(elements).forEach((element) => {
+        const parentDocument = documents[element.documentId];
         insert(searchDb, {
             id: element.id,
             documentId: element.documentId,
             isVisible: element.isVisible,
             vendor: element.vendor,
             name: element.name,
-            spacedName: addSpaces(element.name)
+            spacedName: addSpaces(element.name),
+            documentName: parentDocument.name
         });
     });
     return searchDb;
@@ -200,7 +203,11 @@ export async function doSearch(
 
     const result = await searchWithHighlight(searchDb, {
         term: query,
-        properties: ["name", "spacedName"],
+        properties: ["name", "spacedName", "documentName"],
+        boost: {
+            name: 2,
+            spacedName: 2
+        },
         // ChatGPT suggested tuning for small documents
         relevance: {
             k: 0.5, // 0 - 0.5

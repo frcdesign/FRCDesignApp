@@ -23,6 +23,7 @@ import {
     showSuccessToast
 } from "../common/toaster";
 import { queryClient } from "../query-client";
+import { invalidateSearchDb } from "../api/search";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -75,6 +76,7 @@ function AddDocumentMenuDialog(
                 queryClient.refetchQueries({ queryKey: ["document-order"] }),
                 queryClient.refetchQueries({ queryKey: ["elements"] })
             ]);
+            invalidateSearchDb();
 
             showSuccessToast(
                 `Successfully added ${result.name}.`,

@@ -7,8 +7,8 @@ from backend.endpoints import (
     configurations,
     document_order,
     documents,
-    elements,
     favorites,
+    thumbnails,
 )
 from onshape_api.endpoints.users import AccessLevel
 from onshape_api.exceptions import ApiError
@@ -46,7 +46,7 @@ def get_access_level():
 
 router.register_blueprint(documents.router)
 router.register_blueprint(configurations.router)
-router.register_blueprint(elements.router)
+router.register_blueprint(thumbnails.router)
 router.register_blueprint(add_part.router)
 router.register_blueprint(favorites.router)
 router.register_blueprint(document_order.router)

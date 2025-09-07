@@ -18,10 +18,8 @@ def get_versions(
     )
 
 
-def get_version(api: Api, version_path: InstancePath) -> list[dict]:
-    """Fetches a list of versions of a document.
-
-    Versions are returned in chronological order, with the oldest version ("Start") first.
+def get_version(api: Api, version_path: InstancePath) -> dict:
+    """Fetches information about a version of a document.
     """
     assert_version(version_path)
     return api.get(

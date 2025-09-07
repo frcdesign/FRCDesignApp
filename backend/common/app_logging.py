@@ -6,9 +6,14 @@ import google.cloud.logging as cloud_logging
 
 
 from backend.common import env
+from backend.common.database import (
+    ConfigurationParameters,
+    ParameterType,
+    get_parameter_type_name,
+)
 from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 
-from backend.endpoints.configurations import OnshapeConfigurationType
+from backend.endpoints.configurations import evaluate_condition
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.endpoints.documents import ElementType
 
@@ -48,6 +53,7 @@ else:
     formatter = CloudLoggingDevFormatter()
     handler.setFormatter(formatter)
     CLOUD_LOGGER.addHandler(handler)
+    CLOUD_LOGGER.propagate = False
 
 
 def set_logging_level(logger: logging.Logger):
@@ -75,24 +81,44 @@ def log_app_opened(user_id: str):
 
 
 def build_config_array(
-    configuration: dict[str, str], configuration_parameters: dict | None = None
+    configuration: dict[str, str],
+    configuration_parameters: ConfigurationParameters | None,
 ) -> list:
     if configuration_parameters == None:
         raise ValueError("Configuration parameters must be passed.")
+
     # TODO: Hide non-visible parameters
     config_array = []
     for id, value in configuration.items():
-        config_parameter = configuration_parameters["key"]
+        config_parameter = next(
+            parameter
+            for parameter in configuration_parameters.parameters
+            if parameter.id == id
+        )
+        if config_parameter == None:
+            continue
+        # Hides if the enum is hidden
+        if not evaluate_condition(
+            config_parameter.condition,
+            configuration,
+            configuration_parameters.parameters,
+        ):
+            continue
+
         config_dict = {
-            "name": config_parameter["name"],
-            "type": config_parameter["type"],
+            "name": config_parameter.name,
+            "type": get_parameter_type_name(config_parameter.type),
             "id": id,
             "value": value,
         }
-        if config_parameter["type"] == OnshapeConfigurationType.ENUM:
-            # Convert from enum option id to name of option
-            # Could be missing if it was, e.g., deprecated
-            config_dict["value"] = config_parameter["options"].get(id)
+        if config_parameter.type == ParameterType.ENUM:
+            # Technically there's an edge case for enums that are constructively hidden by virtue of all their enum options being hidden
+            option_name = next(
+                option.name for option in config_parameter.options if option.id == value
+            )
+            if option_name != None:
+                config_dict["value"] = option_name
+
         config_array.append(config_dict)
     return config_array
 
@@ -100,12 +126,12 @@ def build_config_array(
 def log_part_inserted(
     element_id: str,
     name: str,
-    user_id: str,
     target_element_type: ElementType,
+    user_id: str,
     is_favorite: bool,
     version: dict,
     configuration: dict[str, str] | None = None,
-    configuration_parameters: dict | None = None,
+    configuration_parameters: ConfigurationParameters | None = None,
 ):
     """Logs adding an element to an assembly or part studio."""
     log_data = {
@@ -117,7 +143,7 @@ def log_part_inserted(
             "id": version["id"],
             "name": version["name"],
         },
-        "targetElementType": target_element_type,
+        "targetElementType": str(target_element_type),
         "isFavorite": is_favorite,
     }
     if configuration != None:

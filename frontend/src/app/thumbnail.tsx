@@ -6,18 +6,13 @@ import {
     ThumbnailSize,
     Configuration
 } from "../api/backend-types";
-import {
-    ElementPath,
-    InstancePath,
-    isElementPath,
-    toElementApiPath,
-    toInstanceApiPath
-} from "../api/path";
+import { ElementPath, toElementApiPath } from "../api/path";
 import { Card, Intent, Popover, Spinner, SpinnerSize } from "@blueprintjs/core";
+
 import { ReactNode } from "react";
 
 interface CardThumbnailProps {
-    path: InstancePath | ElementPath;
+    path: ElementPath;
 }
 
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
@@ -50,7 +45,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 interface ThumbnailProps {
-    path: InstancePath | ElementPath;
+    path: ElementPath;
     /**
      * The size (quality) of the given thumbnail.
      */
@@ -68,10 +63,7 @@ interface ThumbnailProps {
 function Thumbnail(props: ThumbnailProps): ReactNode {
     const { path, size, spinnerSize, scale } = props;
 
-    const apiPath = isElementPath(path)
-        ? toElementApiPath(path)
-        : toInstanceApiPath(path);
-
+    const apiPath = toElementApiPath(path);
     const imageQuery = useQuery({
         queryKey: ["document-thumbnail", apiPath, size],
         queryFn: () =>
@@ -126,7 +118,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     });
 
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", toElementApiPath(elementPath)],
+        queryKey: ["thumbnail", toElementApiPath(elementPath), configuration],
         queryFn: () => {
             const query: Record<string, string> = {
                 size,

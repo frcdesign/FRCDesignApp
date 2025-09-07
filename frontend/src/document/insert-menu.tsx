@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { Dispatch, ReactNode, useEffect, useMemo, useState } from "react";
+import { Dispatch, ReactNode, useEffect, useState } from "react";
 import {
     BooleanParameterObj,
     ConfigurationResult,
@@ -8,11 +8,13 @@ import {
     EnumParameterObj,
     evaluateCondition,
     ParameterObj,
-    ConfigurationType,
+    ConfigurationParameterType,
     QuantityParameterObj,
     StringParameterObj,
     Configuration,
-    QuantityType
+    QuantityType,
+    OptionVisibilityConditionType,
+    EnumOption
 } from "../api/backend-types";
 import {
     Alignment,
@@ -104,7 +106,11 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const actions = (
         <>
             <OpenUrlButton url={makeUrl(element, configuration)} text="Open" />
-            <InsertButton element={element} configuration={configuration} />
+            <InsertButton
+                element={element}
+                configuration={configuration}
+                isFavorite={isFavorite}
+            />
         </>
     );
 
@@ -198,22 +204,22 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
     const { configurationResult, configuration, setConfiguration } = props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
-        if (!evaluateCondition(parameter.visibilityCondition, configuration)) {
-            // Return empty div to suppress key error
-            return <div key={parameter.id} />;
-        }
+        const handleValueChange = (newValue: string) => {
+            const newConfiguration = {
+                ...configuration,
+                [parameter.id]: newValue
+            };
+            setConfiguration(newConfiguration);
+        };
+
         return (
             <ConfigurationParameter
                 key={parameter.id}
                 parameter={parameter}
                 value={configuration[parameter.id]}
-                onValueChange={(newValue) => {
-                    const newConfiguration = {
-                        ...configuration,
-                        [parameter.id]: newValue
-                    };
-                    setConfiguration(newConfiguration);
-                }}
+                configuration={configuration}
+                parameters={configurationResult.parameters}
+                onValueChange={handleValueChange}
             />
         );
     });
@@ -224,59 +230,119 @@ interface ParameterProps<T extends ParameterObj> {
     parameter: T;
     value: string;
     onValueChange: (newValue: string) => void;
+    configuration: Configuration;
+    parameters: ParameterObj[];
 }
 
 function ConfigurationParameter(
     props: ParameterProps<ParameterObj>
 ): ReactNode {
-    // Need to expose parameter directly to get type narrowing
-    const { parameter, value, onValueChange } = props;
-    if (parameter.type === ConfigurationType.ENUM) {
-        return (
-            <EnumParameter
-                parameter={parameter}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        );
-    } else if (parameter.type === ConfigurationType.BOOLEAN) {
-        return (
-            <BooleanParameter
-                parameter={parameter}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        );
-    } else if (parameter.type === ConfigurationType.STRING) {
-        return (
-            <StringParameter
-                parameter={parameter}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        );
-    } else if (parameter.type === ConfigurationType.QUANTITY) {
-        return (
-            <QuantityParameter
-                parameter={parameter}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        );
+    const { parameter } = props;
+
+    if (
+        !evaluateCondition(
+            parameter.condition,
+            props.configuration,
+            props.parameters
+        )
+    ) {
+        return null;
+    }
+
+    // Need to expose and use parameter directly to get type narrowing
+    if (parameter.type === ConfigurationParameterType.ENUM) {
+        return <EnumParameter {...props} parameter={parameter} />;
+    } else if (parameter.type === ConfigurationParameterType.BOOLEAN) {
+        return <BooleanParameter {...props} parameter={parameter} />;
+    } else if (parameter.type === ConfigurationParameterType.STRING) {
+        return <StringParameter {...props} parameter={parameter} />;
+    } else if (parameter.type === ConfigurationParameterType.QUANTITY) {
+        return <QuantityParameter {...props} parameter={parameter} />;
     }
 }
 
+function getOption(
+    options: EnumOption[],
+    optionId: string
+): EnumOption | undefined {
+    return options.find((option) => option.id == optionId);
+}
+
+function getVisibleOptions(
+    enumParameter: EnumParameterObj,
+    configuration: Configuration,
+    parameters: ParameterObj[]
+): EnumOption[] {
+    // No conditions means everything is shown
+    if (enumParameter.optionConditions.length === 0) {
+        return enumParameter.options;
+    }
+
+    const optionIds = enumParameter.options.map((option) => option.id);
+
+    const validOptionIds = enumParameter.optionConditions
+        .filter((optionCondition) =>
+            evaluateCondition(
+                optionCondition.condition,
+                configuration,
+                parameters
+            )
+        )
+        .flatMap((optionCondition) => {
+            if (optionCondition.type == OptionVisibilityConditionType.LIST) {
+                return optionCondition.controlledOptions;
+            } else if (
+                optionCondition.type == OptionVisibilityConditionType.RANGE
+            ) {
+                return optionIds.slice(
+                    optionIds.indexOf(optionCondition.start),
+                    optionIds.indexOf(optionCondition.end) + 1
+                );
+            }
+            throw new Error("Unhandled option condition type");
+        });
+
+    const validOptionsSet = new Set(validOptionIds);
+    return enumParameter.options.filter((option) =>
+        validOptionsSet.has(option.id)
+    );
+}
+
 function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
-    const { parameter, value, onValueChange } = props;
+    const { parameter, value, onValueChange, configuration, parameters } =
+        props;
 
     // The active option is the option currently focused by the user
-    // It should start out as the selected option but can change
-    const [activeOptionId, setActiveOptionId] = useState<string | null>(value);
+    // const [activeOption, setActiveOption] = useState<EnumOption | null>(null);
+
+    const visibleOptions = getVisibleOptions(
+        parameter,
+        configuration,
+        parameters
+    );
 
     // useMemo to stabilize options across re-renders so, e.g., active item changes work
-    const optionIds = useMemo(() => {
-        return Object.keys(parameter.options);
-    }, [parameter.options]);
+    // const visibleOptions = useMemo(
+    //     () => getVisibleOptions(parameter, configuration, parameters),
+    //     [configuration, parameter, parameters]
+    // );
+
+    useEffect(() => {
+        if (visibleOptions.length === 0) {
+            return;
+        }
+        if (!getOption(visibleOptions, value)) {
+            if (getOption(visibleOptions, parameter.default)) {
+                onValueChange(parameter.default);
+            } else {
+                onValueChange(visibleOptions[0].id);
+            }
+        }
+    }, [onValueChange, parameter.default, value, visibleOptions]);
+
+    if (visibleOptions.length === 0) {
+        return null;
+    }
 
     return (
         <FormGroup
@@ -285,46 +351,44 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             inline
             className="full-width"
         >
-            <Select<string>
-                items={optionIds}
-                activeItem={activeOptionId}
-                onActiveItemChange={setActiveOptionId}
-                filterable={false}
+            <Select<EnumOption>
+                items={visibleOptions}
+                activeItem={getOption(visibleOptions, value) ?? null}
+                onItemSelect={(option) => {
+                    onValueChange(option.id);
+                }}
+                itemsEqual="id"
                 fill
                 popoverProps={{
                     minimal: true,
                     popoverClassName: "enum-menu"
                 }}
+                filterable={false}
                 itemRenderer={(
-                    currentOptionId,
+                    currentOption,
                     { handleClick, handleFocus, modifiers, ref }
                 ) => {
-                    const selected = value === currentOptionId;
-                    const currentOptionName =
-                        parameter.options[currentOptionId];
+                    const selected = value === currentOption.id;
                     return (
                         <MenuItem
-                            key={currentOptionId}
+                            key={currentOption.id}
                             ref={ref}
                             onClick={handleClick}
                             onFocus={handleFocus}
                             active={modifiers.active}
-                            text={currentOptionName}
+                            text={currentOption.name}
                             roleStructure="listoption"
                             selected={selected}
                             intent={selected ? Intent.PRIMARY : Intent.NONE}
                         />
                     );
                 }}
-                onItemSelect={(optionId) => {
-                    onValueChange(optionId);
-                }}
             >
                 <Button
                     id={parameter.id}
                     alignText="start"
                     endIcon="caret-down"
-                    text={parameter.options[value]}
+                    text={getOption(parameter.options, value)?.name}
                     fill
                 />
             </Select>
@@ -430,10 +494,11 @@ function QuantityParameter(
 interface SubmitButtonProps {
     element: ElementObj;
     configuration?: Configuration;
+    isFavorite: boolean;
 }
 
 function InsertButton(props: SubmitButtonProps): ReactNode {
-    const { element, configuration } = props;
+    const { element, configuration, isFavorite } = props;
 
     const search = useSearch({ from: "/app" });
     const closeDialog = useHandleCloseDialog();
@@ -449,7 +514,10 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
                 instanceType: element.instanceType,
                 instanceId: element.instanceId,
                 elementId: element.id,
-                configuration
+                configuration,
+                name: element.name,
+                isFavorite,
+                userId: search.userId
             };
             if (search.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
@@ -457,7 +525,6 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
             } else {
                 // Part studio derive also needs name and microversion id
                 endpoint = "/add-to-part-studio";
-                body.name = element.name;
                 body.microversionId = element.microversionId;
             }
             showLoadingToast(`Inserting ${element.name}...`, toastId);

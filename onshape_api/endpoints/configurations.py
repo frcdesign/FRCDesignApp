@@ -45,14 +45,16 @@ def decode_configuration(
     }
 
 
-def encode_configuration(values: dict[str, str]) -> str:
+def encode_configuration(configuration: dict[str, str]) -> str:
     """Encodes a configuration into a string suitable for passing to the Onshape API as a body parameter."""
     # Convert to str to handle booleans and other tomfoolery
     return ";".join(
-        f"{id}={str(parse.quote_plus(value))}" for (id, value) in values.items()
+        f"{id}={str(parse.quote_plus(value))}" for (id, value) in configuration.items()
     )
 
 
-def encode_configuration_for_query(values: dict[str, str]) -> str:
+def encode_configuration_for_query(configuration: dict[str, str]) -> str:
     """Encodes a configuration into a format suitable for passing to the Onshape API via a query parameter."""
-    return parse.quote_plus(";".join(f"{id}={value}" for (id, value) in values.items()))
+    return parse.quote_plus(
+        ";".join(f"{id}={value}" for (id, value) in configuration.items())
+    )

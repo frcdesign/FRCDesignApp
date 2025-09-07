@@ -36,6 +36,13 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     const { document } = props;
     const navigate = useNavigate();
 
+    const thumbnailPath = {
+        documentId: document.documentId,
+        instanceId: document.instanceId,
+        instanceType: document.instanceType,
+        elementId: document.thumbnailElementId
+    };
+
     return (
         <DocumentContextMenu document={document}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
@@ -54,7 +61,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                     >
                         <EntityTitle
                             title={<Text>{document.name}</Text>}
-                            icon={<CardThumbnail path={document} />}
+                            icon={<CardThumbnail path={thumbnailPath} />}
                         />
                         <Icon
                             icon="arrow-right"
@@ -71,6 +78,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
     searchHit?: SearchHit;
+    onClick?: () => void;
 }
 
 /**
@@ -127,6 +135,10 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                         ref={ctxMenuProps.ref}
                         interactive
                         onClick={() => {
+                            if (props.onClick) {
+                                props.onClick();
+                            }
+
                             if (isAssemblyInPartStudio) {
                                 setIsAlertOpen(true);
                                 return;

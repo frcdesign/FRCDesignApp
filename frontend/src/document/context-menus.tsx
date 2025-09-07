@@ -13,6 +13,7 @@ import { AppMenu } from "../api/menu-params";
 import { queryClient } from "../query-client";
 import { ChangeDocumentOrderItems } from "./change-document-order";
 import { makeUrl, openUrlInNewTab } from "../common/url";
+import { invalidateSearchDb } from "../api/search";
 
 interface ElementContextMenuProps {
     element: ElementObj;
@@ -78,6 +79,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
             queryClient.refetchQueries({ queryKey: ["documents"] });
             queryClient.refetchQueries({ queryKey: ["document-order"] });
             queryClient.refetchQueries({ queryKey: ["elements"] });
+            invalidateSearchDb();
         }
     });
 
@@ -191,6 +193,7 @@ function useToggleDocumentSortMutation(document: DocumentObj) {
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["documents"] });
+            invalidateSearchDb();
         }
     });
 }
@@ -233,6 +236,7 @@ function useSetVisibilityMutation(
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["elements"] });
+            invalidateSearchDb();
         }
     });
 }

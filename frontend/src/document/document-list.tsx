@@ -46,7 +46,7 @@ export function DocumentList(): ReactNode {
     }).documentId;
 
     const search = useSearch({ from: "/app" });
-    const searchDb = useSearchDb(elements);
+    const searchDb = useSearchDb(documents, elements);
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);

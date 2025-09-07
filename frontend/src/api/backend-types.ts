@@ -68,11 +68,11 @@ export enum ElementType {
     ASSEMBLY = "ASSEMBLY"
 }
 
-export enum ConfigurationType {
-    ENUM = "ENUM",
-    QUANTITY = "QUANTITY",
-    BOOLEAN = "BOOLEAN",
-    STRING = "STRING"
+export enum ConfigurationParameterType {
+    ENUM = "BTMConfigurationParameterEnum-105",
+    QUANTITY = "BTMConfigurationParameterQuantity-1826",
+    BOOLEAN = "BTMConfigurationParameterBoolean-2550",
+    STRING = "BTMConfigurationParameterString-872"
 }
 
 export enum QuantityType {
@@ -94,15 +94,43 @@ export enum Unit {
     UNITLESS = ""
 }
 
-export enum OptionConditionType {
+export enum OptionVisibilityConditionType {
     LIST = "BTEnumOptionVisibilityForList-1613",
     RANGE = "BTEnumOptionVisibilityForRange-4297"
 }
 
-export enum ConditionType {
+export type OptionVisibilityCondition =
+    | EqualOptionVisibilityCondition
+    | RangeOptionVisibilityCondition;
+
+export interface EqualOptionVisibilityCondition {
+    type: OptionVisibilityConditionType.LIST;
+    controlledOptions: string[];
+    condition: VisibilityCondition;
+}
+
+export interface RangeOptionVisibilityCondition {
+    type: OptionVisibilityConditionType.RANGE;
+    start: string;
+    end: string;
+    condition: VisibilityCondition;
+}
+
+export enum VisibilityConditionType {
     LOGICAL = "BTParameterVisibilityLogical-178",
     EQUAL = "BTParameterVisibilityOnEqual-180",
     RANGE = "BTParameterVisibilityInRange-2980"
+}
+
+export type VisibilityCondition =
+    | LogicalVisibilityCondition
+    | EqualVisibilityCondition
+    | RangeVisibilityCondition;
+
+interface LogicalVisibilityCondition {
+    type: VisibilityConditionType.LOGICAL;
+    operation: LogicalOp;
+    children: VisibilityCondition[];
 }
 
 export enum LogicalOp {
@@ -110,52 +138,59 @@ export enum LogicalOp {
     OR = "OR"
 }
 
-export type VisibilityCondition = LogicalCondition | EqualCondition;
-
-interface LogicalCondition {
-    type: ConditionType.LOGICAL;
-    operation: LogicalOp;
-    children: VisibilityCondition[];
+interface EqualVisibilityCondition {
+    type: VisibilityConditionType.EQUAL;
+    id: string;
+    value: string;
 }
 
-interface EqualCondition {
-    type: ConditionType.EQUAL;
+interface RangeVisibilityCondition {
+    type: VisibilityConditionType.RANGE;
     id: string;
-    values: string[];
+    start: string;
+    end: string;
 }
 
 export function evaluateCondition(
-    condition: VisibilityCondition | null,
-    configuration: Record<string, string>
+    condition: VisibilityCondition | undefined,
+    configuration: Record<string, string>,
+    parameters: ParameterObj[]
 ): boolean {
     if (!condition) {
         return true;
     }
 
-    if (condition.type == ConditionType.LOGICAL) {
+    if (condition.type == VisibilityConditionType.LOGICAL) {
         if (condition.operation == LogicalOp.AND) {
             return condition.children.every((child) =>
-                evaluateCondition(child, configuration)
+                evaluateCondition(child, configuration, parameters)
             );
         } else {
             return condition.children.some((child) =>
-                evaluateCondition(child, configuration)
+                evaluateCondition(child, configuration, parameters)
             );
         }
-    } else if (condition.type == ConditionType.EQUAL) {
-        return condition.values.includes(configuration[condition.id]);
+    } else if (condition.type == VisibilityConditionType.EQUAL) {
+        return condition.value == configuration[condition.id];
+    } else if (condition.type == VisibilityConditionType.RANGE) {
+        const parameter = parameters.find(
+            (parameter) => parameter.id === condition.id
+        );
+        if (!parameter || parameter.type != ConfigurationParameterType.ENUM) {
+            throw new Error(
+                "Visibility condition does not target a valid enum parameter."
+            );
+        }
+
+        const optionIds = parameter.options.map((option) => option.id);
+        const startIndex = optionIds.indexOf(condition.start);
+        const endIndex = optionIds.indexOf(condition.end);
+        return optionIds
+            .slice(startIndex, endIndex + 1)
+            .includes(configuration[condition.id]);
     }
     return true;
 }
-
-// export function evaluateVisibleOptions(
-//     condition: VisibilityCondition | null,
-//     configuration: Record<string, string>
-// ): boolean {
-//     if (!condition) {
-//         return true;
-//     }
-// }
 
 export interface ConfigurationResult {
     // defaultConfiguration: string;
@@ -172,14 +207,14 @@ export interface ParameterBase {
     id: string;
     name: string;
     default: string;
-    visibilityCondition: VisibilityCondition | null;
+    condition?: VisibilityCondition;
 }
 export interface BooleanParameterObj extends ParameterBase {
-    type: ConfigurationType.BOOLEAN;
+    type: ConfigurationParameterType.BOOLEAN;
 }
 
 export interface StringParameterObj extends ParameterBase {
-    type: ConfigurationType.STRING;
+    type: ConfigurationParameterType.STRING;
 }
 
 export interface EnumOption {
@@ -187,18 +222,14 @@ export interface EnumOption {
     name: string;
 }
 
-export interface OptionCondition {
-    type: OptionConditionType;
-}
-
 export interface EnumParameterObj extends ParameterBase {
-    type: ConfigurationType.ENUM;
-    options: Record<string, string>;
-    optionConditions: OptionCondition[];
+    type: ConfigurationParameterType.ENUM;
+    options: EnumOption[];
+    optionConditions: OptionVisibilityCondition[];
 }
 
 export interface QuantityParameterObj extends ParameterBase {
-    type: ConfigurationType.QUANTITY;
+    type: ConfigurationParameterType.QUANTITY;
     quantityType: QuantityType;
     min: number;
     max: number;
@@ -232,6 +263,7 @@ export type DocumentOrder = string[];
 export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
+    thumbnailElementId: string;
     elementIds: string[];
     sortAlphabetically: boolean;
 }

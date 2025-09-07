@@ -159,8 +159,10 @@ function FavoritesList() {
 
     const elementsQuery = useElementsQuery();
     const favoritesQuery = useFavoritesQuery(search);
+    // documents are only used for building the search db
+    const documents = useDocumentsQuery().data;
 
-    const searchDb = useSearchDb(elementsQuery.data);
+    const searchDb = useSearchDb(documents, elementsQuery.data);
 
     if (favoritesQuery.isError || elementsQuery.isError) {
         return (

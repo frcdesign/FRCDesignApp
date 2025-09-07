@@ -1,160 +1,24 @@
 from __future__ import annotations
-from enum import StrEnum
-from typing import Annotated, Literal
 import flask
-from pydantic import BaseModel, ConfigDict, Field
 
-from backend.common import connect, env
-from backend.common.backend_exceptions import ClientException
-
-
-class OnshapeConfigurationType(StrEnum):
-    ENUM = "BTMConfigurationParameterEnum-105"
-    QUANTITY = "BTMConfigurationParameterQuantity-1826"
-    BOOLEAN = "BTMConfigurationParameterBoolean-2550"
-    STRING = "BTMConfigurationParameterString-872"
-
-
-class ConfigurationType(StrEnum):
-    """The type of each configuration parameter. Stored inside the database."""
-
-    ENUM = "ENUM"
-    QUANTITY = "QUANTITY"
-    BOOLEAN = "BOOLEAN"
-    STRING = "STRING"
-
-
-configuration_type_mapping = {
-    OnshapeConfigurationType.ENUM: ConfigurationType.ENUM,
-    OnshapeConfigurationType.QUANTITY: ConfigurationType.QUANTITY,
-    OnshapeConfigurationType.BOOLEAN: ConfigurationType.BOOLEAN,
-    OnshapeConfigurationType.STRING: ConfigurationType.STRING,
-}
-
-
-def get_configuration_type(config_type: OnshapeConfigurationType) -> ConfigurationType:
-    return configuration_type_mapping[config_type]
-
-
-class Configuration(BaseModel):
-    parameters: list[ConfigurationParameter]
-
-    model_config = ConfigDict(extra="forbid")
-
-
-class BaseConfigurationParameter(BaseModel):
-    visibilityCondition: VisibilityCondition | None
-    name: str
-    id: str
-
-
-class EnumConfigurationParameter(BaseConfigurationParameter):
-    type: Literal[ConfigurationType.ENUM]
-    default: str
-    options: dict[str, str]
-    optionVisibilityConditions: list[OptionVisibilityCondition]
-
-
-class StringConfigurationParameter(BaseConfigurationParameter):
-    type: Literal[ConfigurationType.STRING]
-    default: str
-
-
-class BooleanConfigurationParameter(BaseConfigurationParameter):
-    type: Literal[ConfigurationType.BOOLEAN]
-    default: bool
-
-
-class QuantityConfigurationParameter(BaseConfigurationParameter):
-    type: Literal[ConfigurationType.QUANTITY]
-    default: str
-    quantityType: QuantityType
-    unit: Unit
-    min: str | float
-    max: str | float
-
-
-ConfigurationParameter = Annotated[
-    EnumConfigurationParameter
-    | BooleanConfigurationParameter
-    | StringConfigurationParameter
-    | QuantityConfigurationParameter,
-    Field(discriminator="type"),
-]
-
-
-class ConditionType(StrEnum):
-    LOGICAL = "LOGICAL"
-    EQUAL = "EQUAL"
-
-
-class LogicalOp(StrEnum):
-    AND = "AND"
-    OR = "OR"
-
-
-class LogicalCondition(BaseModel):
-    type: Literal[ConditionType.LOGICAL] = ConditionType.LOGICAL
-    operation: LogicalOp
-    children: list[VisibilityCondition]
-
-
-class EqualCondition(BaseModel):
-    type: Literal[ConditionType.EQUAL] = ConditionType.EQUAL
-    id: str
-    values: list[str]
-
-
-VisibilityCondition = Annotated[
-    LogicalCondition | EqualCondition, Field(discriminator="type")
-]
-
-
-class OptionVisibilityCondition(BaseModel):
-    controlledOptions: list[str]
-    visibilityCondition: VisibilityCondition
-
-
-class QuantityType(StrEnum):
-    LENGTH = "LENGTH"
-    ANGLE = "ANGLE"
-    INTEGER = "INTEGER"
-    REAL = "REAL"
-
-
-class Unit(StrEnum):
-    METER = "meter"
-    CENTIMETER = "centimeter"
-    MILLIMETER = "millimeter"
-    YARD = "yard"
-    FOOT = "foot"
-    INCH = "inch"
-    DEGREE = "degree"
-    RADIAN = "radian"
-    UNITLESS = ""
-
-
-def get_abbreviation(unit: Unit) -> str:
-    match unit:
-        case Unit.METER:
-            return "m"
-        case Unit.CENTIMETER:
-            return "cm"
-        case Unit.MILLIMETER:
-            return "mm"
-        case Unit.YARD:
-            return "yd"
-        case Unit.FOOT:
-            return "ft"
-        case Unit.INCH:
-            return "in"
-        case Unit.DEGREE:
-            return "deg"
-        case Unit.RADIAN:
-            return "rad"
-        case Unit.UNITLESS:
-            return ""
-
+from backend.common import connect
+from backend.common.database import (
+    ConfigurationParameter,
+    ConfigurationParameters,
+    ParameterType,
+    EqualCondition,
+    ListOptionVisibilityCondition,
+    LogicalCondition,
+    LogicalOp,
+    OptionConditionType,
+    OptionVisibilityCondition,
+    RangeCondition,
+    RangeOptionVisibilityCondition,
+    Unit,
+    VisibilityCondition,
+    VisibilityConditionType,
+    get_abbreviation,
+)
 
 router = flask.Blueprint("configurations", __name__)
 
@@ -167,104 +31,129 @@ def get_configuration(configuration_id: str):
         parameters: A list of configuration parameters.
     """
     db = connect.get_db()
-    configuration = db.configurations.document(configuration_id).get().to_dict()
-
-    if not env.IS_PRODUCTION:
-        Configuration.model_validate(configuration)
-
-    if configuration == None:
-        raise ClientException(
-            f"Failed to find configuration with id {configuration_id}"
-        )
-    return configuration
-
-
-class OnshapeOptionConditionType(StrEnum):
-    """Options which define what specific enum options a condition will show."""
-
-    LIST = "BTEnumOptionVisibilityForList-1613"
-    RANGE = "BTEnumOptionVisibilityForRange-4297"
+    return db.get_configuration_parameters(configuration_id).model_dump_json(
+        exclude_none=True
+    )
 
 
 def parse_option_visibility_conditions(
-    enum_option_visibility_conditions: dict | None, enum_option_ids: list[str]
+    onshape_option_conditions: dict | None,
 ) -> list[OptionVisibilityCondition]:
-    if enum_option_visibility_conditions == None:
+    if onshape_option_conditions == None:
         return []  # Should never happen
 
+    option_conditions = onshape_option_conditions["visibilityConditions"]
     results = []
-    option_conditions = enum_option_visibility_conditions["visibilityConditions"]
     for option_condition in option_conditions:
-        result = {
-            "type": option_condition["btType"],
-            "visibilityCondition": parse_visibility_condition(
-                option_condition["condition"], enum_option_ids
-            ),
-        }
-        if result["type"] == OnshapeOptionConditionType.LIST:
-            result["controlledOptions"] = option_condition["controlledOptions"]
-        elif result["type"] == OnshapeOptionConditionType.RANGE:
-            range = option_condition["controlledRange"]
-            start_index = enum_option_ids.index(range["start"])
-            end_index = enum_option_ids.index(range["end"])
-            result["controlledOptions"] = enum_option_ids[start_index : end_index + 1]
+        condition = parse_visibility_condition(option_condition["condition"])
+        if condition == None:
+            raise ValueError(
+                "An enum option visibility condition is mssing a valid visibility condition"
+            )
 
-        results.append(OptionVisibilityCondition.model_validate(result))
+        if option_condition["btType"] == OptionConditionType.LIST:
+            results.append(
+                ListOptionVisibilityCondition(
+                    controlledOptions=option_condition["controlledOptions"],
+                    condition=condition,
+                )
+            )
+        elif option_condition["btType"] == OptionConditionType.RANGE:
+            range = option_condition["controlledRange"]
+            results.append(
+                RangeOptionVisibilityCondition(
+                    start=range["start"],
+                    end=range["end"],
+                    condition=condition,
+                )
+            )
 
     return results
 
 
-class OnshapeVisibilityConditionType(StrEnum):
-    """Options which represent ways in which a given configuration option can be hidden."""
-
-    LOGICAL = "BTParameterVisibilityLogical-178"
-    EQUAL = "BTParameterVisibilityOnEqual-180"
-    RANGE = "BTParameterVisibilityInRange-2980"
-    NONE = "BTParameterVisibilityCondition-177"
-
-
 def parse_visibility_condition(
-    visibility_condition: dict | None, enum_option_ids: list[str] | None
+    onshape_condition: dict | None,
 ) -> VisibilityCondition | None:
     """Transforms a visibility condition on an Onshape configuration into a normalized condition_dict."""
-    if visibility_condition == None:
+    if onshape_condition == None:
         return None
 
-    condition_type: OnshapeVisibilityConditionType = visibility_condition["btType"]
-    if condition_type == OnshapeVisibilityConditionType.NONE:
+    condition_type: VisibilityConditionType = onshape_condition["btType"]
+    if condition_type == VisibilityConditionType.NONE:
         return None
 
-    if condition_type == OnshapeVisibilityConditionType.LOGICAL:
+    if condition_type == VisibilityConditionType.LOGICAL:
         conditions = [
-            parse_visibility_condition(child, enum_option_ids)
-            for child in visibility_condition["children"]
+            parse_visibility_condition(child) for child in onshape_condition["children"]
         ]
         return LogicalCondition(
-            operation=visibility_condition["operation"],
+            operation=onshape_condition["operation"],
             children=[condition for condition in conditions if condition != None],
         )
-    elif condition_type == OnshapeVisibilityConditionType.EQUAL:
+    elif condition_type == VisibilityConditionType.EQUAL:
         return EqualCondition(
-            id=visibility_condition["parameterId"],
-            values=[visibility_condition["value"]],
+            id=onshape_condition["parameterId"],
+            value=onshape_condition["value"],
         )
-    elif condition_type == OnshapeVisibilityConditionType.RANGE:
-        if enum_option_ids == None:
-            raise ValueError("Missing required option")
-
-        option_range = visibility_condition["optionRange"]
-        start_index = enum_option_ids.index(option_range["start"])
-        end_index = enum_option_ids.index(option_range["end"])
-        valid_option_ids = enum_option_ids[start_index : end_index + 1]
-
-        return EqualCondition(
-            id=visibility_condition["parameterId"], values=valid_option_ids
+    elif condition_type == VisibilityConditionType.RANGE:
+        option_range = onshape_condition["optionRange"]
+        return RangeCondition(
+            id=onshape_condition["parameterId"],
+            start=option_range["start"],
+            end=option_range["end"],
         )
 
     return None
 
 
-def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
+def evaluate_condition(
+    condition: VisibilityCondition | None,
+    configuration: dict[str, str],
+    parameters: list[ConfigurationParameter],
+) -> bool:
+    if condition is None:
+        return True
+
+    if condition.type == VisibilityConditionType.LOGICAL:
+        if condition.operation == LogicalOp.AND:
+            return all(
+                evaluate_condition(child, configuration, parameters)
+                for child in condition.children
+            )
+        else:
+            return any(
+                evaluate_condition(child, configuration, parameters)
+                for child in condition.children
+            )
+
+    elif condition.type == VisibilityConditionType.EQUAL:
+        return configuration.get(condition.id) == condition.value
+
+    elif condition.type == VisibilityConditionType.RANGE:
+        parameter = next(
+            (parameter for parameter in parameters if parameter.id == condition.id),
+            None,
+        )
+        if parameter == None:
+            raise ValueError(
+                "Visibility condition does not target a valid enum parameter."
+            )
+        elif parameter.type != ParameterType.ENUM:
+            raise ValueError(
+                "Visibility condition does not target a valid enum parameter."
+            )
+
+        option_ids = [option.id for option in parameter.options]
+        start_index = option_ids.index(condition.start)
+        end_index = option_ids.index(condition.end)
+        return (
+            configuration.get(condition.id) in option_ids[start_index : end_index + 1]
+        )
+
+    return True
+
+
+def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationParameters:
     """Parses an Onshape configuration into a normalized configuration which can be stored in the database."""
     parameters = []
     for parameter in onshape_configuration["configurationParameters"]:
@@ -272,27 +161,25 @@ def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
         result = {
             "id": parameter["parameterId"],
             "name": parameter["parameterName"],
-            "type": get_configuration_type(onshape_config_type),
+            "type": onshape_config_type,
+            "condition": parse_visibility_condition(parameter["visibilityCondition"]),
         }
 
-        enum_option_ids = None
-        if onshape_config_type == OnshapeConfigurationType.ENUM:
+        if onshape_config_type == ParameterType.ENUM:
             result["default"] = parameter["defaultValue"]
-            enum_options = {
-                option["option"]: option["optionName"]
+            result["options"] = [
+                {"id": option["option"], "name": option["optionName"]}
                 for option in parameter["options"]
-            }
-            enum_option_ids = list(enum_options.keys())
-            result["options"] = enum_options
-            result["optionVisibilityConditions"] = parse_option_visibility_conditions(
-                parameter["enumOptionVisibilityConditions"], enum_option_ids
+            ]
+            result["optionConditions"] = parse_option_visibility_conditions(
+                parameter["enumOptionVisibilityConditions"]
             )
-        elif onshape_config_type == OnshapeConfigurationType.BOOLEAN:
+        elif onshape_config_type == ParameterType.BOOLEAN:
             # Convert to "true" or "false" for simplicity
             result["default"] = str(parameter["defaultValue"]).lower()
-        elif onshape_config_type == OnshapeConfigurationType.STRING:
+        elif onshape_config_type == ParameterType.STRING:
             result["default"] = parameter["defaultValue"]
-        elif onshape_config_type == OnshapeConfigurationType.QUANTITY:
+        elif onshape_config_type == ParameterType.QUANTITY:
             quantity_type = parameter["quantityType"]
             range = parameter["rangeAndDefault"]
 
@@ -308,10 +195,6 @@ def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
                 }
             )
 
-        result["visibilityCondition"] = parse_visibility_condition(
-            parameter["visibilityCondition"], enum_option_ids
-        )
-
         parameters.append(result)
 
-    return Configuration(parameters=parameters)
+    return ConfigurationParameters(parameters=parameters)

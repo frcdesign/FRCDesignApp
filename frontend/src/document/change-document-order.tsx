@@ -5,6 +5,7 @@ import { DocumentOrder } from "../api/backend-types";
 import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
 import { ReactNode } from "react";
+import { invalidateSearchDb } from "../api/search";
 
 function useSetDocumentOrderMutation() {
     return useMutation({
@@ -18,6 +19,7 @@ function useSetDocumentOrderMutation() {
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["document-order"] });
+            invalidateSearchDb();
         }
     });
 }
