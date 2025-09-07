@@ -114,6 +114,8 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         </>
     );
 
+    console.log(configuration);
+
     return (
         <Dialog
             isOpen
@@ -204,11 +206,17 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
     const { configurationResult, configuration, setConfiguration } = props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
-        const handleValueChange = (newValue: string) => {
-            const newConfiguration = {
-                ...configuration,
-                [parameter.id]: newValue
-            };
+        const handleValueChange = (newValue: string | undefined) => {
+            let newConfiguration;
+            if (newValue == undefined) {
+                newConfiguration = { ...configuration };
+                delete newConfiguration[parameter.id];
+            } else {
+                newConfiguration = {
+                    ...configuration,
+                    [parameter.id]: newValue
+                };
+            }
             setConfiguration(newConfiguration);
         };
 
@@ -229,7 +237,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 interface ParameterProps<T extends ParameterObj> {
     parameter: T;
     value: string;
-    onValueChange: (newValue: string) => void;
+    onValueChange: (newValue: string | undefined) => void;
     configuration: Configuration;
     parameters: ParameterObj[];
 }
@@ -238,6 +246,18 @@ function ConfigurationParameter(
     props: ParameterProps<ParameterObj>
 ): ReactNode {
     const { parameter } = props;
+
+    useEffect(() => {
+        if (
+            !evaluateCondition(
+                parameter.condition,
+                props.configuration,
+                props.parameters
+            )
+        ) {
+            props.onValueChange(undefined);
+        }
+    }, [parameter.condition, props]);
 
     if (
         !evaluateCondition(
@@ -329,6 +349,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
 
     useEffect(() => {
         if (visibleOptions.length === 0) {
+            onValueChange(undefined);
             return;
         }
         if (!getOption(visibleOptions, value)) {

@@ -1,4 +1,3 @@
-import { reportMissingPermissionError } from "./errors";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
 
 function getUrl(path: string, query?: URLSearchParamsInit): string {
@@ -78,7 +77,6 @@ export async function apiDelete(
 async function handleResponse(response: Response) {
     const json = await response.json();
     if (!response.ok) {
-        reportMissingPermissionError(json);
         throw new Error("Network response failed.");
     }
     return json;

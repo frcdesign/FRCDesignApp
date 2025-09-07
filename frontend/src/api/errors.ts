@@ -1,5 +1,3 @@
-import { capitalize } from "../common/utils";
-
 /**
  * Errors which are generated and thrown on the client.
  * Unlike other errors, the message is displayed directly to the user.
@@ -24,44 +22,29 @@ export class ReportedError extends Error {
     }
 }
 
-export class MissingPermissionError extends ReportedError {
-    public constructor(
-        public permission: string,
-        public documentName?: string
-    ) {
-        super("MISSING_PERMISSION");
-        Object.setPrototypeOf(this, new.target.prototype);
-    }
+// export class MissingPermissionError extends ReportedError {
+//     public constructor(
+//         public permission: string,
+//         public documentName?: string
+//     ) {
+//         super("MISSING_PERMISSION");
+//         Object.setPrototypeOf(this, new.target.prototype);
+//     }
 
-    public getDescription(
-        isCurrentDocument?: boolean,
-        unknownAccessMessage?: string
-    ): string {
-        if (isCurrentDocument ?? true) {
-            // You need to have Write access to this document.
-            return `You need to have ${this.permission} access to this document.`;
-        } else if (this.documentName) {
-            // You need to have Write access to My Test Document.
-            return `You need to have ${this.permission} access to ${this.documentName}.`;
-        }
-        return (
-            unknownAccessMessage ??
-            `You don't have access to a needed document.`
-        );
-    }
-}
-
-export function reportMissingPermissionError(json: any) {
-    if (json.type !== "MISSING_PERMISSION") {
-        return;
-    }
-    let permission;
-    if (json.permission === "LINK") {
-        // Change link to link document to match UI
-        permission = "Link document";
-    } else {
-        // e.g., Read, Write
-        permission = capitalize(json.permission);
-    }
-    throw new MissingPermissionError(permission, json.documentName);
-}
+//     public getDescription(
+//         isCurrentDocument?: boolean,
+//         unknownAccessMessage?: string
+//     ): string {
+//         if (isCurrentDocument ?? true) {
+//             // You need to have Write access to this document.
+//             return `You need to have ${this.permission} access to this document.`;
+//         } else if (this.documentName) {
+//             // You need to have Write access to My Test Document.
+//             return `You need to have ${this.permission} access to ${this.documentName}.`;
+//         }
+//         return (
+//             unknownAccessMessage ??
+//             `You don't have access to a needed document.`
+//         );
+//     }
+// }

@@ -106,51 +106,51 @@ def parse_visibility_condition(
     return None
 
 
-def evaluate_condition(
-    condition: VisibilityCondition | None,
-    configuration: dict[str, str],
-    parameters: list[ConfigurationParameter],
-) -> bool:
-    if condition is None:
-        return True
+# def evaluate_condition(
+#     condition: VisibilityCondition | None,
+#     configuration: dict[str, str],
+#     parameters: list[ConfigurationParameter],
+# ) -> bool:
+#     if condition is None:
+#         return True
 
-    if condition.type == VisibilityConditionType.LOGICAL:
-        if condition.operation == LogicalOp.AND:
-            return all(
-                evaluate_condition(child, configuration, parameters)
-                for child in condition.children
-            )
-        else:
-            return any(
-                evaluate_condition(child, configuration, parameters)
-                for child in condition.children
-            )
+#     if condition.type == VisibilityConditionType.LOGICAL:
+#         if condition.operation == LogicalOp.AND:
+#             return all(
+#                 evaluate_condition(child, configuration, parameters)
+#                 for child in condition.children
+#             )
+#         else:
+#             return any(
+#                 evaluate_condition(child, configuration, parameters)
+#                 for child in condition.children
+#             )
 
-    elif condition.type == VisibilityConditionType.EQUAL:
-        return configuration.get(condition.id) == condition.value
+#     elif condition.type == VisibilityConditionType.EQUAL:
+#         return configuration.get(condition.id) == condition.value
 
-    elif condition.type == VisibilityConditionType.RANGE:
-        parameter = next(
-            (parameter for parameter in parameters if parameter.id == condition.id),
-            None,
-        )
-        if parameter == None:
-            raise ValueError(
-                "Visibility condition does not target a valid enum parameter."
-            )
-        elif parameter.type != ParameterType.ENUM:
-            raise ValueError(
-                "Visibility condition does not target a valid enum parameter."
-            )
+#     elif condition.type == VisibilityConditionType.RANGE:
+#         parameter = next(
+#             (parameter for parameter in parameters if parameter.id == condition.id),
+#             None,
+#         )
+#         if parameter == None:
+#             raise ValueError(
+#                 "Visibility condition does not target a valid enum parameter."
+#             )
+#         elif parameter.type != ParameterType.ENUM:
+#             raise ValueError(
+#                 "Visibility condition does not target a valid enum parameter."
+#             )
 
-        option_ids = [option.id for option in parameter.options]
-        start_index = option_ids.index(condition.start)
-        end_index = option_ids.index(condition.end)
-        return (
-            configuration.get(condition.id) in option_ids[start_index : end_index + 1]
-        )
+#         option_ids = [option.id for option in parameter.options]
+#         start_index = option_ids.index(condition.start)
+#         end_index = option_ids.index(condition.end)
+#         return (
+#             configuration.get(condition.id) in option_ids[start_index : end_index + 1]
+#         )
 
-    return True
+#     return True
 
 
 def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationParameters:

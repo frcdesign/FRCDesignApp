@@ -13,7 +13,6 @@ from backend.common.database import (
 )
 from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 
-from backend.endpoints.configurations import evaluate_condition
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.endpoints.documents import ElementType
 
@@ -87,7 +86,6 @@ def build_config_array(
     if configuration_parameters == None:
         raise ValueError("Configuration parameters must be passed.")
 
-    # TODO: Hide non-visible parameters
     config_array = []
     for id, value in configuration.items():
         config_parameter = next(
@@ -97,13 +95,6 @@ def build_config_array(
         )
         if config_parameter == None:
             continue
-        # Hides if the enum is hidden
-        if not evaluate_condition(
-            config_parameter.condition,
-            configuration,
-            configuration_parameters.parameters,
-        ):
-            continue
 
         config_dict = {
             "name": config_parameter.name,
@@ -112,7 +103,6 @@ def build_config_array(
             "value": value,
         }
         if config_parameter.type == ParameterType.ENUM:
-            # Technically there's an edge case for enums that are constructively hidden by virtue of all their enum options being hidden
             option_name = next(
                 option.name for option in config_parameter.options if option.id == value
             )
