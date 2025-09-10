@@ -1,1 +1,1 @@
-web: gunicorn --bind :$PORT --workers=4 "backend.server:create_app()"
+web: gunicorn --bind :$PORT --workers=4 --timeout=300 "backend.server:create_app()"

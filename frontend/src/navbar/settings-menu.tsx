@@ -168,8 +168,7 @@ export function ReloadDocumentsButton(
         mutationFn: () => {
             return apiPost("/reload-documents", {
                 // Set a timeout of 5 minutes
-                query: { reloadAll },
-                signal: AbortSignal.timeout(5 * 60000)
+                query: { reloadAll }
             });
         },
         onError: () => {
