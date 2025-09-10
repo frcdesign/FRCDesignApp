@@ -37,9 +37,13 @@ class AccessLevel(StrEnum):
 
 def get_access_level(api: Api, team_id: str) -> AccessLevel:
     """Returns the access level of a user respective to a given team."""
-    team_info = api.get(api_path("teams", end_id=team_id))
-    if team_info["admin"]:
-        return AccessLevel.ADMIN
-    elif team_info["member"]:
+    try:
+        team_info = api.get(api_path("teams", end_id=team_id))
+        if team_info["admin"]:
+            return AccessLevel.ADMIN
+        elif team_info["member"]:
+            return AccessLevel.MEMBER
+        return AccessLevel.USER
+    except Exception as e:
+        # Onshape doesn't let you get team info of teams you aren't on
         return AccessLevel.MEMBER
-    return AccessLevel.USER
