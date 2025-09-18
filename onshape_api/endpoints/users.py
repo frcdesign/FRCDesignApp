@@ -44,6 +44,6 @@ def get_access_level(api: Api, team_id: str) -> AccessLevel:
         elif team_info["member"]:
             return AccessLevel.MEMBER
         return AccessLevel.USER
-    except Exception as e:
+    except:
         # Onshape doesn't let you get team info of teams you aren't on
         return AccessLevel.USER

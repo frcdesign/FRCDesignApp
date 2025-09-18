@@ -7,12 +7,17 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { getBackgroundClass, getThemeClass } from "../api/onshape-params";
+import {
+    getBackgroundClass,
+    getColorTheme,
+    getThemeClass
+} from "../api/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { SettingsMenu } from "../navbar/settings-menu";
 import { InsertMenu } from "../document/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AddDocumentMenu } from "../document/add-document-menu";
+import { useSettings } from "../queries";
 
 export function BaseApp() {
     const result = useLoaderData({ from: "/app/" });
@@ -30,21 +35,22 @@ export function BaseApp() {
 
 export function App() {
     const search = useSearch({ from: "/app" });
-
-    const themeClass = getThemeClass(search.theme);
+    const settings = useSettings();
+    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
+    const themeClass = getThemeClass(colorTheme);
 
     return (
-        <BlueprintProvider
-            portalClassName={themeClass}
-            // Very important, context menus do not work with the default container :(
-            portalContainer={document.getElementById("root")!}
-        >
-            <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+            <BlueprintProvider
+                portalClassName={themeClass}
+                // Very important, context menus do not work with the default container :(
+                portalContainer={document.getElementById("root")!}
+            >
                 <div className={themeClass + " app-background"}>
                     <AppNavbar />
                     <div
                         className={
-                            getBackgroundClass(search.theme) + " app-content"
+                            getBackgroundClass(colorTheme) + " app-content"
                         }
                     >
                         <Outlet />
@@ -54,7 +60,7 @@ export function App() {
                         <TanStackRouterDevtools />
                     </div>
                 </div>
-            </QueryClientProvider>
-        </BlueprintProvider>
+            </BlueprintProvider>
+        </QueryClientProvider>
     );
 }

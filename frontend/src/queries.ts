@@ -7,14 +7,16 @@ import {
     Favorite,
     Favorites,
     ElementObj,
-    DocumentOrder
+    DocumentOrder,
+    Settings
 } from "./api/backend-types";
 import { toUserApiPath, UserPath } from "./api/path";
+import { useLoaderData } from "@tanstack/react-router";
 
 export function getDocumentsQuery() {
     return queryOptions({
         queryKey: ["documents"],
-        queryFn: () =>
+        queryFn: async () =>
             apiGet("/documents").then((result) =>
                 Object.fromEntries(
                     result.documents.map((document: DocumentObj) => [
@@ -33,7 +35,7 @@ export function useDocumentsQuery() {
 export function getDocumentOrderQuery() {
     return queryOptions({
         queryKey: ["document-order"],
-        queryFn: () =>
+        queryFn: async () =>
             apiGet("/document-order").then(
                 (result) => result.documentOrder
             ) as Promise<DocumentOrder>
@@ -47,7 +49,7 @@ export function useDocumentOrderQuery() {
 export function getElementsQuery() {
     return queryOptions({
         queryKey: ["elements"],
-        queryFn: () =>
+        queryFn: async () =>
             apiGet("/elements").then((result) =>
                 Object.fromEntries(
                     result.elements.map((element: ElementObj) => [
@@ -66,7 +68,7 @@ export function useElementsQuery() {
 export function getFavoritesQuery(userPath: UserPath) {
     return queryOptions({
         queryKey: ["favorites"],
-        queryFn: () =>
+        queryFn: async () =>
             apiGet("/favorites" + toUserApiPath(userPath)).then((result) =>
                 Object.fromEntries(
                     result.favorites.map((favorite: Favorite) => [
@@ -82,4 +84,15 @@ export function getFavoritesQuery(userPath: UserPath) {
 
 export function useFavoritesQuery(userPath: UserPath) {
     return useQuery(getFavoritesQuery(userPath));
+}
+
+export function getSettingsQuery(userPath: UserPath) {
+    return queryOptions<Settings>({
+        queryKey: ["settings"],
+        queryFn: async () => apiGet("/settings" + toUserApiPath(userPath))
+    });
+}
+
+export function useSettings(): Settings {
+    return useLoaderData({ from: "/app" });
 }

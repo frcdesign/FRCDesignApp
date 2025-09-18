@@ -11,7 +11,7 @@ import {
     NavbarDivider,
     NavbarGroup
 } from "@blueprintjs/core";
-import { ReactNode, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
@@ -22,8 +22,6 @@ import { VendorFilters } from "./vendor-filters";
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
-    const navigate = useNavigate();
-
     const [showFilters, setShowFilters] = useState(false);
 
     const frcDesignIcon = (
@@ -37,30 +35,6 @@ export function AppNavbar(): ReactNode {
         </a>
     );
 
-    const searchGroup = (
-        <ControlGroup>
-            <Button
-                icon="filter"
-                variant={ButtonVariant.MINIMAL}
-                onClick={() => setShowFilters(!showFilters)}
-                active={showFilters}
-                intent={showFilters ? Intent.PRIMARY : Intent.NONE}
-            />
-            <InputGroup
-                type="search"
-                leftIcon="search"
-                placeholder="Search library..."
-                onValueChange={(value) => {
-                    const query = value === "" ? undefined : value;
-                    navigate({
-                        to: ".",
-                        search: { query }
-                    });
-                }}
-            />
-        </ControlGroup>
-    );
-
     return (
         <Navbar className="app-navbar">
             {/* Add div to make display: flex work */}
@@ -68,7 +42,16 @@ export function AppNavbar(): ReactNode {
                 <NavbarGroup>
                     {frcDesignIcon}
                     <NavbarDivider />
-                    {searchGroup}
+                    <ControlGroup>
+                        <Button
+                            icon="filter"
+                            variant={ButtonVariant.MINIMAL}
+                            onClick={() => setShowFilters(!showFilters)}
+                            active={showFilters}
+                            intent={showFilters ? Intent.PRIMARY : Intent.NONE}
+                        />
+                        <SearchBar />
+                    </ControlGroup>
                 </NavbarGroup>
                 <NavbarGroup align={Alignment.END}>
                     <SettingsButton />
@@ -98,6 +81,35 @@ export function SettingsButton() {
                     })
                 })
             }
+        />
+    );
+}
+
+export function SearchBar() {
+    const navigate = useNavigate();
+    const ref = useRef<HTMLInputElement>(null);
+
+    return (
+        <InputGroup
+            type="search"
+            leftIcon="search"
+            placeholder="Search library..."
+            inputRef={ref}
+            onFocus={() => {
+                const input = ref.current;
+                if (!input) {
+                    return;
+                }
+                const length = input.value.length;
+                input.setSelectionRange(0, length);
+            }}
+            onValueChange={(value) => {
+                const query = value === "" ? undefined : value;
+                navigate({
+                    to: ".",
+                    search: { query }
+                });
+            }}
         />
     );
 }

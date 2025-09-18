@@ -114,8 +114,6 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         </>
     );
 
-    console.log(configuration);
-
     return (
         <Dialog
             isOpen
@@ -352,6 +350,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             onValueChange(undefined);
             return;
         }
+        // Logic to set value to the first visible option or default when a parameter is shown
         if (!getOption(visibleOptions, value)) {
             if (getOption(visibleOptions, parameter.default)) {
                 onValueChange(parameter.default);
@@ -365,6 +364,15 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         return null;
     }
 
+    // Same logic as the useEffect
+    let currentOption = getOption(visibleOptions, value);
+    if (!currentOption) {
+        currentOption = getOption(visibleOptions, parameter.default);
+        if (!currentOption) {
+            currentOption = visibleOptions[0];
+        }
+    }
+
     return (
         <FormGroup
             label={parameter.name}
@@ -374,7 +382,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         >
             <Select<EnumOption>
                 items={visibleOptions}
-                activeItem={getOption(visibleOptions, value) ?? null}
+                activeItem={currentOption}
                 onItemSelect={(option) => {
                     onValueChange(option.id);
                 }}
@@ -409,7 +417,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                     id={parameter.id}
                     alignText="start"
                     endIcon="caret-down"
-                    text={getOption(parameter.options, value)?.name}
+                    text={currentOption.name}
                     fill
                 />
             </Select>
@@ -475,7 +483,7 @@ function QuantityParameter(
 
     const mustBeInteger = parameter.quantityType === QuantityType.INTEGER;
 
-    const isEmpty = value.trim() == "";
+    const isEmpty = value?.trim() == "";
 
     let helperText = undefined;
     if (isEmpty) {

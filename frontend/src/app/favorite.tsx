@@ -43,7 +43,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 
     const mutation = useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorites", isFavorite],
-        mutationFn: (args) => {
+        mutationFn: async (args) => {
             const query = { elementId: args.elementId };
             if (args.operation === Operation.ADD) {
                 return apiPost("/favorites" + toUserApiPath(search), {

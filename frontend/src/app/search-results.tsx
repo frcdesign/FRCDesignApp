@@ -29,7 +29,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     const searchResultSelectedMutation = useMutation({
         mutationKey: ["search-result-selected"],
-        mutationFn: () => apiPost("/search-result-selected")
+        mutationFn: async () => apiPost("/search-result-selected")
     });
 
     useEffect(() => {

@@ -46,7 +46,7 @@ function AddDocumentMenuDialog(
 
     const mutation = useMutation({
         mutationKey: ["add-document"],
-        mutationFn: () => {
+        mutationFn: async () => {
             const newDocumentId = parseUrl(url)?.documentId;
             if (!newDocumentId) {
                 throw new HandledError("Failed to parse document id.");

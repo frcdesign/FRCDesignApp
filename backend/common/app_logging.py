@@ -25,6 +25,7 @@ FLASK_LOGGER.propagate = False
 
 CLOUD_LOGGER = logging.getLogger("cloud")
 CLOUD_LOGGER.setLevel(logging.INFO)
+CLOUD_LOGGER.propagate = False
 
 
 class CloudLoggingDevFormatter(logging.Formatter):
@@ -74,9 +75,17 @@ class LogType(StrEnum):
     SEARCH = "Search"
 
 
+def make_log_extra(log_data: dict | None = None) -> dict:
+    if log_data == None:
+        log_data = {}
+    # Hardcode source field so we can route app logs to the appropriate bucket
+    log_data["source"] = "frc-design-app-data"
+    return {"json_fields": log_data}
+
+
 def log_app_opened(user_id: str):
     log_data = {"userId": user_id}
-    CLOUD_LOGGER.info(LogType.APP_OPENED, extra={"json_fields": log_data})
+    CLOUD_LOGGER.info(LogType.APP_OPENED, extra=make_log_extra(log_data))
 
 
 def build_config_array(
@@ -140,8 +149,8 @@ def log_part_inserted(
         log_data["configuration"] = build_config_array(
             configuration, configuration_parameters
         )
-    CLOUD_LOGGER.info(LogType.PART_INSERTED, extra={"json_fields": log_data})
+    CLOUD_LOGGER.info(LogType.PART_INSERTED, extra=make_log_extra(log_data))
 
 
 def log_search():
-    CLOUD_LOGGER.info(LogType.SEARCH)
+    CLOUD_LOGGER.info(LogType.SEARCH, extra=make_log_extra())

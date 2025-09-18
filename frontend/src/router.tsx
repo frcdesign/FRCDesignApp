@@ -15,7 +15,8 @@ import {
     getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
-    getFavoritesQuery
+    getFavoritesQuery,
+    getSettingsQuery
 } from "./queries";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
@@ -52,10 +53,18 @@ const appRoute = createRoute({
     component: App,
     // Add SearchSchemaInput so search parameters become optional
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
+        search.systemTheme = search.theme;
+        delete search.theme;
         return search as unknown as SearchParams;
     },
     search: {
         middlewares: [retainSearchParams(true)]
+    },
+    loaderDeps: ({ search }) => ({
+        userId: search.userId
+    }),
+    loader: async ({ deps }) => {
+        return queryClient.ensureQueryData(getSettingsQuery(deps));
     }
 });
 
@@ -63,11 +72,11 @@ const baseAppRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "/",
     component: BaseApp,
-    loader: () => {
+    loader: async () => {
         return queryClient.ensureQueryData(
             queryOptions<AccessLevelResult>({
                 queryKey: ["access-level"],
-                queryFn: () => apiGet("/access-level")
+                queryFn: async () => apiGet("/access-level")
             })
         );
     }

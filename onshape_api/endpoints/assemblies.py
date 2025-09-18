@@ -65,8 +65,6 @@ def add_element_to_assembly(
     """
     Adds the contents of an element tab to an assembly.
 
-    Note this function uses the transformedinstances endpoint since the default insert endpoint has no return value.
-
     assembly_path: The path to the assembly to add to.
     element_path: The path to the element tab to insert into the assembly.
     """

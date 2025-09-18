@@ -10,12 +10,8 @@ import { invalidateSearchDb } from "../api/search";
 function useSetDocumentOrderMutation() {
     return useMutation({
         mutationKey: ["set-document-order"],
-        mutationFn: (documentOrder: DocumentOrder) => {
-            return apiPost("/document-order", {
-                body: {
-                    documentOrder
-                }
-            });
+        mutationFn: async (documentOrder: DocumentOrder) => {
+            return apiPost("/document-order", { body: { documentOrder } });
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["document-order"] });

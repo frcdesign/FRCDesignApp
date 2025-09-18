@@ -3,13 +3,11 @@ import flask
 
 from backend.common import connect
 from backend.common.database import (
-    ConfigurationParameter,
     ConfigurationParameters,
     ParameterType,
     EqualCondition,
     ListOptionVisibilityCondition,
     LogicalCondition,
-    LogicalOp,
     OptionConditionType,
     OptionVisibilityCondition,
     RangeCondition,

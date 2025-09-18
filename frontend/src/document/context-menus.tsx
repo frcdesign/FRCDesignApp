@@ -72,7 +72,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const deleteDocumentMutation = useMutation({
         mutationKey: ["delete-document"],
-        mutationFn: () => {
+        mutationFn: async () => {
             return apiDelete("/document", { documentId: document.id });
         },
         onSuccess: () => {
@@ -183,7 +183,7 @@ function OpenItem(props: OpenItemProps) {
 function useToggleDocumentSortMutation(document: DocumentObj) {
     return useMutation({
         mutationKey: ["set-document-sort"],
-        mutationFn: () => {
+        mutationFn: async () => {
             return apiPost("/set-document-sort", {
                 body: {
                     documentId: document.id,
@@ -226,7 +226,7 @@ function useSetVisibilityMutation(
 ) {
     return useMutation({
         mutationKey: [mutationKey],
-        mutationFn: () => {
+        mutationFn: async () => {
             return apiPost("/set-visibility", {
                 body: {
                     elementIds,

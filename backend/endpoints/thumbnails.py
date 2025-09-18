@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import flask
 
 from backend.common import connect
@@ -34,6 +35,9 @@ def get_thumbnail_id(**kwargs):
     element_path = get_route_element_path()
 
     configuration = get_optional_query_param("configuration")
-    return {
-        "thumbnailId": thumbnails.get_thumbnail_id(api, element_path, configuration)
-    }
+    try:
+        return {
+            "thumbnailId": thumbnails.get_thumbnail_id(api, element_path, configuration)
+        }
+    except:
+        return flask.Response({"success": False}, status=HTTPStatus.REQUEST_TIMEOUT)

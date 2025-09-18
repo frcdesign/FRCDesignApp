@@ -3,6 +3,16 @@
  */
 import { ElementPath, InstancePath } from "./path";
 
+export enum Theme {
+    SYSTEM = "system",
+    LIGHT = "light",
+    DARK = "dark"
+}
+
+export interface Settings {
+    theme: Theme;
+}
+
 export enum AccessLevel {
     ADMIN = "admin",
     MEMBER = "member",
@@ -151,6 +161,10 @@ interface RangeVisibilityCondition {
     end: string;
 }
 
+/**
+ * Evaluates a visibility condition.
+ * Returns true if the controlled part should be shown, and false otherwise.
+ */
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
     configuration: Record<string, string>,

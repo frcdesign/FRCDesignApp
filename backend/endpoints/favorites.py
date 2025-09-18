@@ -1,7 +1,13 @@
 """User settings saved in Onshape directly."""
 
-import flask
+from __future__ import annotations
 
+from enum import StrEnum
+import flask
+from pydantic import BaseModel
+
+from backend.common import connect
+from backend.common.app_logging import APP_LOGGER
 from backend.common.connect import (
     get_api,
     get_db,
@@ -20,28 +26,66 @@ from onshape_api.endpoints.settings import (
 router = flask.Blueprint("favorites", __name__)
 
 
+class Theme(StrEnum):
+    SYSTEM = "system"
+    LIGHT = "light"
+    DARK = "dark"
+
+
+class Settings(BaseModel):
+    theme: Theme = Theme.SYSTEM
+
+
+@router.get("/settings" + user_path_route())
+def get_settings(**kwargs):
+    db = get_db()
+    api = get_api(db)
+    user_path = get_route_user_path()
+
+    settings = Settings.model_validate(get_setting(api, user_path, "settings"))
+    return settings.model_dump()
+
+
+@router.post("/settings" + user_path_route())
+def update_settings(**kwargs):
+    db = get_db()
+    api = get_api(db)
+
+    user_path = get_route_user_path()
+    theme = connect.get_body_arg("theme")
+    update: Update = {
+        "key": "settings",
+        "field": "theme",
+        "value": theme,
+        "operation": Operation.ADD,
+    }
+    update_setting(api, user_path, update)
+
+    return {"success": True}
+
+
 @router.get("/favorites" + user_path_route())
 def get_favorites(**kwargs):
     """Returns a list of all of the current user's favorites."""
     db = get_db()
     api = get_api(db)
-    client_path = get_route_user_path()
+    user_path = get_route_user_path()
 
-    favorites_result = get_setting(api, client_path, "favorites")
+    favorites_result = get_setting(api, user_path, "favorites")
+
     if favorites_result == None:
         favorites = []
-
     else:
         # Convert from dict mapping ids to {} to array
         # This is a bit goofy since we immediately convert back in the frontend, but it's uniform with /documents and /elements
-        favorites = [{"id": id} for id in favorites_result["value"].keys()]
+        favorites = [{"id": id} for id in favorites_result.keys()]
 
     return {"favorites": favorites}
 
 
 @router.post("/favorites" + user_path_route())
 def add_favorite(**kwargs):
-    client_path = get_route_user_path()
+    user_path = get_route_user_path()
     db = get_db()
     api = get_api(db)
     element_id = get_query_param("elementId")
@@ -52,7 +96,8 @@ def add_favorite(**kwargs):
         "value": {},
         "operation": Operation.ADD,
     }
-    update_setting(api, client_path, update)
+
+    update_setting(api, user_path, update)
     return {"success": True}
 
 
@@ -61,7 +106,7 @@ def remove_favorite(**kwargs):
     db = get_db()
     api = get_api(db)
 
-    client_path = get_route_user_path()
+    user_path = get_route_user_path()
     element_id = get_query_param("elementId")
 
     update: Update = {
@@ -69,5 +114,5 @@ def remove_favorite(**kwargs):
         "field": element_id,
         "operation": Operation.REMOVE,
     }
-    update_setting(api, client_path, update)
+    update_setting(api, user_path, update)
     return {}

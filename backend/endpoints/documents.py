@@ -10,7 +10,7 @@ from typing import Iterator
 import flask
 from pydantic import BaseModel, ConfigDict
 
-from backend.common import connect, database, env
+from backend.common import connect, database
 from backend.common.app_access import require_access_level
 from backend.common.app_logging import log_search
 from backend.endpoints.backend_types import (
@@ -86,7 +86,7 @@ class Element(BaseModel):
     documentId: str
     instanceId: str
     microversionId: str
-    isVisible: bool
+    isVisible: bool = False
     configurationId: str | None = None
 
     model_config = ConfigDict(extra="forbid")

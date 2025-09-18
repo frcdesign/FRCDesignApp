@@ -1,4 +1,4 @@
-import { ElementType } from "./backend-types";
+import { ElementType, Theme } from "./backend-types";
 import { UserPath, ElementPath } from "./path";
 import { Classes } from "@blueprintjs/core";
 
@@ -7,20 +7,27 @@ import { Classes } from "@blueprintjs/core";
  */
 export interface OnshapeParams extends ElementPath, UserPath {
     elementType: ElementType;
-    theme: ColorTheme;
+    systemTheme: ColorTheme;
 }
 
-export enum ColorTheme {
-    LIGHT = "light",
-    DARK = "dark"
+export type ColorTheme = "light" | "dark";
+
+export function getColorTheme(
+    theme: Theme,
+    systemTheme: ColorTheme
+): ColorTheme {
+    if (theme === Theme.SYSTEM) {
+        return systemTheme;
+    }
+    return theme;
 }
 
-export function getThemeClass(theme: ColorTheme) {
-    return theme === ColorTheme.DARK ? Classes.DARK : "";
+export function getThemeClass(colorTheme: ColorTheme) {
+    return colorTheme === "dark" ? Classes.DARK : "";
 }
 
-export function getBackgroundClass(theme: ColorTheme) {
-    return theme === ColorTheme.DARK
+export function getBackgroundClass(colorTheme: ColorTheme) {
+    return colorTheme === "dark"
         ? "app-dark-background"
         : "app-light-background";
 }

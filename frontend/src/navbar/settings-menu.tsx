@@ -10,17 +10,27 @@ import {
     Intent,
     MenuItem
 } from "@blueprintjs/core";
-import { ReactNode, useMemo, useState } from "react";
+import { Dispatch, ReactNode, useMemo, useState } from "react";
 import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import { AccessLevel, hasMemberAccess } from "../api/backend-types";
+import {
+    AccessLevel,
+    hasMemberAccess,
+    Settings,
+    Theme
+} from "../api/backend-types";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { invalidateSearchDb } from "../api/search";
+import { toUserApiPath } from "../api/path";
+import { openUrlInNewTab } from "../common/url";
+import { FEEDBACK_FORM_URL } from "../api/errors";
+import { useSettings } from "../queries";
+import { router } from "../router";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -64,9 +74,111 @@ function SettingsMenuDialog(): ReactNode {
             title="Settings"
             onClose={closeDialog}
         >
-            <DialogBody>{adminSettings}</DialogBody>
+            <DialogBody>
+                <UserSettings />
+                {adminSettings}
+            </DialogBody>
             <DialogFooter minimal actions={closeButton} />
         </Dialog>
+    );
+}
+
+function UserSettings(): ReactNode {
+    const search = useSearch({ from: "/app" });
+    const settings = useSettings();
+
+    const settingsMutation = useMutation({
+        mutationKey: ["settings"],
+        mutationFn: async (newSettings: Settings) =>
+            apiPost("/settings" + toUserApiPath(search), {
+                body: newSettings
+            }),
+        onMutate: (newSettings) => {
+            queryClient.setQueryData(["settings"], newSettings);
+            router.invalidate();
+        },
+        onError: () => {
+            showErrorToast("Unexpectedly failed to update settings.");
+            queryClient.refetchQueries({ queryKey: ["settings"] });
+            router.invalidate();
+        }
+    });
+
+    return (
+        <>
+            <FormGroup label="Submit feedback" className="full-width" inline>
+                <Button
+                    text="Open Form"
+                    intent="primary"
+                    endIcon="share"
+                    onClick={() => openUrlInNewTab(FEEDBACK_FORM_URL)}
+                />
+            </FormGroup>
+            <ThemeSelect
+                theme={settings.theme}
+                onThemeSelect={(theme) => settingsMutation.mutate({ theme })}
+            />
+        </>
+    );
+}
+
+interface ThemeSelectProps {
+    theme: Theme;
+    onThemeSelect: Dispatch<Theme>;
+}
+
+function ThemeSelect(props: ThemeSelectProps) {
+    const { theme, onThemeSelect } = props;
+
+    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
+    const themes = useMemo(() => {
+        return [Theme.SYSTEM, Theme.DARK, Theme.LIGHT];
+    }, []);
+
+    const [activeTheme, setActiveTheme] = useState<Theme | null>(theme);
+
+    const renderTheme: ItemRenderer<Theme> = (
+        currentTheme,
+        { handleClick, handleFocus, modifiers, ref }
+    ) => {
+        const selected = theme === currentTheme;
+        return (
+            <MenuItem
+                key={currentTheme}
+                ref={ref}
+                onClick={handleClick}
+                onFocus={handleFocus}
+                active={modifiers.active}
+                text={capitalize(currentTheme)}
+                roleStructure="listoption"
+                selected={selected}
+                intent={selected ? Intent.PRIMARY : Intent.NONE}
+            />
+        );
+    };
+
+    const select = (
+        <Select<Theme>
+            items={themes}
+            activeItem={activeTheme}
+            onActiveItemChange={setActiveTheme}
+            filterable={false}
+            popoverProps={{ minimal: true }}
+            itemRenderer={renderTheme}
+            onItemSelect={onThemeSelect}
+        >
+            <Button
+                alignText="start"
+                endIcon="caret-down"
+                text={capitalize(theme)}
+            />
+        </Select>
+    );
+
+    return (
+        <FormGroup label="Theme" className="full-width" inline>
+            {select}
+        </FormGroup>
     );
 }
 
@@ -146,7 +258,7 @@ function AccessLevelSelect(): ReactNode {
     );
 
     return (
-        <FormGroup label="Access Level" className="full-width" inline>
+        <FormGroup label="Access level" className="full-width" inline>
             {select}
         </FormGroup>
     );
@@ -165,7 +277,7 @@ export function ReloadDocumentsButton(
 
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
-        mutationFn: () => {
+        mutationFn: async () => {
             return apiPost("/reload-documents", {
                 // Set a timeout of 5 minutes
                 query: { reloadAll }

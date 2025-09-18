@@ -66,10 +66,14 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     const apiPath = toElementApiPath(path);
     const imageQuery = useQuery({
         queryKey: ["document-thumbnail", apiPath, size],
-        queryFn: () =>
-            apiGetImage("/thumbnail" + apiPath, {
-                size
-            })
+        queryFn: async ({ signal }) =>
+            apiGetImage(
+                "/thumbnail" + apiPath,
+                {
+                    size
+                },
+                signal
+            )
     });
 
     const heightAndWidth = getHeightAndWidth(size);
@@ -110,31 +114,44 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             toElementApiPath(elementPath),
             configuration
         ],
-        queryFn: () => {
-            return apiGet("/thumbnail-id" + toElementApiPath(elementPath), {
-                configuration: encodeConfigurationForQuery(configuration)
-            }).then((value) => value.thumbnailId);
-        }
+        queryFn: async ({ signal }) => {
+            return apiGet(
+                "/thumbnail-id" + toElementApiPath(elementPath),
+                {
+                    configuration: encodeConfigurationForQuery(configuration)
+                },
+                signal
+            ).then((value) => value.thumbnailId);
+        },
+        // Don't retry since failures are almost certainly due to an invalid configuration
+        retry: 0
     });
 
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", toElementApiPath(elementPath), configuration],
-        queryFn: () => {
+        queryKey: [
+            "thumbnail",
+            toElementApiPath(elementPath),
+            thumbnailIdQuery
+        ],
+        queryFn: async ({ signal }) => {
             const query: Record<string, string> = {
                 size,
                 thumbnailId: thumbnailIdQuery.data
             };
             return apiGetImage(
                 "/thumbnail" + toElementApiPath(elementPath),
-                query
+                query,
+                signal
             );
         },
-        retry: 10,
+        placeholderData: (previousData) => previousData,
+        // Cap max time between retries at 15 seconds with exponential backoff
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         enabled: thumbnailIdQuery.data !== undefined
     });
 
     const heightAndWidth = getHeightAndWidth(size);
-    if (thumbnailQuery.isPending) {
+    if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <div className="center" style={heightAndWidth}>
                 <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
@@ -142,9 +159,12 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
+    const showSmallSpinner =
+        thumbnailIdQuery.isRefetching || thumbnailQuery.isRefetching;
+
     return (
         <div style={{ position: "relative", ...heightAndWidth }}>
-            {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
+            {showSmallSpinner && (
                 <Spinner
                     size={SpinnerSize.SMALL}
                     intent={Intent.PRIMARY}

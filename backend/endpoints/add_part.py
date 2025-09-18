@@ -119,6 +119,10 @@ def config_type_to_part_studio_parameter_type(
     return type_mapping[parameter_type]
 
 
+def escape_feature_name(name: str) -> str:
+    return name.replace("#", "##")
+
+
 class DerivedFeature:
     def __init__(
         self,
@@ -128,7 +132,7 @@ class DerivedFeature:
         configuration: dict | None = None,
         parameters: ConfigurationParameters | None = None,
     ):
-        self.name = name
+        self.name = escape_feature_name(name)
         self.namespace = path_to_namespace(part_studio_to_add, microversion_id)
 
         if configuration != None and parameters != None:
@@ -142,7 +146,7 @@ class DerivedFeature:
         part_configuration = []
         for parameter in parameters.parameters:
             config_type: ParameterType = parameter.type
-            str_value = configuration[parameter.id]
+            str_value = configuration.get(parameter.id, parameter.default)
             result = {
                 "btType": str(config_type_to_part_studio_parameter_type(config_type)),
                 "parameterId": parameter.id,
