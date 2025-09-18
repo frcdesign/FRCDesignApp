@@ -172,7 +172,8 @@ class DerivedFeature:
                 "queries": [
                     {
                         "btType": "BTMIndividualQuery-138",
-                        "queryString": "query=qUnion(qAllModifiableSolidBodies(), qAllModifiableSolidBodies()->qOwnedByBody(EntityType.BODY)->qBodyType(BodyType.MATE_CONNECTOR));",
+                        # Include all solid parts, mate connectors owned by parts (to allow deriving while excluding implicit mate connectors), and composite parts
+                        "queryString": "query=qUnion(qAllModifiableSolidBodies(), qAllModifiableSolidBodies()->qOwnedByBody(EntityType.BODY)->qBodyType(BodyType.MATE_CONNECTOR), qAllModifiableSolidBodies()->qCompositePartsContaining());",
                     }
                 ],
                 "parameterId": "partQuery",

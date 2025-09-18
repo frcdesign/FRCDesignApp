@@ -7,7 +7,6 @@ import flask
 from pydantic import BaseModel
 
 from backend.common import connect
-from backend.common.app_logging import APP_LOGGER
 from backend.common.connect import (
     get_api,
     get_db,

@@ -11,7 +11,7 @@ def get_setting(api: OAuthApi, user_path: UserPath, key: str) -> dict | None:
     result = get_settings(api, user_path, keys=[key])
     if len(result) == 0:
         return None
-    return result[0]["value"]
+    return result[0].get("value", None)
 
 
 def get_settings(

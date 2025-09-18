@@ -34,7 +34,7 @@ import {
     NumericInput,
     Spinner
 } from "@blueprintjs/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
@@ -534,6 +534,11 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
 
     const toastId = "insert" + element.id;
 
+    const isLoadingConfiguration =
+        useIsFetching({
+            queryKey: ["configuration", element.configurationId]
+        }) > 0;
+
     const insertMutation = useMutation({
         mutationKey: ["insert", element.id],
         mutationFn: async () => {
@@ -572,10 +577,14 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
 
     return (
         <Button
-            text="Insert"
+            text={
+                search.elementType === ElementType.ASSEMBLY
+                    ? "Insert"
+                    : "Derive"
+            }
             icon="plus"
             intent={Intent.SUCCESS}
-            loading={insertMutation.isPending}
+            loading={isLoadingConfiguration || insertMutation.isPending}
             onClick={() => insertMutation.mutate()}
         />
     );
