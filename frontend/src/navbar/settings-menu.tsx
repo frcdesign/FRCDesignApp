@@ -27,10 +27,10 @@ import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { invalidateSearchDb } from "../api/search";
 import { toUserApiPath } from "../api/path";
-import { openUrlInNewTab } from "../common/url";
 import { FEEDBACK_FORM_URL } from "../api/errors";
 import { useSettings } from "../queries";
 import { router } from "../router";
+import { OpenUrlButton } from "../common/open-url-button";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -107,12 +107,7 @@ function UserSettings(): ReactNode {
     return (
         <>
             <FormGroup label="Submit feedback" className="full-width" inline>
-                <Button
-                    text="Open Form"
-                    intent="primary"
-                    endIcon="share"
-                    onClick={() => openUrlInNewTab(FEEDBACK_FORM_URL)}
-                />
+                <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </FormGroup>
             <ThemeSelect
                 theme={settings.theme}

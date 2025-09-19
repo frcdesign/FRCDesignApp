@@ -6,14 +6,15 @@ import {
     ContextMenu
 } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
-import { useSearch, useNavigate, useMatch } from "@tanstack/react-router";
+import { useNavigate, useMatch } from "@tanstack/react-router";
 import { apiPost, apiDelete } from "../api/api";
-import { DocumentObj, ElementObj, hasMemberAccess } from "../api/backend-types";
+import { DocumentObj, ElementObj } from "../api/backend-types";
 import { AppMenu } from "../api/menu-params";
 import { queryClient } from "../query-client";
 import { ChangeDocumentOrderItems } from "./change-document-order";
 import { makeUrl, openUrlInNewTab } from "../common/url";
 import { invalidateSearchDb } from "../api/search";
+import { RequireAccessLevel } from "../api/access-level";
 
 interface ElementContextMenuProps {
     element: ElementObj;
@@ -22,8 +23,6 @@ interface ElementContextMenuProps {
 
 export function ElementContextMenu(props: ElementContextMenuProps) {
     const { children, element } = props;
-
-    const search = useSearch({ from: "/app" });
 
     const mutation = useSetVisibilityMutation(
         "set-visibility",
@@ -34,26 +33,21 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
     const menu = (
         <Menu>
             <OpenItem url={makeUrl(element)} />
-            <MenuDivider />
-            <MenuItem
-                onClick={() => {
-                    mutation.mutate();
-                }}
-                intent={element.isVisible ? "danger" : "primary"}
-                icon={element.isVisible ? "eye-off" : "eye-open"}
-                text={element.isVisible ? "Hide element" : "Show element"}
-            />
+            <RequireAccessLevel>
+                <MenuDivider />
+                <MenuItem
+                    onClick={() => {
+                        mutation.mutate();
+                    }}
+                    intent={element.isVisible ? "danger" : "primary"}
+                    icon={element.isVisible ? "eye-off" : "eye-open"}
+                    text={element.isVisible ? "Hide element" : "Show element"}
+                />
+            </RequireAccessLevel>
         </Menu>
     );
 
-    return (
-        <ContextMenu
-            content={menu}
-            disabled={!hasMemberAccess(search.accessLevel)}
-        >
-            {children}
-        </ContextMenu>
-    );
+    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 interface DocumentContextMenuProps {
@@ -64,7 +58,6 @@ interface DocumentContextMenuProps {
 export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const { children, document } = props;
 
-    const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
 
     const isHome =
@@ -134,35 +127,30 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const menu = (
         <Menu>
             <OpenItem url={makeUrl(document)} />
-            <MenuDivider />
-            {orderItems}
-            <MenuItem
-                icon="eye-open"
-                text="Show all elements"
-                onClick={() => {
-                    showAllMutation.mutate();
-                }}
-            />
-            <MenuItem
-                icon="eye-off"
-                text="Hide all elements"
-                onClick={() => {
-                    hideAllMutation.mutate();
-                }}
-            />
-            <ToggleDocumentSortItem document={document} />
-            {modifyDocumentItems}
+            <RequireAccessLevel>
+                <MenuDivider />
+                {orderItems}
+                <MenuItem
+                    icon="eye-open"
+                    text="Show all elements"
+                    onClick={() => {
+                        showAllMutation.mutate();
+                    }}
+                />
+                <MenuItem
+                    icon="eye-off"
+                    text="Hide all elements"
+                    onClick={() => {
+                        hideAllMutation.mutate();
+                    }}
+                />
+                <ToggleDocumentSortItem document={document} />
+                {modifyDocumentItems}
+            </RequireAccessLevel>
         </Menu>
     );
 
-    return (
-        <ContextMenu
-            content={menu}
-            disabled={!hasMemberAccess(search.accessLevel)}
-        >
-            {children}
-        </ContextMenu>
-    );
+    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 interface OpenItemProps {

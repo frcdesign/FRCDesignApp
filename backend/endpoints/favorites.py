@@ -41,7 +41,8 @@ def get_settings(**kwargs):
     api = get_api(db)
     user_path = get_route_user_path()
 
-    settings = Settings.model_validate(get_setting(api, user_path, "settings"))
+    settings_dict = get_setting(api, user_path, "settings")
+    settings = Settings.model_validate(settings_dict if settings_dict != None else {})
     return settings.model_dump()
 
 

@@ -39,8 +39,6 @@ import { apiGet, apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/utils";
-import { OpenUrlButton } from "../common/open-url-button";
-import { makeUrl } from "../common/url";
 import { useElementsQuery, useFavoritesQuery } from "../queries";
 import {
     AppMenu,
@@ -104,14 +102,11 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     );
 
     const actions = (
-        <>
-            <OpenUrlButton url={makeUrl(element, configuration)} text="Open" />
-            <InsertButton
-                element={element}
-                configuration={configuration}
-                isFavorite={isFavorite}
-            />
-        </>
+        <InsertButton
+            element={element}
+            configuration={configuration}
+            isFavorite={isFavorite}
+        />
     );
 
     return (
