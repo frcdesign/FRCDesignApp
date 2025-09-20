@@ -200,7 +200,7 @@ function FavoritesList() {
         elementIds: Object.keys(favorites),
         vendors: search.vendors,
         // Only show visible elements
-        isVisible: !hasMemberAccess(search.accessLevel)
+        isVisible: !hasMemberAccess(search.currentAccessLevel)
     });
 
     if (orderedFavorites.length == 0) {

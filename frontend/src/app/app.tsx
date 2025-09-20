@@ -20,17 +20,10 @@ import { AddDocumentMenu } from "../document/add-document-menu";
 import { useSettings } from "../queries";
 
 export function BaseApp() {
-    const result = useLoaderData({ from: "/app/" });
+    const contextData = useLoaderData({ from: "/app/" });
 
-    return (
-        <Navigate
-            to="/app/documents"
-            search={() => ({
-                maxAccessLevel: result.maxAccessLevel,
-                accessLevel: result.currentAccessLevel
-            })}
-        />
-    );
+    // Add contextData to search params
+    return <Navigate to="/app/documents" search={() => contextData} />;
 }
 
 export function App() {

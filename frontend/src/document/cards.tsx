@@ -96,7 +96,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     if (
         !data ||
         !favorites ||
-        (search.accessLevel === AccessLevel.USER && !element.isVisible)
+        (search.currentAccessLevel === AccessLevel.USER && !element.isVisible)
     ) {
         return null;
     }
@@ -119,7 +119,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     }
 
     let hiddenTag = null;
-    if (hasMemberAccess(search.accessLevel) && !element.isVisible) {
+    if (hasMemberAccess(search.currentAccessLevel) && !element.isVisible) {
         hiddenTag = (
             <Tag round intent="warning" icon="eye-off" title="Hidden" />
         );

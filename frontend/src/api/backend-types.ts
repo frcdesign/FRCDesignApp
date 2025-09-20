@@ -104,6 +104,29 @@ export enum Unit {
     UNITLESS = ""
 }
 
+export function getDisplayStr(unit: Unit): string {
+    switch (unit) {
+        case Unit.METER:
+            return "m";
+        case Unit.CENTIMETER:
+            return "cm";
+        case Unit.MILLIMETER:
+            return "mm";
+        case Unit.YARD:
+            return "yd";
+        case Unit.FOOT:
+            return "ft";
+        case Unit.INCH:
+            return "in";
+        case Unit.DEGREE:
+            return "deg";
+        case Unit.RADIAN:
+            return "rad";
+        case Unit.UNITLESS:
+            return "";
+    }
+}
+
 export enum OptionVisibilityConditionType {
     LIST = "BTEnumOptionVisibilityForList-1613",
     RANGE = "BTEnumOptionVisibilityForRange-4297"
@@ -305,10 +328,6 @@ export interface Favorite {
     id: string;
 }
 
-export interface AccessLevelResult {
-    maxAccessLevel: AccessLevel;
-    currentAccessLevel: AccessLevel;
-}
 
 export enum ThumbnailSize {
     STANDARD = "300x300",

@@ -31,6 +31,7 @@ import { FEEDBACK_FORM_URL } from "../api/errors";
 import { useSettings } from "../queries";
 import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
+import { RequireAccessLevel } from "../api/access-level";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -178,16 +179,14 @@ function ThemeSelect(props: ThemeSelectProps) {
 }
 
 function AdminSettings(): ReactNode {
-    const search = useSearch({ from: "/app" });
     return (
         <>
+            {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
-            {hasMemberAccess(search.accessLevel) ? (
-                <>
-                    <ReloadDocumentsButton />
-                    <ReloadDocumentsButton reloadAll />
-                </>
-            ) : null}
+            <RequireAccessLevel>
+                <ReloadDocumentsButton />
+                <ReloadDocumentsButton reloadAll />
+            </RequireAccessLevel>
         </>
     );
 }
@@ -205,14 +204,14 @@ function AccessLevelSelect(): ReactNode {
     }, [maxAccessLevel]);
 
     const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(
-        search.accessLevel
+        search.currentAccessLevel
     );
 
     const button = (
         <Button
             alignText="start"
             endIcon="caret-down"
-            text={capitalize(search.accessLevel)}
+            text={capitalize(search.currentAccessLevel)}
         />
     );
 
@@ -220,7 +219,7 @@ function AccessLevelSelect(): ReactNode {
         accessLevel,
         { handleClick, handleFocus, modifiers, ref }
     ) => {
-        const selected = search.accessLevel === accessLevel;
+        const selected = search.currentAccessLevel === accessLevel;
         return (
             <MenuItem
                 key={accessLevel}

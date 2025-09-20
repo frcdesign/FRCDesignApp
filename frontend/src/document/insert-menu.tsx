@@ -1,5 +1,12 @@
 import { useSearch } from "@tanstack/react-router";
-import { Dispatch, ReactNode, useEffect, useState } from "react";
+import {
+    Dispatch,
+    ReactNode,
+    useCallback,
+    useEffect,
+    useRef,
+    useState
+} from "react";
 import {
     BooleanParameterObj,
     ConfigurationResult,
@@ -12,9 +19,10 @@ import {
     QuantityParameterObj,
     StringParameterObj,
     Configuration,
-    QuantityType,
     OptionVisibilityConditionType,
-    EnumOption
+    EnumOption,
+    Unit,
+    QuantityType
 } from "../api/backend-types";
 import {
     Alignment,
@@ -39,7 +47,7 @@ import { apiGet, apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/utils";
-import { useElementsQuery, useFavoritesQuery } from "../queries";
+import { ContextData, useElementsQuery, useFavoritesQuery } from "../queries";
 import {
     AppMenu,
     InsertMenuParams,
@@ -53,6 +61,7 @@ import {
     showLoadingToast,
     showSuccessToast
 } from "../common/toaster";
+import { cleanDefault, evaluateExpression, EvaluateOptions } from "./parser";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -94,11 +103,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     }
 
     const previewThumbnail = (
-        <PreviewImage
-            isDialogPreview
-            elementPath={element}
-            configuration={configuration}
-        />
+        <PreviewImage elementPath={element} configuration={configuration} />
     );
 
     const actions = (
@@ -459,36 +464,88 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     );
 }
 
-function isNumeric(str: string): boolean {
-    return !isNaN(Number(str));
-}
+// function selectAllInputText(ref: RefObject<HTMLInputElement>) {
+//     const input = ref.current;
+//     if (!input) {
+//         return;
+//     }
+//     const length = input.value.length;
+//     input.setSelectionRange(0, length);
+// }
 
-function isInteger(str: string): boolean {
-    return Number.isInteger(Number(str));
+function getEvaluateOptions(
+    quantityType: QuantityType,
+    contextData: ContextData
+): EvaluateOptions {
+    if (quantityType === QuantityType.LENGTH) {
+        return {
+            quantityType,
+            displayPrecision: contextData.lengthPrecision,
+            displayUnit: contextData.defaultLengthUnit
+        };
+    } else if (quantityType === QuantityType.ANGLE) {
+        return {
+            quantityType,
+            displayPrecision: contextData.anglePrecision,
+            displayUnit: contextData.defaultAngleUnit
+        };
+    } else if (quantityType == QuantityType.REAL) {
+        return {
+            quantityType,
+            displayPrecision: contextData.realPrecision,
+            displayUnit: Unit.UNITLESS
+        };
+    }
+    return {
+        quantityType: QuantityType.INTEGER,
+        displayPrecision: 0,
+        displayUnit: Unit.UNITLESS
+    };
 }
 
 function QuantityParameter(
     props: ParameterProps<QuantityParameterObj>
 ): ReactNode {
-    const { parameter, value, onValueChange } = props;
+    // This parameter doesn't actually use value since it manages it's state internally
+    const { parameter, onValueChange } = props;
 
-    const requiresUnits =
-        parameter.quantityType === QuantityType.LENGTH ||
-        parameter.quantityType === QuantityType.ANGLE;
+    const contextData = useSearch({ from: "/app" });
 
-    const mustBeInteger = parameter.quantityType === QuantityType.INTEGER;
+    const evaluateOptions = getEvaluateOptions(
+        parameter.quantityType,
+        contextData
+    );
 
-    const isEmpty = value?.trim() == "";
+    const ref = useRef<HTMLInputElement>(null);
+    const [focused, setFocused] = useState(false);
+    // The user's raw expression.
+    const [expression, setExpression] = useState(
+        cleanDefault(parameter.default, evaluateOptions).expression
+    );
+    // The pretty print value to display. Only shown when the input isn't focused.
+    const [display, setDisplay] = useState(
+        cleanDefault(parameter.default, evaluateOptions).displayExpression
+    );
+    const [errorMessage, setErrorMessage] = useState<string | undefined>(
+        undefined
+    );
 
-    let helperText = undefined;
-    if (isEmpty) {
-        helperText = "Enter a valid expression";
-    } else if (requiresUnits && isNumeric(value)) {
-        helperText = "Expression must include units";
-    } else if (mustBeInteger && !isInteger(value)) {
-        helperText = "Expression must be a whole number";
-    }
-    const intent = helperText !== undefined ? "danger" : undefined;
+    const handleSubmit = useCallback(() => {
+        setFocused(false);
+        const result = evaluateExpression(expression, evaluateOptions);
+        setExpression(result.expression);
+        if (result.hasError) {
+            setErrorMessage(result.errorMessage);
+            // Don't change the value so the thumbnail is still okay
+            setDisplay(result.expression);
+        } else {
+            setErrorMessage(undefined);
+            onValueChange(result.expression);
+            setDisplay(result.displayExpression);
+        }
+    }, [evaluateOptions, expression, onValueChange]);
+
+    const intent = errorMessage ? "danger" : undefined;
 
     return (
         <FormGroup
@@ -496,19 +553,30 @@ function QuantityParameter(
             inline
             labelFor={parameter.id}
             className="full-width"
-            helperText={helperText}
+            helperText={errorMessage}
             intent={intent}
         >
             <NumericInput
                 id={parameter.id}
-                value={value}
+                value={focused ? expression : display}
                 fill
                 intent={intent}
-                allowNumericCharactersOnly={
-                    parameter.quantityType == QuantityType.REAL ||
-                    parameter.quantityType == QuantityType.INTEGER
-                }
-                onValueChange={(_, value) => onValueChange(value)}
+                inputRef={ref}
+                selectAllOnFocus
+                onFocus={() => {
+                    setFocused(true);
+                }}
+                onBlur={handleSubmit}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        ref.current?.blur();
+                        handleSubmit();
+                    }
+                }}
+                allowNumericCharactersOnly={false}
+                onValueChange={(_, expression) => {
+                    setExpression(expression);
+                }}
                 buttonPosition="none"
             />
         </FormGroup>

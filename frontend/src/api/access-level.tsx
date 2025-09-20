@@ -14,7 +14,7 @@ interface RequireAccessLevelProps extends PropsWithChildren {
  * Simple component which renders children only if the given accessLevel requirement is met.
  */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
-    const accessLevel = useSearch({ from: "/app" }).accessLevel;
+    const accessLevel = useSearch({ from: "/app" }).currentAccessLevel;
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.MEMBER;
 
     if (

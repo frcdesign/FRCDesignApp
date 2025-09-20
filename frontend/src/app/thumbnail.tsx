@@ -97,7 +97,6 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 interface PreviewImageProps {
     elementPath: ElementPath;
     configuration?: Configuration;
-    isDialogPreview?: boolean;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
@@ -147,6 +146,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 15 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
+        retry: Infinity, // Allow indefinite retrying
         enabled: thumbnailIdQuery.data !== undefined
     });
 
@@ -160,7 +160,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     }
 
     const showSmallSpinner =
-        thumbnailIdQuery.isRefetching || thumbnailQuery.isRefetching;
+        thumbnailIdQuery.isFetching || thumbnailQuery.isFetching;
 
     return (
         <div style={{ position: "relative", ...heightAndWidth }}>

@@ -83,7 +83,7 @@ export function DocumentList(): ReactNode {
             elementIds: document.elementIds,
             vendors: search.vendors,
             // Only show visible elements to users
-            isVisible: !hasMemberAccess(search.accessLevel)
+            isVisible: !hasMemberAccess(search.currentAccessLevel)
         });
 
         if (documentSortOrder == SortOrder.DEFAULT) {

@@ -8,9 +8,16 @@ import {
     Favorites,
     ElementObj,
     DocumentOrder,
-    Settings
+    Settings,
+    AccessLevel,
+    Unit
 } from "./api/backend-types";
-import { toUserApiPath, UserPath } from "./api/path";
+import {
+    InstancePath,
+    toInstanceApiPath,
+    toUserApiPath,
+    UserPath
+} from "./api/path";
 import { useLoaderData } from "@tanstack/react-router";
 
 export function getDocumentsQuery() {
@@ -95,4 +102,22 @@ export function getSettingsQuery(userPath: UserPath) {
 
 export function useSettings(): Settings {
     return useLoaderData({ from: "/app" });
+}
+
+export interface ContextData {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
+    defaultAngleUnit: Unit;
+    defaultLengthUnit: Unit;
+    lengthPrecision: number;
+    anglePrecision: number;
+    realPrecision: number;
+}
+
+export function getContextDataQuery(instancePath: InstancePath) {
+    return queryOptions<ContextData>({
+        queryKey: ["context-data"],
+        queryFn: async () =>
+            apiGet("/context-data" + toInstanceApiPath(instancePath))
+    });
 }

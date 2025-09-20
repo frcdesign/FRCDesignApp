@@ -12,6 +12,8 @@ import {
 import { queryClient } from "./query-client";
 import { DocumentList } from "./document/document-list";
 import {
+    ContextData,
+    getContextDataQuery,
     getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
@@ -21,25 +23,15 @@ import {
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
-import { AccessLevel, AccessLevelResult, Vendor } from "./api/backend-types";
+import { Vendor } from "./api/backend-types";
 import { AppError } from "./app/app-error";
-import { queryOptions } from "@tanstack/react-query";
-import { apiGet } from "./api/api";
 
 interface BaseSearchParams {
-    /**
-     * The maximum access level the user can have.
-     */
-    maxAccessLevel: AccessLevel;
-    /**
-     * The access level the user is currently using.
-     */
-    accessLevel: AccessLevel;
     query?: string;
     vendors?: Vendor[];
 }
 
-type SearchParams = OnshapeParams & BaseSearchParams & MenuParams;
+type SearchParams = OnshapeParams & BaseSearchParams & MenuParams & ContextData;
 
 const rootRoute = createRootRoute();
 
@@ -64,6 +56,12 @@ const appRoute = createRoute({
         userId: search.userId
     }),
     loader: async ({ deps }) => {
+        queryClient.fetchQuery(getDocumentOrderQuery());
+        queryClient.fetchQuery(getDocumentsQuery());
+        queryClient.fetchQuery(getElementsQuery());
+        queryClient.fetchQuery(getFavoritesQuery(deps));
+
+        // Settings goes here since we need them in App and they need to be modifiable
         return queryClient.ensureQueryData(getSettingsQuery(deps));
     }
 });
@@ -72,33 +70,26 @@ const baseAppRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "/",
     component: BaseApp,
-    loader: async () => {
-        return queryClient.ensureQueryData(
-            queryOptions<AccessLevelResult>({
-                queryKey: ["access-level"],
-                queryFn: async () => apiGet("/access-level")
-            })
-        );
+    loaderDeps: ({ search }) => ({
+        documentId: search.documentId,
+        instanceId: search.instanceId,
+        instanceType: search.instanceType
+    }),
+    loader: async ({ deps }) => {
+        // Context data goes here since we only need them once
+        return queryClient.ensureQueryData(getContextDataQuery(deps));
     }
 });
 
 const homeRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "documents",
-    loaderDeps: ({ search }) => ({ userId: search.userId }),
-    loader: async ({ deps }) => {
-        const loadDocuments = getDocumentsQuery();
-        const loadDocumentOrder = getDocumentOrderQuery();
-        const loadElements = getElementsQuery();
-        const loadFavorites = getFavoritesQuery(deps);
+    // loaderDeps: ({ search }) => ({ userId: search.userId }),
+    // loader: async ({ deps }) => {
+    //     // Everything else goes here since we only need them in Documents
 
-        return [
-            queryClient.fetchQuery(loadDocuments),
-            queryClient.fetchQuery(loadDocumentOrder),
-            queryClient.fetchQuery(loadElements),
-            queryClient.fetchQuery(loadFavorites)
-        ];
-    },
+    //     return [];
+    // },
     errorComponent: AppError
 });
 
