@@ -1,5 +1,6 @@
 """Serves as an abstraction layer for connecting with the Onshape API and the current flask request."""
 
+from datetime import datetime, timedelta, timezone
 import enum
 import re
 from typing import Any
@@ -13,9 +14,13 @@ from google.cloud import firestore
 from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
-from onshape_api.endpoints.users import AccessLevel
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.user_path import UserPath
+
+
+def get_deletion_time() -> datetime:
+    """Return a UTC timestamp 30 days in the future."""
+    return datetime.now(timezone.utc) + timedelta(days=30)
 
 
 def get_session_id() -> str:
@@ -31,15 +36,16 @@ def get_token(db: Database) -> dict | None:
 
 
 def save_token(db: Database, token: dict) -> None:
-    set_session_data(db, {"token": token})
+    """Saves a given token into the database."""
+    set_session_data(db, {"token": token, "deleteTime": get_deletion_time()})
 
 
 def get_session_data(db: Database) -> dict:
     session_id = get_session_id()
     doc_ref = db.sessions.document(document_id=session_id)
-    doc = doc_ref.get()
-    if not doc.exists or (session_data := doc.to_dict()) is None:
-        session_data = {"token": None}
+    session_data = doc_ref.get().to_dict()
+    if not session_data:
+        return {"token": None, "deletionTime": get_deletion_time()}
     return session_data
 
 
@@ -82,7 +88,6 @@ def get_oauth_session(
         auto_refresh_url=token_url,
         auto_refresh_kwargs=refresh_kwargs,
         token_updater=_save_token,
-        
     )
 
 
