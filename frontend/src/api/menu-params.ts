@@ -44,6 +44,7 @@ export type MenuParams =
  */
 export function useHandleCloseDialog() {
     const navigate = useNavigate();
+
     return useCallback(() => {
         navigate({
             to: ".",

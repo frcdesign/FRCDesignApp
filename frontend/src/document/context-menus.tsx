@@ -32,7 +32,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenItem url={makeUrl(element)} />
+            <OpenDocumentItem url={makeUrl(element)} />
             <RequireAccessLevel>
                 <MenuDivider />
                 <MenuItem
@@ -126,7 +126,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenItem url={makeUrl(document)} />
+            <OpenDocumentItem url={makeUrl(document)} />
             <RequireAccessLevel>
                 <MenuDivider />
                 {orderItems}
@@ -153,14 +153,14 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
-interface OpenItemProps {
+interface OpenDocumentItemProps {
     url: string;
 }
 
-function OpenItem(props: OpenItemProps) {
+function OpenDocumentItem(props: OpenDocumentItemProps) {
     return (
         <MenuItem
-            text="Open"
+            text="Open document"
             icon="share"
             onClick={() => openUrlInNewTab(props.url)}
             intent="primary"

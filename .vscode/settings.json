@@ -30,6 +30,7 @@
         "gunicorn",
         "jsonify",
         "Kempen",
+        "kmid",
         "levelname",
         "Onshape",
         "Orama",

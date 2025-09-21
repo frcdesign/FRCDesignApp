@@ -244,7 +244,10 @@ function AccessLevelSelect(): ReactNode {
             popoverProps={{ minimal: true }}
             itemRenderer={renderAccessLevel}
             onItemSelect={(accessLevel) => {
-                navigate({ to: ".", search: { accessLevel } });
+                navigate({
+                    to: ".",
+                    search: { currentAccessLevel: accessLevel }
+                });
             }}
         >
             {button}

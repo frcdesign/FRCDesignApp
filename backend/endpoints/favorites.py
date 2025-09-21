@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 import flask
-from pydantic import BaseModel
 
-from backend.common import connect
 from backend.common.connect import (
     get_api,
     get_db,
@@ -23,45 +20,6 @@ from onshape_api.endpoints.settings import (
 
 
 router = flask.Blueprint("favorites", __name__)
-
-
-class Theme(StrEnum):
-    SYSTEM = "system"
-    LIGHT = "light"
-    DARK = "dark"
-
-
-class Settings(BaseModel):
-    theme: Theme = Theme.SYSTEM
-
-
-@router.get("/settings" + user_path_route())
-def get_settings(**kwargs):
-    db = get_db()
-    api = get_api(db)
-    user_path = get_route_user_path()
-
-    settings_dict = get_setting(api, user_path, "settings")
-    settings = Settings.model_validate(settings_dict if settings_dict != None else {})
-    return settings.model_dump()
-
-
-@router.post("/settings" + user_path_route())
-def update_settings(**kwargs):
-    db = get_db()
-    api = get_api(db)
-
-    user_path = get_route_user_path()
-    theme = connect.get_body_arg("theme")
-    update: Update = {
-        "key": "settings",
-        "field": "theme",
-        "value": theme,
-        "operation": Operation.ADD,
-    }
-    update_setting(api, user_path, update)
-
-    return {"success": True}
 
 
 @router.get("/favorites" + user_path_route())

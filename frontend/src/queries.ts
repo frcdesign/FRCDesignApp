@@ -107,8 +107,8 @@ export function useSettings(): Settings {
 export interface ContextData {
     maxAccessLevel: AccessLevel;
     currentAccessLevel: AccessLevel;
-    defaultAngleUnit: Unit;
-    defaultLengthUnit: Unit;
+    angleUnit: Unit;
+    lengthUnit: Unit;
     lengthPrecision: number;
     anglePrecision: number;
     realPrecision: number;

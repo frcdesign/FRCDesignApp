@@ -8,6 +8,7 @@ from backend.endpoints import (
     document_order,
     documents,
     favorites,
+    settings,
     thumbnails,
 )
 from onshape_api.endpoints.users import AccessLevel
@@ -34,19 +35,10 @@ def reported_exception(e: backend_exceptions.UserException):
     return e.to_dict(), e.status_code
 
 
-@router.get("/access-level")
-def get_access_level():
-    max_access_level = get_app_access_level()
-    current_access_level = AccessLevel.USER if env.IS_PRODUCTION else max_access_level
-    return {
-        "maxAccessLevel": max_access_level,
-        "currentAccessLevel": current_access_level,
-    }
-
-
 router.register_blueprint(documents.router)
 router.register_blueprint(configurations.router)
 router.register_blueprint(thumbnails.router)
 router.register_blueprint(add_part.router)
 router.register_blueprint(favorites.router)
+router.register_blueprint(settings.router)
 router.register_blueprint(document_order.router)

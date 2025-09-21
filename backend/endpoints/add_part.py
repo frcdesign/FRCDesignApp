@@ -63,7 +63,7 @@ def add_to_part_studio(**kwargs):
     path_to_add = connect.get_body_element_path()
     microversion_id = connect.get_body_arg("microversionId")
     part_name = connect.get_body_arg("name")
-    configuration = connect.get_body_arg("configuration")
+    configuration = connect.get_optional_body_arg("configuration")
 
     # Tracking information
     user_id = connect.get_body_arg("userId")

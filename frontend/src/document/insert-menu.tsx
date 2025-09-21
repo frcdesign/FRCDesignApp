@@ -42,7 +42,12 @@ import {
     NumericInput,
     Spinner
 } from "@blueprintjs/core";
-import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
+import {
+    useIsFetching,
+    useMutation,
+    useQuery,
+    useQueryClient
+} from "@tanstack/react-query";
 import { apiGet, apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
@@ -149,12 +154,12 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 return result;
             });
         },
-        // Disable refetch to avoid resetting defaults
+        // Don't refetch query automatically so we don't reset user inputs
         refetchInterval: false
     });
 
     useEffect(() => {
-        if (!query.data) {
+        if (!query.data || configuration) {
             return;
         }
         const defaultConfiguration = query.data.parameters.reduce(
@@ -165,7 +170,7 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
             {} as Configuration
         );
         setConfiguration(defaultConfiguration);
-    }, [query.data, setConfiguration]);
+    }, [query.data, configuration, setConfiguration]);
 
     if (query.isPending || !configuration) {
         return <Spinner intent={Intent.PRIMARY} />;
@@ -464,15 +469,6 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     );
 }
 
-// function selectAllInputText(ref: RefObject<HTMLInputElement>) {
-//     const input = ref.current;
-//     if (!input) {
-//         return;
-//     }
-//     const length = input.value.length;
-//     input.setSelectionRange(0, length);
-// }
-
 function getEvaluateOptions(
     quantityType: QuantityType,
     contextData: ContextData
@@ -481,13 +477,13 @@ function getEvaluateOptions(
         return {
             quantityType,
             displayPrecision: contextData.lengthPrecision,
-            displayUnit: contextData.defaultLengthUnit
+            displayUnit: contextData.lengthUnit
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
             displayPrecision: contextData.anglePrecision,
-            displayUnit: contextData.defaultAngleUnit
+            displayUnit: contextData.angleUnit
         };
     } else if (quantityType == QuantityType.REAL) {
         return {
@@ -594,6 +590,7 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
 
     const search = useSearch({ from: "/app" });
     const closeDialog = useHandleCloseDialog();
+    const queryClient = useQueryClient();
 
     const toastId = "insert" + element.id;
 
@@ -624,6 +621,12 @@ function InsertButton(props: SubmitButtonProps): ReactNode {
                 endpoint = "/add-to-part-studio";
                 body.microversionId = element.microversionId;
             }
+            // Cancel any outstanding thumbnail queries
+            queryClient.cancelQueries({
+                predicate: (query) =>
+                    query.queryKey[0] === "thumbnail-id" ||
+                    query.queryKey[0] === "thumbnail"
+            });
             showLoadingToast(`Inserting ${element.name}...`, toastId);
             closeDialog();
             return apiPost(endpoint + toElementApiPath(search), {

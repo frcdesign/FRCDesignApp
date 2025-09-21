@@ -271,3 +271,8 @@ def get_microversion_id(api: Api, instance_path: InstancePath) -> str:
     return api.get(
         api_path("documents", instance_path, InstancePath, "currentmicroversion")
     )["microversion"]
+
+
+def get_unit_info(api: Api, instance_path: InstancePath) -> dict:
+    """Returns units and precision settings for a given document."""
+    return api.get(api_path("documents", instance_path, InstancePath, "unitinfo"))

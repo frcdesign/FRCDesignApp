@@ -11,7 +11,7 @@ import {
     NavbarDivider,
     NavbarGroup
 } from "@blueprintjs/core";
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, RefObject, useRef, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
@@ -85,6 +85,15 @@ export function SettingsButton() {
     );
 }
 
+function selectAllInputText(ref: RefObject<HTMLInputElement>) {
+    const input = ref.current;
+    if (!input) {
+        return;
+    }
+    const length = input.value.length;
+    input.setSelectionRange(0, length);
+}
+
 export function SearchBar() {
     const navigate = useNavigate();
     const ref = useRef<HTMLInputElement>(null);
@@ -96,12 +105,7 @@ export function SearchBar() {
             placeholder="Search library..."
             inputRef={ref}
             onFocus={() => {
-                const input = ref.current;
-                if (!input) {
-                    return;
-                }
-                const length = input.value.length;
-                input.setSelectionRange(0, length);
+                selectAllInputText(ref);
             }}
             onValueChange={(value) => {
                 const query = value === "" ? undefined : value;
