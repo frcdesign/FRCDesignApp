@@ -49,7 +49,7 @@ def redirect():
         client_secret=env.CLIENT_SECRET,
         code=request.args["code"],
     )
-    connect.save_token(db, token)
+    connect.set_session_token(db, token)
 
     redirect_url = flask.session.get("redirect_url")
     if redirect_url == None:

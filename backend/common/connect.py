@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
 import flask
+from pydantic import BaseModel
 from requests_oauthlib import OAuth2Session
 from google.cloud import firestore
 
@@ -23,6 +24,11 @@ def get_deletion_time() -> datetime:
     return datetime.now(timezone.utc) + timedelta(days=30)
 
 
+class SessionData(BaseModel):
+    token: dict | None = None
+    deletionTime: datetime = get_deletion_time()
+
+
 def get_session_id() -> str:
     session_id = flask.session.get("session_id")
     if session_id is None:
@@ -31,28 +37,20 @@ def get_session_id() -> str:
     return session_id
 
 
-def get_token(db: Database) -> dict | None:
-    return get_session_data(db).get("token")
+def get_session_token(db: Database) -> dict | None:
+    session_id = get_session_id()
+    doc_ref = db.sessions.document(session_id)
+    session_data_dict = doc_ref.get().to_dict()
+    session_data = SessionData.model_validate(
+        {} if session_data_dict == None else session_data_dict
+    )
+    return session_data.token
 
 
-def save_token(db: Database, token: dict) -> None:
-    """Saves a given token into the database."""
-    set_session_data(db, {"token": token, "deleteTime": get_deletion_time()})
-
-
-def get_session_data(db: Database) -> dict:
+def set_session_token(db: Database, token: dict) -> None:
     session_id = get_session_id()
     doc_ref = db.sessions.document(document_id=session_id)
-    session_data = doc_ref.get().to_dict()
-    if not session_data:
-        return {"token": None, "deletionTime": get_deletion_time()}
-    return session_data
-
-
-def set_session_data(db: Database, session_data: dict) -> None:
-    session_id = get_session_id()
-    doc_ref = db.sessions.document(document_id=session_id)
-    doc_ref.set(session_data)
+    doc_ref.set(SessionData(token=token).model_dump())
 
 
 base_url = "https://oauth.onshape.com/oauth"
@@ -80,11 +78,11 @@ def get_oauth_session(
     }
 
     def _save_token(token) -> None:
-        save_token(db, token)
+        set_session_token(db, token)
 
     return OAuth2Session(
         env.CLIENT_ID,
-        token=get_token(db),
+        token=get_session_token(db),
         auto_refresh_url=token_url,
         auto_refresh_kwargs=refresh_kwargs,
         token_updater=_save_token,
