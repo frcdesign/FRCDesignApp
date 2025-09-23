@@ -328,7 +328,6 @@ export interface Favorite {
     id: string;
 }
 
-
 export enum ThumbnailSize {
     STANDARD = "300x300",
     LARGE = "600x340",
@@ -360,3 +359,17 @@ export function encodeConfigurationForQuery(
 }
 
 export type Configuration = Record<string, string>;
+
+/**
+ * Custom data collected from the current tab the user has open.
+ */
+export interface ContextData {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
+    angleUnit: Unit;
+    lengthUnit: Unit;
+    lengthPrecision: number;
+    anglePrecision: number;
+    realPrecision: number;
+    cacheVersion: number;
+}

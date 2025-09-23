@@ -1,15 +1,17 @@
 from __future__ import annotations
+from functools import cache
 import flask
 
 from backend.common import connect
-from backend.common.database import (
-    ConfigurationParameters,
-    ParameterType,
+from backend.common.cache_control import cacheable_route
+from backend.common.database import ConfigurationParameters
+from backend.common.models import (
     EqualCondition,
     ListOptionVisibilityCondition,
     LogicalCondition,
     OptionConditionType,
     OptionVisibilityCondition,
+    ParameterType,
     RangeCondition,
     RangeOptionVisibilityCondition,
     Unit,
@@ -21,7 +23,7 @@ from backend.common.database import (
 router = flask.Blueprint("configurations", __name__)
 
 
-@router.get("/configuration/<configuration_id>")
+@cacheable_route(router, "/configuration/<configuration_id>")
 def get_configuration(configuration_id: str):
     """Returns a specific configuration.
 

@@ -1,7 +1,6 @@
 import flask
 
-from backend.common import backend_exceptions, connect, env
-from backend.common.app_access import get_app_access_level
+from backend.common import backend_exceptions
 from backend.endpoints import (
     add_part,
     configurations,
@@ -11,7 +10,6 @@ from backend.endpoints import (
     settings,
     thumbnails,
 )
-from onshape_api.endpoints.users import AccessLevel
 from onshape_api.exceptions import ApiError
 
 

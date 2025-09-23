@@ -5,8 +5,8 @@ import flask
 
 from backend.common import connect
 from backend.common.app_logging import log_part_inserted
-from backend.common.backend_exceptions import ClientException
-from backend.common.database import ConfigurationParameters, ParameterType
+from backend.common.database import ConfigurationParameters
+from backend.common.models import ParameterType
 from onshape_api.endpoints import part_studios, assemblies
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.versions import get_version
@@ -139,6 +139,8 @@ class DerivedFeature:
             self.part_configuration = self.build_part_configuration(
                 configuration, parameters
             )
+        else:
+            self.part_configuration = None
 
     def build_part_configuration(
         self, configuration: dict, parameters: ConfigurationParameters

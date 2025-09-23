@@ -2,7 +2,7 @@ import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, Favorites } from "../api/backend-types";
+import { ElementObj, Favorites } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { showErrorToast } from "../common/toaster";
@@ -50,7 +50,9 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                     query
                 });
             } else {
-                return apiDelete("/favorites" + toUserApiPath(search), query);
+                return apiDelete("/favorites" + toUserApiPath(search), {
+                    query
+                });
             }
         },
         onMutate: (args) => {

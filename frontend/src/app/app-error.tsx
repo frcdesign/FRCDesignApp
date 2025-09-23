@@ -1,6 +1,6 @@
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
 import { useSearch } from "@tanstack/react-router";
-import { hasMemberAccess } from "../api/backend-types";
+import { hasMemberAccess } from "../api/models";
 import { ReloadDocumentsButton } from "../navbar/settings-menu";
 
 export function AppError() {

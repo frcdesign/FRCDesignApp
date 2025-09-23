@@ -3,7 +3,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { SearchHit, doSearch, useSearchDb } from "../api/search";
 import { ElementCard } from "../document/cards";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
-import { Vendor } from "../api/backend-types";
+import { Vendor } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 

@@ -53,21 +53,21 @@ def check_access_level(required_access_level: AccessLevel = AccessLevel.MEMBER):
 
 
 def require_access_level(required_access_level: AccessLevel = AccessLevel.MEMBER):
-    def decorator(f):
-        if inspect.iscoroutinefunction(f):
+    def decorator(func):
+        if inspect.iscoroutinefunction(func):
             # async route
-            @wraps(f)
+            @wraps(func)
             async def wrapped_async(*args, **kwargs):
                 check_access_level(required_access_level)
-                return await f(*args, **kwargs)
+                return await func(*args, **kwargs)
 
             return wrapped_async
         else:
             # sync route
-            @wraps(f)
+            @wraps(func)
             def wrapped(*args, **kwargs):
                 check_access_level(required_access_level)
-                return f(*args, **kwargs)
+                return func(*args, **kwargs)
 
             return wrapped
 

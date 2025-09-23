@@ -17,12 +17,7 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import {
-    AccessLevel,
-    hasMemberAccess,
-    Settings,
-    Theme
-} from "../api/backend-types";
+import { AccessLevel, hasMemberAccess, Settings, Theme } from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { invalidateSearchDb } from "../api/search";

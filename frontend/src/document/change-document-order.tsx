@@ -1,7 +1,7 @@
 import { MenuItem } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
-import { DocumentOrder } from "../api/backend-types";
+import { DocumentOrder } from "../api/models";
 import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
 import { ReactNode } from "react";

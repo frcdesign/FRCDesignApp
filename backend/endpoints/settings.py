@@ -13,7 +13,7 @@ from backend.common.connect import (
     instance_path_route,
     user_path_route,
 )
-from backend.common.database import QuantityType, Unit
+from backend.common.models import QuantityType, Unit
 from onshape_api.endpoints.documents import get_unit_info
 from onshape_api.endpoints.settings import (
     Operation,
@@ -50,6 +50,7 @@ def get_context_data(**kwargs):
         "anglePrecision": unit_info["unitsDisplayPrecision"][angle_unit],
         "lengthPrecision": unit_info["unitsDisplayPrecision"][length_unit],
         "realPrecision": 3,  # Always 3 to match Onshape since there's no setting for real numbers
+        "cacheVersion": db.get_cache_version(),
     }
 
 

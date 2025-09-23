@@ -13,16 +13,16 @@ class PreservedInfo:
 
     def save_element(self, element_id: str, element_dict: dict):
         self.preserved_elements[element_id] = {
-            "isVisible": element_dict.get("isVisible", False)
+            "isVisible": element_dict.get("isVisible")
         }
 
     def load_element(self, element_id: str) -> dict:
-        return self.preserved_elements.get(element_id, {"isVisible": False})
+        return self.preserved_elements.get(element_id, {"isVisible": None})
 
     def save_document(self, document_id: str, document_dict: dict):
         self.preserved_documents[document_id] = {
-            "sortAlphabetically": document_dict.get("sortAlphabetically", True)
+            "sortAlphabetically": document_dict.get("sortAlphabetically")
         }
 
     def load_document(self, document_id: str) -> dict:
-        return self.preserved_elements.get(document_id, {"sortAlphabetically": True})
+        return self.preserved_elements.get(document_id, {"sortAlphabetically": None})

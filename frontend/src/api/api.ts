@@ -1,17 +1,33 @@
+import { useSearch } from "@tanstack/react-router";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
+import { AccessLevel, hasMemberAccess } from "./models";
 
-function getUrl(path: string, query?: URLSearchParamsInit): string {
-    path = "/api" + path;
-    if (query) {
-        path += `?${createSearchParams(query)}`;
+function getUrl(
+    path: string,
+    query?: URLSearchParamsInit,
+    cacheOptions?: CacheOptions
+): string {
+    const searchParams = createSearchParams(query);
+    if (cacheOptions) {
+        if (hasMemberAccess(cacheOptions.currentAccessLevel)) {
+            // Makes the path /api/admin/...
+            path = "/admin" + path;
+        } else {
+            // Append the v parameter to bust the cache when the cache version changes
+            searchParams.append("v", cacheOptions.cacheVersion.toString());
+        }
     }
-    return path;
+
+    return "/api" + path + `?${searchParams}`;
 }
 
-interface PostOptions {
+interface QueryOptions {
     query?: URLSearchParamsInit;
-    body?: object;
     signal?: AbortSignal;
+}
+
+interface PostOptions extends QueryOptions {
+    body?: object;
 }
 
 /**
@@ -29,16 +45,32 @@ export async function apiPost(
     }).then(handleResponse);
 }
 
+export interface CacheOptions {
+    currentAccessLevel: AccessLevel;
+    cacheVersion: number;
+}
+
+export function useCacheOptions(): CacheOptions {
+    const search = useSearch({ from: "/app" });
+    return {
+        currentAccessLevel: search.currentAccessLevel,
+        cacheVersion: search.cacheVersion
+    };
+}
+
+interface QueryOptionsWithCache extends QueryOptions {
+    cacheOptions?: CacheOptions;
+}
+
 /**
  * Makes a get request to a backend /api route.
  */
 export async function apiGet(
     path: string,
-    query?: URLSearchParamsInit,
-    signal?: AbortSignal
+    options?: QueryOptionsWithCache
 ): Promise<any> {
-    return fetch(getUrl(path, query), {
-        signal
+    return fetch(getUrl(path, options?.query, options?.cacheOptions), {
+        signal: options?.signal
     }).then(handleResponse);
 }
 
@@ -48,10 +80,11 @@ export async function apiGet(
  */
 export async function apiGetImage(
     path: string,
-    query?: URLSearchParamsInit,
-    signal?: AbortSignal
+    options?: QueryOptionsWithCache
 ): Promise<string> {
-    return fetch(getUrl(path, query), { signal }).then(handleImageResponse);
+    return fetch(getUrl(path, options?.query, options?.cacheOptions), {
+        signal: options?.signal
+    }).then(handleImageResponse);
 }
 
 async function handleImageResponse(response: Response) {
@@ -67,11 +100,12 @@ async function handleImageResponse(response: Response) {
  */
 export async function apiDelete(
     path: string,
-    query?: URLSearchParamsInit
+    options?: QueryOptions
 ): Promise<any> {
-    return fetch(getUrl(path, query), { method: "DELETE" }).then(
-        handleResponse
-    );
+    return fetch(getUrl(path, options?.query), {
+        method: "DELETE",
+        signal: options?.signal
+    }).then(handleResponse);
 }
 
 async function handleResponse(response: Response) {

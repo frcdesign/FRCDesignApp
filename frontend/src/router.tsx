@@ -12,7 +12,6 @@ import {
 import { queryClient } from "./query-client";
 import { DocumentList } from "./document/document-list";
 import {
-    ContextData,
     getContextDataQuery,
     getDocumentOrderQuery,
     getDocumentsQuery,
@@ -20,10 +19,11 @@ import {
     getFavoritesQuery,
     getSettingsQuery
 } from "./queries";
+import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
-import { Vendor } from "./api/backend-types";
+import { Vendor } from "./api/models";
 import { AppError } from "./app/app-error";
 
 interface BaseSearchParams {
@@ -53,15 +53,16 @@ const appRoute = createRoute({
         middlewares: [retainSearchParams(true)]
     },
     loaderDeps: ({ search }) => ({
-        userId: search.userId
+        userId: search.userId,
+        currentAccessLevel: search.currentAccessLevel,
+        cacheVersion: search.cacheVersion
     }),
     loader: async ({ deps }) => {
-        queryClient.fetchQuery(getDocumentOrderQuery());
-        queryClient.fetchQuery(getDocumentsQuery());
-        queryClient.fetchQuery(getElementsQuery());
         queryClient.fetchQuery(getFavoritesQuery(deps));
+        queryClient.fetchQuery(getDocumentOrderQuery(deps));
+        queryClient.fetchQuery(getDocumentsQuery(deps));
+        queryClient.fetchQuery(getElementsQuery(deps));
 
-        // Settings goes here since we need them in App and they need to be modifiable
         return queryClient.ensureQueryData(getSettingsQuery(deps));
     }
 });

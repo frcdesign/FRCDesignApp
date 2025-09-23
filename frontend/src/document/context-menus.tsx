@@ -8,7 +8,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useMatch } from "@tanstack/react-router";
 import { apiPost, apiDelete } from "../api/api";
-import { DocumentObj, ElementObj } from "../api/backend-types";
+import { DocumentObj, ElementObj } from "../api/models";
 import { AppMenu } from "../api/menu-params";
 import { queryClient } from "../query-client";
 import { ChangeDocumentOrderItems } from "./change-document-order";
@@ -66,7 +66,9 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const deleteDocumentMutation = useMutation({
         mutationKey: ["delete-document"],
         mutationFn: async () => {
-            return apiDelete("/document", { documentId: document.id });
+            return apiDelete("/document", {
+                query: { documentId: document.id }
+            });
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["documents"] });

@@ -8,11 +8,10 @@ import google.cloud.logging as cloud_logging
 from backend.common import env
 from backend.common.database import (
     ConfigurationParameters,
-    ParameterType,
-    get_parameter_type_name,
 )
 from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 
+from backend.common.models import ParameterType, get_parameter_type_name
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.endpoints.documents import ElementType
 

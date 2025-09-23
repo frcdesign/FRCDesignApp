@@ -2,6 +2,7 @@ from http import HTTPStatus
 import flask
 
 from backend.common import connect
+from backend.common.cache_control import cacheable_route
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,
@@ -12,7 +13,7 @@ from onshape_api.endpoints import thumbnails
 router = flask.Blueprint("thumbnails", __name__)
 
 
-@router.get("/thumbnail" + element_path_route())
+@cacheable_route(router, "/thumbnail" + element_path_route())
 def get_element_thumbnail(**kwargs):
     db = connect.get_db()
     api = connect.get_api(db)

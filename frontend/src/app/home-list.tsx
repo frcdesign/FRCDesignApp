@@ -22,7 +22,7 @@ import {
     useElementsQuery,
     useFavoritesQuery
 } from "../queries";
-import { hasMemberAccess } from "../api/backend-types";
+import { hasMemberAccess } from "../api/models";
 import { SearchResults } from "./search-results";
 import { getElementOrder, useSearchDb } from "../api/search";
 import { AppMenu } from "../api/menu-params";

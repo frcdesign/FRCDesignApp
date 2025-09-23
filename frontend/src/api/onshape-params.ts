@@ -1,4 +1,4 @@
-import { ElementType, Theme } from "./backend-types";
+import { ElementType, Theme } from "./models";
 import { UserPath, ElementPath } from "./path";
 import { Classes } from "@blueprintjs/core";
 

@@ -17,7 +17,7 @@ import {
     ElementObj,
     ElementType,
     hasMemberAccess
-} from "../api/backend-types";
+} from "../api/models";
 import { CardThumbnail } from "../app/thumbnail";
 import { FavoriteButton } from "../app/favorite";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";

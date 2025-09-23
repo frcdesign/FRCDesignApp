@@ -1,5 +1,5 @@
 import { AnyOrama, create, insert, search } from "@orama/orama";
-import { Documents, Elements, Vendor } from "./backend-types";
+import { Documents, Elements, Vendor } from "./models";
 import {
     afterInsert as highlightAfterInsert,
     Position,

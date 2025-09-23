@@ -1,6 +1,7 @@
 import flask
 
 from backend.common import connect
+from backend.common.cache_control import cacheable_route
 from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import ClientException
 from backend.endpoints.documents import save_document
@@ -12,7 +13,7 @@ from onshape_api.paths.doc_path import DocumentPath
 router = flask.Blueprint("document-order", __name__)
 
 
-@router.get("/document-order")
+@cacheable_route(router, "/document-order")
 def get_document_order():
     db = connect.get_db()
     return {"documentOrder": db.get_document_order()}
@@ -24,6 +25,7 @@ def set_document_order():
     db = connect.get_db()
     new_document_order = connect.get_body_arg("documentOrder")
     db.set_document_order(new_document_order)
+    db.increment_cache_version()
     return {"success": True}
 
 
@@ -61,7 +63,7 @@ async def add_document():
 
     db.set_document_order(order)
     await save_document(api, db, latest_version)
-
+    db.increment_cache_version()
     return {"name": document_name}
 
 
@@ -77,4 +79,5 @@ def delete_document():
     order.pop(index)
     db.set_document_order(order)
     db.delete_document(document_id)
+    db.increment_cache_version()
     return {"Success": True}

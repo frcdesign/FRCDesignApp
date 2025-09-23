@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, apiGetImage } from "../api/api";
+import { apiGet, apiGetImage, useCacheOptions } from "../api/api";
 import {
     getHeightAndWidth,
     encodeConfigurationForQuery,
     ThumbnailSize,
     Configuration
-} from "../api/backend-types";
+} from "../api/models";
 import { ElementPath, toElementApiPath } from "../api/path";
 import { Card, Intent, Popover, Spinner, SpinnerSize } from "@blueprintjs/core";
 
@@ -64,16 +64,15 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     const { path, size, spinnerSize, scale } = props;
 
     const apiPath = toElementApiPath(path);
+    const cacheOptions = useCacheOptions();
     const imageQuery = useQuery({
         queryKey: ["document-thumbnail", apiPath, size],
         queryFn: async ({ signal }) =>
-            apiGetImage(
-                "/thumbnail" + apiPath,
-                {
-                    size
-                },
-                signal
-            )
+            apiGetImage("/thumbnail" + apiPath, {
+                query: { size },
+                signal,
+                cacheOptions
+            })
     });
 
     const heightAndWidth = getHeightAndWidth(size);
@@ -114,17 +113,18 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             configuration
         ],
         queryFn: async ({ signal }) => {
-            return apiGet(
-                "/thumbnail-id" + toElementApiPath(elementPath),
-                {
+            return apiGet("/thumbnail-id" + toElementApiPath(elementPath), {
+                query: {
                     configuration: encodeConfigurationForQuery(configuration)
                 },
                 signal
-            ).then((value) => value.thumbnailId);
+            }).then((value) => value.thumbnailId);
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: 0
     });
+
+    const cacheOptions = useCacheOptions();
 
     const thumbnailQuery = useQuery({
         queryKey: [
@@ -137,11 +137,11 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 size,
                 thumbnailId: thumbnailIdQuery.data
             };
-            return apiGetImage(
-                "/thumbnail" + toElementApiPath(elementPath),
+            return apiGetImage("/thumbnail" + toElementApiPath(elementPath), {
                 query,
-                signal
-            );
+                signal,
+                cacheOptions
+            });
         },
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 15 seconds with exponential backoff

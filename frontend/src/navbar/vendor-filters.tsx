@@ -1,7 +1,7 @@
 import { Button, ButtonVariant, Intent, Tag } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ReactNode } from "react";
-import { getVendorName, Vendor } from "../api/backend-types";
+import { getVendorName, Vendor } from "../api/models";
 
 export function VendorFilters(): ReactNode {
     const navigate = useNavigate();

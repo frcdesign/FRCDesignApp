@@ -1,4 +1,4 @@
-import { encodeConfigurationForQuery } from "../api/backend-types";
+import { encodeConfigurationForQuery } from "../api/models";
 import {
     DocumentPath,
     InstancePath,

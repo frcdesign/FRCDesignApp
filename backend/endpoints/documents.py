@@ -8,13 +8,14 @@ import asyncio
 from enum import StrEnum
 from typing import Iterator
 import flask
-from pydantic import BaseModel, ConfigDict
 
 from backend.common import connect, database
 from backend.common.app_access import require_access_level
 from backend.common.app_logging import log_search
+from backend.common.cache_control import cacheable_route
+from backend.common.models import Element
+from backend.common.models import Document
 from backend.endpoints.backend_types import (
-    Vendor,
     parse_vendor,
 )
 from backend.endpoints.configurations import parse_onshape_configuration
@@ -36,7 +37,7 @@ from onshape_api.paths.instance_type import InstanceType
 router = flask.Blueprint("documents", __name__)
 
 
-@router.get("/documents")
+@cacheable_route(router, "/documents")
 def get_documents(**kwargs):
     """Returns a list of the top level documents to display to the user."""
     db = connect.get_db()
@@ -58,7 +59,7 @@ def get_documents(**kwargs):
     return {"documents": documents}
 
 
-@router.get("/elements")
+@cacheable_route(router, "/elements")
 def get_elements(**kwargs):
     """Returns a list of the top level elements to display to the user."""
     db = connect.get_db()
@@ -77,19 +78,6 @@ def get_elements(**kwargs):
         elements.append(element_obj)
 
     return {"elements": elements}
-
-
-class Element(BaseModel):
-    name: str
-    vendor: Vendor | None
-    elementType: ElementType
-    documentId: str
-    instanceId: str
-    microversionId: str
-    isVisible: bool = False
-    configurationId: str | None = None
-
-    model_config = ConfigDict(extra="forbid")
 
 
 def save_element(
@@ -132,16 +120,6 @@ def save_element(
         ).model_dump()
     )
     return element_id
-
-
-class Document(BaseModel):
-    name: str
-    instanceId: str
-    thumbnailElementId: str
-    elementIds: list[str]
-    sortAlphabetically: bool
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class EntryType(StrEnum):
@@ -310,6 +288,9 @@ async def reload_documents(**kwargs):
             continue
         db.delete_document(doc_ref.id)
 
+    if count > 0:
+        db.increment_cache_version()
+
     return {"savedElements": count}
 
 
@@ -322,6 +303,7 @@ def set_visibility():
 
     for element_id in element_ids:
         db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
+    db.increment_cache_version()
     return {"success": True}
 
 
@@ -335,6 +317,7 @@ def set_document_sort():
     db.documents.document(document_id).set(
         {"sortAlphabetically": sort_alphabetically}, merge=True
     )
+    db.increment_cache_version()
     return {"success": True}
 
 

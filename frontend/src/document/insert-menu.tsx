@@ -23,7 +23,7 @@ import {
     EnumOption,
     Unit,
     QuantityType
-} from "../api/backend-types";
+} from "../api/models";
 import {
     Alignment,
     Button,
@@ -48,11 +48,12 @@ import {
     useQuery,
     useQueryClient
 } from "@tanstack/react-query";
-import { apiGet, apiPost } from "../api/api";
+import { apiGet, apiPost, useCacheOptions } from "../api/api";
 import { toElementApiPath } from "../api/path";
 import { Select } from "@blueprintjs/select";
 import { handleBooleanChange } from "../common/utils";
-import { ContextData, useElementsQuery, useFavoritesQuery } from "../queries";
+import { useElementsQuery, useFavoritesQuery } from "../queries";
+import { ContextData } from "../api/models";
 import {
     AppMenu,
     InsertMenuParams,
@@ -146,12 +147,12 @@ interface ConfigurationWrapperProps {
 function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const { configurationId, configuration, setConfiguration } = props;
 
+    const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
         queryKey: ["configuration", configurationId],
         queryFn: async () => {
-            const result = apiGet("/configuration/" + configurationId);
-            return result.then((result: ConfigurationResult) => {
-                return result;
+            return apiGet("/configuration/" + configurationId, {
+                cacheOptions
             });
         },
         // Don't refetch query automatically so we don't reset user inputs
@@ -159,6 +160,7 @@ function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     useEffect(() => {
+        // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
         if (!query.data || configuration) {
             return;
         }

@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { AccessLevel, hasAdminAccess, hasMemberAccess } from "./backend-types";
+import { AccessLevel, hasAdminAccess, hasMemberAccess } from "./models";
 import { useSearch } from "@tanstack/react-router";
 
 interface RequireAccessLevelProps extends PropsWithChildren {

@@ -15,7 +15,7 @@ import { ReactNode, RefObject, useLayoutEffect, useRef } from "react";
 import { ElementCard } from "./cards";
 import { SearchResults } from "../app/search-results";
 import { getElementOrder, SortOrder, useSearchDb } from "../api/search";
-import { hasMemberAccess } from "../api/backend-types";
+import { hasMemberAccess } from "../api/models";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { DocumentContextMenu } from "./context-menus";
 

@@ -11,7 +11,7 @@ import {
     seq,
     tok
 } from "typescript-parsec";
-import { getDisplayStr, QuantityType, Unit } from "../api/backend-types";
+import { getDisplayStr, QuantityType, Unit } from "../api/models";
 
 export class ParseError extends Error {
     constructor(message: string) {
