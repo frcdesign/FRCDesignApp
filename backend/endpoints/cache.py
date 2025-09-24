@@ -2,6 +2,11 @@ import functools
 from flask import request, make_response
 import flask
 
+from backend.common import connect
+from backend.common.app_access import require_access_level
+from backend.common.database import Database
+
+
 MAX_AGE = 3 * 24 * 3600  # 3 days
 
 
@@ -36,3 +41,30 @@ def cacheable_route(router: flask.Blueprint, rule: str):
         return wrapped
 
     return decorator
+
+
+router = flask.Blueprint("cache-control", __name__)
+
+
+@router.post("/cache-version")
+@require_access_level()
+def push_cache_version():
+    """
+    Invalidates all CDN caching by pushing a new version of the app.
+    """
+    db = connect.get_db()
+    increment_cache_version(db)
+    return {"success": True}
+
+
+def get_cache_version(db: Database) -> int:
+    doc = db.cache.get().to_dict() or {}
+    return doc.get("cacheVersion", 1)
+
+
+def increment_cache_version(db: Database) -> int:
+    doc = db.cache.get().to_dict() or {}
+    current = doc.get("cacheVersion", 1) + 1
+    doc["cacheVersion"] = current
+    db.cache.set(doc)
+    return current

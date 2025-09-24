@@ -3,6 +3,7 @@ import flask
 from backend.common import backend_exceptions
 from backend.endpoints import (
     add_part,
+    cache,
     configurations,
     document_order,
     documents,
@@ -40,3 +41,4 @@ router.register_blueprint(add_part.router)
 router.register_blueprint(favorites.router)
 router.register_blueprint(settings.router)
 router.register_blueprint(document_order.router)
+router.register_blueprint(cache.router)

@@ -3,7 +3,7 @@ from functools import cache
 import flask
 
 from backend.common import connect
-from backend.common.cache_control import cacheable_route
+from backend.endpoints.cache import cacheable_route
 from backend.common.database import ConfigurationParameters
 from backend.common.models import (
     EqualCondition,

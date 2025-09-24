@@ -2,7 +2,7 @@ from http import HTTPStatus
 import flask
 
 from backend.common import connect
-from backend.common.cache_control import cacheable_route
+from backend.endpoints.cache import cacheable_route
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,

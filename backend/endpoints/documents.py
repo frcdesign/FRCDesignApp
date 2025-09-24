@@ -12,7 +12,7 @@ import flask
 from backend.common import connect, database
 from backend.common.app_access import require_access_level
 from backend.common.app_logging import log_search
-from backend.common.cache_control import cacheable_route
+from backend.endpoints.cache import cacheable_route
 from backend.common.models import Element
 from backend.common.models import Document
 from backend.endpoints.backend_types import (
@@ -288,9 +288,6 @@ async def reload_documents(**kwargs):
             continue
         db.delete_document(doc_ref.id)
 
-    if count > 0:
-        db.increment_cache_version()
-
     return {"savedElements": count}
 
 
@@ -303,7 +300,6 @@ def set_visibility():
 
     for element_id in element_ids:
         db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
-    db.increment_cache_version()
     return {"success": True}
 
 
@@ -317,7 +313,6 @@ def set_document_sort():
     db.documents.document(document_id).set(
         {"sortAlphabetically": sort_alphabetically}, merge=True
     )
-    db.increment_cache_version()
     return {"success": True}
 
 

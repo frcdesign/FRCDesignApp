@@ -42,7 +42,7 @@ function SettingsMenuDialog(): ReactNode {
     const search = useSearch({ from: "/app" });
 
     let adminSettings = null;
-    // Unlike most other checks, this one uses maxAccessLevel so you can still switch from user to admin
+    // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
     if (hasMemberAccess(search.maxAccessLevel)) {
         adminSettings = (
             <>
@@ -181,8 +181,40 @@ function AdminSettings(): ReactNode {
             <RequireAccessLevel>
                 <ReloadDocumentsButton />
                 <ReloadDocumentsButton reloadAll />
+                <PushVersionButton />
             </RequireAccessLevel>
         </>
+    );
+}
+
+/**
+ * Pushes a new version of the app which invalidates all existing CDN caches.
+ */
+function PushVersionButton(): ReactNode {
+    const navigate = useNavigate();
+    const pushVersionMutation = useMutation({
+        mutationKey: ["push-cache-version"],
+        mutationFn: async () => apiPost("/cache-version"),
+        onError: () => {
+            showErrorToast("Unexpectedly failed to push new version.");
+        },
+        onSuccess: (data: { newVersion: number }) => {
+            showSuccessToast("Successfully updated the FRCDesignApp version.");
+            navigate({ to: ".", search: { cacheVersion: data.newVersion } });
+        }
+    });
+
+    return (
+        <FormGroup label="Push new app version" inline>
+            <Button
+                icon="cloud-upload"
+                text="Push version"
+                onClick={() => {
+                    pushVersionMutation.mutate();
+                }}
+                intent={Intent.PRIMARY}
+            />
+        </FormGroup>
     );
 }
 

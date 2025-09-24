@@ -30,16 +30,6 @@ class Database:
     def configurations(self) -> CollectionReference:
         return self.client.collection("configurations")
 
-    def get_cache_version(self) -> int:
-        doc = self.cache.get().to_dict() or {}
-        return doc.get("cacheVersion", 1)
-
-    def increment_cache_version(self) -> int:
-        doc = self.cache.get().to_dict() or {}
-        current = doc.get("cacheVersion", 1) + 1
-        doc["cacheVersion"] = current
-        self.cache.set(doc)
-        return current
 
     def get_configuration_parameters(
         self, configuration_id: str
