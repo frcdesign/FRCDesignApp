@@ -60,8 +60,8 @@ async def add_document():
         except ValueError:
             order.append(new_document_id)
 
-    db.set_document_order(order)
     await save_document(api, db, latest_version)
+    db.set_document_order(order)
     return {"name": document_name}
 
 

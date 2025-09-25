@@ -30,7 +30,6 @@ class Database:
     def configurations(self) -> CollectionReference:
         return self.client.collection("configurations")
 
-
     def get_configuration_parameters(
         self, configuration_id: str
     ) -> ConfigurationParameters:

@@ -184,7 +184,7 @@ class Element(BaseModel):
     instanceId: str
     microversionId: str
     # Default isVisible to true in development
-    isVisible: bool = False if env.IS_PRODUCTION else True
+    isVisible: bool | None = False if env.IS_PRODUCTION else True
     configurationId: str | None = None
 
     model_config = ConfigDict(extra="forbid")
@@ -195,6 +195,6 @@ class Document(BaseModel):
     instanceId: str
     thumbnailElementId: str
     elementIds: list[str]
-    sortAlphabetically: bool = False
+    sortAlphabetically: bool | None = False
 
     model_config = ConfigDict(extra="forbid")

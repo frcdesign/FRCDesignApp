@@ -67,6 +67,7 @@ def get_thumbnail_id(
     query = {
         "includeParts": True,
         "includeAssemblies": True,
+        "includeCompositeParts": True,
         "elementId": element_path.element_id,
         "configuration": configuration,
     }
