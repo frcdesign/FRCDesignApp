@@ -17,12 +17,14 @@ import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
 import { AppMenu } from "../api/menu-params";
 import { VendorFilters } from "./vendor-filters";
+import { useUiState } from "../app/ui-state";
 
 /**
  * Provides top-level navigation for the app.
  */
 export function AppNavbar(): ReactNode {
     const [showFilters, setShowFilters] = useState(false);
+    const uiState = useUiState()[0];
 
     const frcDesignIcon = (
         <a href="https://frcdesign.org" target="_blank">
@@ -48,7 +50,11 @@ export function AppNavbar(): ReactNode {
                             variant={ButtonVariant.MINIMAL}
                             onClick={() => setShowFilters(!showFilters)}
                             active={showFilters}
-                            intent={showFilters ? Intent.PRIMARY : Intent.NONE}
+                            intent={
+                                uiState.vendorFilters
+                                    ? Intent.PRIMARY
+                                    : Intent.NONE
+                            }
                         />
                         <SearchBar />
                     </ControlGroup>

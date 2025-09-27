@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.common import env
-from backend.endpoints.backend_types import Vendor
 from onshape_api.endpoints.documents import ElementType
 
 
@@ -59,8 +58,9 @@ class QuantityConfigurationParameter(BaseConfigurationParameter):
     default: str
     quantityType: QuantityType
     unit: Unit
-    min: str | float
-    max: str | float
+    defaultValue: float
+    min: float
+    max: float
 
 
 ConfigurationParameter = Annotated[
@@ -176,6 +176,26 @@ def get_abbreviation(unit: Unit) -> str:
             return ""
 
 
+class Vendor(StrEnum):
+    AM = "AM"
+    LAI = "LAI"
+    MCM = "MCM"
+    REDUX = "Redux"
+    REV = "REV"
+    SDS = "SDS"
+    SWYFT = "Swyft"
+    TTB = "TTB"
+    VEX = "VEX"
+    WCP = "WCP"
+
+
+def default_if_none(default):
+    def validator(cls, v):
+        return v if v is not None else default
+
+    return validator
+
+
 class Element(BaseModel):
     name: str
     vendor: Vendor | None
@@ -184,7 +204,7 @@ class Element(BaseModel):
     instanceId: str
     microversionId: str
     # Default isVisible to true in development
-    isVisible: bool | None = False if env.IS_PRODUCTION else True
+    isVisible: bool
     configurationId: str | None = None
 
     model_config = ConfigDict(extra="forbid")
@@ -195,6 +215,6 @@ class Document(BaseModel):
     instanceId: str
     thumbnailElementId: str
     elementIds: list[str]
-    sortAlphabetically: bool | None = False
+    sortAlphabetically: bool
 
     model_config = ConfigDict(extra="forbid")

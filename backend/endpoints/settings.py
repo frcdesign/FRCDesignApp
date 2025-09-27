@@ -91,7 +91,7 @@ def update_settings(**kwargs):
         "key": "settings",
         "field": "theme",
         "value": theme,
-        "operation": Operation.ADD,
+        "operation": Operation.SET,
     }
     update_setting(api, user_path, update)
 

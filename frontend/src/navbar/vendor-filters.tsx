@@ -1,16 +1,21 @@
 import { Button, ButtonVariant, Intent, Tag } from "@blueprintjs/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { getVendorName, Vendor } from "../api/models";
+import { useUiState } from "../app/ui-state";
 
 export function VendorFilters(): ReactNode {
     const navigate = useNavigate();
-    const vendors = useSearch({ from: "/app" }).vendors;
 
-    const areAllTagsActive = vendors === undefined;
+    const [uiState, setUiState] = useUiState();
+
+    const vendorFilters = uiState.vendorFilters;
+
+    const areAllTagsActive = vendorFilters === undefined;
 
     const filterTags = Object.values(Vendor).map((vendor) => {
-        const isVendorActive = areAllTagsActive || vendors.includes(vendor);
+        const isVendorActive =
+            areAllTagsActive || vendorFilters.includes(vendor);
         return (
             <Tag
                 round
@@ -19,18 +24,20 @@ export function VendorFilters(): ReactNode {
                 intent={Intent.PRIMARY}
                 title={getVendorName(vendor)}
                 onClick={() => {
-                    let newVendors;
+                    let newFilters;
                     if (areAllTagsActive) {
-                        newVendors = [vendor];
+                        newFilters = [vendor];
                     } else if (isVendorActive) {
-                        newVendors = vendors.filter((curr) => curr !== vendor);
-                        if (newVendors.length === 0) {
-                            newVendors = undefined;
+                        newFilters = vendorFilters.filter(
+                            (curr) => curr !== vendor
+                        );
+                        if (newFilters.length === 0) {
+                            newFilters = undefined;
                         }
                     } else {
-                        newVendors = [...vendors, vendor];
+                        newFilters = [...vendorFilters, vendor];
                     }
-                    navigate({ to: ".", search: { vendors: newVendors } });
+                    setUiState({ vendorFilters: newFilters });
                 }}
                 active={!isVendorActive} // The active prop of tags is backwards
             >

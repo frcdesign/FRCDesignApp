@@ -18,6 +18,7 @@ import { getElementOrder, SortOrder, useSearchDb } from "../api/search";
 import { hasMemberAccess } from "../api/models";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { DocumentContextMenu } from "./context-menus";
+import { useUiState } from "../app/ui-state";
 
 function useInteractiveSection(
     sectionRef: RefObject<HTMLDivElement>,
@@ -47,6 +48,7 @@ export function DocumentList(): ReactNode {
 
     const search = useSearch({ from: "/app" });
     const searchDb = useSearchDb(documents, elements);
+    const uiState = useUiState()[0];
 
     // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export function DocumentList(): ReactNode {
             <SearchResults
                 query={search.query}
                 filters={{
-                    vendors: search.vendors,
+                    vendors: uiState.vendorFilters,
                     documentId: document.documentId
                 }}
             />
@@ -81,7 +83,7 @@ export function DocumentList(): ReactNode {
         let orderedElementIds = getElementOrder(searchDb, {
             sortOrder: documentSortOrder,
             elementIds: document.elementIds,
-            vendors: search.vendors,
+            vendors: uiState.vendorFilters,
             // Only show visible elements to users
             isVisible: !hasMemberAccess(search.currentAccessLevel)
         });

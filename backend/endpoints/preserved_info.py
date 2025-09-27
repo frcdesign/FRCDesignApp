@@ -1,5 +1,24 @@
 from __future__ import annotations
 
+from pydantic import BaseModel, field_validator
+from backend.common import env
+
+
+class SavedElement(BaseModel):
+    isVisible: bool = False if env.IS_PRODUCTION else True
+
+    @field_validator("isVisible", mode="before")
+    def default_is_visible(cls, v):
+        return v if v != None else (False if env.IS_PRODUCTION else True)
+
+
+class SavedDocument(BaseModel):
+    sortAlphabetically: bool = True
+
+    @field_validator("sortAlphabetically", mode="before")
+    def default_sort_alphabetically(cls, v):
+        return v if v != None else True
+
 
 class PreservedInfo:
     """A class representing a subset of Document data which should be saved on a best-effort basis when documents are reloaded.
@@ -8,21 +27,19 @@ class PreservedInfo:
     """
 
     def __init__(self) -> None:
-        self.preserved_elements: dict[str, dict] = {}
-        self.preserved_documents: dict[str, dict] = {}
+        self.preserved_elements: dict[str, SavedElement] = {}
+        self.preserved_documents: dict[str, SavedDocument] = {}
 
-    def save_element(self, element_id: str, element_dict: dict):
-        self.preserved_elements[element_id] = {
-            "isVisible": element_dict.get("isVisible")
-        }
+    def save_element(self, element_id: str, element_dict: dict) -> None:
+        self.preserved_elements[element_id] = SavedElement.model_validate(element_dict)
 
-    def load_element(self, element_id: str) -> dict:
-        return self.preserved_elements.get(element_id, {"isVisible": None})
+    def get_element(self, element_id: str) -> SavedElement:
+        return self.preserved_elements.get(element_id, SavedElement())
 
-    def save_document(self, document_id: str, document_dict: dict):
-        self.preserved_documents[document_id] = {
-            "sortAlphabetically": document_dict.get("sortAlphabetically")
-        }
+    def save_document(self, document_id: str, document_dict: dict) -> None:
+        self.preserved_documents[document_id] = SavedDocument.model_validate(
+            document_dict
+        )
 
-    def load_document(self, document_id: str) -> dict:
-        return self.preserved_elements.get(document_id, {"sortAlphabetically": None})
+    def get_document(self, document_id: str) -> SavedDocument:
+        return self.preserved_documents.get(document_id, SavedDocument())

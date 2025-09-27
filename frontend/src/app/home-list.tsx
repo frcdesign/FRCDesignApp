@@ -13,7 +13,7 @@ import {
     Spinner
 } from "@blueprintjs/core";
 import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useState } from "react";
+import { PropsWithChildren, ReactNode } from "react";
 import { DocumentCard, ElementCard } from "../document/cards";
 import { FavoriteIcon } from "./favorite";
 import {
@@ -26,12 +26,15 @@ import { hasMemberAccess } from "../api/models";
 import { SearchResults } from "./search-results";
 import { getElementOrder, useSearchDb } from "../api/search";
 import { AppMenu } from "../api/menu-params";
+import { useUiState } from "./ui-state";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
     const search = useSearch({ from: "/app" });
+
+    const [uiState, setUiState] = useUiState();
 
     let content;
     if (search.query) {
@@ -42,10 +45,11 @@ export function HomeList(): ReactNode {
                 key="search"
                 icon={<Icon icon="search" intent={Intent.PRIMARY} />}
                 title="Search Results"
+                isOpen
             >
                 <SearchResults
                     query={search.query}
-                    filters={{ vendors: search.vendors }}
+                    filters={{ vendors: uiState.vendorFilters }}
                 />
             </ListContainer>
         );
@@ -55,13 +59,18 @@ export function HomeList(): ReactNode {
                 <ListContainer
                     icon={<FavoriteIcon />}
                     title="Favorites"
-                    defaultIsOpen={false}
+                    isOpen={uiState.isFavoritesOpen}
+                    onClick={(isOpen) =>
+                        setUiState({ isFavoritesOpen: isOpen })
+                    }
                 >
                     <FavoritesList />
                 </ListContainer>
                 <ListContainer
                     icon={<Icon icon="manual" className="frc-design-green" />}
                     title="Library"
+                    isOpen={uiState.isLibraryOpen}
+                    onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
                 >
                     <LibraryList />
                 </ListContainer>
@@ -156,6 +165,7 @@ function LibraryList() {
 
 function FavoritesList() {
     const search = useSearch({ from: "/app" });
+    const uiState = useUiState()[0];
 
     const elementsQuery = useElementsQuery();
     const favoritesQuery = useFavoritesQuery(search);
@@ -198,7 +208,7 @@ function FavoritesList() {
 
     const orderedFavorites = getElementOrder(searchDb, {
         elementIds: Object.keys(favorites),
-        vendors: search.vendors,
+        vendors: uiState.vendorFilters,
         // Only show visible elements
         isVisible: !hasMemberAccess(search.currentAccessLevel)
     });
@@ -230,23 +240,19 @@ function FavoritesList() {
 }
 
 interface ListContainerProps extends PropsWithChildren {
-    /**
-     * Whether the section is open by default.
-     * @default true
-     */
-    defaultIsOpen?: boolean;
+    isOpen: boolean;
+    onClick?: (isOpen: boolean) => void;
     icon: ReactNode;
     title: string;
 }
 
 function ListContainer(props: ListContainerProps): ReactNode {
-    const { icon, title, children } = props;
-    const [isOpen, setIsOpen] = useState(props.defaultIsOpen ?? true);
+    const { icon, title, children, isOpen, onClick } = props;
     return (
         <>
             <Card
                 className="split"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => onClick && onClick(!isOpen)}
                 interactive
             >
                 <div className="home-card-title">

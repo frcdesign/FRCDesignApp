@@ -268,9 +268,10 @@ export interface EnumParameterObj extends ParameterBase {
 export interface QuantityParameterObj extends ParameterBase {
     type: ConfigurationParameterType.QUANTITY;
     quantityType: QuantityType;
+    defaultValue: number;
     min: number;
     max: number;
-    unit: Unit;
+    unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
 export type Documents = Record<string, DocumentObj>;

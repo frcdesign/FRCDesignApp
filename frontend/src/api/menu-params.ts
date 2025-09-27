@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
+import { Configuration } from "./models";
 
 export enum AppMenu {
     INSERT_MENU = "insert-menu",
@@ -16,6 +17,7 @@ export interface InsertMenuParams {
     activeMenu: AppMenu.INSERT_MENU;
     // Cannot use elementId since that's already used by OnshapeData
     activeElementId: string;
+    defaultConfiguration?: Configuration;
 }
 
 export interface AddDocumentMenuParams {

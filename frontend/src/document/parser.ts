@@ -13,7 +13,7 @@ import {
 } from "typescript-parsec";
 import { getDisplayStr, QuantityType, Unit } from "../api/models";
 
-export class ParseError extends Error {
+class ParseError extends Error {
     constructor(message: string) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
@@ -26,27 +26,37 @@ const TOLERANCE = {
     angle: 1e-11
 };
 
-export const ZERO: ValueWithUnits = {
+const ZERO: ValueWithUnits = {
     value: 0,
     type: "number"
 };
 
-export const ZERO_LENGTH: ValueWithUnits = {
-    value: 0,
-    type: "length"
-};
+export function valueWithUnits(value: number, type: Unit): ValueWithUnits {
+    return { value, type: getUnitType(type) };
+}
 
-export const ZERO_ANGLE: ValueWithUnits = {
-    value: 0,
-    type: "angle"
-};
-
-export function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
+function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
     if (value1.type !== value2.type) {
         throw new ParseError("Cannot compare values with different units");
     }
     const tolerance = TOLERANCE[value1.type];
     return Math.abs(value1.value - value2.value) < tolerance;
+}
+
+function tolerantLessThan(value1: ValueWithUnits, value2: ValueWithUnits) {
+    if (value1.type !== value2.type) {
+        throw new ParseError("Cannot compare values with different units");
+    }
+    const tolerance = TOLERANCE[value1.type];
+    return value1.value < value2.value - tolerance;
+}
+
+function tolerantGreaterThan(value1: ValueWithUnits, value2: ValueWithUnits) {
+    if (value1.type !== value2.type) {
+        throw new ParseError("Cannot compare values with different units");
+    }
+    const tolerance = TOLERANCE[value1.type];
+    return value1.value > value2.value + tolerance;
 }
 
 enum TokenKind {
@@ -525,6 +535,17 @@ function stringify(expr: Expr): string {
     }
 }
 
+export function formatValueWithUnits(
+    value: ValueWithUnits,
+    displayUnit: Unit,
+    displayPrecision: number
+): string {
+    return `${roundToPrecision(
+        value.value / getUnitFactor(displayUnit),
+        displayPrecision
+    )} ${getDisplayStr(displayUnit)}`;
+}
+
 /**
  * Rounds number to a given precision. Unlike toFixed, drops trailing zeros.
  */
@@ -554,15 +575,14 @@ function formatExpression(
         expression = expression + " " + getDisplayStr(displayUnit);
     }
 
-    const displayValue = roundToPrecision(
-        value.value / getUnitFactor(displayUnit),
-        displayPrecision
-    );
-
     return {
         hasError: false,
         value: value.value,
-        displayExpression: displayValue + " " + getDisplayStr(displayUnit),
+        displayExpression: formatValueWithUnits(
+            value,
+            displayUnit,
+            displayPrecision
+        ),
         expression
     };
 }
@@ -614,6 +634,8 @@ export interface EvaluateOptions {
      * Should be unitless for real and integer expressions.
      */
     displayUnit: Unit;
+    max: ValueWithUnits;
+    min: ValueWithUnits;
 }
 
 /**
@@ -652,18 +674,27 @@ export function evaluateExpression(
         };
     }
 
-    return formatExpression(expr, value, options);
-}
+    if (tolerantLessThan(value, options.min)) {
+        return {
+            hasError: true,
+            expression: input,
+            errorMessage: `Value must be greater than ${formatValueWithUnits(
+                options.min,
+                options.displayUnit,
+                options.displayPrecision
+            )}`
+        };
+    } else if (tolerantGreaterThan(value, options.max)) {
+        return {
+            hasError: true,
+            expression: input,
+            errorMessage: `Value must be less than ${formatValueWithUnits(
+                options.max,
+                options.displayUnit,
+                options.displayPrecision
+            )}`
+        };
+    }
 
-/**
- * Cleans a default value from the database. Returns the display version of the value.
- * We could do this on the database, but this function will also convert to the user's current precision and value.
- *
- * @param input - A default value from the database.
- * @param options - EvaluateOptions to use.
- */
-export function cleanDefault(input: string, options: EvaluateOptions): Result {
-    const expr = parseExpression(input);
-    const value = evaluateExpressionValue(expr, options.quantityType);
     return formatExpression(expr, value, options);
 }

@@ -34,7 +34,7 @@ def get_settings(
 
 
 class Operation(StrEnum):
-    ADD = "ADD"
+    SET = "ADD"
     """Sets the value of the given field."""
     UPDATE = "UPDATE"
     """Updates the given field. Throws if it doesn't exist."""

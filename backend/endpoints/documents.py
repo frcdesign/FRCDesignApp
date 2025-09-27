@@ -6,6 +6,7 @@ Every route in this file is access controlled.
 from __future__ import annotations
 import asyncio
 from enum import StrEnum
+import re
 from typing import Iterator
 import flask
 
@@ -13,11 +14,8 @@ from backend.common import connect, database
 from backend.common.app_access import require_access_level
 from backend.common.app_logging import log_search
 from backend.endpoints.cache import cacheable_route
-from backend.common.models import Element
+from backend.common.models import Element, Vendor
 from backend.common.models import Document
-from backend.endpoints.backend_types import (
-    parse_vendor,
-)
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
     PreservedInfo,
@@ -80,6 +78,14 @@ def get_elements(**kwargs):
     return {"elements": elements}
 
 
+def parse_vendor(name: str) -> Vendor | None:
+    match = re.search(r"\((\w+)\)$", name)
+    if not match:
+        return None
+    vendor_str = match.group(1)
+    return next((vendor for vendor in Vendor if vendor == vendor_str), None)
+
+
 def save_element(
     db: database.Database,
     api: Api,
@@ -97,7 +103,6 @@ def save_element(
     element_id = onshape_element["id"]
 
     path = ElementPath.from_path(version_path, element_id)
-    preserved = preserved_info.load_element(element_id)
 
     onshape_configuration = get_configuration(api, path)
     configuration_id = None
@@ -107,6 +112,7 @@ def save_element(
         db.configurations.document(element_id).set(configuration.model_dump())
         configuration_id = element_id
 
+    preserved_element = preserved_info.get_element(element_id)
     db.elements.document(element_id).set(
         Element(
             name=element_name,
@@ -116,7 +122,7 @@ def save_element(
             instanceId=version_path.instance_id,
             microversionId=onshape_element["microversionId"],
             configurationId=configuration_id,
-            isVisible=preserved["isVisible"],
+            isVisible=preserved_element.isVisible,
         ).model_dump()
     )
     return element_id
@@ -186,17 +192,17 @@ async def save_document(
         )
 
     document_id = version_path.document_id
-    preserved = preserved_info.load_document(document_id)
 
     await asyncio.gather(*save_element_operations)
 
+    preserved_document = preserved_info.get_document(document_id)
     db.documents.document(document_id).set(
         Document(
             name=onshape_document["name"],
             thumbnailElementId=thumbnail_element_id,
             instanceId=version_path.instance_id,
             elementIds=ordered_element_ids,
-            sortAlphabetically=preserved["sortAlphabetically"],
+            sortAlphabetically=preserved_document.sortAlphabetically,
         ).model_dump()
     )
     return len(ordered_element_ids)

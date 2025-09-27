@@ -1,12 +1,16 @@
 """User settings saved in Onshape directly."""
 
 from __future__ import annotations
+from enum import IntEnum
+import uuid
 
 import flask
+from pydantic import BaseModel, field_validator
 
 from backend.common.connect import (
     get_api,
     get_db,
+    get_optional_body_arg,
     get_query_param,
     get_route_user_path,
     user_path_route,
@@ -22,6 +26,22 @@ from onshape_api.endpoints.settings import (
 router = flask.Blueprint("favorites", __name__)
 
 
+class FavoriteVersion(IntEnum):
+    V1 = 1
+
+
+class Favorite(BaseModel):
+    version: FavoriteVersion = FavoriteVersion.V1
+    defaultConfiguration: str | None = None
+
+    @field_validator("version", mode="before")
+    def validate_version(cls, v):
+        if v is None:
+            # No version is backwards compatible with V1
+            return FavoriteVersion.V1
+        return v
+
+
 @router.get("/favorites" + user_path_route())
 def get_favorites(**kwargs):
     """Returns a list of all of the current user's favorites."""
@@ -31,12 +51,13 @@ def get_favorites(**kwargs):
 
     favorites_result = get_setting(api, user_path, "favorites")
 
-    if favorites_result == None:
-        favorites = []
-    else:
-        # Convert from dict mapping ids to {} to array
+    favorites = []
+    if favorites_result != None:
+        # Convert from dict mapping ids to favorites to array
         # This is a bit goofy since we immediately convert back in the frontend, but it's uniform with /documents and /elements
-        favorites = [{"id": id} for id in favorites_result.keys()]
+        for [key, value] in favorites_result.items():
+            value["id"] = key
+            favorites.append(value)
 
     return {"favorites": favorites}
 
@@ -47,12 +68,15 @@ def add_favorite(**kwargs):
     db = get_db()
     api = get_api(db)
     element_id = get_query_param("elementId")
+    default_configuration = get_optional_body_arg("defaultConfiguration", None)
+
+    favorite = Favorite(defaultConfiguration=default_configuration)
 
     update: Update = {
         "key": "favorites",
         "field": element_id,
-        "value": {},
-        "operation": Operation.ADD,
+        "value": favorite.model_dump(),
+        "operation": Operation.SET,
     }
 
     update_setting(api, user_path, update)
@@ -73,4 +97,4 @@ def remove_favorite(**kwargs):
         "operation": Operation.REMOVE,
     }
     update_setting(api, user_path, update)
-    return {}
+    return {"success": True}

@@ -23,12 +23,11 @@ import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
-import { Vendor } from "./api/models";
 import { AppError } from "./app/app-error";
+import { getUiState, updateUiState } from "./app/ui-state";
 
 interface BaseSearchParams {
     query?: string;
-    vendors?: Vendor[];
 }
 
 type SearchParams = OnshapeParams & BaseSearchParams & MenuParams & ContextData;
@@ -63,6 +62,7 @@ const appRoute = createRoute({
         queryClient.fetchQuery(getDocumentsQuery(deps));
         queryClient.fetchQuery(getElementsQuery(deps));
 
+        // We need settings immediately to determine the theme
         return queryClient.ensureQueryData(getSettingsQuery(deps));
     }
 });
@@ -77,7 +77,7 @@ const baseAppRoute = createRoute({
         instanceType: search.instanceType
     }),
     loader: async ({ deps }) => {
-        // Context data goes here since we only need them once
+        // Context data goes here since we only need it once
         return queryClient.ensureQueryData(getContextDataQuery(deps));
     }
 });
@@ -97,13 +97,21 @@ const homeRoute = createRoute({
 const homeListRoute = createRoute({
     getParentRoute: () => homeRoute,
     path: "/",
-    component: HomeList
+    component: HomeList,
+    onEnter: () => {
+        updateUiState(getUiState(), { openDocumentId: undefined });
+    }
 });
 
 const documentListRoute = createRoute({
     getParentRoute: () => homeRoute,
     path: "$documentId",
-    component: DocumentList
+    component: DocumentList,
+    onEnter: (match) => {
+        updateUiState(getUiState(), {
+            openDocumentId: match.params.documentId
+        });
+    }
 });
 
 const grantDeniedRoute = createRoute({

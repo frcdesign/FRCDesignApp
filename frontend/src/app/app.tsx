@@ -18,11 +18,23 @@ import { InsertMenu } from "../document/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AddDocumentMenu } from "../document/add-document-menu";
 import { useSettings } from "../queries";
+import { useUiState } from "./ui-state";
 
 export function BaseApp() {
     const contextData = useLoaderData({ from: "/app/" });
 
-    // Add contextData to search params
+    const uiState = useUiState()[0];
+
+    if (uiState.openDocumentId) {
+        return (
+            <Navigate
+                to="/app/documents/$documentId"
+                params={{ documentId: uiState.openDocumentId }}
+                search={() => contextData}
+            />
+        );
+    }
+
     return <Navigate to="/app/documents" search={() => contextData} />;
 }
 

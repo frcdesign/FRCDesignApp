@@ -52,7 +52,6 @@ else:
     formatter = CloudLoggingDevFormatter()
     handler.setFormatter(formatter)
     CLOUD_LOGGER.addHandler(handler)
-    CLOUD_LOGGER.propagate = False
 
 
 def set_logging_level(logger: logging.Logger):
@@ -60,12 +59,13 @@ def set_logging_level(logger: logging.Logger):
     if not IS_PRODUCTION and VERBOSE_LOGGING:
         logger.setLevel(logging.DEBUG)
     else:
-        logger.setLevel(logging.ERROR)
+        logger.setLevel(logging.CRITICAL)
+        logger.propagate = False
 
 
 set_logging_level(APP_LOGGER)
-set_logging_level(ONSHAPE_LOGGER)
 set_logging_level(FLASK_LOGGER)
+set_logging_level(ONSHAPE_LOGGER)
 
 
 class LogType(StrEnum):

@@ -74,7 +74,7 @@ def parse_option_visibility_conditions(
 def parse_visibility_condition(
     onshape_condition: dict | None,
 ) -> VisibilityCondition | None:
-    """Transforms a visibility condition on an Onshape configuration into a normalized condition_dict."""
+    """Transforms a visibility condition on an Onshape configuration into a valid VisibilityCondition."""
     if onshape_condition == None:
         return None
 
@@ -184,14 +184,26 @@ def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationPar
             range = parameter["rangeAndDefault"]
 
             unit: Unit = range["units"]
-            default = f"{range["defaultValue"]} {get_abbreviation(unit)}"
+
+            val = range["defaultValue"]
+            # Convert float to int if it's an int so we don't get a trailing 0
+            if isinstance(val, float) and val == int(val):
+                val = int(val)
+
+            if unit == Unit.UNITLESS:
+                default = str(val)
+            else:
+                default = f"{val} {get_abbreviation(unit)}"
+
             result.update(
                 {
                     "quantityType": quantity_type,
                     "default": default,
+                    # Leave as integer or float values for easier comparisons
+                    "defaultValue": val,
                     "min": range["minValue"],
                     "max": range["maxValue"],
-                    "unit": range["units"],  # empty string for real and integer
+                    "unit": unit,  # empty string for real and integer
                 }
             )
 
