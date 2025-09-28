@@ -7,8 +7,7 @@ import {
     Documents,
     ElementObj,
     Elements,
-    Favorite,
-    Favorites,
+    FavoritesResult,
     Settings
 } from "./api/models";
 import {
@@ -78,14 +77,9 @@ export function getFavoritesQuery(userPath: UserPath) {
     return queryOptions({
         queryKey: ["favorites"],
         queryFn: async () =>
-            apiGet("/favorites" + toUserApiPath(userPath)).then((result) =>
-                Object.fromEntries(
-                    result.favorites.map((favorite: Favorite) => [
-                        favorite.id,
-                        favorite
-                    ])
-                )
-            ) as Promise<Favorites>,
+            apiGet(
+                "/favorites" + toUserApiPath(userPath)
+            ) as Promise<FavoritesResult>,
         // Favorites shouldn't go stale, although they can get changed in another tab
         staleTime: 60 * 1000
     });

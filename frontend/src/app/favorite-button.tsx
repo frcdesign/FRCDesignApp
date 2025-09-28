@@ -2,7 +2,7 @@ import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, Favorites } from "../api/models";
+import { ElementObj, FavoritesResult } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { showErrorToast } from "../common/toaster";
@@ -22,14 +22,24 @@ interface UpdateFavoritesArgs {
     elementId: string;
 }
 
-function updateFavorites(data: Favorites, args: UpdateFavoritesArgs) {
-    const favorites = { ...data };
+function updateFavorites(
+    data: FavoritesResult,
+    args: UpdateFavoritesArgs
+): FavoritesResult {
+    const newFavorites = {
+        favorites: { ...data.favorites },
+        favoriteOrder: data.favoriteOrder
+    };
     if (args.operation === Operation.ADD) {
-        favorites[args.elementId] = { id: args.elementId };
+        newFavorites.favorites[args.elementId] = { id: args.elementId };
+        newFavorites.favoriteOrder.push(args.elementId);
     } else {
-        delete favorites[args.elementId];
+        delete newFavorites.favorites[args.elementId];
+        newFavorites.favoriteOrder = newFavorites.favoriteOrder.filter(
+            (favoriteId) => favoriteId !== args.elementId
+        );
     }
-    return favorites;
+    return newFavorites;
 }
 
 interface FavoriteButtonProps {
@@ -56,7 +66,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             }
         },
         onMutate: (args) => {
-            queryClient.setQueryData(["favorites"], (data: Favorites) =>
+            queryClient.setQueryData(["favorites"], (data: FavoritesResult) =>
                 updateFavorites(data, args)
             );
         },
@@ -65,9 +75,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
             showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
             args.operation = getOppositeOperation(args.operation);
-            queryClient.setQueryData(["favorites"], (data: Favorites) =>
-                updateFavorites(data, args)
-            );
+            queryClient.refetchQueries({ queryKey: ["favorites"] });
         }
     });
 

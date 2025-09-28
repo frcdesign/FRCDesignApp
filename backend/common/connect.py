@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 import enum
 import re
-from typing import Any
+from typing import Any, Type, TypeVar
 
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
@@ -15,8 +15,25 @@ from google.cloud import firestore
 from backend.common.database import Database
 import onshape_api
 from backend.common import backend_exceptions, env
+from onshape_api.api.oauth_api import OAuthApi
+from onshape_api.endpoints.settings import get_setting, set_setting
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.user_path import UserPath
+
+
+T = TypeVar("T", bound=BaseModel)
+
+
+def get_onshape_setting(
+    api: OAuthApi, user_path: UserPath, key: str, schema: Type[T]
+) -> T:
+    """Gets a value from Onshape and compares it against a given schema. Writes it back if any changes are made to ensure consistency."""
+    base_dict = get_setting(api, user_path, key) or {}
+    validated = schema.model_validate(base_dict)
+    if validated.model_dump() != base_dict:
+        set_setting(api, user_path, key, validated.model_dump())
+
+    return validated
 
 
 def get_deletion_time() -> datetime:

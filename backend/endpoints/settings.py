@@ -1,7 +1,7 @@
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 import flask
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from backend.common import env
 from backend.common import connect
@@ -9,6 +9,7 @@ from backend.common.app_access import get_app_access_level
 from backend.common.connect import (
     get_api,
     get_db,
+    get_onshape_setting,
     get_route_user_path,
     instance_path_route,
     user_path_route,
@@ -19,7 +20,6 @@ from onshape_api.endpoints.documents import get_unit_info
 from onshape_api.endpoints.settings import (
     Operation,
     Update,
-    get_setting,
     update_setting,
 )
 from onshape_api.endpoints.users import AccessLevel
@@ -59,6 +59,10 @@ def get_default_unit(units: list, quantity_type: QuantityType) -> Unit:
     return next(unit["value"] for unit in units if unit["key"] == quantity_type)
 
 
+class SettingsVersion(IntEnum):
+    V1 = 1
+
+
 class Theme(StrEnum):
     SYSTEM = "system"
     LIGHT = "light"
@@ -66,7 +70,15 @@ class Theme(StrEnum):
 
 
 class Settings(BaseModel):
+    version: SettingsVersion = SettingsVersion.V1
     theme: Theme = Theme.SYSTEM
+
+    @field_validator("version", mode="before")
+    def validate_version(cls, v):
+        if v is None:
+            # No version is backwards compatible with V1
+            return SettingsVersion.V1
+        return v
 
 
 @router.get("/settings" + user_path_route())
@@ -75,9 +87,8 @@ def get_settings(**kwargs):
     api = get_api(db)
     user_path = get_route_user_path()
 
-    settings_dict = get_setting(api, user_path, "settings")
-    settings = Settings.model_validate(settings_dict if settings_dict != None else {})
-    return settings.model_dump()
+    settings = get_onshape_setting(api, user_path, "settings", Settings)
+    return settings.model_dump(exclude_none=True)
 
 
 @router.post("/settings" + user_path_route())

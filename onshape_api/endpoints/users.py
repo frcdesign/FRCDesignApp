@@ -1,18 +1,19 @@
 from enum import StrEnum
 from onshape_api.api.api_base import Api
+from onshape_api.api.oauth_api import OAuthApi
 from onshape_api.paths.api_path import api_path
 
 
-def get_session_info(api: Api) -> dict:
+def get_session_info(api: OAuthApi) -> dict:
     return api.get(api_path("users", end_route="sessioninfo"))
 
 
-def get_user_id(api: Api) -> str:
+def get_user_id(api: OAuthApi) -> str:
     """Returns the user_id associated with the current session."""
     return get_session_info(api)["id"]
 
 
-def ping(api: Api, catch: bool = False) -> bool:
+def ping(api: OAuthApi, catch: bool = False) -> bool:
     """Pings the Onshape API's users/sessioninfo endpoint.
 
     Returns true if the ping was successful, and false if it was not.

@@ -63,10 +63,10 @@ export function DocumentList(): ReactNode {
     const document = documents[documentId];
 
     let content;
-    if (search.query) {
+    if (uiState.searchQuery) {
         content = (
             <SearchResults
-                query={search.query}
+                query={uiState.searchQuery}
                 filters={{
                     vendors: uiState.vendorFilters,
                     documentId: document.documentId

@@ -66,3 +66,9 @@ def update_settings(
 def update_setting(api: OAuthApi, user_path: UserPath, update: Update) -> None:
     """Applies a single update."""
     update_settings(api, user_path, [update])
+
+
+def set_setting(api: OAuthApi, user_path: UserPath, key: str, value: Any) -> None:
+    """Sets the value of a given key."""
+    update: Update = {"key": key, "value": value}
+    update_setting(api, user_path, update)

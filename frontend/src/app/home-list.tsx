@@ -15,7 +15,7 @@ import {
 import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentCard, ElementCard } from "../document/cards";
-import { FavoriteIcon } from "./favorite";
+import { FavoriteIcon } from "./favorite-button";
 import {
     useDocumentOrderQuery,
     useDocumentsQuery,
@@ -32,12 +32,10 @@ import { useUiState } from "./ui-state";
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
-    const search = useSearch({ from: "/app" });
-
     const [uiState, setUiState] = useUiState();
 
     let content;
-    if (search.query) {
+    if (uiState.searchQuery) {
         // Key is needed to differentiate between Favorites
         // Otherwise the useState in ListContainer can get confused
         content = (
@@ -48,7 +46,7 @@ export function HomeList(): ReactNode {
                 isOpen
             >
                 <SearchResults
-                    query={search.query}
+                    query={uiState.searchQuery}
                     filters={{ vendors: uiState.vendorFilters }}
                 />
             </ListContainer>
@@ -207,7 +205,7 @@ function FavoritesList() {
     const elements = elementsQuery.data;
 
     const orderedFavorites = getElementOrder(searchDb, {
-        elementIds: Object.keys(favorites),
+        elementIds: favorites.favoriteOrder,
         vendors: uiState.vendorFilters,
         // Only show visible elements
         isVisible: !hasMemberAccess(search.currentAccessLevel)

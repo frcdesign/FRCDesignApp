@@ -19,7 +19,7 @@ import {
     hasMemberAccess
 } from "../api/models";
 import { CardThumbnail } from "../app/thumbnail";
-import { FavoriteButton } from "../app/favorite";
+import { FavoriteButton } from "../app/favorite-button";
 import { useDocumentsQuery, useFavoritesQuery } from "../queries";
 import { getSearchHitTitle, SearchHit } from "../api/search";
 import { AppMenu } from "../api/menu-params";
@@ -105,7 +105,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         element.elementType === ElementType.ASSEMBLY &&
         search.elementType == ElementType.PART_STUDIO;
 
-    const isFavorite = favorites[element.elementId] !== undefined;
+    const isFavorite = favorites.favorites[element.elementId] !== undefined;
 
     const alert = isAlertOpen ? (
         <CannotDeriveAssemblyAlert onClose={() => setIsAlertOpen(false)} />

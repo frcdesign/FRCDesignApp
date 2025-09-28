@@ -26,11 +26,7 @@ import { OnshapeParams } from "./api/onshape-params";
 import { AppError } from "./app/app-error";
 import { getUiState, updateUiState } from "./app/ui-state";
 
-interface BaseSearchParams {
-    query?: string;
-}
-
-type SearchParams = OnshapeParams & BaseSearchParams & MenuParams & ContextData;
+type SearchParams = OnshapeParams & MenuParams & ContextData;
 
 const rootRoute = createRootRoute();
 
@@ -57,10 +53,10 @@ const appRoute = createRoute({
         cacheVersion: search.cacheVersion
     }),
     loader: async ({ deps }) => {
-        queryClient.fetchQuery(getFavoritesQuery(deps));
-        queryClient.fetchQuery(getDocumentOrderQuery(deps));
-        queryClient.fetchQuery(getDocumentsQuery(deps));
-        queryClient.fetchQuery(getElementsQuery(deps));
+        queryClient.prefetchQuery(getFavoritesQuery(deps));
+        queryClient.prefetchQuery(getDocumentOrderQuery(deps));
+        queryClient.prefetchQuery(getDocumentsQuery(deps));
+        queryClient.prefetchQuery(getElementsQuery(deps));
 
         // We need settings immediately to determine the theme
         return queryClient.ensureQueryData(getSettingsQuery(deps));
@@ -85,12 +81,6 @@ const baseAppRoute = createRoute({
 const homeRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "documents",
-    // loaderDeps: ({ search }) => ({ userId: search.userId }),
-    // loader: async ({ deps }) => {
-    //     // Everything else goes here since we only need them in Documents
-
-    //     return [];
-    // },
     errorComponent: AppError
 });
 

@@ -24,7 +24,7 @@ import {
     useHandleCloseDialog
 } from "../api/menu-params";
 import { PreviewImage } from "../app/thumbnail";
-import { FavoriteButton } from "../app/favorite";
+import { FavoriteButton } from "../app/favorite-button";
 import {
     showErrorToast,
     showLoadingToast,
@@ -65,7 +65,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     }
 
     const element = elements[elementId];
-    const isFavorite = favorites[elementId] !== undefined;
+    const isFavorite = favorites.favorites[elementId] !== undefined;
 
     let parameters = null;
     if (element.configurationId) {
@@ -97,7 +97,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
             onClose={() => {
                 toaster.show(
                     {
-                        message: `Cancelled insertion of ${element.name}.`,
+                        message: `Cancelled ${element.name}.`,
                         intent: "primary",
                         icon: "info-sign",
                         action: {

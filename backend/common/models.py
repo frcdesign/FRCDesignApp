@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from backend.common import env
 from onshape_api.endpoints.documents import ElementType
 
 

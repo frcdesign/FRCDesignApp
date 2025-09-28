@@ -1,6 +1,6 @@
+from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_version
 from onshape_api.paths.api_path import api_path
-from onshape_api.api.api_base import Api
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.doc_path import DocumentPath, InstancePath
 
@@ -19,8 +19,7 @@ def get_versions(
 
 
 def get_version(api: Api, version_path: InstancePath) -> dict:
-    """Fetches information about a version of a document.
-    """
+    """Fetches information about a version of a document."""
     assert_version(version_path)
     return api.get(
         api_path(

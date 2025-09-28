@@ -7,6 +7,7 @@ const VendorType = z.enum(Object.values(Vendor));
 const UiStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
+    searchQuery: z.string().optional(),
     vendorFilters: z.array(VendorType).optional(),
     openDocumentId: z.string().optional()
 });

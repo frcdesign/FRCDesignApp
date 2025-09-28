@@ -319,6 +319,11 @@ export interface ElementObj extends ElementPath {
     configurationId?: string;
 }
 
+export interface FavoritesResult {
+    favorites: Favorites;
+    favoriteOrder: string[];
+}
+
 export type Favorites = Record<string, Favorite>;
 
 /**
@@ -327,6 +332,7 @@ export type Favorites = Record<string, Favorite>;
  */
 export interface Favorite {
     id: string;
+    defaultConfiguration?: Configuration;
 }
 
 export enum ThumbnailSize {
