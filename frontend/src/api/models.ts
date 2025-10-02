@@ -29,6 +29,10 @@ export function hasMemberAccess(accessLevel: AccessLevel) {
     );
 }
 
+export function hasUserAccess(accessLevel: AccessLevel) {
+    return accessLevel === AccessLevel.USER;
+}
+
 export enum Vendor {
     AM = "AM",
     LAI = "LAI",
@@ -36,7 +40,7 @@ export enum Vendor {
     REDUX = "Redux",
     REV = "REV",
     SDS = "SDS",
-    SWYFT = "Swyft",
+    SWYFT = "SWYFT",
     TTB = "TTB",
     VEX = "VEX",
     WCP = "WCP"
@@ -60,7 +64,7 @@ export function getVendorName(vendor: Vendor) {
         case Vendor.SDS:
             return "Swerve Drive Specialties";
         case Vendor.SWYFT:
-            return "Swyft";
+            return "SWYFT";
         case Vendor.TTB:
             return "The Thrifty Bot";
         case Vendor.VEX:
@@ -315,7 +319,7 @@ export interface ElementObj extends ElementPath {
     elementType: ElementType;
     microversionId: string;
     isVisible: boolean;
-    vendor?: string;
+    vendor?: Vendor;
     configurationId?: string;
 }
 
@@ -326,10 +330,6 @@ export interface FavoritesResult {
 
 export type Favorites = Record<string, Favorite>;
 
-/**
- * A favorite is currently just an empty object.
- * We may add additional information in the future.
- */
 export interface Favorite {
     id: string;
     defaultConfiguration?: Configuration;

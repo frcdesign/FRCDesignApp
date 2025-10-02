@@ -74,3 +74,8 @@ export function parseUrl(
 export function openUrlInNewTab(url: string) {
     window.open(url);
 }
+
+/**
+ * URL of the FRCDesign feedback google form.
+ */
+export const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";

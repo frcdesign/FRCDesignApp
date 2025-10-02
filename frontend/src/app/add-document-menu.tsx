@@ -23,7 +23,7 @@ import {
     showSuccessToast
 } from "../common/toaster";
 import { queryClient } from "../query-client";
-import { invalidateSearchDb } from "../api/search";
+import { invalidateSearchDb } from "./search";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });

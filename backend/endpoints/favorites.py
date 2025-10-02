@@ -180,8 +180,9 @@ def set_favorite_order(**kwargs):
     db = get_db()
     api = get_api(db)
     user_path = get_route_user_path()
-    favorite_order_obj = get_body_arg("favoriteOrder")
+    favorite_order_arr = get_body_arg("favoriteOrder")
 
-    favorite_order = FavoriteOrder(order=favorite_order_obj)
+    order = [FavoriteRef(favoriteId=id) for id in favorite_order_arr]
+    favorite_order = FavoriteOrder(order=order)
     set_setting(api, user_path, "favorite-order", favorite_order.model_dump())
     return {"success": True}

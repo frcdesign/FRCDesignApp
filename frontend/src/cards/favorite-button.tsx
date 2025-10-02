@@ -28,7 +28,7 @@ function updateFavorites(
 ): FavoritesResult {
     const newFavorites = {
         favorites: { ...data.favorites },
-        favoriteOrder: data.favoriteOrder
+        favoriteOrder: [...data.favoriteOrder]
     };
     if (args.operation === Operation.ADD) {
         newFavorites.favorites[args.elementId] = { id: args.elementId };
@@ -84,12 +84,12 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     let favoriteIcon;
     if (isHovered) {
         if (isFavorite) {
-            favoriteIcon = <Icon icon="heart-broken" color={Colors.RED3} />;
+            favoriteIcon = <HeartBrokenIcon />;
         } else {
-            favoriteIcon = <FavoriteIcon />;
+            favoriteIcon = <HeartIcon />;
         }
     } else {
-        favoriteIcon = <FavoriteIcon isFavorite={isFavorite} />;
+        favoriteIcon = <HeartIcon full={isFavorite} />;
     }
 
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
@@ -113,17 +113,18 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     );
 }
 
-interface FavoriteIconProps {
-    isFavorite?: boolean;
+interface HeartIconProps {
+    /**
+     * @default true
+     */
+    full?: boolean;
 }
 
-export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
-    const isFavorite = props.isFavorite ?? true;
-    return (
-        <Icon
-            icon="heart"
-            className={isFavorite ? "" : "empty-heart-icon"}
-            color={isFavorite ? Colors.RED3 : undefined}
-        />
-    );
+export function HeartIcon(props: HeartIconProps): ReactNode {
+    const full = props.full ?? true;
+    return <Icon icon="heart" color={full ? Colors.RED3 : undefined} />;
+}
+
+export function HeartBrokenIcon(): ReactNode {
+    return <Icon icon="heart-broken" color={Colors.RED3} />;
 }

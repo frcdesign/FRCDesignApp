@@ -8,23 +8,31 @@ interface RequireAccessLevelProps extends PropsWithChildren {
      * @default AccessLevel.MEMBER
      */
     accessLevel?: AccessLevel;
+    /**
+     * If specified, this will check against the maxAccessLevel instead of currentAccessLevel.
+     * @default false
+     */
+    useMaxAccessLevel?: boolean;
 }
 
 /**
  * Simple component which renders children only if the given accessLevel requirement is met.
  */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
-    const accessLevel = useSearch({ from: "/app" }).currentAccessLevel;
+    const search = useSearch({ from: "/app" });
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.MEMBER;
+    const currentAccessLevel = props.useMaxAccessLevel
+        ? search.maxAccessLevel
+        : search.currentAccessLevel;
 
     if (
         requiredAccessLevel === AccessLevel.ADMIN &&
-        hasAdminAccess(accessLevel)
+        hasAdminAccess(currentAccessLevel)
     ) {
         return props.children;
     } else if (
         requiredAccessLevel === AccessLevel.MEMBER &&
-        hasMemberAccess(accessLevel)
+        hasMemberAccess(currentAccessLevel)
     ) {
         return props.children;
     }

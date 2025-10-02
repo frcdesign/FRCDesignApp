@@ -23,7 +23,6 @@ $frc-design-green: #4cae4f;
 
 .split {
     display: flex;
-    align-items: center;
     justify-content: space-between;
 }
 
@@ -117,21 +116,25 @@ $frc-design-green: #4cae4f;
 .item-card {
     display: flex;
     justify-content: space-between;
-    margin-left: -3px;
+
+    .item-card-right-content {
+        // Shimmy more button and heart over
+        margin-right: -6px;
+    }
 }
 
-.home-loading-state {
+.inline-app-loading-state {
     padding-top: 50px;
     padding-bottom: 50px;
 }
 
-.home-error-state {
+.inline-app-error-state {
     padding-top: 25px;
     padding-bottom: 50px;
 }
 
-.home-card-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+// .home-card-title {
+//     display: flex;
+//     align-items: center;
+//     gap: 10px;
+// }

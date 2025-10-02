@@ -20,13 +20,13 @@ import { queryClient } from "../query-client";
 import { AccessLevel, hasMemberAccess, Settings, Theme } from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { invalidateSearchDb } from "../api/search";
+import { invalidateSearchDb } from "../app/search";
 import { toUserApiPath } from "../api/path";
-import { FEEDBACK_FORM_URL } from "../api/errors";
 import { useSettings } from "../queries";
 import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api/access-level";
+import { FEEDBACK_FORM_URL } from "../common/url";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });

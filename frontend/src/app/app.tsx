@@ -1,11 +1,6 @@
 import { queryClient } from "../query-client";
 import { AppNavbar } from "../navbar/app-navbar";
-import {
-    Navigate,
-    Outlet,
-    useLoaderData,
-    useSearch
-} from "@tanstack/react-router";
+import { Outlet, useSearch } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
     getBackgroundClass,
@@ -14,29 +9,10 @@ import {
 } from "../api/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { SettingsMenu } from "../navbar/settings-menu";
-import { InsertMenu } from "../document/insert-menu";
+import { InsertMenu } from "../insert/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { AddDocumentMenu } from "../document/add-document-menu";
+import { AddDocumentMenu } from "./add-document-menu";
 import { useSettings } from "../queries";
-import { useUiState } from "./ui-state";
-
-export function BaseApp() {
-    const contextData = useLoaderData({ from: "/app/" });
-
-    const uiState = useUiState()[0];
-
-    if (uiState.openDocumentId) {
-        return (
-            <Navigate
-                to="/app/documents/$documentId"
-                params={{ documentId: uiState.openDocumentId }}
-                search={() => contextData}
-            />
-        );
-    }
-
-    return <Navigate to="/app/documents" search={() => contextData} />;
-}
 
 export function App() {
     const search = useSearch({ from: "/app" });

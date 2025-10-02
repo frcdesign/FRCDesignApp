@@ -1,11 +1,17 @@
-import { NonIdealState, Icon, NonIdealStateIconSize } from "@blueprintjs/core";
 import { ReactNode, useState, useEffect } from "react";
-import { SearchHit, doSearch, useSearchDb } from "../api/search";
-import { ElementCard } from "../document/cards";
+import {
+    SearchHit,
+    SearchPositions,
+    DELIMINATOR,
+    doSearch,
+    useSearchDb
+} from "./search";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
+import { ElementCard } from "../cards/element-card";
+import { AppErrorState, AppLoadingState } from "../common/app-zero-state";
 
 interface SearchResultsProps {
     query: string;
@@ -18,10 +24,10 @@ interface SearchResultsProps {
 export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters } = props;
 
-    const elements = useElementsQuery().data;
-    const documents = useDocumentsQuery().data;
+    const elementsQuery = useElementsQuery();
+    const documentsQuery = useDocumentsQuery();
 
-    const searchDb = useSearchDb(documents, elements);
+    const searchDb = useSearchDb(documentsQuery.data, elementsQuery.data);
 
     const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
         undefined
@@ -44,21 +50,23 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         executeSearch();
     }, [searchDb, query, filters]);
 
-    if (!searchDb || !searchHits || !elements) {
-        return null;
+    if (
+        !searchDb ||
+        !searchHits ||
+        !elementsQuery.data ||
+        !documentsQuery.data
+    ) {
+        return <AppLoadingState title="Building search index..." />;
     }
+    const elements = elementsQuery.data;
 
     let content = null;
     if (searchHits.length === 0) {
         content = (
             <div style={{ height: "150px" }}>
-                <NonIdealState
-                    icon={
-                        <Icon
-                            icon="search"
-                            size={NonIdealStateIconSize.STANDARD}
-                        />
-                    }
+                <AppErrorState
+                    icon="search"
+                    iconIntent="primary"
                     title="No search results"
                 />
             </div>
@@ -79,4 +87,109 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     }
 
     return content;
+}
+
+interface Range {
+    start: number;
+    length: number;
+}
+
+function applyRanges(str: string, ranges: Range[]) {
+    ranges = deduplicateRanges(ranges);
+    // Sort ranges by start to ensure processing order
+    ranges = [...ranges].sort((a, b) => a.start - b.start);
+
+    const result = [];
+    let currentIndex = 0;
+
+    for (const range of ranges) {
+        const { start, length } = range;
+        const end = start + length;
+
+        // Add non-highlighted part before this range
+        if (currentIndex < start) {
+            result.push(str.slice(currentIndex, start));
+        }
+
+        // Add highlighted part
+        // Array elements must have a key to avoid a warning
+        result.push(<u key={currentIndex}>{str.slice(start, end)}</u>);
+
+        currentIndex = end;
+    }
+
+    // Add the remaining non-highlighted part
+    if (currentIndex < str.length) {
+        result.push(str.slice(currentIndex));
+    }
+
+    return result;
+}
+
+function remapRanges(str: string, ranges: Range[]): Range[] {
+    let offsetCount = 0;
+
+    // Build mapping from original index → index in "clean" string
+    const indexMap: number[] = [];
+    for (let i = 0; i < str.length; i++) {
+        if (str[i] === DELIMINATOR) {
+            offsetCount++;
+        } else {
+            indexMap[i] = i - offsetCount;
+        }
+    }
+
+    // Adjust ranges
+    return ranges.map(({ start, length }) => {
+        const newStart = indexMap[start];
+        return { start: newStart, length };
+    });
+}
+
+function deduplicateRanges(ranges: Range[]): Range[] {
+    // Mapping where indexMap[i] = true means i is in a range.
+    const indexMap: boolean[] = [];
+    ranges.forEach((range) => {
+        for (let i = 0; i < range.length; i++) {
+            indexMap[range.start + i] = true;
+        }
+    });
+
+    const merged: Range[] = [];
+    // indexMap.length will always include the highest index set
+    for (let i = 0; i < indexMap.length; i++) {
+        if (!indexMap[i]) {
+            continue;
+        }
+        const start = i;
+        // Find length of range
+        while (i < indexMap.length && indexMap[i]) {
+            i++;
+        }
+        merged.push({ start, length: i - start });
+    }
+    return merged;
+}
+
+interface SearchHitTitleProps {
+    searchHit: SearchHit;
+}
+
+/**
+ * Returns text highlighted with a searchHit, or title if searchHit is undefined.
+ */
+export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
+    const { searchHit } = props;
+
+    const positions: SearchPositions = searchHit.positions;
+    const ranges = [];
+
+    const spacedNameRanges = Object.values(positions.spacedName).flat(1);
+    ranges.push(
+        ...remapRanges(searchHit.document.spacedName, spacedNameRanges)
+    );
+
+    ranges.push(...Object.values(positions.name).flat(1));
+
+    return <>{applyRanges(searchHit.document.name, ranges)}</>;
 }

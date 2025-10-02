@@ -1,24 +1,5 @@
 import { MenuItem } from "@blueprintjs/core";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
-import { DocumentOrder } from "../api/models";
-import { useDocumentOrderQuery } from "../queries";
-import { queryClient } from "../query-client";
 import { ReactNode } from "react";
-import { invalidateSearchDb } from "../api/search";
-
-function useSetDocumentOrderMutation() {
-    return useMutation({
-        mutationKey: ["set-document-order"],
-        mutationFn: async (documentOrder: DocumentOrder) => {
-            return apiPost("/document-order", { body: { documentOrder } });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["document-order"] });
-            invalidateSearchDb();
-        }
-    });
-}
 
 enum MoveOperation {
     MOVE_UP,
@@ -29,14 +10,14 @@ enum MoveOperation {
 
 function applyMoveOperation(
     target: string,
-    documentOrder: DocumentOrder,
+    order: string[],
     operation: MoveOperation
-): DocumentOrder {
-    const index = documentOrder.indexOf(target);
-    if (index === -1) return documentOrder; // target not found, return unchanged
+): string[] {
+    const index = order.indexOf(target);
+    if (index === -1) return order; // target not found, return unchanged
 
     // Make a shallow copy so we don't mutate input
-    const result = [...documentOrder];
+    const result = [...order];
 
     switch (operation) {
         case MoveOperation.MOVE_UP: {
@@ -75,15 +56,12 @@ function applyMoveOperation(
 /**
  * Given a target and a documentOrder, returns a list of currently valid operations.
  */
-function getValidOperations(
-    target: string,
-    documentOrder: DocumentOrder
-): MoveOperation[] {
-    const index = documentOrder.indexOf(target);
+function getValidOperations(target: string, order: string[]): MoveOperation[] {
+    const index = order.indexOf(target);
     if (index === -1) {
         return [];
     }
-    const lastIndex = documentOrder.length - 1;
+    const lastIndex = order.length - 1;
     const operations: MoveOperation[] = [];
 
     if (index > 0) {
@@ -108,23 +86,22 @@ function getValidOperations(
     return operations;
 }
 
-interface ChangeDocumentOrderMenuProps {
-    documentId: string;
+interface ChangeOrderMenuProps {
+    id: string;
+    order: string[];
+    onOrderChange: (newOrder: string[]) => void;
 }
 
 /**
  * MenuItems that allow users to adjust the position of a document in the documents list.
  */
 
-export function ChangeDocumentOrderItems(
-    props: ChangeDocumentOrderMenuProps
-): ReactNode {
-    const { documentId } = props;
+export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
+    const { id, order, onOrderChange } = props;
 
-    const documentOrder = useDocumentOrderQuery().data ?? [];
+    // const documentOrder = useDocumentOrderQuery().data ?? [];
 
-    const operations = getValidOperations(documentId, documentOrder);
-    const setDocumentOrderMutation = useSetDocumentOrderMutation();
+    const operations = getValidOperations(id, order);
 
     return (
         <>
@@ -133,12 +110,8 @@ export function ChangeDocumentOrderItems(
                     icon="chevron-up"
                     text="Move up"
                     onClick={() => {
-                        setDocumentOrderMutation.mutate(
-                            applyMoveOperation(
-                                documentId,
-                                documentOrder,
-                                MoveOperation.MOVE_UP
-                            )
+                        onOrderChange(
+                            applyMoveOperation(id, order, MoveOperation.MOVE_UP)
                         );
                     }}
                 />
@@ -148,10 +121,10 @@ export function ChangeDocumentOrderItems(
                     icon="chevron-down"
                     text="Move down"
                     onClick={() => {
-                        setDocumentOrderMutation.mutate(
+                        onOrderChange(
                             applyMoveOperation(
-                                documentId,
-                                documentOrder,
+                                id,
+                                order,
                                 MoveOperation.MOVE_DOWN
                             )
                         );
@@ -163,10 +136,10 @@ export function ChangeDocumentOrderItems(
                     icon="double-chevron-up"
                     text="Move to top"
                     onClick={() => {
-                        setDocumentOrderMutation.mutate(
+                        onOrderChange(
                             applyMoveOperation(
-                                documentId,
-                                documentOrder,
+                                id,
+                                order,
                                 MoveOperation.MOVE_DOWN
                             )
                         );
@@ -178,10 +151,10 @@ export function ChangeDocumentOrderItems(
                     icon="double-chevron-down"
                     text="Move to bottom"
                     onClick={() => {
-                        setDocumentOrderMutation.mutate(
+                        onOrderChange(
                             applyMoveOperation(
-                                documentId,
-                                documentOrder,
+                                id,
+                                order,
                                 MoveOperation.MOVE_TO_BOTTOM
                             )
                         );

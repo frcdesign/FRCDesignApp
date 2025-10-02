@@ -1,53 +1,76 @@
 import {
-    Menu,
-    MenuItem,
-    MenuDivider,
     Icon,
-    ContextMenu
+    Card,
+    Classes,
+    ContextMenuChildrenProps,
+    ContextMenu,
+    Menu,
+    MenuDivider,
+    MenuItem
 } from "@blueprintjs/core";
+import { useMatch, useNavigate } from "@tanstack/react-router";
+import { PropsWithChildren, ReactNode } from "react";
+import { DocumentObj, DocumentOrder } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate, useMatch } from "@tanstack/react-router";
-import { apiPost, apiDelete } from "../api/api";
-import { DocumentObj, ElementObj } from "../api/models";
-import { AppMenu } from "../api/menu-params";
-import { queryClient } from "../query-client";
-import { ChangeDocumentOrderItems } from "./change-document-order";
-import { makeUrl, openUrlInNewTab } from "../common/url";
-import { invalidateSearchDb } from "../api/search";
 import { RequireAccessLevel } from "../api/access-level";
+import { apiPost, apiDelete } from "../api/api";
+import { AppMenu } from "../api/menu-params";
+import { invalidateSearchDb } from "../app/search";
+import { showErrorToast } from "../common/toaster";
+import { useDocumentOrderQuery } from "../queries";
+import { queryClient } from "../query-client";
+import { ChangeOrderItems } from "./change-order";
+import { useSetVisibilityMutation } from "./card-hooks";
+import { CardTitle, OpenDocumentItem } from "./card-components";
 
-interface ElementContextMenuProps {
-    element: ElementObj;
-    children: any;
+interface DocumentCardProps extends PropsWithChildren {
+    document: DocumentObj;
 }
 
-export function ElementContextMenu(props: ElementContextMenuProps) {
-    const { children, element } = props;
+/**
+ * A collapsible card representing a single document.
+ */
+export function DocumentCard(props: DocumentCardProps): ReactNode {
+    const { document } = props;
+    const navigate = useNavigate();
 
-    const mutation = useSetVisibilityMutation(
-        "set-visibility",
-        [element.id],
-        !element.isVisible
+    const thumbnailPath = {
+        documentId: document.documentId,
+        instanceId: document.instanceId,
+        instanceType: document.instanceType,
+        elementId: document.thumbnailElementId
+    };
+
+    return (
+        <DocumentContextMenu document={document}>
+            {(ctxMenuProps: ContextMenuChildrenProps) => (
+                <>
+                    <Card
+                        onContextMenu={ctxMenuProps.onContextMenu}
+                        ref={ctxMenuProps.ref}
+                        interactive
+                        onClick={() => {
+                            navigate({
+                                to: "/app/documents/$documentId",
+                                params: { documentId: document.id }
+                            });
+                        }}
+                        className="item-card"
+                    >
+                        <CardTitle
+                            title={document.name}
+                            elementPath={thumbnailPath}
+                        />
+                        <Icon
+                            icon="arrow-right"
+                            className={Classes.TEXT_MUTED}
+                        />
+                    </Card>
+                    {ctxMenuProps.popover}
+                </>
+            )}
+        </DocumentContextMenu>
     );
-
-    const menu = (
-        <Menu>
-            <OpenDocumentItem url={makeUrl(element)} />
-            <RequireAccessLevel>
-                <MenuDivider />
-                <MenuItem
-                    onClick={() => {
-                        mutation.mutate();
-                    }}
-                    intent={element.isVisible ? "danger" : "primary"}
-                    icon={element.isVisible ? "eye-off" : "eye-open"}
-                    text={element.isVisible ? "Hide element" : "Show element"}
-                />
-            </RequireAccessLevel>
-        </Menu>
-    );
-
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 interface DocumentContextMenuProps {
@@ -78,6 +101,9 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
         }
     });
 
+    const setDocumentOrderMutation = useSetDocumentOrderMutation();
+    const documentOrder = useDocumentOrderQuery();
+
     const showAllMutation = useSetVisibilityMutation(
         "show-all",
         document.elementIds,
@@ -90,9 +116,19 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
         false
     );
 
+    if (!documentOrder.data) {
+        return null;
+    }
+
     const orderItems = isHome && (
         <>
-            <ChangeDocumentOrderItems documentId={document.id} />
+            <ChangeOrderItems
+                id={document.id}
+                order={documentOrder.data}
+                onOrderChange={(newOrder) =>
+                    setDocumentOrderMutation.mutate(newOrder)
+                }
+            />
             <MenuDivider />
         </>
     );
@@ -128,7 +164,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenDocumentItem url={makeUrl(document)} />
+            <OpenDocumentItem path={document} />
             <RequireAccessLevel>
                 <MenuDivider />
                 {orderItems}
@@ -155,19 +191,20 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
-interface OpenDocumentItemProps {
-    url: string;
-}
-
-function OpenDocumentItem(props: OpenDocumentItemProps) {
-    return (
-        <MenuItem
-            text="Open document"
-            icon="share"
-            onClick={() => openUrlInNewTab(props.url)}
-            intent="primary"
-        />
-    );
+function useSetDocumentOrderMutation() {
+    return useMutation({
+        mutationKey: ["set-document-order"],
+        mutationFn: async (documentOrder: DocumentOrder) => {
+            return apiPost("/document-order", { body: { documentOrder } });
+        },
+        onMutate: (newOrder: DocumentOrder) => {
+            queryClient.setQueryData(["document-order"], newOrder);
+        },
+        onError: () => {
+            showErrorToast("Unexpectedly failed to reorder document.");
+            queryClient.refetchQueries({ queryKey: ["document-order"] });
+        }
+    });
 }
 
 function useToggleDocumentSortMutation(document: DocumentObj) {
@@ -207,26 +244,4 @@ function ToggleDocumentSortItem({ document }: ToggleDocumentSortItemProps) {
             }
         />
     );
-}
-
-function useSetVisibilityMutation(
-    mutationKey: string,
-    elementIds: string[],
-    isVisible: boolean
-) {
-    return useMutation({
-        mutationKey: [mutationKey],
-        mutationFn: async () => {
-            return apiPost("/set-visibility", {
-                body: {
-                    elementIds,
-                    isVisible
-                }
-            });
-        },
-        onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["elements"] });
-            invalidateSearchDb();
-        }
-    });
 }

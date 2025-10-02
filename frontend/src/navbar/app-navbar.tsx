@@ -17,7 +17,7 @@ import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
 import { AppMenu } from "../api/menu-params";
 import { VendorFilters } from "./vendor-filters";
-import { useUiState } from "../app/ui-state";
+import { useUiState } from "../api/ui-state";
 
 /**
  * Provides top-level navigation for the app.
@@ -101,8 +101,8 @@ function selectAllInputText(ref: RefObject<HTMLInputElement>) {
 }
 
 export function SearchBar() {
-    const navigate = useNavigate();
     const ref = useRef<HTMLInputElement>(null);
+    const [uiState, setUiState] = useUiState();
 
     return (
         <InputGroup
@@ -110,15 +110,13 @@ export function SearchBar() {
             leftIcon="search"
             placeholder="Search library..."
             inputRef={ref}
+            value={uiState.searchQuery}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
             onValueChange={(value) => {
                 const query = value === "" ? undefined : value;
-                navigate({
-                    to: ".",
-                    search: { query }
-                });
+                setUiState({ searchQuery: query });
             }}
         />
     );

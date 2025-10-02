@@ -1,5 +1,5 @@
-import { AnyOrama, create, insert, search } from "@orama/orama";
-import { Documents, Elements, Vendor } from "./models";
+import { AnyOrama, create, insert } from "@orama/orama";
+import { Documents, Elements, Vendor } from "../api/models";
 import {
     afterInsert as highlightAfterInsert,
     Position,
@@ -110,72 +110,6 @@ export function buildSearchDb(documents: Documents, elements: Elements) {
     return searchDb;
 }
 
-/**
- * Asserts a given value is not a Promise.
- */
-function notPromise<T>(value: T | Promise<T>): T {
-    if (value instanceof Promise) {
-        throw new Error("Value cannot be a promise");
-    }
-    return value;
-}
-
-export enum SortOrder {
-    DEFAULT = "default",
-    ASCENDING = "ASC",
-    DESCENDING = "DESC"
-}
-
-export interface ElementOrderArgs {
-    elementIds?: string[];
-    sortOrder?: SortOrder;
-    vendors?: Vendor[];
-    /**
-     * @default false
-     */
-    isVisible?: boolean;
-}
-
-/**
- * Returns an ordered list of elements in a document.
- */
-export function getElementOrder(
-    searchDb: AnyOrama,
-    args: ElementOrderArgs
-): string[] {
-    const where: Record<string, string | string[] | boolean> = {};
-    if (args.isVisible) {
-        where.isVisible = true;
-    }
-
-    if (args.elementIds) {
-        where.id = args.elementIds;
-    }
-
-    if (args.vendors) {
-        where.vendor = args.vendors;
-    }
-
-    let sortBy = undefined;
-    if (args.sortOrder != SortOrder.DEFAULT) {
-        sortBy = {
-            property: "name",
-            order: args.sortOrder
-        };
-    }
-
-    const result = notPromise(
-        search(searchDb, {
-            sortBy,
-            where,
-            // Limit defaults to 10, can't use Infinity or Number.MAX_VALUE because Orama crashes
-            limit: 9999999
-        })
-    );
-
-    return result.hits.map((hit) => hit.id);
-}
-
 export interface SearchFilters {
     documentId?: string;
     vendors?: Vendor[];
@@ -217,122 +151,26 @@ export async function doSearch(
         limit: 50,
         where
     });
+    console.log(result);
     return result.hits;
 }
 
-const deliminator = "^";
+export const DELIMINATOR = "^";
 
 export type SearchHit = ResultWithPositions<any>;
 
 export type SearchPositions = Record<string, Record<string, Position[]>>;
 
-// Most of the following code is generated using ChatGPT with some modifications
+/**
+ * Adds spaces to a given string so prefix matching is more efficient.
+ */
 function addSpaces(str: string) {
     return (
         str
             // Insert space between lowercase-to-uppercase (camelCase)
-            .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
+            .replace(/([a-z])([A-Z])/g, `$1${DELIMINATOR}$2`)
             // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
-            .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
+            .replace(/([A-Z])([A-Z][a-z])/g, `$1${DELIMINATOR}$2`)
         // Note handling ABCdef is ambiguous with PascalCase handling
     );
-}
-
-interface Range {
-    start: number;
-    length: number;
-}
-
-function applyRanges(str: string, ranges: Range[]) {
-    ranges = deduplicateRanges(ranges);
-    // Sort ranges by start to ensure processing order
-    ranges = [...ranges].sort((a, b) => a.start - b.start);
-
-    const result = [];
-    let currentIndex = 0;
-
-    for (const range of ranges) {
-        const { start, length } = range;
-        const end = start + length;
-
-        // Add non-highlighted part before this range
-        if (currentIndex < start) {
-            result.push(str.slice(currentIndex, start));
-        }
-
-        // Add highlighted part
-        // Array elements must have a key to avoid a warning
-        result.push(<u key={currentIndex}>{str.slice(start, end)}</u>);
-
-        currentIndex = end;
-    }
-
-    // Add the remaining non-highlighted part
-    if (currentIndex < str.length) {
-        result.push(str.slice(currentIndex));
-    }
-
-    return result;
-}
-
-function remapRanges(str: string, ranges: Range[]): Range[] {
-    let offsetCount = 0;
-
-    // Build mapping from original index → index in "clean" string
-    const indexMap: number[] = [];
-    for (let i = 0; i < str.length; i++) {
-        if (str[i] === deliminator) {
-            offsetCount++;
-        } else {
-            indexMap[i] = i - offsetCount;
-        }
-    }
-
-    // Adjust ranges
-    return ranges.map(({ start, length }) => {
-        const newStart = indexMap[start];
-        return { start: newStart, length };
-    });
-}
-
-function deduplicateRanges(ranges: Range[]): Range[] {
-    // Mapping where indexMap[i] = true means i is in a range.
-    const indexMap: boolean[] = [];
-    ranges.forEach((range) => {
-        for (let i = 0; i < range.length; i++) {
-            indexMap[range.start + i] = true;
-        }
-    });
-
-    const merged: Range[] = [];
-    // indexMap.length will always include the highest index set
-    for (let i = 0; i < indexMap.length; i++) {
-        if (!indexMap[i]) {
-            continue;
-        }
-        const start = i;
-        // Find length of range
-        while (i < indexMap.length && indexMap[i]) {
-            i++;
-        }
-        merged.push({ start, length: i - start });
-    }
-    return merged;
-}
-
-/**
- * Returns text highlighted with a searchHit.
- */
-export function getSearchHitTitle(searchHit: SearchHit): JSX.Element {
-    const positions: SearchPositions = searchHit.positions;
-    const ranges = [];
-
-    const spacedNameRanges = Object.values(positions.spacedName).flat(1);
-    ranges.push(
-        ...remapRanges(searchHit.document.spacedName, spacedNameRanges)
-    );
-
-    ranges.push(...Object.values(positions.name).flat(1));
-
-    return <>{applyRanges(searchHit.document.name, ranges)}</>;
 }

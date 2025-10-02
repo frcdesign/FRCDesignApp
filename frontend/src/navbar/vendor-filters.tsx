@@ -1,12 +1,39 @@
-import { Button, ButtonVariant, Intent, Tag } from "@blueprintjs/core";
-import { useNavigate } from "@tanstack/react-router";
+import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
 import { ReactNode } from "react";
 import { getVendorName, Vendor } from "../api/models";
-import { useUiState } from "../app/ui-state";
+import { useUiState } from "../api/ui-state";
+
+interface ClearFiltersButtonProps {
+    /**
+     * @default "Clear filters"
+     */
+    text?: string;
+    standardSize?: boolean;
+}
+
+export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
+    const [uiState, setUiState] = useUiState();
+    const text = props.text ?? "Clear filters";
+    const standardSize = props.standardSize ?? false;
+
+    const vendorFilters = uiState.vendorFilters;
+    const areAllTagsActive = vendorFilters === undefined;
+
+    return (
+        <Button
+            text={text}
+            disabled={areAllTagsActive}
+            variant={ButtonVariant.OUTLINED}
+            size={standardSize ? Size.MEDIUM : Size.SMALL}
+            icon="filter-remove"
+            onClick={() => {
+                setUiState({ vendorFilters: undefined });
+            }}
+        />
+    );
+}
 
 export function VendorFilters(): ReactNode {
-    const navigate = useNavigate();
-
     const [uiState, setUiState] = useUiState();
 
     const vendorFilters = uiState.vendorFilters;
@@ -25,12 +52,15 @@ export function VendorFilters(): ReactNode {
                 title={getVendorName(vendor)}
                 onClick={() => {
                     let newFilters;
-                    if (areAllTagsActive) {
+                    if (vendorFilters === undefined) {
+                        // First filter selected
                         newFilters = [vendor];
                     } else if (isVendorActive) {
+                        // Filter is already selected
                         newFilters = vendorFilters.filter(
                             (curr) => curr !== vendor
                         );
+                        // It was the last filter
                         if (newFilters.length === 0) {
                             newFilters = undefined;
                         }
@@ -46,22 +76,10 @@ export function VendorFilters(): ReactNode {
         );
     });
 
-    const clearButton = (
-        <Button
-            text="Clear"
-            disabled={areAllTagsActive}
-            variant={ButtonVariant.OUTLINED}
-            icon="small-cross"
-            onClick={() => {
-                navigate({ to: ".", search: { vendors: undefined } });
-            }}
-        />
-    );
-
     return (
         <div className="split" style={{ gap: "5x" }}>
             <div className="vendor-filter-tags">{filterTags}</div>
-            {clearButton}
+            <ClearFiltersButton text="Clear" />
         </div>
     );
 }

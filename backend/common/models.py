@@ -182,7 +182,7 @@ class Vendor(StrEnum):
     REDUX = "Redux"
     REV = "REV"
     SDS = "SDS"
-    SWYFT = "Swyft"
+    SWYFT = "SWYFT"
     TTB = "TTB"
     VEX = "VEX"
     WCP = "WCP"

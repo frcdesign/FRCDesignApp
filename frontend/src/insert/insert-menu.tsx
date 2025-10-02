@@ -24,7 +24,7 @@ import {
     useHandleCloseDialog
 } from "../api/menu-params";
 import { PreviewImage } from "../app/thumbnail";
-import { FavoriteButton } from "../app/favorite-button";
+import { FavoriteButton } from "../cards/favorite-button";
 import {
     showErrorToast,
     showLoadingToast,
@@ -115,7 +115,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
                             icon: "share"
                         }
                     },
-                    "cancel-insert"
+                    `cancel-insert ${element.elementId}`
                 );
                 closeDialog();
             }}

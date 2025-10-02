@@ -48,5 +48,3 @@ export class ReportedError extends Error {
 //         );
 //     }
 // }
-
-export const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
