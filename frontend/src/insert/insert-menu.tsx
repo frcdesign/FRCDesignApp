@@ -16,7 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { toElementApiPath } from "../api/path";
-import { useElementsQuery, useFavoritesQuery } from "../queries";
+import { useElementsQuery, useUserData } from "../queries";
 import {
     AppMenu,
     InsertMenuParams,
@@ -50,9 +50,8 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
 
     const elements = useElementsQuery().data;
-    const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
-    const favorites = useFavoritesQuery(search).data;
+    const favorites = useUserData().favorites;
 
     const closeDialog = useHandleCloseDialog();
 
@@ -65,7 +64,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     }
 
     const element = elements[elementId];
-    const isFavorite = favorites.favorites[elementId] !== undefined;
+    const isFavorite = favorites[elementId] !== undefined;
 
     let parameters = null;
     if (element.configurationId) {

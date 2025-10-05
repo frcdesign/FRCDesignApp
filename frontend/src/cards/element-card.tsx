@@ -6,13 +6,13 @@ import {
     MenuDivider,
     MenuItem
 } from "@blueprintjs/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { AppMenu } from "../api/menu-params";
 import { ElementObj } from "../api/models";
 import { SearchHit } from "../app/search";
 import { FavoriteButton } from "./favorite-button";
-import { useDocumentsQuery, useFavoritesQuery } from "../queries";
+import { useUserData } from "../queries";
 import { RequireAccessLevel } from "../api/access-level";
 import {
     useIsAssemblyInPartStudio,
@@ -38,9 +38,8 @@ interface ElementCardProps extends PropsWithChildren {
 export function ElementCard(props: ElementCardProps): ReactNode {
     const { element, searchHit } = props;
     const navigate = useNavigate();
-    const search = useSearch({ from: "/app" });
-    const data = useDocumentsQuery().data;
-    const favorites = useFavoritesQuery(search).data;
+
+    const userData = useUserData();
 
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
@@ -50,11 +49,11 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         element.elementType
     );
 
-    if (isHidden || !data || !favorites) {
+    if (isHidden) {
         return null;
     }
 
-    const isFavorite = favorites.favorites[element.elementId] !== undefined;
+    const isFavorite = userData.favorites[element.elementId] !== undefined;
 
     return (
         <ElementContextMenu element={element}>

@@ -12,6 +12,9 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { ElementCard } from "../cards/element-card";
 import { AppErrorState, AppLoadingState } from "../common/app-zero-state";
+import { FilterCallout } from "../navbar/filter-callout";
+import { useUiState } from "../api/ui-state";
+import { ClearFiltersButton } from "../navbar/vendor-filters";
 
 interface SearchResultsProps {
     query: string;
@@ -28,6 +31,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const documentsQuery = useDocumentsQuery();
 
     const searchDb = useSearchDb(documentsQuery.data, elementsQuery.data);
+    const uiState = useUiState()[0];
 
     const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
         undefined
@@ -59,34 +63,48 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         return <AppLoadingState title="Building search index..." />;
     }
     const elements = elementsQuery.data;
+    const hasFilters = uiState.vendorFilters !== undefined;
 
-    let content = null;
     if (searchHits.length === 0) {
-        content = (
-            <div style={{ height: "150px" }}>
+        if (hasFilters) {
+            return (
                 <AppErrorState
                     icon="search"
                     iconIntent="primary"
-                    title="No search results"
-                />
-            </div>
-        );
-    } else {
-        content = searchHits.map((searchHit: SearchHit) => {
-            const elementId = searchHit.id;
-            const element = elements[elementId];
-            return (
-                <ElementCard
-                    key={elementId}
-                    element={element}
-                    searchHit={searchHit}
-                    onClick={() => searchResultSelectedMutation.mutate()}
+                    title="No search results."
+                    description="Some search results may be hidden by filters."
+                    action={<ClearFiltersButton />}
                 />
             );
-        });
+        }
+        return (
+            <AppErrorState
+                icon="search"
+                iconIntent="primary"
+                title="No search results"
+            />
+        );
     }
+    const callout = <FilterCallout itemType="search results" />;
+    const searchResults = searchHits.map((searchHit: SearchHit) => {
+        const elementId = searchHit.id;
+        const element = elements[elementId];
+        return (
+            <ElementCard
+                key={elementId}
+                element={element}
+                searchHit={searchHit}
+                onClick={() => searchResultSelectedMutation.mutate()}
+            />
+        );
+    });
 
-    return content;
+    return (
+        <>
+            {callout}
+            {searchResults}
+        </>
+    );
 }
 
 interface Range {

@@ -3,6 +3,12 @@
  */
 import { ElementPath, InstancePath } from "./path";
 
+export interface UserData {
+    settings: Settings;
+    favorites: Favorites;
+    favoriteOrder: string[];
+}
+
 export enum Theme {
     SYSTEM = "system",
     LIGHT = "light",
@@ -321,11 +327,6 @@ export interface ElementObj extends ElementPath {
     isVisible: boolean;
     vendor?: Vendor;
     configurationId?: string;
-}
-
-export interface FavoritesResult {
-    favorites: Favorites;
-    favoriteOrder: string[];
 }
 
 export type Favorites = Record<string, Favorite>;

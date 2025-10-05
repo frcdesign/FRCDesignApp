@@ -17,8 +17,7 @@ import {
     getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
-    getFavoritesQuery,
-    getSettingsQuery
+    getUserDataQuery
 } from "./queries";
 import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
@@ -30,7 +29,7 @@ import { RootAppError } from "./app/root-error";
 type SearchParams = OnshapeParams & MenuParams & ContextData;
 
 const rootRoute = createRootRoute({
-    errorComponent: RootAppError
+    errorComponent: () => <RootAppError isRoot />
 });
 
 /**
@@ -80,13 +79,12 @@ const appRoute = createRoute({
     }),
     loader: async ({ deps }) => {
         Promise.all([
-            queryClient.prefetchQuery(getFavoritesQuery(deps)),
             queryClient.prefetchQuery(getDocumentOrderQuery(deps)),
             queryClient.prefetchQuery(getDocumentsQuery(deps)),
             queryClient.prefetchQuery(getElementsQuery(deps))
         ]);
         // We need settings immediately to determine the theme
-        return queryClient.ensureQueryData(getSettingsQuery(deps));
+        return queryClient.ensureQueryData(getUserDataQuery(deps));
     },
     // Include it higher up in the hopes that accessLevel will be loaded for the escape hatch
     errorComponent: RootAppError
@@ -95,12 +93,6 @@ const appRoute = createRoute({
 const homeRoute = createRoute({
     getParentRoute: () => appRoute,
     path: "documents"
-    // loaderDeps: ({ search }) => ({
-    //     userId: search.userId,
-    //     currentAccessLevel: search.currentAccessLevel,
-    //     cacheVersion: search.cacheVersion
-    // }),
-    // loader: async ({ deps }) => {}
 });
 
 const homeListRoute = createRoute({

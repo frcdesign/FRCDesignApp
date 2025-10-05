@@ -5,11 +5,11 @@ from backend.endpoints import (
     add_part,
     cache,
     configurations,
+    context_data,
     document_order,
     documents,
-    favorites,
-    settings,
     thumbnails,
+    user_data,
 )
 from onshape_api.exceptions import ApiError
 
@@ -38,7 +38,7 @@ router.register_blueprint(documents.router)
 router.register_blueprint(configurations.router)
 router.register_blueprint(thumbnails.router)
 router.register_blueprint(add_part.router)
-router.register_blueprint(favorites.router)
-router.register_blueprint(settings.router)
+router.register_blueprint(user_data.router)
+router.register_blueprint(context_data.router)
 router.register_blueprint(document_order.router)
 router.register_blueprint(cache.router)

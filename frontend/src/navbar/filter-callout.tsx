@@ -1,7 +1,7 @@
 import { Callout } from "@blueprintjs/core";
 import { ClearFiltersButton } from "./vendor-filters";
 
-type ItemType = "elements" | "favorites";
+type ItemType = "elements" | "favorites" | "search results";
 
 interface FilterCalloutProps {
     /**
@@ -10,9 +10,9 @@ interface FilterCalloutProps {
     itemType: ItemType;
 
     /**
-     * The number of items that are filtered out.
+     * The number of items that are filtered out, or `undefined` if unknown.
      */
-    filteredItems: number;
+    filteredItems?: number;
 }
 
 export function FilterCallout(props: FilterCalloutProps) {
@@ -20,9 +20,16 @@ export function FilterCallout(props: FilterCalloutProps) {
     if (filteredItems === 0) {
         return null;
     }
+    let message: string;
+    if (filteredItems === undefined) {
+        message = `Some ${itemType} may be hidden by filters.`;
+    } else {
+        message = `${filteredItems} ${itemType} are currently hidden by filters.`;
+    }
+
     return (
         <Callout intent="primary" className="split">
-            {`${filteredItems} ${itemType} are currently hidden by filters.`}
+            {message}
             <ClearFiltersButton />
         </Callout>
     );

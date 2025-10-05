@@ -19,9 +19,9 @@ import {
     useDocumentOrderQuery,
     useDocumentsQuery,
     useElementsQuery,
-    useFavoritesQuery
+    useUserData
 } from "../queries";
-import { ElementObj, Favorite, hasMemberAccess } from "../api/models";
+import { ElementObj, hasMemberAccess } from "../api/models";
 import { SearchResults } from "./search-results";
 import { AppMenu } from "../api/menu-params";
 import { useUiState } from "../api/ui-state";
@@ -152,9 +152,9 @@ function FavoritesList() {
     const uiState = useUiState()[0];
 
     const elementsQuery = useElementsQuery();
-    const favoritesQuery = useFavoritesQuery(search);
+    const userData = useUserData();
 
-    if (favoritesQuery.isError || elementsQuery.isError) {
+    if (elementsQuery.isError) {
         return (
             <AppInternalErrorState
                 title="Failed to load favorites."
@@ -163,21 +163,20 @@ function FavoritesList() {
                 inline
             />
         );
-    } else if (favoritesQuery.isPending || elementsQuery.isPending) {
+    } else if (elementsQuery.isPending) {
         return <AppLoadingState title="Loading favorites..." inline />;
     }
 
-    const favorites = favoritesQuery.data;
+    const favorites = userData.favorites;
     const elements = elementsQuery.data;
 
-    const orderedFavorites = favorites.favoriteOrder
-        .map((favoriteId) => favorites.favorites[favoriteId])
-        // Guard against missing favorites
-        .filter((favorite: Favorite | undefined) => !!favorite);
+    const orderedFavorites = userData.favoriteOrder.map(
+        (favoriteId) => favorites[favoriteId]
+    );
 
-    const favoriteElements = orderedFavorites
-        .map((favorite) => elements[favorite.id])
-        .filter((element: ElementObj | undefined) => !!element);
+    const favoriteElements = orderedFavorites.map(
+        (favorite) => elements[favorite.id]
+    );
 
     if (favoriteElements.length == 0) {
         return (
@@ -199,8 +198,7 @@ function FavoritesList() {
     if (filterResult.elements.length == 0) {
         return (
             <AppErrorState
-                title="All favorites are hidden by filters."
-                description="Try clearing or changing your filters."
+                title="All favorites are hidden by filters"
                 icon="heart-broken"
                 iconColor={Colors.RED3}
                 action={<ClearFiltersButton standardSize />}
@@ -220,7 +218,7 @@ function FavoritesList() {
     }
 
     const cards = filterResult.elements.map((element: ElementObj) => {
-        const favorite = favorites.favorites[element.id];
+        const favorite = favorites[element.id];
         return (
             <FavoriteCard
                 key={favorite.id}
@@ -269,7 +267,10 @@ function ListContainer(props: ListContainerProps): ReactNode {
                     />
                 }
             >
-                <SectionCard padded={false}>
+                <SectionCard
+                    padded={false}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <Collapse isOpen={isOpen}>
                         <CardList compact bordered={false}>
                             {children}

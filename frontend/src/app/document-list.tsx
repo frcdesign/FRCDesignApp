@@ -156,8 +156,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
             <AppErrorState
                 icon="warning-sign"
                 iconIntent="warning"
-                title="All elements are hidden by filters."
-                description="Try clearing or changing your filters."
+                title="All elements are hidden by filters"
                 action={<ClearFiltersButton standardSize />}
             />
         );

@@ -1,14 +1,14 @@
+/**
+ * Queries for getting data from various endpoints on the backend.
+ */
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet, CacheOptions, useCacheOptions } from "./api/api";
 import {
     ContextData,
-    DocumentObj,
     DocumentOrder,
     Documents,
-    ElementObj,
     Elements,
-    FavoritesResult,
-    Settings
+    UserData
 } from "./api/models";
 import {
     InstancePath,
@@ -19,17 +19,12 @@ import {
 import { useLoaderData } from "@tanstack/react-router";
 
 export function getDocumentsQuery(cacheOptions: CacheOptions) {
-    return queryOptions({
+    return queryOptions<Documents>({
         queryKey: ["documents"],
         queryFn: async () =>
-            apiGet("/documents", { cacheOptions }).then((result) =>
-                Object.fromEntries(
-                    result.documents.map((document: DocumentObj) => [
-                        document.id,
-                        document
-                    ])
-                )
-            ) as Promise<Documents>
+            apiGet("/documents", { cacheOptions }).then(
+                (result) => result.documents
+            )
     });
 }
 
@@ -39,12 +34,12 @@ export function useDocumentsQuery() {
 }
 
 export function getDocumentOrderQuery(cacheOptions: CacheOptions) {
-    return queryOptions({
+    return queryOptions<DocumentOrder>({
         queryKey: ["document-order"],
         queryFn: async () =>
             apiGet("/document-order", { cacheOptions }).then(
                 (result) => result.documentOrder
-            ) as Promise<DocumentOrder>
+            )
     });
 }
 
@@ -54,17 +49,12 @@ export function useDocumentOrderQuery() {
 }
 
 export function getElementsQuery(cacheOptions: CacheOptions) {
-    return queryOptions({
+    return queryOptions<Elements>({
         queryKey: ["elements"],
         queryFn: async () =>
-            apiGet("/elements", { cacheOptions }).then((result) =>
-                Object.fromEntries(
-                    result.elements.map((element: ElementObj) => [
-                        element.id,
-                        element
-                    ])
-                )
-            ) as Promise<Elements>
+            apiGet("/elements", { cacheOptions }).then(
+                (result) => result.elements
+            )
     });
 }
 
@@ -73,30 +63,16 @@ export function useElementsQuery() {
     return useQuery(getElementsQuery(cacheOptions));
 }
 
-export function getFavoritesQuery(userPath: UserPath) {
-    return queryOptions({
-        queryKey: ["favorites"],
-        queryFn: async () =>
-            apiGet(
-                "/favorites" + toUserApiPath(userPath)
-            ) as Promise<FavoritesResult>,
+export function getUserDataQuery(userPath: UserPath) {
+    return queryOptions<UserData>({
+        queryKey: ["user-data"],
+        queryFn: async () => apiGet("/user-data" + toUserApiPath(userPath)),
         // Favorites shouldn't go stale, although they can get changed in another tab
-        staleTime: 60 * 1000
+        staleTime: 60 * 1000 // 1 minute
     });
 }
 
-export function useFavoritesQuery(userPath: UserPath) {
-    return useQuery(getFavoritesQuery(userPath));
-}
-
-export function getSettingsQuery(userPath: UserPath) {
-    return queryOptions<Settings>({
-        queryKey: ["settings"],
-        queryFn: async () => apiGet("/settings" + toUserApiPath(userPath))
-    });
-}
-
-export function useSettings(): Settings {
+export function useUserData(): UserData {
     return useLoaderData({ from: "/app" });
 }
 

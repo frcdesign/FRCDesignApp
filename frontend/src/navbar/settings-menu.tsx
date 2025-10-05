@@ -17,12 +17,18 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import { AccessLevel, hasMemberAccess, Settings, Theme } from "../api/models";
+import {
+    AccessLevel,
+    hasMemberAccess,
+    Settings,
+    Theme,
+    UserData
+} from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { invalidateSearchDb } from "../app/search";
 import { toUserApiPath } from "../api/path";
-import { useSettings } from "../queries";
+import { useUserData } from "../queries";
 import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api/access-level";
@@ -81,7 +87,7 @@ function SettingsMenuDialog(): ReactNode {
 
 function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
-    const settings = useSettings();
+    const settings = useUserData().settings;
 
     const settingsMutation = useMutation({
         mutationKey: ["settings"],
@@ -90,7 +96,9 @@ function UserSettings(): ReactNode {
                 body: newSettings
             }),
         onMutate: (newSettings) => {
-            queryClient.setQueryData(["settings"], newSettings);
+            queryClient.setQueryData(["user-data"], (userData: UserData) => {
+                return { ...userData, settings: newSettings };
+            });
             router.invalidate();
         },
         onError: () => {

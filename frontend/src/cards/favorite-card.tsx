@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { ElementObj, Favorite, FavoritesResult } from "../api/models";
+import { ElementObj, Favorite, UserData } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast } from "../common/toaster";
@@ -24,8 +24,8 @@ import {
 import { useIsElementHidden, useIsAssemblyInPartStudio } from "./card-hooks";
 import { ChangeOrderItems } from "./change-order";
 import { ElementPath, toUserApiPath, UserPath } from "../api/path";
-import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api/ui-state";
+import { useUserData } from "../queries";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -114,7 +114,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
     const uiState = useUiState()[0];
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation(search);
-    const favoriteOrder = useFavoritesQuery(search).data?.favoriteOrder ?? [];
+    const favoriteOrder = useUserData().favoriteOrder;
 
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
@@ -167,16 +167,11 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
             });
         },
         onMutate: (newOrder: string[]) => {
-            const data = queryClient.getQueryData<FavoritesResult>([
-                "favorites"
-            ]);
-            if (data) {
-                const newData = {
-                    favorites: { ...data.favorites },
-                    favoriteOrder: newOrder
-                };
-                queryClient.setQueryData(["favorites"], newData);
-            }
+            queryClient.setQueryData(["user-data"], (data: UserData) => {
+                const newData = { ...data };
+                newData.favoriteOrder = newOrder;
+                return newData;
+            });
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder favorites.");

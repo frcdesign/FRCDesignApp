@@ -12,12 +12,15 @@ import { SettingsMenu } from "../navbar/settings-menu";
 import { InsertMenu } from "../insert/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AddDocumentMenu } from "./add-document-menu";
-import { useSettings } from "../queries";
+import { useUserData } from "../queries";
 
 export function App() {
     const search = useSearch({ from: "/app" });
-    const settings = useSettings();
-    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
+    const userData = useUserData();
+    const colorTheme = getColorTheme(
+        userData.settings.theme,
+        search.systemTheme
+    );
     const themeClass = getThemeClass(colorTheme);
 
     return (

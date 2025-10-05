@@ -12,6 +12,10 @@ interface AppNonIdealStateProps {
     title: string;
     description?: string | JSX.Element;
     className?: string;
+    /**
+     * Whether the state should be displayed using smaller styles.
+     * @default true
+     */
     inline?: boolean;
 }
 
@@ -104,7 +108,7 @@ export function AppInternalErrorState(props: AppInternalErrorStateProps) {
     const { action, title, icon, iconIntent, iconColor } = props;
     return (
         <AppErrorState
-            title={title ?? "Encountered an internal error."}
+            title={title ?? "The app has crashed due to an unexpected error."}
             icon={icon}
             iconIntent={iconIntent}
             iconColor={iconColor}

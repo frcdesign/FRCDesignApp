@@ -7,10 +7,10 @@ from backend.common.app_access import require_access_level
 from backend.common.database import Database
 
 
-MAX_AGE = 3 * 24 * 3600  # 3 days
+MAX_AGE = 7 * 24 * 3600  # 7 days
 
 
-def cacheable_route(router: flask.Blueprint, rule: str):
+def cacheable_route(router: flask.Blueprint, rule: str, private: bool = False):
     """
     Decorator to add Cache-Control headers to GET endpoints.
     This will create the route plus a /admin/ version of the route.
@@ -27,7 +27,7 @@ def cacheable_route(router: flask.Blueprint, rule: str):
                 response.headers["Cache-Control"] = "no-cache"
             else:
                 response.headers["Cache-Control"] = (
-                    f"public, max-age={MAX_AGE}, immutable"
+                    f"{"private" if private else "public"}, max-age={MAX_AGE}, immutable"
                 )
             return response
 

@@ -217,3 +217,23 @@ class Document(BaseModel):
     sortAlphabetically: bool
 
     model_config = ConfigDict(extra="forbid")
+
+
+class Theme(StrEnum):
+    SYSTEM = "system"
+    LIGHT = "light"
+    DARK = "dark"
+
+
+class Settings(BaseModel):
+    theme: Theme = Theme.SYSTEM
+
+
+class Favorite(BaseModel):
+    defaultConfiguration: dict[str, str] | None = None
+
+
+class UserData(BaseModel):
+    favorites: dict[str, Favorite] = Field(default_factory=dict)
+    favoriteOrder: list[str] = Field(default_factory=list)
+    settings: Settings = Field(default_factory=Settings)

@@ -151,7 +151,6 @@ export async function doSearch(
         limit: 50,
         where
     });
-    console.log(result);
     return result.hits;
 }
 

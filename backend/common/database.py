@@ -3,7 +3,8 @@ from __future__ import annotations
 from google.cloud import firestore
 from google.cloud.firestore import CollectionReference, DocumentReference
 
-from backend.common.models import ConfigurationParameters
+from backend.common.models import ConfigurationParameters, UserData
+from onshape_api.paths.user_path import UserPath
 
 
 class Database:
@@ -12,7 +13,7 @@ class Database:
 
     @property
     def cache(self) -> DocumentReference:
-        return self.client.collection("cache").document("cache")
+        return self.client.collection("common").document("cache")
 
     @property
     def sessions(self) -> CollectionReference:
@@ -25,6 +26,18 @@ class Database:
     @property
     def elements(self) -> CollectionReference:
         return self.client.collection("elements")
+
+    @property
+    def user_data(self) -> CollectionReference:
+        return self.client.collection("userData")
+
+    def get_user_data(self, user_path: UserPath) -> UserData:
+        return UserData.model_validate(
+            self.user_data.document(user_path.user_id).get().to_dict() or {}
+        )
+
+    def set_user_data(self, user_path: UserPath, user_data: UserData) -> None:
+        self.user_data.document(user_path.user_id).set(user_data.model_dump())
 
     @property
     def configurations(self) -> CollectionReference:
@@ -41,8 +54,7 @@ class Database:
 
     @property
     def document_order(self) -> DocumentReference:
-        # Yes, there are three layers of documentOrder...
-        return self.client.collection("documentOrder").document("documentOrder")
+        return self.client.collection("common").document("documentOrder")
 
     def get_document_order(self) -> list[str]:
         result = self.document_order.get().to_dict()

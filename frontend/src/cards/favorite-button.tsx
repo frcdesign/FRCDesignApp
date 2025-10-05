@@ -2,7 +2,7 @@ import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, FavoritesResult } from "../api/models";
+import { ElementObj, UserData } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { showErrorToast } from "../common/toaster";
@@ -22,24 +22,20 @@ interface UpdateFavoritesArgs {
     elementId: string;
 }
 
-function updateFavorites(
-    data: FavoritesResult,
-    args: UpdateFavoritesArgs
-): FavoritesResult {
-    const newFavorites = {
-        favorites: { ...data.favorites },
-        favoriteOrder: [...data.favoriteOrder]
-    };
+function updateFavorites(data: UserData, args: UpdateFavoritesArgs): UserData {
+    const newData = { ...data };
     if (args.operation === Operation.ADD) {
-        newFavorites.favorites[args.elementId] = { id: args.elementId };
-        newFavorites.favoriteOrder.push(args.elementId);
+        newData.favorites[args.elementId] = {
+            id: args.elementId,
+            defaultConfiguration: undefined
+        };
     } else {
-        delete newFavorites.favorites[args.elementId];
-        newFavorites.favoriteOrder = newFavorites.favoriteOrder.filter(
+        delete newData.favorites[args.elementId];
+        newData.favoriteOrder = newData.favoriteOrder.filter(
             (favoriteId) => favoriteId !== args.elementId
         );
     }
-    return newFavorites;
+    return newData;
 }
 
 interface FavoriteButtonProps {
@@ -66,7 +62,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             }
         },
         onMutate: (args) => {
-            queryClient.setQueryData(["favorites"], (data: FavoritesResult) =>
+            queryClient.setQueryData(["user-data"], (data: UserData) =>
                 updateFavorites(data, args)
             );
         },

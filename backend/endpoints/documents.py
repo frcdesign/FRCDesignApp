@@ -40,7 +40,7 @@ def get_documents(**kwargs):
     """Returns a list of the top level documents to display to the user."""
     db = connect.get_db()
 
-    documents: list[dict] = []
+    documents: dict[str, dict] = {}
 
     for doc_ref in db.documents.stream():
         document = Document.model_validate(doc_ref.to_dict())
@@ -52,7 +52,7 @@ def get_documents(**kwargs):
         document_obj["instanceType"] = InstanceType.VERSION
         document_obj["documentId"] = document_id
 
-        documents.append(document_obj)
+        documents[document_id] = document_obj
 
     return {"documents": documents}
 
@@ -61,7 +61,7 @@ def get_documents(**kwargs):
 def get_elements(**kwargs):
     """Returns a list of the top level elements to display to the user."""
     db = connect.get_db()
-    elements: list[dict] = []
+    elements: dict[str, dict] = {}
 
     for element_ref in db.elements.stream():
         element_id = element_ref.id
@@ -73,7 +73,7 @@ def get_elements(**kwargs):
         element_obj["instanceType"] = InstanceType.VERSION
         element_obj["elementId"] = element_id
 
-        elements.append(element_obj)
+        elements[element_id] = element_obj
 
     return {"elements": elements}
 
