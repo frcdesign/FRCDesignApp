@@ -4,6 +4,7 @@ import flask
 
 from backend.common import connect
 from backend.common.app_access import require_access_level
+from backend.common.app_logging import APP_LOGGER
 from backend.common.database import Database
 from onshape_api.paths.user_path import UserPath
 
@@ -53,10 +54,11 @@ def push_cache_version():
     """
     Invalidates all CDN caching by pushing a new version of the app.
     """
-    new_search_db = connect.get_body_arg("searchDb")
     db = connect.get_db()
 
-    db.search_db.set(new_search_db)
+    new_search_db = connect.get_body_arg("searchDb")
+    db.search_db.set({"searchDb": new_search_db})
+
     increment_cache_version(db)
     return {"success": True}
 
@@ -77,5 +79,6 @@ def increment_cache_version(db: Database) -> int:
 @cacheable_route(router, "/search-db")
 def get_search_db():
     db = connect.get_db()
-    search_db = db.search_db.get().to_dict()
-    return {"searchDb": search_db}
+    search_db = db.search_db.get().to_dict() or {}
+    APP_LOGGER.info(search_db)
+    return {"searchDb": search_db.get("searchDb", None)}

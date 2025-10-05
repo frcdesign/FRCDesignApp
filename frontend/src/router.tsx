@@ -25,6 +25,7 @@ import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
+import { getSearchDbQuery } from "./app/search";
 
 type SearchParams = OnshapeParams & MenuParams & ContextData;
 
@@ -81,8 +82,8 @@ const appRoute = createRoute({
         Promise.all([
             queryClient.prefetchQuery(getDocumentOrderQuery(deps)),
             queryClient.prefetchQuery(getDocumentsQuery(deps)),
-            queryClient.prefetchQuery(getElementsQuery(deps))
-            // queryClient.prefetchQuery(getSearchDbQuery(deps))
+            queryClient.prefetchQuery(getElementsQuery(deps)),
+            queryClient.prefetchQuery(getSearchDbQuery(deps))
         ]);
         // We need settings immediately to determine the theme
         return queryClient.ensureQueryData(getUserDataQuery(deps));
@@ -147,5 +148,5 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
     routeTree,
     defaultStaleTime: Infinity,
-    defaultGcTime: 6 * 1000
+    defaultGcTime: Infinity
 });

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import flask
+from werkzeug import Client
 
 from backend.common import connect
+from backend.common.backend_exceptions import ClientException
 from backend.common.connect import (
     get_body_arg,
     get_db,
@@ -39,6 +41,13 @@ def add_favorite(**kwargs):
 
     # Add it to favorite-order
     user_data = db.get_user_data(user_path)
+
+    if (
+        element_id in user_data.favoriteOrder
+        or element_id in user_data.favorites.keys()
+    ):
+        raise ClientException("Element is already a favorite")
+
     user_data.favoriteOrder.append(element_id)
 
     favorite = Favorite(defaultConfiguration=default_configuration)
@@ -56,7 +65,14 @@ def remove_favorite(**kwargs):
     element_id = get_query_param("elementId")
 
     user_data = db.get_user_data(user_path)
-    user_data.favorites.pop(element_id, None)
+
+    if (
+        element_id not in user_data.favoriteOrder
+        or element_id not in user_data.favorites.keys()
+    ):
+        raise ClientException("Element is not a favorite")
+
+    user_data.favorites.pop(element_id)
     user_data.favoriteOrder = list(
         id for id in user_data.favoriteOrder if id != element_id
     )

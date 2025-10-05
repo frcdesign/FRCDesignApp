@@ -9,6 +9,14 @@ export interface UserData {
     favoriteOrder: string[];
 }
 
+export function copyUserData(data: UserData): UserData {
+    return {
+        settings: { ...data.settings },
+        favorites: { ...data.favorites },
+        favoriteOrder: [...data.favoriteOrder]
+    };
+}
+
 export enum Theme {
     SYSTEM = "system",
     LIGHT = "light",

@@ -2,19 +2,16 @@ import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, UserData } from "../api/models";
+import { copyUserData, ElementObj, UserData } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { showErrorToast } from "../common/toaster";
 import { useSearch } from "@tanstack/react-router";
+import { router } from "../router";
 
 enum Operation {
     ADD,
     REMOVE
-}
-
-function getOppositeOperation(operation: Operation) {
-    return operation == Operation.ADD ? Operation.REMOVE : Operation.ADD;
 }
 
 interface UpdateFavoritesArgs {
@@ -23,19 +20,19 @@ interface UpdateFavoritesArgs {
 }
 
 function updateFavorites(data: UserData, args: UpdateFavoritesArgs): UserData {
-    const newData = { ...data };
+    const newUserData = copyUserData(data);
     if (args.operation === Operation.ADD) {
-        newData.favorites[args.elementId] = {
-            id: args.elementId,
-            defaultConfiguration: undefined
+        newUserData.favorites[args.elementId] = {
+            id: args.elementId
         };
+        newUserData.favoriteOrder.push(args.elementId);
     } else {
-        delete newData.favorites[args.elementId];
-        newData.favoriteOrder = newData.favoriteOrder.filter(
+        delete newUserData.favorites[args.elementId];
+        newUserData.favoriteOrder = newUserData.favoriteOrder.filter(
             (favoriteId) => favoriteId !== args.elementId
         );
     }
-    return newData;
+    return newUserData;
 }
 
 interface FavoriteButtonProps {
@@ -51,6 +48,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
         mutationKey: ["update-favorites", isFavorite],
         mutationFn: async (args) => {
             const query = { elementId: args.elementId };
+            console.log("Mutate?");
             if (args.operation === Operation.ADD) {
                 return apiPost("/favorites" + toUserApiPath(search), {
                     query
@@ -65,13 +63,14 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             queryClient.setQueryData(["user-data"], (data: UserData) =>
                 updateFavorites(data, args)
             );
+            router.invalidate();
         },
         onError: (_error, args) => {
             const action =
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
             showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
-            args.operation = getOppositeOperation(args.operation);
-            queryClient.refetchQueries({ queryKey: ["favorites"] });
+            queryClient.refetchQueries({ queryKey: ["user-data"] });
+            router.invalidate();
         }
     });
 

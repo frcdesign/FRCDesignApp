@@ -19,6 +19,7 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
+    copyUserData,
     Documents,
     Elements,
     hasMemberAccess,
@@ -35,6 +36,7 @@ import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
+import { HandledError } from "../api/errors";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -99,13 +101,15 @@ function UserSettings(): ReactNode {
             }),
         onMutate: (newSettings) => {
             queryClient.setQueryData(["user-data"], (userData: UserData) => {
-                return { ...userData, settings: newSettings };
+                const newUserData = copyUserData(userData);
+                newUserData.settings = newSettings;
+                return newUserData;
             });
             router.invalidate();
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");
-            queryClient.refetchQueries({ queryKey: ["settings"] });
+            queryClient.refetchQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });
@@ -210,15 +214,16 @@ function PushVersionButton(): ReactNode {
             ]) as Documents;
             const elements = queryClient.getQueryData<Elements>(["elements"]);
             if (!documents || !elements) {
-                showErrorToast(
-                    "Unexpectedly failed to push new version: documents are not loaded."
-                );
-                return;
+                throw new HandledError("Documents or elements not loaded.");
             }
-            const searchDb = await buildSearchDb(documents, elements);
+            const searchDb = JSON.stringify(buildSearchDb(documents, elements));
             return apiPost("/cache-version", { body: { searchDb } });
         },
-        onError: () => {
+        onError: (error) => {
+            if (error instanceof HandledError) {
+                showErrorToast(error.message);
+                return;
+            }
             showErrorToast("Unexpectedly failed to push new version.");
         },
         onSuccess: (data: { newVersion: number }) => {

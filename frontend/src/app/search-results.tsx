@@ -1,5 +1,11 @@
-import { ReactNode, useState, useEffect } from "react";
-import { SearchHit, SearchPositions, DELIMINATOR, doSearch, useSearchDb } from "./search";
+import { ReactNode } from "react";
+import {
+    DELIMINATOR,
+    SearchHit,
+    SearchPositions,
+    doSearch,
+    useSearchDbQuery
+} from "./search";
 import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
@@ -11,7 +17,6 @@ import {
     AppLoadingState
 } from "../common/app-zero-state";
 import { FilterCallout } from "../navbar/filter-callout";
-import { useUiState } from "../api/ui-state";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 
 interface SearchResultsProps {
@@ -26,48 +31,31 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters } = props;
 
     const elementsQuery = useElementsQuery();
-    const searchDbQuery = useSearchDb();
-    const uiState = useUiState()[0];
-
-    const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
-        undefined
-    );
+    const searchDbQuery = useSearchDbQuery();
 
     const searchResultSelectedMutation = useMutation({
         mutationKey: ["search-result-selected"],
         mutationFn: async () => apiPost("/search-result-selected")
     });
 
-    useEffect(() => {
-        const executeSearch = async () => {
-            if (!searchDbQuery.data) {
-                return;
-            }
-            const hits = await doSearch(searchDbQuery.data, query, filters);
-            setSearchHits(hits);
-        };
-
-        executeSearch();
-    }, [searchDbQuery.data, query, filters]);
-
-    if (searchDbQuery.isPending || elementsQuery.isPending || !searchHits) {
-        return <AppLoadingState title="Building search index..." />;
+    if (searchDbQuery.isPending || elementsQuery.isPending) {
+        return <AppLoadingState title="Loading documents..." />;
     } else if (searchDbQuery.isError || elementsQuery.isError) {
         return (
             <AppInternalErrorState title="Unexpectedly failed to load documents." />
         );
     }
     const elements = elementsQuery.data;
-    const hasFilters = uiState.vendorFilters !== undefined;
+    const searchResults = doSearch(searchDbQuery.data, query, filters);
 
-    if (searchHits.length === 0) {
-        if (hasFilters) {
+    if (searchResults.hits.length === 0) {
+        if (searchResults.filtered > 0) {
             return (
                 <AppErrorState
                     icon="search"
                     iconIntent="primary"
                     title="No search results."
-                    description="Some search results may be hidden by filters."
+                    description={`${searchResults.filtered} search results are hidden by filters.`}
                     action={<ClearFiltersButton />}
                 />
             );
@@ -80,8 +68,13 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
             />
         );
     }
-    const callout = <FilterCallout itemType="search results" />;
-    const searchResults = searchHits.map((searchHit: SearchHit) => {
+    const callout = (
+        <FilterCallout
+            itemName="search results"
+            filteredItems={searchResults.filtered}
+        />
+    );
+    const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
         const elementId = searchHit.id;
         const element = elements[elementId];
         return (
@@ -97,7 +90,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     return (
         <>
             {callout}
-            {searchResults}
+            {resultCards}
         </>
     );
 }

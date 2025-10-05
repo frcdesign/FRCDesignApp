@@ -80,7 +80,7 @@ interface AppLoadingStateProps extends AppNonIdealStateProps {
  */
 export function AppLoadingState(props: AppLoadingStateProps): ReactNode {
     const { title, description, action, className } = props;
-    const inline = props.inline ?? false;
+    const inline = props.inline ?? true;
 
     return (
         <NonIdealState
