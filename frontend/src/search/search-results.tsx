@@ -69,7 +69,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         />
     );
     const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
-        const elementId = searchHit.id;
+        const elementId = searchHit.document.id;
         const element = elements[elementId];
         return (
             <ElementCard
@@ -175,12 +175,5 @@ interface SearchHitTitleProps {
  */
 export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
     const { searchHit } = props;
-
-    // Add ranges from spacedName (need to remap to account for delimiters)
-    // const spacedNameRanges = positions.spacedName || [];
-    // ranges.push(
-    //     ...remapRanges(searchHit.document.spacedName, spacedNameRanges)
-    // );
-
     return <>{applyRanges(searchHit.document.name, searchHit.positions)}</>;
 }

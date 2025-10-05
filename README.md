@@ -162,7 +162,7 @@ You may also need to install the Java JRE:
 sudo apt install openjdk-21-jdk
 ```
 
-You can then set up Firebase emulators by running:
+You can then set up the Firebase emulator by running:
 
 ```
 firebase init emulators firestore
@@ -170,15 +170,15 @@ firebase init emulators firestore
 
 If you are prompted to select a project, you can select **Don't set up a default project**.
 
-<!-- Then restart your WSL instance. This prevents google cloud from using the google cloud version located outside of WSL. -->
-
 ## Development Servers
 
 You should now be able to run the `Launch servers` VSCode task to launch the dev servers necessary to view and test the app.
 If everything is setup properly, you should see all three servers start successfully.
 You should also be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
-Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see a GUI representation of the database.
+To see documents, add one or more documents and push a new app version to rebuild the search database.
+
+Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see the current database state directly.
 
 # Deploying To Production
 

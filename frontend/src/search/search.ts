@@ -98,7 +98,6 @@ export interface Position {
 }
 
 export interface SearchHit {
-    id: string;
     document: SearchDocument;
     positions: Position[];
 }
@@ -177,60 +176,24 @@ function generateHighlightPositions(
 ): Position[] {
     // Terms is an array of values in name (or spacedName) which matched
     // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
-    console.log(document.name);
-    console.log(result);
 
-    const terms = result.terms;
     const name = document.name.toLowerCase();
 
     const positions: Position[] = [];
-    for (const term in terms) {
+
+    for (const [term, matchedFields] of Object.entries(result.match)) {
+        // Only include terms that matched something in the name field
+        if (!matchedFields.includes("name")) {
+            continue;
+        }
         const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
         for (const match of matchedLocations) {
-            if (match.index !== undefined) {
-                positions.push({
-                    start: match.index,
-                    length: term.length
-                });
-            }
+            positions.push({
+                start: match.index,
+                length: term.length
+            });
         }
     }
-
-    // For each field, find positions of matching tokens
-
-    // for (const field of fields) {
-    //     const fieldValue = document[field] as string;
-    //     const lowerFieldValue = fieldValue.toLowerCase();
-
-    //     for (const token of queryTokens) {
-    //         let startIndex = 0;
-    //         let index = lowerFieldValue.indexOf(token, startIndex);
-
-    //         while (index !== -1) {
-    //             // Check if this is a word boundary match
-    //             const beforeChar = index > 0 ? lowerFieldValue[index - 1] : " ";
-    //             const afterChar =
-    //                 index + token.length < lowerFieldValue.length
-    //                     ? lowerFieldValue[index + token.length]
-    //                     : " ";
-
-    //             // Match if at word boundary or after special chars
-    //             if (
-    //                 /[-()#\s^]/.test(beforeChar) ||
-    //                 /[-()#\s^]/.test(afterChar) ||
-    //                 index === 0
-    //             ) {
-    //                 positions[field].push({
-    //                     start: index,
-    //                     length: token.length
-    //                 });
-    //             }
-
-    //             startIndex = index + 1;
-    //             index = lowerFieldValue.indexOf(token, startIndex);
-    //         }
-    //     }
-    // }
 
     return positions;
 }

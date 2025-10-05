@@ -99,6 +99,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
                         message: `Cancelled ${element.name}.`,
                         intent: "primary",
                         icon: "info-sign",
+                        timeout: 3000,
                         action: {
                             text: "Restore",
                             onClick: () => {
@@ -118,7 +119,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
                 );
                 closeDialog();
             }}
-            style={{ maxHeight: "90vh", maxWidth: "400px" }}
+            style={{ maxHeight: "90vh", maxWidth: "500px" }}
         >
             <Card className="center preview-image-card">
                 {previewThumbnail}
