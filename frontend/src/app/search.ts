@@ -126,11 +126,7 @@ export async function doSearch(
             }
 
             // Generate highlighting positions
-            const positions = generateHighlightPositions(
-                document,
-                query,
-                searchDb
-            );
+            const positions = generateHighlightPositions(document, query);
 
             return {
                 id: result.id,
@@ -151,8 +147,7 @@ export async function doSearch(
  */
 function generateHighlightPositions(
     document: SearchDocument,
-    query: string,
-    searchDb: MiniSearch<SearchDocument>
+    query: string
 ): SearchPositions {
     const positions: SearchPositions = {
         name: [],
@@ -175,10 +170,9 @@ function generateHighlightPositions(
         
         for (const token of queryTokens) {
             let startIndex = 0;
-            while (true) {
-                const index = lowerFieldValue.indexOf(token, startIndex);
-                if (index === -1) break;
-                
+            let index = lowerFieldValue.indexOf(token, startIndex);
+            
+            while (index !== -1) {
                 // Check if this is a word boundary match
                 const beforeChar = index > 0 ? lowerFieldValue[index - 1] : " ";
                 const afterChar =
@@ -195,6 +189,7 @@ function generateHighlightPositions(
                 }
                 
                 startIndex = index + 1;
+                index = lowerFieldValue.indexOf(token, startIndex);
             }
         }
     }
