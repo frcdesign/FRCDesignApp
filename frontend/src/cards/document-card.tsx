@@ -15,7 +15,6 @@ import { useMutation } from "@tanstack/react-query";
 import { RequireAccessLevel } from "../api/access-level";
 import { apiPost, apiDelete } from "../api/api";
 import { AppMenu } from "../api/menu-params";
-import { invalidateSearchDb } from "../app/search";
 import { showErrorToast } from "../common/toaster";
 import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
@@ -97,7 +96,6 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
             queryClient.refetchQueries({ queryKey: ["documents"] });
             queryClient.refetchQueries({ queryKey: ["document-order"] });
             queryClient.refetchQueries({ queryKey: ["elements"] });
-            invalidateSearchDb();
         }
     });
 
@@ -220,7 +218,6 @@ function useToggleDocumentSortMutation(document: DocumentObj) {
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["documents"] });
-            invalidateSearchDb();
         }
     });
 }

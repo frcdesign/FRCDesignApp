@@ -83,3 +83,20 @@ export function getContextDataQuery(instancePath: InstancePath) {
             apiGet("/context-data" + toInstanceApiPath(instancePath))
     });
 }
+
+// export function getSearchDbQuery(cacheOptions: CacheOptions) {
+//     return queryOptions<AnyOrama | undefined>({
+//         queryKey: ["search-db"],
+//         queryFn: async () =>
+//             apiGet("/search-db", { cacheOptions }).then((result) => {
+//                 if (!result.searchDb) {
+//                     throw new Error("No search database found");
+//                 }
+//             })
+//     });
+// }
+
+// export function useSearchDbQuery() {
+//     const cacheOptions = useCacheOptions();
+//     return useQuery(getSearchDbQuery(cacheOptions));
+// }

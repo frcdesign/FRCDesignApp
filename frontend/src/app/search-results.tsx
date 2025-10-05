@@ -1,17 +1,15 @@
 import { ReactNode, useState, useEffect } from "react";
-import {
-    SearchHit,
-    SearchPositions,
-    DELIMINATOR,
-    doSearch,
-    useSearchDb
-} from "./search";
-import { useDocumentsQuery, useElementsQuery } from "../queries";
+import { SearchHit, SearchPositions, DELIMINATOR, doSearch } from "./search";
+import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { ElementCard } from "../cards/element-card";
-import { AppErrorState, AppLoadingState } from "../common/app-zero-state";
+import {
+    AppErrorState,
+    AppInternalErrorState,
+    AppLoadingState
+} from "../common/app-zero-state";
 import { FilterCallout } from "../navbar/filter-callout";
 import { useUiState } from "../api/ui-state";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
@@ -28,9 +26,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters } = props;
 
     const elementsQuery = useElementsQuery();
-    const documentsQuery = useDocumentsQuery();
-
-    const searchDb = useSearchDb(documentsQuery.data, elementsQuery.data);
+    const searchDbQuery = useSearchDb();
     const uiState = useUiState()[0];
 
     const [searchHits, setSearchHits] = useState<SearchHit[] | undefined>(
@@ -44,23 +40,22 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     useEffect(() => {
         const executeSearch = async () => {
-            if (!searchDb) {
+            if (!searchDbQuery.data) {
                 return;
             }
-            const hits = await doSearch(searchDb, query, filters);
+            const hits = await doSearch(searchDbQuery.data, query, filters);
             setSearchHits(hits);
         };
 
         executeSearch();
-    }, [searchDb, query, filters]);
+    }, [searchDbQuery.data, query, filters]);
 
-    if (
-        !searchDb ||
-        !searchHits ||
-        !elementsQuery.data ||
-        !documentsQuery.data
-    ) {
+    if (searchDbQuery.isPending || elementsQuery.isPending || !searchHits) {
         return <AppLoadingState title="Building search index..." />;
+    } else if (searchDbQuery.isError || elementsQuery.isError) {
+        return (
+            <AppInternalErrorState title="Unexpectedly failed to load documents." />
+        );
     }
     const elements = elementsQuery.data;
     const hasFilters = uiState.vendorFilters !== undefined;

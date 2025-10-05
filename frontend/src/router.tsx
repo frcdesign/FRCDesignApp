@@ -82,6 +82,7 @@ const appRoute = createRoute({
             queryClient.prefetchQuery(getDocumentOrderQuery(deps)),
             queryClient.prefetchQuery(getDocumentsQuery(deps)),
             queryClient.prefetchQuery(getElementsQuery(deps))
+            // queryClient.prefetchQuery(getSearchDbQuery(deps))
         ]);
         // We need settings immediately to determine the theme
         return queryClient.ensureQueryData(getUserDataQuery(deps));

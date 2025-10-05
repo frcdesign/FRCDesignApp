@@ -19,6 +19,8 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
+    Documents,
+    Elements,
     hasMemberAccess,
     Settings,
     Theme,
@@ -26,7 +28,7 @@ import {
 } from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { invalidateSearchDb } from "../app/search";
+import { buildSearchDb } from "../app/search";
 import { toUserApiPath } from "../api/path";
 import { useUserData } from "../queries";
 import { router } from "../router";
@@ -202,7 +204,20 @@ function PushVersionButton(): ReactNode {
     const navigate = useNavigate();
     const pushVersionMutation = useMutation({
         mutationKey: ["push-cache-version"],
-        mutationFn: async () => apiPost("/cache-version"),
+        mutationFn: async () => {
+            const documents = queryClient.getQueryData<Documents>([
+                "documents"
+            ]) as Documents;
+            const elements = queryClient.getQueryData<Elements>(["elements"]);
+            if (!documents || !elements) {
+                showErrorToast(
+                    "Unexpectedly failed to push new version: documents are not loaded."
+                );
+                return;
+            }
+            const searchDb = await buildSearchDb(documents, elements);
+            return apiPost("/cache-version", { body: { searchDb } });
+        },
         onError: () => {
             showErrorToast("Unexpectedly failed to push new version.");
         },
@@ -331,7 +346,6 @@ export function ReloadDocumentsButton(
                 queryClient.refetchQueries({ queryKey: ["documents"] }),
                 queryClient.refetchQueries({ queryKey: ["elements"] })
             ]);
-            invalidateSearchDb();
         }
     });
 

@@ -234,6 +234,7 @@ class Favorite(BaseModel):
 
 
 class UserData(BaseModel):
+    userCacheVersion: int = 1
     favorites: dict[str, Favorite] = Field(default_factory=dict)
     favoriteOrder: list[str] = Field(default_factory=list)
     settings: Settings = Field(default_factory=Settings)

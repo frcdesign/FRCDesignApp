@@ -16,6 +16,10 @@ class Database:
         return self.client.collection("common").document("cache")
 
     @property
+    def search_db(self) -> DocumentReference:
+        return self.client.collection("common").document("searchDb")
+
+    @property
     def sessions(self) -> CollectionReference:
         return self.client.collection("sessions")
 

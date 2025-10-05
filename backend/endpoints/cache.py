@@ -5,6 +5,7 @@ import flask
 from backend.common import connect
 from backend.common.app_access import require_access_level
 from backend.common.database import Database
+from onshape_api.paths.user_path import UserPath
 
 
 MAX_AGE = 7 * 24 * 3600  # 7 days
@@ -52,7 +53,10 @@ def push_cache_version():
     """
     Invalidates all CDN caching by pushing a new version of the app.
     """
+    new_search_db = connect.get_body_arg("searchDb")
     db = connect.get_db()
+
+    db.search_db.set(new_search_db)
     increment_cache_version(db)
     return {"success": True}
 
@@ -68,3 +72,10 @@ def increment_cache_version(db: Database) -> int:
     doc["cacheVersion"] = current
     db.cache.set(doc)
     return current
+
+
+@cacheable_route(router, "/search-db")
+def get_search_db():
+    db = connect.get_db()
+    search_db = db.search_db.get().to_dict()
+    return {"searchDb": search_db}

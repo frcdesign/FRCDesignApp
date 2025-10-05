@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
-import { invalidateSearchDb } from "../app/search";
 import { queryClient } from "../query-client";
 import { ElementObj, ElementType, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
@@ -23,7 +22,6 @@ export function useSetVisibilityMutation(
         },
         onSuccess: () => {
             queryClient.refetchQueries({ queryKey: ["elements"] });
-            invalidateSearchDb();
         }
     });
 }

@@ -6,48 +6,10 @@ import {
     ResultWithPositions,
     searchWithHighlight
 } from "@orama/plugin-match-highlight";
-import { useState, useEffect } from "react";
+// import { persist } from "@orama/plugin-data-persistence";
 
-let cachedSearchDb: AnyOrama | undefined = undefined;
-
-function getCachedSearchDb() {
-    return cachedSearchDb;
-}
-
-function setCachedSearchDb(searchDb: AnyOrama) {
-    cachedSearchDb = searchDb;
-}
-
-export function invalidateSearchDb() {
-    cachedSearchDb = undefined;
-}
-
-/**
- * Returns the current cached search database.
- * If the database hasn't been accessed yet, this function will synchronously build it first.
- * This could produce a small latency on initial load, which we will ignore for now.
- */
-export function useSearchDb(documents?: Documents, elements?: Elements) {
-    const [searchDb, setSearchDb] = useState<AnyOrama | undefined>(
-        getCachedSearchDb()
-    );
-
-    useEffect(() => {
-        if (!elements || !documents) {
-            return;
-        }
-        if (getCachedSearchDb()) {
-            return;
-        }
-        const searchDb = buildSearchDb(documents, elements);
-        setCachedSearchDb(searchDb);
-        setSearchDb(searchDb);
-    }, [documents, elements]);
-
-    return searchDb;
-}
-
-export function buildSearchDb(documents: Documents, elements: Elements) {
+export async function buildSearchDb(documents: Documents, elements: Elements) {
+    console.log("Building search database...");
     const searchDb = create({
         schema: {
             id: "string",
@@ -107,7 +69,7 @@ export function buildSearchDb(documents: Documents, elements: Elements) {
             documentName: parentDocument.name
         });
     });
-    return searchDb;
+    // return persist(searchDb, "json");
 }
 
 export interface SearchFilters {
