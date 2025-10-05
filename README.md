@@ -148,29 +148,37 @@ npm install
 
 ## Google Cloud Dev Setup
 
-To emulate the google cloud database locally, you'll need to install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install#deb).
+Although this project uses Google Cloud Firestore, which is technically a distinct product from Firebase Firestore, Google Cloud Firestore is still just Firebase Firestore in a trenchcoat.
 
-You should also install the firestore emulator and a Java JRE:
-
-```
-sudo apt install google-cloud-cli-firestore-emulator default-jre
-```
-
-You can test your build by starting up the google cloud emulator:
+In order to emulate the google cloud database locally, you'll need to install the [Firebase CLI](https://firebase.google.com/docs/cli). In Linux, this can be done using:
 
 ```
-gcloud emulators firestore start
+curl -sL https://firebase.tools | bash
 ```
+
+You may also need to install the Java JRE:
+
+```
+sudo apt install openjdk-21-jdk
+```
+
+You can then set up Firebase emulators by running:
+
+```
+firebase init emulators firestore
+```
+
+If you are prompted to select a project, you can select **Don't set up a default project**.
 
 <!-- Then restart your WSL instance. This prevents google cloud from using the google cloud version located outside of WSL. -->
-
-Note: this project uses Google Cloud Firestore as it's database. This is not to be confused with Google Firebase or Google Firebase's Firestore (yikes), as Google Firebase is a separate project from Google Cloud.
 
 ## Development Servers
 
 You should now be able to run the `Launch servers` VSCode task to launch the dev servers necessary to view and test the app.
 If everything is setup properly, you should see all three servers start successfully.
 You should also be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
+
+Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see a GUI representation of the database.
 
 # Deploying To Production
 

@@ -79,7 +79,7 @@
         {
             "label": "Launch db",
             "type": "shell",
-            "command": "gcloud emulators firestore start --host-port=127.0.0.1:8080",
+            "command": "firebase emulators:start --import=./firestore_data --export-on-exit --project=frc-design-lib",
             "presentation": {
                 "group": "server"
             },

@@ -11,7 +11,7 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useRef } from "react";
-import { SearchResults } from "./search-results";
+import { SearchResults } from "../search/search-results";
 import { DocumentObj, Elements, hasMemberAccess } from "../api/models";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { useUiState } from "../api/ui-state";

@@ -10,7 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { AppMenu } from "../api/menu-params";
 import { ElementObj } from "../api/models";
-import { SearchHit } from "../app/search";
+import { SearchHit } from "../search/search";
 import { FavoriteButton } from "./favorite-button";
 import { useUserData } from "../queries";
 import { RequireAccessLevel } from "../api/access-level";

@@ -25,7 +25,7 @@ import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
-import { getSearchDbQuery } from "./app/search";
+import { getSearchDbQuery } from "./search/search";
 
 type SearchParams = OnshapeParams & MenuParams & ContextData;
 

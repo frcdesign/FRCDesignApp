@@ -29,7 +29,7 @@ import {
 } from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { buildSearchDb } from "../app/search";
+import { buildSearchDb } from "../search/search";
 import { toUserApiPath } from "../api/path";
 import { useUserData } from "../queries";
 import { router } from "../router";

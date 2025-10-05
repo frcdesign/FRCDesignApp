@@ -10,8 +10,8 @@ import {
 } from "@blueprintjs/core";
 import { makeUrl, openUrlInNewTab } from "../common/url";
 import { MouseEventHandler, ReactNode } from "react";
-import { SearchHit } from "../app/search";
-import { SearchHitTitle } from "../app/search-results";
+import { SearchHit } from "../search/search";
+import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../app/thumbnail";
 import { DocumentPath, ElementPath } from "../api/path";
 

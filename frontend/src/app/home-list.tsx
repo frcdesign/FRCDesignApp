@@ -22,7 +22,7 @@ import {
     useUserData
 } from "../queries";
 import { ElementObj, hasMemberAccess } from "../api/models";
-import { SearchResults } from "./search-results";
+import { SearchResults } from "../search/search-results";
 import { AppMenu } from "../api/menu-params";
 import { useUiState } from "../api/ui-state";
 import { filterElements } from "../api/filter";

@@ -201,5 +201,7 @@ app.yaml
 .storage/
 credentials/
 temp/
+firestore_data/
+.firebaserc
 
 *.pem

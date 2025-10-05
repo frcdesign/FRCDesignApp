@@ -135,7 +135,7 @@ def element_path_route():
 
 
 def get_db() -> Database:
-    return Database(firestore.Client())
+    return Database(firestore.Client(project="frc-design-lib"))
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:

@@ -1,7 +1,39 @@
-import MiniSearch, { Options } from "minisearch";
+import MiniSearch, { Options, SearchResult } from "minisearch";
 import { Documents, Elements, Vendor } from "../api/models";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet, CacheOptions, useCacheOptions } from "../api/api";
+
+const deliminator = "^";
+
+/**
+ * Adds spaces to a given string so prefix matching is more efficient.
+ */
+export function processTerm(term: string): string[] {
+    // Split between lowercase-to-uppercase (camelCase -> camel case)
+    const camelSplit = term
+        .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
+        .split(deliminator);
+
+    // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
+    const pascalSplit = term
+        .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
+        .split(deliminator);
+
+    const base = term.toLowerCase();
+
+    const terms = [...camelSplit, ...pascalSplit, base].map((t) =>
+        t.toLowerCase()
+    );
+    // Deduplicate
+    return Array.from(new Set(terms));
+}
+
+export function tokenize(text: string): string[] {
+    // Don't lowercase so we can use casing for term splitting
+    const tokens = text.split(/[-()#\s^]+/).filter(Boolean);
+    console.log(tokens);
+    return tokens;
+}
 
 export interface SearchDocument {
     id: string;
@@ -9,19 +41,17 @@ export interface SearchDocument {
     isVisible: boolean;
     vendor: string;
     name: string;
-    spacedName: string;
     documentName: string;
 }
 
 const searchOptions: Options<SearchDocument> = {
-    fields: ["name", "spacedName", "documentName"],
+    fields: ["name", "documentName"],
     storeFields: [
         "id",
         "documentId",
         "isVisible",
         "vendor",
         "name",
-        "spacedName",
         "documentName"
     ],
     searchOptions: {
@@ -29,12 +59,8 @@ const searchOptions: Options<SearchDocument> = {
         prefix: true
     },
     // Custom tokenizer to split on special characters
-    tokenize: (text: string) => {
-        return text
-            .toLowerCase()
-            .split(/[-()#\s^]+/)
-            .filter(Boolean);
-    }
+    tokenize,
+    processTerm
 };
 
 export function buildSearchDb(
@@ -52,7 +78,6 @@ export function buildSearchDb(
                 isVisible: element.isVisible,
                 vendor: element.vendor || "",
                 name: element.name,
-                spacedName: addSpaces(element.name),
                 documentName: parentDocument.name
             };
         }
@@ -67,6 +92,7 @@ export interface SearchFilters {
     vendors?: Vendor[];
 }
 
+// Range is already defined by TypeScript
 export interface Position {
     start: number;
     length: number;
@@ -75,12 +101,11 @@ export interface Position {
 export interface SearchHit {
     id: string;
     document: SearchDocument;
-    positions: SearchPositions;
+    positions: Position[];
 }
 
-export type SearchPositions = Record<string, Position[]>;
-
-export interface SearchResult {
+// Don't use SearchResult since that's also defined by MiniSearch
+export interface Result {
     hits: SearchHit[];
     /**
      * The number of items filtered out of the result by user controllable filters (e.g., vendor filters).
@@ -92,7 +117,7 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters
-): SearchResult {
+): Result {
     if (!query || query.trim() === "") {
         return { hits: [], filtered: 0 };
     }
@@ -126,11 +151,11 @@ export function doSearch(
     // Add highlighting
     const hits: SearchHit[] = results
         .map((result) => {
-            const storedFields = searchDb.getStoredFields(result.id);
-            const document = storedFields as unknown as SearchDocument;
-
-            // Generate highlighting positions
-            const positions = generateHighlightPositions(document, query);
+            // Stored fields should be the same as SearchDocument
+            const document = searchDb.getStoredFields(
+                result.id
+            ) as unknown as SearchDocument;
+            const positions = generateHighlightPositions(result, document);
 
             return {
                 id: result.id,
@@ -148,79 +173,67 @@ export function doSearch(
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(
-    document: SearchDocument,
-    query: string
-): SearchPositions {
-    const positions: SearchPositions = {
-        name: [],
-        spacedName: [],
-        documentName: []
-    };
+    result: SearchResult,
+    document: SearchDocument
+): Position[] {
+    // Terms is an array of values in name (or spacedName) which matched
+    // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
+    console.log(document.name);
+    console.log(result);
 
-    // Tokenize the query
-    const queryTokens = query
-        .toLowerCase()
-        .split(/[-()#\s^]+/)
-        .filter(Boolean);
+    const terms = result.terms;
+    const name = document.name.toLowerCase();
 
-    // For each field, find positions of matching tokens
-    const fields: (keyof SearchDocument)[] = [
-        "name",
-        "spacedName",
-        "documentName"
-    ];
-
-    for (const field of fields) {
-        const fieldValue = document[field] as string;
-        const lowerFieldValue = fieldValue.toLowerCase();
-
-        for (const token of queryTokens) {
-            let startIndex = 0;
-            let index = lowerFieldValue.indexOf(token, startIndex);
-
-            while (index !== -1) {
-                // Check if this is a word boundary match
-                const beforeChar = index > 0 ? lowerFieldValue[index - 1] : " ";
-                const afterChar =
-                    index + token.length < lowerFieldValue.length
-                        ? lowerFieldValue[index + token.length]
-                        : " ";
-
-                // Match if at word boundary or after special chars
-                if (
-                    /[-()#\s^]/.test(beforeChar) ||
-                    /[-()#\s^]/.test(afterChar) ||
-                    index === 0
-                ) {
-                    positions[field].push({
-                        start: index,
-                        length: token.length
-                    });
-                }
-
-                startIndex = index + 1;
-                index = lowerFieldValue.indexOf(token, startIndex);
+    const positions: Position[] = [];
+    for (const term in terms) {
+        const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
+        for (const match of matchedLocations) {
+            if (match.index !== undefined) {
+                positions.push({
+                    start: match.index,
+                    length: term.length
+                });
             }
         }
     }
 
+    // For each field, find positions of matching tokens
+
+    // for (const field of fields) {
+    //     const fieldValue = document[field] as string;
+    //     const lowerFieldValue = fieldValue.toLowerCase();
+
+    //     for (const token of queryTokens) {
+    //         let startIndex = 0;
+    //         let index = lowerFieldValue.indexOf(token, startIndex);
+
+    //         while (index !== -1) {
+    //             // Check if this is a word boundary match
+    //             const beforeChar = index > 0 ? lowerFieldValue[index - 1] : " ";
+    //             const afterChar =
+    //                 index + token.length < lowerFieldValue.length
+    //                     ? lowerFieldValue[index + token.length]
+    //                     : " ";
+
+    //             // Match if at word boundary or after special chars
+    //             if (
+    //                 /[-()#\s^]/.test(beforeChar) ||
+    //                 /[-()#\s^]/.test(afterChar) ||
+    //                 index === 0
+    //             ) {
+    //                 positions[field].push({
+    //                     start: index,
+    //                     length: token.length
+    //                 });
+    //             }
+
+    //             startIndex = index + 1;
+    //             index = lowerFieldValue.indexOf(token, startIndex);
+    //         }
+    //     }
+    // }
+
     return positions;
-}
-
-export const DELIMINATOR = "^";
-
-/**
- * Adds spaces to a given string so prefix matching is more efficient.
- */
-function addSpaces(str: string) {
-    return (
-        str
-            // Insert space between lowercase-to-uppercase (camelCase)
-            .replace(/([a-z])([A-Z])/g, `$1${DELIMINATOR}$2`)
-            // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
-            .replace(/([A-Z])([A-Z][a-z])/g, `$1${DELIMINATOR}$2`)
-        // Note handling ABCdef is ambiguous with PascalCase handling
-    );
 }
 
 export function getSearchDbQuery(cacheOptions: CacheOptions) {
