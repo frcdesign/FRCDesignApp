@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
-import { SearchHit, SearchPositions, DELIMINATOR, doSearch } from "./search";
+import { SearchHit, SearchPositions, DELIMINATOR, doSearch, useSearchDb } from "./search";
 import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
@@ -195,14 +195,16 @@ export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
     const { searchHit } = props;
 
     const positions: SearchPositions = searchHit.positions;
-    const ranges = [];
+    const ranges: Range[] = [];
 
-    const spacedNameRanges = Object.values(positions.spacedName).flat(1);
+    // Add ranges from spacedName (need to remap to account for delimiters)
+    const spacedNameRanges = positions.spacedName || [];
     ranges.push(
         ...remapRanges(searchHit.document.spacedName, spacedNameRanges)
     );
 
-    ranges.push(...Object.values(positions.name).flat(1));
+    // Add ranges from name
+    ranges.push(...(positions.name || []));
 
     return <>{applyRanges(searchHit.document.name, ranges)}</>;
 }
