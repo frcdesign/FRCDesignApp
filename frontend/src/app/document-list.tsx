@@ -166,7 +166,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     if (filterResult.filteredByVendors > 0) {
         callout = (
             <FilterCallout
-                itemType="elements"
+                itemName="elements"
                 filteredItems={filterResult.filteredByVendors}
             />
         );

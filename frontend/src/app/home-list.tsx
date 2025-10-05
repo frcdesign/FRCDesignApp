@@ -106,7 +106,7 @@ function LibraryList() {
             <AppInternalErrorState title="Failed to load documents." inline />
         );
     } else if (documentsQuery.isPending || documentOrderQuery.isPending) {
-        return <AppLoadingState title="Loading documents..." inline />;
+        return <AppLoadingState title="Loading documents..." />;
     }
 
     const documents = documentsQuery.data;
@@ -164,7 +164,7 @@ function FavoritesList() {
             />
         );
     } else if (elementsQuery.isPending) {
-        return <AppLoadingState title="Loading favorites..." inline />;
+        return <AppLoadingState title="Loading favorites..." />;
     }
 
     const favorites = userData.favorites;
@@ -210,7 +210,7 @@ function FavoritesList() {
         callout = (
             <Card className="item-card" style={{ padding: "0px" }}>
                 <FilterCallout
-                    itemType="favorites"
+                    itemName="favorites"
                     filteredItems={filterResult.filteredByVendors}
                 />
             </Card>

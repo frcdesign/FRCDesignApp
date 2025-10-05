@@ -1,75 +1,65 @@
-import { AnyOrama, create, insert } from "@orama/orama";
+import MiniSearch, { Options } from "minisearch";
 import { Documents, Elements, Vendor } from "../api/models";
-import {
-    afterInsert as highlightAfterInsert,
-    Position,
-    ResultWithPositions,
-    searchWithHighlight
-} from "@orama/plugin-match-highlight";
-// import { persist } from "@orama/plugin-data-persistence";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { apiGet, CacheOptions, useCacheOptions } from "../api/api";
 
-export async function buildSearchDb(documents: Documents, elements: Elements) {
-    console.log("Building search database...");
-    const searchDb = create({
-        schema: {
-            id: "string",
-            documentId: "string",
-            isVisible: "boolean",
-            vendor: "string",
-            name: "string",
-            spacedName: "string",
-            documentName: "string"
-        },
-        components: {
-            tokenizer: {
-                language: "english",
-                normalizationCache: new Map(),
-                tokenize: (raw) => {
-                    // In theory you could handle spacedName here, but in practice it doesn't work since the highlight algorithm doesn't recognize words in the middle of strings
-                    // if (prop === "spacedName") {
-                    //     raw = addSpaces(raw);
-                    // }
+export interface SearchDocument {
+    id: string;
+    documentId: string;
+    isVisible: boolean;
+    vendor: string;
+    name: string;
+    spacedName: string;
+    documentName: string;
+}
 
-                    // Filter removes empty strings
-                    return raw
-                        .toLowerCase()
-                        .split(/[-()#\s^]+/)
-                        .filter(Boolean);
-                }
-            }
-        },
-        plugins: [
-            {
-                name: "highlight",
-                afterInsert: highlightAfterInsert
-            }
-            // {
-            //     name: "split-on-case",
-            //     beforeInsert: (_orama, _id, document) => {
-            //         document.name = document.name.replace("-", " ");
-            //         // const names: string[] = document.name;
-            //         // const name: string = names[0];
-            //         // const nameWithSpaces = addSpaces(name);
-            //         // names.push(nameWithSpaces);
-            //     }
-            // }
-        ]
-    });
+const searchOptions: Options<SearchDocument> = {
+    fields: ["name", "spacedName", "documentName"],
+    storeFields: [
+        "id",
+        "documentId",
+        "isVisible",
+        "vendor",
+        "name",
+        "spacedName",
+        "documentName"
+    ],
+    searchOptions: {
+        boost: { documentName: 0.5 },
+        prefix: true
+    },
+    // Custom tokenizer to split on special characters
+    tokenize: (text: string) => {
+        return text
+            .toLowerCase()
+            .split(/[-()#\s^]+/)
+            .filter(Boolean);
+    }
+};
 
-    // Cannot use insertMultiple since it doesn't return a Promise and there isn't a way to tell when it's actually finished...
-    Object.values(elements).forEach((element) => {
-        const parentDocument = documents[element.documentId];
-        insert(searchDb, {
-            id: element.id,
-            documentId: element.documentId,
-            isVisible: element.isVisible,
-            vendor: element.vendor,
-            name: element.name,
-            spacedName: addSpaces(element.name),
-            documentName: parentDocument.name
-        });
-    });
-    // return persist(searchDb, "json");
+export function buildSearchDb(
+    documents: Documents,
+    elements: Elements
+): MiniSearch<SearchDocument> {
+    const searchDb = new MiniSearch<SearchDocument>(searchOptions);
+
+    const searchDocuments: SearchDocument[] = Object.values(elements).map(
+        (element) => {
+            const parentDocument = documents[element.documentId];
+            return {
+                id: element.id,
+                documentId: element.documentId,
+                isVisible: element.isVisible,
+                vendor: element.vendor || "",
+                name: element.name,
+                spacedName: addSpaces(element.name),
+                documentName: parentDocument.name
+            };
+        }
+    );
+
+    searchDb.addAll(searchDocuments);
+    return searchDb;
 }
 
 export interface SearchFilters {
@@ -77,50 +67,147 @@ export interface SearchFilters {
     vendors?: Vendor[];
 }
 
-export async function doSearch(
-    searchDb: AnyOrama,
-    query?: string, // Shouldn't really be undefined but makes life easier in component
+export interface Position {
+    start: number;
+    length: number;
+}
+
+export interface SearchHit {
+    id: string;
+    document: SearchDocument;
+    positions: SearchPositions;
+}
+
+export type SearchPositions = Record<string, Position[]>;
+
+export interface SearchResult {
+    hits: SearchHit[];
+    /**
+     * The number of items filtered out of the result by user controllable filters (e.g., vendor filters).
+     */
+    filtered: number;
+}
+
+export function doSearch(
+    searchDb: MiniSearch<SearchDocument>,
+    query?: string,
     filters?: SearchFilters
-): Promise<SearchHit[]> {
-    const where: Record<string, string | string[] | boolean> = {
-        isVisible: true
+): SearchResult {
+    if (!query || query.trim() === "") {
+        return { hits: [], filtered: 0 };
+    }
+
+    let filtered = 0;
+    const results = searchDb.search(query, {
+        filter: (document) => {
+            if (!document.isVisible) {
+                return false;
+            } else if (
+                filters?.documentId &&
+                document.documentId !== filters.documentId
+            ) {
+                return false;
+            }
+
+            if (
+                filters &&
+                filters.vendors &&
+                filters.vendors.length > 0 &&
+                !filters.vendors.includes(document.vendor as Vendor)
+            ) {
+                filtered += 1;
+                return false;
+            }
+
+            return true;
+        }
+    });
+
+    // Add highlighting
+    const hits: SearchHit[] = results
+        .map((result) => {
+            const storedFields = searchDb.getStoredFields(result.id);
+            const document = storedFields as unknown as SearchDocument;
+
+            // Generate highlighting positions
+            const positions = generateHighlightPositions(document, query);
+
+            return {
+                id: result.id,
+                document,
+                positions
+            };
+        })
+        .slice(0, 50); // Limit to 50 results
+
+    return { hits, filtered };
+}
+
+/**
+ * Generate highlight positions for matched terms in the document.
+ * Based on approach from https://github.com/lucaong/minisearch/issues/37
+ */
+function generateHighlightPositions(
+    document: SearchDocument,
+    query: string
+): SearchPositions {
+    const positions: SearchPositions = {
+        name: [],
+        spacedName: [],
+        documentName: []
     };
 
-    if (filters) {
-        // Orama is very touchy about null/undefined/[] in a where clause
-        if (filters.documentId) {
-            where.documentId = filters.documentId;
-        }
+    // Tokenize the query
+    const queryTokens = query
+        .toLowerCase()
+        .split(/[-()#\s^]+/)
+        .filter(Boolean);
 
-        if (filters.vendors) {
-            where.vendor = filters.vendors;
+    // For each field, find positions of matching tokens
+    const fields: (keyof SearchDocument)[] = [
+        "name",
+        "spacedName",
+        "documentName"
+    ];
+
+    for (const field of fields) {
+        const fieldValue = document[field] as string;
+        const lowerFieldValue = fieldValue.toLowerCase();
+
+        for (const token of queryTokens) {
+            let startIndex = 0;
+            let index = lowerFieldValue.indexOf(token, startIndex);
+
+            while (index !== -1) {
+                // Check if this is a word boundary match
+                const beforeChar = index > 0 ? lowerFieldValue[index - 1] : " ";
+                const afterChar =
+                    index + token.length < lowerFieldValue.length
+                        ? lowerFieldValue[index + token.length]
+                        : " ";
+
+                // Match if at word boundary or after special chars
+                if (
+                    /[-()#\s^]/.test(beforeChar) ||
+                    /[-()#\s^]/.test(afterChar) ||
+                    index === 0
+                ) {
+                    positions[field].push({
+                        start: index,
+                        length: token.length
+                    });
+                }
+
+                startIndex = index + 1;
+                index = lowerFieldValue.indexOf(token, startIndex);
+            }
         }
     }
 
-    const result = await searchWithHighlight(searchDb, {
-        term: query,
-        properties: ["name", "spacedName", "documentName"],
-        boost: {
-            name: 2,
-            spacedName: 2
-        },
-        // ChatGPT suggested tuning for small documents
-        relevance: {
-            k: 0.5, // 0 - 0.5
-            b: 0, // 0 - 0.2
-            d: 1 // 1+
-        },
-        limit: 50,
-        where
-    });
-    return result.hits;
+    return positions;
 }
 
 export const DELIMINATOR = "^";
-
-export type SearchHit = ResultWithPositions<any>;
-
-export type SearchPositions = Record<string, Record<string, Position[]>>;
 
 /**
  * Adds spaces to a given string so prefix matching is more efficient.
@@ -134,4 +221,22 @@ function addSpaces(str: string) {
             .replace(/([A-Z])([A-Z][a-z])/g, `$1${DELIMINATOR}$2`)
         // Note handling ABCdef is ambiguous with PascalCase handling
     );
+}
+
+export function getSearchDbQuery(cacheOptions: CacheOptions) {
+    return queryOptions<MiniSearch>({
+        queryKey: ["search-db"],
+        queryFn: async () =>
+            apiGet("/search-db", { cacheOptions }).then((result) => {
+                if (!result.searchDb) {
+                    throw new Error("No search database found");
+                }
+                return MiniSearch.loadJSON(result.searchDb, searchOptions);
+            })
+    });
+}
+
+export function useSearchDbQuery() {
+    const cacheOptions = useCacheOptions();
+    return useQuery(getSearchDbQuery(cacheOptions));
 }

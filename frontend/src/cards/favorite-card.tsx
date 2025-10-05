@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { ElementObj, Favorite, UserData } from "../api/models";
+import { copyUserData, ElementObj, Favorite, UserData } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast } from "../common/toaster";
@@ -26,6 +26,7 @@ import { ChangeOrderItems } from "./change-order";
 import { ElementPath, toUserApiPath, UserPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
 import { useUserData } from "../queries";
+import { router } from "../router";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -168,14 +169,16 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
         },
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(["user-data"], (data: UserData) => {
-                const newData = { ...data };
-                newData.favoriteOrder = newOrder;
-                return newData;
+                const newUserData = copyUserData(data);
+                newUserData.favoriteOrder = newOrder;
+                return newUserData;
             });
+            router.invalidate();
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder favorites.");
-            queryClient.refetchQueries({ queryKey: ["favorite-order"] });
+            queryClient.refetchQueries({ queryKey: ["user-data"] });
+            router.invalidate();
         }
     });
 }
