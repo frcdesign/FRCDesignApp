@@ -42,7 +42,6 @@ import {
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,
-    getUnitType,
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
@@ -398,8 +397,8 @@ function getEvaluateOptions(
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
-        max: { value: parameter.max, type: getUnitType(parameter.unit) },
-        min: { value: parameter.min, type: getUnitType(parameter.unit) }
+        min: valueWithUnits(parameter.min, parameter.unit),
+        max: valueWithUnits(parameter.max, parameter.unit)
     };
     if (quantityType === QuantityType.LENGTH) {
         return {

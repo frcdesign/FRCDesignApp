@@ -31,8 +31,8 @@ const ZERO: ValueWithUnits = {
     type: "number"
 };
 
-export function valueWithUnits(value: number, type: Unit): ValueWithUnits {
-    return { value, type: getUnitType(type) };
+export function valueWithUnits(value: number, unit: Unit): ValueWithUnits {
+    return { value: value * getUnitFactor(unit), type: getUnitType(unit) };
 }
 
 function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
@@ -164,7 +164,7 @@ export function getUnitFactor(unit: Unit): number {
     }
 }
 
-export function getUnitType(unit: Unit): UnitType {
+function getUnitType(unit: Unit): UnitType {
     switch (unit) {
         // length
         case Unit.METER:
@@ -503,10 +503,8 @@ function applyDefaultUnit(
     value: ValueWithUnits,
     defaultUnit: Unit
 ): ValueWithUnits {
-    return {
-        value: value.value * getUnitFactor(defaultUnit),
-        type: getUnitType(defaultUnit)
-    };
+    // Convert a number into the given unit
+    return valueWithUnits(value.value, defaultUnit);
 }
 
 /**
@@ -558,7 +556,7 @@ function formatExpression(
     expr: Expr,
     value: ValueWithUnits,
     options: EvaluateOptions
-): Result {
+): Result | ErrorResult {
     const { quantityType, displayUnit, displayPrecision } = options;
 
     let expression = stringify(expr);
@@ -575,9 +573,30 @@ function formatExpression(
         expression = expression + " " + getDisplayStr(displayUnit);
     }
 
+    if (tolerantLessThan(value, options.min)) {
+        return {
+            hasError: true,
+            expression,
+            errorMessage: `Value must be greater than ${formatValueWithUnits(
+                options.min,
+                options.displayUnit,
+                options.displayPrecision
+            )}`
+        };
+    } else if (tolerantGreaterThan(value, options.max)) {
+        return {
+            hasError: true,
+            expression,
+            errorMessage: `Value must be less than ${formatValueWithUnits(
+                options.max,
+                options.displayUnit,
+                options.displayPrecision
+            )}`
+        };
+    }
+
     return {
         hasError: false,
-        value: value.value,
         displayExpression: formatValueWithUnits(
             value,
             displayUnit,
@@ -589,12 +608,6 @@ function formatExpression(
 
 export interface Result {
     hasError: false;
-    /**
-     * The value of the parsed result.
-     * This will be an angle in radians, length in meters, or number depending on the current quantityType.
-     * @example 0.3048
-     */
-    value: number;
     /**
      * The formatted result. Includes the value rounded to the correct display precision and the display unit.
      * @example `12.00 in`
@@ -671,28 +684,6 @@ export function evaluateExpression(
             hasError: true,
             expression: input,
             errorMessage
-        };
-    }
-
-    if (tolerantLessThan(value, options.min)) {
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage: `Value must be greater than ${formatValueWithUnits(
-                options.min,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
-        };
-    } else if (tolerantGreaterThan(value, options.max)) {
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage: `Value must be less than ${formatValueWithUnits(
-                options.max,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
         };
     }
 
