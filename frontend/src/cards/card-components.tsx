@@ -8,39 +8,40 @@ import {
     Tag,
     Text
 } from "@blueprintjs/core";
-import { makeUrl, openUrlInNewTab } from "../common/url";
+import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { MouseEventHandler, ReactNode } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
-import { CardThumbnail } from "../app/thumbnail";
+import { CardThumbnail } from "../favorites/thumbnail";
 import { DocumentPath, ElementPath } from "../api/path";
+import { AppAlertProps } from "../common/utils";
 
-interface OpenDocumentItemProps {
+interface OpenDocumentItemsProps {
     path: DocumentPath;
 }
 
-export function OpenDocumentItem(props: OpenDocumentItemProps) {
+export function OpenDocumentItems(props: OpenDocumentItemsProps) {
+    const url = makeUrl(props.path);
     return (
-        <MenuItem
-            text="Open document"
-            icon="share"
-            onClick={() => openUrlInNewTab(makeUrl(props.path))}
-            intent="primary"
-        />
+        <>
+            <MenuItem
+                text="Open document"
+                icon="share"
+                onClick={() => openUrlInNewTab(url)}
+            />
+            <MenuItem
+                text="Copy link"
+                icon="link"
+                onClick={() => copyUrlToClipboard(url)}
+            />
+        </>
     );
-}
-
-interface CannotDeriveAssemblyAlertProps {
-    isOpen: boolean;
-    onClose: () => void;
 }
 
 /**
  * A controlled alert warning that assemblies cannot be derived into part studios.
  */
-export function CannotDeriveAssemblyAlert(
-    props: CannotDeriveAssemblyAlertProps
-): ReactNode {
+export function CannotDeriveAssemblyAlert(props: AppAlertProps): ReactNode {
     const { onClose, isOpen } = props;
     if (!isOpen) {
         return null;

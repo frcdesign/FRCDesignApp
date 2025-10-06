@@ -199,12 +199,12 @@ function generateHighlightPositions(
 }
 
 export function getSearchDbQuery(cacheOptions: CacheOptions) {
-    return queryOptions<MiniSearch>({
+    return queryOptions<MiniSearch | undefined>({
         queryKey: ["search-db"],
         queryFn: async () =>
             apiGet("/search-db", { cacheOptions }).then((result) => {
                 if (!result.searchDb) {
-                    throw new Error("No search database found");
+                    return undefined;
                 }
                 return MiniSearch.loadJSON(result.searchDb, searchOptions);
             })

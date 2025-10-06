@@ -13,6 +13,7 @@ import { InsertMenu } from "../insert/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AddDocumentMenu } from "./add-document-menu";
 import { useUserData } from "../queries";
+import { FavoriteMenu } from "../favorites/favorite-menu";
 
 export function App() {
     const search = useSearch({ from: "/app" });
@@ -41,6 +42,7 @@ export function App() {
                         <SettingsMenu />
                         <InsertMenu />
                         <AddDocumentMenu />
+                        <FavoriteMenu />
                         <TanStackRouterDevtools />
                     </div>
                 </div>

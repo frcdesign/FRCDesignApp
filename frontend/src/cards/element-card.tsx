@@ -11,7 +11,7 @@ import { PropsWithChildren, ReactNode, useState } from "react";
 import { AppMenu } from "../api/menu-params";
 import { ElementObj } from "../api/models";
 import { SearchHit } from "../search/search";
-import { FavoriteButton } from "./favorite-button";
+import { FavoriteButton } from "../favorites/favorite-button";
 import { useUserData } from "../queries";
 import { RequireAccessLevel } from "../api/access-level";
 import {
@@ -23,7 +23,7 @@ import {
     CannotDeriveAssemblyAlert,
     CardTitle,
     ContextMenuButton,
-    OpenDocumentItem
+    OpenDocumentItems
 } from "./card-components";
 
 interface ElementCardProps extends PropsWithChildren {
@@ -127,7 +127,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenDocumentItem path={element} />
+            <OpenDocumentItems path={element} />
             <RequireAccessLevel>
                 <MenuDivider />
                 <MenuItem

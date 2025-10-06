@@ -73,3 +73,8 @@ export function useInteractiveSection(
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sectionRef, ...dependencies]);
 }
+
+export interface AppAlertProps {
+    isOpen: boolean;
+    onClose: () => void;
+}

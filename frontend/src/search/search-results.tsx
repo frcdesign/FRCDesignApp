@@ -34,7 +34,11 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     if (searchDbQuery.isPending || elementsQuery.isPending) {
         return <AppLoadingState title="Loading documents..." />;
-    } else if (searchDbQuery.isError || elementsQuery.isError) {
+    } else if (
+        searchDbQuery.isError ||
+        elementsQuery.isError ||
+        searchDbQuery.data === undefined
+    ) {
         return (
             <AppInternalErrorState title="Unexpectedly failed to load documents." />
         );

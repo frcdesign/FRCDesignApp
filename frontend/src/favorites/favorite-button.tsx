@@ -1,4 +1,10 @@
-import { Button, ButtonVariant, Colors, Icon } from "@blueprintjs/core";
+import {
+    Button,
+    ButtonVariant,
+    Colors,
+    Icon,
+    MenuItem
+} from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
@@ -103,6 +109,33 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             variant={ButtonVariant.MINIMAL}
+        />
+    );
+}
+
+interface FavoriteElementItemProps {
+    isFavorite: boolean;
+}
+
+/**
+ * A menu item which can be used to favorite or unfavorite an element.
+ */
+export function FavoriteElementItem(props: FavoriteElementItemProps) {
+    const { isFavorite } = props;
+    const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
+
+    return (
+        <MenuItem
+            text={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
+            icon={
+                operation === Operation.ADD ? (
+                    <HeartIcon />
+                ) : (
+                    <HeartBrokenIcon />
+                )
+            }
+            onClick={() => {}}
+            intent={operation === Operation.ADD ? "primary" : "danger"}
         />
     );
 }

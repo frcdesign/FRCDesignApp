@@ -13,13 +13,13 @@ import {
 import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
 import {
-    getContextDataQuery,
+    getCacheDataQuery,
     getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
     getUserDataQuery
 } from "./queries";
-import { ContextData } from "./api/models";
+import { CacheData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
@@ -27,7 +27,7 @@ import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
 import { getSearchDbQuery } from "./search/search";
 
-type SearchParams = OnshapeParams & MenuParams & ContextData;
+type SearchParams = OnshapeParams & MenuParams & CacheData;
 
 const rootRoute = createRootRoute({
     errorComponent: () => <RootAppError isRoot />
@@ -50,13 +50,13 @@ const appRoute = createRoute({
     search: {
         middlewares: [retainSearchParams(true)]
     },
-    beforeLoad: async ({ location, search }) => {
+    beforeLoad: async ({ location }) => {
         if (location.pathname !== "/app") {
             return;
         }
 
         const contextData = await queryClient.ensureQueryData(
-            getContextDataQuery(search)
+            getCacheDataQuery()
         );
         const uiState = getUiState();
 

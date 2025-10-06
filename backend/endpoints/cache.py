@@ -2,11 +2,11 @@ import functools
 from flask import request, make_response
 import flask
 
-from backend.common import connect
-from backend.common.app_access import require_access_level
+from backend.common import connect, env
+from backend.common.app_access import get_app_access_level, require_access_level
 from backend.common.app_logging import APP_LOGGER
 from backend.common.database import Database
-from onshape_api.paths.user_path import UserPath
+from onshape_api.endpoints.users import AccessLevel
 
 
 MAX_AGE = 7 * 24 * 3600  # 7 days
@@ -48,7 +48,21 @@ def cacheable_route(router: flask.Blueprint, rule: str, private: bool = False):
 router = flask.Blueprint("cache-control", __name__)
 
 
-@router.post("/cache-version")
+@router.get("/cache-data")
+def get_cache_data(**kwargs):
+    db = connect.get_db()
+
+    max_access_level = get_app_access_level()
+    current_access_level = AccessLevel.USER if env.IS_PRODUCTION else max_access_level
+
+    return {
+        "maxAccessLevel": max_access_level,
+        "currentAccessLevel": current_access_level,
+        "cacheVersion": get_cache_version(db),
+    }
+
+
+@router.post("/cache-data")
 @require_access_level()
 def push_cache_version():
     """

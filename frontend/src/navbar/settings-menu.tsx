@@ -74,7 +74,7 @@ function SettingsMenuDialog(): ReactNode {
 
     return (
         <Dialog
-            className="settings-dialog"
+            className="settings-menu"
             isOpen
             icon="cog"
             title="Settings"
@@ -207,17 +207,21 @@ function AdminSettings(): ReactNode {
 function PushVersionButton(): ReactNode {
     const navigate = useNavigate();
     const pushVersionMutation = useMutation({
-        mutationKey: ["push-cache-version"],
+        mutationKey: ["push-cache-data"],
         mutationFn: async () => {
-            const documents = queryClient.getQueryData<Documents>([
-                "documents"
-            ]) as Documents;
-            const elements = queryClient.getQueryData<Elements>(["elements"]);
+            const documents = await queryClient.fetchQuery<Documents>({
+                queryKey: ["documents"]
+            });
+            const elements = await queryClient.fetchQuery<Elements>({
+                queryKey: ["elements"]
+            });
             if (!documents || !elements) {
-                throw new HandledError("Documents or elements not loaded.");
+                throw new HandledError(
+                    "Failed to fetch documents or elements."
+                );
             }
             const searchDb = JSON.stringify(buildSearchDb(documents, elements));
-            return apiPost("/cache-version", { body: { searchDb } });
+            return apiPost("/cache-data", { body: { searchDb } });
         },
         onError: (error) => {
             if (error instanceof HandledError) {

@@ -88,6 +88,12 @@ $frc-design-green: #4cae4f;
 //     }
 // }
 
+.insert-menu {
+    max-height: 90vh;
+    width: 90%;
+    max-width: 500px;
+}
+
 // Makes insert dialog inputs full width
 .full-width {
     display: flex;
@@ -108,7 +114,7 @@ $frc-design-green: #4cae4f;
     background-color: bp.$light-gray4;
 }
 
-.settings-dialog {
+.settings-menu {
     max-width: 80%;
 }
 

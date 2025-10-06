@@ -5,7 +5,8 @@ import { Configuration } from "./models";
 export enum AppMenu {
     INSERT_MENU = "insert-menu",
     SETTINGS_MENU = "settings-menu",
-    ADD_DOCUMENT_MENU = "add-document-menu"
+    ADD_DOCUMENT_MENU = "add-document-menu",
+    FAVORITE_MENU = "favorite-menu"
 }
 
 /**
@@ -29,17 +30,21 @@ export interface AddDocumentMenuParams {
     selectedDocumentId?: string;
 }
 
-/**
- * Other menus that don't need any additional settings.
- */
 export interface SettingsMenuParams {
     activeMenu: AppMenu.SETTINGS_MENU;
+}
+
+export interface FavoriteMenuParams {
+    activeMenu: AppMenu.FAVORITE_MENU;
+    favoriteId: string;
+    defaultConfiguration?: Configuration;
 }
 
 export type MenuParams =
     | InsertMenuParams
     | AddDocumentMenuParams
-    | SettingsMenuParams;
+    | SettingsMenuParams
+    | FavoriteMenuParams;
 
 /**
  * A hook that returns a function that can be invoked to close the current dialog.

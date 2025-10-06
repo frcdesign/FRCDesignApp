@@ -7,7 +7,14 @@ import {
     Configuration
 } from "../api/models";
 import { ElementPath, toElementApiPath } from "../api/path";
-import { Card, Intent, Popover, Spinner, SpinnerSize } from "@blueprintjs/core";
+import {
+    Card,
+    Icon,
+    Intent,
+    Popover,
+    Spinner,
+    SpinnerSize
+} from "@blueprintjs/core";
 
 import { ReactNode } from "react";
 
@@ -72,7 +79,8 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
                 query: { size },
                 signal,
                 cacheOptions
-            })
+            }),
+        retry: 1
     });
 
     const heightAndWidth = getHeightAndWidth(size);
@@ -82,6 +90,8 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     let content;
     if (imageQuery.isPending) {
         content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
+    } else if (imageQuery.isError) {
+        content = <Icon icon="help" size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }

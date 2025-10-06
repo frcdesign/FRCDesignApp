@@ -14,7 +14,7 @@ import {
 import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useRef } from "react";
 import { DocumentCard } from "../cards/document-card";
-import { HeartIcon } from "../cards/favorite-button";
+import { HeartIcon } from "../favorites/favorite-button";
 import {
     useDocumentOrderQuery,
     useDocumentsQuery,
@@ -26,7 +26,7 @@ import { SearchResults } from "../search/search-results";
 import { AppMenu } from "../api/menu-params";
 import { useUiState } from "../api/ui-state";
 import { filterElements } from "../api/filter";
-import { FavoriteCard } from "../cards/favorite-card";
+import { FavoriteCard } from "../favorites/favorite-card";
 import { FilterCallout } from "../navbar/filter-callout";
 import {
     AppErrorState,

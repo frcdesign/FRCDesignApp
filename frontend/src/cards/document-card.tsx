@@ -20,7 +20,7 @@ import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
-import { CardTitle, OpenDocumentItem } from "./card-components";
+import { CardTitle, OpenDocumentItems } from "./card-components";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -162,7 +162,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenDocumentItem path={document} />
+            <OpenDocumentItems path={document} />
             <RequireAccessLevel>
                 <MenuDivider />
                 {orderItems}

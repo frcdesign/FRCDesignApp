@@ -379,13 +379,16 @@ export type Configuration = Record<string, string>;
 /**
  * Custom data collected from the current tab the user has open.
  */
-export interface ContextData {
-    maxAccessLevel: AccessLevel;
-    currentAccessLevel: AccessLevel;
+export interface UnitInfo {
     angleUnit: Unit;
     lengthUnit: Unit;
     lengthPrecision: number;
     anglePrecision: number;
     realPrecision: number;
+}
+
+export interface CacheData {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
     cacheVersion: number;
 }

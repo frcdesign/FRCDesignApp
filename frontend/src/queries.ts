@@ -4,11 +4,12 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet, CacheOptions, useCacheOptions } from "./api/api";
 import {
-    ContextData,
+    UnitInfo,
     DocumentOrder,
     Documents,
     Elements,
-    UserData
+    UserData,
+    CacheData
 } from "./api/models";
 import {
     InstancePath,
@@ -76,10 +77,23 @@ export function useUserData(): UserData {
     return useLoaderData({ from: "/app" });
 }
 
-export function getContextDataQuery(instancePath: InstancePath) {
-    return queryOptions<ContextData>({
-        queryKey: ["context-data"],
+/**
+ * Returns core application cache data needed to load most other endpoints.
+ */
+export function getCacheDataQuery() {
+    return queryOptions<CacheData>({
+        queryKey: ["cache-data"],
+        queryFn: async () => apiGet("/cache-data")
+    });
+}
+
+/**
+ * Returns information needed to format unit expressions in insert-dialogs.
+ */
+export function useUnitInfoQuery(instancePath: InstancePath) {
+    return useQuery<UnitInfo>({
+        queryKey: ["unit-info"],
         queryFn: async () =>
-            apiGet("/context-data" + toInstanceApiPath(instancePath))
+            apiGet("/unit-info" + toInstanceApiPath(instancePath))
     });
 }

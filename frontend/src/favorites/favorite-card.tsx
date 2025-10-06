@@ -10,7 +10,8 @@ import {
     ContextMenu,
     ContextMenuChildrenProps,
     Menu,
-    MenuDivider
+    MenuDivider,
+    MenuItem
 } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AppMenu } from "../api/menu-params";
@@ -19,14 +20,18 @@ import {
     CannotDeriveAssemblyAlert,
     CardTitle,
     ContextMenuButton,
-    OpenDocumentItem
-} from "./card-components";
-import { useIsElementHidden, useIsAssemblyInPartStudio } from "./card-hooks";
-import { ChangeOrderItems } from "./change-order";
-import { ElementPath, toUserApiPath, UserPath } from "../api/path";
+    OpenDocumentItems
+} from "../cards/card-components";
+import {
+    useIsElementHidden,
+    useIsAssemblyInPartStudio
+} from "../cards/card-hooks";
+import { ChangeOrderItems } from "../cards/change-order";
+import { toUserApiPath, UserPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
 import { useUserData } from "../queries";
 import { router } from "../router";
+import { AppAlertProps } from "../common/utils";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -53,7 +58,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     }
 
     return (
-        <FavoriteContextMenu path={element} favorite={favorite}>
+        <FavoriteContextMenu element={element} favorite={favorite}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
                 <>
                     <Card
@@ -103,59 +108,115 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
 }
 
 interface FavoriteContextMenuProps {
-    path: ElementPath;
+    element: ElementObj;
     favorite: Favorite;
     children: any;
 }
 
 function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
-    const { children, path, favorite } = props;
+    const { children, element, favorite } = props;
 
     const search = useSearch({ from: "/app" });
     const uiState = useUiState()[0];
+    const navigate = useNavigate();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation(search);
     const favoriteOrder = useUserData().favoriteOrder;
 
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const [isReorderAlertOpen, setIsReorderAlertOpen] = useState(false);
+    const [isEditDefaultConfigAlertOpen, setIsEditDefaultConfigAlertOpen] =
+        useState(false);
 
-    const alert = (
-        <Alert
-            intent="warning"
-            icon="warning-sign"
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            confirmButtonText="Close"
-            onClose={() => setIsAlertOpen(false)}
-            isOpen={isAlertOpen}
-        >
-            To prevent confusion, favorites cannot be reordered while filters
-            are active.
-        </Alert>
+    const cannotReorderAlert = (
+        <CannotReorderAlert
+            isOpen={isReorderAlertOpen}
+            onClose={() => setIsReorderAlertOpen(false)}
+        />
+    );
+
+    const cannotEditDefaultConfigAlert = (
+        <CannotEditDefaultConfiguration
+            isOpen={isEditDefaultConfigAlertOpen}
+            onClose={() => setIsEditDefaultConfigAlertOpen(false)}
+        />
     );
 
     const menu = (
         <Menu>
+            <MenuItem
+                icon="edit"
+                text="Edit default configuration"
+                intent="primary"
+                onClick={() => {
+                    if (element.configurationId === undefined) {
+                        setIsEditDefaultConfigAlertOpen(true);
+                    }
+                    navigate({
+                        to: ".",
+                        search: {
+                            activeMenu: AppMenu.FAVORITE_MENU,
+                            favoriteId: favorite.id,
+                            defaultConfiguration: favorite.defaultConfiguration
+                        }
+                    });
+                }}
+            />
+            <MenuDivider />
             <ChangeOrderItems
                 id={favorite.id}
                 order={favoriteOrder}
                 onOrderChange={(newOrder) => {
                     if (uiState.vendorFilters !== undefined) {
-                        setIsAlertOpen(true);
+                        setIsReorderAlertOpen(true);
                         return;
                     }
                     setFavoriteOrderMutation.mutate(newOrder);
                 }}
             />
             <MenuDivider />
-            <OpenDocumentItem path={path} />
+            <OpenDocumentItems path={element} />
         </Menu>
     );
     return (
         <>
             <ContextMenu content={menu}>{children}</ContextMenu>
-            {alert}
+            {cannotReorderAlert}
+            {cannotEditDefaultConfigAlert}
         </>
+    );
+}
+
+function CannotReorderAlert(props: AppAlertProps) {
+    return (
+        <Alert
+            intent="warning"
+            icon="warning-sign"
+            canEscapeKeyCancel
+            canOutsideClickCancel
+            confirmButtonText="Close"
+            onClose={props.onClose}
+            isOpen={props.isOpen}
+        >
+            To prevent confusion, favorites cannot be reordered while filters
+            are active.
+        </Alert>
+    );
+}
+
+function CannotEditDefaultConfiguration(props: AppAlertProps) {
+    return (
+        <Alert
+            intent="warning"
+            icon="warning-sign"
+            canEscapeKeyCancel
+            canOutsideClickCancel
+            confirmButtonText="Close"
+            onClose={props.onClose}
+            isOpen={props.isOpen}
+        >
+            This element is not configurable, so its default configuration
+            cannot be changed.
+        </Alert>
     );
 }
 

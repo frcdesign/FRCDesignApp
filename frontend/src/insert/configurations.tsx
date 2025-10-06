@@ -34,7 +34,7 @@ import {
     BooleanParameterObj,
     StringParameterObj,
     QuantityParameterObj,
-    ContextData,
+    UnitInfo,
     QuantityType,
     Unit,
     EnumOption
@@ -48,6 +48,7 @@ import {
     evaluateExpression
 } from "./parser";
 import { Select } from "@blueprintjs/select";
+import { useUnitInfoQuery } from "../queries";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -70,6 +71,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         refetchInterval: false
     });
 
+    const search = useSearch({ from: "/app" });
+    const unitInfoQuery = useUnitInfoQuery(search);
+
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
         // Only fill in the configuration if it isn't already set
@@ -86,9 +90,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
 
-    if (query.isPending || !configuration) {
+    if (query.isPending || unitInfoQuery.isPending || !configuration) {
         return <Spinner intent={Intent.PRIMARY} />;
-    } else if (query.isError) {
+    } else if (query.isError || unitInfoQuery.isError) {
         return (
             <NonIdealState
                 icon={
@@ -109,6 +113,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
             configurationResult={query.data}
             configuration={configuration}
             setConfiguration={setConfiguration}
+            unitInfo={unitInfoQuery.data}
         />
     );
 }
@@ -117,10 +122,12 @@ interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
     configuration: Configuration;
     setConfiguration: Dispatch<Configuration>;
+    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
-    const { configurationResult, configuration, setConfiguration } = props;
+    const { configurationResult, configuration, setConfiguration, unitInfo } =
+        props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
         const handleValueChange = (newValue: string | undefined) => {
@@ -145,6 +152,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
                 configuration={configuration}
                 parameters={configurationResult.parameters}
                 onValueChange={handleValueChange}
+                unitInfo={unitInfo}
             />
         );
     });
@@ -157,6 +165,7 @@ interface ParameterProps<T extends ParameterObj> {
     onValueChange: (newValue: string | undefined) => void;
     configuration: Configuration;
     parameters: ParameterObj[];
+    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameter(
@@ -385,7 +394,7 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
 
 function getEvaluateOptions(
     parameter: QuantityParameterObj,
-    contextData: ContextData
+    contextData: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
@@ -426,11 +435,9 @@ function QuantityParameter(
     props: ParameterProps<QuantityParameterObj>
 ): ReactNode {
     // This parameter doesn't actually use value since it manages it's state internally
-    const { parameter, onValueChange } = props;
+    const { parameter, onValueChange, unitInfo } = props;
 
-    const contextData = useSearch({ from: "/app" });
-
-    const evaluateOptions = getEvaluateOptions(parameter, contextData);
+    const evaluateOptions = getEvaluateOptions(parameter, unitInfo);
 
     const ref = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);

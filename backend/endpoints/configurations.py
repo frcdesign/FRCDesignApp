@@ -12,6 +12,7 @@ from backend.common.models import (
     OptionConditionType,
     OptionVisibilityCondition,
     ParameterType,
+    QuantityType,
     RangeCondition,
     RangeOptionVisibilityCondition,
     Unit,
@@ -19,6 +20,7 @@ from backend.common.models import (
     VisibilityConditionType,
     get_abbreviation,
 )
+from onshape_api.endpoints.documents import get_unit_info
 
 router = flask.Blueprint("configurations", __name__)
 
@@ -34,6 +36,32 @@ def get_configuration(configuration_id: str):
     return db.get_configuration_parameters(configuration_id).model_dump_json(
         exclude_none=True
     )
+
+
+@router.get("/unit-info" + connect.instance_path_route())
+def get_context_data(**kwargs):
+    db = connect.get_db()
+    api = connect.get_api(db)
+
+    instance_path = connect.get_route_instance_path()
+
+    unit_info = get_unit_info(api, instance_path)
+    units = unit_info["defaultUnits"]["units"]
+
+    angle_unit = get_default_unit(units, QuantityType.ANGLE)
+    length_unit = get_default_unit(units, QuantityType.LENGTH)
+
+    return {
+        "angleUnit": angle_unit,
+        "lengthUnit": length_unit,
+        "anglePrecision": unit_info["unitsDisplayPrecision"][angle_unit],
+        "lengthPrecision": unit_info["unitsDisplayPrecision"][length_unit],
+        "realPrecision": 3,  # Always 3 to match Onshape since there's no config for real numbers
+    }
+
+
+def get_default_unit(units: list, quantity_type: QuantityType) -> Unit:
+    return next(unit["value"] for unit in units if unit["key"] == quantity_type)
 
 
 def parse_option_visibility_conditions(

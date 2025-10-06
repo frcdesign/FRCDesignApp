@@ -1,4 +1,8 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import {
+    useNavigate,
+    UseNavigateResult,
+    useSearch
+} from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
 import { ElementObj, ElementType, Configuration } from "../api/models";
 import {
@@ -23,8 +27,8 @@ import {
     MenuDialogProps,
     useHandleCloseDialog
 } from "../api/menu-params";
-import { PreviewImage } from "../app/thumbnail";
-import { FavoriteButton } from "../cards/favorite-button";
+import { PreviewImage } from "../favorites/thumbnail";
+import { FavoriteButton } from "../favorites/favorite-button";
 import {
     showErrorToast,
     showLoadingToast,
@@ -46,13 +50,43 @@ export function InsertMenu(): ReactNode {
     );
 }
 
+function showRestoreToast(
+    element: ElementObj,
+    navigate: UseNavigateResult<string>,
+    configuration?: Configuration
+) {
+    toaster.show(
+        {
+            message: `Cancelled ${element.name}.`,
+            intent: "primary",
+            icon: "info-sign",
+            timeout: 3000,
+            action: {
+                text: "Restore",
+                onClick: () => {
+                    navigate({
+                        to: ".",
+                        search: {
+                            activeMenu: AppMenu.INSERT_MENU,
+                            activeElementId: element.id,
+                            defaultConfiguration: configuration
+                        }
+                    });
+                },
+                icon: "share"
+            }
+        },
+        `cancel-insert ${element.id}`
+    );
+}
+
 function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
 
     const elements = useElementsQuery().data;
-    const navigate = useNavigate();
     const favorites = useUserData().favorites;
 
+    const navigate = useNavigate();
     const closeDialog = useHandleCloseDialog();
 
     const [configuration, setConfiguration] = useState<
@@ -77,8 +111,10 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         );
     }
 
-    const previewThumbnail = (
-        <PreviewImage elementPath={element} configuration={configuration} />
+    const previewImageCard = (
+        <Card className="center preview-image-card">
+            <PreviewImage elementPath={element} configuration={configuration} />
+        </Card>
     );
 
     const actions = (
@@ -94,36 +130,12 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
             isOpen
             title={element.name}
             onClose={() => {
-                toaster.show(
-                    {
-                        message: `Cancelled ${element.name}.`,
-                        intent: "primary",
-                        icon: "info-sign",
-                        timeout: 3000,
-                        action: {
-                            text: "Restore",
-                            onClick: () => {
-                                navigate({
-                                    to: ".",
-                                    search: {
-                                        activeMenu: AppMenu.INSERT_MENU,
-                                        activeElementId: elementId,
-                                        defaultConfiguration: configuration
-                                    }
-                                });
-                            },
-                            icon: "share"
-                        }
-                    },
-                    `cancel-insert ${element.elementId}`
-                );
+                showRestoreToast(element, navigate, configuration);
                 closeDialog();
             }}
-            style={{ maxHeight: "90vh", maxWidth: "500px" }}
+            className="insert-menu"
         >
-            <Card className="center preview-image-card">
-                {previewThumbnail}
-            </Card>
+            {previewImageCard}
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
                 <FavoriteButton isFavorite={isFavorite} element={element} />
@@ -131,20 +143,20 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         </Dialog>
     );
 }
-interface SubmitButtonProps {
+interface InsertButtonProps {
     element: ElementObj;
     configuration?: Configuration;
     isFavorite: boolean;
 }
 
-function InsertButton(props: SubmitButtonProps): ReactNode {
+function InsertButton(props: InsertButtonProps): ReactNode {
     const { element, configuration, isFavorite } = props;
 
     const search = useSearch({ from: "/app" });
     const closeDialog = useHandleCloseDialog();
     const queryClient = useQueryClient();
 
-    const toastId = "insert" + element.id;
+    const toastId = "insert-" + element.id;
 
     const isLoadingConfiguration =
         useIsFetching({

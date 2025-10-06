@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import flask
-from werkzeug import Client
 
 from backend.common import connect
 from backend.common.backend_exceptions import ClientException
@@ -90,6 +89,20 @@ def set_favorite_order(**kwargs):
     user_data = db.get_user_data(user_path)
     user_data.favoriteOrder = favorite_order
     db.set_user_data(user_path, user_data)
+    return {"success": True}
+
+
+@router.post("/default-configuration" + user_path_route())
+def update_default_configuration(**kwargs):
+    db = get_db()
+
+    user_path = get_route_user_path()
+    favorite_id = connect.get_body_arg("favoriteId")
+    default_configuration = connect.get_body_arg("defaultConfiguration")
+    user_data = db.get_user_data(user_path)
+    user_data.favorites[favorite_id].defaultConfiguration = default_configuration
+    db.set_user_data(user_path, user_data)
+
     return {"success": True}
 
 
