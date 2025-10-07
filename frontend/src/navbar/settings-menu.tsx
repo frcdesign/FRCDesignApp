@@ -94,14 +94,17 @@ function UserSettings(): ReactNode {
     const settings = useUserData().settings;
 
     const settingsMutation = useMutation({
-        mutationKey: ["settings"],
+        mutationKey: ["update-settings"],
         mutationFn: async (newSettings: Settings) =>
             apiPost("/settings" + toUserApiPath(search), {
                 body: newSettings
             }),
         onMutate: (newSettings) => {
-            queryClient.setQueryData(["user-data"], (userData: UserData) => {
-                const newUserData = copyUserData(userData);
+            queryClient.setQueryData(["user-data"], (data?: UserData) => {
+                if (!data) {
+                    return undefined;
+                }
+                const newUserData = copyUserData(data);
                 newUserData.settings = newSettings;
                 return newUserData;
             });
@@ -109,7 +112,9 @@ function UserSettings(): ReactNode {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");
-            queryClient.refetchQueries({ queryKey: ["user-data"] });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });

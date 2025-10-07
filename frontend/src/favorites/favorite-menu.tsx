@@ -20,7 +20,7 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { PreviewImage } from "./thumbnail";
 import { useElementsQuery } from "../queries";
 import { ConfigurationWrapper } from "../insert/configurations";
-import { Configuration, UserData } from "../api/models";
+import { Configuration, copyUserData, UserData } from "../api/models";
 import { AppInternalErrorState } from "../common/app-zero-state";
 import { HeartIcon } from "./favorite-button";
 import { toUserApiPath } from "../api/path";
@@ -64,10 +64,12 @@ function FavoriteMenuDialog(
             });
         },
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: ["user-data"] });
             const previousUserData = queryClient.getQueryData(["user-data"]);
-            queryClient.setQueryData(["user-data"], (oldData: UserData) => {
-                const newUserData = { ...oldData };
+            queryClient.setQueryData(["user-data"], (data?: UserData) => {
+                if (!data) {
+                    return undefined;
+                }
+                const newUserData = copyUserData(data);
                 if (newUserData.favorites[favoriteId]) {
                     newUserData.favorites[favoriteId].defaultConfiguration =
                         configuration;
@@ -80,11 +82,13 @@ function FavoriteMenuDialog(
             showErrorToast(
                 "Unexpectedly failed to update default configuration."
             );
-            queryClient.invalidateQueries({ queryKey: ["user-data"] });
-            router.invalidate();
         },
         onSuccess: () => {
             showSuccessToast("Successfully updated default configuration.");
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            router.invalidate();
         }
     });
 

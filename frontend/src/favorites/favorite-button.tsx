@@ -25,7 +25,13 @@ interface UpdateFavoritesArgs {
     elementId: string;
 }
 
-function updateFavorites(data: UserData, args: UpdateFavoritesArgs): UserData {
+function updateFavorites(
+    data: UserData | undefined,
+    args: UpdateFavoritesArgs
+): UserData | undefined {
+    if (!data) {
+        return undefined;
+    }
     const newUserData = copyUserData(data);
     if (args.operation === Operation.ADD) {
         newUserData.favorites[args.elementId] = {
@@ -65,16 +71,17 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             }
         },
         onMutate: (args) => {
-            queryClient.setQueryData(["user-data"], (data: UserData) =>
+            queryClient.setQueryData(["user-data"], (data?: UserData) =>
                 updateFavorites(data, args)
             );
-            router.invalidate();
         },
         onError: (_error, args) => {
             const action =
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
             showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
-            queryClient.refetchQueries({ queryKey: ["user-data"] });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });

@@ -229,16 +229,20 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
             });
         },
         onMutate: (newOrder: string[]) => {
-            queryClient.setQueryData(["user-data"], (data: UserData) => {
+            queryClient.setQueryData(["user-data"], (data?: UserData) => {
+                if (!data) {
+                    return undefined;
+                }
                 const newUserData = copyUserData(data);
                 newUserData.favoriteOrder = newOrder;
                 return newUserData;
             });
-            router.invalidate();
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder favorites.");
-            queryClient.refetchQueries({ queryKey: ["user-data"] });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });

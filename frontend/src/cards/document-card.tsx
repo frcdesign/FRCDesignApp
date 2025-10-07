@@ -200,8 +200,9 @@ function useSetDocumentOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder document.");
-            queryClient.refetchQueries({ queryKey: ["document-order"] });
+            queryClient.invalidateQueries({ queryKey: ["document-order"] });
         }
+        // Don't need an onSettled handler since document-order doesn't expire
     });
 }
 

@@ -36,6 +36,7 @@ import {
     toaster
 } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
+import { updateUiState } from "../api/ui-state";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -193,6 +194,7 @@ function InsertButton(props: InsertButtonProps): ReactNode {
             });
             showLoadingToast(`Inserting ${element.name}...`, toastId);
             closeDialog();
+            updateUiState({ searchQuery: undefined });
             return apiPost(endpoint + toElementApiPath(search), {
                 body
             });

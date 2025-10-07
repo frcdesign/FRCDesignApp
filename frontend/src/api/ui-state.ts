@@ -7,8 +7,8 @@ const VendorType = z.enum(Object.values(Vendor));
 const UiStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
-    searchQuery: z.string().optional(),
     vendorFilters: z.array(VendorType).optional(),
+    searchQuery: z.string().optional(),
     openDocumentId: z.string().optional()
 });
 
@@ -20,7 +20,7 @@ const subscribers = new Set<Subscriber>();
 
 let uiStateCache: UiState | null = null;
 
-export function setUiState(uiState: UiState) {
+function setUiState(uiState: UiState) {
     const parsed = UiStateSchema.parse(uiState);
 
     // Only update if changed
@@ -34,6 +34,9 @@ export function setUiState(uiState: UiState) {
     }
 }
 
+/**
+ * Asynchronously retrieves the current UI state.
+ */
 export function getUiState(): UiState {
     if (uiStateCache) return uiStateCache;
 
@@ -55,6 +58,9 @@ function subscribeToUiState(callback: Subscriber) {
     return () => subscribers.delete(callback);
 }
 
+/**
+ * Asynchronously updates the current UI state.
+ */
 export function updateUiState(partialState: Partial<UiState>): UiState {
     const newState = { ...getUiState(), ...partialState };
     setUiState(newState);
