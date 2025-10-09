@@ -92,10 +92,10 @@ function FavoriteMenuDialog(
         }
     });
 
-    if (!elements) {
+    const element = elements ? elements[favoriteId] : undefined;
+    if (!element) {
         return null;
     }
-    const element = elements[favoriteId];
     if (!element.configurationId) {
         return (
             <AppInternalErrorState title="Cannot edit unconfigurable favorite." />

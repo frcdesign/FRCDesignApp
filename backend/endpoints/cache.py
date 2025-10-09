@@ -94,5 +94,4 @@ def increment_cache_version(db: Database) -> int:
 def get_search_db():
     db = connect.get_db()
     search_db = db.search_db.get().to_dict() or {}
-    APP_LOGGER.info(search_db)
     return {"searchDb": search_db.get("searchDb", None)}

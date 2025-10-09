@@ -75,6 +75,9 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
         const elementId = searchHit.document.id;
         const element = elements[elementId];
+        if (!element) {
+            return null;
+        }
         return (
             <ElementCard
                 key={elementId}

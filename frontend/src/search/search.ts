@@ -68,8 +68,9 @@ export function buildSearchDb(
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(searchOptions);
 
-    const searchDocuments: SearchDocument[] = Object.values(elements).map(
-        (element) => {
+    const searchDocuments: SearchDocument[] = Object.values(elements)
+        .filter((element) => !!element)
+        .map((element) => {
             const parentDocument = documents[element.documentId];
             return {
                 id: element.id,
@@ -77,10 +78,9 @@ export function buildSearchDb(
                 isVisible: element.isVisible,
                 vendor: element.vendor || "",
                 name: element.name,
-                documentName: parentDocument.name
+                documentName: parentDocument?.name ?? ""
             };
-        }
-    );
+        });
 
     searchDb.addAll(searchDocuments);
     return searchDb;

@@ -26,13 +26,12 @@ const TOLERANCE = {
     angle: 1e-11
 };
 
-const ZERO: ValueWithUnits = {
-    value: 0,
-    type: "number"
-};
-
 export function valueWithUnits(value: number, unit: Unit): ValueWithUnits {
     return { value: value * getUnitFactor(unit), type: getUnitType(unit) };
+}
+
+function tolerantEqualsZero(value: ValueWithUnits) {
+    return tolerantEquals(value, { value: 0, type: value.type });
 }
 
 function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
@@ -62,16 +61,19 @@ function tolerantGreaterThan(value1: ValueWithUnits, value2: ValueWithUnits) {
 enum TokenKind {
     Number,
     Identifier,
-    Operator,
+    MulDivide,
+    PlusMinus,
     LParen,
     RParen,
     Space
 }
 
 const lexer = buildLexer([
-    [true, /^[+-]?\d+(\.\d+)?/g, TokenKind.Number],
+    // Allow a number plus optional decimal OR a decimal plus number
+    [true, /^(?:\d+(?:\.\d*)?|\.\d+)/g, TokenKind.Number],
     [true, /^[A-Za-z]+/g, TokenKind.Identifier],
-    [true, /^[+\-*/]/g, TokenKind.Operator],
+    [true, /^[*/]/g, TokenKind.MulDivide],
+    [true, /^[+-]/g, TokenKind.PlusMinus],
     [true, /^\(/g, TokenKind.LParen],
     [true, /^\)/g, TokenKind.RParen],
     [false, /^\s+/g, TokenKind.Space] // skip whitespace
@@ -243,6 +245,7 @@ const FACTOR = rule<TokenKind, Expr>();
 
 PRIMARY.setPattern(
     alt(
+        // number with optional unit
         apply(
             seq(tok(TokenKind.Number), opt(tok(TokenKind.Identifier))),
             ([numTok, unitTok]) => {
@@ -285,11 +288,8 @@ PRIMARY.setPattern(
 
 FACTOR.setPattern(
     alt(
-        apply(seq(tok(TokenKind.Operator), FACTOR), ([opTok, expr]) => {
-            if (opTok.text === "+" || opTok.text === "-") {
-                return { kind: "unary", op: opTok.text as "+" | "-", expr };
-            }
-            throw new ParseError(`Unexpected unary operator: ${opTok.text}`);
+        apply(seq(tok(TokenKind.PlusMinus), FACTOR), ([opTok, expr]) => {
+            return { kind: "unary", op: opTok.text as "+" | "-", expr };
         }),
         PRIMARY
     )
@@ -323,7 +323,7 @@ FACTOR.setPattern(
 
 TERM.setPattern(
     apply(
-        seq(FACTOR, rep_sc(seq(tok(TokenKind.Operator), FACTOR))),
+        seq(FACTOR, rep_sc(seq(tok(TokenKind.MulDivide), FACTOR))),
         ([first, rest]) =>
             rest.reduce<Expr>(
                 (acc, [opTok, rhs]) => ({
@@ -340,7 +340,7 @@ TERM.setPattern(
 
 EXP.setPattern(
     apply(
-        seq(TERM, rep_sc(seq(tok(TokenKind.Operator), TERM))),
+        seq(TERM, rep_sc(seq(tok(TokenKind.PlusMinus), TERM))),
         ([first, rest]) =>
             rest.reduce<Expr>(
                 (acc, [opTok, rhs]) => ({
@@ -385,7 +385,7 @@ function getOpName(op: Operator): string {
 /**
  * Recursively checks the type of an expression.
  * To match Onshape, type assumption is only done on the final result, so unitless + unit is always invalid.
- * We also disallow units if type is a unitless type.
+ * We also disallow units if quantityType is a unitless type.
  */
 function evaluateExpressionValue(
     expr: Expr,
@@ -459,7 +459,7 @@ function evaluateExpressionValue(
                     return { value: left.value - right.value, type: left.type };
 
                 case "*":
-                    // number * unit → unit
+                    // number * unit -> unit
                     if (left.type === "number") {
                         return {
                             value: left.value * right.value,
@@ -479,18 +479,27 @@ function evaluateExpressionValue(
                     );
 
                 case "/":
-                    // unit / number → unit
+                    // unit / number -> unit
+                    // number / number -> number
                     if (right.type === "number") {
-                        if (tolerantEquals(right, ZERO)) {
+                        if (tolerantEqualsZero(right)) {
                             throw new ParseError(`Cannot divide by 0`);
                         }
+
                         return {
                             value: left.value / right.value,
                             type: left.type
                         };
                     }
-                    // number / unit → disallow for now (would give inverse unit)
-                    // unit / unit → disallow (dimensionless ratio would be possible)
+
+                    // number / unit -> disallow (would be inverse unit, which we don't support)
+                    if (left.type === "number") {
+                        throw new ParseError(
+                            `Cannot divide ${left.type} by ${right.type}`
+                        );
+                    }
+
+                    // unit / unit -> disallow (dimensionless ratio would be possible)
                     throw new ParseError(
                         `Cannot divide ${left.type} by ${right.type}`
                     );

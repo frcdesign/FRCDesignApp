@@ -1,6 +1,5 @@
 import os
 import flask
-import logging
 import json5
 from backend.common.app_logging import APP_LOGGER, log_app_opened
 from backend.endpoints import api
@@ -42,6 +41,7 @@ def create_app():
         if not authorized:
             # Save redirect url to session so we can get back here after processing OAuth2 redirect
             flask.session["redirect_url"] = connect.get_current_url()
+
             return flask.redirect("/sign-in")
 
         user_id = connect.get_query_param("userId")

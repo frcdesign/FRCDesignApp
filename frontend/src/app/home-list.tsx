@@ -170,13 +170,13 @@ function FavoritesList() {
     const favorites = userData.favorites;
     const elements = elementsQuery.data;
 
-    const orderedFavorites = userData.favoriteOrder.map(
-        (favoriteId) => favorites[favoriteId]
-    );
+    const orderedFavorites = userData.favoriteOrder
+        .map((favoriteId) => favorites[favoriteId])
+        .filter((favorite) => !!favorite);
 
-    const favoriteElements = orderedFavorites.map(
-        (favorite) => elements[favorite.id]
-    );
+    const favoriteElements = orderedFavorites
+        .map((favorite) => elements[favorite.id])
+        .filter((element) => !!element);
 
     if (favoriteElements.length == 0) {
         return (
@@ -219,6 +219,9 @@ function FavoritesList() {
 
     const cards = filterResult.elements.map((element: ElementObj) => {
         const favorite = favorites[element.id];
+        if (!favorite) {
+            return null;
+        }
         return (
             <FavoriteCard
                 key={favorite.id}

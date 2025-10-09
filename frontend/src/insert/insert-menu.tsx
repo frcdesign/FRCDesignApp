@@ -94,11 +94,11 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         Configuration | undefined
     >(props.defaultConfiguration);
 
-    if (!elements || !favorites) {
+    const element = elements ? elements[elementId] : undefined;
+    if (!element) {
         return null;
     }
 
-    const element = elements[elementId];
     const isFavorite = favorites[elementId] !== undefined;
 
     let parameters = null;

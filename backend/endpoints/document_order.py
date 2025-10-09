@@ -49,6 +49,8 @@ async def add_document():
         raise ClientException("Failed to find a document version to use.")
 
     order = db.get_document_order()
+    if new_document_id in order:
+        raise ClientException("Document has already has been added")
 
     if selected_document_id == None:
         order.append(new_document_id)

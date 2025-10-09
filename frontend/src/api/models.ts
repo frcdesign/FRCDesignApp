@@ -292,7 +292,7 @@ export interface QuantityParameterObj extends ParameterBase {
     unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
-export type Documents = Record<string, DocumentObj>;
+export type Documents = Record<string, DocumentObj | undefined>;
 
 // export enum ListElementType {
 //     DOCUMENT = "document",
@@ -324,7 +324,7 @@ export interface DocumentObj extends InstancePath {
     sortAlphabetically: boolean;
 }
 
-export type Elements = Record<string, ElementObj>;
+export type Elements = Record<string, ElementObj | undefined>;
 
 export interface ElementObj extends ElementPath {
     id: string;
@@ -337,7 +337,7 @@ export interface ElementObj extends ElementPath {
     configurationId?: string;
 }
 
-export type Favorites = Record<string, Favorite>;
+export type Favorites = Record<string, Favorite | undefined>;
 
 export interface Favorite {
     id: string;

@@ -48,6 +48,7 @@ import {
 } from "./parser";
 import { Select } from "@blueprintjs/select";
 import { useUnitInfoQuery } from "../queries";
+import { showErrorToast } from "../common/toaster";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -434,23 +435,35 @@ function QuantityParameter(
     props: ParameterProps<QuantityParameterObj>
 ): ReactNode {
     // This parameter doesn't actually use value since it manages it's state internally
-    const { parameter, onValueChange, unitInfo } = props;
+    const { parameter, value, onValueChange, unitInfo } = props;
 
     const evaluateOptions = getEvaluateOptions(parameter, unitInfo);
 
     const ref = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
+
     // The user's raw expression.
-    const [expression, setExpression] = useState(parameter.default);
+    const [expression, setExpression] = useState(value ?? parameter.default);
 
     // The pretty print value to display. Only shown when the input isn't focused.
-    const [display, setDisplay] = useState(
-        formatValueWithUnits(
+    const [display, setDisplay] = useState(() => {
+        if (value !== undefined) {
+            const expression = evaluateExpression(value, evaluateOptions);
+            if (expression.hasError) {
+                showErrorToast(
+                    "Failed to parse default value for " + parameter.name
+                );
+                return expression.expression;
+            }
+            return expression.displayExpression;
+        }
+
+        return formatValueWithUnits(
             valueWithUnits(parameter.defaultValue, parameter.unit),
             evaluateOptions.displayUnit,
             evaluateOptions.displayPrecision
-        )
-    );
+        );
+    });
 
     const [errorMessage, setErrorMessage] = useState<string | undefined>(
         undefined

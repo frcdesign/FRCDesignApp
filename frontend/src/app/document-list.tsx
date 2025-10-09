@@ -57,6 +57,10 @@ export function DocumentList(): ReactNode {
 
     const document = documents[documentId];
 
+    if (!document) {
+        return null;
+    }
+
     let content;
     if (uiState.searchQuery) {
         content = (
@@ -134,9 +138,9 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         ? SortOrder.ASCENDING
         : SortOrder.DEFAULT;
 
-    const documentElements = document.elementIds.map(
-        (elementId) => elements[elementId]
-    );
+    const documentElements = document.elementIds
+        .map((elementId) => elements[elementId])
+        .filter((element) => !!element);
 
     if (documentElements.length === 0) {
         return (

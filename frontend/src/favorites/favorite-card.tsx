@@ -78,7 +78,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                     activeMenu: AppMenu.INSERT_MENU,
                                     activeElementId: element.elementId,
                                     defaultConfiguration:
-                                        favorite?.defaultConfiguration
+                                        favorite.defaultConfiguration
                                 }
                             });
                         }}
