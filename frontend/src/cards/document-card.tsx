@@ -14,13 +14,13 @@ import { DocumentObj, DocumentOrder } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { RequireAccessLevel } from "../api/access-level";
 import { apiPost, apiDelete } from "../api/api";
-import { AppMenu } from "../api/menu-params";
 import { showErrorToast } from "../common/toaster";
 import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
 import { CardTitle, OpenDocumentItems } from "./card-components";
+import { AddDocumentItem } from "../app/add-document-menu";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -80,8 +80,6 @@ interface DocumentContextMenuProps {
 export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const { children, document } = props;
 
-    const navigate = useNavigate();
-
     const isHome =
         useMatch({ from: "/app/documents/", shouldThrow: false }) !== undefined;
 
@@ -135,21 +133,6 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
         <>
             <MenuDivider />
             <MenuItem
-                icon="add"
-                text="Add document"
-                labelElement={<Icon icon="share" />}
-                intent="primary"
-                onClick={() => {
-                    navigate({
-                        to: ".",
-                        search: {
-                            activeMenu: AppMenu.ADD_DOCUMENT_MENU,
-                            selectedDocumentId: document.id
-                        }
-                    });
-                }}
-            />
-            <MenuItem
                 icon="trash"
                 text="Delete"
                 intent="danger"
@@ -157,6 +140,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                     deleteDocumentMutation.mutate();
                 }}
             />
+            <AddDocumentItem />
         </>
     );
 

@@ -2,8 +2,10 @@ import {
     Button,
     Dialog,
     DialogBody,
+    Icon,
     InputGroup,
-    Intent
+    Intent,
+    MenuItem
 } from "@blueprintjs/core";
 import { ReactNode, useState } from "react";
 import {
@@ -12,7 +14,7 @@ import {
     MenuDialogProps,
     useHandleCloseDialog
 } from "../api/menu-params";
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { parseUrl } from "../common/url";
@@ -38,7 +40,6 @@ function AddDocumentMenuDialog(
     props: MenuDialogProps<AddDocumentMenuParams>
 ): ReactNode {
     const { selectedDocumentId } = props;
-
     const closeDialog = useHandleCloseDialog();
 
     const [url, setUrl] = useState("");
@@ -113,5 +114,49 @@ function AddDocumentMenuDialog(
             <DialogBody>{body}</DialogBody>
             {/* <DialogFooter minimal actions={submitButton} /> */}
         </Dialog>
+    );
+}
+
+export function AddDocumentButton(): ReactNode {
+    const navigate = useNavigate();
+    return (
+        <Button
+            icon="add"
+            text="Add document"
+            intent="primary"
+            onClick={() => {
+                navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: AppMenu.ADD_DOCUMENT_MENU
+                    }
+                });
+            }}
+        />
+    );
+}
+
+interface AddDocumentItemProps {
+    selectedDocumentId?: string;
+}
+
+export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
+    const navigate = useNavigate();
+    return (
+        <MenuItem
+            icon="add"
+            text="Add document"
+            labelElement={<Icon icon="share" />}
+            intent="primary"
+            onClick={() => {
+                navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: AppMenu.ADD_DOCUMENT_MENU,
+                        selectedDocumentId: props.selectedDocumentId
+                    }
+                });
+            }}
+        />
     );
 }

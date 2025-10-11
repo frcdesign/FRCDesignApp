@@ -1,10 +1,11 @@
 import flask
 
 from backend.common import connect
+from backend.endpoints import documents
 from backend.endpoints.cache import cacheable_route
 from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import ClientException
-from backend.endpoints.documents import save_document
+from backend.endpoints.documents import clean_favorites, save_document
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import DocumentPath
@@ -50,7 +51,9 @@ async def add_document():
 
     order = db.get_document_order()
     if new_document_id in order:
-        raise ClientException("Document has already has been added")
+        raise ClientException("Document has already been added.")
+
+    await save_document(api, db, latest_version)
 
     if selected_document_id == None:
         order.append(new_document_id)
@@ -62,7 +65,6 @@ async def add_document():
         except ValueError:
             order.append(new_document_id)
 
-    await save_document(api, db, latest_version)
     db.set_document_order(order)
     return {"name": document_name}
 
@@ -78,5 +80,6 @@ def delete_document():
     index = order.index(document_id)
     order.pop(index)
     db.set_document_order(order)
-    db.delete_document(document_id)
+    documents.delete_document(db, document_id)
+    clean_favorites(db)
     return {"Success": True}

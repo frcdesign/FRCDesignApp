@@ -87,7 +87,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             disabled={isAssemblyInPartStudio}
                             title={element.name}
                             elementPath={element}
-                            showHiddenTag={!element.isVisible}
                         />
                         <div className="item-card-right-content">
                             <FavoriteButton isFavorite element={element} />

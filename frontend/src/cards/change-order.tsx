@@ -54,7 +54,7 @@ function applyMoveOperation(
 }
 
 /**
- * Given a target and a documentOrder, returns a list of currently valid operations.
+ * Given a target and an order, returns a list of currently valid operations.
  */
 function getValidOperations(target: string, order: string[]): MoveOperation[] {
     const index = order.indexOf(target);
@@ -93,7 +93,7 @@ interface ChangeOrderMenuProps {
 }
 
 /**
- * MenuItems that allow users to adjust the position of a document in the documents list.
+ * MenuItems that allow users to move a given item in a list up or down.
  */
 
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {

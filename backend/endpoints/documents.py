@@ -14,12 +14,13 @@ from backend.common import connect, database
 from backend.common.app_access import require_access_level
 from backend.common.app_logging import log_search
 from backend.endpoints.cache import cacheable_route
-from backend.common.models import Element, Vendor
+from backend.common.models import Element, UserData, Vendor
 from backend.common.models import Document
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
     PreservedInfo,
 )
+from backend.endpoints.user_data import delete_favorites
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
@@ -229,7 +230,7 @@ async def refresh_document(
     latest_version_path: InstancePath,
     preserved_info: PreservedInfo,
 ) -> int:
-    db.delete_document(latest_version_path.document_id)
+    delete_document(db, latest_version_path.document_id)
     return await save_document(api, db, latest_version_path, preserved_info)
 
 
@@ -288,13 +289,86 @@ async def reload_documents(**kwargs):
     results = await asyncio.gather(*operations)
     count = sum(results)
 
-    # Clean up any documents that are no longer in the config
-    for doc_ref in db.documents.stream():
-        if doc_ref.id in visited:
-            continue
-        db.delete_document(doc_ref.id)
+    clean_favorites(db)
 
     return {"savedElements": count}
+
+
+def delete_document(db: database.Database, document_id: str):
+    """Deletes a document and all elements and configurations which depend on it.
+
+    Note this does not update documentOrder or user favorites.
+    """
+    document = db.documents.document(document_id).get().to_dict()
+    db.documents.document(document_id).delete()
+
+    if document == None:
+        return
+    # Delete all children as well
+    for element_id in document.get("elementIds", []):
+        db.elements.document(element_id).delete()
+        db.configurations.document(element_id).delete()
+
+
+async def verify_db_integrity(db: database.Database) -> None:
+    """Verifies document order, favorite order, and favorites integrity."""
+    document_ids = set(db.documents.list_documents())
+
+    document_order = db.get_document_order()
+    document_order_ids = set(document_order)
+
+    if document_ids != document_order_ids:
+        raise ValueError("documentOrder does not match documents")
+
+    user_data = db.user_data.stream()
+    for user_data_ref in user_data:
+        user_data = UserData.model_validate(user_data_ref.to_dict())
+
+        favorite_order_ids = set(user_data.favoriteOrder)
+        favorite_ids = set(user_data.favorites.keys())
+
+        if favorite_order_ids != favorite_ids:
+            raise ValueError(
+                f"User {user_data_ref.id} has a favoriteOrder that does not match favorites"
+            )
+
+        for element_id in user_data.favorites.keys():
+            element_ref = db.elements.document(element_id).get()
+            if not element_ref.exists:
+                raise ValueError(
+                    f"User {user_data_ref.id} has a favorite element {element_id} that does not exist"
+                )
+            element = Element.model_validate(element_ref.to_dict())
+            if not element.isVisible:
+                raise ValueError(
+                    f"User {user_data_ref.id} has a favorite element {element_id} that is not visible"
+                )
+
+
+def clean_favorites(db: database.Database) -> None:
+    """Removes any favorites that are no longer valid."""
+    for user_data_ref in db.user_data.stream():
+        user_data = UserData.model_validate(user_data_ref.to_dict())
+        favorite_ids = list(user_data.favorites.keys())
+
+        modified = False
+        for element_id in favorite_ids:
+            element_ref = db.elements.document(element_id).get()
+
+            invalid = element_ref.exists == False
+            if not invalid:
+                element = Element.model_validate(element_ref.to_dict())
+                invalid = element.isVisible == False
+
+            if invalid:
+                modified = True
+                user_data.favorites.pop(element_id)
+                user_data.favoriteOrder = list(
+                    id for id in user_data.favoriteOrder if id != element_id
+                )
+
+        if modified:
+            db.set_user_data(user_data_ref.id, user_data)
 
 
 @router.post("/set-visibility")
@@ -303,6 +377,9 @@ def set_visibility():
     db = connect.get_db()
     element_ids = connect.get_body_arg("elementIds")
     is_visible = connect.get_body_arg("isVisible")
+
+    if not is_visible:
+        delete_favorites(db, element_ids)
 
     for element_id in element_ids:
         db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)

@@ -1,5 +1,4 @@
 import {
-    Button,
     Card,
     CardList,
     Classes,
@@ -11,7 +10,7 @@ import {
     Section,
     SectionCard
 } from "@blueprintjs/core";
-import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useRef } from "react";
 import { DocumentCard } from "../cards/document-card";
 import { HeartIcon } from "../favorites/favorite-button";
@@ -21,9 +20,8 @@ import {
     useElementsQuery,
     useUserData
 } from "../queries";
-import { ElementObj, hasMemberAccess } from "../api/models";
+import { ElementObj } from "../api/models";
 import { SearchResults } from "../search/search-results";
-import { AppMenu } from "../api/menu-params";
 import { useUiState } from "../api/ui-state";
 import { filterElements } from "../api/filter";
 import { FavoriteCard } from "../favorites/favorite-card";
@@ -36,6 +34,7 @@ import {
 import { RequireAccessLevel } from "../api/access-level";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useInteractiveSection } from "../common/utils";
+import { AddDocumentButton } from "./add-document-menu";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -96,8 +95,6 @@ export function HomeList(): ReactNode {
 }
 
 function LibraryList() {
-    const navigate = useNavigate();
-
     const documentsQuery = useDocumentsQuery();
     const documentOrderQuery = useDocumentOrderQuery();
 
@@ -119,19 +116,7 @@ function LibraryList() {
                 title="No documents found"
                 action={
                     <RequireAccessLevel>
-                        <Button
-                            icon="add"
-                            text="Add document"
-                            intent="primary"
-                            onClick={() => {
-                                navigate({
-                                    to: ".",
-                                    search: {
-                                        activeMenu: AppMenu.ADD_DOCUMENT_MENU
-                                    }
-                                });
-                            }}
-                        />
+                        <AddDocumentButton />
                     </RequireAccessLevel>
                 }
             />
@@ -148,7 +133,6 @@ function LibraryList() {
 }
 
 function FavoritesList() {
-    const search = useSearch({ from: "/app" });
     const uiState = useUiState()[0];
 
     const elementsQuery = useElementsQuery();
@@ -174,6 +158,7 @@ function FavoritesList() {
         .map((favoriteId) => favorites[favoriteId])
         .filter((favorite) => !!favorite);
 
+    // Only ever show elements that aren't hidden
     const favoriteElements = orderedFavorites
         .map((favorite) => elements[favorite.id])
         .filter((element) => !!element);
@@ -190,8 +175,8 @@ function FavoritesList() {
 
     const filterResult = filterElements(favoriteElements, {
         vendors: uiState.vendorFilters,
-        // Only show visible elements
-        isVisible: !hasMemberAccess(search.currentAccessLevel)
+        // Only elements which haven't been disabled can be shown
+        isVisible: true
     });
 
     let callout;

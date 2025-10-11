@@ -5,8 +5,7 @@ import {
     Classes,
     EntityTitle,
     MenuItem,
-    Tag,
-    Text
+    Tag
 } from "@blueprintjs/core";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { MouseEventHandler, ReactNode } from "react";
@@ -72,6 +71,10 @@ interface CardTitleProps {
      * @default false
      */
     showHiddenTag?: boolean;
+    /**
+     * The title to display.
+     * Ignored if SearchHit is provided.
+     */
     title: string;
     searchHit?: SearchHit;
     elementPath: ElementPath;
@@ -91,9 +94,9 @@ export function CardTitle(props: CardTitleProps) {
 
     let cardTitle;
     if (searchHit) {
-        cardTitle = <SearchHitTitle searchHit={searchHit} />;
+        cardTitle = <SearchHitTitle title={title} searchHit={searchHit} />;
     } else {
-        cardTitle = <Text>{title}</Text>;
+        cardTitle = title;
     }
 
     return (

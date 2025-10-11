@@ -23,10 +23,6 @@ export interface InsertMenuParams {
 
 export interface AddDocumentMenuParams {
     activeMenu: AppMenu.ADD_DOCUMENT_MENU;
-    /**
-     * The id of the document that was selected when the dialog was activated.
-     * The new document is inserted after this document.
-     */
     selectedDocumentId?: string;
 }
 

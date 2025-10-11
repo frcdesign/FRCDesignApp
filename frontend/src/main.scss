@@ -126,6 +126,7 @@ $frc-design-green: #4cae4f;
     .item-card-right-content {
         // Shimmy more button and heart over
         margin-right: -6px;
+        flex-shrink: 0;
     }
 }
 

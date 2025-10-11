@@ -4,6 +4,7 @@ import { queryClient } from "../query-client";
 import { ElementObj, ElementType, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
+import { showErrorToast } from "../common/toaster";
 
 export function useSetVisibilityMutation(
     mutationKey: string,
@@ -13,6 +14,15 @@ export function useSetVisibilityMutation(
     return useMutation({
         mutationKey: [mutationKey],
         mutationFn: async () => {
+            if (!isVisible) {
+                const result = window.confirm(
+                    "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?`"
+                );
+                if (!result) {
+                    showErrorToast("Cancelled operation.");
+                    return;
+                }
+            }
             return apiPost("/set-visibility", {
                 body: {
                     elementIds,

@@ -73,7 +73,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         />
     );
     const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
-        const elementId = searchHit.document.id;
+        const elementId = searchHit.id;
         const element = elements[elementId];
         if (!element) {
             return null;
@@ -174,6 +174,7 @@ function deduplicateRanges(ranges: Position[]): Position[] {
 }
 
 interface SearchHitTitleProps {
+    title: string;
     searchHit: SearchHit;
 }
 
@@ -181,6 +182,6 @@ interface SearchHitTitleProps {
  * Returns text highlighted with a searchHit.
  */
 export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
-    const { searchHit } = props;
-    return <>{applyRanges(searchHit.document.name, searchHit.positions)}</>;
+    const { title, searchHit } = props;
+    return <>{applyRanges(title, searchHit.positions)}</>;
 }

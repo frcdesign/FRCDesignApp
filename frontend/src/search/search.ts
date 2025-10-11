@@ -98,7 +98,7 @@ export interface Position {
 }
 
 export interface SearchHit {
-    document: SearchDocument;
+    id: string;
     positions: Position[];
 }
 
@@ -156,8 +156,7 @@ export function doSearch(
             const positions = generateHighlightPositions(result, document);
 
             return {
-                id: result.id,
-                document,
+                id: document.id,
                 positions
             };
         })

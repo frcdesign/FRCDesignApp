@@ -14,7 +14,8 @@ from backend.common.connect import (
     get_route_user_path,
     user_path_route,
 )
-from backend.common.models import Favorite
+from backend.common.database import Database
+from backend.common.models import Favorite, UserData
 
 router = flask.Blueprint("user-data", __name__)
 
@@ -117,3 +118,24 @@ def update_settings(**kwargs):
     db.set_user_data(user_path, user_data)
 
     return {"success": True}
+
+
+def delete_favorites(db: Database, element_ids: list[str]):
+    """Deletes any element in element_ids from every user's favorites."""
+    for user_data_ref in db.user_data.stream():
+        user_data = UserData.model_validate(user_data_ref.to_dict())
+        user_id = user_data_ref.id
+
+        modified = False
+        for element_id in element_ids:
+            if user_data.favorites.get(element_id) == None:
+                continue
+
+            modified = True
+            user_data.favorites.pop(element_id)
+            user_data.favoriteOrder = [
+                id for id in user_data.favoriteOrder if id != element_id
+            ]
+
+        if modified:
+            db.user_data.document(user_id).set(user_data.model_dump())

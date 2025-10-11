@@ -70,18 +70,6 @@ class Database:
     def set_document_order(self, order: list[str]) -> None:
         self.document_order.set({"documentOrder": order})
 
-    def delete_document(self, document_id: str):
-        """Deletes a document and all elements and configurations which depend on it."""
-        document = self.documents.document(document_id).get().to_dict()
-        self.documents.document(document_id).delete()
-
-        if document == None:
-            return
-        # Delete all children as well
-        for element_id in document.get("elementIds", []):
-            self.elements.document(element_id).delete()
-            self.configurations.document(element_id).delete()
-
 
 def delete_collection(coll_ref: CollectionReference, batch_size=500):
     """Deletes a collection in the database."""
