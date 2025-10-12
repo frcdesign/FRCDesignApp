@@ -15,7 +15,7 @@ import { ReactNode, RefObject, useRef, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
-import { AppMenu } from "../api/menu-params";
+import { MenuType } from "../search-params/menu-params";
 import { VendorFilters } from "./vendor-filters";
 import { useUiState } from "../api/ui-state";
 
@@ -83,7 +83,7 @@ export function SettingsButton() {
                 navigate({
                     to: ".",
                     search: () => ({
-                        activeMenu: AppMenu.SETTINGS_MENU
+                        activeMenu: MenuType.SETTINGS_MENU
                     })
                 })
             }

@@ -1,9 +1,7 @@
 import {
-    Card,
     CardList,
     Classes,
     Collapse,
-    Colors,
     Icon,
     Intent,
     MaybeElement,
@@ -11,47 +9,51 @@ import {
     SectionCard
 } from "@blueprintjs/core";
 import { Outlet } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useRef } from "react";
+import { PropsWithChildren, ReactNode, useRef, useState } from "react";
 import { DocumentCard } from "../cards/document-card";
 import { HeartIcon } from "../favorites/favorite-button";
-import {
-    useDocumentOrderQuery,
-    useDocumentsQuery,
-    useElementsQuery,
-    useUserData
-} from "../queries";
-import { ElementObj } from "../api/models";
+import { useDocumentOrderQuery, useDocumentsQuery } from "../queries";
 import { SearchResults } from "../search/search-results";
 import { useUiState } from "../api/ui-state";
-import { filterElements } from "../api/filter";
-import { FavoriteCard } from "../favorites/favorite-card";
-import { FilterCallout } from "../navbar/filter-callout";
 import {
     AppErrorState,
     AppInternalErrorState,
     AppLoadingState
 } from "../common/app-zero-state";
 import { RequireAccessLevel } from "../api/access-level";
-import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useInteractiveSection } from "../common/utils";
 import { AddDocumentButton } from "./add-document-menu";
+import { FavoritesList } from "../favorites/favorites-list";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
+    const [isSearchOpen, setIsSearchOpen] = useState(true);
 
-    let content;
+    const favoritesList = (
+        <ListContainer
+            icon={<HeartIcon />}
+            title="Favorites"
+            isOpen={uiState.isFavoritesOpen}
+            onClick={(isOpen) => setUiState({ isFavoritesOpen: isOpen })}
+        >
+            <FavoritesList />
+        </ListContainer>
+    );
+
+    let documentList;
     if (uiState.searchQuery) {
         // Key is needed to differentiate between Favorites
         // Otherwise the useState in ListContainer can get confused
-        content = (
+        documentList = (
             <ListContainer
                 key="search"
                 icon={<Icon icon="search" intent={Intent.PRIMARY} />}
                 title="Search Results"
-                isOpen
+                isOpen={isSearchOpen}
+                onClick={setIsSearchOpen}
             >
                 <SearchResults
                     query={uiState.searchQuery}
@@ -60,34 +62,23 @@ export function HomeList(): ReactNode {
             </ListContainer>
         );
     } else {
-        content = (
-            <>
-                <ListContainer
-                    icon={<HeartIcon />}
-                    title="Favorites"
-                    isOpen={uiState.isFavoritesOpen}
-                    onClick={(isOpen) =>
-                        setUiState({ isFavoritesOpen: isOpen })
-                    }
-                >
-                    <FavoritesList />
-                </ListContainer>
-                <ListContainer
-                    icon={<Icon icon="manual" className="frc-design-green" />}
-                    title="Library"
-                    isOpen={uiState.isLibraryOpen}
-                    onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
-                >
-                    <LibraryList />
-                </ListContainer>
-            </>
+        documentList = (
+            <ListContainer
+                icon={<Icon icon="manual" className="frc-design-green" />}
+                title="Library"
+                isOpen={uiState.isLibraryOpen}
+                onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
+            >
+                <LibraryList />
+            </ListContainer>
         );
     }
 
     return (
         <>
             {/* <CardList compact style={{ margin: "0px" }} bordered={false}> */}
-            {content}
+            {favoritesList}
+            {documentList}
             {/* </CardList> */}
             <Outlet />
         </>
@@ -130,98 +121,6 @@ function LibraryList() {
         }
         return <DocumentCard key={document.id} document={document} />;
     });
-}
-
-function FavoritesList() {
-    const uiState = useUiState()[0];
-
-    const elementsQuery = useElementsQuery();
-    const userData = useUserData();
-
-    if (elementsQuery.isError) {
-        return (
-            <AppInternalErrorState
-                title="Failed to load favorites."
-                icon="heart-broken"
-                iconColor={Colors.RED3}
-                inline
-            />
-        );
-    } else if (elementsQuery.isPending) {
-        return <AppLoadingState title="Loading favorites..." />;
-    }
-
-    const favorites = userData.favorites;
-    const elements = elementsQuery.data;
-
-    const orderedFavorites = userData.favoriteOrder
-        .map((favoriteId) => favorites[favoriteId])
-        .filter((favorite) => !!favorite);
-
-    // Only ever show elements that aren't hidden
-    const favoriteElements = orderedFavorites
-        .map((favorite) => elements[favorite.id])
-        .filter((element) => !!element);
-
-    if (favoriteElements.length == 0) {
-        return (
-            <AppErrorState
-                title="No favorites"
-                icon="heart-broken"
-                iconColor={Colors.RED3}
-            />
-        );
-    }
-
-    const filterResult = filterElements(favoriteElements, {
-        vendors: uiState.vendorFilters,
-        // Only elements which haven't been disabled can be shown
-        isVisible: true
-    });
-
-    let callout;
-    if (filterResult.elements.length == 0) {
-        return (
-            <AppErrorState
-                title="All favorites are hidden by filters"
-                icon="heart-broken"
-                iconColor={Colors.RED3}
-                action={<ClearFiltersButton standardSize />}
-            />
-        );
-    }
-
-    if (filterResult.filteredByVendors > 0) {
-        callout = (
-            <Card className="item-card" style={{ padding: "0px" }}>
-                <FilterCallout
-                    itemName="favorites"
-                    filteredItems={filterResult.filteredByVendors}
-                />
-            </Card>
-        );
-    }
-
-    const cards = filterResult.elements.map((element: ElementObj) => {
-        const favorite = favorites[element.id];
-        if (!favorite) {
-            return null;
-        }
-        return (
-            <FavoriteCard
-                key={favorite.id}
-                element={element}
-                favorite={favorite}
-            />
-        );
-    });
-
-    return (
-        <>
-            {callout}
-            {cards}
-        </>
-    );
 }
 
 interface ListContainerProps extends PropsWithChildren {

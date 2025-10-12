@@ -1,11 +1,9 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { copyUserData, ElementObj, Favorite, UserData } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
-import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import {
-    Alert,
     Card,
     ContextMenu,
     ContextMenuChildrenProps,
@@ -14,24 +12,23 @@ import {
     MenuItem
 } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { AppMenu } from "../api/menu-params";
-import { FavoriteButton } from "./favorite-button";
+import { MenuType } from "../search-params/menu-params";
+import { FavoriteButton, FavoriteElementItem } from "./favorite-button";
 import {
-    CannotDeriveAssemblyAlert,
     CardTitle,
     ContextMenuButton,
-    OpenDocumentItems
+    OpenDocumentItems,
+    QuickInsertItem
 } from "../cards/card-components";
-import {
-    useIsElementHidden,
-    useIsAssemblyInPartStudio
-} from "../cards/card-hooks";
+import { useIsElementHidden } from "../cards/card-hooks";
+import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { toUserApiPath, UserPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
 import { useUserData } from "../queries";
 import { router } from "../router";
-import { AppAlertProps } from "../common/utils";
+import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import { getAppErrorHandler } from "../api/errors";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -51,7 +48,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
+    const openAlert = useOpenAlert();
 
     if (isHidden) {
         return null;
@@ -68,14 +65,13 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                         interactive
                         onClick={() => {
                             if (isAssemblyInPartStudio) {
-                                setIsAlertOpen(true);
+                                openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
                                 return;
                             }
-
                             navigate({
                                 to: ".",
                                 search: {
-                                    activeMenu: AppMenu.INSERT_MENU,
+                                    activeMenu: MenuType.INSERT_MENU,
                                     activeElementId: element.elementId,
                                     defaultConfiguration:
                                         favorite.defaultConfiguration
@@ -95,10 +91,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             />
                         </div>
                     </Card>
-                    <CannotDeriveAssemblyAlert
-                        isOpen={isAlertOpen}
-                        onClose={() => setIsAlertOpen(false)}
-                    />
                     {ctxMenuProps.popover}
                 </>
             )}
@@ -121,39 +113,29 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation(search);
     const favoriteOrder = useUserData().favoriteOrder;
-
-    const [isReorderAlertOpen, setIsReorderAlertOpen] = useState(false);
-    const [isEditDefaultConfigAlertOpen, setIsEditDefaultConfigAlertOpen] =
-        useState(false);
-
-    const cannotReorderAlert = (
-        <CannotReorderAlert
-            isOpen={isReorderAlertOpen}
-            onClose={() => setIsReorderAlertOpen(false)}
-        />
-    );
-
-    const cannotEditDefaultConfigAlert = (
-        <CannotEditDefaultConfiguration
-            isOpen={isEditDefaultConfigAlertOpen}
-            onClose={() => setIsEditDefaultConfigAlertOpen(false)}
-        />
-    );
+    const openAlert = useOpenAlert();
 
     const menu = (
         <Menu>
+            <QuickInsertItem
+                element={element}
+                defaultConfiguration={favorite.defaultConfiguration}
+                isFavorite
+            />
+            <MenuDivider />
             <MenuItem
                 icon="edit"
                 text="Edit default configuration"
                 intent="primary"
                 onClick={() => {
                     if (element.configurationId === undefined) {
-                        setIsEditDefaultConfigAlertOpen(true);
+                        openAlert(AlertType.CANNOT_EDIT_DEFAULT_CONFIGURATION);
+                        return;
                     }
                     navigate({
                         to: ".",
                         search: {
-                            activeMenu: AppMenu.FAVORITE_MENU,
+                            activeMenu: MenuType.FAVORITE_MENU,
                             favoriteId: favorite.id,
                             defaultConfiguration: favorite.defaultConfiguration
                         }
@@ -166,7 +148,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
                 order={favoriteOrder}
                 onOrderChange={(newOrder) => {
                     if (uiState.vendorFilters !== undefined) {
-                        setIsReorderAlertOpen(true);
+                        openAlert(AlertType.CANNOT_REORDER);
                         return;
                     }
                     setFavoriteOrderMutation.mutate(newOrder);
@@ -174,49 +156,11 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
             />
             <MenuDivider />
             <OpenDocumentItems path={element} />
+            <MenuDivider />
+            <FavoriteElementItem isFavorite element={element} />
         </Menu>
     );
-    return (
-        <>
-            <ContextMenu content={menu}>{children}</ContextMenu>
-            {cannotReorderAlert}
-            {cannotEditDefaultConfigAlert}
-        </>
-    );
-}
-
-function CannotReorderAlert(props: AppAlertProps) {
-    return (
-        <Alert
-            intent="warning"
-            icon="warning-sign"
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            confirmButtonText="Close"
-            onClose={props.onClose}
-            isOpen={props.isOpen}
-        >
-            To prevent confusion, favorites cannot be reordered while filters
-            are active.
-        </Alert>
-    );
-}
-
-function CannotEditDefaultConfiguration(props: AppAlertProps) {
-    return (
-        <Alert
-            intent="warning"
-            icon="warning-sign"
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            confirmButtonText="Close"
-            onClose={props.onClose}
-            isOpen={props.isOpen}
-        >
-            This element is not configurable, so its default configuration
-            cannot be changed.
-        </Alert>
-    );
+    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 function useSetFavoriteOrderMutation(userPath: UserPath) {
@@ -227,7 +171,8 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
                 body: { favoriteOrder }
             });
         },
-        onMutate: (newOrder: string[]) => {
+        onMutate: async (newOrder: string[]) => {
+            await queryClient.cancelQueries({ queryKey: ["user-data"] });
             queryClient.setQueryData(["user-data"], (data?: UserData) => {
                 if (!data) {
                     return undefined;
@@ -236,12 +181,13 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
                 newUserData.favoriteOrder = newOrder;
                 return newUserData;
             });
+            router.invalidate();
         },
-        onError: () => {
-            showErrorToast("Unexpectedly failed to reorder favorites.");
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+        onError: getAppErrorHandler(
+            "Unexpectedly failed to reorder favorites."
+        ),
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });

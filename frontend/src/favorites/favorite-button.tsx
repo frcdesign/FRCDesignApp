@@ -11,9 +11,9 @@ import { apiDelete, apiPost } from "../api/api";
 import { copyUserData, ElementObj, UserData } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
-import { showErrorToast } from "../common/toaster";
 import { useSearch } from "@tanstack/react-router";
 import { router } from "../router";
+import { handleAppError, HandledError } from "../api/errors";
 
 enum Operation {
     ADD,
@@ -22,7 +22,7 @@ enum Operation {
 
 interface UpdateFavoritesArgs {
     operation: Operation;
-    elementId: string;
+    element: ElementObj;
 }
 
 function updateFavorites(
@@ -33,34 +33,34 @@ function updateFavorites(
         return undefined;
     }
     const newUserData = copyUserData(data);
+    const elementId = args.element.id;
     if (args.operation === Operation.ADD) {
-        newUserData.favorites[args.elementId] = {
-            id: args.elementId
+        newUserData.favorites[elementId] = {
+            id: elementId
         };
-        newUserData.favoriteOrder.push(args.elementId);
+        newUserData.favoriteOrder.push(elementId);
     } else {
-        delete newUserData.favorites[args.elementId];
+        delete newUserData.favorites[elementId];
         newUserData.favoriteOrder = newUserData.favoriteOrder.filter(
-            (favoriteId) => favoriteId !== args.elementId
+            (favoriteId) => favoriteId !== elementId
         );
     }
     return newUserData;
 }
 
-interface FavoriteButtonProps {
-    isFavorite: boolean;
-    element: ElementObj;
-}
-
-export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { isFavorite, element } = props;
+function useUpdateFavoritesMutation(isFavorite: boolean) {
     const search = useSearch({ from: "/app" });
 
-    const mutation = useMutation<null, Error, UpdateFavoritesArgs>({
+    return useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorites", isFavorite],
         mutationFn: async (args) => {
-            const query = { elementId: args.elementId };
+            const query = { elementId: args.element.id };
             if (args.operation === Operation.ADD) {
+                if (!args.element.isVisible) {
+                    throw new HandledError(
+                        `Cannot favorite hidden element ${args.element.name}.`
+                    );
+                }
                 return apiPost("/favorites" + toUserApiPath(search), {
                     query
                 });
@@ -70,23 +70,35 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                 });
             }
         },
-        onMutate: (args) => {
+        onMutate: async (args) => {
+            await queryClient.cancelQueries({ queryKey: ["user-data"] });
             queryClient.setQueryData(["user-data"], (data?: UserData) =>
                 updateFavorites(data, args)
             );
+            router.invalidate();
         },
-        onError: (_error, args) => {
+        onError: (error, args) => {
             const action =
                 args.operation === Operation.ADD ? "favorite" : "unfavorite";
-            showErrorToast(`Unexpectedly failed to ${action} ${element.name}.`);
+            const defaultMessage = `Unexpectedly failed to ${action} ${args.element.name}.`;
+            handleAppError(error, defaultMessage);
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });
+}
+interface FavoriteButtonProps {
+    isFavorite: boolean;
+    element: ElementObj;
+}
+
+export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
+    const { isFavorite, element } = props;
 
     const [isHovered, setIsHovered] = useState(false);
+    const mutation = useUpdateFavoritesMutation(isFavorite);
 
     let favoriteIcon;
     if (isHovered) {
@@ -100,17 +112,12 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     }
 
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
-    const args = {
-        operation,
-        elementId: element.elementId
-    };
-
     return (
         <Button
             icon={favoriteIcon}
             onClick={(event) => {
                 event.stopPropagation();
-                mutation.mutate(args);
+                mutation.mutate({ operation, element });
             }}
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
             onMouseEnter={() => setIsHovered(true)}
@@ -122,14 +129,16 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 
 interface FavoriteElementItemProps {
     isFavorite: boolean;
+    element: ElementObj;
 }
 
 /**
  * A menu item which can be used to favorite or unfavorite an element.
  */
 export function FavoriteElementItem(props: FavoriteElementItemProps) {
-    const { isFavorite } = props;
+    const { isFavorite, element } = props;
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
+    const mutation = useUpdateFavoritesMutation(isFavorite);
 
     return (
         <MenuItem
@@ -141,8 +150,10 @@ export function FavoriteElementItem(props: FavoriteElementItemProps) {
                     <HeartBrokenIcon />
                 )
             }
-            onClick={() => {}}
-            intent={operation === Operation.ADD ? "primary" : "danger"}
+            onClick={() => {
+                mutation.mutate({ operation, element });
+            }}
+            intent={operation === Operation.ADD ? "none" : "danger"}
         />
     );
 }

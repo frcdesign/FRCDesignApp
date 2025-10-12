@@ -2,8 +2,6 @@ import { ReactNode } from "react";
 import { Position, SearchHit, doSearch, useSearchDbQuery } from "./search";
 import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
 import { ElementCard } from "../cards/element-card";
 import {
     AppErrorState,
@@ -26,11 +24,6 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     const elementsQuery = useElementsQuery();
     const searchDbQuery = useSearchDbQuery();
-
-    const searchResultSelectedMutation = useMutation({
-        mutationKey: ["search-result-selected"],
-        mutationFn: async () => apiPost("/search-result-selected")
-    });
 
     if (searchDbQuery.isPending || elementsQuery.isPending) {
         return <AppLoadingState title="Loading documents..." />;
@@ -83,7 +76,6 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
                 key={elementId}
                 element={element}
                 searchHit={searchHit}
-                onClick={() => searchResultSelectedMutation.mutate()}
             />
         );
     });

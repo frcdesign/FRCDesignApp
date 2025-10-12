@@ -13,34 +13,23 @@ import {
     DialogFooter,
     Intent
 } from "@blueprintjs/core";
-import {
-    useIsFetching,
-    useMutation,
-    useQueryClient
-} from "@tanstack/react-query";
-import { apiPost } from "../api/api";
-import { toElementApiPath } from "../api/path";
+import { useIsFetching } from "@tanstack/react-query";
 import { useElementsQuery, useUserData } from "../queries";
 import {
-    AppMenu,
+    MenuType,
     InsertMenuParams,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../api/menu-params";
+} from "../search-params/menu-params";
 import { PreviewImage } from "../favorites/thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
-import {
-    showErrorToast,
-    showLoadingToast,
-    showSuccessToast,
-    toaster
-} from "../common/toaster";
+import { toaster } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
-import { updateUiState } from "../api/ui-state";
+import { useInsertMutation } from "./insert-hooks";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== AppMenu.INSERT_MENU) {
+    if (search.activeMenu !== MenuType.INSERT_MENU) {
         return null;
     }
     return (
@@ -50,37 +39,6 @@ export function InsertMenu(): ReactNode {
         />
     );
 }
-
-function showRestoreToast(
-    element: ElementObj,
-    navigate: UseNavigateResult<string>,
-    configuration?: Configuration
-) {
-    toaster.show(
-        {
-            message: `Cancelled ${element.name}.`,
-            intent: "primary",
-            icon: "info-sign",
-            timeout: 3000,
-            action: {
-                text: "Restore",
-                onClick: () => {
-                    navigate({
-                        to: ".",
-                        search: {
-                            activeMenu: AppMenu.INSERT_MENU,
-                            activeElementId: element.id,
-                            defaultConfiguration: configuration
-                        }
-                    });
-                },
-                icon: "share"
-            }
-        },
-        `cancel-insert ${element.id}`
-    );
-}
-
 function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
 
@@ -144,6 +102,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         </Dialog>
     );
 }
+
 interface InsertButtonProps {
     element: ElementObj;
     configuration?: Configuration;
@@ -154,58 +113,17 @@ function InsertButton(props: InsertButtonProps): ReactNode {
     const { element, configuration, isFavorite } = props;
 
     const search = useSearch({ from: "/app" });
+    const insertMutation = useInsertMutation(
+        element,
+        configuration,
+        isFavorite
+    );
     const closeDialog = useHandleCloseDialog();
-    const queryClient = useQueryClient();
-
-    const toastId = "insert-" + element.id;
 
     const isLoadingConfiguration =
         useIsFetching({
             queryKey: ["configuration", element.configurationId]
         }) > 0;
-
-    const insertMutation = useMutation({
-        mutationKey: ["insert", element.id],
-        mutationFn: async () => {
-            let endpoint;
-            const body: Record<string, any> = {
-                documentId: element.documentId,
-                instanceType: element.instanceType,
-                instanceId: element.instanceId,
-                elementId: element.id,
-                configuration,
-                name: element.name,
-                isFavorite,
-                userId: search.userId
-            };
-            if (search.elementType == ElementType.ASSEMBLY) {
-                endpoint = "/add-to-assembly";
-                body.elementType = element.elementType;
-            } else {
-                // Part studio derive also needs name and microversion id
-                endpoint = "/add-to-part-studio";
-                body.microversionId = element.microversionId;
-            }
-            // Cancel any outstanding thumbnail queries
-            queryClient.cancelQueries({
-                predicate: (query) =>
-                    query.queryKey[0] === "thumbnail-id" ||
-                    query.queryKey[0] === "thumbnail"
-            });
-            showLoadingToast(`Inserting ${element.name}...`, toastId);
-            closeDialog();
-            updateUiState({ searchQuery: undefined });
-            return apiPost(endpoint + toElementApiPath(search), {
-                body
-            });
-        },
-        onError: () => {
-            showErrorToast(`Failed to insert ${element.name}.`, toastId);
-        },
-        onSuccess: () => {
-            showSuccessToast(`Successfully inserted ${element.name}.`, toastId);
-        }
-    });
 
     return (
         <Button
@@ -217,7 +135,40 @@ function InsertButton(props: InsertButtonProps): ReactNode {
             icon="plus"
             intent={Intent.SUCCESS}
             loading={isLoadingConfiguration || insertMutation.isPending}
-            onClick={() => insertMutation.mutate()}
+            onClick={() => {
+                insertMutation.mutate();
+                closeDialog();
+            }}
         />
+    );
+}
+
+function showRestoreToast(
+    element: ElementObj,
+    navigate: UseNavigateResult<string>,
+    configuration?: Configuration
+) {
+    toaster.show(
+        {
+            message: `Cancelled ${element.name}.`,
+            intent: "primary",
+            icon: "info-sign",
+            timeout: 3000,
+            action: {
+                text: "Restore",
+                onClick: () => {
+                    navigate({
+                        to: ".",
+                        search: {
+                            activeMenu: MenuType.INSERT_MENU,
+                            activeElementId: element.id,
+                            defaultConfiguration: configuration
+                        }
+                    });
+                },
+                icon: "share"
+            }
+        },
+        `cancel-insert ${element.id}`
     );
 }

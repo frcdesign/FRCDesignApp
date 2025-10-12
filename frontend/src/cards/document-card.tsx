@@ -91,9 +91,9 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
             });
         },
         onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
-            queryClient.refetchQueries({ queryKey: ["document-order"] });
-            queryClient.refetchQueries({ queryKey: ["elements"] });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["document-order"] });
+            queryClient.invalidateQueries({ queryKey: ["elements"] });
         }
     });
 
@@ -202,7 +202,7 @@ function useToggleDocumentSortMutation(document: DocumentObj) {
             });
         },
         onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
         }
     });
 }

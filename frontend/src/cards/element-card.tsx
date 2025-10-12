@@ -7,24 +7,25 @@ import {
     MenuItem
 } from "@blueprintjs/core";
 import { useNavigate } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useState } from "react";
-import { AppMenu } from "../api/menu-params";
+import { PropsWithChildren, ReactNode } from "react";
 import { ElementObj } from "../api/models";
 import { SearchHit } from "../search/search";
-import { FavoriteButton } from "../favorites/favorite-button";
+import {
+    FavoriteButton,
+    FavoriteElementItem
+} from "../favorites/favorite-button";
 import { useUserData } from "../queries";
 import { RequireAccessLevel } from "../api/access-level";
+import { useIsElementHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
-    useIsAssemblyInPartStudio,
-    useIsElementHidden,
-    useSetVisibilityMutation
-} from "./card-hooks";
-import {
-    CannotDeriveAssemblyAlert,
     CardTitle,
     ContextMenuButton,
-    OpenDocumentItems
+    OpenDocumentItems,
+    QuickInsertItem
 } from "./card-components";
+import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
+import { MenuType } from "../search-params/menu-params";
 
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
@@ -41,13 +42,12 @@ export function ElementCard(props: ElementCardProps): ReactNode {
 
     const userData = useUserData();
 
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
-
     const isHidden = useIsElementHidden(element);
 
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
+    const openAlert = useOpenAlert();
 
     if (isHidden) {
         return null;
@@ -56,7 +56,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     const isFavorite = userData.favorites[element.elementId] !== undefined;
 
     return (
-        <ElementContextMenu element={element}>
+        <ElementContextMenu isFavorite={isFavorite} element={element}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
                 <>
                     <Card
@@ -70,14 +70,14 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             }
 
                             if (isAssemblyInPartStudio) {
-                                setIsAlertOpen(true);
+                                openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
                                 return;
                             }
 
                             navigate({
                                 to: ".",
                                 search: {
-                                    activeMenu: AppMenu.INSERT_MENU,
+                                    activeMenu: MenuType.INSERT_MENU,
                                     activeElementId: element.elementId
                                 }
                             });
@@ -100,10 +100,6 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             />
                         </div>
                     </Card>
-                    <CannotDeriveAssemblyAlert
-                        isOpen={isAlertOpen}
-                        onClose={() => setIsAlertOpen(false)}
-                    />
                     {ctxMenuProps.popover}
                 </>
             )}
@@ -112,12 +108,13 @@ export function ElementCard(props: ElementCardProps): ReactNode {
 }
 
 interface ElementContextMenuProps {
+    isFavorite: boolean;
     element: ElementObj;
     children: any;
 }
 
 export function ElementContextMenu(props: ElementContextMenuProps) {
-    const { children, element } = props;
+    const { children, isFavorite, element } = props;
 
     const mutation = useSetVisibilityMutation(
         "set-visibility",
@@ -127,7 +124,11 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
 
     const menu = (
         <Menu>
+            <QuickInsertItem element={element} isFavorite={isFavorite} />
+            <MenuDivider />
             <OpenDocumentItems path={element} />
+            <MenuDivider />
+            <FavoriteElementItem isFavorite={isFavorite} element={element} />
             <RequireAccessLevel>
                 <MenuDivider />
                 <MenuItem

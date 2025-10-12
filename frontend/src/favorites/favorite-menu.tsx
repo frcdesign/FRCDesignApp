@@ -8,11 +8,11 @@ import {
 } from "@blueprintjs/core";
 import { ReactNode, useState } from "react";
 import {
-    AppMenu,
+    MenuType,
     FavoriteMenuParams,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../api/menu-params";
+} from "../search-params/menu-params";
 import { useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
@@ -29,7 +29,7 @@ import { router } from "../router";
 
 export function FavoriteMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== AppMenu.FAVORITE_MENU) {
+    if (search.activeMenu !== MenuType.FAVORITE_MENU) {
         return null;
     }
     return (
@@ -64,7 +64,7 @@ function FavoriteMenuDialog(
             });
         },
         onMutate: async () => {
-            const previousUserData = queryClient.getQueryData(["user-data"]);
+            await queryClient.cancelQueries({ queryKey: ["user-data"] });
             queryClient.setQueryData(["user-data"], (data?: UserData) => {
                 if (!data) {
                     return undefined;
@@ -76,7 +76,7 @@ function FavoriteMenuDialog(
                 }
                 return newUserData;
             });
-            return { previousUserData };
+            router.invalidate();
         },
         onError: () => {
             showErrorToast(
@@ -86,8 +86,8 @@ function FavoriteMenuDialog(
         onSuccess: () => {
             showSuccessToast("Successfully updated default configuration.");
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });

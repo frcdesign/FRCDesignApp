@@ -1,5 +1,4 @@
 import {
-    Alert,
     Button,
     ButtonVariant,
     Classes,
@@ -8,17 +7,25 @@ import {
     Tag
 } from "@blueprintjs/core";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import { MouseEventHandler, ReactNode } from "react";
+import { MouseEventHandler, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../favorites/thumbnail";
 import { DocumentPath, ElementPath } from "../api/path";
-import { AppAlertProps } from "../common/utils";
+import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import {
+    useInsertMutation,
+    useIsAssemblyInPartStudio
+} from "../insert/insert-hooks";
+import { Configuration, ElementObj } from "../api/models";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
 }
 
+/**
+ * MenuItems which can be used to open or copy a link to a document.
+ */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
@@ -37,26 +44,42 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     );
 }
 
+interface QuickInsertItemProps {
+    element: ElementObj;
+    defaultConfiguration?: Configuration;
+    isFavorite: boolean;
+}
+
 /**
- * A controlled alert warning that assemblies cannot be derived into part studios.
+ * MenuItems which can be used to quick insert a document.
  */
-export function CannotDeriveAssemblyAlert(props: AppAlertProps): ReactNode {
-    const { onClose, isOpen } = props;
-    if (!isOpen) {
-        return null;
-    }
+export function QuickInsertItem(props: QuickInsertItemProps) {
+    const { element, defaultConfiguration, isFavorite } = props;
+    const insertMutation = useInsertMutation(
+        element,
+        defaultConfiguration,
+        isFavorite
+    );
+    const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
+        element.elementType
+    );
+    const openAlert = useOpenAlert();
+
+    const handleClick = useCallback(() => {
+        if (isAssemblyInPartStudio) {
+            openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
+            return;
+        }
+        insertMutation.mutate();
+    }, [isAssemblyInPartStudio, insertMutation, openAlert]);
+
     return (
-        <Alert
-            isOpen
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            onClose={onClose}
-            confirmButtonText="Close"
-            icon="cross"
-            intent="danger"
-        >
-            This part is an assembly and cannot be derived into a part studio.
-        </Alert>
+        <MenuItem
+            text="Quick insert"
+            icon="add"
+            onClick={handleClick}
+            label="Double click"
+        />
     );
 }
 

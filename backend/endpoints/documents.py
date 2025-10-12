@@ -12,7 +12,6 @@ import flask
 
 from backend.common import connect, database
 from backend.common.app_access import require_access_level
-from backend.common.app_logging import log_search
 from backend.endpoints.cache import cacheable_route
 from backend.common.models import Element, UserData, Vendor
 from backend.common.models import Document
@@ -396,11 +395,4 @@ def set_document_sort():
     db.documents.document(document_id).set(
         {"sortAlphabetically": sort_alphabetically}, merge=True
     )
-    return {"success": True}
-
-
-@router.post("/search-result-selected")
-def search_result_selected():
-    """Logs that a search result was selected."""
-    log_search()
     return {"success": True}

@@ -71,7 +71,6 @@ set_logging_level(ONSHAPE_LOGGER)
 class LogType(StrEnum):
     APP_OPENED = "App opened"
     PART_INSERTED = "Part inserted"
-    SEARCH = "Search"
 
 
 def make_log_extra(log_data: dict | None = None) -> dict:
@@ -149,7 +148,3 @@ def log_part_inserted(
             configuration, configuration_parameters
         )
     CLOUD_LOGGER.info(LogType.PART_INSERTED, extra=make_log_extra(log_data))
-
-
-def log_search():
-    CLOUD_LOGGER.info(LogType.SEARCH, extra=make_log_extra())

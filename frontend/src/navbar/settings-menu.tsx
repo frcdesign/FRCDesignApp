@@ -1,5 +1,4 @@
 import {
-    Alert,
     Button,
     Dialog,
     DialogBody,
@@ -11,7 +10,7 @@ import {
     MenuItem
 } from "@blueprintjs/core";
 import { Dispatch, ReactNode, useMemo, useState } from "react";
-import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
+import { MenuType, useHandleCloseDialog } from "../search-params/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
@@ -40,7 +39,7 @@ import { HandledError } from "../api/errors";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== AppMenu.SETTINGS_MENU) {
+    if (search.activeMenu !== MenuType.SETTINGS_MENU) {
         return null;
     }
     return <SettingsMenuDialog />;
@@ -99,7 +98,8 @@ function UserSettings(): ReactNode {
             apiPost("/settings" + toUserApiPath(search), {
                 body: newSettings
             }),
-        onMutate: (newSettings) => {
+        onMutate: async (newSettings) => {
+            await queryClient.cancelQueries({ queryKey: ["user-data"] });
             queryClient.setQueryData(["user-data"], (data?: UserData) => {
                 if (!data) {
                     return undefined;
@@ -113,8 +113,8 @@ function UserSettings(): ReactNode {
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
             router.invalidate();
         }
     });
@@ -339,12 +339,23 @@ export function ReloadDocumentsButton(
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
         mutationFn: async () => {
+            const confirmMessage =
+                "Are you sure you want to reload" +
+                (reloadAll ? " all documents?" : " outdated documents?");
+
+            if (!window.confirm(confirmMessage)) {
+                throw new HandledError("Cancelled operation.");
+            }
+
             return apiPost("/reload-documents", {
-                // Set a timeout of 5 minutes
                 query: { reloadAll }
             });
         },
-        onError: () => {
+        onError: (error) => {
+            if (error instanceof HandledError) {
+                showErrorToast(error.message);
+                return;
+            }
             showErrorToast("Failed to reload documents!");
         },
         onSuccess: async (result) => {
@@ -357,50 +368,27 @@ export function ReloadDocumentsButton(
                 );
             }
             await Promise.all([
-                queryClient.refetchQueries({ queryKey: ["documents"] }),
-                queryClient.refetchQueries({ queryKey: ["elements"] })
+                queryClient.invalidateQueries({ queryKey: ["documents"] }),
+                queryClient.invalidateQueries({ queryKey: ["elements"] })
             ]);
         }
     });
-
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
-
-    const alert = (
-        <Alert
-            confirmButtonText="Reload"
-            icon="refresh"
-            intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
-            isOpen={isAlertOpen}
-            canEscapeKeyCancel
-            canOutsideClickCancel
-            cancelButtonText="Cancel"
-            onClose={(confirmed) => {
-                if (confirmed) {
-                    mutation.mutate();
-                }
-                setIsAlertOpen(false);
-            }}
-        >
-            Are you sure you want to
-            {reloadAll
-                ? " reload all documents?"
-                : " reload outdated documents?"}
-        </Alert>
-    );
 
     const button = (
         <Button
             icon="refresh"
             text="Reload"
-            onClick={() => setIsAlertOpen(true)}
+            onClick={() => mutation.mutate()}
             loading={mutation.isPending}
             intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
         />
     );
 
-    const formGroup = hideFormGroup ? (
-        button
-    ) : (
+    if (hideFormGroup) {
+        return button;
+    }
+
+    return (
         <FormGroup
             label={
                 reloadAll ? "Reload all documents" : "Reload outdated documents"
@@ -410,11 +398,26 @@ export function ReloadDocumentsButton(
             {button}
         </FormGroup>
     );
-
-    return (
-        <>
-            {formGroup}
-            {alert}
-        </>
-    );
 }
+
+// interface ReloadAlertProps {
+//     reloadAll?: boolean;
+// }
+
+// export function ReloadAlert(props: ReloadAlertProps) {
+//     return (
+//         <Alert
+//             confirmButtonText="Reload"
+//             icon="refresh"
+//             intent={Intent.PRIMARY}
+//             isOpen={props.isOpen}
+//             onClose={props.onClose}
+//             canEscapeKeyCancel
+//             canOutsideClickCancel
+//             cancelButtonText="Cancel"
+//         >
+//             Are you sure you want to reload
+//             {props.reloadAll ? " all documents?" : " outdated documents?"}
+//         </Alert>
+//     );
+// }

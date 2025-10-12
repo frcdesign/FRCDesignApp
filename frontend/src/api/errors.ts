@@ -1,3 +1,5 @@
+import { showErrorToast } from "../common/toaster";
+
 /**
  * Errors which are generated and thrown on the client.
  * Unlike other errors, the message is displayed directly to the user.
@@ -7,6 +9,39 @@ export class HandledError extends Error {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
     }
+}
+
+/**
+ * Used to indicate that an error has occurred, but also that no action should be taken.
+ * Allows a mutation to "quit out" without triggering onError behavior.
+ */
+// export class NoError extends Error {
+//     constructor() {
+//         super("No error");
+//         Object.setPrototypeOf(this, new.target.prototype);
+//     }
+// }
+
+/**
+ * Returns a function that handles app errors.
+ */
+export function getAppErrorHandler(defaultMessage: string, toastKey?: string) {
+    return (error: Error) => handleAppError(error, defaultMessage, toastKey);
+}
+
+export function handleAppError(
+    error: Error,
+    defaultMessage: string,
+    toastKey?: string
+) {
+    if (error instanceof HandledError) {
+        showErrorToast(error.message, toastKey);
+        return;
+    }
+    // else if (error instanceof NoError) {
+    //     return;
+    // }
+    showErrorToast(defaultMessage, toastKey);
 }
 
 /**
@@ -21,30 +56,3 @@ export class ReportedError extends Error {
         this.type = type;
     }
 }
-
-// export class MissingPermissionError extends ReportedError {
-//     public constructor(
-//         public permission: string,
-//         public documentName?: string
-//     ) {
-//         super("MISSING_PERMISSION");
-//         Object.setPrototypeOf(this, new.target.prototype);
-//     }
-
-//     public getDescription(
-//         isCurrentDocument?: boolean,
-//         unknownAccessMessage?: string
-//     ): string {
-//         if (isCurrentDocument ?? true) {
-//             // You need to have Write access to this document.
-//             return `You need to have ${this.permission} access to this document.`;
-//         } else if (this.documentName) {
-//             // You need to have Write access to My Test Document.
-//             return `You need to have ${this.permission} access to ${this.documentName}.`;
-//         }
-//         return (
-//             unknownAccessMessage ??
-//             `You don't have access to a needed document.`
-//         );
-//     }
-// }

@@ -21,13 +21,14 @@ import {
 } from "./queries";
 import { CacheData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
-import { MenuParams } from "./api/menu-params";
-import { OnshapeParams } from "./api/onshape-params";
+import { MenuParams } from "./search-params/menu-params";
+import { OnshapeParams } from "./search-params/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
 import { getSearchDbQuery } from "./search/search";
+import { AlertParams } from "./search-params/alert-type";
 
-type SearchParams = OnshapeParams & MenuParams & CacheData;
+type SearchParams = OnshapeParams & MenuParams & AlertParams & CacheData;
 
 const rootRoute = createRootRoute({
     errorComponent: () => <RootAppError isRoot />

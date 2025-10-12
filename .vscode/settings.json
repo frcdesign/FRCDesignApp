@@ -62,9 +62,18 @@
         "**/*.pyc": true,
         "**/assets": true,
         "**/dist": true,
-        "**/*.code-search": true
+        "**/.venv": true,
+        "**/package-lock.json": true
     },
     "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "*test*.py"],
     "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true
+    "python.testing.unittestEnabled": true,
+    "jest.runMode": "on-demand",
+    "jest.rootPath": "frontend/src",
+    "jest.outputConfig": {
+        "revealWithFocus": "test-results",
+        "revealOn": "error",
+        "clearOnRun": "none"
+    },
+    "testing.automaticallyOpenTestResults": "openOnTestFailure"
 }

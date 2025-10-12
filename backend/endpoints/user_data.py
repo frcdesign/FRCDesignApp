@@ -53,7 +53,7 @@ def add_favorite(**kwargs):
     favorite = Favorite(defaultConfiguration=default_configuration)
     user_data.favorites[element_id] = favorite
 
-    db.set_user_data(user_path, user_data)
+    db.set_user_data(user_path.user_id, user_data)
 
     return {"success": True}
 
@@ -76,7 +76,7 @@ def remove_favorite(**kwargs):
     user_data.favoriteOrder = list(
         id for id in user_data.favoriteOrder if id != element_id
     )
-    db.set_user_data(user_path, user_data)
+    db.set_user_data(user_path.user_id, user_data)
     return {"success": True}
 
 
@@ -89,7 +89,7 @@ def set_favorite_order(**kwargs):
 
     user_data = db.get_user_data(user_path)
     user_data.favoriteOrder = favorite_order
-    db.set_user_data(user_path, user_data)
+    db.set_user_data(user_path.user_id, user_data)
     return {"success": True}
 
 
@@ -102,7 +102,7 @@ def update_default_configuration(**kwargs):
     default_configuration = connect.get_body_arg("defaultConfiguration")
     user_data = db.get_user_data(user_path)
     user_data.favorites[favorite_id].defaultConfiguration = default_configuration
-    db.set_user_data(user_path, user_data)
+    db.set_user_data(user_path.user_id, user_data)
 
     return {"success": True}
 
@@ -115,7 +115,7 @@ def update_settings(**kwargs):
     theme = connect.get_body_arg("theme")
     user_data = db.get_user_data(user_path)
     user_data.settings.theme = theme
-    db.set_user_data(user_path, user_data)
+    db.set_user_data(user_path.user_id, user_data)
 
     return {"success": True}
 

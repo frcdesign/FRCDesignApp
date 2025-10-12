@@ -1,4 +1,4 @@
-import { ElementObj, Vendor } from "./models";
+import { ElementObj, Vendor } from "../api/models";
 
 export enum SortOrder {
     DEFAULT = "default",

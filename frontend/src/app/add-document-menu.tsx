@@ -10,25 +10,21 @@ import {
 import { ReactNode, useState } from "react";
 import {
     AddDocumentMenuParams,
-    AppMenu,
+    MenuType,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../api/menu-params";
+} from "../search-params/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { parseUrl } from "../common/url";
-import { HandledError } from "../api/errors";
-import {
-    showErrorToast,
-    showLoadingToast,
-    showSuccessToast
-} from "../common/toaster";
+import { getAppErrorHandler, HandledError } from "../api/errors";
+import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== AppMenu.ADD_DOCUMENT_MENU) {
+    if (search.activeMenu !== MenuType.ADD_DOCUMENT_MENU) {
         return null;
     }
     return (
@@ -60,21 +56,15 @@ function AddDocumentMenuDialog(
                 }
             });
         },
-        onError: (error) => {
-            if (error instanceof HandledError) {
-                showErrorToast(error.message, "add-document");
-            } else {
-                showErrorToast(
-                    "Failed to add document. Make sure it's valid.",
-                    "add-document"
-                );
-            }
-        },
+        onError: getAppErrorHandler(
+            "Failed to add document. Make sure it's valid.",
+            "add-document"
+        ),
         onSuccess: async (result) => {
             await Promise.all([
-                queryClient.refetchQueries({ queryKey: ["documents"] }),
-                queryClient.refetchQueries({ queryKey: ["document-order"] }),
-                queryClient.refetchQueries({ queryKey: ["elements"] })
+                queryClient.invalidateQueries({ queryKey: ["documents"] }),
+                queryClient.invalidateQueries({ queryKey: ["document-order"] }),
+                queryClient.invalidateQueries({ queryKey: ["elements"] })
             ]);
 
             showSuccessToast(
@@ -128,7 +118,7 @@ export function AddDocumentButton(): ReactNode {
                 navigate({
                     to: ".",
                     search: {
-                        activeMenu: AppMenu.ADD_DOCUMENT_MENU
+                        activeMenu: MenuType.ADD_DOCUMENT_MENU
                     }
                 });
             }}
@@ -152,7 +142,7 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
                 navigate({
                     to: ".",
                     search: {
-                        activeMenu: AppMenu.ADD_DOCUMENT_MENU,
+                        activeMenu: MenuType.ADD_DOCUMENT_MENU,
                         selectedDocumentId: props.selectedDocumentId
                     }
                 });

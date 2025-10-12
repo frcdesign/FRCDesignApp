@@ -15,7 +15,7 @@ import { SearchResults } from "../search/search-results";
 import { DocumentObj, Elements, hasMemberAccess } from "../api/models";
 import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { useUiState } from "../api/ui-state";
-import { filterElements, SortOrder } from "../api/filter";
+import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
 import { ElementCard } from "../cards/element-card";
 import { ContextMenuButton } from "../cards/card-components";

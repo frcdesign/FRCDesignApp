@@ -40,8 +40,8 @@ class Database:
             self.user_data.document(user_path.user_id).get().to_dict() or {}
         )
 
-    def set_user_data(self, user_path: UserPath, user_data: UserData) -> None:
-        self.user_data.document(user_path.user_id).set(user_data.model_dump())
+    def set_user_data(self, user_id: str, user_data: UserData) -> None:
+        self.user_data.document(user_id).set(user_data.model_dump())
 
     @property
     def configurations(self) -> CollectionReference:

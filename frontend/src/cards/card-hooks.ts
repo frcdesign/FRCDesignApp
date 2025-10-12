@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import { ElementObj, ElementType, hasUserAccess } from "../api/models";
+import { ElementObj, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { showErrorToast } from "../common/toaster";
@@ -31,19 +31,9 @@ export function useSetVisibilityMutation(
             });
         },
         onSuccess: () => {
-            queryClient.refetchQueries({ queryKey: ["elements"] });
+            queryClient.invalidateQueries({ queryKey: ["elements"] });
         }
     });
-}
-
-export function useIsAssemblyInPartStudio(elementType: ElementType): boolean {
-    const search = useSearch({ from: "/app" });
-    return useMemo(() => {
-        return (
-            elementType === ElementType.ASSEMBLY &&
-            search.elementType == ElementType.PART_STUDIO
-        );
-    }, [elementType, search.elementType]);
 }
 
 /**
