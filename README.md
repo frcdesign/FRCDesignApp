@@ -92,10 +92,9 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
 
 You should now be able to see your App in the right panel of any Part Studios or Assemblies you open.
 
-## Onshape API Key Setup
+## Onshape API Key Setup (optional)
 
-When the local development web server is first started, it will attempt to optimistically load the documents specified in `config.json` into the database.
-This is done using API keys specified in `.env`. This will also allow you to access the Onshape API using local Python scripts.
+This step is only required if you want to use the Onshape API with local development.
 
 1. Get an API key from the [Onshape developer portal](https://dev-portal.onshape.com/keys).
 1. Add your access key and secret key to `.env`.
@@ -118,14 +117,14 @@ mkcert -install
 
 ```
 cd ~ # Switch to your user directory
-cd Documents # Switch to the Documents folder, can also use any other folder you recognize, like Downloads
+cd Documents # Switch to the Documents folder - you can also use any other folder you recognize, like Downloads
 mkcert localhost # Create a certificate which allows localhost to run
 ```
 
 1. You can then open your Documents folder in File Explorer and copy and paste `localhost-key.pem` and `localhost.pem` into the root of this project.
 
-Depending on your browser, this should automatically clear any security warnings. If it doesn't, you can manually add the Certificate Authority.
-In Firefox, the procedure is:
+If you use a chromium-based browser like Google Chrome, MKCert should install the certificate automatically.
+If it doesn't, you'll need to add the Certificate Authority manually. In Firefox, the procedure is:
 
 1. In PowerShell, run `mkcert -CAROOT` and note down the path.
 1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
@@ -148,7 +147,7 @@ npm install
 
 ## Google Cloud Dev Setup
 
-Although this project uses Google Cloud Firestore, which is technically a distinct product from Firebase Firestore, Google Cloud Firestore is still just Firebase Firestore in a trenchcoat.
+Although this project uses Google Cloud Firestore, which is technically a distinct product from Google Firebase's Firestore, Google Cloud Firestore is still just Firebase's Firestore in a trenchcoat.
 
 In order to emulate the google cloud database locally, you'll need to install the [Firebase CLI](https://firebase.google.com/docs/cli). In Linux, this can be done using:
 

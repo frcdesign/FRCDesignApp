@@ -47,16 +47,6 @@ def create_app():
         user_id = connect.get_query_param("userId")
         log_app_opened(user_id)
 
-        if not env.IS_PRODUCTION and db.get_document_order() == []:
-            APP_LOGGER.info("Loading documents from config.json!")
-            with open("config.json") as f:
-                json = json5.load(f)
-                document_order = [
-                    url_to_document_path(url).document_id for url in json["documents"]
-                ]
-                db.set_document_order(document_order)
-                await reload_documents()
-
         return serve_index()
 
     @app.get("/license")

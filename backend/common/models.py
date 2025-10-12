@@ -205,6 +205,7 @@ class Element(BaseModel):
     # Default isVisible to true in development
     isVisible: bool
     configurationId: str | None = None
+    thumbnailUrl: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 

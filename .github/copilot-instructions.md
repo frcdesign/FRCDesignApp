@@ -39,7 +39,7 @@
 
 -   [Project README](../README.md) — full setup, OAuth, and dev instructions.
 -   [Onshape API Python Client README](../onshape_api/README.md)
--   Key files: `.env`, `config.json`, `Procfile`, `requirements.txt`, `frontend/package.json`, `backend/server.py`, `backend/endpoints/`, `frontend/src/`, `onshape_api/`
+-   Key files: `.env`, `Procfile`, `requirements.txt`, `frontend/package.json`, `backend/server.py`, `backend/endpoints/`, `frontend/src/`, `onshape_api/`
 
 ---
 
