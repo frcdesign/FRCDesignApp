@@ -9,11 +9,20 @@ from enum import StrEnum
 import re
 from typing import Iterator
 import flask
+from pydantic import ValidationError
 
-from backend.common import connect, database
+from backend.common import connect
+from backend.common.database import Database
 from backend.common.app_access import require_access_level
 from backend.endpoints.cache import cacheable_route
-from backend.common.models import Element, UserData, Vendor
+from backend.common.models import (
+    ConfigurationParameters,
+    Element,
+    ParameterType,
+    UserData,
+    Vendor,
+    get_vendor_name,
+)
 from backend.common.models import Document
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
@@ -78,16 +87,68 @@ def get_elements(**kwargs):
     return {"elements": elements}
 
 
-def parse_vendor(name: str) -> Vendor | None:
-    match = re.search(r"\((\w+)\)$", name)
-    if not match:
-        return None
-    vendor_str = match.group(1)
-    return next((vendor for vendor in Vendor if vendor == vendor_str), None)
+def parse_name_vendor(name: str) -> Vendor | None:
+    """Parse vendor information from element name.
+
+    Checks the name for vendor abbreviations or full names.
+    """
+    # Search for all vendor matches in the name
+    # Look for vendors in parentheses or standalone
+    for match in re.finditer(r"\b(\w+)\b", name.upper()):
+        vendor_str = match.group(1)
+
+        # Check if it matches a vendor abbreviation
+        if vendor := next(
+            (vendor for vendor in Vendor if vendor.upper() == vendor_str), None
+        ):
+            return vendor
+
+
+def parse_vendors(
+    name: str, configuration: ConfigurationParameters | None = None
+) -> list[Vendor]:
+    """
+    Parse vendor information from element name and/or configuration parameters.
+
+    First checks the name for vendor abbreviations or full names.
+    If no vendors found in name, checks configuration enum parameters for vendor values.
+    """
+    name_vendor = parse_name_vendor(name)
+    if name_vendor:
+        return [name_vendor]
+
+    vendors: set[Vendor] = set()
+    if not configuration:
+        return []
+
+    for param in configuration.parameters:
+        if param.type != ParameterType.ENUM:
+            continue
+
+        # Check all option values against vendors
+        for option in param.options:
+            # Check if option matches vendor abbreviation
+            vendor = parse_name_vendor(option.name)
+            if vendor:
+                vendors.add(vendor)
+                continue
+
+            vendor = next(
+                (
+                    vendor
+                    for vendor in Vendor
+                    if get_vendor_name(vendor).upper() == option.name.upper()
+                ),
+                None,
+            )
+            if vendor:
+                vendors.add(vendor)
+
+    return list(vendors)
 
 
 def save_element(
-    db: database.Database,
+    db: Database,
     api: Api,
     version_path: InstancePath,
     onshape_element: dict,
@@ -106,6 +167,7 @@ def save_element(
 
     onshape_configuration = get_configuration(api, path)
     configuration_id = None
+    configuration = None
     if len(onshape_configuration["configurationParameters"]) > 0:
         configuration = parse_onshape_configuration(onshape_configuration)
         # Re-use element db id since configurations can't be shared
@@ -116,7 +178,7 @@ def save_element(
     db.elements.document(element_id).set(
         Element(
             name=element_name,
-            vendor=parse_vendor(element_name),
+            vendors=parse_vendors(element_name, configuration),
             elementType=element_type,
             documentId=version_path.document_id,
             instanceId=version_path.instance_id,
@@ -148,38 +210,61 @@ def traverse_entry(entry: dict) -> Iterator[str]:
         yield entry["elementId"]
 
 
+def get_valid_elements(
+    db: Database, contents: dict, preserved_info: PreservedInfo
+) -> Iterator[dict]:
+    for onshape_element in contents["elements"]:
+        if onshape_element["elementType"] not in [
+            ElementType.ASSEMBLY,
+            ElementType.PART_STUDIO,
+        ]:
+            continue
+
+        element_ref = db.elements.document(onshape_element["id"]).get()
+        if not element_ref.exists:
+            yield onshape_element
+            continue
+
+        try:
+            Element.model_validate(element_ref.to_dict())
+
+        except ValidationError:
+            yield onshape_element
+            continue
+
+        if not preserved_info.should_reload_element(
+            onshape_element["id"], onshape_element["microversionId"]
+        ):
+            continue
+
+        yield onshape_element
+
+
 async def save_document(
     api: Api,
-    db: database.Database,
+    db: Database,
     version_path: InstancePath,
-    preserved_info: PreservedInfo | None = None,
+    preserved_info: PreservedInfo,
 ) -> int:
     """Loads all of the elements of a given document into the database."""
-    # Fill in PreservedInfo to get access to defaults
-    if preserved_info == None:
-        preserved_info = PreservedInfo()
 
     contents = await asyncio.to_thread(documents.get_contents, api, version_path)
 
-    valid_elements = [
-        onshape_element
-        for onshape_element in contents["elements"]
-        if onshape_element["elementType"]
-        in [ElementType.ASSEMBLY, ElementType.PART_STUDIO]
-    ]
+    valid_elements = get_valid_elements(db, contents, preserved_info)
     valid_ids = set(element["id"] for element in valid_elements)
-
-    ordered_element_ids = [
-        element_id
-        for element_id in get_ordered_element_ids(contents)
-        if element_id in valid_ids
-    ]
 
     save_element_operations = [
         asyncio.to_thread(
             save_element, db, api, version_path, onshape_element, preserved_info
         )
         for onshape_element in valid_elements
+    ]
+
+    # Collect list of element ids in same order as the Onshape Tab manager
+    ordered_element_ids = [
+        element_id
+        for element_id in get_ordered_element_ids(contents)
+        if element_id in valid_ids
     ]
 
     onshape_document = documents.get_document(api, version_path)
@@ -208,8 +293,8 @@ async def save_document(
     return len(ordered_element_ids)
 
 
-def preserve_info(db: database.Database) -> PreservedInfo:
-    preserved_info = PreservedInfo()
+def preserve_info(db: Database, reload_all: bool) -> PreservedInfo:
+    preserved_info = PreservedInfo(reload_all=reload_all)
     for doc_ref in db.documents.stream():
         document_id = doc_ref.id
         document_dict = doc_ref.to_dict()
@@ -223,41 +308,30 @@ def preserve_info(db: database.Database) -> PreservedInfo:
     return preserved_info
 
 
-async def refresh_document(
-    api: Api,
-    db: database.Database,
-    latest_version_path: InstancePath,
-    preserved_info: PreservedInfo,
-) -> int:
-    delete_document(db, latest_version_path.document_id)
-    return await save_document(api, db, latest_version_path, preserved_info)
-
-
 async def reload_document(
     api: Api,
-    db: database.Database,
+    db: Database,
     document_path: DocumentPath,
-    reload_all: bool,
     preserved_info: PreservedInfo,
 ) -> int:
     latest_version_path = await asyncio.to_thread(
         get_latest_version_path, api, document_path
     )
 
-    document = db.documents.document(document_path.document_id).get().to_dict()
-    if document == None:
+    document_ref = db.documents.document(document_path.document_id).get()
+    if not document_ref.exists:
         # Document doesn't exist, create it immediately
-        return await save_document(api, db, latest_version_path, PreservedInfo())
+        return await save_document(api, db, latest_version_path, preserved_info)
 
-    if reload_all:
-        return await refresh_document(api, db, latest_version_path, preserved_info)
-
-    # Version is already saved
-    if document.get("instanceId") == latest_version_path.instance_id:
-        return 0
+    try:
+        document = Document.model_validate(document_ref.to_dict())
+        if document.instanceId == latest_version_path.instance_id:
+            return 0
+    except ValidationError:
+        return await save_document(api, db, latest_version_path, preserved_info)
 
     # Refresh document
-    return await refresh_document(api, db, latest_version_path, preserved_info)
+    return await save_document(api, db, latest_version_path, preserved_info)
 
 
 @router.post("/reload-documents")
@@ -267,11 +341,11 @@ async def reload_documents(**kwargs):
     db = connect.get_db()
     api = connect.get_api(db)
 
-    reload_all = connect.get_query_bool("reloadAll", False)
+    reload_all = connect.get_optional_body_arg("reloadAll", False)
 
     document_order = db.get_document_order()
 
-    preserved_info = preserve_info(db)
+    preserved_info = preserve_info(db, reload_all)
 
     count = 0
     visited = set()
@@ -281,9 +355,7 @@ async def reload_documents(**kwargs):
         document_path = DocumentPath(document_id)
         visited.add(document_path.document_id)
 
-        operations.append(
-            reload_document(api, db, document_path, reload_all, preserved_info)
-        )
+        operations.append(reload_document(api, db, document_path, preserved_info))
 
     results = await asyncio.gather(*operations)
     count = sum(results)
@@ -293,7 +365,7 @@ async def reload_documents(**kwargs):
     return {"savedElements": count}
 
 
-def delete_document(db: database.Database, document_id: str):
+def delete_document(db: Database, document_id: str):
     """Deletes a document and all elements and configurations which depend on it.
 
     Note this does not update documentOrder or user favorites.
@@ -309,42 +381,42 @@ def delete_document(db: database.Database, document_id: str):
         db.configurations.document(element_id).delete()
 
 
-async def verify_db_integrity(db: database.Database) -> None:
-    """Verifies document order, favorite order, and favorites integrity."""
-    document_ids = set(db.documents.list_documents())
+# async def verify_db_integrity(db: Database) -> None:
+#     """Verifies document order, favorite order, and favorites integrity."""
+#     document_ids = set(db.documents.list_documents())
 
-    document_order = db.get_document_order()
-    document_order_ids = set(document_order)
+#     document_order = db.get_document_order()
+#     document_order_ids = set(document_order)
 
-    if document_ids != document_order_ids:
-        raise ValueError("documentOrder does not match documents")
+#     if document_ids != document_order_ids:
+#         raise ValueError("documentOrder does not match documents")
 
-    user_data = db.user_data.stream()
-    for user_data_ref in user_data:
-        user_data = UserData.model_validate(user_data_ref.to_dict())
+#     user_data = db.user_data.stream()
+#     for user_data_ref in user_data:
+#         user_data = UserData.model_validate(user_data_ref.to_dict())
 
-        favorite_order_ids = set(user_data.favoriteOrder)
-        favorite_ids = set(user_data.favorites.keys())
+#         favorite_order_ids = set(user_data.favoriteOrder)
+#         favorite_ids = set(user_data.favorites.keys())
 
-        if favorite_order_ids != favorite_ids:
-            raise ValueError(
-                f"User {user_data_ref.id} has a favoriteOrder that does not match favorites"
-            )
+#         if favorite_order_ids != favorite_ids:
+#             raise ValueError(
+#                 f"User {user_data_ref.id} has a favoriteOrder that does not match favorites"
+#             )
 
-        for element_id in user_data.favorites.keys():
-            element_ref = db.elements.document(element_id).get()
-            if not element_ref.exists:
-                raise ValueError(
-                    f"User {user_data_ref.id} has a favorite element {element_id} that does not exist"
-                )
-            element = Element.model_validate(element_ref.to_dict())
-            if not element.isVisible:
-                raise ValueError(
-                    f"User {user_data_ref.id} has a favorite element {element_id} that is not visible"
-                )
+#         for element_id in user_data.favorites.keys():
+#             element_ref = db.elements.document(element_id).get()
+#             if not element_ref.exists:
+#                 raise ValueError(
+#                     f"User {user_data_ref.id} has a favorite element {element_id} that does not exist"
+#                 )
+#             element = Element.model_validate(element_ref.to_dict())
+#             if not element.isVisible:
+#                 raise ValueError(
+#                     f"User {user_data_ref.id} has a favorite element {element_id} that is not visible"
+#                 )
 
 
-def clean_favorites(db: database.Database) -> None:
+def clean_favorites(db: Database) -> None:
     """Removes any favorites that are no longer valid."""
     for user_data_ref in db.user_data.stream():
         user_data = UserData.model_validate(user_data_ref.to_dict())

@@ -333,7 +333,7 @@ export interface ElementObj extends ElementPath {
     elementType: ElementType;
     microversionId: string;
     isVisible: boolean;
-    vendor?: Vendor;
+    vendors: Vendor[];
     configurationId?: string;
 }
 

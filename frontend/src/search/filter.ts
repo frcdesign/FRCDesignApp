@@ -50,7 +50,7 @@ export function filterElements(
         const vendorSet = new Set(args.vendors);
         const beforeCount = filtered.length;
         filtered = filtered.filter(
-            (element) => element.vendor && vendorSet.has(element.vendor)
+            (element) => element.vendors && vendorSet.has(element.vendors)
         );
         filteredByVendors = beforeCount - filtered.length;
     }

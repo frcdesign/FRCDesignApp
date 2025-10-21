@@ -155,7 +155,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 10 seconds with exponential backoff
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         retry: Infinity, // Allow indefinite retrying
         enabled: thumbnailIdQuery.data !== undefined
     });

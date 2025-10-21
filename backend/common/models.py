@@ -7,6 +7,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from onshape_api.endpoints.documents import ElementType
 
 
+class LibraryType(StrEnum):
+    FRC_DESIGN_LIB = "frc-design-lib"
+    FTC_DESIGN_LIB = "ftc-design-lib"
+    MKCAD = "mkcad"
+
+
+class LibraryData(BaseModel):
+    cacheVersion: int
+    searchDb: str
+    documentOrder: list[str]
+
+
 class ParameterType(StrEnum):
     ENUM = "BTMConfigurationParameterEnum-105"
     QUANTITY = "BTMConfigurationParameterQuantity-1826"
@@ -188,26 +200,47 @@ class Vendor(StrEnum):
     WCP = "WCP"
 
 
-def default_if_none(default):
-    def validator(cls, v):
-        return v if v is not None else default
+def get_vendor_name(vendor: Vendor) -> str:
+    match vendor:
+        case Vendor.AM:
+            return "AndyMark"
+        case Vendor.LAI:
+            return "Last Anvil Innovations"
+        case Vendor.MCM:
+            return "McMaster-Carr"
+        case Vendor.REDUX:
+            return "Redux Robotics"
+        case Vendor.REV:
+            return "REV Robotics"
+        case Vendor.SDS:
+            return "Swerve Drive Specialties"
+        case Vendor.SWYFT:
+            return "SWYFT"
+        case Vendor.TTB:
+            return "The Thrifty Bot"
+        case Vendor.VEX:
+            return "VEXpro"
+        case Vendor.WCP:
+            return "West Coast Products"
 
-    return validator
+
+# def default_if_none(default):
+#     def validator(cls, v):
+#         return v if v is not None else default
+
+#     return validator
 
 
 class Element(BaseModel):
     name: str
-    vendor: Vendor | None
+    vendors: list[Vendor] = Field(default_factory=list)
     elementType: ElementType
     documentId: str
     instanceId: str
     microversionId: str
-    # Default isVisible to true in development
     isVisible: bool
     configurationId: str | None = None
     thumbnailUrl: str | None = None
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class Document(BaseModel):
@@ -216,8 +249,6 @@ class Document(BaseModel):
     thumbnailElementId: str
     elementIds: list[str]
     sortAlphabetically: bool
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class Theme(StrEnum):
@@ -230,11 +261,15 @@ class Settings(BaseModel):
     theme: Theme = Theme.SYSTEM
 
 
+class LibrarySettings(BaseModel):
+    pass
+    # We can add library-specific settings here in the future.
+
+
 class Favorite(BaseModel):
     defaultConfiguration: dict[str, str] | None = None
 
 
 class UserData(BaseModel):
-    favorites: dict[str, Favorite] = Field(default_factory=dict)
     favoriteOrder: list[str] = Field(default_factory=list)
-    settings: Settings = Field(default_factory=Settings)
+    librarySettings: LibrarySettings

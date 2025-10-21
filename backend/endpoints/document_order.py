@@ -6,6 +6,7 @@ from backend.endpoints.cache import cacheable_route
 from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import ClientException
 from backend.endpoints.documents import clean_favorites, save_document
+from backend.endpoints.preserved_info import PreservedInfo
 from onshape_api.endpoints.documents import get_document
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import DocumentPath
@@ -53,7 +54,7 @@ async def add_document():
     if new_document_id in order:
         raise ClientException("Document has already been added.")
 
-    await save_document(api, db, latest_version)
+    await save_document(api, db, latest_version, PreservedInfo())
 
     if selected_document_id == None:
         order.append(new_document_id)

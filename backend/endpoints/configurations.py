@@ -1,5 +1,4 @@
 from __future__ import annotations
-from functools import cache
 import flask
 
 from backend.common import connect

@@ -140,7 +140,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                             applyMoveOperation(
                                 id,
                                 order,
-                                MoveOperation.MOVE_DOWN
+                                MoveOperation.MOVE_TO_TOP
                             )
                         );
                     }}

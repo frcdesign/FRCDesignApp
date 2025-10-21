@@ -38,7 +38,7 @@ export interface SearchDocument {
     id: string;
     documentId: string;
     isVisible: boolean;
-    vendor: string;
+    vendors: Vendor[];
     name: string;
     documentName: string;
 }
@@ -76,7 +76,7 @@ export function buildSearchDb(
                 id: element.id,
                 documentId: element.documentId,
                 isVisible: element.isVisible,
-                vendor: element.vendor || "",
+                vendors: element.vendors,
                 name: element.name,
                 documentName: parentDocument?.name ?? ""
             };
@@ -135,8 +135,9 @@ export function doSearch(
             if (
                 filters &&
                 filters.vendors &&
-                filters.vendors.length > 0 &&
-                !filters.vendors.includes(document.vendor as Vendor)
+                !filters.vendors.some((vendor) =>
+                    document.vendors.includes(vendor)
+                )
             ) {
                 filtered += 1;
                 return false;

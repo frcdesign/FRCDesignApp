@@ -18,18 +18,15 @@ router = flask.Blueprint("api", __name__, url_prefix="/api", static_folder="dist
 
 @router.errorhandler(ApiError)
 def api_exception(e: ApiError):
-    """A handler for uncaught exceptions thrown by the Api."""
+    """A handler for uncaught errors thrown by the Onshape API."""
+    result = e.to_dict()
+    result["type"] = backend_exceptions.ExceptionType.API
     return e.to_dict(), e.status_code
 
 
-@router.errorhandler(backend_exceptions.ServerException)
-def backend_exception(e: backend_exceptions.ServerException):
-    """A handler for uncaught exceptions thrown by the Api."""
-    return e.to_dict(), e.status_code
-
-
-@router.errorhandler(backend_exceptions.UserException)
-def reported_exception(e: backend_exceptions.UserException):
+@router.errorhandler(backend_exceptions.BaseAppException)
+def backend_exception(e: backend_exceptions.BaseAppException):
+    """A handler for uncaught exceptions thrown by the App."""
     return e.to_dict(), e.status_code
 
 
