@@ -56,10 +56,11 @@ Install `uv`:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Then use `uv` to install Python 3.12:
+Then use `uv` to install Python 3.12 and all of the project's dependencies:
 
 ```
 uv python install 3.12
+uv sync
 ```
 
 Note that Python version 3.12 or greater is a hard requirement.

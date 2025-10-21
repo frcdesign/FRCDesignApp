@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 import enum
 import re
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
