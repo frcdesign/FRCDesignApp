@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, field_validator
 
+from backend.common.models import Document, Element
+
 
 class SavedElement(BaseModel):
     isVisible: bool = False
@@ -32,8 +34,10 @@ class PreservedInfo:
         self._preserved_documents: dict[str, SavedDocument] = {}
         self.reload_all = reload_all
 
-    def save_element(self, element_id: str, element_dict: dict) -> None:
-        self._preserved_elements[element_id] = SavedElement.model_validate(element_dict)
+    def save_element(self, element_id: str, element: Element) -> None:
+        self._preserved_elements[element_id] = SavedElement.model_validate(
+            element.model_dump()
+        )
 
     def get_element(self, element_id: str) -> SavedElement:
         return self._preserved_elements.get(element_id, SavedElement())
@@ -49,9 +53,9 @@ class PreservedInfo:
 
         return False
 
-    def save_document(self, document_id: str, document_dict: dict) -> None:
+    def save_document(self, document_id: str, document: Document) -> None:
         self._preserved_documents[document_id] = SavedDocument.model_validate(
-            document_dict
+            document.model_dump()
         )
 
     def get_document(self, document_id: str) -> SavedDocument:

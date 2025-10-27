@@ -12,7 +12,8 @@ from pydantic import BaseModel
 from requests_oauthlib import OAuth2Session
 from google.cloud import firestore
 
-from backend.common.database import Database
+from backend.common.database import Database, LibraryRef
+from backend.common.models import Library
 import onshape_api
 from backend.common import backend_exceptions, env
 from onshape_api.paths.instance_type import InstanceType
@@ -20,18 +21,6 @@ from onshape_api.paths.user_path import UserPath
 
 
 T = TypeVar("T", bound=BaseModel)
-
-
-# def get_onshape_setting(
-#     api: OAuthApi, user_path: UserPath, key: str, schema: Type[T]
-# ) -> T:
-#     """Gets a value from Onshape and compares it against a given schema. Writes it back if any changes are made to ensure consistency."""
-#     base_dict = get_setting(api, user_path, key) or {}
-#     validated = schema.model_validate(base_dict)
-#     if validated.model_dump() != base_dict:
-#         set_setting(api, user_path, key, validated.model_dump())
-
-#     return validated
 
 
 def get_deletion_time() -> datetime:
@@ -114,6 +103,15 @@ def get_current_url() -> str:
     return flask.request.url.replace("http://", "https://", 1)
 
 
+def library_route():
+    """A route with components necessary to receive a library type."""
+    return "/library/<library_type>"
+
+
+def get_route_library() -> Library:
+    return get_route("library_type")
+
+
 def user_path_route():
     """A route with components necessary to receive a UserPath."""
     return "/<user_type>/<user_id>"
@@ -136,6 +134,10 @@ def element_path_route():
 
 def get_db() -> Database:
     return Database(firestore.Client(project="frc-design-lib"))
+
+
+def get_library_ref() -> LibraryRef:
+    return get_db().library_ref(get_route_library())
 
 
 def get_api(db: Database) -> onshape_api.OAuthApi:

@@ -6,24 +6,18 @@ Every route in this file is access controlled.
 from __future__ import annotations
 import asyncio
 from enum import StrEnum
-import re
 from typing import Iterator
 import flask
 from pydantic import ValidationError
 
 from backend.common import connect
-from backend.common.database import Database
+from backend.common.database import Database, DocumentRef, LibraryRef
 from backend.common.app_access import require_access_level
-from backend.endpoints.cache import cacheable_route
 from backend.common.models import (
-    ConfigurationParameters,
     Element,
-    ParameterType,
-    UserData,
-    Vendor,
-    get_vendor_name,
 )
 from backend.common.models import Document
+from backend.common.vendors import parse_vendors
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
     PreservedInfo,
@@ -39,117 +33,56 @@ from onshape_api.paths.doc_path import (
     ElementPath,
     InstancePath,
 )
-from onshape_api.paths.instance_type import InstanceType
 
 router = flask.Blueprint("documents", __name__)
 
 
-@cacheable_route(router, "/documents")
-def get_documents(**kwargs):
-    """Returns a list of the top level documents to display to the user."""
-    db = connect.get_db()
+# @cacheable_route(router, "/documents")
+# def get_documents(**kwargs):
+#     """Returns a list of the top level documents to display to the user."""
+#     db = connect.get_db()
 
-    documents: dict[str, dict] = {}
+#     documents: dict[str, dict] = {}
 
-    for doc_ref in db.documents.stream():
-        document = Document.model_validate(doc_ref.to_dict())
-        document_id = doc_ref.id
+#     for doc_ref in db.documents.stream():
+#         document = Document.model_validate(doc_ref.to_dict())
+#         document_id = doc_ref.id
 
-        document_obj = document.model_dump(exclude_none=True)
-        document_obj["id"] = document_id
-        # Make it a valid InstancePath on the frontend
-        document_obj["instanceType"] = InstanceType.VERSION
-        document_obj["documentId"] = document_id
+#         document_obj = document.model_dump(exclude_none=True)
+#         document_obj["id"] = document_id
+#         # Make it a valid InstancePath on the frontend
+#         document_obj["instanceType"] = InstanceType.VERSION
+#         document_obj["documentId"] = document_id
 
-        documents[document_id] = document_obj
+#         documents[document_id] = document_obj
 
-    return {"documents": documents}
-
-
-@cacheable_route(router, "/elements")
-def get_elements(**kwargs):
-    """Returns a list of the top level elements to display to the user."""
-    db = connect.get_db()
-    elements: dict[str, dict] = {}
-
-    for element_ref in db.elements.stream():
-        element_id = element_ref.id
-        element = Element.model_validate(element_ref.to_dict())
-
-        element_obj = element.model_dump(exclude_none=True)
-        element_obj["id"] = element_id
-        # Add instanceType and elementId so it's a valid ElementPath on the frontend
-        element_obj["instanceType"] = InstanceType.VERSION
-        element_obj["elementId"] = element_id
-
-        elements[element_id] = element_obj
-
-    return {"elements": elements}
+#     return {"documents": documents}
 
 
-def parse_name_vendor(name: str) -> Vendor | None:
-    """Parse vendor information from element name.
+# @cacheable_route(router, "/elements")
+# def get_elements(**kwargs):
+#     """Returns a list of the top level elements to display to the user."""
+#     db = connect.get_db()
+#     elements: dict[str, dict] = {}
 
-    Checks the name for vendor abbreviations or full names.
-    """
-    # Search for all vendor matches in the name
-    # Look for vendors in parentheses or standalone
-    for match in re.finditer(r"\b(\w+)\b", name.upper()):
-        vendor_str = match.group(1)
+#     for element_ref in db.elements.stream():
+#         element_id = element_ref.id
+#         element = Element.model_validate(element_ref.to_dict())
 
-        # Check if it matches a vendor abbreviation
-        if vendor := next(
-            (vendor for vendor in Vendor if vendor.upper() == vendor_str), None
-        ):
-            return vendor
+#         element_obj = element.model_dump(exclude_none=True)
+#         element_obj["id"] = element_id
+#         # Add instanceType and elementId so it's a valid ElementPath on the frontend
+#         element_obj["instanceType"] = InstanceType.VERSION
+#         element_obj["elementId"] = element_id
 
+#         elements[element_id] = element_obj
 
-def parse_vendors(
-    name: str, configuration: ConfigurationParameters | None = None
-) -> list[Vendor]:
-    """
-    Parse vendor information from element name and/or configuration parameters.
-
-    First checks the name for vendor abbreviations or full names.
-    If no vendors found in name, checks configuration enum parameters for vendor values.
-    """
-    name_vendor = parse_name_vendor(name)
-    if name_vendor:
-        return [name_vendor]
-
-    vendors: set[Vendor] = set()
-    if not configuration:
-        return []
-
-    for param in configuration.parameters:
-        if param.type != ParameterType.ENUM:
-            continue
-
-        # Check all option values against vendors
-        for option in param.options:
-            # Check if option matches vendor abbreviation
-            vendor = parse_name_vendor(option.name)
-            if vendor:
-                vendors.add(vendor)
-                continue
-
-            vendor = next(
-                (
-                    vendor
-                    for vendor in Vendor
-                    if get_vendor_name(vendor).upper() == option.name.upper()
-                ),
-                None,
-            )
-            if vendor:
-                vendors.add(vendor)
-
-    return list(vendors)
+#     return {"elements": elements}
 
 
 def save_element(
-    db: Database,
     api: Api,
+    document_ref: DocumentRef,
     version_path: InstancePath,
     onshape_element: dict,
     preserved_info: PreservedInfo,
@@ -211,7 +144,7 @@ def traverse_entry(entry: dict) -> Iterator[str]:
 
 
 def get_valid_elements(
-    db: Database, contents: dict, preserved_info: PreservedInfo
+    document_ref: DocumentRef, contents: dict, preserved_info: PreservedInfo
 ) -> Iterator[dict]:
     for onshape_element in contents["elements"]:
         if onshape_element["elementType"] not in [
@@ -220,15 +153,8 @@ def get_valid_elements(
         ]:
             continue
 
-        element_ref = db.elements.document(onshape_element["id"]).get()
-        if not element_ref.exists:
-            yield onshape_element
-            continue
-
-        try:
-            Element.model_validate(element_ref.to_dict())
-
-        except ValidationError:
+        element = document_ref.elements.element_ref(onshape_element["id"]).get()
+        if element == None:
             yield onshape_element
             continue
 
@@ -240,22 +166,33 @@ def get_valid_elements(
         yield onshape_element
 
 
+def add_document(api: Api, library_ref: LibraryRef, version_path: InstancePath):
+    """Loads all of the elements of a given document into the database."""
+    return save_document(api, library_ref, version_path, PreservedInfo())
+
+
 async def save_document(
     api: Api,
-    db: Database,
+    library_ref: LibraryRef,
     version_path: InstancePath,
     preserved_info: PreservedInfo,
 ) -> int:
     """Loads all of the elements of a given document into the database."""
+    document_ref = library_ref.documents.document_ref(version_path.document_id)
 
     contents = await asyncio.to_thread(documents.get_contents, api, version_path)
 
-    valid_elements = get_valid_elements(db, contents, preserved_info)
+    valid_elements = get_valid_elements(document_ref, contents, preserved_info)
     valid_ids = set(element["id"] for element in valid_elements)
 
     save_element_operations = [
         asyncio.to_thread(
-            save_element, db, api, version_path, onshape_element, preserved_info
+            save_element,
+            api,
+            document_ref,
+            version_path,
+            onshape_element,
+            preserved_info,
         )
         for onshape_element in valid_elements
     ]
@@ -281,29 +218,26 @@ async def save_document(
     await asyncio.gather(*save_element_operations)
 
     preserved_document = preserved_info.get_document(document_id)
-    db.documents.document(document_id).set(
+    document_ref.set(
         Document(
             name=onshape_document["name"],
             thumbnailElementId=thumbnail_element_id,
             instanceId=version_path.instance_id,
             elementIds=ordered_element_ids,
             sortAlphabetically=preserved_document.sortAlphabetically,
-        ).model_dump()
+        )
     )
     return len(ordered_element_ids)
 
 
-def preserve_info(db: Database, reload_all: bool) -> PreservedInfo:
+def preserve_info(library_ref: LibraryRef, reload_all: bool) -> PreservedInfo:
     preserved_info = PreservedInfo(reload_all=reload_all)
-    for doc_ref in db.documents.stream():
-        document_id = doc_ref.id
-        document_dict = doc_ref.to_dict()
-        preserved_info.save_document(document_id, document_dict)
+    for document_ref in library_ref.documents.list():
+        preserved_info.save_document(document_ref.id, document_ref.get_valid())
 
-    for element_ref in db.elements.stream():
-        element_id = element_ref.id
-        element_dict = element_ref.to_dict()
-        preserved_info.save_element(element_id, element_dict)
+        for element in document_ref.elements.list():
+            element_id = element.id
+            preserved_info.save_element(element_id, element.get_valid())
 
     return preserved_info
 
@@ -416,55 +350,48 @@ def delete_document(db: Database, document_id: str):
 #                 )
 
 
-def clean_favorites(db: Database) -> None:
+def clean_favorites(library_ref: LibraryRef) -> None:
     """Removes any favorites that are no longer valid."""
-    for user_data_ref in db.user_data.stream():
-        user_data = UserData.model_validate(user_data_ref.to_dict())
-        favorite_ids = list(user_data.favorites.keys())
 
-        modified = False
-        for element_id in favorite_ids:
-            element_ref = db.elements.document(element_id).get()
+    for favorite_ref in library_ref.all_favorites():
+        for favorite in favorite_ref.list():
+            for element_ref in library_ref.all_elements():
 
-            invalid = element_ref.exists == False
-            if not invalid:
-                element = Element.model_validate(element_ref.to_dict())
-                invalid = element.isVisible == False
+                element = element_ref.get()
+                if element == None:
+                    continue
 
-            if invalid:
-                modified = True
-                user_data.favorites.pop(element_id)
-                user_data.favoriteOrder = list(
-                    id for id in user_data.favoriteOrder if id != element_id
-                )
+                if element.isVisible == True:
+                    continue
 
-        if modified:
-            db.set_user_data(user_data_ref.id, user_data)
+                favorite_ref.remove(favorite.id)
 
 
-@router.post("/set-visibility")
+@router.post("/set-visibility" + connect.library_route())
 @require_access_level()
 def set_visibility():
-    db = connect.get_db()
+    library_ref = connect.get_library_ref()
+    document_id = connect.get_body_arg("documentId")
     element_ids = connect.get_body_arg("elementIds")
     is_visible = connect.get_body_arg("isVisible")
 
     if not is_visible:
-        delete_favorites(db, element_ids)
+        delete_favorites(library_ref, element_ids)
 
+    document_ref = library_ref.document(document_id)
     for element_id in element_ids:
-        db.elements.document(element_id).set({"isVisible": is_visible}, merge=True)
+        document_ref.element(element_id).ref.set({"isVisible": is_visible}, merge=True)
     return {"success": True}
 
 
 @router.post("/set-document-sort")
 @require_access_level()
 def set_document_sort():
-    db = connect.get_db()
+    library_ref = connect.get_library_ref()
     document_id = connect.get_body_arg("documentId")
     sort_alphabetically = connect.get_body_arg("sortAlphabetically")
 
-    db.documents.document(document_id).set(
+    library_ref.document(document_id).ref.set(
         {"sortAlphabetically": sort_alphabetically}, merge=True
     )
     return {"success": True}

@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from onshape_api.endpoints.documents import ElementType
 
 
-class LibraryType(StrEnum):
+class Library(StrEnum):
     FRC_DESIGN_LIB = "frc-design-lib"
     FTC_DESIGN_LIB = "ftc-design-lib"
     MKCAD = "mkcad"
@@ -37,7 +37,7 @@ class ConfigurationParameters(BaseModel):
 
 
 class BaseConfigurationParameter(BaseModel):
-    condition: VisibilityCondition | None
+    condition: VisibilityCondition | None = None
     name: str
     id: str
 
@@ -45,8 +45,8 @@ class BaseConfigurationParameter(BaseModel):
 class EnumConfigurationParameter(BaseConfigurationParameter):
     type: Literal[ParameterType.ENUM] = ParameterType.ENUM
     default: str
-    options: list[EnumOption]
-    optionConditions: list[OptionVisibilityCondition]
+    options: list[EnumOption] = Field(default_factory=list)
+    optionConditions: list[OptionVisibilityCondition] = Field(default_factory=list)
 
 
 class EnumOption(BaseModel):
@@ -261,15 +261,18 @@ class Settings(BaseModel):
     theme: Theme = Theme.SYSTEM
 
 
-class LibrarySettings(BaseModel):
-    pass
-    # We can add library-specific settings here in the future.
+class UserData(BaseModel):
+    """User-specific data shared across the entire app."""
+
+    settings: Settings = Field(default_factory=Settings)
 
 
 class Favorite(BaseModel):
     defaultConfiguration: dict[str, str] | None = None
 
 
-class UserData(BaseModel):
+class LibraryUserData(BaseModel):
+    """User-specific data for a given library."""
+
     favoriteOrder: list[str] = Field(default_factory=list)
-    librarySettings: LibrarySettings
+    # settings: LibrarySettings
