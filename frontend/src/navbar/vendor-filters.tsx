@@ -1,17 +1,48 @@
-import { Button, ButtonVariant, Intent, Tag } from "@blueprintjs/core";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
 import { ReactNode } from "react";
-import { getVendorName, Vendor } from "../api/backend-types";
+import { getVendorName, Vendor } from "../api/models";
+import { useUiState } from "../api/ui-state";
+
+interface ClearFiltersButtonProps {
+    /**
+     * @default "Clear filters"
+     */
+    text?: string;
+    standardSize?: boolean;
+}
+
+export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
+    const [uiState, setUiState] = useUiState();
+    const text = props.text ?? "Clear filters";
+    const standardSize = props.standardSize ?? false;
+
+    const vendorFilters = uiState.vendorFilters;
+    const areAllTagsActive = vendorFilters === undefined;
+
+    return (
+        <Button
+            text={text}
+            disabled={areAllTagsActive}
+            variant={ButtonVariant.OUTLINED}
+            size={standardSize ? Size.MEDIUM : Size.SMALL}
+            icon="filter-remove"
+            onClick={() => {
+                setUiState({ vendorFilters: undefined });
+            }}
+        />
+    );
+}
 
 export function VendorFilters(): ReactNode {
-    const navigate = useNavigate();
-    const pathname = useLocation().pathname;
-    const vendors = useSearch({ from: "/app" }).vendors;
+    const [uiState, setUiState] = useUiState();
 
-    const areAllTagsActive = vendors === undefined;
+    const vendorFilters = uiState.vendorFilters;
+
+    const areAllTagsActive = vendorFilters === undefined;
 
     const filterTags = Object.values(Vendor).map((vendor) => {
-        const isVendorActive = areAllTagsActive || vendors.includes(vendor);
+        const isVendorActive =
+            areAllTagsActive || vendorFilters.includes(vendor);
         return (
             <Tag
                 round
@@ -20,18 +51,23 @@ export function VendorFilters(): ReactNode {
                 intent={Intent.PRIMARY}
                 title={getVendorName(vendor)}
                 onClick={() => {
-                    let newVendors;
-                    if (areAllTagsActive) {
-                        newVendors = [vendor];
+                    let newFilters;
+                    if (vendorFilters === undefined) {
+                        // First filter selected
+                        newFilters = [vendor];
                     } else if (isVendorActive) {
-                        newVendors = vendors.filter((curr) => curr !== vendor);
-                        if (newVendors.length === 0) {
-                            newVendors = undefined;
+                        // Filter is already selected
+                        newFilters = vendorFilters.filter(
+                            (curr) => curr !== vendor
+                        );
+                        // It was the last filter
+                        if (newFilters.length === 0) {
+                            newFilters = undefined;
                         }
                     } else {
-                        newVendors = [...vendors, vendor];
+                        newFilters = [...vendorFilters, vendor];
                     }
-                    navigate({ to: pathname, search: { vendors: newVendors } });
+                    setUiState({ vendorFilters: newFilters });
                 }}
                 active={!isVendorActive} // The active prop of tags is backwards
             >
@@ -40,22 +76,10 @@ export function VendorFilters(): ReactNode {
         );
     });
 
-    const clearButton = (
-        <Button
-            text="Clear"
-            disabled={areAllTagsActive}
-            variant={ButtonVariant.OUTLINED}
-            icon="small-cross"
-            onClick={() => {
-                navigate({ to: pathname, search: { vendors: undefined } });
-            }}
-        />
-    );
-
     return (
         <div className="split" style={{ gap: "5x" }}>
             <div className="vendor-filter-tags">{filterTags}</div>
-            {clearButton}
+            <ClearFiltersButton text="Clear" />
         </div>
     );
 }

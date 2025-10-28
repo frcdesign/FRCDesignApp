@@ -6,7 +6,7 @@
         {
             "label": "Deploy app",
             "type": "shell",
-            "command": "gcloud app deploy --project=frc-design-lib",
+            "command": "gcloud run deploy frcdesignapp --project=frc-design-lib --source=. --region=us-central1",
             "problemMatcher": [],
             "group": {
                 "kind": "build"
@@ -65,9 +65,9 @@
                 "run",
                 "--debug",
                 "--cert",
-                "credentials/cert.pem",
+                "localhost.pem",
                 "--key",
-                "credentials/key.pem",
+                "localhost-key.pem",
                 "--port",
                 "3000"
             ],
@@ -79,16 +79,10 @@
         {
             "label": "Launch db",
             "type": "shell",
-            "command": "gcloud emulators firestore start --host-port=127.0.0.1:8080",
+            "command": "firebase emulators:start --import=./firestore_data --export-on-exit --project=frc-design-lib",
             "presentation": {
                 "group": "server"
             },
-            "problemMatcher": []
-        },
-        {
-            "label": "Clear db",
-            "type": "shell",
-            "command": "curl -v -X DELETE 'http://127.0.0.1:8080/emulator/v1/projects/robot-manager-123/databases/(default)/documents'",
             "problemMatcher": []
         }
     ]

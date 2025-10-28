@@ -1,10 +1,12 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
+import { Configuration } from "./models";
 
 export enum AppMenu {
     INSERT_MENU = "insert-menu",
     SETTINGS_MENU = "settings-menu",
-    ADD_DOCUMENT_MENU = "add-document-menu"
+    ADD_DOCUMENT_MENU = "add-document-menu",
+    FAVORITE_MENU = "favorite-menu"
 }
 
 /**
@@ -16,6 +18,7 @@ export interface InsertMenuParams {
     activeMenu: AppMenu.INSERT_MENU;
     // Cannot use elementId since that's already used by OnshapeData
     activeElementId: string;
+    defaultConfiguration?: Configuration;
 }
 
 export interface AddDocumentMenuParams {
@@ -27,32 +30,36 @@ export interface AddDocumentMenuParams {
     selectedDocumentId?: string;
 }
 
-/**
- * Other menus that don't need any additional settings.
- */
 export interface SettingsMenuParams {
     activeMenu: AppMenu.SETTINGS_MENU;
+}
+
+export interface FavoriteMenuParams {
+    activeMenu: AppMenu.FAVORITE_MENU;
+    favoriteId: string;
+    defaultConfiguration?: Configuration;
 }
 
 export type MenuParams =
     | InsertMenuParams
     | AddDocumentMenuParams
-    | SettingsMenuParams;
+    | SettingsMenuParams
+    | FavoriteMenuParams;
 
 /**
  * A hook that returns a function that can be invoked to close the current dialog.
  */
 export function useHandleCloseDialog() {
     const navigate = useNavigate();
-    const pathname = useLocation().pathname;
+
     return useCallback(() => {
         navigate({
-            to: pathname,
+            to: ".",
             search: {
                 activeMenu: undefined,
                 activeElementId: undefined,
                 selectedDocumentId: undefined
             }
         });
-    }, [pathname, navigate]);
+    }, [navigate]);
 }

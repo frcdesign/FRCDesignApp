@@ -5,36 +5,46 @@ import {
     Classes,
     Collapse,
     Colors,
-    H6,
     Icon,
     Intent,
-    NonIdealState,
-    NonIdealStateIconSize,
-    Spinner
+    MaybeElement,
+    Section,
+    SectionCard
 } from "@blueprintjs/core";
 import { Outlet, useNavigate, useSearch } from "@tanstack/react-router";
-import { PropsWithChildren, ReactNode, useState } from "react";
-import { DocumentCard, ElementCard } from "./cards";
-import { FavoriteIcon } from "./favorite";
+import { PropsWithChildren, ReactNode, useRef } from "react";
+import { DocumentCard } from "../cards/document-card";
+import { HeartIcon } from "../favorites/favorite-button";
 import {
     useDocumentOrderQuery,
     useDocumentsQuery,
     useElementsQuery,
-    useFavoritesQuery
+    useUserData
 } from "../queries";
-import { hasMemberAccess } from "../api/backend-types";
-import { SearchResults } from "./search-results";
-import { getElementOrder, useSearchDb } from "../api/search";
+import { ElementObj, hasMemberAccess } from "../api/models";
+import { SearchResults } from "../search/search-results";
 import { AppMenu } from "../api/menu-params";
+import { useUiState } from "../api/ui-state";
+import { filterElements } from "../api/filter";
+import { FavoriteCard } from "../favorites/favorite-card";
+import { FilterCallout } from "../navbar/filter-callout";
+import {
+    AppErrorState,
+    AppInternalErrorState,
+    AppLoadingState
+} from "../common/app-zero-state";
+import { RequireAccessLevel } from "../api/access-level";
+import { ClearFiltersButton } from "../navbar/vendor-filters";
+import { useInteractiveSection } from "../common/utils";
 
 /**
  * The list of all folders and/or top-level documents.
  */
 export function HomeList(): ReactNode {
-    const search = useSearch({ from: "/app" });
+    const [uiState, setUiState] = useUiState();
 
     let content;
-    if (search.query) {
+    if (uiState.searchQuery) {
         // Key is needed to differentiate between Favorites
         // Otherwise the useState in ListContainer can get confused
         content = (
@@ -42,10 +52,11 @@ export function HomeList(): ReactNode {
                 key="search"
                 icon={<Icon icon="search" intent={Intent.PRIMARY} />}
                 title="Search Results"
+                isOpen
             >
                 <SearchResults
-                    query={search.query}
-                    filters={{ vendors: search.vendors }}
+                    query={uiState.searchQuery}
+                    filters={{ vendors: uiState.vendorFilters }}
                 />
             </ListContainer>
         );
@@ -53,15 +64,20 @@ export function HomeList(): ReactNode {
         content = (
             <>
                 <ListContainer
-                    icon={<FavoriteIcon />}
+                    icon={<HeartIcon />}
                     title="Favorites"
-                    defaultIsOpen={false}
+                    isOpen={uiState.isFavoritesOpen}
+                    onClick={(isOpen) =>
+                        setUiState({ isFavoritesOpen: isOpen })
+                    }
                 >
                     <FavoritesList />
                 </ListContainer>
                 <ListContainer
                     icon={<Icon icon="manual" className="frc-design-green" />}
                     title="Library"
+                    isOpen={uiState.isLibraryOpen}
+                    onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
                 >
                     <LibraryList />
                 </ListContainer>
@@ -71,18 +87,15 @@ export function HomeList(): ReactNode {
 
     return (
         <>
-            <div style={{ overflow: "scroll" }}>
-                <CardList compact style={{ margin: "0px" }} bordered={false}>
-                    {content}
-                </CardList>
-            </div>
+            {/* <CardList compact style={{ margin: "0px" }} bordered={false}> */}
+            {content}
+            {/* </CardList> */}
             <Outlet />
         </>
     );
 }
 
 function LibraryList() {
-    const search = useSearch({ from: "/app" });
     const navigate = useNavigate();
 
     const documentsQuery = useDocumentsQuery();
@@ -90,27 +103,10 @@ function LibraryList() {
 
     if (documentsQuery.isError || documentOrderQuery.isError) {
         return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        icon="cross"
-                        size={NonIdealStateIconSize.SMALL}
-                        intent="danger"
-                    />
-                }
-                title="Failed to load documents."
-                description="If the problem persists, contact the FRCDesign App developers."
-                className="home-error-state"
-            />
+            <AppInternalErrorState title="Failed to load documents." inline />
         );
     } else if (documentsQuery.isPending || documentOrderQuery.isPending) {
-        return (
-            <NonIdealState
-                icon={<Spinner intent="primary" />}
-                title="Loading documents..."
-                className="home-loading-state"
-            />
-        );
+        return <AppLoadingState title="Loading documents..." />;
     }
 
     const documents = documentsQuery.data;
@@ -118,31 +114,26 @@ function LibraryList() {
 
     if (documentOrder.length <= 0) {
         // Add an escape hatch for when no documents are in the database
-        const action = hasMemberAccess(search.maxAccessLevel) ? (
-            <Button
-                icon="add"
-                text="Add document"
-                intent="primary"
-                onClick={() => {
-                    navigate({
-                        to: ".",
-                        search: { activeMenu: AppMenu.ADD_DOCUMENT_MENU }
-                    });
-                }}
-            />
-        ) : undefined;
         return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        icon="cross"
-                        size={NonIdealStateIconSize.SMALL}
-                        intent="danger"
-                    />
-                }
+            <AppErrorState
                 title="No documents found"
-                action={action}
-                className="home-error-state"
+                action={
+                    <RequireAccessLevel>
+                        <Button
+                            icon="add"
+                            text="Add document"
+                            intent="primary"
+                            onClick={() => {
+                                navigate({
+                                    to: ".",
+                                    search: {
+                                        activeMenu: AppMenu.ADD_DOCUMENT_MENU
+                                    }
+                                });
+                            }}
+                        />
+                    </RequireAccessLevel>
+                }
             />
         );
     }
@@ -158,95 +149,141 @@ function LibraryList() {
 
 function FavoritesList() {
     const search = useSearch({ from: "/app" });
+    const uiState = useUiState()[0];
 
     const elementsQuery = useElementsQuery();
-    const favoritesQuery = useFavoritesQuery(search);
+    const userData = useUserData();
 
-    const searchDb = useSearchDb(elementsQuery.data);
-
-    if (favoritesQuery.isError || elementsQuery.isError) {
+    if (elementsQuery.isError) {
         return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        icon="heart-broken"
-                        size={NonIdealStateIconSize.SMALL}
-                        color={Colors.RED3}
-                    />
-                }
+            <AppInternalErrorState
                 title="Failed to load favorites."
-                description="If the problem persists, contact the FRCDesign App developers."
-                className="home-error-state"
+                icon="heart-broken"
+                iconColor={Colors.RED3}
+                inline
             />
         );
-    } else if (
-        favoritesQuery.isPending ||
-        elementsQuery.isPending ||
-        !searchDb
-    ) {
-        return (
-            <NonIdealState
-                icon={<Spinner intent="primary" />}
-                title="Loading favorites..."
-                className="home-loading-state"
-            />
-        );
+    } else if (elementsQuery.isPending) {
+        return <AppLoadingState title="Loading favorites..." />;
     }
 
-    const favorites = favoritesQuery.data;
+    const favorites = userData.favorites;
     const elements = elementsQuery.data;
 
-    const orderedFavorites = getElementOrder(searchDb, {
-        elementIds: Object.keys(favorites),
-        vendors: search.vendors,
-        // Only show visible elements
-        isVisible: !hasMemberAccess(search.accessLevel)
-    });
+    const orderedFavorites = userData.favoriteOrder
+        .map((favoriteId) => favorites[favoriteId])
+        .filter((favorite) => !!favorite);
 
-    if (orderedFavorites.length == 0) {
+    const favoriteElements = orderedFavorites
+        .map((favorite) => elements[favorite.id])
+        .filter((element) => !!element);
+
+    if (favoriteElements.length == 0) {
         return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        icon="heart-broken"
-                        size={NonIdealStateIconSize.SMALL}
-                        color={Colors.RED3}
-                    />
-                }
+            <AppErrorState
                 title="No favorites"
-                className="home-error-state"
+                icon="heart-broken"
+                iconColor={Colors.RED3}
             />
         );
     }
 
-    return orderedFavorites.map((elementId: string) => {
-        // Have to guard against elements in case we ever deprecate a document
-        const element = elements[elementId];
-        if (!element) {
+    const filterResult = filterElements(favoriteElements, {
+        vendors: uiState.vendorFilters,
+        // Only show visible elements
+        isVisible: !hasMemberAccess(search.currentAccessLevel)
+    });
+
+    let callout;
+    if (filterResult.elements.length == 0) {
+        return (
+            <AppErrorState
+                title="All favorites are hidden by filters"
+                icon="heart-broken"
+                iconColor={Colors.RED3}
+                action={<ClearFiltersButton standardSize />}
+            />
+        );
+    }
+
+    if (filterResult.filteredByVendors > 0) {
+        callout = (
+            <Card className="item-card" style={{ padding: "0px" }}>
+                <FilterCallout
+                    itemName="favorites"
+                    filteredItems={filterResult.filteredByVendors}
+                />
+            </Card>
+        );
+    }
+
+    const cards = filterResult.elements.map((element: ElementObj) => {
+        const favorite = favorites[element.id];
+        if (!favorite) {
             return null;
         }
-        return <ElementCard key={elementId} element={element} />;
+        return (
+            <FavoriteCard
+                key={favorite.id}
+                element={element}
+                favorite={favorite}
+            />
+        );
     });
+
+    return (
+        <>
+            {callout}
+            {cards}
+        </>
+    );
 }
 
 interface ListContainerProps extends PropsWithChildren {
-    /**
-     * Whether the section is open by default.
-     * @default true
-     */
-    defaultIsOpen?: boolean;
-    icon: ReactNode;
+    isOpen: boolean;
+    onClick?: (isOpen: boolean) => void;
+    icon: MaybeElement;
     title: string;
 }
 
 function ListContainer(props: ListContainerProps): ReactNode {
-    const { icon, title, children } = props;
-    const [isOpen, setIsOpen] = useState(props.defaultIsOpen ?? true);
+    const { icon, title, children, isOpen, onClick } = props;
+
+    const sectionRef = useRef<HTMLDivElement>(null);
+    useInteractiveSection(sectionRef);
+
     return (
         <>
-            <Card
+            <Section
+                icon={icon}
+                title={title}
+                ref={sectionRef}
+                onClick={() => onClick && onClick(!isOpen)}
+                style={{
+                    display: "flex",
+                    flexDirection: "column"
+                }}
+                rightElement={
+                    <Icon
+                        icon={isOpen ? "chevron-up" : "chevron-down"}
+                        className={Classes.TEXT_MUTED}
+                    />
+                }
+            >
+                <SectionCard
+                    padded={false}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Collapse isOpen={isOpen}>
+                        <CardList compact bordered={false}>
+                            {children}
+                        </CardList>
+                    </Collapse>
+                </SectionCard>
+            </Section>
+            {/* <Card
                 className="split"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => onClick && onClick(!isOpen)}
                 interactive
             >
                 <div className="home-card-title">
@@ -260,7 +297,7 @@ function ListContainer(props: ListContainerProps): ReactNode {
             </Card>
             <Collapse isOpen={isOpen}>
                 <CardList compact>{children}</CardList>
-            </Collapse>
+            </Collapse> */}
         </>
     );
 }

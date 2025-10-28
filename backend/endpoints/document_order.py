@@ -1,7 +1,8 @@
 import flask
 
 from backend.common import connect
-from backend.common.app_access import require_member_access
+from backend.endpoints.cache import cacheable_route
+from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import ClientException
 from backend.endpoints.documents import save_document
 from onshape_api.endpoints.documents import get_document
@@ -12,14 +13,14 @@ from onshape_api.paths.doc_path import DocumentPath
 router = flask.Blueprint("document-order", __name__)
 
 
-@router.get("/document-order")
+@cacheable_route(router, "/document-order")
 def get_document_order():
     db = connect.get_db()
     return {"documentOrder": db.get_document_order()}
 
 
 @router.post("/document-order")
-@require_member_access()
+@require_access_level()
 def set_document_order():
     db = connect.get_db()
     new_document_order = connect.get_body_arg("documentOrder")
@@ -28,8 +29,8 @@ def set_document_order():
 
 
 @router.post("/document")
-@require_member_access()
-def add_document():
+@require_access_level()
+async def add_document():
     db = connect.get_db()
     api = connect.get_api(db)
 
@@ -48,6 +49,8 @@ def add_document():
         raise ClientException("Failed to find a document version to use.")
 
     order = db.get_document_order()
+    if new_document_id in order:
+        raise ClientException("Document has already has been added")
 
     if selected_document_id == None:
         order.append(new_document_id)
@@ -59,14 +62,13 @@ def add_document():
         except ValueError:
             order.append(new_document_id)
 
+    await save_document(api, db, latest_version)
     db.set_document_order(order)
-    save_document(api, db, latest_version)
-
     return {"name": document_name}
 
 
 @router.delete("/document")
-@require_member_access()
+@require_access_level()
 def delete_document():
     db = connect.get_db()
 

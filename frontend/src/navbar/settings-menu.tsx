@@ -10,17 +10,33 @@ import {
     Intent,
     MenuItem
 } from "@blueprintjs/core";
-import { ReactNode, useMemo, useState } from "react";
+import { Dispatch, ReactNode, useMemo, useState } from "react";
 import { AppMenu, useHandleCloseDialog } from "../api/menu-params";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { showSuccessToast } from "../common/toaster";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
-import { AccessLevel, hasMemberAccess } from "../api/backend-types";
+import {
+    AccessLevel,
+    copyUserData,
+    Documents,
+    Elements,
+    hasMemberAccess,
+    Settings,
+    Theme,
+    UserData
+} from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
-import { invalidateSearchDb } from "../api/search";
+import { buildSearchDb } from "../search/search";
+import { toUserApiPath } from "../api/path";
+import { useUserData } from "../queries";
+import { router } from "../router";
+import { OpenUrlButton } from "../common/open-url-button";
+import { RequireAccessLevel } from "../api/access-level";
+import { FEEDBACK_FORM_URL } from "../common/url";
+import { HandledError } from "../api/errors";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -36,7 +52,7 @@ function SettingsMenuDialog(): ReactNode {
     const search = useSearch({ from: "/app" });
 
     let adminSettings = null;
-    // Unlike most other checks, this one uses maxAccessLevel so you can still switch from user to admin
+    // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
     if (hasMemberAccess(search.maxAccessLevel)) {
         adminSettings = (
             <>
@@ -58,36 +74,189 @@ function SettingsMenuDialog(): ReactNode {
 
     return (
         <Dialog
-            className="settings-dialog"
+            className="settings-menu"
             isOpen
             icon="cog"
             title="Settings"
             onClose={closeDialog}
         >
-            <DialogBody>{adminSettings}</DialogBody>
+            <DialogBody>
+                <UserSettings />
+                {adminSettings}
+            </DialogBody>
             <DialogFooter minimal actions={closeButton} />
         </Dialog>
     );
 }
 
-function AdminSettings(): ReactNode {
+function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
+    const settings = useUserData().settings;
+
+    const settingsMutation = useMutation({
+        mutationKey: ["update-settings"],
+        mutationFn: async (newSettings: Settings) =>
+            apiPost("/settings" + toUserApiPath(search), {
+                body: newSettings
+            }),
+        onMutate: (newSettings) => {
+            queryClient.setQueryData(["user-data"], (data?: UserData) => {
+                if (!data) {
+                    return undefined;
+                }
+                const newUserData = copyUserData(data);
+                newUserData.settings = newSettings;
+                return newUserData;
+            });
+            router.invalidate();
+        },
+        onError: () => {
+            showErrorToast("Unexpectedly failed to update settings.");
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            router.invalidate();
+        }
+    });
+
     return (
         <>
-            <AccessLevelSelect />
-            {hasMemberAccess(search.accessLevel) ? (
-                <>
-                    <ReloadDocumentsButton reloadAll />
-                    <ReloadDocumentsButton />
-                </>
-            ) : null}
+            <FormGroup label="Submit feedback" className="full-width" inline>
+                <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
+            </FormGroup>
+            <ThemeSelect
+                theme={settings.theme}
+                onThemeSelect={(theme) => settingsMutation.mutate({ theme })}
+            />
         </>
+    );
+}
+
+interface ThemeSelectProps {
+    theme: Theme;
+    onThemeSelect: Dispatch<Theme>;
+}
+
+function ThemeSelect(props: ThemeSelectProps) {
+    const { theme, onThemeSelect } = props;
+
+    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
+    const themes = useMemo(() => {
+        return [Theme.SYSTEM, Theme.DARK, Theme.LIGHT];
+    }, []);
+
+    const [activeTheme, setActiveTheme] = useState<Theme | null>(theme);
+
+    const renderTheme: ItemRenderer<Theme> = (
+        currentTheme,
+        { handleClick, handleFocus, modifiers, ref }
+    ) => {
+        const selected = theme === currentTheme;
+        return (
+            <MenuItem
+                key={currentTheme}
+                ref={ref}
+                onClick={handleClick}
+                onFocus={handleFocus}
+                active={modifiers.active}
+                text={capitalize(currentTheme)}
+                roleStructure="listoption"
+                selected={selected}
+                intent={selected ? Intent.PRIMARY : Intent.NONE}
+            />
+        );
+    };
+
+    const select = (
+        <Select<Theme>
+            items={themes}
+            activeItem={activeTheme}
+            onActiveItemChange={setActiveTheme}
+            filterable={false}
+            popoverProps={{ minimal: true }}
+            itemRenderer={renderTheme}
+            onItemSelect={onThemeSelect}
+        >
+            <Button
+                alignText="start"
+                endIcon="caret-down"
+                text={capitalize(theme)}
+            />
+        </Select>
+    );
+
+    return (
+        <FormGroup label="Theme" className="full-width" inline>
+            {select}
+        </FormGroup>
+    );
+}
+
+function AdminSettings(): ReactNode {
+    return (
+        <>
+            {/* Always show the access level select so admins can change access level if needed */}
+            <AccessLevelSelect />
+            <RequireAccessLevel>
+                <ReloadDocumentsButton />
+                <ReloadDocumentsButton reloadAll />
+                <PushVersionButton />
+            </RequireAccessLevel>
+        </>
+    );
+}
+
+/**
+ * Pushes a new version of the app which invalidates all existing CDN caches.
+ */
+function PushVersionButton(): ReactNode {
+    const navigate = useNavigate();
+    const pushVersionMutation = useMutation({
+        mutationKey: ["push-cache-data"],
+        mutationFn: async () => {
+            const documents = await queryClient.fetchQuery<Documents>({
+                queryKey: ["documents"]
+            });
+            const elements = await queryClient.fetchQuery<Elements>({
+                queryKey: ["elements"]
+            });
+            if (!documents || !elements) {
+                throw new HandledError(
+                    "Failed to fetch documents or elements."
+                );
+            }
+            const searchDb = JSON.stringify(buildSearchDb(documents, elements));
+            return apiPost("/cache-data", { body: { searchDb } });
+        },
+        onError: (error) => {
+            if (error instanceof HandledError) {
+                showErrorToast(error.message);
+                return;
+            }
+            showErrorToast("Unexpectedly failed to push new version.");
+        },
+        onSuccess: (data: { newVersion: number }) => {
+            showSuccessToast("Successfully updated the FRCDesignApp version.");
+            navigate({ to: ".", search: { cacheVersion: data.newVersion } });
+        }
+    });
+
+    return (
+        <FormGroup label="Push new app version" inline>
+            <Button
+                icon="cloud-upload"
+                text="Push version"
+                onClick={() => {
+                    pushVersionMutation.mutate();
+                }}
+                intent={Intent.PRIMARY}
+            />
+        </FormGroup>
     );
 }
 
 function AccessLevelSelect(): ReactNode {
     const search = useSearch({ from: "/app" });
-    const pathname = useLocation().pathname;
     const navigate = useNavigate();
 
     const maxAccessLevel = search.maxAccessLevel;
@@ -99,14 +268,14 @@ function AccessLevelSelect(): ReactNode {
     }, [maxAccessLevel]);
 
     const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(
-        search.accessLevel
+        search.currentAccessLevel
     );
 
     const button = (
         <Button
             alignText="start"
             endIcon="caret-down"
-            text={capitalize(search.accessLevel)}
+            text={capitalize(search.currentAccessLevel)}
         />
     );
 
@@ -114,7 +283,7 @@ function AccessLevelSelect(): ReactNode {
         accessLevel,
         { handleClick, handleFocus, modifiers, ref }
     ) => {
-        const selected = search.accessLevel === accessLevel;
+        const selected = search.currentAccessLevel === accessLevel;
         return (
             <MenuItem
                 key={accessLevel}
@@ -139,7 +308,10 @@ function AccessLevelSelect(): ReactNode {
             popoverProps={{ minimal: true }}
             itemRenderer={renderAccessLevel}
             onItemSelect={(accessLevel) => {
-                navigate({ to: pathname, search: { accessLevel } });
+                navigate({
+                    to: ".",
+                    search: { currentAccessLevel: accessLevel }
+                });
             }}
         >
             {button}
@@ -147,7 +319,7 @@ function AccessLevelSelect(): ReactNode {
     );
 
     return (
-        <FormGroup label="Access Level" className="full-width" inline>
+        <FormGroup label="Access level" className="full-width" inline>
             {select}
         </FormGroup>
     );
@@ -166,12 +338,14 @@ export function ReloadDocumentsButton(
 
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
-        mutationFn: () => {
+        mutationFn: async () => {
             return apiPost("/reload-documents", {
                 // Set a timeout of 5 minutes
-                query: { reloadAll },
-                signal: AbortSignal.timeout(5 * 60000)
+                query: { reloadAll }
             });
+        },
+        onError: () => {
+            showErrorToast("Failed to reload documents!");
         },
         onSuccess: async (result) => {
             const savedElements = result["savedElements"];
@@ -186,7 +360,6 @@ export function ReloadDocumentsButton(
                 queryClient.refetchQueries({ queryKey: ["documents"] }),
                 queryClient.refetchQueries({ queryKey: ["elements"] })
             ]);
-            invalidateSearchDb();
         }
     });
 

@@ -10,7 +10,7 @@ The frontend should have a /redirect route which calls the /redirect route below
 import flask
 from flask import request
 from backend.common import connect, env
-from backend.common.backend_exceptions import AuthException, ServerException
+from backend.common.backend_exceptions import ServerException
 
 
 router = flask.Blueprint("oauth", __name__)
@@ -49,7 +49,7 @@ def redirect():
         client_secret=env.CLIENT_SECRET,
         code=request.args["code"],
     )
-    connect.save_token(db, token)
+    connect.set_session_token(db, token)
 
     redirect_url = flask.session.get("redirect_url")
     if redirect_url == None:

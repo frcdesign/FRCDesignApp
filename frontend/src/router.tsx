@@ -6,39 +6,32 @@ import {
     createRootRoute,
     createRoute,
     createRouter,
+    redirect,
     retainSearchParams,
     SearchSchemaInput
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import { DocumentList } from "./document/document-list";
+import { DocumentList } from "./app/document-list";
 import {
+    getCacheDataQuery,
     getDocumentOrderQuery,
     getDocumentsQuery,
     getElementsQuery,
-    getFavoritesQuery
+    getUserDataQuery
 } from "./queries";
+import { CacheData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./api/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
-import { AccessLevel, Vendor } from "./api/backend-types";
-import { AppError } from "./app/app-error";
+import { getUiState, updateUiState } from "./api/ui-state";
+import { RootAppError } from "./app/root-error";
+import { getSearchDbQuery } from "./search/search";
 
-export interface BaseSearchParams {
-    /**
-     * The maximum access level the user can have.
-     */
-    maxAccessLevel: AccessLevel;
-    /**
-     * The access level the user is currently using.
-     */
-    accessLevel: AccessLevel;
-    query?: string;
-    vendors?: Vendor[];
-}
+type SearchParams = OnshapeParams & MenuParams & CacheData;
 
-type SearchParams = OnshapeParams & BaseSearchParams & MenuParams;
-
-const rootRoute = createRootRoute();
+const rootRoute = createRootRoute({
+    errorComponent: () => <RootAppError isRoot />
+});
 
 /**
  * When the app is first loaded by Onshape, Onshape provides search params indiciating the context the app is being accessed from.
@@ -50,43 +43,78 @@ const appRoute = createRoute({
     component: App,
     // Add SearchSchemaInput so search parameters become optional
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
+        search.systemTheme = search.theme;
+        delete search.theme;
         return search as unknown as SearchParams;
     },
     search: {
         middlewares: [retainSearchParams(true)]
-    }
+    },
+    beforeLoad: async ({ location }) => {
+        if (location.pathname !== "/app") {
+            return;
+        }
+
+        const contextData = await queryClient.ensureQueryData(
+            getCacheDataQuery()
+        );
+        const uiState = getUiState();
+
+        if (uiState.openDocumentId) {
+            return redirect({
+                to: "/app/documents/$documentId",
+                params: { documentId: uiState.openDocumentId },
+                search: () => contextData
+            });
+        }
+
+        return redirect({
+            to: "/app/documents",
+            search: () => contextData
+        });
+    },
+    loaderDeps: ({ search }) => ({
+        userId: search.userId,
+        currentAccessLevel: search.currentAccessLevel,
+        cacheVersion: search.cacheVersion
+    }),
+    loader: async ({ deps }) => {
+        Promise.all([
+            queryClient.prefetchQuery(getDocumentOrderQuery(deps)),
+            queryClient.prefetchQuery(getDocumentsQuery(deps)),
+            queryClient.prefetchQuery(getElementsQuery(deps)),
+            queryClient.prefetchQuery(getSearchDbQuery(deps))
+        ]);
+        // We need settings immediately to determine the theme
+        return queryClient.ensureQueryData(getUserDataQuery(deps));
+    },
+    // Include it higher up in the hopes that accessLevel will be loaded for the escape hatch
+    errorComponent: RootAppError
 });
 
 const homeRoute = createRoute({
     getParentRoute: () => appRoute,
-    path: "documents",
-    loaderDeps: ({ search }) => ({ userId: search.userId }),
-    loader: async ({ deps }) => {
-        const loadDocuments = getDocumentsQuery();
-        const loadDocumentOrder = getDocumentOrderQuery();
-        const loadElements = getElementsQuery();
-        const loadFavorites = getFavoritesQuery(deps);
-
-        return [
-            queryClient.fetchQuery(loadDocuments),
-            queryClient.fetchQuery(loadDocumentOrder),
-            queryClient.fetchQuery(loadElements),
-            queryClient.fetchQuery(loadFavorites)
-        ];
-    },
-    errorComponent: AppError
+    path: "documents"
 });
 
 const homeListRoute = createRoute({
     getParentRoute: () => homeRoute,
     path: "/",
-    component: HomeList
+    component: HomeList,
+    onEnter: () => {
+        updateUiState({ openDocumentId: undefined });
+    }
 });
 
 const documentListRoute = createRoute({
     getParentRoute: () => homeRoute,
     path: "$documentId",
-    component: DocumentList
+    component: DocumentList,
+    onEnter: (match) => {
+        updateUiState({
+            openDocumentId: match.params.documentId
+        });
+    }
 });
 
 const grantDeniedRoute = createRoute({
@@ -109,6 +137,7 @@ const safariErrorRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
+        // appRedirectRoute,
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,
@@ -119,5 +148,5 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
     routeTree,
     defaultStaleTime: Infinity,
-    defaultGcTime: 6 * 1000
+    defaultGcTime: Infinity
 });

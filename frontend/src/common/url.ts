@@ -1,4 +1,4 @@
-import { encodeConfigurationForQuery } from "../api/backend-types";
+import { encodeConfigurationForQuery } from "../api/models";
 import {
     DocumentPath,
     InstancePath,
@@ -9,6 +9,7 @@ import {
     WorkspacePath,
     InstanceType
 } from "../api/path";
+import { toaster } from "./toaster";
 
 export function makeUrl(path: DocumentPath): string;
 export function makeUrl(path: WorkspacePath): string;
@@ -72,5 +73,19 @@ export function parseUrl(
  * Opens the given url in a new tab.
  */
 export function openUrlInNewTab(url: string) {
-    window.open(url);
+    window.open(url, "_blank");
 }
+
+export async function copyUrlToClipboard(url: string) {
+    await navigator.clipboard.writeText(url);
+    toaster.show({
+        message: "Link copied to clipboard.",
+        intent: "primary",
+        icon: "link",
+        timeout: 3000
+    });
+}
+/**
+ * URL of the FRCDesign feedback google form.
+ */
+export const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";

@@ -1,10 +1,23 @@
+from __future__ import annotations
+
 from google.cloud import firestore
 from google.cloud.firestore import CollectionReference, DocumentReference
+
+from backend.common.models import ConfigurationParameters, UserData
+from onshape_api.paths.user_path import UserPath
 
 
 class Database:
     def __init__(self, client: firestore.Client):
         self.client = client
+
+    @property
+    def cache(self) -> DocumentReference:
+        return self.client.collection("common").document("cache")
+
+    @property
+    def search_db(self) -> DocumentReference:
+        return self.client.collection("common").document("searchDb")
 
     @property
     def sessions(self) -> CollectionReference:
@@ -19,13 +32,33 @@ class Database:
         return self.client.collection("elements")
 
     @property
+    def user_data(self) -> CollectionReference:
+        return self.client.collection("userData")
+
+    def get_user_data(self, user_path: UserPath) -> UserData:
+        return UserData.model_validate(
+            self.user_data.document(user_path.user_id).get().to_dict() or {}
+        )
+
+    def set_user_data(self, user_path: UserPath, user_data: UserData) -> None:
+        self.user_data.document(user_path.user_id).set(user_data.model_dump())
+
+    @property
     def configurations(self) -> CollectionReference:
         return self.client.collection("configurations")
 
+    def get_configuration_parameters(
+        self, configuration_id: str
+    ) -> ConfigurationParameters:
+        parameters = self.configurations.document(configuration_id).get().to_dict()
+        if parameters == None:
+            raise ValueError(f"Failed to find configuration with id {configuration_id}")
+
+        return ConfigurationParameters.model_validate(parameters)
+
     @property
     def document_order(self) -> DocumentReference:
-        # Yes, there are three layers of documentOrder...
-        return self.client.collection("documentOrder").document("documentOrder")
+        return self.client.collection("common").document("documentOrder")
 
     def get_document_order(self) -> list[str]:
         result = self.document_order.get().to_dict()

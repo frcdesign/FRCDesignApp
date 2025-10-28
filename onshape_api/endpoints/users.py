@@ -1,18 +1,19 @@
 from enum import StrEnum
 from onshape_api.api.api_base import Api
+from onshape_api.api.oauth_api import OAuthApi
 from onshape_api.paths.api_path import api_path
 
 
-def get_session_info(api: Api) -> dict:
+def get_session_info(api: OAuthApi) -> dict:
     return api.get(api_path("users", end_route="sessioninfo"))
 
 
-def get_user_id(api: Api) -> str:
+def get_user_id(api: OAuthApi) -> str:
     """Returns the user_id associated with the current session."""
     return get_session_info(api)["id"]
 
 
-def ping(api: Api, catch: bool = False) -> bool:
+def ping(api: OAuthApi, catch: bool = False) -> bool:
     """Pings the Onshape API's users/sessioninfo endpoint.
 
     Returns true if the ping was successful, and false if it was not.
@@ -37,9 +38,13 @@ class AccessLevel(StrEnum):
 
 def get_access_level(api: Api, team_id: str) -> AccessLevel:
     """Returns the access level of a user respective to a given team."""
-    team_info = api.get(api_path("teams", end_id=team_id))
-    if team_info["admin"]:
-        return AccessLevel.ADMIN
-    elif team_info["member"]:
-        return AccessLevel.MEMBER
-    return AccessLevel.USER
+    try:
+        team_info = api.get(api_path("teams", end_id=team_id))
+        if team_info["admin"]:
+            return AccessLevel.ADMIN
+        elif team_info["member"]:
+            return AccessLevel.MEMBER
+        return AccessLevel.USER
+    except:
+        # Onshape doesn't let you get team info of teams you aren't on
+        return AccessLevel.USER

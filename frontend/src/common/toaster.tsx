@@ -1,7 +1,8 @@
 import { Intent, OverlayToaster } from "@blueprintjs/core";
 
 export const toaster = await OverlayToaster.create({
-    maxToasts: 3
+    maxToasts: 3,
+    position: "bottom"
 });
 
 export function closeToast(key: string) {
@@ -39,7 +40,8 @@ export function showSuccessToast(message: string, key?: string): string {
         {
             icon: "tick-circle",
             intent: Intent.SUCCESS,
-            message
+            message,
+            timeout: 3000
         },
         key
     );

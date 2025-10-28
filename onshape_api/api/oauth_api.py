@@ -6,6 +6,7 @@ import logging
 from urllib import parse
 
 from requests_oauthlib import OAuth2Session
+from requests.adapters import HTTPAdapter
 
 from onshape_api import exceptions
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
@@ -25,10 +26,17 @@ class OAuthApi(Api):
 
     def __init__(self, oauth: OAuth2Session, **kwargs: Unpack[ApiArgs]):
         super().__init__(**kwargs)
+
         self.oauth = oauth
         if oauth.client_id == None:
             raise ValueError("The OAuth2Session must have a client_id")
         self.client_id: str = oauth.client_id
+
+        adapter = HTTPAdapter(
+            pool_connections=100,
+            pool_maxsize=100,
+        )
+        self.oauth.mount("https://", adapter)
 
     @override
     def _request(

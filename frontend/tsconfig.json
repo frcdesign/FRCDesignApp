@@ -4,6 +4,7 @@
         "useDefineForClassFields": true,
         "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "module": "ESNext",
+        "esModuleInterop": true, // Prevent jest warnings
         "skipLibCheck": true,
 
         /* Bundler mode */
@@ -20,8 +21,7 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "noFallthroughCasesInSwitch": true,
-        "types": ["vite/client"]
+        "types": ["vite/client", "jest"]
     },
-    "include": ["./src", "src/main.tsx"],
-    "references": [{ "path": "./tsconfig.node.json" }]
+    "include": ["./src"]
 }

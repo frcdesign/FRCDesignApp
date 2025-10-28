@@ -24,7 +24,7 @@ API_VERSION=12 # Control which version of the Onshape API the app uses
 
 VERBOSE_LOGGING=true # Set to false to reduce logging output
 
-# API Keys (Optional)
+# Onshape API Keys (Optional)
 API_ACCESS_KEY=<Your API Access Key>
 API_SECRET_KEY=<Your API Secret Key>
 
@@ -41,10 +41,10 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
 
 You only need API keys if you plan on accessing the Onshape API via regular python script.
-You will likely need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
+You will need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
 
 Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
-You can manually retrigger an update by saving in backend/common/env.py or by killing and restarting the flask server.
+You can manually retrigger an update by saving any .py file or by killing and restarting the flask server.
 
 ## Python Setup
 
@@ -92,44 +92,54 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
 
 You should now be able to see your App in the right panel of any Part Studios or Assemblies you open.
 
-## Onshape API Key Setup (Optional)
+## Onshape API Key Setup
 
-This isn't required for running the FRC Design App, but will allow you to use the Onshape API with API keys via locally developed Python scripts.
+When the local development web server is first started, it will attempt to optimistically load the documents specified in `config.json` into the database.
+This is done using API keys specified in `.env`. This will also allow you to access the Onshape API using local Python scripts.
 
 1. Get an API key from the [Onshape developer portal](https://dev-portal.onshape.com/keys).
 1. Add your access key and secret key to `.env`.
 
-You can then call `make_key_api()` inside a locally running Python script to get an `Api` instance you can pass to endpoints in `onshape_api/endpoints`.
-
 ## Flask Credentials Setup
 
 Onshape requires all apps, even temporary test apps, to use https. This creates a big headache for local development.
-In order to solve this issue, you'll need to generate a certificate and add it to a folder named `credentials` in the root of this project:
+
+You can get around this by using [mkcert](https://github.com/FiloSottile/mkcert) to create a self signed certificate which your browser will trust.
+
+1. Install mkcert on your local machine (not in the dev container!).
+   If you are on Windows, this will likely mean installing [Chocolately](https://chocolatey.org/install) and running `choco install mkcert` using a Powershell terminal you run as an Administrator.
+1. Create a local Certificate Authority (CA):
 
 ```
-/credentials/cert.pem
-/credentials/key.pem
+mkcert -install
 ```
 
-This can be done automatically by running the script `make_credentials.sh`:
+1. Create a localhost certificate (localhost-key.pem and localhost.pem) and copy them into the root of this project:
 
 ```
-./scripts/make_credentials.sh
+cd ~ # Switch to your user directory
+cd Documents # Switch to the Documents folder, can also use any other folder you recognize, like Downloads
+mkcert localhost # Create a certificate which allows localhost to run
 ```
 
-If successful, this should create a folder named `credentials` in the root of the project containing `cert.pem` and `key.pem`.
+1. You can then open your Documents folder in File Explorer and copy and paste `localhost-key.pem` and `localhost.pem` into the root of this project.
 
-You'll then need to add a security exception to your browser to avoid getting blocked.
+Depending on your browser, this should automatically clear any security warnings. If it doesn't, you can manually add the Certificate Authority.
 In Firefox, the procedure is:
 
-1. Start the development servers using the `Launch servers` VSCode task.
-2. Open Firefox and go to `Settings > Certificates > View Certificates... > Servers > Add Exception...`
-3. Enter `https://localhost:3000` as the Location and click `Get Certificate`.
-4. Check `Permanently store this exception` and then click `Confirm Security Exception`.
+1. In PowerShell, run `mkcert -CAROOT` and note down the path.
+1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
+1. Navigate to the `CAROOT` path and select `rootCA.pem`.
 
 ## Frontend Setup
 
-Install Node.js on your computer, then use npm to install the dependencies in `frontend`:
+First, install npm in your WSL container:
+
+```
+sudo apt install npm
+```
+
+Next, use npm to install the dependencies in `frontend`:
 
 ```
 cd frontend
@@ -138,23 +148,27 @@ npm install
 
 ## Google Cloud Dev Setup
 
-To emulate the google cloud database locally, you'll need to install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install#deb).
+Although this project uses Google Cloud Firestore, which is technically a distinct product from Firebase Firestore, Google Cloud Firestore is still just Firebase Firestore in a trenchcoat.
 
-You should also install the firestore emulator and a Java JRE:
-
-```
-sudo apt install google-cloud-cli-firestore-emulator default-jre
-```
-
-You can test your build by starting up the google cloud emulator:
+In order to emulate the google cloud database locally, you'll need to install the [Firebase CLI](https://firebase.google.com/docs/cli). In Linux, this can be done using:
 
 ```
-gcloud emulators firestore start
+curl -sL https://firebase.tools | bash
 ```
 
-<!-- Then restart your WSL instance. This prevents google cloud from using the google cloud version located outside of WSL. -->
+You may also need to install the Java JRE:
 
-Note: this project uses Google Cloud Firestore as it's database. This is not to be confused with Google Firebase or Google Firebase's Firestore (yikes), as Google Firebase is a separate project from Google Cloud.
+```
+sudo apt install openjdk-21-jdk
+```
+
+You can then set up the Firebase emulator by running:
+
+```
+firebase init emulators firestore
+```
+
+If you are prompted to select a project, you can select **Don't set up a default project**.
 
 ## Development Servers
 
@@ -162,26 +176,11 @@ You should now be able to run the `Launch servers` VSCode task to launch the dev
 If everything is setup properly, you should see all three servers start successfully.
 You should also be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
+To see documents, add one or more documents and push a new app version to rebuild the search database.
+
+Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see the current database state directly.
+
 # Deploying To Production
 
-Some notes:
-
--   To allow the App deployed in the App Engine to connect to Firestore, the App Engine default service account must be given the Cloud Datastore User role in IAM.
--   You'll need to create an app.yaml file to deploy. A suitable app.yaml is:
-
-```
-runtime: python312
-
-instance_class: F1
-
-env_variables:
-    API_VERSION: 12
-    NODE_ENV: "production"
-    OAUTH_CLIENT_ID: "<YOUR PRODUCTION OAUTH CLIENT ID IN QUOTES>"
-    OAUTH_CLIENT_SECRET: "<YOUR PRODUCTION OAUTH CLIENT SECRET IN QUOTES>"
-    SESSION_SECRET: "<AN ARBITRARY SECRET YOU MAKE UP>"
-    ADMIN_TEAM: "5b620150b2190f0fca90ec10"
-
-# Ran out of memory with F1 instance and 2 workers, so only 2 workers on F2
-entrypoint: gunicorn -b :8080 -w 2 -t 60 "backend.server:create_app()"
-```
+To allow the App to connect to Firestore, the default compute service account must be given the Cloud Datastore User role in IAM.
+You will need to add relevant environment variables in the google cloud console after you deploy. This includes the Onshape OAuth client and secret as well as the admin team.
