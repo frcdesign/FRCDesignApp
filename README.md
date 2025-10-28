@@ -40,9 +40,6 @@ NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
 
-You only need API keys if you plan on accessing the Onshape API via regular python script.
-You will need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
-
 Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
 You can manually retrigger an update by saving any .py file or by killing and restarting the flask server.
 
@@ -56,10 +53,11 @@ Install `uv`:
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Then use `uv` to install Python 3.12:
+Then use `uv` to install Python 3.12 and all of the project's dependencies:
 
 ```
 uv python install 3.12
+uv sync
 ```
 
 Note that Python version 3.12 or greater is a hard requirement.
@@ -92,13 +90,18 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
 
 You should now be able to see your App in the right panel of any Part Studios or Assemblies you open.
 
-## Onshape API Key Setup
+## Onshape API Key Setup (optional)
 
-When the local development web server is first started, it will attempt to optimistically load the documents specified in `config.json` into the database.
-This is done using API keys specified in `.env`. This will also allow you to access the Onshape API using local Python scripts.
+This step is only required if you want to use the Onshape API from local Python scripts using a KeyApi instance.
 
-1. Get an API key from the [Onshape developer portal](https://dev-portal.onshape.com/keys).
+1. Get an API key from the [Onshape developer portal](https://cad.onshape.com/user/developer/apiKeys).
 1. Add your access key and secret key to `.env`.
+
+## Onshape API Limits
+
+Note that Onshape has an annual limit of 2,500 API calls per Onshape account. This amount is not very large, so you should take pains to be careful with your usage in testing in local environments.
+
+In particular, avoid loading large documents into your local environment and only reload the database when necessary.
 
 ## Flask Credentials Setup
 
@@ -118,14 +121,14 @@ mkcert -install
 
 ```
 cd ~ # Switch to your user directory
-cd Documents # Switch to the Documents folder, can also use any other folder you recognize, like Downloads
+cd Documents # Switch to the Documents folder - you can also use any other folder you recognize, like Downloads
 mkcert localhost # Create a certificate which allows localhost to run
 ```
 
 1. You can then open your Documents folder in File Explorer and copy and paste `localhost-key.pem` and `localhost.pem` into the root of this project.
 
-Depending on your browser, this should automatically clear any security warnings. If it doesn't, you can manually add the Certificate Authority.
-In Firefox, the procedure is:
+If you use a chromium-based browser like Google Chrome, MKCert should install the certificate automatically.
+If it doesn't, you'll need to add the Certificate Authority manually. In Firefox, the procedure is:
 
 1. In PowerShell, run `mkcert -CAROOT` and note down the path.
 1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
@@ -148,7 +151,7 @@ npm install
 
 ## Google Cloud Dev Setup
 
-Although this project uses Google Cloud Firestore, which is technically a distinct product from Firebase Firestore, Google Cloud Firestore is still just Firebase Firestore in a trenchcoat.
+Although this project uses Google Cloud Firestore, which is technically a distinct product from Google Firebase's Firestore, Google Cloud Firestore is still just Firebase's Firestore in a trenchcoat.
 
 In order to emulate the google cloud database locally, you'll need to install the [Firebase CLI](https://firebase.google.com/docs/cli). In Linux, this can be done using:
 
@@ -165,7 +168,7 @@ sudo apt install openjdk-21-jdk
 You can then set up the Firebase emulator by running:
 
 ```
-firebase init emulators firestore
+firebase init emulators firestore storage
 ```
 
 If you are prompted to select a project, you can select **Don't set up a default project**.
