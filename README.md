@@ -40,9 +40,6 @@ NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 ```
 
-You only need API keys if you plan on accessing the Onshape API via regular python script.
-You will need OAuth keys if you plan on accessing the Onshape API via the FRC Design App.
-
 Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
 You can manually retrigger an update by saving any .py file or by killing and restarting the flask server.
 
@@ -95,10 +92,16 @@ You should now be able to see your App in the right panel of any Part Studios or
 
 ## Onshape API Key Setup (optional)
 
-This step is only required if you want to use the Onshape API with local development.
+This step is only required if you want to use the Onshape API from local Python scripts using a KeyApi instance.
 
-1. Get an API key from the [Onshape developer portal](https://dev-portal.onshape.com/keys).
+1. Get an API key from the [Onshape developer portal](https://cad.onshape.com/user/developer/apiKeys).
 1. Add your access key and secret key to `.env`.
+
+## Onshape API Limits
+
+Note that Onshape has an annual limit of 2,500 API calls per Onshape account. This amount is not very large, so you should take pains to be careful with your usage in testing in local environments.
+
+In particular, avoid loading large documents into your local environment and only reload the database when necessary.
 
 ## Flask Credentials Setup
 
