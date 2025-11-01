@@ -7,7 +7,7 @@ import google.cloud.logging as cloud_logging
 
 from backend.common import env
 from backend.common.database import (
-    ConfigurationParameters,
+    Configuration,
 )
 from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 
@@ -88,7 +88,7 @@ def log_app_opened(user_id: str):
 
 def build_config_array(
     configuration: dict[str, str],
-    configuration_parameters: ConfigurationParameters | None,
+    configuration_parameters: Configuration | None,
 ) -> list:
     if configuration_parameters == None:
         raise ValueError("Configuration parameters must be passed.")
@@ -128,7 +128,7 @@ def log_part_inserted(
     is_favorite: bool,
     version: dict,
     configuration: dict[str, str] | None = None,
-    configuration_parameters: ConfigurationParameters | None = None,
+    configuration_parameters: Configuration | None = None,
 ):
     """Logs adding an element to an assembly or part studio."""
     log_data = {

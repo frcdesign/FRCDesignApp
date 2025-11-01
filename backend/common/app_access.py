@@ -30,8 +30,7 @@ def get_app_access_level() -> AccessLevel:
     access_level = flask.session.get("access_level")
 
     if access_level == None:
-        db = connect.get_db()
-        api = connect.get_api(db)
+        api = connect.get_api()
         access_level = compute_app_access_level(api)
 
         flask.session["access_level"] = access_level

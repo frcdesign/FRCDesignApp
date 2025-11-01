@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Generic, Type, TypeVar, override
+from typing import Generic, Protocol, Type, TypeVar, override, runtime_checkable
 
 from google.cloud import firestore
 from google.cloud.firestore import CollectionReference, DocumentReference
@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from backend.common.backend_exceptions import ServerException
 from backend.common.models import (
+    Configuration,
     Document,
     Element,
     Favorite,
@@ -21,6 +22,7 @@ class Collection(StrEnum):
     LIBRARIES = "libraries"
     DOCUMENTS = "documents"
     ELEMENTS = "elements"
+    CONFIGURATIONS = "configurations"
     LIBRARY_USER_DATA = "libraryUserData"
     FAVORITES = "favorites"
     USER_DATA = "userData"
@@ -28,9 +30,126 @@ class Collection(StrEnum):
 
 
 T = TypeVar("T", bound=BaseModel)
+S = TypeVar("S", bound=BaseModel)
 
 
-class FirestoreCollection(Generic[T]):
+@runtime_checkable
+class BaseDocument(Protocol, Generic[T]):
+    id: str
+
+    def get(self) -> T: ...
+    def maybe_get(self) -> T | None: ...
+    def get_with_default(self) -> T: ...
+
+    def set(self, data: T) -> None: ...
+    def update(self, partial: dict) -> None: ...
+    def delete(self) -> None: ...
+    def collection(
+        self, collection: Collection, model: Type[S]
+    ) -> BaseCollection[S]: ...
+
+
+@runtime_checkable
+class BaseCollection(Protocol, Generic[T]):
+    def list(self) -> list[BaseDocument[T]]: ...
+    def keys(self) -> list[str]: ...
+    def set(self, doc_id: str, data: T) -> None: ...
+    def delete(self, doc_id: str) -> None: ...
+    def document(self, doc_id: str) -> BaseDocument[T]: ...
+
+
+class BaseDocumentRef(BaseDocument[T], Generic[T]):
+    def __init__(self, ref: BaseDocument[T]):
+        self.ref = ref
+        self.id = ref.id
+
+    def get(self) -> T:
+        return self.ref.get()
+
+    def maybe_get(self) -> T | None:
+        return self.ref.maybe_get()
+
+    def get_with_default(self) -> T:
+        return self.ref.get_with_default()
+
+    def set(self, data: T) -> None:
+        self.ref.set(data)
+
+    def update(self, partial: dict) -> None:
+        self.ref.update(partial)
+
+    def delete(self) -> None:
+        self.ref.delete()
+
+    def collection(self, collection: Collection, model: Type[S]) -> BaseCollection[S]:
+        return self.ref.collection(collection, model)
+
+
+class BaseCollectionRef(BaseCollection[T], Generic[T]):
+    def __init__(self, ref: BaseCollection[T]):
+        self.ref = ref
+
+    def list(self) -> list[BaseDocument[T]]:
+        return self.ref.list()
+
+    def keys(self) -> list[str]:
+        return self.ref.keys()
+
+    def set(self, doc_id: str, data: T) -> None:
+        return self.ref.set(doc_id, data)
+
+    def delete(self, doc_id: str) -> None:
+        return self.ref.delete(doc_id)
+
+    def document(self, doc_id: str) -> BaseDocument[Document]:
+        return self.document(doc_id)
+
+
+class FirestoreDocument(BaseDocument[T]):
+    def __init__(self, ref: DocumentReference, model: Type[T]):
+        self.ref = ref
+        self.model = model
+
+    @property
+    def id(self) -> str:
+        return self.ref.id
+
+    def maybe_get(self) -> T | None:
+        snapshot = self.ref.get()
+        if not snapshot.exists:
+            return None
+        try:
+            return self.model.model_validate(snapshot.to_dict())
+        except ValidationError:
+            return None
+
+    def get(self) -> T:
+        result = self.maybe_get()
+        if result == None:
+            raise ServerException("Unexpectedly failed to get document {self.id}")
+        return result
+
+    def get_with_default(self) -> T:
+        """Retrieves the document, constructing it if it doesn't exist."""
+        snapshot = self.ref.get()
+        return self.model.model_validate(snapshot.to_dict() or {})
+
+    def set(self, data: T) -> None:
+        self.ref.set(data.model_dump())
+
+    def update(self, partial: dict) -> None:
+        self.ref.set(partial, merge=True)
+
+    def delete(self) -> None:
+        self.ref.delete()
+
+    def collection(
+        self, collection: Collection, model: Type[S]
+    ) -> FirestoreCollection[S]:
+        return FirestoreCollection(self.ref.collection(collection), model)
+
+
+class FirestoreCollection(BaseCollection[T]):
     """A collection of Firestore documents."""
 
     def __init__(
@@ -41,51 +160,46 @@ class FirestoreCollection(Generic[T]):
         self.ref = ref
         self.model = model
 
-    def child(self, doc_id: str) -> FirestoreDocument[T]:
-        return FirestoreDocument(self.ref.document(doc_id), self.model)
-
     def keys(self) -> list[str]:
         return [doc_ref.id for doc_ref in self.list()]
-
-    def get(self, doc_id: str) -> T | None:
-        return self.child(doc_id).get()
 
     def list(self) -> list[FirestoreDocument[T]]:
         return [FirestoreDocument(doc_ref, self.model) for doc_ref in self.ref.stream()]
 
-    def set(self, doc_id: str, data: T):
+    def set(self, doc_id: str, data: T) -> None:
         self.ref.document(doc_id).set(data.model_dump())
 
-    def delete(self, doc_id: str):
+    def delete(self, doc_id: str) -> None:
         self.ref.document(doc_id).delete()
+
+    def document(self, doc_id: str) -> FirestoreDocument[T]:
+        return FirestoreDocument(self.ref.document(doc_id), self.model)
 
 
 D = TypeVar("D", bound=BaseModel)
 
 
-class OrderedCollection(FirestoreCollection[T], Generic[D, T]):
-    """A Firestore collection that maintains an explicit order list in its parent document."""
+class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
+    """An ordered collection that maintains an explicit order list in its parent document."""
 
     def __init__(
         self,
-        collection_ref: CollectionReference,
-        document_model: Type[D],
-        model: Type[T],
+        collection: BaseCollection[T],
+        parent: BaseDocument[D],
         order_key: str,
     ):
-        super().__init__(collection_ref, model)
-        assert collection_ref.parent != None
-        self.document = FirestoreDocument(collection_ref.parent, document_model)
+        super().__init__(collection)
+        self.parent = parent
         self.order_key = order_key
 
     def _get_order(self) -> list[str]:
-        data = self.document.get_with_default()
+        data = self.parent.get()
         return getattr(data, self.order_key, [])
 
     def _set_order(self, order: list[str]):
-        data = self.document.get_with_default()
+        data = self.parent.get()
         setattr(data, self.order_key, order)
-        self.document.set(data)
+        self.parent.set(data)
 
     @override
     def keys(self) -> list[str]:
@@ -123,128 +237,74 @@ class OrderedCollection(FirestoreCollection[T], Generic[D, T]):
         self._set_order(new_order)
 
 
-class FirestoreDocument(Generic[T]):
-    def __init__(self, ref: DocumentReference, model: Type[T]):
-        self.ref = ref
-        self.model = model
-
-    @property
-    def id(self) -> str:
-        return self.ref.id
-
-    def get(self) -> T | None:
-        snapshot = self.ref.get()
-        if not snapshot.exists:
-            return None
-        try:
-            return self.model.model_validate(snapshot.to_dict())
-        except ValidationError:
-            return None
-
-    def get_valid(self) -> T:
-        snapshot = self.ref.get()
-        try:
-            return self.model.model_validate(snapshot.to_dict())
-        except ValidationError as e:
-            raise ServerException(
-                "Unexpectedly failed to get document {self.id}: " + str(e)
-            )
-
-    def get_with_default(self) -> T:
-        """Retrieves the document, constructing it if it doesn't exist."""
-        snapshot = self.ref.get()
-        return self.model.model_validate(snapshot.to_dict() or {})
-
-    def set(self, data: T):
-        self.ref.set(data.model_dump())
-
-    def merge(self, partial: dict):
-        self.ref.set(partial, merge=True)
-
-    def delete(self):
-        self.ref.delete()
-
-
-class LibraryRef(FirestoreDocument):
-    def __init__(self, ref: DocumentReference):
-        super().__init__(ref, LibraryData)
-        self.ref = ref
-
+class LibraryRef(BaseDocumentRef[LibraryData]):
     @property
     def documents(self) -> DocumentsRef:
-        return DocumentsRef(self.ref.collection(Collection.DOCUMENTS))
-
-    @property
-    def user_data(self) -> AllLibraryUserDataRef:
-        return AllLibraryUserDataRef(self.ref.collection(Collection.USER_DATA))
-
-
-class DocumentsRef(OrderedCollection[LibraryData, Document]):
-    def __init__(self, ref: CollectionReference):
-        super().__init__(
-            ref,
-            model=Document,
-            document_model=LibraryData,
+        return DocumentsRef(
+            collection=self.ref.collection(Collection.DOCUMENTS, Document),
+            parent=self.ref,
             order_key="documentOrder",
         )
 
-    def document_ref(self, document_id: str) -> DocumentRef:
+    @property
+    def user_data(self) -> AllLibraryUserDataRef:
+        return AllLibraryUserDataRef(
+            self.ref.collection(Collection.LIBRARY_USER_DATA, LibraryUserData)
+        )
+
+
+class DocumentsRef(OrderedCollection[LibraryData, Document]):
+    def document(self, document_id: str) -> DocumentRef:
         return DocumentRef(self.ref.document(document_id))
 
+    @override
     def list(self) -> list[DocumentRef]:
-        return [DocumentRef(doc_ref.ref) for doc_ref in self.ref.stream()]
+        return [DocumentRef(doc_ref) for doc_ref in self.list()]
 
 
-class DocumentRef(FirestoreDocument[Document]):
-    def __init__(self, ref: DocumentReference):
-        super().__init__(ref, Document)
-
+class DocumentRef(BaseDocumentRef[Document]):
     @property
     def elements(self) -> ElementsRef:
-        return ElementsRef(self.ref.collection(Collection.ELEMENTS))
+        return ElementsRef(
+            collection=self.ref.collection(Collection.ELEMENTS, Element),
+            parent=self.ref,
+            order_key="elementOrder",
+        )
+
+    @property
+    def configurations(self) -> ConfigurationsRef:
+        return ConfigurationsRef(
+            self.ref.collection(Collection.CONFIGURATIONS, Configuration)
+        )
 
 
 class ElementsRef(OrderedCollection[Document, Element]):
-    def __init__(self, ref: CollectionReference):
-        super().__init__(
-            ref, model=Element, document_model=Document, order_key="elementOrder"
-        )
-
-    def element_ref(self, element_id: str) -> ElementRef:
-        return ElementRef(self.ref.document(element_id))
-
-    def list(self) -> list[ElementRef]:
-        return [ElementRef(doc_ref.ref) for doc_ref in self.ref.stream()]
+    def element(self, element_id: str) -> BaseDocument[Element]:
+        return self.ref.document(element_id)
 
 
-class ElementRef(FirestoreDocument[Element]):
-    def __init__(self, ref: DocumentReference):
-        super().__init__(ref, Element)
+class ConfigurationsRef(BaseCollectionRef[Configuration]):
+    def configuration(self, configuration: str) -> BaseDocument[Configuration]:
+        return self.ref.document(configuration)
 
 
-class AllLibraryUserDataRef(FirestoreCollection[LibraryUserData]):
-    def __init__(self, ref: CollectionReference):
-        super().__init__(ref, LibraryUserData)
-
+class AllLibraryUserDataRef(BaseCollectionRef[LibraryUserData]):
     def user_data(self, user_id: str) -> LibraryUserDataRef:
         return LibraryUserDataRef(self.ref.document(user_id))
 
+    @override
     def list(self) -> list[LibraryUserDataRef]:
-        return [LibraryUserDataRef(doc_ref.ref) for doc_ref in self.ref.stream()]
+        return [LibraryUserDataRef(doc_ref) for doc_ref in self.ref.list()]
 
 
-class LibraryUserDataRef(FirestoreDocument[LibraryUserData]):
-    def __init__(self, ref: DocumentReference):
-        super().__init__(ref, LibraryUserData)
-
+class LibraryUserDataRef(BaseDocumentRef[LibraryUserData]):
     @property
     def favorites(self) -> FavoritesRef:
-        return FavoritesRef(self.ref.collection(Collection.FAVORITES))
+        return FavoritesRef(self.ref.collection(Collection.FAVORITES, Favorite))
 
 
-class FavoritesRef(FirestoreCollection[Favorite]):
-    def __init__(self, ref: CollectionReference):
-        super().__init__(ref, Favorite)
+class FavoritesRef(BaseCollectionRef[Favorite]):
+    pass
 
 
 class Database:
@@ -258,8 +318,10 @@ class Database:
     def libraries(self) -> CollectionReference:
         return self.get_collection(Collection.LIBRARIES)
 
-    def library_ref(self, library: Library) -> LibraryRef:
-        return LibraryRef(self.libraries.document(library))
+    def get_library(self, library: Library) -> LibraryRef:
+        return LibraryRef(
+            FirestoreDocument(self.libraries.document(library), LibraryData)
+        )
 
     @property
     def user_data(self) -> CollectionReference:

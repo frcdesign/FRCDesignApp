@@ -1,5 +1,5 @@
 from backend.common.models import (
-    ConfigurationParameters,
+    Configuration,
     EnumConfigurationParameter,
     EnumOption,
     Vendor,
@@ -26,7 +26,7 @@ def test_parse_vendor_configurations():
             EnumOption(id="test4", name="AndyMark"),
         ],
     )
-    parameters = ConfigurationParameters(parameters=[parameter])
+    parameters = Configuration(parameters=[parameter])
 
     assert sorted(parse_vendors("Test part", parameters)) == sorted(
         [

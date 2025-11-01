@@ -105,11 +105,11 @@ def get_current_url() -> str:
 
 def library_route():
     """A route with components necessary to receive a library type."""
-    return "/library/<library_type>"
+    return "/library/<library>"
 
 
 def get_route_library() -> Library:
-    return get_route("library_type")
+    return get_route("library")
 
 
 def user_path_route():
@@ -132,16 +132,20 @@ def element_path_route():
     return instance_path_route() + "/e/<element_id>"
 
 
+DATABASE = Database(firestore.Client(project="frc-design-lib"))
+
+
 def get_db() -> Database:
-    return Database(firestore.Client(project="frc-design-lib"))
+    # TODO: Get rid of get_db and just use DATABASE directly...
+    return DATABASE
 
 
 def get_library_ref() -> LibraryRef:
-    return get_db().library_ref(get_route_library())
+    return get_db().get_library(get_route_library())
 
 
-def get_api(db: Database) -> onshape_api.OAuthApi:
-    return onshape_api.make_oauth_api(get_oauth_session(db))
+def get_api() -> onshape_api.OAuthApi:
+    return onshape_api.make_oauth_api(get_oauth_session(DATABASE))
 
 
 def get_route_instance_path() -> onshape_api.InstancePath:

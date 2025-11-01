@@ -1,6 +1,6 @@
 import re
 from backend.common.models import (
-    ConfigurationParameters,
+    Configuration,
     ParameterType,
     Vendor,
     get_vendor_name,
@@ -25,7 +25,7 @@ def parse_name_vendor(name: str) -> Vendor | None:
 
 
 def parse_vendors(
-    name: str, configuration: ConfigurationParameters | None = None
+    name: str, configuration: Configuration | None = None
 ) -> list[Vendor]:
     """
     Parse vendor information from element name and/or configuration parameters.

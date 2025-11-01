@@ -5,7 +5,7 @@ import flask
 
 from backend.common import connect
 from backend.common.app_logging import log_part_inserted
-from backend.common.database import ConfigurationParameters
+from backend.common.database import Configuration
 from backend.common.models import ParameterType
 from onshape_api.endpoints import part_studios, assemblies
 from onshape_api.endpoints.documents import ElementType
@@ -16,11 +16,13 @@ from onshape_api.paths.doc_path import ElementPath, path_to_namespace
 router = flask.Blueprint("add-part", __name__)
 
 
-@router.post("/add-to-assembly" + connect.element_path_route())
+@router.post(
+    "/add-to-assembly" + connect.library_route() + connect.element_path_route()
+)
 def add_to_assembly(**kwargs):
     """Adds the contents of an element to the current assembly."""
-    db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
+    library_ref = connect.get_library_ref()
     assembly_path = connect.get_route_element_path()
     path_to_add = connect.get_body_element_path()
     element_type = connect.get_body_arg("elementType")
@@ -35,11 +37,15 @@ def add_to_assembly(**kwargs):
         api, assembly_path, path_to_add, element_type, configuration=configuration
     )
 
-    parameters = (
-        None
-        if configuration == None
-        else db.get_configuration_parameters(path_to_add.element_id)
-    )
+    parameters = None
+
+    if configuration != None:
+        parameters = (
+            library_ref.documents.document(path_to_add.document_id)
+            .configurations.configuration(path_to_add.element_id)
+            .get()
+        )
+
     version = get_version(api, path_to_add)
     log_part_inserted(
         path_to_add.element_id,
@@ -54,11 +60,14 @@ def add_to_assembly(**kwargs):
     return {"success": True}
 
 
-@router.post("/add-to-part-studio" + connect.element_path_route())
+@router.post(
+    "/add-to-part-studio" + connect.library_route() + connect.element_path_route()
+)
 def add_to_part_studio(**kwargs):
     """Adds the contents of an element to the current part studio."""
-    db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
+    library_ref = connect.get_library_ref()
+
     part_studio_path = connect.get_route_element_path()
     path_to_add = connect.get_body_element_path()
     microversion_id = connect.get_body_arg("microversionId")
@@ -72,7 +81,9 @@ def add_to_part_studio(**kwargs):
     parameters = (
         None
         if configuration == None
-        else db.get_configuration_parameters(path_to_add.element_id)
+        else library_ref.documents.document(path_to_add.document_id)
+        .configurations.configuration(path_to_add.element_id)
+        .get()
     )
 
     derived_feature = DerivedFeature(
@@ -130,7 +141,7 @@ class DerivedFeature:
         part_studio_to_add: ElementPath,
         microversion_id: str,
         configuration: dict | None = None,
-        parameters: ConfigurationParameters | None = None,
+        parameters: Configuration | None = None,
     ):
         self.name = escape_feature_name(name)
         self.namespace = path_to_namespace(part_studio_to_add, microversion_id)
@@ -143,7 +154,7 @@ class DerivedFeature:
             self.part_configuration = None
 
     def build_part_configuration(
-        self, configuration: dict, parameters: ConfigurationParameters
+        self, configuration: dict, parameters: Configuration
     ) -> list[dict]:
         part_configuration = []
         for parameter in parameters.parameters:

@@ -3,9 +3,10 @@ import flask
 
 from backend.common import connect
 from backend.endpoints.cache import cacheable_route
-from backend.common.database import ConfigurationParameters
+from backend.common.database import Configuration
 from backend.common.models import (
     EqualCondition,
+    Library,
     ListOptionVisibilityCondition,
     LogicalCondition,
     OptionConditionType,
@@ -24,23 +25,29 @@ from onshape_api.endpoints.documents import get_unit_info
 router = flask.Blueprint("configurations", __name__)
 
 
-@cacheable_route(router, "/configuration/<configuration_id>")
-def get_configuration(configuration_id: str):
+@cacheable_route(
+    router,
+    "/configuration" + connect.library_route() + "<document_id>/<configuration_id>",
+)
+def get_configuration(library: Library, document_id: str, configuration_id: str):
     """Returns a specific configuration.
 
     Returns:
         parameters: A list of configuration parameters.
     """
     db = connect.get_db()
-    return db.get_configuration_parameters(configuration_id).model_dump_json(
-        exclude_none=True
+    configuration_parameters = (
+        db.get_library(library)
+        .documents.document(document_id)
+        .configurations.configuration(configuration_id)
+        .get()
     )
+    return configuration_parameters.model_dump_json(exclude_none=True)
 
 
 @router.get("/unit-info" + connect.instance_path_route())
 def get_context_data(**kwargs):
-    db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
 
     instance_path = connect.get_route_instance_path()
 
@@ -180,7 +187,7 @@ def parse_visibility_condition(
 #     return True
 
 
-def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationParameters:
+def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
     """Parses an Onshape configuration into a normalized configuration which can be stored in the database."""
     parameters = []
     for parameter in onshape_configuration["configurationParameters"]:
@@ -236,4 +243,4 @@ def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationPar
 
         parameters.append(result)
 
-    return ConfigurationParameters(parameters=parameters)
+    return Configuration(parameters=parameters)

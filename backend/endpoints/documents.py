@@ -8,16 +8,17 @@ import asyncio
 from enum import StrEnum
 from typing import Iterator
 import flask
-from pydantic import ValidationError
 
 from backend.common import connect
-from backend.common.database import Database, DocumentRef, LibraryRef
+from backend.common.backend_exceptions import HandledException
+from backend.common.database import DocumentRef, LibraryRef
 from backend.common.app_access import require_access_level
 from backend.common.models import (
     Element,
 )
 from backend.common.models import Document
 from backend.common.vendors import parse_vendors
+from backend.endpoints.cache import cacheable_route
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
     PreservedInfo,
@@ -26,7 +27,7 @@ from backend.endpoints.user_data import delete_favorites
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
-from onshape_api.endpoints.documents import ElementType
+from onshape_api.endpoints.documents import ElementType, get_document
 from onshape_api.endpoints.versions import get_latest_version_path
 from onshape_api.paths.doc_path import (
     DocumentPath,
@@ -35,6 +36,8 @@ from onshape_api.paths.doc_path import (
 )
 
 router = flask.Blueprint("documents", __name__)
+
+
 
 
 # @cacheable_route(router, "/documents")
@@ -104,11 +107,11 @@ def save_element(
     if len(onshape_configuration["configurationParameters"]) > 0:
         configuration = parse_onshape_configuration(onshape_configuration)
         # Re-use element db id since configurations can't be shared
-        db.configurations.document(element_id).set(configuration.model_dump())
+        document_ref.configurations.configuration(element_id).set(configuration)
         configuration_id = element_id
 
     preserved_element = preserved_info.get_element(element_id)
-    db.elements.document(element_id).set(
+    document_ref.elements.element(element_id).set(
         Element(
             name=element_name,
             vendors=parse_vendors(element_name, configuration),
@@ -118,7 +121,7 @@ def save_element(
             microversionId=onshape_element["microversionId"],
             configurationId=configuration_id,
             isVisible=preserved_element.isVisible,
-        ).model_dump()
+        )
     )
     return element_id
 
@@ -153,7 +156,7 @@ def get_valid_elements(
         ]:
             continue
 
-        element = document_ref.elements.element_ref(onshape_element["id"]).get()
+        element = document_ref.elements.element(onshape_element["id"]).maybe_get()
         if element == None:
             yield onshape_element
             continue
@@ -166,20 +169,23 @@ def get_valid_elements(
         yield onshape_element
 
 
-def add_document(api: Api, library_ref: LibraryRef, version_path: InstancePath):
+def add_document(api: Api, document: DocumentRef, version_path: InstancePath):
     """Loads all of the elements of a given document into the database."""
-    return save_document(api, library_ref, version_path, PreservedInfo())
+    return save_document(
+        api,
+        document,
+        version_path,
+        PreservedInfo(),
+    )
 
 
 async def save_document(
     api: Api,
-    library_ref: LibraryRef,
+    document_ref: DocumentRef,
     version_path: InstancePath,
     preserved_info: PreservedInfo,
 ) -> int:
     """Loads all of the elements of a given document into the database."""
-    document_ref = library_ref.documents.document_ref(version_path.document_id)
-
     contents = await asyncio.to_thread(documents.get_contents, api, version_path)
 
     valid_elements = get_valid_elements(document_ref, contents, preserved_info)
@@ -233,18 +239,18 @@ async def save_document(
 def preserve_info(library_ref: LibraryRef, reload_all: bool) -> PreservedInfo:
     preserved_info = PreservedInfo(reload_all=reload_all)
     for document_ref in library_ref.documents.list():
-        preserved_info.save_document(document_ref.id, document_ref.get_valid())
+        preserved_info.save_document(document_ref.id, document_ref.get())
 
         for element in document_ref.elements.list():
             element_id = element.id
-            preserved_info.save_element(element_id, element.get_valid())
+            preserved_info.save_element(element_id, element.get())
 
     return preserved_info
 
 
 async def reload_document(
     api: Api,
-    db: Database,
+    document_ref: DocumentRef,
     document_path: DocumentPath,
     preserved_info: PreservedInfo,
 ) -> int:
@@ -252,124 +258,80 @@ async def reload_document(
         get_latest_version_path, api, document_path
     )
 
-    document_ref = db.documents.document(document_path.document_id).get()
-    if not document_ref.exists:
+    document = document_ref.maybe_get()
+    if not document:
         # Document doesn't exist, create it immediately
-        return await save_document(api, db, latest_version_path, preserved_info)
+        return await save_document(
+            api, document_ref, latest_version_path, preserved_info
+        )
 
-    try:
-        document = Document.model_validate(document_ref.to_dict())
-        if document.instanceId == latest_version_path.instance_id:
-            return 0
-    except ValidationError:
-        return await save_document(api, db, latest_version_path, preserved_info)
+    if document.instanceId == latest_version_path.instance_id:
+        return 0
 
     # Refresh document
-    return await save_document(api, db, latest_version_path, preserved_info)
+    return await save_document(api, document_ref, latest_version_path, preserved_info)
 
 
-@router.post("/reload-documents")
+@router.post("/reload-documents" + connect.library_route())
 @require_access_level()
 async def reload_documents(**kwargs):
     """Saves the contents of the latest versions of all documents managed by FRC Design Lib into the database."""
-    db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
+    library_ref = connect.get_library_ref()
 
     reload_all = connect.get_optional_body_arg("reloadAll", False)
 
-    document_order = db.get_document_order()
-
-    preserved_info = preserve_info(db, reload_all)
+    preserved_info = preserve_info(library_ref, reload_all)
 
     count = 0
     visited = set()
 
+    documents_ref = library_ref.documents
+
     operations = []
-    for document_id in document_order:
+    for document_id in documents_ref.keys():
         document_path = DocumentPath(document_id)
         visited.add(document_path.document_id)
 
-        operations.append(reload_document(api, db, document_path, preserved_info))
+        operations.append(
+            reload_document(
+                api, documents_ref.document(document_id), document_path, preserved_info
+            )
+        )
 
     results = await asyncio.gather(*operations)
     count = sum(results)
 
-    clean_favorites(db)
+    clean_favorites(library_ref)
 
     return {"savedElements": count}
 
 
-def delete_document(db: Database, document_id: str):
-    """Deletes a document and all elements and configurations which depend on it.
-
-    Note this does not update documentOrder or user favorites.
-    """
-    document = db.documents.document(document_id).get().to_dict()
-    db.documents.document(document_id).delete()
-
-    if document == None:
-        return
-    # Delete all children as well
-    for element_id in document.get("elementIds", []):
-        db.elements.document(element_id).delete()
-        db.configurations.document(element_id).delete()
-
-
-# async def verify_db_integrity(db: Database) -> None:
-#     """Verifies document order, favorite order, and favorites integrity."""
-#     document_ids = set(db.documents.list_documents())
-
-#     document_order = db.get_document_order()
-#     document_order_ids = set(document_order)
-
-#     if document_ids != document_order_ids:
-#         raise ValueError("documentOrder does not match documents")
-
-#     user_data = db.user_data.stream()
-#     for user_data_ref in user_data:
-#         user_data = UserData.model_validate(user_data_ref.to_dict())
-
-#         favorite_order_ids = set(user_data.favoriteOrder)
-#         favorite_ids = set(user_data.favorites.keys())
-
-#         if favorite_order_ids != favorite_ids:
-#             raise ValueError(
-#                 f"User {user_data_ref.id} has a favoriteOrder that does not match favorites"
-#             )
-
-#         for element_id in user_data.favorites.keys():
-#             element_ref = db.elements.document(element_id).get()
-#             if not element_ref.exists:
-#                 raise ValueError(
-#                     f"User {user_data_ref.id} has a favorite element {element_id} that does not exist"
-#                 )
-#             element = Element.model_validate(element_ref.to_dict())
-#             if not element.isVisible:
-#                 raise ValueError(
-#                     f"User {user_data_ref.id} has a favorite element {element_id} that is not visible"
-#                 )
-
-
 def clean_favorites(library_ref: LibraryRef) -> None:
-    """Removes any favorites that are no longer valid."""
+    """Removes any favorites in the library that are no longer valid."""
 
-    for favorite_ref in library_ref.all_favorites():
-        for favorite in favorite_ref.list():
-            for element_ref in library_ref.all_elements():
+    elements: dict[str, Element] = {}
+    for document_ref in library_ref.documents.list():
+        for element_ref in document_ref.elements.list():
+            elements[element_ref.id] = element_ref.get()
 
-                element = element_ref.get()
-                if element == None:
-                    continue
+    for user_data_ref in library_ref.user_data.list():
+        for favorite in user_data_ref.favorites.list():
+            element = elements.get(favorite.id)
+            if element == None:
+                continue
 
-                if element.isVisible == True:
-                    continue
+            # We have to remove all invisible favorites
+            # This is necessary to prevent issues with reordering, as, e.g., Move to top is ambiguous with hidden elements
+            if element.isVisible == True:
+                continue
 
-                favorite_ref.remove(favorite.id)
+            user_data_ref.favorites.delete(favorite.id)
 
 
 @router.post("/set-visibility" + connect.library_route())
 @require_access_level()
-def set_visibility():
+def set_visibility(**kwargs):
     library_ref = connect.get_library_ref()
     document_id = connect.get_body_arg("documentId")
     element_ids = connect.get_body_arg("elementIds")
@@ -378,20 +340,72 @@ def set_visibility():
     if not is_visible:
         delete_favorites(library_ref, element_ids)
 
-    document_ref = library_ref.document(document_id)
+    document_ref = library_ref.documents.document(document_id)
     for element_id in element_ids:
-        document_ref.element(element_id).ref.set({"isVisible": is_visible}, merge=True)
+        document_ref.elements.element(element_id).update({"isVisible": is_visible})
     return {"success": True}
 
 
-@router.post("/set-document-sort")
+@router.post("/set-document-sort" + connect.library_route())
 @require_access_level()
-def set_document_sort():
+def set_document_sort(**kwargs):
     library_ref = connect.get_library_ref()
     document_id = connect.get_body_arg("documentId")
     sort_alphabetically = connect.get_body_arg("sortAlphabetically")
 
-    library_ref.document(document_id).ref.set(
-        {"sortAlphabetically": sort_alphabetically}, merge=True
+    library_ref.documents.document(document_id).update(
+        {"sortAlphabetically": sort_alphabetically}
     )
     return {"success": True}
+
+
+@router.post("/document-order" + connect.library_route())
+@require_access_level()
+def set_document_order(**kwargs):
+    library_ref = connect.get_library_ref()
+    new_document_order = connect.get_body_arg("documentOrder")
+
+    library_ref.documents.set_order(new_document_order)
+    return {"success": True}
+
+
+@router.post("/document" + connect.library_route())
+@require_access_level()
+async def add_document_route(**kwargs):
+    api = connect.get_api()
+    library_ref = connect.get_library_ref()
+
+    new_document_id = connect.get_body_arg("newDocumentId")
+    new_path = DocumentPath(new_document_id)
+    # selected_document_id = connect.get_optional_body_arg("selectedDocumentId")
+
+    try:
+        document_name = get_document(api, new_path)["name"]
+    except:
+        raise HandledException("Failed to find the specified document.")
+
+    try:
+        latest_version = get_latest_version_path(api, new_path)
+    except:
+        raise HandledException("Failed to find a document version to use.")
+
+    document_ref = library_ref.documents.document(new_document_id)
+
+    keys = library_ref.documents.keys()
+    if new_document_id in keys:
+        raise HandledException("Document has already been added to library.")
+
+    await save_document(api, document_ref, latest_version, PreservedInfo())
+    return {"name": document_name}
+
+
+@router.delete("/document" + connect.library_route())
+@require_access_level()
+def delete_document(**kwargs):
+    library_ref = connect.get_library_ref()
+
+    document_id = connect.get_query_param("documentId")
+    library_ref.documents.delete(document_id)
+
+    clean_favorites(library_ref)
+    return {"Success": True}
