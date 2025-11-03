@@ -18,14 +18,16 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { PreviewImage } from "./thumbnail";
-import { useElementsQuery } from "../queries";
 import { ConfigurationWrapper } from "../insert/configurations";
-import { Configuration, copyUserData, UserData } from "../api/models";
+import { LibraryUserData } from "../api/models";
 import { AppInternalErrorState } from "../common/app-zero-state";
 import { HeartIcon } from "./favorite-button";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { router } from "../router";
+import { Configuration } from "../insert/configuration-models";
+import { produce } from "immer";
+import { useLibraryQuery } from "../queries";
 
 export function FavoriteMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -46,7 +48,7 @@ function FavoriteMenuDialog(
     const { favoriteId, defaultConfiguration } = props;
 
     const search = useSearch({ from: "/app" });
-    const elements = useElementsQuery().data;
+    const elements = useLibraryQuery().data?.elements;
 
     const [configuration, setConfiguration] = useState<
         Configuration | undefined
@@ -64,18 +66,22 @@ function FavoriteMenuDialog(
             });
         },
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: ["user-data"] });
-            queryClient.setQueryData(["user-data"], (data?: UserData) => {
-                if (!data) {
-                    return undefined;
-                }
-                const newUserData = copyUserData(data);
-                if (newUserData.favorites[favoriteId]) {
-                    newUserData.favorites[favoriteId].defaultConfiguration =
-                        configuration;
-                }
-                return newUserData;
+            await queryClient.cancelQueries({
+                queryKey: ["library-user-data"]
             });
+            queryClient.setQueryData(
+                ["library-user-data"],
+                produce((data?: LibraryUserData) => {
+                    if (!data) {
+                        return undefined;
+                    }
+                    if (data.favorites[favoriteId]) {
+                        data.favorites[favoriteId].defaultConfiguration =
+                            configuration;
+                    }
+                    return data;
+                })
+            );
             router.invalidate();
         },
         onError: () => {
@@ -87,7 +93,9 @@ function FavoriteMenuDialog(
             showSuccessToast("Successfully updated default configuration.");
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            await queryClient.invalidateQueries({
+                queryKey: ["library-user-data"]
+            });
             router.invalidate();
         }
     });

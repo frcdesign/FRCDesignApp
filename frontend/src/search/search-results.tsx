@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { Position, SearchHit, doSearch, useSearchDbQuery } from "./search";
-import { useElementsQuery } from "../queries";
 import { Vendor } from "../api/models";
 import { ElementCard } from "../cards/element-card";
 import {
@@ -10,6 +9,7 @@ import {
 } from "../common/app-zero-state";
 import { FilterCallout } from "../navbar/filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
+import { useLibraryQuery } from "../queries";
 
 interface SearchResultsProps {
     query: string;
@@ -22,21 +22,21 @@ interface SearchResultsProps {
 export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters } = props;
 
-    const elementsQuery = useElementsQuery();
+    const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
 
-    if (searchDbQuery.isPending || elementsQuery.isPending) {
+    if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <AppLoadingState title="Loading documents..." />;
     } else if (
         searchDbQuery.isError ||
-        elementsQuery.isError ||
-        searchDbQuery.data === undefined
+        libraryQuery.isError ||
+        !searchDbQuery.data
     ) {
         return (
-            <AppInternalErrorState title="Unexpectedly failed to load documents." />
+            <AppInternalErrorState title="Unexpectedly failed to load library." />
         );
     }
-    const elements = elementsQuery.data;
+    const elements = libraryQuery.data.elements;
     const searchResults = doSearch(searchDbQuery.data, query, filters);
 
     if (searchResults.hits.length === 0) {

@@ -13,7 +13,6 @@ import {
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../search/search-results";
 import { DocumentObj, Elements, hasMemberAccess } from "../api/models";
-import { useDocumentsQuery, useElementsQuery } from "../queries";
 import { useUiState } from "../api/ui-state";
 import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
@@ -27,14 +26,14 @@ import {
 } from "../common/app-zero-state";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useInteractiveSection } from "../common/utils";
+import { useLibraryQuery } from "../queries";
 
 /**
  * A list of elements in a document.
  */
 export function DocumentList(): ReactNode {
     const navigate = useNavigate();
-    const documentsQuery = useDocumentsQuery();
-    const elementsQuery = useElementsQuery();
+    const libraryQuery = useLibraryQuery();
     const documentId = useParams({
         from: "/app/documents/$documentId"
     }).documentId;
@@ -45,15 +44,15 @@ export function DocumentList(): ReactNode {
     const sectionRef = useRef<HTMLDivElement>(null);
 
     // Include documents and elements as dependencies so it stays interactive even if the query isn't complete
-    useInteractiveSection(sectionRef, [documentsQuery, elementsQuery]);
+    useInteractiveSection(sectionRef, [libraryQuery]);
 
-    if (documentsQuery.isPending || elementsQuery.isPending) {
+    if (libraryQuery.isPending) {
         return <AppLoadingState title="Loading documents..." />;
-    } else if (documentsQuery.isError || elementsQuery.isError) {
+    } else if (libraryQuery.isError) {
         return <AppInternalErrorState title="Failed to load document." />;
     }
-    const documents = documentsQuery.data;
-    const elements = elementsQuery.data;
+    const documents = libraryQuery.data.documents;
+    const elements = libraryQuery.data.elements;
 
     const document = documents[documentId];
 

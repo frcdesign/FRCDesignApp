@@ -47,7 +47,7 @@ export function handleAppError(
 /**
  * Errors reported by the backend and handled on the client.
  */
-export class ReportedError extends Error {
+export class HandledBackendError extends Error {
     public type: string;
 
     constructor(type: string) {

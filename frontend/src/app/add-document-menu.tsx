@@ -61,12 +61,7 @@ function AddDocumentMenuDialog(
             "add-document"
         ),
         onSuccess: async (result) => {
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["documents"] }),
-                queryClient.invalidateQueries({ queryKey: ["document-order"] }),
-                queryClient.invalidateQueries({ queryKey: ["elements"] })
-            ]);
-
+            queryClient.invalidateQueries({ queryKey: ["library"] });
             showSuccessToast(
                 `Successfully added ${result.name}.`,
                 "add-document"

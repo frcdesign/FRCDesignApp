@@ -11,7 +11,7 @@ import {
     seq,
     tok
 } from "typescript-parsec";
-import { getDisplayStr, QuantityType, Unit } from "../api/models";
+import { getUnitDisplayStr, QuantityType, Unit } from "./configuration-models";
 
 class ParseError extends Error {
     constructor(message: string) {
@@ -604,10 +604,10 @@ function stringify(expr: Expr): string {
             if (value.type === "number") {
                 return value.rawValue;
             }
-            return value.rawValue + " " + getDisplayStr(value.unit);
+            return value.rawValue + " " + getUnitDisplayStr(value.unit);
         }
         case "unit-application":
-            return `${stringify(expr.expr)} ${getDisplayStr(expr.unit)}`;
+            return `${stringify(expr.expr)} ${getUnitDisplayStr(expr.unit)}`;
         case "unary":
             return `${expr.op}${stringify(expr.expr)}`;
         case "paren":
@@ -632,7 +632,7 @@ export function formatValueWithUnits(
     if (displayUnit === Unit.UNITLESS) {
         return displayValue;
     }
-    return `${displayValue} ${getDisplayStr(displayUnit)}`;
+    return `${displayValue} ${getUnitDisplayStr(displayUnit)}`;
 }
 
 /**
@@ -661,7 +661,7 @@ function formatExpression(
         if (expr.kind === "binary") {
             expression = `(${expression})`;
         }
-        expression = expression + " " + getDisplayStr(displayUnit);
+        expression = expression + " " + getUnitDisplayStr(displayUnit);
     }
 
     if (tolerantLessThan(value, options.min)) {

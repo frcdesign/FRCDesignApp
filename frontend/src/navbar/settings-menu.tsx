@@ -18,10 +18,8 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
-    copyUserData,
-    Documents,
-    Elements,
     hasMemberAccess,
+    LibraryObj,
     Settings,
     Theme,
     UserData
@@ -30,12 +28,13 @@ import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize } from "../common/utils";
 import { buildSearchDb } from "../search/search";
 import { toUserApiPath } from "../api/path";
-import { useUserData } from "../queries";
 import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { HandledError } from "../api/errors";
+import { getAppErrorHandler, HandledError } from "../api/errors";
+import { toLibraryPath, useLibrary } from "../api/library";
+import { updateSettingsKey, userDataQueryKey } from "../queries";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -90,31 +89,36 @@ function SettingsMenuDialog(): ReactNode {
 
 function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
-    const settings = useUserData().settings;
 
     const settingsMutation = useMutation({
-        mutationKey: ["update-settings"],
+        mutationKey: updateSettingsKey(search),
         mutationFn: async (newSettings: Settings) =>
             apiPost("/settings" + toUserApiPath(search), {
                 body: newSettings
             }),
         onMutate: async (newSettings) => {
-            await queryClient.cancelQueries({ queryKey: ["user-data"] });
-            queryClient.setQueryData(["user-data"], (data?: UserData) => {
-                if (!data) {
-                    return undefined;
+            queryClient.cancelQueries({ queryKey: userDataQueryKey(search) });
+            queryClient.setQueryData(
+                userDataQueryKey(search),
+                (data?: UserData) => {
+                    console.log(data);
+                    if (!data) {
+                        return undefined;
+                    }
+                    data.theme = newSettings.theme;
+                    data.library = newSettings.library;
+                    return data;
                 }
-                const newUserData = copyUserData(data);
-                newUserData.settings = newSettings;
-                return newUserData;
-            });
+            );
             router.invalidate();
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            await queryClient.invalidateQueries({
+                queryKey: userDataQueryKey(search)
+            });
             router.invalidate();
         }
     });
@@ -125,8 +129,13 @@ function UserSettings(): ReactNode {
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </FormGroup>
             <ThemeSelect
-                theme={settings.theme}
-                onThemeSelect={(theme) => settingsMutation.mutate({ theme })}
+                theme={search.theme}
+                onThemeSelect={(newTheme) =>
+                    settingsMutation.mutate({
+                        library: search.library,
+                        theme: newTheme
+                    })
+                }
             />
         </>
     );
@@ -212,21 +221,16 @@ function AdminSettings(): ReactNode {
 function PushVersionButton(): ReactNode {
     const navigate = useNavigate();
     const pushVersionMutation = useMutation({
-        mutationKey: ["push-cache-data"],
+        mutationKey: ["library-version"],
         mutationFn: async () => {
-            const documents = await queryClient.fetchQuery<Documents>({
-                queryKey: ["documents"]
+            const libraryData = await queryClient.fetchQuery<LibraryObj>({
+                queryKey: ["library"]
             });
-            const elements = await queryClient.fetchQuery<Elements>({
-                queryKey: ["elements"]
-            });
-            if (!documents || !elements) {
-                throw new HandledError(
-                    "Failed to fetch documents or elements."
-                );
+            if (!libraryData) {
+                throw new HandledError("Failed to fetch library data.");
             }
-            const searchDb = JSON.stringify(buildSearchDb(documents, elements));
-            return apiPost("/cache-data", { body: { searchDb } });
+            const searchDb = JSON.stringify(buildSearchDb(libraryData));
+            return apiPost("/push-version", { body: { searchDb } });
         },
         onError: (error) => {
             if (error instanceof HandledError) {
@@ -336,6 +340,7 @@ export function ReloadDocumentsButton(
     const reloadAll = props.reloadAll ?? false;
     const hideFormGroup = props.hideFormGroup ?? false;
 
+    const library = useLibrary();
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
         mutationFn: async () => {
@@ -347,17 +352,11 @@ export function ReloadDocumentsButton(
                 throw new HandledError("Cancelled operation.");
             }
 
-            return apiPost("/reload-documents", {
+            return apiPost("/reload-documents" + toLibraryPath(library), {
                 query: { reloadAll }
             });
         },
-        onError: (error) => {
-            if (error instanceof HandledError) {
-                showErrorToast(error.message);
-                return;
-            }
-            showErrorToast("Failed to reload documents!");
-        },
+        onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: async (result) => {
             const savedElements = result["savedElements"];
             if (savedElements === 0) {
@@ -367,10 +366,7 @@ export function ReloadDocumentsButton(
                     "Successfully reloaded " + savedElements + " elements."
                 );
             }
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["documents"] }),
-                queryClient.invalidateQueries({ queryKey: ["elements"] })
-            ]);
+            queryClient.invalidateQueries({ queryKey: ["library"] });
         }
     });
 

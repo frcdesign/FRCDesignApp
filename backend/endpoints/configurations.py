@@ -35,10 +35,9 @@ def get_configuration(library: Library, document_id: str, configuration_id: str)
     Returns:
         parameters: A list of configuration parameters.
     """
-    db = connect.get_db()
+    library_ref = connect.get_library_ref()
     configuration_parameters = (
-        db.get_library(library)
-        .documents.document(document_id)
+        library_ref.documents.document(document_id)
         .configurations.configuration(configuration_id)
         .get()
     )

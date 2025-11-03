@@ -34,8 +34,7 @@ def create_app():
     @app.get("/app")
     async def serve_app():
         """The base route used by Onshape."""
-        db = connect.get_db()
-        api = connect.get_api(db)
+        api = connect.get_api()
 
         authorized = api.oauth.authorized and ping(api, catch=True)
         if not authorized:

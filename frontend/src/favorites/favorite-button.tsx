@@ -8,12 +8,13 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api/api";
-import { copyUserData, ElementObj, UserData } from "../api/models";
+import { ElementObj, LibraryUserData } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { useSearch } from "@tanstack/react-router";
 import { router } from "../router";
 import { handleAppError, HandledError } from "../api/errors";
+import { produce } from "immer";
 
 enum Operation {
     ADD,
@@ -26,26 +27,25 @@ interface UpdateFavoritesArgs {
 }
 
 function updateFavorites(
-    data: UserData | undefined,
+    data: LibraryUserData | undefined,
     args: UpdateFavoritesArgs
-): UserData | undefined {
+): LibraryUserData | undefined {
     if (!data) {
         return undefined;
     }
-    const newUserData = copyUserData(data);
     const elementId = args.element.id;
     if (args.operation === Operation.ADD) {
-        newUserData.favorites[elementId] = {
+        data.favorites[elementId] = {
             id: elementId
         };
-        newUserData.favoriteOrder.push(elementId);
+        data.favoriteOrder.push(elementId);
     } else {
-        delete newUserData.favorites[elementId];
-        newUserData.favoriteOrder = newUserData.favoriteOrder.filter(
+        delete data.favorites[elementId];
+        data.favoriteOrder = data.favoriteOrder.filter(
             (favoriteId) => favoriteId !== elementId
         );
     }
-    return newUserData;
+    return data;
 }
 
 function useUpdateFavoritesMutation(isFavorite: boolean) {
@@ -71,9 +71,12 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
             }
         },
         onMutate: async (args) => {
-            await queryClient.cancelQueries({ queryKey: ["user-data"] });
-            queryClient.setQueryData(["user-data"], (data?: UserData) =>
-                updateFavorites(data, args)
+            await queryClient.cancelQueries({
+                queryKey: ["library-user-data"]
+            });
+            queryClient.setQueryData(
+                ["library-user-data"],
+                produce((data?: LibraryUserData) => updateFavorites(data, args))
             );
             router.invalidate();
         },
@@ -84,7 +87,9 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
             handleAppError(error, defaultMessage);
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            await queryClient.invalidateQueries({
+                queryKey: ["library-user-data"]
+            });
             router.invalidate();
         }
     });

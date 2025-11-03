@@ -4,7 +4,7 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
-import { ElementObj, ElementType, Configuration } from "../api/models";
+import { ElementObj, ElementType } from "../api/models";
 import {
     Button,
     Card,
@@ -14,7 +14,6 @@ import {
     Intent
 } from "@blueprintjs/core";
 import { useIsFetching } from "@tanstack/react-query";
-import { useElementsQuery, useUserData } from "../queries";
 import {
     MenuType,
     InsertMenuParams,
@@ -26,6 +25,8 @@ import { FavoriteButton } from "../favorites/favorite-button";
 import { toaster } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
+import { Configuration } from "./configuration-models";
+import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -42,8 +43,8 @@ export function InsertMenu(): ReactNode {
 function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
 
-    const elements = useElementsQuery().data;
-    const favorites = useUserData().favorites;
+    const elements = useLibraryQuery().data?.elements;
+    const favorites = useLibraryUserDataQuery().data?.favorites;
 
     const navigate = useNavigate();
     const closeDialog = useHandleCloseDialog();
@@ -53,7 +54,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     >(props.defaultConfiguration);
 
     const element = elements ? elements[elementId] : undefined;
-    if (!element) {
+    if (!element || !favorites) {
         return null;
     }
 

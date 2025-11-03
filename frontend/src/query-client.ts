@@ -1,15 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
-import { ReportedError } from "./api/errors";
+import { HandledBackendError } from "./api/errors";
 
 export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            staleTime: Infinity,
-            gcTime: 60 * 1000,
             retry: (count, error) => {
                 if (count >= 3) {
                     return false;
-                } else if (error instanceof ReportedError) {
+                } else if (error instanceof HandledBackendError) {
                     return false;
                 }
                 return true;

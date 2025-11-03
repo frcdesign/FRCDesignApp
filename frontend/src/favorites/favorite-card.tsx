@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { copyUserData, ElementObj, Favorite, UserData } from "../api/models";
+import { ElementObj, Favorite, LibraryUserData } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
@@ -25,10 +25,11 @@ import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { toUserApiPath, UserPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
-import { useUserData } from "../queries";
 import { router } from "../router";
 import { AlertType, useOpenAlert } from "../search-params/alert-type";
 import { getAppErrorHandler } from "../api/errors";
+import { useLibraryUserDataQuery } from "../queries";
+import { produce } from "immer";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -112,7 +113,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
     const navigate = useNavigate();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation(search);
-    const favoriteOrder = useUserData().favoriteOrder;
+    const favoriteOrder = useLibraryUserDataQuery().data?.favoriteOrder ?? [];
     const openAlert = useOpenAlert();
 
     const menu = (
@@ -172,22 +173,28 @@ function useSetFavoriteOrderMutation(userPath: UserPath) {
             });
         },
         onMutate: async (newOrder: string[]) => {
-            await queryClient.cancelQueries({ queryKey: ["user-data"] });
-            queryClient.setQueryData(["user-data"], (data?: UserData) => {
-                if (!data) {
-                    return undefined;
-                }
-                const newUserData = copyUserData(data);
-                newUserData.favoriteOrder = newOrder;
-                return newUserData;
+            await queryClient.cancelQueries({
+                queryKey: ["library-user-data"]
             });
+            queryClient.setQueryData(
+                ["library-user-data"],
+                produce((data?: LibraryUserData) => {
+                    if (!data) {
+                        return undefined;
+                    }
+                    data.favoriteOrder = newOrder;
+                    return data;
+                })
+            );
             router.invalidate();
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."
         ),
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["user-data"] });
+            await queryClient.invalidateQueries({
+                queryKey: ["library-user-data"]
+            });
             router.invalidate();
         }
     });

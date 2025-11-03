@@ -5,8 +5,8 @@ from backend.endpoints import (
     add_part,
     cache,
     configurations,
-    document_order,
     documents,
+    library,
     thumbnails,
     user_data,
 )
@@ -35,5 +35,5 @@ router.register_blueprint(configurations.router)
 router.register_blueprint(thumbnails.router)
 router.register_blueprint(add_part.router)
 router.register_blueprint(user_data.router)
-router.register_blueprint(document_order.router)
+router.register_blueprint(library.router)
 router.register_blueprint(cache.router)

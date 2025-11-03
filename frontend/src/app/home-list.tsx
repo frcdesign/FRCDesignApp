@@ -12,7 +12,6 @@ import { Outlet } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useRef, useState } from "react";
 import { DocumentCard } from "../cards/document-card";
 import { HeartIcon } from "../favorites/favorite-button";
-import { useDocumentOrderQuery, useDocumentsQuery } from "../queries";
 import { SearchResults } from "../search/search-results";
 import { useUiState } from "../api/ui-state";
 import {
@@ -24,6 +23,7 @@ import { RequireAccessLevel } from "../api/access-level";
 import { useInteractiveSection } from "../common/utils";
 import { AddDocumentButton } from "./add-document-menu";
 import { FavoritesList } from "../favorites/favorites-list";
+import { useLibraryQuery } from "../queries";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -86,19 +86,18 @@ export function HomeList(): ReactNode {
 }
 
 function LibraryList() {
-    const documentsQuery = useDocumentsQuery();
-    const documentOrderQuery = useDocumentOrderQuery();
+    const libraryQuery = useLibraryQuery();
 
-    if (documentsQuery.isError || documentOrderQuery.isError) {
+    if (libraryQuery.isError) {
         return (
             <AppInternalErrorState title="Failed to load documents." inline />
         );
-    } else if (documentsQuery.isPending || documentOrderQuery.isPending) {
+    } else if (libraryQuery.isPending) {
         return <AppLoadingState title="Loading documents..." />;
     }
 
-    const documents = documentsQuery.data;
-    const documentOrder = documentOrderQuery.data;
+    const documents = libraryQuery.data.documents;
+    const documentOrder = libraryQuery.data.documentOrder;
 
     if (documentOrder.length <= 0) {
         // Add an escape hatch for when no documents are in the database

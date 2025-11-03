@@ -14,7 +14,6 @@ import {
     FavoriteButton,
     FavoriteElementItem
 } from "../favorites/favorite-button";
-import { useUserData } from "../queries";
 import { RequireAccessLevel } from "../api/access-level";
 import { useIsElementHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
@@ -26,6 +25,7 @@ import {
 import { AlertType, useOpenAlert } from "../search-params/alert-type";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../search-params/menu-params";
+import { useLibraryUserDataQuery } from "../queries";
 
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
@@ -40,7 +40,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     const { element, searchHit } = props;
     const navigate = useNavigate();
 
-    const userData = useUserData();
+    const userData = useLibraryUserDataQuery().data;
 
     const isHidden = useIsElementHidden(element);
 
@@ -49,7 +49,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     );
     const openAlert = useOpenAlert();
 
-    if (isHidden) {
+    if (isHidden || !userData) {
         return null;
     }
 

@@ -3,96 +3,81 @@
  */
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet, CacheOptions, useCacheOptions } from "./api/api";
-import {
-    UnitInfo,
-    DocumentOrder,
-    Documents,
-    Elements,
-    UserData,
-    CacheData
-} from "./api/models";
+import { LibraryUserData, UserData, Library, LibraryObj } from "./api/models";
 import {
     InstancePath,
     toInstanceApiPath,
     toUserApiPath,
     UserPath
 } from "./api/path";
-import { useLoaderData } from "@tanstack/react-router";
+import { toLibraryPath, useLibrary } from "./api/library";
+import { UnitInfo } from "./insert/configuration-models";
+import { useSearch } from "@tanstack/react-router";
 
-export function getDocumentsQuery(cacheOptions: CacheOptions) {
-    return queryOptions<Documents>({
-        queryKey: ["documents"],
+export function updateSettingsKey(userPath: UserPath) {
+    return ["user-data", toUserApiPath(userPath)];
+}
+
+export function useLibraryQuery() {
+    const cacheOptions = useCacheOptions();
+    const library = useLibrary();
+    return useQuery(getLibraryQuery(library, cacheOptions));
+}
+
+export function libraryQueryKey(library: Library, cacheOptions: CacheOptions) {
+    return ["library", library, cacheOptions];
+}
+
+export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
+    return queryOptions<LibraryObj>({
+        queryKey: libraryQueryKey(library, cacheOptions),
+        queryFn: async () => apiGet(toLibraryPath(library), { cacheOptions }),
+        staleTime: Infinity,
+        gcTime: Infinity
+    });
+}
+
+export function libraryUserDataQueryKey(library: Library, userPath: UserPath) {
+    return ["library-user-data", library, userPath];
+}
+
+export function getLibraryUserDataQuery(library: Library, userPath: UserPath) {
+    return queryOptions<LibraryUserData>({
+        queryKey: libraryUserDataQueryKey(library, userPath),
         queryFn: async () =>
-            apiGet("/documents", { cacheOptions }).then(
-                (result) => result.documents
+            apiGet(
+                "/library-user-data" +
+                    toLibraryPath(library) +
+                    toUserApiPath(userPath)
             )
     });
 }
 
-export function useDocumentsQuery() {
-    const cacheOptions = useCacheOptions();
-    return useQuery(getDocumentsQuery(cacheOptions));
+export function useLibraryUserDataQuery() {
+    const search = useSearch({ from: "/app" });
+    return useQuery(getLibraryUserDataQuery(search.library, search));
 }
 
-export function getDocumentOrderQuery(cacheOptions: CacheOptions) {
-    return queryOptions<DocumentOrder>({
-        queryKey: ["document-order"],
-        queryFn: async () =>
-            apiGet("/document-order", { cacheOptions }).then(
-                (result) => result.documentOrder
-            )
-    });
+export function userDataQueryKey(userPath: UserPath) {
+    return ["user-data", userPath];
 }
 
-export function useDocumentOrderQuery() {
-    const cacheOptions = useCacheOptions();
-    return useQuery(getDocumentOrderQuery(cacheOptions));
-}
-
-export function getElementsQuery(cacheOptions: CacheOptions) {
-    return queryOptions<Elements>({
-        queryKey: ["elements"],
-        queryFn: async () =>
-            apiGet("/elements", { cacheOptions }).then(
-                (result) => result.elements
-            )
-    });
-}
-
-export function useElementsQuery() {
-    const cacheOptions = useCacheOptions();
-    return useQuery(getElementsQuery(cacheOptions));
-}
-
+/**
+ * Returns core application data needed to load most other endpoints.
+ */
 export function getUserDataQuery(userPath: UserPath) {
     return queryOptions<UserData>({
-        queryKey: ["user-data"],
-        queryFn: async () => apiGet("/user-data" + toUserApiPath(userPath)),
-        // Favorites shouldn't go stale, although they can get changed in another tab
-        staleTime: 60 * 1000 // 1 minute
-    });
-}
-
-export function useUserData(): UserData {
-    return useLoaderData({ from: "/app" });
-}
-
-/**
- * Returns core application cache data needed to load most other endpoints.
- */
-export function getCacheDataQuery() {
-    return queryOptions<CacheData>({
-        queryKey: ["cache-data"],
-        queryFn: async () => apiGet("/cache-data")
+        queryKey: userDataQueryKey(userPath),
+        queryFn: async () => apiGet("/user-data" + toUserApiPath(userPath))
     });
 }
 
 /**
- * Returns information needed to format unit expressions in insert-dialogs.
+ * Returns information needed to format unit expressions in the Insert dialog.
  */
 export function useUnitInfoQuery(instancePath: InstancePath) {
     return useQuery<UnitInfo>({
-        queryKey: ["unit-info"],
+        queryKey: ["unit-info", instancePath],
         queryFn: async () =>
             apiGet("/unit-info" + toInstanceApiPath(instancePath))
     });

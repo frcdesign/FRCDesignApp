@@ -18,12 +18,10 @@ from backend.common.models import (
 )
 from backend.common.models import Document
 from backend.common.vendors import parse_vendors
-from backend.endpoints.cache import cacheable_route
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.endpoints.preserved_info import (
     PreservedInfo,
 )
-from backend.endpoints.user_data import delete_favorites
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
@@ -36,8 +34,6 @@ from onshape_api.paths.doc_path import (
 )
 
 router = flask.Blueprint("documents", __name__)
-
-
 
 
 # @cacheable_route(router, "/documents")
@@ -326,21 +322,26 @@ def clean_favorites(library_ref: LibraryRef) -> None:
             if element.isVisible == True:
                 continue
 
-            user_data_ref.favorites.delete(favorite.id)
+            user_data_ref.favorites.remove(favorite.id)
 
 
 @router.post("/set-visibility" + connect.library_route())
 @require_access_level()
 def set_visibility(**kwargs):
+    """Sets the visibility of one or more elements in a document."""
     library_ref = connect.get_library_ref()
     document_id = connect.get_body_arg("documentId")
     element_ids = connect.get_body_arg("elementIds")
     is_visible = connect.get_body_arg("isVisible")
 
-    if not is_visible:
-        delete_favorites(library_ref, element_ids)
-
     document_ref = library_ref.documents.document(document_id)
+
+    if not is_visible:
+        for user_data_ref in library_ref.user_data.list():
+            for favorite in user_data_ref.favorites.list():
+                if favorite.id in element_ids:
+                    user_data_ref.favorites.remove(favorite.id)
+
     for element_id in element_ids:
         document_ref.elements.element(element_id).update({"isVisible": is_visible})
     return {"success": True}
@@ -405,7 +406,7 @@ def delete_document(**kwargs):
     library_ref = connect.get_library_ref()
 
     document_id = connect.get_query_param("documentId")
-    library_ref.documents.delete(document_id)
+    library_ref.documents.remove(document_id)
 
     clean_favorites(library_ref)
     return {"Success": True}

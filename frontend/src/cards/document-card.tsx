@@ -10,17 +10,19 @@ import {
 } from "@blueprintjs/core";
 import { useMatch, useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { DocumentObj, DocumentOrder } from "../api/models";
+import { DocumentObj, LibraryObj } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { RequireAccessLevel } from "../api/access-level";
 import { apiPost, apiDelete } from "../api/api";
 import { showErrorToast } from "../common/toaster";
-import { useDocumentOrderQuery } from "../queries";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
 import { CardTitle, OpenDocumentItems } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
+import { useLibraryQuery } from "../queries";
+import { produce } from "immer";
+import { useLibrary } from "../api/library";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -91,14 +93,12 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
-            queryClient.invalidateQueries({ queryKey: ["document-order"] });
-            queryClient.invalidateQueries({ queryKey: ["elements"] });
+            queryClient.invalidateQueries({ queryKey: ["library"] });
         }
     });
 
     const setDocumentOrderMutation = useSetDocumentOrderMutation();
-    const documentOrder = useDocumentOrderQuery();
+    const documentOrder = useLibraryQuery().data?.documentOrder ?? [];
 
     const showAllMutation = useSetVisibilityMutation(
         "show-all",
@@ -112,15 +112,11 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
         false
     );
 
-    if (!documentOrder.data) {
-        return null;
-    }
-
     const orderItems = isHome && (
         <>
             <ChangeOrderItems
                 id={document.id}
-                order={documentOrder.data}
+                order={documentOrder}
                 onOrderChange={(newOrder) =>
                     setDocumentOrderMutation.mutate(newOrder)
                 }
@@ -174,17 +170,25 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 }
 
 function useSetDocumentOrderMutation() {
+    const library = useLibrary();
     return useMutation({
         mutationKey: ["set-document-order"],
-        mutationFn: async (documentOrder: DocumentOrder) => {
+        mutationFn: async (documentOrder: string[]) => {
             return apiPost("/document-order", { body: { documentOrder } });
         },
-        onMutate: (newOrder: DocumentOrder) => {
-            queryClient.setQueryData(["document-order"], newOrder);
+        onMutate: (newOrder: string[]) => {
+            queryClient.setQueryData(
+                ["library", library],
+                produce((data?: LibraryObj) => {
+                    if (!data) return;
+                    data.documentOrder = newOrder;
+                    return data;
+                })
+            );
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder document.");
-            queryClient.invalidateQueries({ queryKey: ["document-order"] });
+            queryClient.invalidateQueries({ queryKey: ["library"] });
         }
         // Don't need an onSettled handler since document-order doesn't expire
     });
@@ -202,7 +206,7 @@ function useToggleDocumentSortMutation(document: DocumentObj) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["library"] });
         }
     });
 }

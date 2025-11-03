@@ -38,7 +38,7 @@ import {
     QuantityType,
     Unit,
     EnumOption
-} from "../api/models";
+} from "./configuration-models";
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,

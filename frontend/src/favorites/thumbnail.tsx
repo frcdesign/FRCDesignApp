@@ -1,11 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetImage, useCacheOptions } from "../api/api";
-import {
-    getHeightAndWidth,
-    encodeConfigurationForQuery,
-    ThumbnailSize,
-    Configuration
-} from "../api/models";
+import { getHeightAndWidth, ThumbnailSize } from "../api/models";
 import { ElementPath, toElementApiPath } from "../api/path";
 import {
     Card,
@@ -17,6 +12,10 @@ import {
 } from "@blueprintjs/core";
 
 import { ReactNode } from "react";
+import {
+    Configuration,
+    encodeConfigurationForQuery
+} from "../insert/configuration-models";
 
 interface CardThumbnailProps {
     path: ElementPath;

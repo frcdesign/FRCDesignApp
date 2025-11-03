@@ -1,4 +1,3 @@
-import { encodeConfigurationForQuery } from "../api/models";
 import {
     DocumentPath,
     InstancePath,
@@ -9,6 +8,7 @@ import {
     WorkspacePath,
     InstanceType
 } from "../api/path";
+import { encodeConfigurationForQuery } from "../insert/configuration-models";
 import { toaster } from "./toaster";
 
 export function makeUrl(path: DocumentPath): string;

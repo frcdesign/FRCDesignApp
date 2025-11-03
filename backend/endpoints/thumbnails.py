@@ -22,7 +22,7 @@ router = flask.Blueprint("thumbnails", __name__)
 @cacheable_route(router, "/thumbnail" + element_path_route())
 def get_element_thumbnail(**kwargs):
     db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
     element_path = get_route_element_path()
 
     size = get_optional_query_param("size")
@@ -38,7 +38,7 @@ def get_element_thumbnail(**kwargs):
 @router.get("/thumbnail-id" + element_path_route())
 def get_thumbnail_id(**kwargs):
     db = connect.get_db()
-    api = connect.get_api(db)
+    api = connect.get_api()
     element_path = get_route_element_path()
 
     configuration = get_optional_query_param("configuration")

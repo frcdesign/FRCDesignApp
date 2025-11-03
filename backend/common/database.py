@@ -15,6 +15,7 @@ from backend.common.models import (
     Library,
     LibraryData,
     LibraryUserData,
+    UserData,
 )
 
 
@@ -53,8 +54,8 @@ class BaseDocument(Protocol, Generic[T]):
 class BaseCollection(Protocol, Generic[T]):
     def list(self) -> list[BaseDocument[T]]: ...
     def keys(self) -> list[str]: ...
-    def set(self, doc_id: str, data: T) -> None: ...
-    def delete(self, doc_id: str) -> None: ...
+    def add(self, doc_id: str, data: T) -> None: ...
+    def remove(self, doc_id: str) -> None: ...
     def document(self, doc_id: str) -> BaseDocument[T]: ...
 
 
@@ -95,27 +96,27 @@ class BaseCollectionRef(BaseCollection[T], Generic[T]):
     def keys(self) -> list[str]:
         return self.ref.keys()
 
-    def set(self, doc_id: str, data: T) -> None:
-        return self.ref.set(doc_id, data)
+    def add(self, doc_id: str, data: T) -> None:
+        return self.ref.add(doc_id, data)
 
-    def delete(self, doc_id: str) -> None:
-        return self.ref.delete(doc_id)
+    def remove(self, doc_id: str) -> None:
+        return self.ref.remove(doc_id)
 
-    def document(self, doc_id: str) -> BaseDocument[Document]:
-        return self.document(doc_id)
+    def document(self, doc_id: str) -> BaseDocument[T]:
+        return self.ref.document(doc_id)
 
 
 class FirestoreDocument(BaseDocument[T]):
-    def __init__(self, ref: DocumentReference, model: Type[T]):
-        self.ref = ref
+    def __init__(self, document: DocumentReference, model: Type[T]):
+        self.document = document
         self.model = model
 
     @property
     def id(self) -> str:
-        return self.ref.id
+        return self.document.id
 
     def maybe_get(self) -> T | None:
-        snapshot = self.ref.get()
+        snapshot = self.document.get()
         if not snapshot.exists:
             return None
         try:
@@ -126,27 +127,29 @@ class FirestoreDocument(BaseDocument[T]):
     def get(self) -> T:
         result = self.maybe_get()
         if result == None:
-            raise ServerException("Unexpectedly failed to get document {self.id}")
+            raise ServerException(
+                f"Unexpectedly failed to get {self.model.__name__} with id {self.id}"
+            )
         return result
 
     def get_with_default(self) -> T:
         """Retrieves the document, constructing it if it doesn't exist."""
-        snapshot = self.ref.get()
+        snapshot = self.document.get()
         return self.model.model_validate(snapshot.to_dict() or {})
 
     def set(self, data: T) -> None:
-        self.ref.set(data.model_dump())
+        self.document.set(data.model_dump())
 
     def update(self, partial: dict) -> None:
-        self.ref.set(partial, merge=True)
+        self.document.set(partial, merge=True)
 
     def delete(self) -> None:
-        self.ref.delete()
+        self.document.delete()
 
     def collection(
         self, collection: Collection, model: Type[S]
     ) -> FirestoreCollection[S]:
-        return FirestoreCollection(self.ref.collection(collection), model)
+        return FirestoreCollection(self.document.collection(collection), model)
 
 
 class FirestoreCollection(BaseCollection[T]):
@@ -154,26 +157,29 @@ class FirestoreCollection(BaseCollection[T]):
 
     def __init__(
         self,
-        ref: CollectionReference,
+        collection: CollectionReference,
         model: Type[T],
     ):
-        self.ref = ref
+        self.collection = collection
         self.model = model
 
     def keys(self) -> list[str]:
         return [doc_ref.id for doc_ref in self.list()]
 
     def list(self) -> list[FirestoreDocument[T]]:
-        return [FirestoreDocument(doc_ref, self.model) for doc_ref in self.ref.stream()]
+        return [
+            FirestoreDocument(doc_ref, self.model)
+            for doc_ref in self.collection.stream()
+        ]
 
-    def set(self, doc_id: str, data: T) -> None:
-        self.ref.document(doc_id).set(data.model_dump())
+    def add(self, doc_id: str, data: T) -> None:
+        self.collection.document(doc_id).set(data.model_dump())
 
-    def delete(self, doc_id: str) -> None:
-        self.ref.document(doc_id).delete()
+    def remove(self, doc_id: str) -> None:
+        self.collection.document(doc_id).delete()
 
     def document(self, doc_id: str) -> FirestoreDocument[T]:
-        return FirestoreDocument(self.ref.document(doc_id), self.model)
+        return FirestoreDocument(self.collection.document(doc_id), self.model)
 
 
 D = TypeVar("D", bound=BaseModel)
@@ -193,11 +199,13 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         self.order_key = order_key
 
     def _get_order(self) -> list[str]:
-        data = self.parent.get()
+        data = self.parent.maybe_get()
+        if data == None:
+            return []
         return getattr(data, self.order_key, [])
 
     def _set_order(self, order: list[str]):
-        data = self.parent.get()
+        data = self.parent.get_with_default()
         setattr(data, self.order_key, order)
         self.parent.set(data)
 
@@ -215,7 +223,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         if doc_id in existing_order:
             raise ValueError(f"Document '{doc_id}' already in order list")
 
-        self.set(doc_id, data)
+        self.add(doc_id, data)
         existing_order.append(doc_id)
         self._set_order(existing_order)
 
@@ -225,7 +233,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         if doc_id not in existing_order:
             raise ValueError(f"Document '{doc_id}' not in order list")
 
-        self.delete(doc_id)
+        self.remove(doc_id)
         new_order = [x for x in existing_order if x != doc_id]
         self._set_order(new_order)
 
@@ -259,7 +267,7 @@ class DocumentsRef(OrderedCollection[LibraryData, Document]):
 
     @override
     def list(self) -> list[DocumentRef]:
-        return [DocumentRef(doc_ref) for doc_ref in self.list()]
+        return [DocumentRef(doc_ref) for doc_ref in super().list()]
 
 
 class DocumentRef(BaseDocumentRef[Document]):
@@ -294,17 +302,22 @@ class AllLibraryUserDataRef(BaseCollectionRef[LibraryUserData]):
 
     @override
     def list(self) -> list[LibraryUserDataRef]:
-        return [LibraryUserDataRef(doc_ref) for doc_ref in self.ref.list()]
+        return [LibraryUserDataRef(doc_ref) for doc_ref in super().list()]
 
 
 class LibraryUserDataRef(BaseDocumentRef[LibraryUserData]):
     @property
     def favorites(self) -> FavoritesRef:
-        return FavoritesRef(self.ref.collection(Collection.FAVORITES, Favorite))
+        return FavoritesRef(
+            collection=self.ref.collection(Collection.FAVORITES, Favorite),
+            parent=self.ref,
+            order_key="favoriteOrder",
+        )
 
 
-class FavoritesRef(BaseCollectionRef[Favorite]):
-    pass
+class FavoritesRef(OrderedCollection[LibraryUserData, Favorite]):
+    def favorite(self, favorite_id: str) -> BaseDocument[Favorite]:
+        return self.ref.document(favorite_id)
 
 
 class Database:
@@ -327,25 +340,9 @@ class Database:
     def user_data(self) -> CollectionReference:
         return self.get_collection(Collection.USER_DATA)
 
-    def get_user_data(self, user_id: str) -> DocumentReference:
-        return self.user_data.document(user_id)
+    def get_user_data(self, user_id: str) -> FirestoreDocument[UserData]:
+        return FirestoreDocument(self.user_data.document(user_id), UserData)
 
     @property
     def sessions(self) -> CollectionReference:
         return self.get_collection(Collection.SESSIONS)
-
-
-# def delete_collection(coll_ref: CollectionReference, batch_size=500):
-#     """Deletes a collection in the database."""
-#     if batch_size == 0:
-#         return
-
-#     docs = coll_ref.list_documents(page_size=batch_size)
-#     deleted = 0
-
-#     for doc in docs:
-#         doc.delete()
-#         deleted = deleted + 1
-
-#     if deleted >= batch_size:
-#         return delete_collection(coll_ref, batch_size)

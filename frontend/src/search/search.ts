@@ -1,7 +1,8 @@
 import MiniSearch, { Options, SearchResult } from "minisearch";
-import { Documents, Elements, Vendor } from "../api/models";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { Library, LibraryObj, Vendor } from "../api/models";
 import { apiGet, CacheOptions, useCacheOptions } from "../api/api";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 const deliminator = "^";
 
@@ -63,15 +64,16 @@ const searchOptions: Options<SearchDocument> = {
 };
 
 export function buildSearchDb(
-    documents: Documents,
-    elements: Elements
+    libraryData: LibraryObj
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(searchOptions);
 
-    const searchDocuments: SearchDocument[] = Object.values(elements)
+    const searchDocuments: SearchDocument[] = Object.values(
+        libraryData.elements
+    )
         .filter((element) => !!element)
         .map((element) => {
-            const parentDocument = documents[element.documentId];
+            const parentDocument = libraryData.documents[element.documentId];
             return {
                 id: element.id,
                 documentId: element.documentId,
@@ -198,20 +200,26 @@ function generateHighlightPositions(
     return positions;
 }
 
-export function getSearchDbQuery(cacheOptions: CacheOptions) {
-    return queryOptions<MiniSearch | undefined>({
-        queryKey: ["search-db"],
+export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
+    return queryOptions<MiniSearch | null>({
+        queryKey: ["search-db", library, cacheOptions],
         queryFn: async () =>
-            apiGet("/search-db", { cacheOptions }).then((result) => {
+            apiGet("/search-db" + toLibraryPath(library), {
+                cacheOptions
+            }).then((result) => {
                 if (!result.searchDb) {
-                    return undefined;
+                    // Have to use null since TanstackQuery doesn't allow null
+                    return null;
                 }
                 return MiniSearch.loadJSON(result.searchDb, searchOptions);
-            })
+            }),
+        staleTime: Infinity,
+        gcTime: Infinity
     });
 }
 
 export function useSearchDbQuery() {
     const cacheOptions = useCacheOptions();
-    return useQuery(getSearchDbQuery(cacheOptions));
+    const library = useLibrary();
+    return useQuery(getSearchDbQuery(library, cacheOptions));
 }

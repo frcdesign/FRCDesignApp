@@ -12,23 +12,18 @@ import {
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
-import {
-    getCacheDataQuery,
-    getDocumentOrderQuery,
-    getDocumentsQuery,
-    getElementsQuery,
-    getUserDataQuery
-} from "./queries";
-import { CacheData } from "./api/models";
+import { getUserDataQuery, getLibraryQuery } from "./queries";
+import { UserData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./search-params/menu-params";
 import { OnshapeParams } from "./search-params/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
-import { getSearchDbQuery } from "./search/search";
 import { AlertParams } from "./search-params/alert-type";
+import { getSearchDbQuery } from "./search/search";
+import { UserPath } from "./api/path";
 
-type SearchParams = OnshapeParams & MenuParams & AlertParams & CacheData;
+type SearchParams = OnshapeParams & MenuParams & AlertParams & UserData;
 
 const rootRoute = createRootRoute({
     errorComponent: () => <RootAppError isRoot />
@@ -56,38 +51,44 @@ const appRoute = createRoute({
             return;
         }
 
-        const contextData = await queryClient.ensureQueryData(
-            getCacheDataQuery()
+        const search = location.search as OnshapeParams;
+        const userPath: UserPath = { userId: search.userId };
+        const userData = await queryClient.ensureQueryData(
+            getUserDataQuery(userPath)
         );
-        const uiState = getUiState();
 
+        const uiState = getUiState();
         if (uiState.openDocumentId) {
             return redirect({
                 to: "/app/documents/$documentId",
                 params: { documentId: uiState.openDocumentId },
-                search: () => contextData
+                // Add userData to search
+                search: () => userData
             });
         }
 
         return redirect({
             to: "/app/documents",
-            search: () => contextData
+            // Add userData to search
+            search: () => userData
         });
     },
     loaderDeps: ({ search }) => ({
-        userId: search.userId,
-        currentAccessLevel: search.currentAccessLevel,
-        cacheVersion: search.cacheVersion
+        library: search.library,
+        cacheOptions: {
+            currentAccessLevel: search.currentAccessLevel,
+            cacheVersion: search.cacheVersion
+        }
     }),
     loader: async ({ deps }) => {
         Promise.all([
-            queryClient.prefetchQuery(getDocumentOrderQuery(deps)),
-            queryClient.prefetchQuery(getDocumentsQuery(deps)),
-            queryClient.prefetchQuery(getElementsQuery(deps)),
-            queryClient.prefetchQuery(getSearchDbQuery(deps))
+            queryClient.prefetchQuery(
+                getLibraryQuery(deps.library, deps.cacheOptions)
+            ),
+            queryClient.prefetchQuery(
+                getSearchDbQuery(deps.library, deps.cacheOptions)
+            )
         ]);
-        // We need settings immediately to determine the theme
-        return queryClient.ensureQueryData(getUserDataQuery(deps));
     },
     // Include it higher up in the hopes that accessLevel will be loaded for the escape hatch
     errorComponent: RootAppError
@@ -138,7 +139,6 @@ const safariErrorRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
-        // appRedirectRoute,
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,
@@ -147,7 +147,5 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({
-    routeTree,
-    defaultStaleTime: Infinity,
-    defaultGcTime: Infinity
+    routeTree
 });

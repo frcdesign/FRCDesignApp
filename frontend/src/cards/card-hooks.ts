@@ -31,7 +31,7 @@ export function useSetVisibilityMutation(
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["elements"] });
+            queryClient.invalidateQueries({ queryKey: ["library"] });
         }
     });
 }

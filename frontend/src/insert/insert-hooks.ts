@@ -1,13 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api/api";
-import { ElementObj, Configuration, ElementType } from "../api/models";
+import { ElementObj, ElementType } from "../api/models";
 import { toElementApiPath } from "../api/path";
 import { updateUiState } from "../api/ui-state";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api/errors";
 import { useMemo } from "react";
+import { Configuration } from "./configuration-models";
 
 /**
  * Creates a mutation for inserting an element.

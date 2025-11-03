@@ -14,9 +14,9 @@ class Library(StrEnum):
 
 
 class LibraryData(BaseModel):
-    cacheVersion: int
-    searchDb: str
-    documentOrder: list[str]
+    cacheVersion: int = 1
+    searchDb: str | None = None
+    documentOrder: list[str] = Field(default_factory=list)
 
 
 class ParameterType(StrEnum):
@@ -259,6 +259,7 @@ class Theme(StrEnum):
 
 class Settings(BaseModel):
     theme: Theme = Theme.SYSTEM
+    library: Library = Library.FRC_DESIGN_LIB
 
 
 class UserData(BaseModel):

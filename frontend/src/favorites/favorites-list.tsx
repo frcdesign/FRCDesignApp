@@ -10,8 +10,8 @@ import {
 } from "../common/app-zero-state";
 import { FilterCallout } from "../navbar/filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
-import { useElementsQuery, useUserData } from "../queries";
 import { FavoriteCard } from "./favorite-card";
+import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
 
 /**
  * A list of current favorite cards.
@@ -20,10 +20,11 @@ import { FavoriteCard } from "./favorite-card";
 export function FavoritesList(): ReactNode {
     const uiState = useUiState()[0];
 
-    const elementsQuery = useElementsQuery();
-    const userData = useUserData();
-
-    if (elementsQuery.isError) {
+    const libraryQuery = useLibraryQuery();
+    const userDataQuery = useLibraryUserDataQuery();
+    if (userDataQuery.isPending || libraryQuery.isPending) {
+        return <AppLoadingState title="Loading favorites..." />;
+    } else if (libraryQuery.isError || userDataQuery.isError) {
         return (
             <AppInternalErrorState
                 title="Failed to load favorites."
@@ -32,15 +33,13 @@ export function FavoritesList(): ReactNode {
                 inline
             />
         );
-    } else if (elementsQuery.isPending) {
-        return <AppLoadingState title="Loading favorites..." />;
     }
 
-    const favorites = userData.favorites;
-    const elements = elementsQuery.data;
+    const userData = userDataQuery.data;
+    const elements = libraryQuery.data.elements;
 
     const orderedFavorites = userData.favoriteOrder
-        .map((favoriteId) => favorites[favoriteId])
+        .map((favoriteId) => userData.favorites[favoriteId])
         .filter((favorite) => !!favorite);
 
     // Only ever show elements that aren't hidden
@@ -88,7 +87,7 @@ export function FavoritesList(): ReactNode {
     }
 
     const cards = filterResult.elements.map((element: ElementObj) => {
-        const favorite = favorites[element.id];
+        const favorite = userData.favorites[element.id];
         if (!favorite) {
             return null;
         }
