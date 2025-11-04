@@ -14,7 +14,7 @@ import { queryClient } from "../query-client";
 import { useSearch } from "@tanstack/react-router";
 import { router } from "../router";
 import { handleAppError, HandledError } from "../api/errors";
-import { produce } from "immer";
+import { getQueryUpdater } from "../common/utils";
 
 enum Operation {
     ADD,
@@ -27,12 +27,9 @@ interface UpdateFavoritesArgs {
 }
 
 function updateFavorites(
-    data: LibraryUserData | undefined,
+    data: LibraryUserData,
     args: UpdateFavoritesArgs
 ): LibraryUserData | undefined {
-    if (!data) {
-        return undefined;
-    }
     const elementId = args.element.id;
     if (args.operation === Operation.ADD) {
         data.favorites[elementId] = {
@@ -76,7 +73,9 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
             });
             queryClient.setQueryData(
                 ["library-user-data"],
-                produce((data?: LibraryUserData) => updateFavorites(data, args))
+                getQueryUpdater((data: LibraryUserData) =>
+                    updateFavorites(data, args)
+                )
             );
             router.invalidate();
         },

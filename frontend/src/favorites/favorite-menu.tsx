@@ -26,8 +26,8 @@ import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { router } from "../router";
 import { Configuration } from "../insert/configuration-models";
-import { produce } from "immer";
 import { useLibraryQuery } from "../queries";
+import { getQueryUpdater } from "../common/utils";
 
 export function FavoriteMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -71,10 +71,7 @@ function FavoriteMenuDialog(
             });
             queryClient.setQueryData(
                 ["library-user-data"],
-                produce((data?: LibraryUserData) => {
-                    if (!data) {
-                        return undefined;
-                    }
+                getQueryUpdater((data: LibraryUserData) => {
                     if (data.favorites[favoriteId]) {
                         data.favorites[favoriteId].defaultConfiguration =
                             configuration;

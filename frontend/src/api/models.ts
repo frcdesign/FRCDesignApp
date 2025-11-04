@@ -142,14 +142,18 @@ export enum Theme {
     DARK = "dark"
 }
 
+export interface ContextData {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
+    cacheVersion: number;
+}
+
 export interface Settings {
     theme: Theme;
     library: Library;
 }
 
-export interface UserData extends Settings {
-    maxAccessLevel: AccessLevel;
-    currentAccessLevel: AccessLevel;
-    // This is technically library specific, but we get it alongside user data since we need it to get the library
-    cacheVersion: number;
+export interface UserData {
+    // We could also move LibraryUserData in here
+    settings: Settings;
 }

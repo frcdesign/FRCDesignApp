@@ -25,7 +25,7 @@ import {
     UserData
 } from "../api/models";
 import { ItemRenderer, Select } from "@blueprintjs/select";
-import { capitalize } from "../common/utils";
+import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
 import { toUserApiPath } from "../api/path";
 import { router } from "../router";
@@ -34,7 +34,12 @@ import { RequireAccessLevel } from "../api/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api/errors";
 import { toLibraryPath, useLibrary } from "../api/library";
-import { updateSettingsKey, userDataQueryKey } from "../queries";
+import {
+    libraryQueryKey,
+    updateSettingsKey,
+    userDataQueryKey,
+    useUserData
+} from "../queries";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -89,6 +94,7 @@ function SettingsMenuDialog(): ReactNode {
 
 function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
+    const settings = useUserData().settings;
 
     const settingsMutation = useMutation({
         mutationKey: updateSettingsKey(search),
@@ -97,18 +103,15 @@ function UserSettings(): ReactNode {
                 body: newSettings
             }),
         onMutate: async (newSettings) => {
-            queryClient.cancelQueries({ queryKey: userDataQueryKey(search) });
-            queryClient.setQueryData(
+            await queryClient.cancelQueries({
+                queryKey: userDataQueryKey(search)
+            });
+            queryClient.setQueryData<UserData>(
                 userDataQueryKey(search),
-                (data?: UserData) => {
-                    console.log(data);
-                    if (!data) {
-                        return undefined;
-                    }
-                    data.theme = newSettings.theme;
-                    data.library = newSettings.library;
+                getQueryUpdater((data) => {
+                    data.settings = newSettings;
                     return data;
-                }
+                })
             );
             router.invalidate();
         },
@@ -129,10 +132,10 @@ function UserSettings(): ReactNode {
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </FormGroup>
             <ThemeSelect
-                theme={search.theme}
+                theme={settings.theme}
                 onThemeSelect={(newTheme) =>
                     settingsMutation.mutate({
-                        library: search.library,
+                        library: settings.library,
                         theme: newTheme
                     })
                 }
@@ -219,12 +222,15 @@ function AdminSettings(): ReactNode {
  * Pushes a new version of the app which invalidates all existing CDN caches.
  */
 function PushVersionButton(): ReactNode {
+    const library = useLibrary();
+    const search = useSearch({ from: "/app" });
+
     const navigate = useNavigate();
     const pushVersionMutation = useMutation({
         mutationKey: ["library-version"],
         mutationFn: async () => {
             const libraryData = await queryClient.fetchQuery<LibraryObj>({
-                queryKey: ["library"]
+                queryKey: libraryQueryKey(library, search)
             });
             if (!libraryData) {
                 throw new HandledError("Failed to fetch library data.");
@@ -232,13 +238,7 @@ function PushVersionButton(): ReactNode {
             const searchDb = JSON.stringify(buildSearchDb(libraryData));
             return apiPost("/push-version", { body: { searchDb } });
         },
-        onError: (error) => {
-            if (error instanceof HandledError) {
-                showErrorToast(error.message);
-                return;
-            }
-            showErrorToast("Unexpectedly failed to push new version.");
-        },
+        onError: getAppErrorHandler("Unexpectedly failed to push new version."),
         onSuccess: (data: { newVersion: number }) => {
             showSuccessToast("Successfully updated the FRCDesignApp version.");
             navigate({ to: ".", search: { cacheVersion: data.newVersion } });
@@ -341,6 +341,8 @@ export function ReloadDocumentsButton(
     const hideFormGroup = props.hideFormGroup ?? false;
 
     const library = useLibrary();
+    const search = useSearch({ from: "/app" });
+
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
         mutationFn: async () => {
@@ -366,7 +368,9 @@ export function ReloadDocumentsButton(
                     "Successfully reloaded " + savedElements + " elements."
                 );
             }
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            queryClient.invalidateQueries({
+                queryKey: libraryQueryKey(library, search)
+            });
         }
     });
 

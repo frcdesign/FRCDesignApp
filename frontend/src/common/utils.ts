@@ -1,4 +1,5 @@
 import { Classes } from "@blueprintjs/core";
+import { produce } from "immer";
 import { Dispatch, FormEvent, RefObject, useLayoutEffect } from "react";
 
 /**
@@ -72,4 +73,17 @@ export function useInteractiveSection(
         child.className += " " + Classes.INTERACTIVE;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sectionRef, ...dependencies]);
+}
+
+type Updater<T> = (value: T | undefined) => T | undefined;
+
+/**
+ * A wrapper around Immer which can be used to update query data.
+ * Unlike normal updating, you can fully mutate the value without any issues.
+ */
+export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
+    return (value: T | undefined) => {
+        if (value === undefined) return undefined;
+        return produce(value, recipe);
+    };
 }

@@ -2,10 +2,17 @@
     "emulators": {
         "singleProjectMode": true,
         "firestore": {
+            "host": "localhost",
             "port": 8080
         },
         "ui": {
             "enabled": true
+        },
+        "storage": {
+            "port": 9199
         }
+    },
+    "storage": {
+        "rules": "storage.rules"
     }
 }

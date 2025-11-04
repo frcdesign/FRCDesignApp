@@ -79,7 +79,7 @@
         {
             "label": "Launch db",
             "type": "shell",
-            "command": "firebase emulators:start --import=./firestore_data --export-on-exit --project=frc-design-lib",
+            "command": "firebase emulators:start --import=./firestore_data --export-on-exit",
             "presentation": {
                 "group": "server"
             },

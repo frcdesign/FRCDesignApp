@@ -1,8 +1,8 @@
-import { useSearch } from "@tanstack/react-router";
 import { Library } from "./models";
+import { useUserData } from "../queries";
 
 export function useLibrary() {
-    return useSearch({ from: "/app" }).library;
+    return useUserData().settings.library;
 }
 
 export function toLibraryPath(library: Library): string {

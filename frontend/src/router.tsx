@@ -12,8 +12,12 @@ import {
 } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
 import { DocumentList } from "./app/document-list";
-import { getUserDataQuery, getLibraryQuery } from "./queries";
-import { UserData } from "./api/models";
+import {
+    getUserDataQuery,
+    getLibraryQuery,
+    getContextDataQuery
+} from "./queries";
+import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./search-params/menu-params";
 import { OnshapeParams } from "./search-params/onshape-params";
@@ -23,7 +27,7 @@ import { AlertParams } from "./search-params/alert-type";
 import { getSearchDbQuery } from "./search/search";
 import { UserPath } from "./api/path";
 
-type SearchParams = OnshapeParams & MenuParams & AlertParams & UserData;
+type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
 const rootRoute = createRootRoute({
     errorComponent: () => <RootAppError isRoot />
@@ -53,8 +57,10 @@ const appRoute = createRoute({
 
         const search = location.search as OnshapeParams;
         const userPath: UserPath = { userId: search.userId };
-        const userData = await queryClient.ensureQueryData(
-            getUserDataQuery(userPath)
+
+        queryClient.prefetchQuery(getUserDataQuery(userPath));
+        const contextData = await queryClient.ensureQueryData(
+            getContextDataQuery(userPath)
         );
 
         const uiState = getUiState();
@@ -62,33 +68,42 @@ const appRoute = createRoute({
             return redirect({
                 to: "/app/documents/$documentId",
                 params: { documentId: uiState.openDocumentId },
-                // Add userData to search
-                search: () => userData
+                // Add contextData to search
+                search: () => contextData
             });
         }
 
         return redirect({
             to: "/app/documents",
-            // Add userData to search
-            search: () => userData
+            // Add contextData to search
+            search: () => contextData
         });
     },
     loaderDeps: ({ search }) => ({
-        library: search.library,
+        userId: search.userId,
         cacheOptions: {
             currentAccessLevel: search.currentAccessLevel,
             cacheVersion: search.cacheVersion
         }
     }),
     loader: async ({ deps }) => {
+        const userData = await queryClient.ensureQueryData(
+            getUserDataQuery(deps)
+        );
+
+        const library = userData.settings.library;
+
+        // Don't return the promise since Tanstack will await it
         Promise.all([
             queryClient.prefetchQuery(
-                getLibraryQuery(deps.library, deps.cacheOptions)
+                getLibraryQuery(library, deps.cacheOptions)
             ),
             queryClient.prefetchQuery(
-                getSearchDbQuery(deps.library, deps.cacheOptions)
+                getSearchDbQuery(library, deps.cacheOptions)
             )
         ]);
+
+        return userData;
     },
     // Include it higher up in the hopes that accessLevel will be loaded for the escape hatch
     errorComponent: RootAppError

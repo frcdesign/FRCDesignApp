@@ -141,7 +141,7 @@ def get_db() -> Database:
 
 
 def get_library_ref() -> LibraryRef:
-    return get_db().get_library(get_route_library())
+    return DATABASE.get_library(get_route_library())
 
 
 def get_api() -> onshape_api.OAuthApi:

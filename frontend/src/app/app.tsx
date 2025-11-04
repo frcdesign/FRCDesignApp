@@ -8,16 +8,15 @@ import {
     getThemeClass
 } from "../search-params/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
-import { SettingsMenu } from "../navbar/settings-menu";
-import { InsertMenu } from "../insert/insert-menu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { AddDocumentMenu } from "./add-document-menu";
-import { FavoriteMenu } from "../favorites/favorite-menu";
-import { AppAlerts } from "../search-params/alerts";
+import { AppAlerts } from "../search-params/app-alerts";
+import { useUserData } from "../queries";
+import { AppMenus } from "../search-params/app-menus";
 
 export function App() {
     const search = useSearch({ from: "/app" });
-    const colorTheme = getColorTheme(search.theme, search.systemTheme);
+    const settings = useUserData().settings;
+    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
     const themeClass = getThemeClass(colorTheme);
 
     return (
@@ -36,10 +35,7 @@ export function App() {
                     >
                         <Outlet />
                         <AppAlerts />
-                        <SettingsMenu />
-                        <InsertMenu />
-                        <AddDocumentMenu />
-                        <FavoriteMenu />
+                        <AppMenus />
                         <TanStackRouterDevtools />
                     </div>
                 </div>

@@ -21,8 +21,8 @@ import { useSetVisibilityMutation } from "./card-hooks";
 import { CardTitle, OpenDocumentItems } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
 import { useLibraryQuery } from "../queries";
-import { produce } from "immer";
 import { useLibrary } from "../api/library";
+import { getQueryUpdater } from "../common/utils";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -179,8 +179,7 @@ function useSetDocumentOrderMutation() {
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
                 ["library", library],
-                produce((data?: LibraryObj) => {
-                    if (!data) return;
+                getQueryUpdater((data: LibraryObj) => {
                     data.documentOrder = newOrder;
                     return data;
                 })

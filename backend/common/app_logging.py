@@ -43,7 +43,7 @@ class CloudLoggingDevFormatter(logging.Formatter):
 
 
 if env.IS_PRODUCTION:
-    client = cloud_logging.Client()
+    client = cloud_logging.Client(project="frc-design-lib")
     # Creates a CloudLoggingHandler
     handler: Handler = client.get_default_handler(name="frc-design-app-data")
     CLOUD_LOGGER.addHandler(handler)

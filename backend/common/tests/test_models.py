@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 import pytest
 
-from backend.common.models import LibraryUserData, UserData
+from backend.common.models import LibraryUserData, Theme, UserData
 
 
 def test_cannot_default():
@@ -17,4 +17,5 @@ def test_cannot_default():
 def test_defaultable():
     """Trivial tests to verify defaulting works as expected."""
     LibraryUserData.model_validate({})
-    UserData.model_validate({})
+    user_data = UserData.model_validate({})
+    assert user_data.settings.theme == Theme.SYSTEM

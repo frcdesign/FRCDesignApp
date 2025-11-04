@@ -168,10 +168,10 @@ sudo apt install openjdk-21-jdk
 You can then set up the Firebase emulator by running:
 
 ```
-firebase init emulators firestore storage
+firebase init emulators
 ```
 
-If you are prompted to select a project, you can select **Don't set up a default project**.
+Select **Don't set up a default project**, then select the Firestore Emulator and the Storage Emulator with **space** and press **enter** to submit.
 
 ## Development Servers
 

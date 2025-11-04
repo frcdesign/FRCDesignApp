@@ -2,8 +2,19 @@
  * Queries for getting data from various endpoints on the backend.
  */
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { apiGet, CacheOptions, useCacheOptions } from "./api/api";
-import { LibraryUserData, UserData, Library, LibraryObj } from "./api/models";
+import {
+    apiGet,
+    CacheOptions,
+    toCacheOptions,
+    useCacheOptions
+} from "./api/api";
+import {
+    LibraryUserData,
+    UserData,
+    Library,
+    LibraryObj,
+    ContextData
+} from "./api/models";
 import {
     InstancePath,
     toInstanceApiPath,
@@ -12,7 +23,7 @@ import {
 } from "./api/path";
 import { toLibraryPath, useLibrary } from "./api/library";
 import { UnitInfo } from "./insert/configuration-models";
-import { useSearch } from "@tanstack/react-router";
+import { useLoaderData, useSearch } from "@tanstack/react-router";
 
 export function updateSettingsKey(userPath: UserPath) {
     return ["user-data", toUserApiPath(userPath)];
@@ -25,7 +36,7 @@ export function useLibraryQuery() {
 }
 
 export function libraryQueryKey(library: Library, cacheOptions: CacheOptions) {
-    return ["library", library, cacheOptions];
+    return ["library", library, toCacheOptions(cacheOptions)];
 }
 
 export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
@@ -38,7 +49,7 @@ export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
 }
 
 export function libraryUserDataQueryKey(library: Library, userPath: UserPath) {
-    return ["library-user-data", library, userPath];
+    return ["library-user-data", library, userPath.userId];
 }
 
 export function getLibraryUserDataQuery(library: Library, userPath: UserPath) {
@@ -55,21 +66,40 @@ export function getLibraryUserDataQuery(library: Library, userPath: UserPath) {
 
 export function useLibraryUserDataQuery() {
     const search = useSearch({ from: "/app" });
-    return useQuery(getLibraryUserDataQuery(search.library, search));
+    const library = useLibrary();
+    return useQuery(getLibraryUserDataQuery(library, search));
 }
 
-export function userDataQueryKey(userPath: UserPath) {
-    return ["user-data", userPath];
+export function contextDataQueryKey(userPath: UserPath) {
+    return ["context-data", userPath.userId];
 }
 
 /**
- * Returns core application data needed to load most other endpoints.
+ * Returns core application context data needed to load most other endpoints.
+ */
+export function getContextDataQuery(userPath: UserPath) {
+    return queryOptions<ContextData>({
+        queryKey: contextDataQueryKey(userPath),
+        queryFn: async () => apiGet("/context-data" + toUserApiPath(userPath))
+    });
+}
+
+export function userDataQueryKey(userPath: UserPath) {
+    return ["user-data", userPath.userId];
+}
+
+/**
+ * Returns user data needed to load most other endpoints.
  */
 export function getUserDataQuery(userPath: UserPath) {
     return queryOptions<UserData>({
         queryKey: userDataQueryKey(userPath),
         queryFn: async () => apiGet("/user-data" + toUserApiPath(userPath))
     });
+}
+
+export function useUserData() {
+    return useLoaderData({ from: "/app" });
 }
 
 /**

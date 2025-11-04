@@ -50,6 +50,13 @@ export interface CacheOptions {
     cacheVersion: number;
 }
 
+export function toCacheOptions(cacheOptions: CacheOptions): CacheOptions {
+    return {
+        currentAccessLevel: cacheOptions.currentAccessLevel,
+        cacheVersion: cacheOptions.cacheVersion
+    };
+}
+
 export function useCacheOptions(): CacheOptions {
     const search = useSearch({ from: "/app" });
     return {
