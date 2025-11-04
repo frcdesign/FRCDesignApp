@@ -10,7 +10,7 @@ from backend.common.connect import (
     get_route_user_path,
     user_path_route,
 )
-from backend.common.models import Library, Theme
+from backend.common.models import Library, Settings, Theme
 from onshape_api.endpoints.users import AccessLevel
 
 router = flask.Blueprint("user-data", __name__)
@@ -58,15 +58,12 @@ def update_settings(**kwargs):
     user_path = get_route_user_path()
     user_data_ref = db.get_user_data(user_path.user_id)
 
-    theme = connect.get_optional_body_arg("theme")
-    library = connect.get_optional_body_arg("library")
+    theme = connect.get_body_arg("theme")
+    library = connect.get_body_arg("library")
 
-    user_data = user_data_ref.get_with_default()
-    if theme != None:
-        user_data.settings.theme = Theme(theme)
-    if library != None:
-        user_data.settings.library = Library(library)
+    settings = Settings(theme=Theme(theme), library=Library(library))
 
-    user_data_ref.set(user_data)
+    update_dict = {"settings": settings.model_dump()}
+    user_data_ref.update(update_dict)
 
     return {"success": True}

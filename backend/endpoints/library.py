@@ -1,5 +1,6 @@
 import flask
 from pydantic import BaseModel
+from google.cloud import firestore
 
 from backend.common import connect
 from backend.common.app_access import require_access_level
@@ -198,8 +199,7 @@ def push_library_version():
     library_ref = connect.get_library_ref()
     new_search_db = connect.get_body_arg("searchDb")
 
-    library = library_ref.get_with_default()
-    new_version = library.cacheVersion + 1
-
-    library_ref.update({"searchDb": new_search_db, "cacheVersion": new_version})
+    library_ref.update(
+        {"searchDb": new_search_db, "cacheVersion": firestore.Increment(1)}
+    )
     return {"success": True}

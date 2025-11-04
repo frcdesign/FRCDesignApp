@@ -24,9 +24,9 @@ class Collection(StrEnum):
     DOCUMENTS = "documents"
     ELEMENTS = "elements"
     CONFIGURATIONS = "configurations"
-    LIBRARY_USER_DATA = "libraryUserData"
+    LIBRARY_USER_DATA = "library-user-data"
     FAVORITES = "favorites"
-    USER_DATA = "userData"
+    USER_DATA = "user-data"
     SESSIONS = "sessions"
 
 
@@ -141,6 +141,11 @@ class FirestoreDocument(BaseDocument[T]):
         self.document.set(data.model_dump())
 
     def update(self, partial: dict) -> None:
+        """Updates fields in the document with given partial data.
+
+        Note this calls set with merge=True rather than update.
+        set supports automatic document creation but not nested field notation.
+        """
         self.document.set(partial, merge=True)
 
     def delete(self) -> None:
