@@ -8,6 +8,7 @@ import { Classes } from "@blueprintjs/core";
 export interface OnshapeParams extends ElementPath, UserPath {
     elementType: ElementType;
     systemTheme: ColorTheme;
+    server: string;
 }
 
 export type ColorTheme = "light" | "dark";

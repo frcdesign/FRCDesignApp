@@ -12,12 +12,15 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AppAlerts } from "../search-params/app-alerts";
 import { useUserData } from "../queries";
 import { AppMenus } from "../search-params/app-menus";
+import { useMessageListener } from "../api/messages";
 
 export function App() {
     const search = useSearch({ from: "/app" });
     const settings = useUserData().settings;
     const colorTheme = getColorTheme(settings.theme, search.systemTheme);
     const themeClass = getThemeClass(colorTheme);
+
+    useMessageListener();
 
     return (
         <QueryClientProvider client={queryClient}>
