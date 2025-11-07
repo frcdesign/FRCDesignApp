@@ -45,7 +45,7 @@ You can manually retrigger an update by saving any .py file or by killing and re
 
 ## Python Setup
 
-This project uses (uv)[https://github.com/astral-sh/uv] to manage Python.
+This project uses [uv](https://github.com/astral-sh/uv) to manage Python.
 
 Install `uv`:
 
@@ -86,9 +86,11 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Action URL:
         - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
         - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-    - Icon: You'll need an arbitrary icon. A good choice is `/frontend/public/frc-design-dev-icon.svg`.
+    - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
+4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
+    - If it doesn't show up, try creating a Store Entry first.
 
-You should now be able to see your App in the right panel of any Part Studios or Assemblies you open.
+You should now be able to see your Test App in the right panel of any Part Studios or Assemblies you open.
 
 ## Onshape API Key Setup (optional)
 
