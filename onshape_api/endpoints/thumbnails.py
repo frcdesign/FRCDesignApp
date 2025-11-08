@@ -31,6 +31,7 @@ class ThumbnailSize(StrEnum):
         return True
 
 
+
 def get_instance_thumbnail(
     api: Api, instance_path: InstancePath, size: ThumbnailSize = ThumbnailSize.STANDARD
 ) -> BytesIO:

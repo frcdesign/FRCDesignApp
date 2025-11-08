@@ -10,10 +10,11 @@ from typing import Iterator
 import flask
 
 from backend.common import connect
-from backend.common.backend_exceptions import HandledException
+from backend.common.app_logging import APP_LOGGER
+from backend.common.backend_exceptions import HandledException, ServerException
 from backend.common.database import DocumentRef, DocumentsRef, LibraryRef
 from backend.common.app_access import require_access_level
-from backend.common.firebase_storage import upload_thumbnail
+from backend.common.firebase_storage import upload_thumbnails
 from backend.common.models import (
     Element,
 )
@@ -65,7 +66,7 @@ def save_element(
         document_ref.configurations.configuration(element_id).set(configuration)
         configuration_id = element_id
 
-    thumbnailUrls = upload_thumbnail(api, path, microversion_id)
+    thumbnailUrls = upload_thumbnails(api, path, microversion_id)
 
     preserved_element = reload_context.get_element(element_id)
     document_ref.elements.element(element_id).set(
@@ -78,7 +79,7 @@ def save_element(
             microversionId=microversion_id,
             configurationId=configuration_id,
             isVisible=preserved_element.isVisible,
-            thumbbailUrls=thumbnailUrls,
+            thumbnailUrls=thumbnailUrls,
         ),
     )
     return element_id
@@ -132,6 +133,13 @@ def get_elements_to_reload(
             yield onshape_element
 
 
+def get_element_microversion_id(contents: dict, element_id: str) -> str | None:
+    for onshape_element in contents["elements"]:
+        if onshape_element["id"] == element_id:
+            return onshape_element["microversionId"]
+    return None
+
+
 async def save_document(
     api: Api,
     document_ref: DocumentRef,
@@ -155,6 +163,18 @@ async def save_document(
         )
 
     contents = await asyncio.to_thread(documents.get_contents, api, version_path)
+
+    thumbnail_path = ElementPath.from_path(version_path, thumbnail_element_id)
+    thumbnail_microversion_id = get_element_microversion_id(
+        contents, thumbnail_element_id
+    )
+
+    if thumbnail_microversion_id is None:
+        raise HandledException(
+            f"Could not find the thumbnail tab for {onshape_document["name"]} in the latest version of a document"
+        )
+    thumbnail_urls = upload_thumbnails(api, thumbnail_path, thumbnail_microversion_id)
+
     valid_elements = list(get_valid_elements(contents))
 
     valid_element_ids = {onshape_element["id"] for onshape_element in valid_elements}
@@ -195,7 +215,7 @@ async def save_document(
     document_ref.set(
         Document(
             name=onshape_document["name"],
-            thumbnailElementId=thumbnail_element_id,
+            thumbnailUrls=thumbnail_urls,
             instanceId=version_path.instance_id,
             elementOrder=ordered_ids,
             sortAlphabetically=preserved_document.sortAlphabetically,

@@ -35,13 +35,6 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     const { document } = props;
     const navigate = useNavigate();
 
-    const thumbnailPath = {
-        documentId: document.documentId,
-        instanceId: document.instanceId,
-        instanceType: document.instanceType,
-        elementId: document.thumbnailElementId
-    };
-
     return (
         <DocumentContextMenu document={document}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
@@ -60,7 +53,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                     >
                         <CardTitle
                             title={document.name}
-                            elementPath={thumbnailPath}
+                            thumbnailUrls={document.thumbnailUrls}
                         />
                         <Icon
                             icon="arrow-right"
@@ -102,13 +95,13 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const documentOrder = useLibraryQuery().data?.documentOrder ?? [];
 
     const showAllMutation = useSetVisibilityMutation(
-        "show-all",
+        document.id,
         document.elementOrder,
         true
     );
 
     const hideAllMutation = useSetVisibilityMutation(
-        "hide-all",
+        document.id,
         document.elementOrder,
         false
     );

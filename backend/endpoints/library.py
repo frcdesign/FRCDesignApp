@@ -8,6 +8,7 @@ from backend.common.database import DocumentsRef, LibraryRef
 from backend.common.models import Document, Favorite
 from backend.endpoints.cache import cacheable_route
 from onshape_api.endpoints.documents import ElementType
+from onshape_api.endpoints.thumbnails import ThumbnailSize
 from onshape_api.paths.instance_type import InstanceType
 
 
@@ -24,7 +25,9 @@ class ElementOut(BaseModel):
 
     name: str
     microversionId: str
+    isVisible: bool
     elementType: ElementType
+    thumbnailUrls: dict[ThumbnailSize, str]
 
 
 class DocumentOut(BaseModel):
@@ -36,6 +39,8 @@ class DocumentOut(BaseModel):
 
     name: str
     sortAlphabetically: bool
+    thumbnailUrls: dict[ThumbnailSize, str]
+
     elementOrder: list[str]
 
 
@@ -77,6 +82,7 @@ def build_documents_out(
             instanceType=InstanceType.WORKSPACE,
             name=document.name,
             sortAlphabetically=document.sortAlphabetically,
+            thumbnailUrls=document.thumbnailUrls,
             elementOrder=document_ref.elements.keys(),
         )
 
@@ -89,6 +95,8 @@ def build_documents_out(
                 instanceId=element.instanceId,
                 instanceType=InstanceType.WORKSPACE,
                 name=element.name,
+                isVisible=element.isVisible,
+                thumbnailUrls=element.thumbnailUrls,
                 microversionId=element.microversionId,
                 elementType=element.elementType,
             )

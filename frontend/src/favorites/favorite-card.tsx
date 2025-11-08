@@ -83,7 +83,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                         <CardTitle
                             disabled={isAssemblyInPartStudio}
                             title={element.name}
-                            elementPath={element}
+                            thumbnailUrls={element.thumbnailUrls}
                         />
                         <div className="item-card-right-content">
                             <FavoriteButton isFavorite element={element} />

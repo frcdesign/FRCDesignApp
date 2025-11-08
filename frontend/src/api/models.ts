@@ -104,7 +104,7 @@ export type Elements = Record<string, ElementObj>;
 export interface DocumentObj extends InstancePath {
     id: string;
     name: string;
-    thumbnailElementId: string;
+    thumbnailUrls: ThumbnailUrls;
     sortAlphabetically: boolean;
     elementOrder: string[];
 }
@@ -119,6 +119,12 @@ export interface ElementObj extends ElementPath {
     isVisible: boolean;
     vendors: Vendor[];
     configurationId?: string;
+    thumbnailUrls: ThumbnailUrls;
+}
+
+export interface ThumbnailUrls {
+    [ThumbnailSize.TINY]: string;
+    [ThumbnailSize.STANDARD]: string;
 }
 
 export enum ThumbnailSize {
@@ -128,12 +134,14 @@ export enum ThumbnailSize {
     TINY = "70x40"
 }
 
-export function getHeightAndWidth(size: ThumbnailSize): {
+export interface HeightAndWidth {
     height: number;
     width: number;
-} {
+}
+
+export function getHeightAndWidth(size: ThumbnailSize, multiplier: number = 1): HeightAndWidth {
     const parts = size.split("x");
-    return { width: parseInt(parts[0]), height: parseInt(parts[1]) };
+    return { width: parseInt(parts[0]) * multiplier, height: parseInt(parts[1]) * multiplier };
 }
 
 export enum Theme {

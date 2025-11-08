@@ -82,6 +82,15 @@ export async function apiGet(
     }).then(handleResponse);
 }
 
+export async function apiGetRawImage(
+    url: string,
+    signal?: AbortSignal
+): Promise<string> {
+    return fetch(url, {
+        signal
+    }).then(handleImageResponse);
+}
+
 /**
  * Makes a get request for an image to a backend /api route.
  * Returns a local url for the image.

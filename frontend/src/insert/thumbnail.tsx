@@ -1,6 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, apiGetImage, useCacheOptions } from "../api/api";
-import { getHeightAndWidth, ThumbnailSize } from "../api/models";
+import {
+    apiGet,
+    apiGetImage,
+    apiGetRawImage,
+    useCacheOptions
+} from "../api/api";
+import {
+    getHeightAndWidth,
+    HeightAndWidth,
+    ThumbnailSize,
+    ThumbnailUrls
+} from "../api/models";
 import { ElementPath, toElementApiPath } from "../api/path";
 import {
     Card,
@@ -18,21 +28,23 @@ import {
 } from "../insert/configuration-models";
 
 interface CardThumbnailProps {
-    path: ElementPath;
+    thumbnailUrls: ThumbnailUrls;
 }
 
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
-    const { path } = props;
+    const { thumbnailUrls } = props;
 
     return (
         <Popover
             content={
                 <Card>
                     <Thumbnail
-                        path={path}
+                        url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                        heightAndWidth={getHeightAndWidth(
+                            ThumbnailSize.STANDARD,
+                            0.6
+                        )}
                         spinnerSize={SpinnerSize.LARGE}
-                        size={ThumbnailSize.STANDARD}
-                        scale={0.6}
                     />
                 </Card>
             }
@@ -40,10 +52,9 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
         >
             <div style={{ marginRight: "5px" }}>
                 <Thumbnail
-                    path={path}
+                    url={thumbnailUrls[ThumbnailSize.TINY]}
+                    heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
                     spinnerSize={25}
-                    size={ThumbnailSize.TINY}
-                    scale={0.8}
                 />
             </div>
         </Popover>
@@ -51,40 +62,22 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 interface ThumbnailProps {
-    path: ElementPath;
-    /**
-     * The size (quality) of the given thumbnail.
-     */
-    size: ThumbnailSize;
+    url: string;
     spinnerSize: SpinnerSize | number;
-    /**
-     * A scale multiplier applied to the image.
-     */
-    scale: number;
+    heightAndWidth: HeightAndWidth;
 }
 
 /**
  * A generic thumbnail component.
  */
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { path, size, spinnerSize, scale } = props;
+    const { url, heightAndWidth, spinnerSize } = props;
 
-    const apiPath = toElementApiPath(path);
-    const cacheOptions = useCacheOptions();
     const imageQuery = useQuery({
-        queryKey: ["document-thumbnail", apiPath, size],
-        queryFn: async ({ signal }) =>
-            apiGetImage("/thumbnail" + apiPath, {
-                query: { size },
-                signal,
-                cacheOptions
-            }),
+        queryKey: ["storage-thumbnail", url],
+        queryFn: async ({ signal }) => apiGetRawImage(url, signal),
         retry: 1
     });
-
-    const heightAndWidth = getHeightAndWidth(size);
-    heightAndWidth.height *= scale;
-    heightAndWidth.width *= scale;
 
     let content;
     if (imageQuery.isPending) {

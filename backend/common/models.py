@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypedDict
 from pydantic import BaseModel, ConfigDict, Field
 
 from onshape_api.endpoints.documents import ElementType
@@ -241,15 +241,16 @@ class Element(BaseModel):
     microversionId: str
     isVisible: bool
     configurationId: str | None = None
-    thumbbailUrls: dict[ThumbnailSize, str] | None = None
+    # Currently only TINY and STANDARD are populated
+    thumbnailUrls: dict[ThumbnailSize, str] = Field(default_factory=dict)
 
 
 class Document(BaseModel):
     name: str
     instanceId: str
-    thumbnailElementId: str
     elementOrder: list[str] = Field(default_factory=list)
     sortAlphabetically: bool
+    thumbnailUrls: dict[ThumbnailSize, str] = Field(default_factory=dict)
 
 
 class Theme(StrEnum):

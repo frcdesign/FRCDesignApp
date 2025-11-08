@@ -11,13 +11,13 @@ import { MouseEventHandler, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath, ElementPath } from "../api/path";
+import { DocumentPath } from "../api/path";
 import { AlertType, useOpenAlert } from "../search-params/alert-type";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { ElementObj } from "../api/models";
+import { ElementObj, ThumbnailUrls } from "../api/models";
 import { Configuration } from "../insert/configuration-models";
 
 interface OpenDocumentItemsProps {
@@ -101,11 +101,11 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    elementPath: ElementPath;
+    thumbnailUrls: ThumbnailUrls;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, elementPath } = props;
+    const { searchHit, title, thumbnailUrls } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
@@ -128,7 +128,7 @@ export function CardTitle(props: CardTitleProps) {
             className={disabled ? Classes.TEXT_MUTED : undefined}
             ellipsize
             title={cardTitle}
-            icon={<CardThumbnail path={elementPath} />}
+            icon={<CardThumbnail thumbnailUrls={thumbnailUrls} />}
             tags={hiddenTag}
         />
     );

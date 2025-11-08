@@ -5,33 +5,41 @@ import { ElementObj, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { showErrorToast } from "../common/toaster";
+import { toLibraryPath, useLibrary } from "../api/library";
+import { getAppErrorHandler } from "../api/errors";
+import { libraryQueryMatchKey } from "../queries";
 
 export function useSetVisibilityMutation(
-    mutationKey: string,
+    documentId: string,
     elementIds: string[],
     isVisible: boolean
 ) {
+    const library = useLibrary();
     return useMutation({
-        mutationKey: [mutationKey],
+        mutationKey: ["set-visibility"],
         mutationFn: async () => {
             if (!isVisible) {
                 const result = window.confirm(
-                    "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?`"
+                    "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?"
                 );
                 if (!result) {
-                    showErrorToast("Cancelled operation.");
+                    showErrorToast("Cancelled hide operation.");
                     return;
                 }
             }
-            return apiPost("/set-visibility", {
+            return apiPost("/set-visibility" + toLibraryPath(library), {
                 body: {
+                    documentId,
                     elementIds,
                     isVisible
                 }
             });
         },
+        onError: getAppErrorHandler(
+            "Unexpectedly failed to modify visibility."
+        ),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
         }
     });
 }

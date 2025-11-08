@@ -29,17 +29,14 @@ def get_bucket() -> Bucket:
     return storage.bucket(BUCKET_NAME)
 
 
-def upload_thumbnail(
+def upload_thumbnails(
     api: Api, element_path: ElementPath, microversion_id: str
-) -> dict | None:
-    """Uploads a thumbnail to Google Cloud Storage."""
+) -> dict:
+    """Uploads thumbnails to Google Cloud Storage."""
     bucket = get_bucket()
 
-    if is_uploaded(element_path.element_id, microversion_id):
-        return None
-
     urls = {}
-    for size in [ThumbnailSize.SMALL, ThumbnailSize.STANDARD]:
+    for size in [ThumbnailSize.TINY, ThumbnailSize.STANDARD]:
         thumbnail = thumbnails.get_element_thumbnail(api, element_path, size)
 
         blob = bucket.blob(f"thumbnails/{size}/{element_path.element_id}")
@@ -48,25 +45,23 @@ def upload_thumbnail(
             "microversionId": microversion_id,
         }
 
-        blob.upload_from_string(
-            thumbnail.getvalue(),
-            content_type="image/gif",
-        )
+        if not is_uploaded(element_path.element_id, microversion_id, size):
+            blob.upload_from_string(
+                thumbnail.getvalue(),
+                content_type="image/gif",
+            )
 
         urls[size] = blob.public_url + "?v=" + microversion_id
 
     return urls
 
 
-def is_uploaded(element_id: str, microversion_id: str) -> bool:
-    """Checks if thumbnails have already been uploaded to GCP storage.
-
-    Realistically, I don't expect this to return False, but it can save us some calls if it does.
-    """
+def is_uploaded(element_id: str, microversion_id: str, size: ThumbnailSize) -> bool:
+    """Checks the given thumbnail has already been uploaded to GCP storage."""
     bucket = get_bucket()
 
     try:
-        blob = bucket.blob(f"thumbnails/{ThumbnailSize.SMALL}/{element_id}")
+        blob = bucket.blob(f"thumbnails/{size}/{element_id}")
         blob.reload()  # raises NotFound if it doesn't exist
         if blob.metadata and blob.metadata.get("microversionId") == microversion_id:
             # This microversion has already been uploaded

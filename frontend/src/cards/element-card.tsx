@@ -87,7 +87,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             disabled={isAssemblyInPartStudio}
                             searchHit={searchHit}
                             title={element.name}
-                            elementPath={element}
+                            thumbnailUrls={element.thumbnailUrls}
                             showHiddenTag={!element.isVisible}
                         />
                         <div className="item-card-right-content">
@@ -117,7 +117,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
     const { children, isFavorite, element } = props;
 
     const mutation = useSetVisibilityMutation(
-        "set-visibility",
+        element.documentId,
         [element.id],
         !element.isVisible
     );
