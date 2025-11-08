@@ -1,6 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
 import { AccessLevel, hasMemberAccess } from "./models";
+import { HandledError } from "./errors";
 
 function getUrl(
     path: string,
@@ -118,6 +119,9 @@ export async function apiDelete(
 async function handleResponse(response: Response) {
     const json = await response.json();
     if (!response.ok) {
+        if (json.type === "handled") {
+            throw new HandledError(json.message);
+        }
         throw new Error("Network response failed.");
     }
     return json;

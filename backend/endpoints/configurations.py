@@ -29,12 +29,15 @@ router = flask.Blueprint("configurations", __name__)
     router,
     "/configuration" + connect.library_route() + "<document_id>/<configuration_id>",
 )
-def get_configuration(library: Library, document_id: str, configuration_id: str):
+def get_configuration(**kwargs):
     """Returns a specific configuration.
 
     Returns:
         parameters: A list of configuration parameters.
     """
+    document_id = connect.get_route("document_id")
+    configuration_id = connect.get_route("configuration_id")
+
     library_ref = connect.get_library_ref()
     configuration_parameters = (
         library_ref.documents.document(document_id)

@@ -25,6 +25,14 @@ import { toLibraryPath, useLibrary } from "./api/library";
 import { UnitInfo } from "./insert/configuration-models";
 import { useLoaderData, useSearch } from "@tanstack/react-router";
 
+export function getConfigurationMatchKey() {
+    return ["configuration"];
+}
+
+export function getConfigurationKey(configurationId?: string) {
+    return ["configuration", configurationId];
+}
+
 export function updateSettingsKey(userPath: UserPath) {
     return ["user-data", toUserApiPath(userPath)];
 }
@@ -37,6 +45,10 @@ export function useLibraryQuery() {
 
 export function libraryQueryKey(library: Library, cacheOptions: CacheOptions) {
     return ["library", library, toCacheOptions(cacheOptions)];
+}
+
+export function libraryQueryMatchKey() {
+    return ["library"];
 }
 
 export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {

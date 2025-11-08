@@ -11,16 +11,17 @@ import flask
 
 from backend.common import connect
 from backend.common.backend_exceptions import HandledException
-from backend.common.database import DocumentRef, LibraryRef
+from backend.common.database import DocumentRef, DocumentsRef, LibraryRef
 from backend.common.app_access import require_access_level
+from backend.common.firebase_storage import upload_thumbnail
 from backend.common.models import (
     Element,
 )
 from backend.common.models import Document
 from backend.common.vendors import parse_vendors
 from backend.endpoints.configurations import parse_onshape_configuration
-from backend.endpoints.preserved_info import (
-    PreservedInfo,
+from backend.common.reload_context import (
+    ReloadContext,
 )
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
@@ -36,55 +37,12 @@ from onshape_api.paths.doc_path import (
 router = flask.Blueprint("documents", __name__)
 
 
-# @cacheable_route(router, "/documents")
-# def get_documents(**kwargs):
-#     """Returns a list of the top level documents to display to the user."""
-#     db = connect.get_db()
-
-#     documents: dict[str, dict] = {}
-
-#     for doc_ref in db.documents.stream():
-#         document = Document.model_validate(doc_ref.to_dict())
-#         document_id = doc_ref.id
-
-#         document_obj = document.model_dump(exclude_none=True)
-#         document_obj["id"] = document_id
-#         # Make it a valid InstancePath on the frontend
-#         document_obj["instanceType"] = InstanceType.VERSION
-#         document_obj["documentId"] = document_id
-
-#         documents[document_id] = document_obj
-
-#     return {"documents": documents}
-
-
-# @cacheable_route(router, "/elements")
-# def get_elements(**kwargs):
-#     """Returns a list of the top level elements to display to the user."""
-#     db = connect.get_db()
-#     elements: dict[str, dict] = {}
-
-#     for element_ref in db.elements.stream():
-#         element_id = element_ref.id
-#         element = Element.model_validate(element_ref.to_dict())
-
-#         element_obj = element.model_dump(exclude_none=True)
-#         element_obj["id"] = element_id
-#         # Add instanceType and elementId so it's a valid ElementPath on the frontend
-#         element_obj["instanceType"] = InstanceType.VERSION
-#         element_obj["elementId"] = element_id
-
-#         elements[element_id] = element_obj
-
-#     return {"elements": elements}
-
-
 def save_element(
     api: Api,
     document_ref: DocumentRef,
     version_path: InstancePath,
     onshape_element: dict,
-    preserved_info: PreservedInfo,
+    reload_context: ReloadContext,
 ) -> str:
     """
     Parameters:
@@ -94,6 +52,7 @@ def save_element(
     element_type: ElementType = onshape_element["elementType"]
     element_name = onshape_element["name"]  # Use the name of the tab
     element_id = onshape_element["id"]
+    microversion_id = onshape_element["microversionId"]
 
     path = ElementPath.from_path(version_path, element_id)
 
@@ -106,7 +65,9 @@ def save_element(
         document_ref.configurations.configuration(element_id).set(configuration)
         configuration_id = element_id
 
-    preserved_element = preserved_info.get_element(element_id)
+    thumbnailUrls = upload_thumbnail(api, path, microversion_id)
+
+    preserved_element = reload_context.get_element(element_id)
     document_ref.elements.element(element_id).set(
         Element(
             name=element_name,
@@ -114,10 +75,11 @@ def save_element(
             elementType=element_type,
             documentId=version_path.document_id,
             instanceId=version_path.instance_id,
-            microversionId=onshape_element["microversionId"],
+            microversionId=microversion_id,
             configurationId=configuration_id,
             isVisible=preserved_element.isVisible,
-        )
+            thumbbailUrls=thumbnailUrls,
+        ),
     )
     return element_id
 
@@ -142,9 +104,7 @@ def traverse_entry(entry: dict) -> Iterator[str]:
         yield entry["elementId"]
 
 
-def get_valid_elements(
-    document_ref: DocumentRef, contents: dict, preserved_info: PreservedInfo
-) -> Iterator[dict]:
+def get_valid_elements(contents: dict) -> Iterator[dict]:
     for onshape_element in contents["elements"]:
         if onshape_element["elementType"] not in [
             ElementType.ASSEMBLY,
@@ -152,40 +112,56 @@ def get_valid_elements(
         ]:
             continue
 
+        yield onshape_element
+
+
+def get_elements_to_reload(
+    document_ref: DocumentRef,
+    valid_elements: list[dict],
+    reload_context: ReloadContext,
+) -> Iterator[dict]:
+    for onshape_element in valid_elements:
         element = document_ref.elements.element(onshape_element["id"]).maybe_get()
         if element == None:
             yield onshape_element
             continue
 
-        if not preserved_info.should_reload_element(
+        if reload_context.should_reload_element(
             onshape_element["id"], onshape_element["microversionId"]
         ):
-            continue
-
-        yield onshape_element
-
-
-def add_document(api: Api, document: DocumentRef, version_path: InstancePath):
-    """Loads all of the elements of a given document into the database."""
-    return save_document(
-        api,
-        document,
-        version_path,
-        PreservedInfo(),
-    )
+            yield onshape_element
 
 
 async def save_document(
     api: Api,
     document_ref: DocumentRef,
     version_path: InstancePath,
-    preserved_info: PreservedInfo,
+    reload_context: ReloadContext,
 ) -> int:
-    """Loads all of the elements of a given document into the database."""
-    contents = await asyncio.to_thread(documents.get_contents, api, version_path)
+    """Loads all of the elements of a given document into the database.
 
-    valid_elements = get_valid_elements(document_ref, contents, preserved_info)
-    valid_ids = set(element["id"] for element in valid_elements)
+    Note this function does NOT update documentOrder; it is up to the caller to add it themselves.
+    """
+    document_id = version_path.document_id
+
+    # Get document synchronously up front to do validation
+    onshape_document = await asyncio.to_thread(
+        documents.get_document, api, version_path
+    )
+    thumbnail_element_id = onshape_document["documentThumbnailElementId"]
+    if thumbnail_element_id == "":
+        raise HandledException(
+            onshape_document["name"] + " does not have a thumbnail tab set"
+        )
+
+    contents = await asyncio.to_thread(documents.get_contents, api, version_path)
+    valid_elements = list(get_valid_elements(contents))
+
+    valid_element_ids = {onshape_element["id"] for onshape_element in valid_elements}
+
+    elements_to_reload = list(
+        get_elements_to_reload(document_ref, valid_elements, reload_context)
+    )
 
     save_element_operations = [
         asyncio.to_thread(
@@ -194,78 +170,74 @@ async def save_document(
             document_ref,
             version_path,
             onshape_element,
-            preserved_info,
+            reload_context,
         )
-        for onshape_element in valid_elements
+        for onshape_element in elements_to_reload
     ]
-
-    # Collect list of element ids in same order as the Onshape Tab manager
-    ordered_element_ids = [
-        element_id
-        for element_id in get_ordered_element_ids(contents)
-        if element_id in valid_ids
-    ]
-
-    onshape_document = documents.get_document(api, version_path)
-    thumbnail_element_id = onshape_document["documentThumbnailElementId"]
-    if thumbnail_element_id == None:
-        raise ValueError(
-            "Document "
-            + onshape_document["name"]
-            + " does not have a thumbnail tab set"
-        )
-
-    document_id = version_path.document_id
 
     await asyncio.gather(*save_element_operations)
 
-    preserved_document = preserved_info.get_document(document_id)
+    # Collect list of element ids in same order as the Onshape Tab manager
+    ordered_ids = [
+        element_id
+        for element_id in get_ordered_element_ids(contents)
+        if element_id in valid_element_ids
+    ]
+
+    # Delete any elements present in the current order but not the new order
+    elements_to_delete = set(document_ref.elements.keys()) - set(ordered_ids)
+    for element_id in elements_to_delete:
+        document_ref.elements.element(element_id).delete()
+        document_ref.configurations.configuration(element_id).delete()
+
+    preserved_document = reload_context.get_document(document_id)
+    # Document order is externally managed, so just set the document directly
     document_ref.set(
         Document(
             name=onshape_document["name"],
             thumbnailElementId=thumbnail_element_id,
             instanceId=version_path.instance_id,
-            elementIds=ordered_element_ids,
+            elementOrder=ordered_ids,
             sortAlphabetically=preserved_document.sortAlphabetically,
-        )
+        ),
     )
-    return len(ordered_element_ids)
+    return len(elements_to_reload)
 
 
-def preserve_info(library_ref: LibraryRef, reload_all: bool) -> PreservedInfo:
-    preserved_info = PreservedInfo(reload_all=reload_all)
+def build_reload_context(library_ref: LibraryRef, reload_all: bool) -> ReloadContext:
+    reload_context = ReloadContext(reload_all=reload_all)
     for document_ref in library_ref.documents.list():
-        preserved_info.save_document(document_ref.id, document_ref.get())
+        reload_context.save_document(document_ref.id, document_ref.get())
 
         for element in document_ref.elements.list():
             element_id = element.id
-            preserved_info.save_element(element_id, element.get())
+            reload_context.save_element(element_id, element.get())
 
-    return preserved_info
+    return reload_context
 
 
 async def reload_document(
     api: Api,
-    document_ref: DocumentRef,
+    documents_ref: DocumentsRef,
     document_path: DocumentPath,
-    preserved_info: PreservedInfo,
+    reload_context: ReloadContext,
 ) -> int:
     latest_version_path = await asyncio.to_thread(
         get_latest_version_path, api, document_path
     )
 
-    document = document_ref.maybe_get()
-    if not document:
+    document_ref = documents_ref.document(document_path.document_id)
+    if not document_ref.maybe_get():
         # Document doesn't exist, create it immediately
         return await save_document(
-            api, document_ref, latest_version_path, preserved_info
+            api, document_ref, latest_version_path, reload_context
         )
 
-    if document.instanceId == latest_version_path.instance_id:
+    if not reload_context.should_reload_document(latest_version_path):
         return 0
 
     # Refresh document
-    return await save_document(api, document_ref, latest_version_path, preserved_info)
+    return await save_document(api, document_ref, latest_version_path, reload_context)
 
 
 @router.post("/reload-documents" + connect.library_route())
@@ -275,24 +247,19 @@ async def reload_documents(**kwargs):
     api = connect.get_api()
     library_ref = connect.get_library_ref()
 
-    reload_all = connect.get_optional_body_arg("reloadAll", False)
+    reload_all = connect.get_query_bool("reloadAll", False)
 
-    preserved_info = preserve_info(library_ref, reload_all)
+    reload_context = build_reload_context(library_ref, reload_all)
 
     count = 0
-    visited = set()
 
     documents_ref = library_ref.documents
 
     operations = []
     for document_id in documents_ref.keys():
         document_path = DocumentPath(document_id)
-        visited.add(document_path.document_id)
-
         operations.append(
-            reload_document(
-                api, documents_ref.document(document_id), document_path, preserved_info
-            )
+            reload_document(api, documents_ref, document_path, reload_context)
         )
 
     results = await asyncio.gather(*operations)
@@ -354,7 +321,7 @@ def set_document_sort(**kwargs):
     document_id = connect.get_body_arg("documentId")
     sort_alphabetically = connect.get_body_arg("sortAlphabetically")
 
-    library_ref.documents.document(document_id).update(
+    library_ref.documents.child(document_id).update(
         {"sortAlphabetically": sort_alphabetically}
     )
     return {"success": True}
@@ -378,7 +345,7 @@ async def add_document_route(**kwargs):
 
     new_document_id = connect.get_body_arg("newDocumentId")
     new_path = DocumentPath(new_document_id)
-    # selected_document_id = connect.get_optional_body_arg("selectedDocumentId")
+    selected_document_id = connect.get_optional_body_arg("selectedDocumentId")
 
     try:
         document_name = get_document(api, new_path)["name"]
@@ -390,13 +357,24 @@ async def add_document_route(**kwargs):
     except:
         raise HandledException("Failed to find a document version to use.")
 
-    document_ref = library_ref.documents.document(new_document_id)
-
-    keys = library_ref.documents.keys()
-    if new_document_id in keys:
+    document_order = library_ref.documents.keys()
+    if new_document_id in document_order:
         raise HandledException("Document has already been added to library.")
 
-    await save_document(api, document_ref, latest_version, PreservedInfo())
+    if selected_document_id:
+        if selected_document_id not in document_order:
+            raise HandledException("Selected document not found in library.")
+
+        selected_index = document_order.index(selected_document_id)
+        document_order.insert(selected_index + 1, new_document_id)
+    else:
+        document_order.append(new_document_id)
+
+    document_ref = library_ref.documents.document(new_document_id)
+    await save_document(api, document_ref, latest_version, ReloadContext())
+
+    # Update order after we've successfully added the document
+    library_ref.documents.set_order(document_order)
     return {"name": document_name}
 
 

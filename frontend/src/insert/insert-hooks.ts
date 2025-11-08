@@ -9,6 +9,7 @@ import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api/errors";
 import { useMemo } from "react";
 import { Configuration } from "./configuration-models";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 /**
  * Creates a mutation for inserting an element.
@@ -20,6 +21,7 @@ export function useInsertMutation(
     isFavorite: boolean
 ) {
     const search = useSearch({ from: "/app" });
+    const library = useLibrary();
 
     const toastId = "insert-" + element.id;
 
@@ -38,11 +40,11 @@ export function useInsertMutation(
                 userId: search.userId
             };
             if (search.elementType == ElementType.ASSEMBLY) {
-                endpoint = "/add-to-assembly";
+                endpoint = "/add-to-assembly" + toLibraryPath(library);
                 body.elementType = element.elementType;
             } else {
                 // Part studio derive also needs name and microversion id
-                endpoint = "/add-to-part-studio";
+                endpoint = "/add-to-part-studio" + toLibraryPath(library);
                 body.microversionId = element.microversionId;
             }
             // Cancel any outstanding thumbnail queries

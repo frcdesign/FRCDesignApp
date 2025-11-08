@@ -36,6 +36,7 @@ import { getAppErrorHandler, HandledError } from "../api/errors";
 import { toLibraryPath, useLibrary } from "../api/library";
 import {
     libraryQueryKey,
+    libraryQueryMatchKey,
     updateSettingsKey,
     userDataQueryKey,
     useUserData
@@ -341,7 +342,6 @@ export function ReloadDocumentsButton(
     const hideFormGroup = props.hideFormGroup ?? false;
 
     const library = useLibrary();
-    const search = useSearch({ from: "/app" });
 
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
@@ -362,14 +362,14 @@ export function ReloadDocumentsButton(
         onSuccess: async (result) => {
             const savedElements = result["savedElements"];
             if (savedElements === 0) {
-                showSuccessToast("All documents were already up to date.");
+                showSuccessToast("All documents are already up to date.");
             } else {
                 showSuccessToast(
                     "Successfully reloaded " + savedElements + " elements."
                 );
             }
             queryClient.invalidateQueries({
-                queryKey: libraryQueryKey(library, search)
+                queryKey: libraryQueryMatchKey()
             });
         }
     });

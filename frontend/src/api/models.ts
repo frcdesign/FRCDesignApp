@@ -106,7 +106,7 @@ export interface DocumentObj extends InstancePath {
     name: string;
     thumbnailElementId: string;
     sortAlphabetically: boolean;
-    elementIds: string[];
+    elementOrder: string[];
 }
 
 export interface ElementObj extends ElementPath {

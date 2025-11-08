@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from onshape_api.endpoints.documents import ElementType
+from onshape_api.endpoints.thumbnails import ThumbnailSize
 
 
 class Library(StrEnum):
@@ -240,14 +241,14 @@ class Element(BaseModel):
     microversionId: str
     isVisible: bool
     configurationId: str | None = None
-    thumbnailUrl: str | None = None
+    thumbbailUrls: dict[ThumbnailSize, str] | None = None
 
 
 class Document(BaseModel):
     name: str
     instanceId: str
     thumbnailElementId: str
-    elementIds: list[str]
+    elementOrder: list[str] = Field(default_factory=list)
     sortAlphabetically: bool
 
 

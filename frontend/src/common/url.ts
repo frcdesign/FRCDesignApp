@@ -40,7 +40,7 @@ export function makeUrl(
     return url;
 }
 
-export interface Configuration {
+export interface ConfigurationPath {
     configuration?: string;
 }
 
@@ -50,7 +50,7 @@ export interface Configuration {
  */
 export function parseUrl(
     urlString: string
-): (ElementPath & Configuration) | undefined {
+): (ElementPath & ConfigurationPath) | undefined {
     try {
         // Example pathname: /documents/769b556baf61d32b18813fd0/w/e6d6c2b3a472b97a7e352949/e/8a0c13d3b2b68a99502dc436
         const url = new URL(urlString);

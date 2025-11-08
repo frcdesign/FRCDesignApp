@@ -99,7 +99,7 @@ def build_documents_out(
 @cacheable_route(router, "/search-db" + connect.library_route())
 def get_search_db(**kwargs):
     library_ref = connect.get_library_ref()
-    library = library_ref.get_with_default()
+    library = library_ref.get()
     return {"searchDb": library.searchDb}
 
 

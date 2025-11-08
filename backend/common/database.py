@@ -3,7 +3,11 @@ from enum import StrEnum
 from typing import Generic, Protocol, Type, TypeVar, override, runtime_checkable
 
 from google.cloud import firestore
-from google.cloud.firestore import CollectionReference, DocumentReference
+from google.cloud.firestore import (
+    CollectionReference,
+    DocumentReference,
+    DocumentSnapshot,
+)
 from pydantic import BaseModel, ValidationError
 
 from backend.common.backend_exceptions import ServerException
@@ -40,7 +44,6 @@ class BaseDocument(Protocol, Generic[T]):
 
     def get(self) -> T: ...
     def maybe_get(self) -> T | None: ...
-    def get_with_default(self) -> T: ...
 
     def set(self, data: T) -> None: ...
     def update(self, partial: dict) -> None: ...
@@ -56,7 +59,7 @@ class BaseCollection(Protocol, Generic[T]):
     def keys(self) -> list[str]: ...
     def add(self, doc_id: str, data: T) -> None: ...
     def remove(self, doc_id: str) -> None: ...
-    def document(self, doc_id: str) -> BaseDocument[T]: ...
+    def child(self, doc_id: str) -> BaseDocument[T]: ...
 
 
 class BaseDocumentRef(BaseDocument[T], Generic[T]):
@@ -69,9 +72,6 @@ class BaseDocumentRef(BaseDocument[T], Generic[T]):
 
     def maybe_get(self) -> T | None:
         return self.ref.maybe_get()
-
-    def get_with_default(self) -> T:
-        return self.ref.get_with_default()
 
     def set(self, data: T) -> None:
         self.ref.set(data)
@@ -102,25 +102,36 @@ class BaseCollectionRef(BaseCollection[T], Generic[T]):
     def remove(self, doc_id: str) -> None:
         return self.ref.remove(doc_id)
 
-    def document(self, doc_id: str) -> BaseDocument[T]:
-        return self.ref.document(doc_id)
+    def child(self, doc_id: str) -> BaseDocument[T]:
+        return self.ref.child(doc_id)
 
 
 class FirestoreDocument(BaseDocument[T]):
-    def __init__(self, document: DocumentReference, model: Type[T]):
-        self.document = document
+    """A Firestore reference to a given document."""
+
+    def __init__(
+        self,
+        document_ref: DocumentReference,
+        model: Type[T],
+        snapshot: DocumentSnapshot | None = None,
+    ):
+        self.document_ref = document_ref
+        self.snapshot = snapshot
         self.model = model
 
     @property
     def id(self) -> str:
-        return self.document.id
+        return self.document_ref.id
 
     def maybe_get(self) -> T | None:
-        snapshot = self.document.get()
+        if self.snapshot != None:
+            snapshot = self.snapshot
+        else:
+            snapshot = self.document_ref.get()
         if not snapshot.exists:
             return None
         try:
-            return self.model.model_validate(snapshot.to_dict())
+            return self.model.model_validate(snapshot.to_dict() or {})
         except ValidationError:
             return None
 
@@ -132,13 +143,8 @@ class FirestoreDocument(BaseDocument[T]):
             )
         return result
 
-    def get_with_default(self) -> T:
-        """Retrieves the document, constructing it if it doesn't exist."""
-        snapshot = self.document.get()
-        return self.model.model_validate(snapshot.to_dict() or {})
-
     def set(self, data: T) -> None:
-        self.document.set(data.model_dump())
+        self.document_ref.set(data.model_dump())
 
     def update(self, partial: dict) -> None:
         """Updates fields in the document with given partial data.
@@ -146,15 +152,15 @@ class FirestoreDocument(BaseDocument[T]):
         Note this calls set with merge=True rather than update.
         set supports automatic document creation but not nested field notation.
         """
-        self.document.set(partial, merge=True)
+        self.document_ref.set(partial, merge=True)
 
     def delete(self) -> None:
-        self.document.delete()
+        self.document_ref.delete()
 
     def collection(
         self, collection: Collection, model: Type[S]
     ) -> FirestoreCollection[S]:
-        return FirestoreCollection(self.document.collection(collection), model)
+        return FirestoreCollection(self.document_ref.collection(collection), model)
 
 
 class FirestoreCollection(BaseCollection[T]):
@@ -162,29 +168,30 @@ class FirestoreCollection(BaseCollection[T]):
 
     def __init__(
         self,
-        collection: CollectionReference,
+        collection_ref: CollectionReference,
         model: Type[T],
     ):
-        self.collection = collection
+        self.collection_ref = collection_ref
         self.model = model
 
     def keys(self) -> list[str]:
-        return [doc_ref.id for doc_ref in self.list()]
+        # Don't need anything except the document IDs
+        return [doc_ref.id for doc_ref in self.collection_ref.select([]).stream()]
 
     def list(self) -> list[FirestoreDocument[T]]:
         return [
-            FirestoreDocument(doc_ref, self.model)
-            for doc_ref in self.collection.stream()
+            FirestoreDocument(doc_snapshot.reference, self.model, snapshot=doc_snapshot)
+            for doc_snapshot in self.collection_ref.stream()
         ]
 
     def add(self, doc_id: str, data: T) -> None:
-        self.collection.document(doc_id).set(data.model_dump())
+        self.collection_ref.document(doc_id).set(data.model_dump())
 
     def remove(self, doc_id: str) -> None:
-        self.collection.document(doc_id).delete()
+        self.collection_ref.document(doc_id).delete()
 
-    def document(self, doc_id: str) -> FirestoreDocument[T]:
-        return FirestoreDocument(self.collection.document(doc_id), self.model)
+    def child(self, doc_id: str) -> FirestoreDocument[T]:
+        return FirestoreDocument(self.collection_ref.document(doc_id), self.model)
 
 
 D = TypeVar("D", bound=BaseModel)
@@ -210,7 +217,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         return getattr(data, self.order_key, [])
 
     def _set_order(self, order: list[str]):
-        data = self.parent.get_with_default()
+        data = self.parent.get()
         setattr(data, self.order_key, order)
         self.parent.set(data)
 
@@ -228,7 +235,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         if doc_id in existing_order:
             raise ValueError(f"Document '{doc_id}' already in order list")
 
-        self.add(doc_id, data)
+        super().add(doc_id, data)
         existing_order.append(doc_id)
         self._set_order(existing_order)
 
@@ -238,7 +245,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         if doc_id not in existing_order:
             raise ValueError(f"Document '{doc_id}' not in order list")
 
-        self.remove(doc_id)
+        super().remove(doc_id)
         new_order = [x for x in existing_order if x != doc_id]
         self._set_order(new_order)
 
@@ -268,7 +275,7 @@ class LibraryRef(BaseDocumentRef[LibraryData]):
 
 class DocumentsRef(OrderedCollection[LibraryData, Document]):
     def document(self, document_id: str) -> DocumentRef:
-        return DocumentRef(self.ref.document(document_id))
+        return DocumentRef(self.ref.child(document_id))
 
     @override
     def list(self) -> list[DocumentRef]:
@@ -293,17 +300,17 @@ class DocumentRef(BaseDocumentRef[Document]):
 
 class ElementsRef(OrderedCollection[Document, Element]):
     def element(self, element_id: str) -> BaseDocument[Element]:
-        return self.ref.document(element_id)
+        return self.ref.child(element_id)
 
 
 class ConfigurationsRef(BaseCollectionRef[Configuration]):
     def configuration(self, configuration: str) -> BaseDocument[Configuration]:
-        return self.ref.document(configuration)
+        return self.ref.child(configuration)
 
 
 class AllLibraryUserDataRef(BaseCollectionRef[LibraryUserData]):
     def user_data(self, user_id: str) -> LibraryUserDataRef:
-        return LibraryUserDataRef(self.ref.document(user_id))
+        return LibraryUserDataRef(self.ref.child(user_id))
 
     @override
     def list(self) -> list[LibraryUserDataRef]:
@@ -322,7 +329,7 @@ class LibraryUserDataRef(BaseDocumentRef[LibraryUserData]):
 
 class FavoritesRef(OrderedCollection[LibraryUserData, Favorite]):
     def favorite(self, favorite_id: str) -> BaseDocument[Favorite]:
-        return self.ref.document(favorite_id)
+        return self.ref.child(favorite_id)
 
 
 class Database:

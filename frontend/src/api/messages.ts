@@ -22,7 +22,7 @@ export function useMessageListener() {
             return;
         }
 
-        console.log("message received:", event.data);
+        // console.log("message received:", event.data);
     };
 
     window.addEventListener("message", handlePostMessage);

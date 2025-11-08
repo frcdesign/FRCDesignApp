@@ -41,7 +41,7 @@ def add_to_assembly(**kwargs):
 
     if configuration != None:
         parameters = (
-            library_ref.documents.document(path_to_add.document_id)
+            library_ref.documents.child(path_to_add.document_id)
             .configurations.configuration(path_to_add.element_id)
             .get()
         )
@@ -81,7 +81,7 @@ def add_to_part_studio(**kwargs):
     parameters = (
         None
         if configuration == None
-        else library_ref.documents.document(path_to_add.document_id)
+        else library_ref.documents.child(path_to_add.document_id)
         .configurations.configuration(path_to_add.element_id)
         .get()
     )

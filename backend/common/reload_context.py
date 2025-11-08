@@ -3,12 +3,14 @@ from __future__ import annotations
 from pydantic import BaseModel, field_validator
 
 from backend.common.models import Document, Element
+from onshape_api.paths.doc_path import InstancePath
 
 
 class SavedElement(BaseModel):
     isVisible: bool = False
     microversionId: str | None = None
 
+    # Note: We need field validators to default fields which can't be None
     @field_validator("isVisible", mode="before")
     def default_is_visible(cls, v):
         return v if v != None else False
@@ -16,13 +18,14 @@ class SavedElement(BaseModel):
 
 class SavedDocument(BaseModel):
     sortAlphabetically: bool = True
+    instanceId: str | None = None
 
     @field_validator("sortAlphabetically", mode="before")
     def default_sort_alphabetically(cls, v):
         return v if v != None else True
 
 
-class PreservedInfo:
+class ReloadContext:
     """A class representing a subset of Document data which should be saved on a best-effort basis when documents are reloaded.
 
     Used to preserve data which is specified by admins rather than being loaded from Onshape directly.
@@ -48,10 +51,20 @@ class PreservedInfo:
             return True
 
         preserved_element = self.get_element(element_id)
-        if preserved_element.microversionId != microversion_id:
+        if preserved_element.microversionId == microversion_id:
+            return False
+
+        return True
+
+    def should_reload_document(self, latest_version_path: InstancePath) -> bool:
+        if self.reload_all:
             return True
 
-        return False
+        preserved_document = self.get_document(latest_version_path.document_id)
+        if preserved_document.instanceId == latest_version_path.instance_id:
+            return False
+
+        return True
 
     def save_document(self, document_id: str, document: Document) -> None:
         self._preserved_documents[document_id] = SavedDocument.model_validate(

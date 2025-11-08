@@ -20,13 +20,17 @@ import {
     MenuDialogProps,
     useHandleCloseDialog
 } from "../search-params/menu-params";
-import { PreviewImage } from "../favorites/thumbnail";
+import { PreviewImage } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
 import { toaster } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "./configuration-models";
-import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
+import {
+    getConfigurationMatchKey,
+    useLibraryQuery,
+    useLibraryUserDataQuery
+} from "../queries";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -54,6 +58,10 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     >(props.defaultConfiguration);
 
     const element = elements ? elements[elementId] : undefined;
+
+    const isFetchingConfiguration =
+        useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
+
     if (!element || !favorites) {
         return null;
     }
@@ -73,7 +81,11 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
 
     const previewImageCard = (
         <Card className="center preview-image-card">
-            <PreviewImage elementPath={element} configuration={configuration} />
+            <PreviewImage
+                elementPath={element}
+                configuration={configuration}
+                pauseLoading={isFetchingConfiguration}
+            />
         </Card>
     );
 

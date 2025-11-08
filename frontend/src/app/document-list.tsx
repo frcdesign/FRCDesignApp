@@ -137,8 +137,8 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         ? SortOrder.ASCENDING
         : SortOrder.DEFAULT;
 
-    const documentElements = document.elementIds
-        .map((elementId) => elements[elementId])
+    const documentElements = document.elementOrder
+        .map((elementOrder) => elements[elementOrder])
         .filter((element) => !!element);
 
     if (documentElements.length === 0) {

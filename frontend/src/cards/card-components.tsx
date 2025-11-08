@@ -10,14 +10,15 @@ import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { MouseEventHandler, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
-import { CardThumbnail } from "../favorites/thumbnail";
+import { CardThumbnail } from "../insert/thumbnail";
 import { DocumentPath, ElementPath } from "../api/path";
 import { AlertType, useOpenAlert } from "../search-params/alert-type";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { Configuration, ElementObj } from "../api/models";
+import { ElementObj } from "../api/models";
+import { Configuration } from "../insert/configuration-models";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;

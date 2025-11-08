@@ -21,6 +21,7 @@ import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api/errors";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -37,6 +38,7 @@ function AddDocumentMenuDialog(
 ): ReactNode {
     const { selectedDocumentId } = props;
     const closeDialog = useHandleCloseDialog();
+    const library = useLibrary();
 
     const [url, setUrl] = useState("");
 
@@ -49,7 +51,7 @@ function AddDocumentMenuDialog(
             }
             showLoadingToast("Adding document...", "add-document");
             closeDialog();
-            return apiPost("/document", {
+            return apiPost("/document" + toLibraryPath(library), {
                 body: {
                     newDocumentId,
                     selectedDocumentId

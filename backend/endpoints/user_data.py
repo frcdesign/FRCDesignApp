@@ -37,8 +37,8 @@ def get_context_data(**kwargs):
 def get_cache_version() -> int:
     db = connect.get_db()
     user_id = connect.get_route_user_path().user_id
-    settings = db.get_user_data(user_id).get_with_default().settings
-    return db.get_library(settings.library).get_with_default().cacheVersion
+    settings = db.get_user_data(user_id).get().settings
+    return db.get_library(settings.library).get().cacheVersion
 
 
 @router.get("/user-data" + user_path_route())
@@ -47,7 +47,7 @@ def get_user_data(**kwargs):
     db = connect.get_db()
 
     user_id = connect.get_route_user_path().user_id
-    user_data = db.get_user_data(user_id).get_with_default()
+    user_data = db.get_user_data(user_id).get()
 
     return user_data.model_dump_json(exclude_none=True)
 

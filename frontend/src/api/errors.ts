@@ -43,16 +43,3 @@ export function handleAppError(
     // }
     showErrorToast(defaultMessage, toastKey);
 }
-
-/**
- * Errors reported by the backend and handled on the client.
- */
-export class HandledBackendError extends Error {
-    public type: string;
-
-    constructor(type: string) {
-        super(type);
-        Object.setPrototypeOf(this, new.target.prototype);
-        this.type = type;
-    }
-}

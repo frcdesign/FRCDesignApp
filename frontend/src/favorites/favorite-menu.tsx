@@ -17,7 +17,7 @@ import { useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
-import { PreviewImage } from "./thumbnail";
+import { PreviewImage } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../insert/configurations";
 import { LibraryUserData } from "../api/models";
 import { AppInternalErrorState } from "../common/app-zero-state";

@@ -105,10 +105,11 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 interface PreviewImageProps {
     elementPath: ElementPath;
     configuration?: Configuration;
+    pauseLoading?: boolean;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { elementPath, configuration } = props;
+    const { elementPath, configuration, pauseLoading } = props;
     const size = ThumbnailSize.SMALL;
 
     // Thumbnail id generation with queries is really unreliable
@@ -130,7 +131,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             }).then((value) => value.thumbnailId);
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
-        retry: 0
+        retry: 0,
+        enabled: !pauseLoading
     });
 
     const cacheOptions = useCacheOptions();
@@ -156,7 +158,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         // Cap max time between retries at 10 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         retry: Infinity, // Allow indefinite retrying
-        enabled: thumbnailIdQuery.data !== undefined
+        enabled: thumbnailIdQuery.data !== undefined && !pauseLoading
     });
 
     const heightAndWidth = getHeightAndWidth(size);

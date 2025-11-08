@@ -20,8 +20,8 @@ import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
 import { CardTitle, OpenDocumentItems } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
-import { useLibraryQuery } from "../queries";
-import { useLibrary } from "../api/library";
+import { libraryQueryMatchKey, useLibraryQuery } from "../queries";
+import { toLibraryPath, useLibrary } from "../api/library";
 import { getQueryUpdater } from "../common/utils";
 
 interface DocumentCardProps extends PropsWithChildren {
@@ -84,16 +84,17 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const isHome =
         useMatch({ from: "/app/documents/", shouldThrow: false }) !== undefined;
+    const library = useLibrary();
 
     const deleteDocumentMutation = useMutation({
         mutationKey: ["delete-document"],
         mutationFn: async () => {
-            return apiDelete("/document", {
+            return apiDelete("/document" + toLibraryPath(library), {
                 query: { documentId: document.id }
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
         }
     });
 
@@ -102,13 +103,13 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const showAllMutation = useSetVisibilityMutation(
         "show-all",
-        document.elementIds,
+        document.elementOrder,
         true
     );
 
     const hideAllMutation = useSetVisibilityMutation(
         "hide-all",
-        document.elementIds,
+        document.elementOrder,
         false
     );
 
