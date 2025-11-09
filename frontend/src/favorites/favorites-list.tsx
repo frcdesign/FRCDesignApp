@@ -11,7 +11,12 @@ import {
 import { FilterCallout } from "../navbar/filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FavoriteCard } from "./favorite-card";
-import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
+import {
+    useLibraryQuery,
+    useLibraryUserDataQuery,
+    useSearchDbQuery
+} from "../queries";
+import { doSearch, SearchHit } from "../search/search";
 
 /**
  * A list of current favorite cards.
@@ -22,9 +27,19 @@ export function FavoritesList(): ReactNode {
 
     const libraryQuery = useLibraryQuery();
     const userDataQuery = useLibraryUserDataQuery();
-    if (userDataQuery.isPending || libraryQuery.isPending) {
+    const searchDbQuery = useSearchDbQuery();
+
+    if (
+        userDataQuery.isPending ||
+        libraryQuery.isPending ||
+        searchDbQuery.isPending
+    ) {
         return <AppLoadingState title="Loading favorites..." />;
-    } else if (libraryQuery.isError || userDataQuery.isError) {
+    } else if (
+        libraryQuery.isError ||
+        userDataQuery.isError ||
+        searchDbQuery.isError
+    ) {
         return (
             <AppInternalErrorState
                 title="Failed to load favorites."
@@ -57,30 +72,80 @@ export function FavoritesList(): ReactNode {
         );
     }
 
-    const filterResult = filterElements(favoriteElements, {
-        vendors: uiState.vendorFilters,
-        // Only elements which haven't been disabled can be shown
-        isVisible: true
-    });
-
-    let callout;
-    if (filterResult.elements.length == 0) {
-        return (
-            <AppErrorState
-                title="All favorites are hidden by filters"
-                icon="heart-broken"
-                iconColor={Colors.RED3}
-                action={<ClearFiltersButton standardSize />}
-            />
+    let filterResult;
+    let searchHits: Record<string, SearchHit> = {};
+    if (uiState.searchQuery) {
+        if (!searchDbQuery.data) {
+            return (
+                <AppInternalErrorState title="Failed to load search database." />
+            );
+        }
+        const searchResults = doSearch(
+            searchDbQuery.data,
+            uiState.searchQuery,
+            {
+                vendors: uiState.vendorFilters,
+                isFavorite: true
+            }
         );
+
+        if (searchResults.hits.length === 0) {
+            if (searchResults.filtered === 0) {
+                return (
+                    <AppErrorState
+                        title="No favorites found"
+                        icon="heart-broken"
+                        iconColor={Colors.RED3}
+                    />
+                );
+            }
+            return (
+                <AppErrorState
+                    title="No favorites found."
+                    description={`${searchResults.filtered} favorites are hidden by filters.`}
+                    icon="heart-broken"
+                    iconColor={Colors.RED3}
+                    action={<ClearFiltersButton standardSize />}
+                />
+            );
+        }
+
+        filterResult = {
+            elements: searchResults.hits
+                .map((hit) => elements[hit.id])
+                .filter((element) => !!element),
+            filtered: searchResults.filtered
+        };
+        searchHits = searchResults.hits.reduce((acc, hit) => {
+            acc[hit.id] = hit;
+            return acc;
+        }, {} as Record<string, SearchHit>);
+    } else {
+        filterResult = filterElements(favoriteElements, {
+            vendors: uiState.vendorFilters,
+            // Only elements which haven't been disabled can be shown
+            isVisible: true
+        });
+
+        if (filterResult.elements.length == 0) {
+            return (
+                <AppErrorState
+                    title="All favorites are hidden by filters"
+                    icon="heart-broken"
+                    iconColor={Colors.RED3}
+                    action={<ClearFiltersButton standardSize />}
+                />
+            );
+        }
     }
 
-    if (filterResult.filteredByVendors > 0) {
+    let callout;
+    if (filterResult.filtered > 0) {
         callout = (
             <Card className="item-card" style={{ padding: "0px" }}>
                 <FilterCallout
-                    itemName="favorites"
-                    filteredItems={filterResult.filteredByVendors}
+                    itemType="favorites"
+                    filteredItems={filterResult.filtered}
                 />
             </Card>
         );
@@ -96,6 +161,7 @@ export function FavoritesList(): ReactNode {
                 key={favorite.id}
                 element={element}
                 favorite={favorite}
+                searchHit={searchHits[element.id]}
             />
         );
     });

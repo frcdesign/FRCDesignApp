@@ -7,7 +7,6 @@ import { ReactNode, useState } from "react";
 import { ElementObj, ElementType } from "../api/models";
 import {
     Button,
-    Card,
     Dialog,
     DialogBody,
     DialogFooter,
@@ -19,8 +18,8 @@ import {
     InsertMenuParams,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../search-params/menu-params";
-import { PreviewImage } from "./thumbnail";
+} from "../overlays/menu-params";
+import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
 import { toaster } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
@@ -79,16 +78,6 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         );
     }
 
-    const previewImageCard = (
-        <Card className="center preview-image-card">
-            <PreviewImage
-                elementPath={element}
-                configuration={configuration}
-                pauseLoading={isFetchingConfiguration}
-            />
-        </Card>
-    );
-
     const actions = (
         <InsertButton
             element={element}
@@ -107,7 +96,11 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
             }}
             className="insert-menu"
         >
-            {previewImageCard}
+            <PreviewImageCard
+                elementPath={element}
+                configuration={configuration}
+                pauseLoading={isFetchingConfiguration}
+            />
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
                 <FavoriteButton isFavorite={isFavorite} element={element} />

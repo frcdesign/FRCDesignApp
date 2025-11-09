@@ -15,16 +15,16 @@ import { DocumentList } from "./app/document-list";
 import {
     getUserDataQuery,
     getLibraryQuery,
-    getContextDataQuery
+    getContextDataQuery,
+    getSearchDbQuery
 } from "./queries";
 import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
-import { MenuParams } from "./search-params/menu-params";
+import { MenuParams } from "./overlays/menu-params";
 import { OnshapeParams } from "./search-params/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
-import { AlertParams } from "./search-params/alert-type";
-import { getSearchDbQuery } from "./search/search";
+import { AlertParams } from "./overlays/popup-params";
 import { UserPath } from "./api/path";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;

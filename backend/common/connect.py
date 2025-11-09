@@ -185,7 +185,7 @@ def get_route(route_param: str) -> Any:
     Throws if it doesn't exist.
     """
     view_args = flask.request.view_args
-    if view_args is None or (param := view_args.get(route_param)) is None:
+    if view_args == None or (param := view_args.get(route_param)) == None:
         raise backend_exceptions.ClientException(
             "Missing required path parameter {}.".format(route_param)
         )

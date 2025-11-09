@@ -12,7 +12,7 @@ import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
 import { DocumentPath } from "../api/path";
-import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
@@ -69,7 +69,7 @@ export function QuickInsertItem(props: QuickInsertItemProps) {
 
     const handleClick = useCallback(() => {
         if (isAssemblyInPartStudio) {
-            openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
+            openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
             return;
         }
         insertMutation.mutate();

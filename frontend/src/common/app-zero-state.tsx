@@ -96,7 +96,7 @@ export function AppLoadingState(props: AppLoadingStateProps): ReactNode {
 interface AppInternalErrorStateProps
     extends Omit<AppErrorStateProps, "description" | "title"> {
     /**
-     * If provided, this should end with a period.
+     * If provided, title should use Sentence case and end with a period.
      */
     title?: string;
 }

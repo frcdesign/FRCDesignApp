@@ -25,9 +25,9 @@ export interface FilterArgs {
 export interface FilterResult {
     elements: ElementObj[];
     /**
-     * The number of entities that were filtered out by the vendor filter.
+     * The number of entities that were filtered out by user-controllable filters.
      */
-    filteredByVendors: number;
+    filtered: number;
 }
 
 /**
@@ -37,36 +37,38 @@ export function filterElements(
     elements: ElementObj[],
     args: FilterArgs
 ): FilterResult {
-    let filtered = [...elements];
+    let filteredElements = [...elements];
 
     // Filter by visibility
     if (args.isVisible) {
-        filtered = filtered.filter((element) => element.isVisible);
+        filteredElements = filteredElements.filter(
+            (element) => element.isVisible
+        );
     }
 
     // Filter by vendors and track how many were removed
-    let filteredByVendors = 0;
+    let filtered = 0;
     if (args.vendors && args.vendors.length > 0) {
         const vendorSet = new Set(args.vendors);
-        const beforeCount = filtered.length;
-        filtered = filtered.filter(
+        const beforeCount = filteredElements.length;
+        filteredElements = filteredElements.filter(
             (element) =>
                 element.vendors &&
                 element.vendors.some((vendor) => vendorSet.has(vendor))
         );
-        filteredByVendors = beforeCount - filtered.length;
+        filtered = beforeCount - filteredElements.length;
     }
 
     // Sorting
     if (args.sortOrder && args.sortOrder !== SortOrder.DEFAULT) {
-        filtered.sort((a, b) => {
+        filteredElements.sort((a, b) => {
             const cmp = a.name.localeCompare(b.name);
             return args.sortOrder === SortOrder.ASCENDING ? cmp : -cmp;
         });
     }
 
     return {
-        elements: filtered,
-        filteredByVendors
+        elements: filteredElements,
+        filtered
     };
 }

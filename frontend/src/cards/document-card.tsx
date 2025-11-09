@@ -8,7 +8,7 @@ import {
     MenuDivider,
     MenuItem
 } from "@blueprintjs/core";
-import { useMatch, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj, LibraryObj } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
@@ -26,7 +26,7 @@ import {
     useLibraryQuery
 } from "../queries";
 import { toLibraryPath, useLibrary } from "../api/library";
-import { getQueryUpdater } from "../common/utils";
+import { getQueryUpdater, useIsHome } from "../common/utils";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -79,8 +79,7 @@ interface DocumentContextMenuProps {
 export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const { children, document } = props;
 
-    const isHome =
-        useMatch({ from: "/app/documents/", shouldThrow: false }) !== undefined;
+    const isHome = useIsHome();
     const library = useLibrary();
 
     const deleteDocumentMutation = useMutation({

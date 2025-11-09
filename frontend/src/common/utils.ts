@@ -1,4 +1,5 @@
 import { Classes } from "@blueprintjs/core";
+import { useMatch } from "@tanstack/react-router";
 import { produce } from "immer";
 import { Dispatch, FormEvent, RefObject, useLayoutEffect } from "react";
 
@@ -86,4 +87,13 @@ export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
         if (value === undefined) return undefined;
         return produce(value, recipe);
     };
+}
+
+/**
+ * Returns true if the current route is the home route, and false if it is a document route.
+ */
+export function useIsHome(): boolean {
+    return (
+        useMatch({ from: "/app/documents/", shouldThrow: false }) !== undefined
+    );
 }

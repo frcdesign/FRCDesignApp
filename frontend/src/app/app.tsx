@@ -9,9 +9,9 @@ import {
 } from "../search-params/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { AppAlerts } from "../search-params/app-alerts";
+import { AppAlerts } from "../overlays/app-popups";
 import { useUserData } from "../queries";
-import { AppMenus } from "../search-params/app-menus";
+import { AppMenus } from "../overlays/app-menus";
 import { useMessageListener } from "../api/messages";
 
 export function App() {

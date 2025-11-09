@@ -1,4 +1,5 @@
 import {
+    Button,
     CardList,
     ContextMenuChildrenProps,
     Section,
@@ -57,7 +58,20 @@ export function DocumentList(): ReactNode {
     const document = documents[documentId];
 
     if (!document) {
-        return null;
+        return (
+            <AppInternalErrorState
+                title="Document not found."
+                inline={false}
+                action={
+                    <Button
+                        text="Go back"
+                        icon="undo"
+                        intent="primary"
+                        onClick={() => navigate({ to: "/app/documents" })}
+                    />
+                }
+            />
+        );
     }
 
     let content;
@@ -166,11 +180,11 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     }
 
     let callout = null;
-    if (filterResult.filteredByVendors > 0) {
+    if (filterResult.filtered > 0) {
         callout = (
             <FilterCallout
-                itemName="elements"
-                filteredItems={filterResult.filteredByVendors}
+                itemType="elements"
+                filteredItems={filterResult.filtered}
             />
         );
     }

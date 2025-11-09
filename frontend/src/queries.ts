@@ -24,6 +24,8 @@ import {
 import { toLibraryPath, useLibrary } from "./api/library";
 import { UnitInfo } from "./insert/configuration-models";
 import { useLoaderData, useSearch } from "@tanstack/react-router";
+import MiniSearch from "minisearch";
+import { SEARCH_OPTIONS } from "./search/search";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];
@@ -58,6 +60,10 @@ export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
         staleTime: Infinity,
         gcTime: Infinity
     });
+}
+
+export function libraryUserDataQueryMatchKey() {
+    return ["library-user-data"];
 }
 
 export function libraryUserDataQueryKey(library: Library, userPath: UserPath) {
@@ -123,4 +129,36 @@ export function useUnitInfoQuery(instancePath: InstancePath) {
         queryFn: async () =>
             apiGet("/unit-info" + toInstanceApiPath(instancePath))
     });
+}
+
+export function searchDbQueryMatchKey() {
+    return ["search-db"];
+}
+
+export function searchDbQueryKey(library: Library, cacheOptions: CacheOptions) {
+    return ["search-db", library, cacheOptions];
+}
+
+export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
+    return queryOptions<MiniSearch | null>({
+        queryKey: searchDbQueryKey(library, cacheOptions),
+        queryFn: async () =>
+            apiGet("/search-db" + toLibraryPath(library), {
+                cacheOptions
+            }).then((result) => {
+                if (!result.searchDb) {
+                    // Have to use null since TanstackQuery doesn't allow null
+                    return null;
+                }
+                return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
+            }),
+        staleTime: Infinity,
+        gcTime: Infinity
+    });
+}
+
+export function useSearchDbQuery() {
+    const cacheOptions = useCacheOptions();
+    const library = useLibrary();
+    return useQuery(getSearchDbQuery(library, cacheOptions));
 }

@@ -26,6 +26,7 @@ import {
     Configuration,
     encodeConfigurationForQuery
 } from "../insert/configuration-models";
+import { AppErrorState } from "../common/app-zero-state";
 
 interface CardThumbnailProps {
     thumbnailUrls: ThumbnailUrls;
@@ -95,6 +96,18 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     );
 }
 
+export function PreviewImageCard(props: PreviewImageProps): ReactNode {
+    return (
+        <Card className="center preview-image-card">
+            <PreviewImage
+                elementPath={props.elementPath}
+                configuration={props.configuration}
+                pauseLoading={props.pauseLoading}
+            />
+        </Card>
+    );
+}
+
 interface PreviewImageProps {
     elementPath: ElementPath;
     configuration?: Configuration;
@@ -125,16 +138,16 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: 0,
-        enabled: !pauseLoading
+        enabled: !pauseLoading,
+        staleTime: Infinity
     });
 
     const cacheOptions = useCacheOptions();
-
     const thumbnailQuery = useQuery({
         queryKey: [
             "thumbnail",
             toElementApiPath(elementPath),
-            thumbnailIdQuery
+            thumbnailIdQuery.data
         ],
         queryFn: async ({ signal }) => {
             const query: Record<string, string> = {
@@ -148,13 +161,26 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             });
         },
         placeholderData: (previousData) => previousData,
-        // Cap max time between retries at 10 seconds with exponential backoff
+        // Cap max time between retries at 15 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         retry: Infinity, // Allow indefinite retrying
-        enabled: thumbnailIdQuery.data !== undefined && !pauseLoading
+        enabled: thumbnailIdQuery.data !== undefined && !pauseLoading,
+        staleTime: Infinity
     });
 
-    const heightAndWidth = getHeightAndWidth(size);
+    const heightAndWidth = getHeightAndWidth(size, 0.8);
+
+    if (thumbnailIdQuery.isError) {
+        return (
+            <div style={heightAndWidth}>
+                <AppErrorState
+                    title="Failed to load configuration"
+                    inline={false}
+                />
+            </div>
+        );
+    }
+
     if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <div className="center" style={heightAndWidth}>
@@ -167,19 +193,21 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         thumbnailIdQuery.isFetching || thumbnailQuery.isFetching;
 
     return (
-        <div style={{ position: "relative", ...heightAndWidth }}>
+        <>
+            <div style={{ position: "relative", ...heightAndWidth }}>
+                <img src={thumbnailQuery.data} {...heightAndWidth} />
+            </div>
             {showSmallSpinner && (
                 <Spinner
                     size={SpinnerSize.SMALL}
                     intent={Intent.PRIMARY}
                     style={{
                         position: "absolute",
-                        bottom: "-5px",
-                        right: "-25px"
+                        bottom: "15px",
+                        right: "15px"
                     }}
                 />
             )}
-            <img src={thumbnailQuery.data} {...heightAndWidth} />
-        </div>
+        </>
     );
 }

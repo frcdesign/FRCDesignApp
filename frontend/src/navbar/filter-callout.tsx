@@ -6,7 +6,7 @@ interface FilterCalloutProps {
      * The name to use for elements currently being filtered.
      * e.g., "elements", "favorites", "search results"
      */
-    itemName: string;
+    itemType: string;
 
     /**
      * The number of items that are filtered out.
@@ -14,8 +14,11 @@ interface FilterCalloutProps {
     filteredItems: number;
 }
 
+/**
+ * A callout which renders whenever there are items hidden by filters.
+ */
 export function FilterCallout(props: FilterCalloutProps) {
-    const { filteredItems, itemName: itemType } = props;
+    const { filteredItems, itemType } = props;
     if (filteredItems === 0) {
         return null;
     }

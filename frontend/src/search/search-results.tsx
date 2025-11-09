@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
-import { Position, SearchHit, doSearch, useSearchDbQuery } from "./search";
-import { Vendor } from "../api/models";
+import { Position, SearchFilters, SearchHit, doSearch } from "./search";
 import { ElementCard } from "../cards/element-card";
 import {
     AppErrorState,
@@ -9,18 +8,23 @@ import {
 } from "../common/app-zero-state";
 import { FilterCallout } from "../navbar/filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
-import { useLibraryQuery } from "../queries";
+import { useLibraryQuery, useSearchDbQuery } from "../queries";
+import { useIsHome } from "../common/utils";
+import { useNavigate } from "@tanstack/react-router";
+import { Button } from "@blueprintjs/core";
 
 interface SearchResultsProps {
     query: string;
-    filters: {
-        vendors?: Vendor[];
-        documentId?: string;
-    };
+    filters: SearchFilters;
 }
 
+/**
+ * Given a valid search query and filters, returns the list of current elements.
+ */
 export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters } = props;
+
+    const isHome = useIsHome();
 
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
@@ -40,28 +44,17 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const searchResults = doSearch(searchDbQuery.data, query, filters);
 
     if (searchResults.hits.length === 0) {
-        if (searchResults.filtered > 0) {
-            return (
-                <AppErrorState
-                    icon="search"
-                    iconIntent="primary"
-                    title="No search results."
-                    description={`${searchResults.filtered} search results are hidden by filters.`}
-                    action={<ClearFiltersButton />}
-                />
-            );
-        }
         return (
-            <AppErrorState
-                icon="search"
-                iconIntent="primary"
-                title="No search results"
+            <NoSearchResultError
+                filtered={searchResults.filtered}
+                isHome={isHome}
             />
         );
     }
+
     const callout = (
         <FilterCallout
-            itemName="search results"
+            itemType="search results"
             filteredItems={searchResults.filtered}
         />
     );
@@ -86,6 +79,61 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
             {resultCards}
         </>
     );
+}
+
+interface NoSearchResultErrorProps {
+    filtered: number;
+    isHome: boolean;
+}
+
+export function NoSearchResultError(
+    props: NoSearchResultErrorProps
+): ReactNode {
+    const { filtered, isHome } = props;
+    if (filtered > 0) {
+        return (
+            <AppErrorState
+                icon="search"
+                iconIntent="primary"
+                title="No search results."
+                description={`${filtered} search results are hidden by filters.`}
+                action={<ClearFiltersButton />}
+            />
+        );
+    }
+    return (
+        <AppErrorState
+            icon="search"
+            iconIntent="primary"
+            title="No search results"
+            action={!isHome ? <SearchAllButton /> : undefined}
+        />
+    );
+}
+
+function SearchAllButton(): ReactNode {
+    const navigate = useNavigate();
+    return (
+        <Button
+            intent="primary"
+            text="Search all documents"
+            icon="search"
+            onClick={() => navigate({ to: "/app/documents" })}
+        />
+    );
+}
+
+interface SearchHitTitleProps {
+    title: string;
+    searchHit: SearchHit;
+}
+
+/**
+ * Returns text highlighted with a searchHit.
+ */
+export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
+    const { title, searchHit } = props;
+    return <>{applyRanges(title, searchHit.positions)}</>;
 }
 
 function applyRanges(str: string, ranges: Position[]) {
@@ -163,17 +211,4 @@ function deduplicateRanges(ranges: Position[]): Position[] {
         merged.push({ start, length: i - start });
     }
     return merged;
-}
-
-interface SearchHitTitleProps {
-    title: string;
-    searchHit: SearchHit;
-}
-
-/**
- * Returns text highlighted with a searchHit.
- */
-export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
-    const { title, searchHit } = props;
-    return <>{applyRanges(title, searchHit.positions)}</>;
 }

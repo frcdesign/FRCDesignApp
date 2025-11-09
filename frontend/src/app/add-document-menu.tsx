@@ -13,7 +13,7 @@ import {
     MenuType,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../search-params/menu-params";
+} from "../overlays/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
@@ -47,7 +47,7 @@ function AddDocumentMenuDialog(
         mutationFn: async () => {
             const newDocumentId = parseUrl(url)?.documentId;
             if (!newDocumentId) {
-                throw new HandledError("Failed to parse document id.");
+                throw new HandledError("Failed to parse url.");
             }
             showLoadingToast("Adding document...", "add-document");
             closeDialog();

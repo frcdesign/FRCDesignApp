@@ -136,11 +136,18 @@ class FirestoreDocument(BaseDocument[T]):
             return None
 
     def get(self) -> T:
+        """Returns the current value of the document, constructing it if it doesn't exist.
+
+        Note this will still fail if the document exists but is invalid.
+        """
         result = self.maybe_get()
         if result == None:
-            raise ServerException(
-                f"Unexpectedly failed to get {self.model.__name__} with id {self.id}"
-            )
+            try:
+                return self.model.model_validate({})
+            except ValidationError as e:
+                raise ServerException(
+                    f"Failed to construct {self.model.__name__} with default values: {e}"
+                )
         return result
 
     def set(self, data: T) -> None:
@@ -216,11 +223,6 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
             return []
         return getattr(data, self.order_key, [])
 
-    def _set_order(self, order: list[str]):
-        data = self.parent.get()
-        setattr(data, self.order_key, order)
-        self.parent.set(data)
-
     @override
     def keys(self) -> list[str]:
         """Returns keys in the collection in stored order.
@@ -230,31 +232,28 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         return self._get_order()
 
     def add(self, doc_id: str, data: T):
-        """Create document and append it to the order list."""
-        existing_order = self._get_order()
+        """Create a document and append it to the order list."""
+        existing_order = self.keys()
         if doc_id in existing_order:
             raise ValueError(f"Document '{doc_id}' already in order list")
 
-        super().add(doc_id, data)
+        self.child(doc_id).set(data)
         existing_order.append(doc_id)
-        self._set_order(existing_order)
+        self.set_order(existing_order)
 
     def remove(self, doc_id: str):
-        """Delete document and remove it from the order list."""
+        """Delete a given document and remove it from the order list."""
         existing_order = self._get_order()
         if doc_id not in existing_order:
             raise ValueError(f"Document '{doc_id}' not in order list")
 
         super().remove(doc_id)
         new_order = [x for x in existing_order if x != doc_id]
-        self._set_order(new_order)
+        self.set_order(new_order)
 
     def set_order(self, new_order: list[str]):
         """Replace the order list with a new explicit order (validated against existing docs)."""
-        if sorted(new_order) != sorted(self.keys()):
-            raise ValueError("New order has different entries than existing order")
-
-        self._set_order(new_order)
+        self.parent.update({self.order_key: new_order})
 
 
 class LibraryRef(BaseDocumentRef[LibraryData]):

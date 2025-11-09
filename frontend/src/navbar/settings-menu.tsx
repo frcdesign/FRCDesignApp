@@ -10,7 +10,7 @@ import {
     MenuItem
 } from "@blueprintjs/core";
 import { Dispatch, ReactNode, useMemo, useState } from "react";
-import { MenuType, useHandleCloseDialog } from "../search-params/menu-params";
+import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ import { toLibraryPath, useLibrary } from "../api/library";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
+    searchDbQueryMatchKey,
     updateSettingsKey,
     userDataQueryKey,
     useUserData
@@ -228,7 +229,7 @@ function PushVersionButton(): ReactNode {
 
     const navigate = useNavigate();
     const pushVersionMutation = useMutation({
-        mutationKey: ["library-version"],
+        mutationKey: ["library-version", library],
         mutationFn: async () => {
             const libraryData = await queryClient.fetchQuery<LibraryObj>({
                 queryKey: libraryQueryKey(library, search)
@@ -237,12 +238,19 @@ function PushVersionButton(): ReactNode {
                 throw new HandledError("Failed to fetch library data.");
             }
             const searchDb = JSON.stringify(buildSearchDb(libraryData));
-            return apiPost("/push-version", { body: { searchDb } });
+            return apiPost("/library-version" + toLibraryPath(library), {
+                body: { searchDb }
+            });
         },
         onError: getAppErrorHandler("Unexpectedly failed to push new version."),
         onSuccess: (data: { newVersion: number }) => {
             showSuccessToast("Successfully updated the FRCDesignApp version.");
             navigate({ to: ".", search: { cacheVersion: data.newVersion } });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({
+                queryKey: searchDbQueryMatchKey()
+            });
         }
     });
 

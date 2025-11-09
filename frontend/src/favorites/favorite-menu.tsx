@@ -1,6 +1,5 @@
 import {
     Button,
-    Card,
     Dialog,
     DialogBody,
     DialogFooter,
@@ -12,12 +11,12 @@ import {
     FavoriteMenuParams,
     MenuDialogProps,
     useHandleCloseDialog
-} from "../search-params/menu-params";
+} from "../overlays/menu-params";
 import { useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
-import { PreviewImage } from "../insert/thumbnail";
+import { PreviewImageCard } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../insert/configurations";
 import { LibraryUserData } from "../api/models";
 import { AppInternalErrorState } from "../common/app-zero-state";
@@ -26,7 +25,7 @@ import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
 import { router } from "../router";
 import { Configuration } from "../insert/configuration-models";
-import { useLibraryQuery } from "../queries";
+import { libraryUserDataQueryMatchKey, useLibraryQuery } from "../queries";
 import { getQueryUpdater } from "../common/utils";
 
 export function FavoriteMenu(): ReactNode {
@@ -91,7 +90,7 @@ function FavoriteMenuDialog(
         },
         onSettled: async () => {
             await queryClient.invalidateQueries({
-                queryKey: ["library-user-data"]
+                queryKey: libraryUserDataQueryMatchKey()
             });
             router.invalidate();
         }
@@ -127,12 +126,10 @@ function FavoriteMenuDialog(
             title={element.name}
             onClose={closeDialog}
         >
-            <Card className="center preview-image-card">
-                <PreviewImage
-                    elementPath={element}
-                    configuration={configuration}
-                />
-            </Card>
+            <PreviewImageCard
+                elementPath={element}
+                configuration={configuration}
+            />
             <DialogBody>
                 <ConfigurationWrapper
                     configuration={configuration}

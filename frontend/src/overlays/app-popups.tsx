@@ -1,7 +1,7 @@
 import { Alert, IconName, Intent } from "@blueprintjs/core";
 import { ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { AlertType } from "./alert-type";
+import { AppPopup } from "./popup-params";
 
 interface AppAlertProps {
     text: string;
@@ -15,6 +15,9 @@ interface AppAlertProps {
     intent?: Intent;
 }
 
+/**
+ * A popup which warns the user and doesn't let them continue.
+ */
 function AppAlert(props: AppAlertProps): ReactNode {
     const { text } = props;
     const icon = props.icon ?? "warning-sign";
@@ -52,7 +55,7 @@ function CannotDeriveAssemblyAlert(): ReactNode {
 
 function CannotReorderAlert() {
     return (
-        <AppAlert text="To prevent confusion, favorites cannot be reordered while filters are active."></AppAlert>
+        <AppAlert text="To prevent confusion, favorites cannot be reordered while filters are active." />
     );
 }
 
@@ -69,11 +72,11 @@ export function AppAlerts(): ReactNode {
     }
     return (
         <>
-            {activeAlert === AlertType.CANNOT_DERIVE_ASSEMBLY && (
+            {activeAlert === AppPopup.CANNOT_DERIVE_ASSEMBLY && (
                 <CannotDeriveAssemblyAlert />
             )}
-            {activeAlert === AlertType.CANNOT_REORDER && <CannotReorderAlert />}
-            {activeAlert === AlertType.CANNOT_EDIT_DEFAULT_CONFIGURATION && (
+            {activeAlert === AppPopup.CANNOT_REORDER && <CannotReorderAlert />}
+            {activeAlert === AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION && (
                 <CannotEditDefaultConfiguration />
             )}
         </>

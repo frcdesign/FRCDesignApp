@@ -22,9 +22,9 @@ import {
     OpenDocumentItems,
     QuickInsertItem
 } from "./card-components";
-import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
-import { MenuType } from "../search-params/menu-params";
+import { MenuType } from "../overlays/menu-params";
 import { useLibraryUserDataQuery } from "../queries";
 
 interface ElementCardProps extends PropsWithChildren {
@@ -70,7 +70,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                             }
 
                             if (isAssemblyInPartStudio) {
-                                openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
+                                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
                                 return;
                             }
 

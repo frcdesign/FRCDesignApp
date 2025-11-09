@@ -104,7 +104,7 @@ This step is only required if you want to use the Onshape API from local Python 
 
 Note that Onshape has an annual limit of 2,500 API calls per Onshape account. This amount is not very large, so you should take pains to be careful with your usage in testing in local environments.
 
-In particular, avoid loading large documents into your local environment and only reload the database when necessary.
+In particular, avoid loading large documents into your local environment and only force reload the database when necessary.
 
 ## Flask Credentials Setup
 

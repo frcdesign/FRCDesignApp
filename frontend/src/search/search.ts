@@ -1,8 +1,8 @@
-import MiniSearch, { Options, SearchResult } from "minisearch";
-import { Library, LibraryObj, Vendor } from "../api/models";
-import { apiGet, CacheOptions, useCacheOptions } from "../api/api";
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { toLibraryPath, useLibrary } from "../api/library";
+import MiniSearch, {
+    Options,
+    SearchResult as MiniSearchResult
+} from "minisearch";
+import { LibraryObj, Vendor } from "../api/models";
 
 const deliminator = "^";
 
@@ -44,7 +44,7 @@ export interface SearchDocument {
     documentName: string;
 }
 
-const searchOptions: Options<SearchDocument> = {
+export const SEARCH_OPTIONS: Options<SearchDocument> = {
     fields: ["name", "documentName"],
     storeFields: [
         "id",
@@ -66,7 +66,7 @@ const searchOptions: Options<SearchDocument> = {
 export function buildSearchDb(
     libraryData: LibraryObj
 ): MiniSearch<SearchDocument> {
-    const searchDb = new MiniSearch<SearchDocument>(searchOptions);
+    const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
     const searchDocuments: SearchDocument[] = Object.values(
         libraryData.elements
@@ -91,6 +91,7 @@ export function buildSearchDb(
 export interface SearchFilters {
     documentId?: string;
     vendors?: Vendor[];
+    isFavorite?: boolean;
 }
 
 // Range is already defined by TypeScript
@@ -104,9 +105,9 @@ export interface SearchHit {
     positions: Position[];
 }
 
-// Don't use SearchResult since that's also defined by MiniSearch
-export interface Result {
+export interface SearchResult {
     hits: SearchHit[];
+
     /**
      * The number of items filtered out of the result by user controllable filters (e.g., vendor filters).
      */
@@ -117,28 +118,29 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters
-): Result {
+): SearchResult {
     if (!query || query.trim() === "") {
         return { hits: [], filtered: 0 };
     }
 
     let filtered = 0;
-    const results = searchDb.search(query, {
-        filter: (document) => {
-            if (!document.isVisible) {
+    const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
+        filter: (element) => {
+            if (!element.isVisible) {
                 return false;
-            } else if (
+            }
+
+            if (
                 filters?.documentId &&
-                document.documentId !== filters.documentId
+                element.documentId !== filters.documentId
             ) {
                 return false;
             }
 
             if (
-                filters &&
-                filters.vendors &&
+                filters?.vendors &&
                 !filters.vendors.some((vendor) =>
-                    document.vendors.includes(vendor)
+                    element.vendors.includes(vendor)
                 )
             ) {
                 filtered += 1;
@@ -150,13 +152,16 @@ export function doSearch(
     });
 
     // Add highlighting
-    const hits: SearchHit[] = results
-        .map((result) => {
+    const hits: SearchHit[] = miniSearchResults
+        .map((miniSearchResult) => {
             // Stored fields should be the same as SearchDocument
             const document = searchDb.getStoredFields(
-                result.id
+                miniSearchResult.id
             ) as unknown as SearchDocument;
-            const positions = generateHighlightPositions(result, document);
+            const positions = generateHighlightPositions(
+                miniSearchResult,
+                document
+            );
 
             return {
                 id: document.id,
@@ -173,7 +178,7 @@ export function doSearch(
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(
-    result: SearchResult,
+    result: MiniSearchResult,
     document: SearchDocument
 ): Position[] {
     // Terms is an array of values in name (or spacedName) which matched
@@ -198,28 +203,4 @@ function generateHighlightPositions(
     }
 
     return positions;
-}
-
-export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
-    return queryOptions<MiniSearch | null>({
-        queryKey: ["search-db", library, cacheOptions],
-        queryFn: async () =>
-            apiGet("/search-db" + toLibraryPath(library), {
-                cacheOptions
-            }).then((result) => {
-                if (!result.searchDb) {
-                    // Have to use null since TanstackQuery doesn't allow null
-                    return null;
-                }
-                return MiniSearch.loadJSON(result.searchDb, searchOptions);
-            }),
-        staleTime: Infinity,
-        gcTime: Infinity
-    });
-}
-
-export function useSearchDbQuery() {
-    const cacheOptions = useCacheOptions();
-    const library = useLibrary();
-    return useQuery(getSearchDbQuery(library, cacheOptions));
 }

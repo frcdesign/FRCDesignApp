@@ -12,7 +12,7 @@ import {
     MenuItem
 } from "@blueprintjs/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { MenuType } from "../search-params/menu-params";
+import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteElementItem } from "./favorite-button";
 import {
     CardTitle,
@@ -26,14 +26,16 @@ import { ChangeOrderItems } from "../cards/change-order";
 import { toUserApiPath, UserPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
 import { router } from "../router";
-import { AlertType, useOpenAlert } from "../search-params/alert-type";
+import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { getAppErrorHandler } from "../api/errors";
 import { useLibraryUserDataQuery } from "../queries";
 import { produce } from "immer";
+import { SearchHit } from "../search/search";
 
 interface FavoriteCardProps {
     element: ElementObj;
     favorite: Favorite;
+    searchHit?: SearchHit;
 }
 
 /**
@@ -41,7 +43,7 @@ interface FavoriteCardProps {
  * Very similar in nature to an ElementCard but with a few tweaks.
  */
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
-    const { element, favorite } = props;
+    const { element, favorite, searchHit } = props;
 
     const navigate = useNavigate();
 
@@ -66,7 +68,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                         interactive
                         onClick={() => {
                             if (isAssemblyInPartStudio) {
-                                openAlert(AlertType.CANNOT_DERIVE_ASSEMBLY);
+                                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
                                 return;
                             }
                             navigate({
@@ -84,6 +86,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             disabled={isAssemblyInPartStudio}
                             title={element.name}
                             thumbnailUrls={element.thumbnailUrls}
+                            searchHit={searchHit}
                         />
                         <div className="item-card-right-content">
                             <FavoriteButton isFavorite element={element} />
@@ -130,7 +133,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
                 intent="primary"
                 onClick={() => {
                     if (element.configurationId === undefined) {
-                        openAlert(AlertType.CANNOT_EDIT_DEFAULT_CONFIGURATION);
+                        openAlert(AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION);
                         return;
                     }
                     navigate({
@@ -149,7 +152,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
                 order={favoriteOrder}
                 onOrderChange={(newOrder) => {
                     if (uiState.vendorFilters !== undefined) {
-                        openAlert(AlertType.CANNOT_REORDER);
+                        openAlert(AppPopup.CANNOT_REORDER);
                         return;
                     }
                     setFavoriteOrderMutation.mutate(newOrder);
