@@ -135,6 +135,7 @@ function FavoriteMenuDialog(
                     configuration={configuration}
                     setConfiguration={setConfiguration}
                     configurationId={element.configurationId}
+                    documentId={element.documentId}
                 />
             </DialogBody>
             <DialogFooter minimal actions={closeButton} />

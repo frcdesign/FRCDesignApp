@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from onshape_api.endpoints.documents import ElementType
@@ -32,7 +32,7 @@ def get_parameter_type_name(parameter_type: ParameterType) -> str:
 
 
 class Configuration(BaseModel):
-    parameters: list[ConfigurationParameter]
+    parameters: list[ConfigurationParameter] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
 

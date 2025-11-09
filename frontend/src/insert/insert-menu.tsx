@@ -72,6 +72,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         parameters = (
             <ConfigurationWrapper
                 configurationId={element.configurationId}
+                documentId={element.documentId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
             />

@@ -49,21 +49,29 @@ import {
 import { Select } from "@blueprintjs/select";
 import { useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
+    documentId: string;
     configuration?: Configuration;
     setConfiguration: Dispatch<Configuration>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, configuration, setConfiguration } = props;
+    const { configurationId, documentId, configuration, setConfiguration } =
+        props;
 
+    const library = useLibrary();
     const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
-        queryKey: ["configuration", configurationId],
+        queryKey: ["configuration", library, configurationId, cacheOptions],
         queryFn: async () => {
-            return apiGet("/configuration/" + configurationId, {
+            return apiGet("/configuration/" + toLibraryPath(library), {
+                query: {
+                    documentId,
+                    configurationId
+                },
                 cacheOptions
             });
         },

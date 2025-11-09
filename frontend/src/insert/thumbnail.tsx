@@ -168,7 +168,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         staleTime: Infinity
     });
 
-    const heightAndWidth = getHeightAndWidth(size, 0.8);
+    const heightAndWidth = getHeightAndWidth(size, 0.7);
 
     if (thumbnailIdQuery.isError) {
         return (

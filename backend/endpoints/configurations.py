@@ -25,18 +25,15 @@ from onshape_api.endpoints.documents import get_unit_info
 router = flask.Blueprint("configurations", __name__)
 
 
-@cacheable_route(
-    router,
-    "/configuration" + connect.library_route() + "<document_id>/<configuration_id>",
-)
+@cacheable_route(router, "/configuration" + connect.library_route())
 def get_configuration(**kwargs):
     """Returns a specific configuration.
 
     Returns:
         parameters: A list of configuration parameters.
     """
-    document_id = connect.get_route("document_id")
-    configuration_id = connect.get_route("configuration_id")
+    document_id = connect.get_query_param("documentId")
+    configuration_id = connect.get_query_param("configurationId")
 
     library_ref = connect.get_library_ref()
     configuration_parameters = (
