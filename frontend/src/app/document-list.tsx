@@ -28,7 +28,6 @@ import {
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useInteractiveSection } from "../common/utils";
 import { useLibraryQuery } from "../queries";
-import { ObjectLabel } from "../search/search";
 
 /**
  * A list of elements in a document.
