@@ -1,4 +1,3 @@
-from logging import config
 import flask
 from pydantic import BaseModel
 from google.cloud import firestore

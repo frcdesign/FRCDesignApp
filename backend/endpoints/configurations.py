@@ -6,7 +6,6 @@ from backend.endpoints.cache import cacheable_route
 from backend.common.database import Configuration
 from backend.common.models import (
     EqualCondition,
-    Library,
     ListOptionVisibilityCondition,
     LogicalCondition,
     OptionConditionType,
