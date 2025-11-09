@@ -1,17 +1,23 @@
 import { ReactNode } from "react";
-import { Position, SearchFilters, SearchHit, doSearch } from "./search";
+import {
+    ObjectLabel,
+    Position,
+    SearchFilters,
+    SearchHit,
+    doSearch
+} from "./search";
 import { ElementCard } from "../cards/element-card";
 import {
     AppErrorState,
     AppInternalErrorState,
     AppLoadingState
 } from "../common/app-zero-state";
-import { FilterCallout } from "../navbar/filter-callout";
+import { FilterCallout } from "./filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useLibraryQuery, useSearchDbQuery } from "../queries";
 import { useIsHome } from "../common/utils";
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@blueprintjs/core";
+import { Button, Colors, IconName, Intent } from "@blueprintjs/core";
 
 interface SearchResultsProps {
     query: string;
@@ -46,16 +52,17 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     if (searchResults.hits.length === 0) {
         return (
             <NoSearchResultError
+                objectLabel="search results"
                 filtered={searchResults.filtered}
-                isHome={isHome}
+                showSearchAllButton={!isHome}
             />
         );
     }
 
     const callout = (
         <FilterCallout
-            itemType="search results"
-            filteredItems={searchResults.filtered}
+            objectLabel="search results"
+            filtered={searchResults.filtered}
         />
     );
     const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
@@ -82,31 +89,47 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 }
 
 interface NoSearchResultErrorProps {
+    objectLabel: Extract<ObjectLabel, "search results" | "favorites">;
     filtered: number;
-    isHome: boolean;
+    showSearchAllButton?: boolean;
 }
 
 export function NoSearchResultError(
     props: NoSearchResultErrorProps
 ): ReactNode {
-    const { filtered, isHome } = props;
+    const { objectLabel, filtered, showSearchAllButton } = props;
+
+    let icon: IconName;
+    let iconIntent: Intent | undefined = undefined;
+    let iconColor = undefined;
+
+    if (objectLabel === "search results") {
+        icon = "search";
+        iconIntent = Intent.PRIMARY;
+    } else {
+        icon = "heart-broken";
+        iconColor = Colors.RED3;
+    }
+
     if (filtered > 0) {
         return (
             <AppErrorState
-                icon="search"
-                iconIntent="primary"
-                title="No search results."
-                description={`${filtered} search results are hidden by filters.`}
+                icon={icon}
+                iconIntent={iconIntent}
+                iconColor={iconColor}
+                title={`No ${objectLabel}.`}
+                description={`${filtered} ${objectLabel} are hidden by filters.`}
                 action={<ClearFiltersButton />}
             />
         );
     }
     return (
         <AppErrorState
-            icon="search"
-            iconIntent="primary"
-            title="No search results"
-            action={!isHome ? <SearchAllButton /> : undefined}
+            icon={icon}
+            iconIntent={iconIntent}
+            iconColor={iconColor}
+            title={`No ${objectLabel}`}
+            action={showSearchAllButton ? <SearchAllButton /> : undefined}
         />
     );
 }

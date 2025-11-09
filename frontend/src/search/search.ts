@@ -4,6 +4,11 @@ import MiniSearch, {
 } from "minisearch";
 import { LibraryObj, Vendor } from "../api/models";
 
+/**
+ * A user facing name to use for elements currently being filtered/searched on.
+ */
+export type ObjectLabel = "elements" | "favorites" | "search results";
+
 const deliminator = "^";
 
 /**

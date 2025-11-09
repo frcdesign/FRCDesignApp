@@ -8,7 +8,7 @@ import {
     AppLoadingState,
     AppErrorState
 } from "../common/app-zero-state";
-import { FilterCallout } from "../navbar/filter-callout";
+import { FilterCallout } from "../search/filter-callout";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FavoriteCard } from "./favorite-card";
 import {
@@ -17,6 +17,7 @@ import {
     useSearchDbQuery
 } from "../queries";
 import { doSearch, SearchHit } from "../search/search";
+import { NoSearchResultError } from "../search/search-results";
 
 /**
  * A list of current favorite cards.
@@ -90,22 +91,10 @@ export function FavoritesList(): ReactNode {
         );
 
         if (searchResults.hits.length === 0) {
-            if (searchResults.filtered === 0) {
-                return (
-                    <AppErrorState
-                        title="No favorites found"
-                        icon="heart-broken"
-                        iconColor={Colors.RED3}
-                    />
-                );
-            }
             return (
-                <AppErrorState
-                    title="No favorites found."
-                    description={`${searchResults.filtered} favorites are hidden by filters.`}
-                    icon="heart-broken"
-                    iconColor={Colors.RED3}
-                    action={<ClearFiltersButton standardSize />}
+                <NoSearchResultError
+                    objectLabel="favorites"
+                    filtered={searchResults.filtered}
                 />
             );
         }
@@ -116,6 +105,7 @@ export function FavoritesList(): ReactNode {
                 .filter((element) => !!element),
             filtered: searchResults.filtered
         };
+
         searchHits = searchResults.hits.reduce((acc, hit) => {
             acc[hit.id] = hit;
             return acc;
@@ -144,8 +134,8 @@ export function FavoritesList(): ReactNode {
         callout = (
             <Card className="item-card" style={{ padding: "0px" }}>
                 <FilterCallout
-                    itemType="favorites"
-                    filteredItems={filterResult.filtered}
+                    objectLabel="favorites"
+                    filtered={filterResult.filtered}
                 />
             </Card>
         );

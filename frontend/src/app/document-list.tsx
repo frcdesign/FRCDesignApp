@@ -19,7 +19,7 @@ import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
 import { ElementCard } from "../cards/element-card";
 import { ContextMenuButton } from "../cards/card-components";
-import { FilterCallout } from "../navbar/filter-callout";
+import { FilterCallout } from "../search/filter-callout";
 import {
     AppErrorState,
     AppInternalErrorState,
@@ -28,6 +28,7 @@ import {
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { useInteractiveSection } from "../common/utils";
 import { useLibraryQuery } from "../queries";
+import { ObjectLabel } from "../search/search";
 
 /**
  * A list of elements in a document.
@@ -183,8 +184,8 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     if (filterResult.filtered > 0) {
         callout = (
             <FilterCallout
-                itemType="elements"
-                filteredItems={filterResult.filtered}
+                objectLabel="elements"
+                filtered={filterResult.filtered}
             />
         );
     }
