@@ -10,8 +10,7 @@ from typing import Iterator
 import flask
 
 from backend.common import connect
-from backend.common.app_logging import APP_LOGGER
-from backend.common.backend_exceptions import HandledException, ServerException
+from backend.common.backend_exceptions import HandledException
 from backend.common.database import DocumentRef, DocumentsRef, LibraryRef
 from backend.common.app_access import require_access_level
 from backend.common.firebase_storage import upload_thumbnails

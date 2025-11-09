@@ -20,7 +20,7 @@ export function SafariError(): JSX.Element {
                     />
                 }
                 title="Cannot Authenticate in Safari"
-                description="The FRCDesignApp does not work on Safari unless you manually disable 'Prevent cross-site tracking'."
+                description="The FRCDesignApp does not work on Safari unless you manually disable 'Prevent cross-site tracking' in your browser settings."
                 action={applicationAccessButton}
             />
         </div>

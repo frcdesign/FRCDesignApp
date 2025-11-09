@@ -3,7 +3,6 @@ import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api/api";
 import { ElementObj, ElementType } from "../api/models";
 import { toElementApiPath } from "../api/path";
-import { updateUiState } from "../api/ui-state";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api/errors";
@@ -54,7 +53,6 @@ export function useInsertMutation(
             queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
             showLoadingToast(`Inserting ${element.name}...`, toastId);
-            updateUiState({ searchQuery: undefined });
             return apiPost(endpoint + toElementApiPath(search), {
                 body
             });

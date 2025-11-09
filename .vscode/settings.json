@@ -76,5 +76,8 @@
         "revealOn": "error",
         "clearOnRun": "none"
     },
+    "jest.nodeEnv": {
+        "NODE_OPTIONS": "--experimental-vm-modules"
+    },
     "testing.automaticallyOpenTestResults": "openOnTestFailure"
 }

@@ -1,13 +1,10 @@
 import os
 import flask
-import json5
 from backend.common.app_logging import APP_LOGGER, log_app_opened
 from backend.endpoints import api
 from backend.common import connect, env
 from backend import oauth
-from backend.endpoints.documents import reload_documents
 from onshape_api.endpoints.users import ping
-from onshape_api.paths.doc_path import url_to_document_path
 
 
 def create_app():

@@ -1,10 +1,10 @@
+import { QuantityType, Unit } from "../configuration-models";
 import {
     evaluateExpression,
     EvaluateOptions,
     Result,
     valueWithUnits
 } from "../parser";
-import { QuantityType, Unit } from "../../api/models";
 
 const defaultOptions = (
     quantityType: QuantityType = QuantityType.LENGTH,

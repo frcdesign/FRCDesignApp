@@ -38,6 +38,7 @@ ACCESS_LEVEL_OVERRIDE=admin
 
 NODE_ENV=development
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+STORAGE_EMULATOR_HOST=http://127.0.0.1:9199
 ```
 
 Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
