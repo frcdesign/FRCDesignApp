@@ -118,7 +118,8 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                     setDocumentOrderMutation.mutate(newOrder)
                 }
             />
-            <MenuDivider />
+            {/* Only show second divider when we have more than one document since otherwise there's no reorder items */}
+            {documentOrder.length > 1 && <MenuDivider />}
         </>
     );
 

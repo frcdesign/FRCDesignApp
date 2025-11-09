@@ -138,24 +138,21 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: 0,
-        enabled: !pauseLoading,
-        staleTime: Infinity
+        enabled: !pauseLoading
     });
+
+    const thumbnailId = thumbnailIdQuery.data;
+    console.log(thumbnailId);
 
     const cacheOptions = useCacheOptions();
     const thumbnailQuery = useQuery({
-        queryKey: [
-            "thumbnail",
-            toElementApiPath(elementPath),
-            thumbnailIdQuery.data
-        ],
+        queryKey: ["thumbnail", toElementApiPath(elementPath), thumbnailId],
         queryFn: async ({ signal }) => {
-            const query: Record<string, string> = {
-                size,
-                thumbnailId: thumbnailIdQuery.data
-            };
             return apiGetImage("/thumbnail" + toElementApiPath(elementPath), {
-                query,
+                query: {
+                    size,
+                    thumbnailId
+                },
                 signal,
                 cacheOptions
             });
@@ -164,7 +161,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         // Cap max time between retries at 15 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         retry: Infinity, // Allow indefinite retrying
-        enabled: thumbnailIdQuery.data !== undefined && !pauseLoading,
+        enabled: thumbnailId && !pauseLoading,
         staleTime: Infinity
     });
 
