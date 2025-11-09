@@ -59,7 +59,8 @@ export function QuickInsertItem(props: QuickInsertItemProps) {
     const insertMutation = useInsertMutation(
         element,
         defaultConfiguration,
-        isFavorite
+        isFavorite,
+        true
     );
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
@@ -74,14 +75,7 @@ export function QuickInsertItem(props: QuickInsertItemProps) {
         insertMutation.mutate();
     }, [isAssemblyInPartStudio, insertMutation, openAlert]);
 
-    return (
-        <MenuItem
-            text="Quick insert"
-            icon="add"
-            onClick={handleClick}
-            label="Double click"
-        />
-    );
+    return <MenuItem text="Quick insert" icon="add" onClick={handleClick} />;
 }
 
 interface CardTitleProps {

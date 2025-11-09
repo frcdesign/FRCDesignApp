@@ -15,6 +15,8 @@ import { useSearch } from "@tanstack/react-router";
 import { router } from "../router";
 import { handleAppError, HandledError } from "../api/errors";
 import { getQueryUpdater } from "../common/utils";
+import { toLibraryPath, useLibrary } from "../api/library";
+import { libraryUserDataQueryKey } from "../queries";
 
 enum Operation {
     ADD,
@@ -47,24 +49,24 @@ function updateFavorites(
 
 function useUpdateFavoritesMutation(isFavorite: boolean) {
     const search = useSearch({ from: "/app" });
+    const library = useLibrary();
 
     return useMutation<null, Error, UpdateFavoritesArgs>({
-        mutationKey: ["update-favorites", isFavorite],
+        mutationKey: ["update-favorite", isFavorite],
         mutationFn: async (args) => {
             const query = { elementId: args.element.id };
+            const path =
+                "/favorites" + toLibraryPath(library) + toUserApiPath(search);
+
             if (args.operation === Operation.ADD) {
                 if (!args.element.isVisible) {
                     throw new HandledError(
                         `Cannot favorite hidden element ${args.element.name}.`
                     );
                 }
-                return apiPost("/favorites" + toUserApiPath(search), {
-                    query
-                });
+                return apiPost(path, { query });
             } else {
-                return apiDelete("/favorites" + toUserApiPath(search), {
-                    query
-                });
+                return apiDelete(path, { query });
             }
         },
         onMutate: async (args) => {
@@ -72,7 +74,7 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
                 queryKey: ["library-user-data"]
             });
             queryClient.setQueryData(
-                ["library-user-data"],
+                libraryUserDataQueryKey(library, search),
                 getQueryUpdater((data: LibraryUserData) =>
                     updateFavorites(data, args)
                 )

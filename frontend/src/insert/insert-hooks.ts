@@ -18,7 +18,8 @@ import { toLibraryPath, useLibrary } from "../api/library";
 export function useInsertMutation(
     element: ElementObj,
     configuration: Configuration | undefined,
-    isFavorite: boolean
+    isFavorite: boolean,
+    isQuickInsert: boolean = false
 ) {
     const search = useSearch({ from: "/app" });
     const library = useLibrary();
@@ -37,6 +38,7 @@ export function useInsertMutation(
                 configuration,
                 name: element.name,
                 isFavorite,
+                isQuickInsert,
                 userId: search.userId
             };
             if (search.elementType == ElementType.ASSEMBLY) {

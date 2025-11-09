@@ -4,7 +4,7 @@ from onshape_api.paths.doc_path import InstancePath
 
 def assert_instance_type(path: InstancePath, *instance_types: InstanceType) -> None:
     if path.instance_type not in instance_types:
-        expected_types = " or ".join(type.name for type in instance_types)
+        expected_types = " or ".join(type for type in instance_types)
         raise ValueError(
             f"The given path must be {expected_types}, got {path.instance_type}"
         )

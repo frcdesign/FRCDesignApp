@@ -129,7 +129,8 @@ function InsertButton(props: InsertButtonProps): ReactNode {
     const insertMutation = useInsertMutation(
         element,
         configuration,
-        isFavorite
+        isFavorite,
+        false
     );
     const closeDialog = useHandleCloseDialog();
 

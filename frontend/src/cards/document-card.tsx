@@ -13,14 +13,18 @@ import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj, LibraryObj } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
 import { RequireAccessLevel } from "../api/access-level";
-import { apiPost, apiDelete } from "../api/api";
+import { apiPost, apiDelete, useCacheOptions } from "../api/api";
 import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
 import { CardTitle, OpenDocumentItems } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
-import { libraryQueryMatchKey, useLibraryQuery } from "../queries";
+import {
+    libraryQueryKey,
+    libraryQueryMatchKey,
+    useLibraryQuery
+} from "../queries";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getQueryUpdater } from "../common/utils";
 
@@ -165,14 +169,17 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
 function useSetDocumentOrderMutation() {
     const library = useLibrary();
+    const cacheOptions = useCacheOptions();
     return useMutation({
         mutationKey: ["set-document-order"],
         mutationFn: async (documentOrder: string[]) => {
-            return apiPost("/document-order", { body: { documentOrder } });
+            return apiPost("/document-order" + toLibraryPath(library), {
+                body: { documentOrder }
+            });
         },
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
-                ["library", library],
+                libraryQueryKey(library, cacheOptions),
                 getQueryUpdater((data: LibraryObj) => {
                     data.documentOrder = newOrder;
                     return data;
@@ -181,17 +188,18 @@ function useSetDocumentOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder document.");
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
         }
         // Don't need an onSettled handler since document-order doesn't expire
     });
 }
 
 function useToggleDocumentSortMutation(document: DocumentObj) {
+    const library = useLibrary();
     return useMutation({
         mutationKey: ["set-document-sort"],
         mutationFn: async () => {
-            return apiPost("/set-document-sort", {
+            return apiPost("/set-document-sort" + toLibraryPath(library), {
                 body: {
                     documentId: document.id,
                     sortAlphabetically: !document.sortAlphabetically
@@ -199,7 +207,7 @@ function useToggleDocumentSortMutation(document: DocumentObj) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
         }
     });
 }

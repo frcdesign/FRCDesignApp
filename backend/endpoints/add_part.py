@@ -1,10 +1,11 @@
 """Routes for inserting elements into documents."""
 
 from enum import StrEnum
+from operator import is_
 import flask
 
 from backend.common import connect
-from backend.common.app_logging import log_part_inserted
+from backend.common.app_logging import APP_LOGGER, log_part_inserted
 from backend.common.database import Configuration
 from backend.common.models import ParameterType
 from onshape_api.endpoints import part_studios, assemblies
@@ -22,6 +23,7 @@ router = flask.Blueprint("add-part", __name__)
 def add_to_assembly(**kwargs):
     """Adds the contents of an element to the current assembly."""
     api = connect.get_api()
+    library = connect.get_route_library()
     library_ref = connect.get_library_ref()
     assembly_path = connect.get_route_element_path()
     path_to_add = connect.get_body_element_path()
@@ -32,6 +34,7 @@ def add_to_assembly(**kwargs):
     part_name = connect.get_body_arg("name")
     user_id = connect.get_body_arg("userId")
     is_favorite = connect.get_body_arg("isFavorite")
+    is_quick_insert = connect.get_body_arg("isQuickInsert")
 
     assemblies.add_element_to_assembly(
         api, assembly_path, path_to_add, element_type, configuration=configuration
@@ -50,12 +53,14 @@ def add_to_assembly(**kwargs):
     log_part_inserted(
         path_to_add.element_id,
         part_name,
-        ElementType.ASSEMBLY,
-        user_id,
-        is_favorite,
-        version,
-        configuration,
-        parameters,
+        target_element_type=ElementType.ASSEMBLY,
+        user_id=user_id,
+        is_favorite=is_favorite,
+        is_quick_insert=is_quick_insert,
+        library=library,
+        version=version,
+        configuration=configuration,
+        configuration_parameters=parameters,
     )
     return {"success": True}
 
@@ -66,10 +71,12 @@ def add_to_assembly(**kwargs):
 def add_to_part_studio(**kwargs):
     """Adds the contents of an element to the current part studio."""
     api = connect.get_api()
+    library = connect.get_route_library()
     library_ref = connect.get_library_ref()
 
     part_studio_path = connect.get_route_element_path()
     path_to_add = connect.get_body_element_path()
+
     microversion_id = connect.get_body_arg("microversionId")
     part_name = connect.get_body_arg("name")
     configuration = connect.get_optional_body_arg("configuration")
@@ -77,14 +84,15 @@ def add_to_part_studio(**kwargs):
     # Tracking information
     user_id = connect.get_body_arg("userId")
     is_favorite = connect.get_body_arg("isFavorite")
+    is_quick_insert = connect.get_body_arg("isQuickInsert")
 
-    parameters = (
-        None
-        if configuration == None
-        else library_ref.documents.document(path_to_add.document_id)
-        .configurations.configuration(path_to_add.element_id)
-        .get()
-    )
+    parameters = None
+    if configuration != None:
+        parameters = (
+            library_ref.documents.document(path_to_add.document_id)
+            .configurations.configuration(path_to_add.element_id)
+            .get()
+        )
 
     derived_feature = DerivedFeature(
         part_name, path_to_add, microversion_id, configuration, parameters
@@ -96,12 +104,14 @@ def add_to_part_studio(**kwargs):
     log_part_inserted(
         path_to_add.element_id,
         part_name,
-        ElementType.PART_STUDIO,
-        user_id,
-        is_favorite,
-        version,
-        configuration,
-        parameters,
+        target_element_type=ElementType.PART_STUDIO,
+        user_id=user_id,
+        is_favorite=is_favorite,
+        is_quick_insert=is_quick_insert,
+        library=library,
+        version=version,
+        configuration=configuration,
+        configuration_parameters=parameters,
     )
 
     return {"success": True}

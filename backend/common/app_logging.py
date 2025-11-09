@@ -11,7 +11,7 @@ from backend.common.database import (
 )
 from backend.common.env import IS_PRODUCTION, VERBOSE_LOGGING
 
-from backend.common.models import ParameterType, get_parameter_type_name
+from backend.common.models import Library, ParameterType, get_parameter_type_name
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
 from onshape_api.endpoints.documents import ElementType
 
@@ -126,11 +126,17 @@ def log_part_inserted(
     target_element_type: ElementType,
     user_id: str,
     is_favorite: bool,
+    is_quick_insert: bool,
+    library: Library,
     version: dict,
     configuration: dict[str, str] | None = None,
     configuration_parameters: Configuration | None = None,
 ):
-    """Logs adding an element to an assembly or part studio."""
+    """Logs adding an element to an assembly or part studio.
+
+    Parameters:
+        version: A version dict fetched from Onshape. Used to get metadata and the time the version was created.
+    """
     log_data = {
         "name": name,
         "elementId": element_id,
@@ -141,6 +147,8 @@ def log_part_inserted(
             "name": version["name"],
         },
         "targetElementType": str(target_element_type),
+        "library": str(library),
+        "quickInsert": is_quick_insert,
         "isFavorite": is_favorite,
     }
     if configuration != None:
