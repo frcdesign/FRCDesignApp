@@ -1,14 +1,16 @@
 # Hook to keep requirements.txt in sync with uv.lock
-default_install_hook_types:
-    - pre-commit
-    - post-checkout
-    - post-merge
-    - post-rewrite
-
 repos:
     - repo: https://github.com/astral-sh/uv-pre-commit
       # uv version.
       rev: 0.8.7
       hooks:
           - id: uv-export
-            args: ["--no-emit-project", "--no-editable", "--no-dev"]
+            args:
+                [
+                    "--no-editable",
+                    "--no-emit-project",
+                    "--no-dev",
+                    "--frozen",
+                    "--output-file=requirements.txt",
+                    "--quiet"
+                ]
