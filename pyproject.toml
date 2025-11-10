@@ -12,7 +12,6 @@ dependencies = [
     "gunicorn>=23.0.0",
     "json5>=0.12.0",
     "pydantic>=2.11.7",
-    "pytest>=8.4.2",
     "python-dotenv>=1.1.0",
     "requests>=2.32.4",
     "requests-oauthlib>=2.0.0",
@@ -24,3 +23,9 @@ packages = ["onshape_api", "backend"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.4.0",
+    "pytest>=8.4.2",
+]
