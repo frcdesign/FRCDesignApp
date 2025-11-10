@@ -8,7 +8,6 @@ repos:
             args:
                 [
                     "--no-editable",
-                    "--no-emit-project",
                     "--no-dev",
                     "--frozen",
                     "--output-file=requirements.txt",
