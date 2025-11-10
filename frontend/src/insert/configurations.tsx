@@ -47,7 +47,7 @@ import {
     evaluateExpression
 } from "./parser";
 import { Select } from "@blueprintjs/select";
-import { useUnitInfoQuery } from "../queries";
+import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 
@@ -65,9 +65,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const library = useLibrary();
     const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
-        queryKey: ["configuration", library, configurationId, cacheOptions],
+        queryKey: getConfigurationKey(library, configurationId, cacheOptions),
         queryFn: async () => {
-            return apiGet("/configuration/" + toLibraryPath(library), {
+            return apiGet("/configuration" + toLibraryPath(library), {
                 query: {
                     documentId,
                     configurationId

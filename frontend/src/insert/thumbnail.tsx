@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
 import {
     apiGet,
     apiGetImage,
@@ -27,6 +27,7 @@ import {
     encodeConfigurationForQuery
 } from "../insert/configuration-models";
 import { AppErrorState } from "../common/app-zero-state";
+import { getConfigurationMatchKey } from "../queries";
 
 interface CardThumbnailProps {
     thumbnailUrls: ThumbnailUrls;
@@ -99,11 +100,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
         <Card className="center preview-image-card">
-            <PreviewImage
-                elementPath={props.elementPath}
-                configuration={props.configuration}
-                pauseLoading={props.pauseLoading}
-            />
+            <PreviewImage {...props} />
         </Card>
     );
 }
@@ -111,12 +108,13 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 interface PreviewImageProps {
     elementPath: ElementPath;
     configuration?: Configuration;
-    pauseLoading?: boolean;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { elementPath, configuration, pauseLoading } = props;
+    const { elementPath, configuration } = props;
     const size = ThumbnailSize.SMALL;
+    const isFetchingConfiguration =
+        useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
 
     // Thumbnail id generation with queries is really unreliable
     // The standard Onshape API for it appears to be broken/bugged
@@ -138,11 +136,10 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: 0,
-        enabled: !pauseLoading
+        enabled: !isFetchingConfiguration
     });
 
     const thumbnailId = thumbnailIdQuery.data;
-    console.log(thumbnailId);
 
     const cacheOptions = useCacheOptions();
     const thumbnailQuery = useQuery({
@@ -161,7 +158,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         // Cap max time between retries at 15 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
         retry: Infinity, // Allow indefinite retrying
-        enabled: thumbnailId && !pauseLoading,
+        enabled: thumbnailId && !isFetchingConfiguration,
         staleTime: Infinity
     });
 

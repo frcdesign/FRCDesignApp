@@ -1,0 +1,1 @@
+gcloud storage buckets update gs://frc-design-app-data --cors-file=storage-cors.json

@@ -9,6 +9,7 @@ repos:
                 [
                     "--no-editable",
                     "--no-dev",
+                    "--no-emit-project",
                     "--frozen",
                     "--output-file=requirements.txt",
                     "--quiet"

@@ -25,11 +25,7 @@ import { toaster } from "../common/toaster";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "./configuration-models";
-import {
-    getConfigurationMatchKey,
-    useLibraryQuery,
-    useLibraryUserDataQuery
-} from "../queries";
+import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -57,9 +53,6 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     >(props.defaultConfiguration);
 
     const element = elements ? elements[elementId] : undefined;
-
-    const isFetchingConfiguration =
-        useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
 
     if (!element || !favorites) {
         return null;
@@ -100,7 +93,6 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
             <PreviewImageCard
                 elementPath={element}
                 configuration={configuration}
-                pauseLoading={isFetchingConfiguration}
             />
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
