@@ -1,5 +1,5 @@
-import { ElementType, Theme } from "../api/models";
-import { UserPath, ElementPath } from "../api/path";
+import { ElementType, Theme } from "./models";
+import { UserPath, ElementPath } from "./path";
 import { Classes } from "@blueprintjs/core";
 
 /**

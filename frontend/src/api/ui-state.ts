@@ -2,9 +2,13 @@ import { useSyncExternalStore } from "react";
 import * as z from "zod";
 import { Vendor } from "./models";
 
+// Increment this when a breaking change is made to the schema
+const LATEST_VERSION = 2;
+
 const VendorType = z.enum(Object.values(Vendor));
 
 const UiStateSchema = z.object({
+    version: z.number().default(1), // We can't default version to LATEST_VERSION because of parsing older versions
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
@@ -22,6 +26,9 @@ let uiStateCache: UiState | null = null;
 
 function setUiState(uiState: UiState) {
     const parsed = UiStateSchema.parse(uiState);
+
+    // Sets always set latest version
+    parsed.version = LATEST_VERSION;
 
     // Only update if changed
     if (
@@ -41,6 +48,7 @@ export function getUiState(): UiState {
     if (uiStateCache) return uiStateCache;
 
     const raw = window.localStorage.getItem("uiState");
+    // Nothing in storage, initialize with defaults
     if (!raw) {
         uiStateCache = UiStateSchema.parse({});
         return uiStateCache;
@@ -50,6 +58,13 @@ export function getUiState(): UiState {
         // Convert null to undefined for optional fields
         JSON.parse(raw, (_key, value) => value ?? undefined)
     );
+
+    if (uiStateCache.version < LATEST_VERSION) {
+        // Always reset to defaults for simplicity
+        // Updated version will get set in the next version
+        window.localStorage.removeItem("uiState");
+        return UiStateSchema.parse({});
+    }
     return uiStateCache;
 }
 
@@ -62,7 +77,11 @@ function subscribeToUiState(callback: Subscriber) {
  * Asynchronously updates the current UI state.
  */
 export function updateUiState(partialState: Partial<UiState>): UiState {
-    const newState = { ...getUiState(), ...partialState };
+    const newState = {
+        ...getUiState(),
+        ...partialState,
+        version: LATEST_VERSION
+    };
     setUiState(newState);
     return newState;
 }

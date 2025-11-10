@@ -21,7 +21,7 @@ import {
 import { ContextData } from "./api/models";
 import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./overlays/menu-params";
-import { OnshapeParams } from "./search-params/onshape-params";
+import { OnshapeParams } from "./api/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
 import { AlertParams } from "./overlays/popup-params";

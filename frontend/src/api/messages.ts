@@ -21,8 +21,6 @@ export function useMessageListener() {
         if (!messageName) {
             return;
         }
-
-        // console.log("message received:", event.data);
     };
 
     window.addEventListener("message", handlePostMessage);

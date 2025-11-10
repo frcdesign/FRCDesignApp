@@ -8,6 +8,7 @@ import { showErrorToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getAppErrorHandler } from "../api/errors";
 import { libraryQueryMatchKey } from "../queries";
+import { router } from "../router";
 
 export function useSetVisibilityMutation(
     documentId: string,
@@ -38,8 +39,9 @@ export function useSetVisibilityMutation(
         onError: getAppErrorHandler(
             "Unexpectedly failed to modify visibility."
         ),
-        onSuccess: () => {
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            router.invalidate();
         }
     });
 }

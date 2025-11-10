@@ -26,8 +26,8 @@ import {
     Configuration,
     encodeConfigurationForQuery
 } from "../insert/configuration-models";
-import { AppErrorState } from "../common/app-zero-state";
 import { getConfigurationMatchKey } from "../queries";
+import { AppErrorState } from "../common/app-zero-state";
 
 interface CardThumbnailProps {
     thumbnailUrls: ThumbnailUrls;
@@ -135,7 +135,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             }).then((value) => value.thumbnailId);
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
-        retry: 0,
+        retry: false,
         enabled: !isFetchingConfiguration
     });
 
@@ -167,10 +167,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     if (thumbnailIdQuery.isError) {
         return (
             <div style={heightAndWidth}>
-                <AppErrorState
-                    title="Failed to load configuration"
-                    inline={false}
-                />
+                <AppErrorState title="Failed to load image" inline={false} />
             </div>
         );
     }

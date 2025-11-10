@@ -12,17 +12,6 @@ export class HandledError extends Error {
 }
 
 /**
- * Used to indicate that an error has occurred, but also that no action should be taken.
- * Allows a mutation to "quit out" without triggering onError behavior.
- */
-// export class NoError extends Error {
-//     constructor() {
-//         super("No error");
-//         Object.setPrototypeOf(this, new.target.prototype);
-//     }
-// }
-
-/**
  * Returns a function that handles app errors.
  */
 export function getAppErrorHandler(defaultMessage: string, toastKey?: string) {
