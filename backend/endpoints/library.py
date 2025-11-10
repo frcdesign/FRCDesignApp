@@ -1,3 +1,4 @@
+from urllib.request import install_opener
 import flask
 from pydantic import BaseModel
 from google.cloud import firestore
@@ -5,7 +6,7 @@ from google.cloud import firestore
 from backend.common import connect
 from backend.common.app_access import require_access_level
 from backend.common.database import DocumentsRef, LibraryRef
-from backend.common.models import Document, Favorite
+from backend.common.models import Document, FastenInfo, Favorite
 from backend.endpoints.cache import cacheable_route
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
@@ -26,6 +27,8 @@ class ElementOut(BaseModel):
     name: str
     microversionId: str
     isVisible: bool
+    isOpenComposite: bool
+    supportsFasten: bool  # Whether the element supports Insert and fasten
     elementType: ElementType
     thumbnailUrls: dict[ThumbnailSize, str]
     configurationId: str | None
@@ -97,6 +100,8 @@ def build_documents_out(
                 instanceType=InstanceType.VERSION,
                 name=element.name,
                 isVisible=element.isVisible,
+                isOpenComposite=element.isOpenComposite,
+                supportsFasten=element.fastenInfo != None,
                 thumbnailUrls=element.thumbnailUrls,
                 microversionId=element.microversionId,
                 elementType=element.elementType,

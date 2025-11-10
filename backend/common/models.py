@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
+from onshape_api.model.assembly_features import mate_connector
 
 
 class Library(StrEnum):
@@ -240,9 +241,21 @@ class Element(BaseModel):
     instanceId: str
     microversionId: str
     isVisible: bool
+    # Whether the element is a part studio with an open composite part studio.
+    isOpenComposite: bool
+    # If the element supports insert and fasten, this is the mate connector id to use.
+    fastenInfo: FastenInfo | None = None
     configurationId: str | None = None
     # Currently only TINY and STANDARD are populated
     thumbnailUrls: dict[ThumbnailSize, str] = Field(default_factory=dict)
+
+
+class FastenInfo(BaseModel):
+    # The id of the mate connector feature.
+    mateConnectorId: str
+    # If the mate connector is owned by subassembly/part in an assembly, this is the id of that subassembly/part.
+    # Note this is not needed/used for part studios.
+    occurrenceId: str | None = None
 
 
 class Document(BaseModel):

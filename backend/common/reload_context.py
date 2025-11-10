@@ -2,17 +2,23 @@ from __future__ import annotations
 
 from pydantic import BaseModel, field_validator
 
-from backend.common.models import Document, Element
+from backend.common.models import Document, Element, FastenInfo
 from onshape_api.paths.doc_path import InstancePath
 
 
 class SavedElement(BaseModel):
     isVisible: bool = False
+    isOpenComposite: bool = False
+    fastenInfo: FastenInfo | None = None
     microversionId: str | None = None
 
     # Note: We need field validators to default fields which can't be None
     @field_validator("isVisible", mode="before")
     def default_is_visible(cls, v):
+        return v if v != None else False
+
+    @field_validator("isOpenComposite", mode="before")
+    def default_is_composite(cls, v):
         return v if v != None else False
 
 

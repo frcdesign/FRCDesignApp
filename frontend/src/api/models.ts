@@ -117,6 +117,8 @@ export interface ElementObj extends ElementPath {
     elementType: ElementType;
     microversionId: string;
     isVisible: boolean;
+    isOpenComposite: boolean;
+    supportsFasten: boolean;
     vendors: Vendor[];
     configurationId?: string;
     thumbnailUrls: ThumbnailUrls;
@@ -139,9 +141,15 @@ export interface HeightAndWidth {
     width: number;
 }
 
-export function getHeightAndWidth(size: ThumbnailSize, multiplier: number = 1): HeightAndWidth {
+export function getHeightAndWidth(
+    size: ThumbnailSize,
+    multiplier: number = 1
+): HeightAndWidth {
     const parts = size.split("x");
-    return { width: parseInt(parts[0]) * multiplier, height: parseInt(parts[1]) * multiplier };
+    return {
+        width: parseInt(parts[0]) * multiplier,
+        height: parseInt(parts[1]) * multiplier
+    };
 }
 
 export enum Theme {

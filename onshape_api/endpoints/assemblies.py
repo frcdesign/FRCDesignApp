@@ -5,7 +5,7 @@ from urllib import parse
 from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_workspace
 from onshape_api.endpoints.configurations import encode_configuration
-from onshape_api.endpoints.documents import ElementType
+from onshape_api.endpoints.documents import ElementType, PartType
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.doc_path import ElementPath, InstancePath
 
@@ -61,12 +61,16 @@ def add_element_to_assembly(
     element_path: ElementPath,
     element_type: ElementType,
     configuration: dict[str, str] | None = None,
+    part_types: list[PartType] | None = None,
 ) -> None:
     """
     Adds the contents of an element tab to an assembly.
 
-    assembly_path: The path to the assembly to add to.
-    element_path: The path to the element tab to insert into the assembly.
+    Parameters:
+        assembly_path: The path to the assembly to add to.
+        element_path: The path to the element tab to insert into the assembly.
+        element_type: The type of the element being inserted (part studio or assembly).
+        part_types: If inserting a part studio, the types of parts to include. If None, defaults to PARTS and COMPOSITE_PARTS.
     """
     assert_workspace(assembly_path)
 
@@ -79,7 +83,11 @@ def add_element_to_assembly(
     elif element_type == ElementType.PART_STUDIO:
         instance.update(
             {
-                "includePartTypes": ["PARTS", "COMPOSITE_PARTS"],
+                "includePartTypes": (
+                    [PartType.PARTS, PartType.COMPOSITE_PARTS]
+                    if part_types == None
+                    else part_types
+                ),
                 "isWholePartStudio": True,
             }
         )

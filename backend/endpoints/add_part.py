@@ -9,7 +9,7 @@ from backend.common.app_logging import APP_LOGGER, log_part_inserted
 from backend.common.database import Configuration
 from backend.common.models import ParameterType
 from onshape_api.endpoints import part_studios, assemblies
-from onshape_api.endpoints.documents import ElementType
+from onshape_api.endpoints.documents import ElementType, PartType
 from onshape_api.endpoints.versions import get_version
 from onshape_api.paths.doc_path import ElementPath, path_to_namespace
 
@@ -30,18 +30,28 @@ def add_to_assembly(**kwargs):
     element_type = connect.get_body_arg("elementType")
     configuration = connect.get_optional_body_arg("configuration")
 
-    # Tracking information
+    insert_and_fasten = connect.get_optional_body_arg("insertAndFasten", False)
+
+    # Logging information
     part_name = connect.get_body_arg("name")
     user_id = connect.get_body_arg("userId")
     is_favorite = connect.get_body_arg("isFavorite")
     is_quick_insert = connect.get_body_arg("isQuickInsert")
 
+    document_ref = library_ref.documents.document(path_to_add.document_id)
+    element = document_ref.elements.element(path_to_add.element_id).get()
+
+    part_types = [PartType.PARTS, PartType.COMPOSITE_PARTS]
+    if element.isOpenComposite:
+        part_types = [PartType.COMPOSITE_PARTS]
+
     assemblies.add_element_to_assembly(
-        api, assembly_path, path_to_add, element_type, configuration=configuration
+        api, assembly_path, path_to_add, element_type, configuration=configuration, part_types=part_types
     )
 
     parameters = None
 
+    # Get the configuration for logging purposes (not needed for the actual insert)
     if configuration != None:
         parameters = (
             library_ref.documents.document(path_to_add.document_id)
@@ -86,13 +96,13 @@ def add_to_part_studio(**kwargs):
     is_favorite = connect.get_body_arg("isFavorite")
     is_quick_insert = connect.get_body_arg("isQuickInsert")
 
+    document_ref = library_ref.documents.document(path_to_add.document_id)
+
     parameters = None
     if configuration != None:
-        parameters = (
-            library_ref.documents.document(path_to_add.document_id)
-            .configurations.configuration(path_to_add.element_id)
-            .get()
-        )
+        parameters = document_ref.configurations.configuration(
+            path_to_add.element_id
+        ).get()
 
     derived_feature = DerivedFeature(
         part_name, path_to_add, microversion_id, configuration, parameters

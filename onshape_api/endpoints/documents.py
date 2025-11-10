@@ -77,6 +77,12 @@ def delete_document(api: Api, document_path: DocumentPath) -> dict:
     """Deletes an entire document."""
     return api.delete(f"/documents/{document_path.document_id}")
 
+class PartType(enum.StrEnum):
+    """Describes possible part types."""
+
+    PARTS = "PARTS"
+    COMPOSITE_PARTS = "COMPOSITE_PARTS"
+
 
 class ElementType(enum.StrEnum):
     """Describes possible element (tab) types in a document."""

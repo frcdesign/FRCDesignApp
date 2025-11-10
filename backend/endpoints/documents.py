@@ -78,6 +78,8 @@ def save_element(
             microversionId=microversion_id,
             configurationId=configuration_id,
             isVisible=preserved_element.isVisible,
+            isOpenComposite=preserved_element.isOpenComposite,
+            fastenInfo=preserved_element.fastenInfo,
             thumbnailUrls=thumbnailUrls,
         ),
     )
