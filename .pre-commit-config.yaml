@@ -5,3 +5,4 @@ repos:
       rev: 0.8.7
       hooks:
           - id: uv-export
+            args: ["--no-emit-project", "--no-editable", "--no-dev"]
