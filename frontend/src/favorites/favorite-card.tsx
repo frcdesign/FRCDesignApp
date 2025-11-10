@@ -23,7 +23,7 @@ import {
 import { useIsElementHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
-import { toUserApiPath, UserPath } from "../api/path";
+import { toUserApiPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
 import { router } from "../router";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
@@ -31,6 +31,7 @@ import { getAppErrorHandler } from "../api/errors";
 import { useLibraryUserDataQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 interface FavoriteCardProps {
     element: ElementObj;
@@ -111,11 +112,10 @@ interface FavoriteContextMenuProps {
 function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
     const { children, element, favorite } = props;
 
-    const search = useSearch({ from: "/app" });
     const uiState = useUiState()[0];
     const navigate = useNavigate();
 
-    const setFavoriteOrderMutation = useSetFavoriteOrderMutation(search);
+    const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoriteOrder = useLibraryUserDataQuery().data?.favoriteOrder ?? [];
     const openAlert = useOpenAlert();
 
@@ -168,13 +168,20 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
     return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
-function useSetFavoriteOrderMutation(userPath: UserPath) {
+function useSetFavoriteOrderMutation() {
+    const userPath = useSearch({ from: "/app" });
+    const library = useLibrary();
     return useMutation({
         mutationKey: ["set-favorite-order"],
         mutationFn: async (favoriteOrder: string[]) => {
-            return apiPost("/favorite-order" + toUserApiPath(userPath), {
-                body: { favoriteOrder }
-            });
+            return apiPost(
+                "/favorite-order" +
+                    toLibraryPath(library) +
+                    toUserApiPath(userPath),
+                {
+                    body: { favoriteOrder }
+                }
+            );
         },
         onMutate: async (newOrder: string[]) => {
             await queryClient.cancelQueries({

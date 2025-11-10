@@ -41,11 +41,11 @@ export function useInsertMutation(
                 userId: search.userId
             };
             if (search.elementType == ElementType.ASSEMBLY) {
-                endpoint = "/add-to-assembly" + toLibraryPath(library);
+                endpoint = "/add-to-assembly";
                 body.elementType = element.elementType;
             } else {
                 // Part studio derive also needs name and microversion id
-                endpoint = "/add-to-part-studio" + toLibraryPath(library);
+                endpoint = "/add-to-part-studio";
                 body.microversionId = element.microversionId;
             }
             // Cancel any outstanding thumbnail queries
@@ -53,9 +53,12 @@ export function useInsertMutation(
             queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
             showLoadingToast(`Inserting ${element.name}...`, toastId);
-            return apiPost(endpoint + toElementApiPath(search), {
-                body
-            });
+            return apiPost(
+                endpoint + toLibraryPath(library) + toElementApiPath(search),
+                {
+                    body
+                }
+            );
         },
         onError: getAppErrorHandler(
             `Failed to insert ${element.name}.`,
