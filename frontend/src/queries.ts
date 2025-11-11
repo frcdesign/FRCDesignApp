@@ -31,8 +31,12 @@ export function getConfigurationMatchKey() {
     return ["configuration"];
 }
 
-export function getConfigurationKey(configurationId?: string) {
-    return ["configuration", configurationId];
+export function getConfigurationKey(
+    library: Library,
+    configurationId?: string,
+    cacheOptions?: CacheOptions
+) {
+    return ["configuration", library, configurationId, cacheOptions];
 }
 
 export function updateSettingsKey(userPath: UserPath) {

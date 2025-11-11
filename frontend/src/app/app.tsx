@@ -6,7 +6,7 @@ import {
     getBackgroundClass,
     getColorTheme,
     getThemeClass
-} from "../search-params/onshape-params";
+} from "../api/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AppAlerts } from "../overlays/app-popups";

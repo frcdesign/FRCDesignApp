@@ -27,6 +27,7 @@ import { router } from "../router";
 import { Configuration } from "../insert/configuration-models";
 import { libraryUserDataQueryMatchKey, useLibraryQuery } from "../queries";
 import { getQueryUpdater } from "../common/utils";
+import { toLibraryPath, useLibrary } from "../api/library";
 
 export function FavoriteMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -47,6 +48,7 @@ function FavoriteMenuDialog(
     const { favoriteId, defaultConfiguration } = props;
 
     const search = useSearch({ from: "/app" });
+    const library = useLibrary();
     const elements = useLibraryQuery().data?.elements;
 
     const [configuration, setConfiguration] = useState<
@@ -57,12 +59,17 @@ function FavoriteMenuDialog(
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            return apiPost("/default-configuration" + toUserApiPath(search), {
-                body: {
-                    favoriteId,
-                    defaultConfiguration: configuration
+            return apiPost(
+                "/default-configuration" +
+                    toLibraryPath(library) +
+                    toUserApiPath(search),
+                {
+                    body: {
+                        favoriteId,
+                        defaultConfiguration: configuration
+                    }
                 }
-            });
+            );
         },
         onMutate: async () => {
             await queryClient.cancelQueries({

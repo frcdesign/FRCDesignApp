@@ -16,7 +16,10 @@ import { router } from "../router";
 import { handleAppError, HandledError } from "../api/errors";
 import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibrary } from "../api/library";
-import { libraryUserDataQueryKey } from "../queries";
+import {
+    libraryUserDataQueryKey,
+    libraryUserDataQueryMatchKey
+} from "../queries";
 
 enum Operation {
     ADD,
@@ -71,7 +74,7 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
         },
         onMutate: async (args) => {
             await queryClient.cancelQueries({
-                queryKey: ["library-user-data"]
+                queryKey: libraryUserDataQueryMatchKey()
             });
             queryClient.setQueryData(
                 libraryUserDataQueryKey(library, search),
@@ -89,7 +92,7 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
         },
         onSettled: async () => {
             await queryClient.invalidateQueries({
-                queryKey: ["library-user-data"]
+                queryKey: libraryUserDataQueryMatchKey()
             });
             router.invalidate();
         }

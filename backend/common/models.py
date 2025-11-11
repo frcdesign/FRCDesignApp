@@ -32,7 +32,7 @@ def get_parameter_type_name(parameter_type: ParameterType) -> str:
     return parameter_type.name
 
 
-class Configuration(BaseModel):
+class ConfigurationParameters(BaseModel):
     parameters: list[ConfigurationParameter] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")

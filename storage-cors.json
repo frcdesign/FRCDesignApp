@@ -1,0 +1,12 @@
+[
+    {
+        "origin": ["https://app.frcdesign.org"],
+        "method": ["GET", "HEAD", "OPTIONS"],
+        "responseHeader": [
+            "Content-Type",
+            "Cache-Control",
+            "Content-Disposition"
+        ],
+        "maxAgeSeconds": 86400
+    }
+]

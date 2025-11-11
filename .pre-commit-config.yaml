@@ -5,3 +5,12 @@ repos:
       rev: 0.8.7
       hooks:
           - id: uv-export
+            args:
+                [
+                    "--no-editable",
+                    "--no-dev",
+                    "--no-emit-project",
+                    "--frozen",
+                    "--output-file=requirements.txt",
+                    "--quiet"
+                ]

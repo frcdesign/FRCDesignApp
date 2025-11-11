@@ -405,6 +405,14 @@ def delete_document(**kwargs):
     library_ref = connect.get_library_ref()
 
     document_id = connect.get_query_param("documentId")
+    document_ref = library_ref.documents.document(document_id)
+
+    for element_ref in document_ref.elements.list():
+        element_ref.delete()
+
+    for configuration_ref in document_ref.configurations.list():
+        configuration_ref.delete()
+
     library_ref.documents.remove(document_id)
 
     clean_favorites(library_ref)

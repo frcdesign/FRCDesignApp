@@ -52,9 +52,12 @@ export function useHandleCloseDialog() {
         navigate({
             to: ".",
             search: {
+                // Attempt to clear search params, although this doesn't really have any functional impact
                 activeMenu: undefined,
                 activeElementId: undefined,
-                selectedDocumentId: undefined
+                selectedDocumentId: undefined,
+                defaultConfiguration: undefined,
+                favoriteId: undefined
             }
         });
     }, [navigate]);
