@@ -206,9 +206,11 @@ export function encodeConfigurationForQuery(
     if (!configuration) {
         return "";
     }
-    return Object.entries(configuration)
-        .map(([id, value]) => `${id}=${value}`)
-        .join(";");
+    return encodeURIComponent(
+        Object.entries(configuration)
+            .map(([id, value]) => `${id}=${value}`)
+            .join(";")
+    );
 }
 
 /**

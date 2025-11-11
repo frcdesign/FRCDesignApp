@@ -1,4 +1,3 @@
-from logging import config
 import flask
 from pydantic import BaseModel
 from google.cloud import firestore
@@ -6,7 +5,7 @@ from google.cloud import firestore
 from backend.common import connect
 from backend.common.app_access import require_access_level
 from backend.common.database import DocumentsRef, LibraryRef
-from backend.common.models import Document, Favorite
+from backend.common.models import Document, Favorite, Vendor
 from backend.endpoints.cache import cacheable_route
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
@@ -30,6 +29,7 @@ class ElementOut(BaseModel):
     elementType: ElementType
     thumbnailUrls: dict[ThumbnailSize, str]
     configurationId: str | None
+    vendors: list[Vendor]
 
 
 class DocumentOut(BaseModel):
@@ -102,6 +102,7 @@ def build_documents_out(
                 microversionId=element.microversionId,
                 elementType=element.elementType,
                 configurationId=element.configurationId,
+                vendors=element.vendors,
             )
 
     return (documents_out, elements_out)

@@ -148,7 +148,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             return apiGetImage("/thumbnail" + toElementApiPath(elementPath), {
                 query: {
                     size,
-                    thumbnailId
+                    configuration: encodeConfigurationForQuery(configuration)
                 },
                 signal,
                 cacheOptions
@@ -167,7 +167,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     if (thumbnailIdQuery.isError) {
         return (
             <div style={heightAndWidth}>
-                <AppErrorState title="Failed to load image" inline={false} />
+                <AppErrorState title="Failed to thumbnail" inline={false} />
             </div>
         );
     }

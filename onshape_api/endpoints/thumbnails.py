@@ -1,14 +1,11 @@
 from enum import StrEnum
 from io import BytesIO
 
-import urllib
 from urllib import parse
 
-from flask import config
 
 from onshape_api.api.api_base import Api
-from onshape_api.assertions import assert_instance_type, assert_workspace
-from onshape_api.endpoints.configurations import encode_configuration
+from onshape_api.assertions import assert_instance_type
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.doc_path import ElementPath, InstancePath
@@ -31,7 +28,6 @@ class ThumbnailSize(StrEnum):
         return True
 
 
-
 def get_instance_thumbnail(
     api: Api, instance_path: InstancePath, size: ThumbnailSize = ThumbnailSize.STANDARD
 ) -> BytesIO:
@@ -46,17 +42,29 @@ def get_element_thumbnail(
     element_path: ElementPath,
     size: ThumbnailSize = ThumbnailSize.STANDARD,
 ) -> BytesIO:
-    """Returns the thumbnail for a given element."""
+    """Returns the thumbnail for a given element in a workspace or version."""
     assert_instance_type(element_path, InstanceType.WORKSPACE, InstanceType.VERSION)
 
     path = api_path("thumbnails", element_path, ElementPath)
+    path += "/s/" + size
 
-    # As far as I can tell, the /ac functionality of this endpoint straight up doesn't work for expressions...
-    # if configuration != None:
-    #     configuration_id = encode_configuration(configuration)
-    #     path += "/ac/" + configuration_id
+    return BytesIO(api.get(path, is_json=False).content)
+
+
+def get_workspace_thumbnail(
+    api: Api,
+    element_path: ElementPath,
+    size: ThumbnailSize = ThumbnailSize.STANDARD,
+    configuration: str | None = None,
+) -> BytesIO:
+    assert_instance_type(element_path, InstanceType.WORKSPACE, InstanceType.VERSION)
+    path = api_path("thumbnails", element_path, ElementPath)
+
+    if configuration:
+        path += "/ac/" + parse.quote(configuration)
 
     path += "/s/" + size
+
     return BytesIO(api.get(path, is_json=False).content)
 
 

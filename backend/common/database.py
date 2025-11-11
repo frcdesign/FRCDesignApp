@@ -1,6 +1,7 @@
 from __future__ import annotations
+from collections.abc import Iterable
 from enum import StrEnum
-from typing import Generic, Protocol, Type, TypeVar, override, runtime_checkable
+from typing import Generic, Protocol, Type, TypeVar, cast, override, runtime_checkable
 
 from google.cloud import firestore
 from google.cloud.firestore import (
@@ -12,7 +13,7 @@ from pydantic import BaseModel, ValidationError
 
 from backend.common.backend_exceptions import ServerException
 from backend.common.models import (
-    Configuration,
+    ConfigurationParameters,
     Document,
     Element,
     Favorite,
@@ -293,7 +294,7 @@ class DocumentRef(BaseDocumentRef[Document]):
     @property
     def configurations(self) -> ConfigurationsRef:
         return ConfigurationsRef(
-            self.ref.collection(Collection.CONFIGURATIONS, Configuration)
+            self.ref.collection(Collection.CONFIGURATIONS, ConfigurationParameters)
         )
 
 
@@ -302,8 +303,10 @@ class ElementsRef(OrderedCollection[Document, Element]):
         return self.ref.child(element_id)
 
 
-class ConfigurationsRef(BaseCollectionRef[Configuration]):
-    def configuration(self, configuration: str) -> BaseDocument[Configuration]:
+class ConfigurationsRef(BaseCollectionRef[ConfigurationParameters]):
+    def configuration(
+        self, configuration: str
+    ) -> BaseDocument[ConfigurationParameters]:
         return self.ref.child(configuration)
 
 
@@ -357,3 +360,19 @@ class Database:
     @property
     def sessions(self) -> CollectionReference:
         return self.get_collection(Collection.SESSIONS)
+
+
+def delete_collection(
+    collection_ref: CollectionReference,
+    batch_size: int = 500,
+):
+    """Deletes all documents in a Firestore collection."""
+    docs = cast(Iterable[DocumentSnapshot], collection_ref.limit(batch_size).stream())
+    deleted = 0
+
+    for doc in docs:
+        doc.reference.delete()
+        deleted += 1
+
+    if deleted >= batch_size:
+        return delete_collection(collection_ref, batch_size)

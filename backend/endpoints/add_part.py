@@ -6,7 +6,7 @@ import flask
 
 from backend.common import connect
 from backend.common.app_logging import APP_LOGGER, log_part_inserted
-from backend.common.database import Configuration
+from backend.common.database import ConfigurationParameters
 from backend.common.models import ParameterType
 from onshape_api.endpoints import part_studios, assemblies
 from onshape_api.endpoints.documents import ElementType
@@ -151,7 +151,7 @@ class DerivedFeature:
         part_studio_to_add: ElementPath,
         microversion_id: str,
         configuration: dict | None = None,
-        parameters: Configuration | None = None,
+        parameters: ConfigurationParameters | None = None,
     ):
         self.name = escape_feature_name(name)
         self.namespace = path_to_namespace(part_studio_to_add, microversion_id)
@@ -164,7 +164,7 @@ class DerivedFeature:
             self.part_configuration = None
 
     def build_part_configuration(
-        self, configuration: dict, parameters: Configuration
+        self, configuration: dict, parameters: ConfigurationParameters
     ) -> list[dict]:
         part_configuration = []
         for parameter in parameters.parameters:

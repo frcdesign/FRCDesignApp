@@ -3,10 +3,9 @@ import flask
 
 from backend.common import connect
 from backend.endpoints.cache import cacheable_route
-from backend.common.database import Configuration
+from backend.common.database import ConfigurationParameters
 from backend.common.models import (
     EqualCondition,
-    Library,
     ListOptionVisibilityCondition,
     LogicalCondition,
     OptionConditionType,
@@ -186,7 +185,7 @@ def parse_visibility_condition(
 #     return True
 
 
-def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
+def parse_onshape_configuration(onshape_configuration: dict) -> ConfigurationParameters:
     """Parses an Onshape configuration into a normalized configuration which can be stored in the database."""
     parameters = []
     for parameter in onshape_configuration["configurationParameters"]:
@@ -242,4 +241,4 @@ def parse_onshape_configuration(onshape_configuration: dict) -> Configuration:
 
         parameters.append(result)
 
-    return Configuration(parameters=parameters)
+    return ConfigurationParameters(parameters=parameters)
