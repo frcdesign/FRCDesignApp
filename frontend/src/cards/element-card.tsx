@@ -20,7 +20,7 @@ import {
     CardTitle,
     ContextMenuButton,
     OpenDocumentItems,
-    QuickInsertItem
+    QuickInsertItems
 } from "./card-components";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
@@ -124,7 +124,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
 
     const menu = (
         <Menu>
-            <QuickInsertItem element={element} isFavorite={isFavorite} />
+            <QuickInsertItems element={element} isFavorite={isFavorite} />
             <MenuDivider />
             <OpenDocumentItems path={element} />
             <MenuDivider />

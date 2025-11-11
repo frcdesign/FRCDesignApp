@@ -10,6 +10,11 @@ import { useMemo } from "react";
 import { Configuration } from "./configuration-models";
 import { toLibraryPath, useLibrary } from "../api/library";
 
+export interface InsertArgs {
+    isFavorite: boolean;
+    isQuickInsert?: boolean;
+}
+
 /**
  * Creates a mutation for inserting an element.
  * @param onClick Callback function to call when the mutation is triggered.
@@ -17,8 +22,7 @@ import { toLibraryPath, useLibrary } from "../api/library";
 export function useInsertMutation(
     element: ElementObj,
     configuration: Configuration | undefined,
-    isFavorite: boolean,
-    isQuickInsert: boolean = false
+    insertArgs: InsertArgs
 ) {
     const search = useSearch({ from: "/app" });
     const library = useLibrary();
@@ -27,7 +31,7 @@ export function useInsertMutation(
 
     return useMutation({
         mutationKey: ["insert", element.id],
-        mutationFn: async () => {
+        mutationFn: async (fasten: boolean) => {
             let endpoint;
             const body: Record<string, any> = {
                 documentId: element.documentId,
@@ -36,9 +40,10 @@ export function useInsertMutation(
                 elementId: element.id,
                 configuration,
                 name: element.name,
-                isFavorite,
-                isQuickInsert,
-                userId: search.userId
+                userId: search.userId,
+                isFavorite: insertArgs.isFavorite,
+                isQuickInsert: insertArgs.isQuickInsert ?? false,
+                fasten
             };
             if (search.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";

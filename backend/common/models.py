@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
-from onshape_api.model.assembly_features import mate_connector
 
 
 class Library(StrEnum):
@@ -226,13 +225,6 @@ def get_vendor_name(vendor: Vendor) -> str:
             return "West Coast Products"
 
 
-# def default_if_none(default):
-#     def validator(cls, v):
-#         return v if v is not None else default
-
-#     return validator
-
-
 class Element(BaseModel):
     name: str
     vendors: list[Vendor] = Field(default_factory=list)
@@ -240,9 +232,9 @@ class Element(BaseModel):
     documentId: str
     instanceId: str
     microversionId: str
-    isVisible: bool
+    isVisible: bool = False
     # Whether the element is a part studio with an open composite part studio.
-    isOpenComposite: bool
+    isOpenComposite: bool = False
     # If the element supports insert and fasten, this is the mate connector id to use.
     fastenInfo: FastenInfo | None = None
     configurationId: str | None = None

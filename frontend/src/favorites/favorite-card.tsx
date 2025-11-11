@@ -18,7 +18,7 @@ import {
     CardTitle,
     ContextMenuButton,
     OpenDocumentItems,
-    QuickInsertItem
+    QuickInsertItems
 } from "../cards/card-components";
 import { useIsElementHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
@@ -121,7 +121,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
 
     const menu = (
         <Menu>
-            <QuickInsertItem
+            <QuickInsertItems
                 element={element}
                 defaultConfiguration={favorite.defaultConfiguration}
                 isFavorite

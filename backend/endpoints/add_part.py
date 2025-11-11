@@ -30,7 +30,7 @@ def add_to_assembly(**kwargs):
     element_type = connect.get_body_arg("elementType")
     configuration = connect.get_optional_body_arg("configuration")
 
-    insert_and_fasten = connect.get_optional_body_arg("insertAndFasten", False)
+    fasten = connect.get_optional_body_arg("fasten", False)
 
     # Logging information
     part_name = connect.get_body_arg("name")
@@ -46,7 +46,12 @@ def add_to_assembly(**kwargs):
         part_types = [PartType.COMPOSITE_PARTS]
 
     assemblies.add_element_to_assembly(
-        api, assembly_path, path_to_add, element_type, configuration=configuration, part_types=part_types
+        api,
+        assembly_path,
+        path_to_add,
+        element_type,
+        configuration=configuration,
+        part_types=part_types,
     )
 
     parameters = None

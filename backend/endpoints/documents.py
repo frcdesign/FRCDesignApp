@@ -313,7 +313,7 @@ def clean_favorites(library_ref: LibraryRef) -> None:
             user_data_ref.favorites.remove(favorite.id)
 
 
-@router.post("/set-visibility" + connect.library_route())
+@router.post("/set-element-visibility" + connect.library_route())
 @require_access_level()
 def set_visibility(**kwargs):
     """Sets the visibility of one or more elements in a document."""
@@ -335,9 +335,9 @@ def set_visibility(**kwargs):
     return {"success": True}
 
 
-@router.post("/set-document-sort" + connect.library_route())
+@router.post("/sort-document-alphabetically" + connect.library_route())
 @require_access_level()
-def set_document_sort(**kwargs):
+def set_sort_alphabetically(**kwargs):
     library_ref = connect.get_library_ref()
     document_id = connect.get_body_arg("documentId")
     sort_alphabetically = connect.get_body_arg("sortAlphabetically")

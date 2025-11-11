@@ -3,7 +3,7 @@ import {
     UseNavigateResult,
     useSearch
 } from "@tanstack/react-router";
-import { ReactNode, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { ElementObj, ElementType } from "../api/models";
 import {
     Button,
@@ -73,7 +73,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     }
 
     const actions = (
-        <InsertButton
+        <InsertButtons
             element={element}
             configuration={configuration}
             isFavorite={isFavorite}
@@ -102,22 +102,22 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     );
 }
 
-interface InsertButtonProps {
+interface InsertButtonsProps {
     element: ElementObj;
     configuration?: Configuration;
     isFavorite: boolean;
 }
 
-function InsertButton(props: InsertButtonProps): ReactNode {
+/**
+ * The Insert and Insert and fasten buttons in the insert menu.
+ */
+function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { element, configuration, isFavorite } = props;
 
     const search = useSearch({ from: "/app" });
-    const insertMutation = useInsertMutation(
-        element,
-        configuration,
-        isFavorite,
-        false
-    );
+    const insertMutation = useInsertMutation(element, configuration, {
+        isFavorite
+    });
     const closeDialog = useHandleCloseDialog();
 
     const isLoadingConfiguration =
@@ -125,21 +125,44 @@ function InsertButton(props: InsertButtonProps): ReactNode {
             queryKey: ["configuration", element.configurationId]
         }) > 0;
 
+    const onClick = useCallback(
+        (fasten: boolean) => {
+            insertMutation.mutate(fasten);
+            closeDialog();
+        },
+        [insertMutation, closeDialog]
+    );
+
+    const supportsFasten =
+        element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
+
     return (
-        <Button
-            text={
-                search.elementType === ElementType.ASSEMBLY
-                    ? "Insert"
-                    : "Derive"
-            }
-            icon="plus"
-            intent={Intent.SUCCESS}
-            loading={isLoadingConfiguration || insertMutation.isPending}
-            onClick={() => {
-                insertMutation.mutate();
-                closeDialog();
-            }}
-        />
+        <>
+            {supportsFasten && (
+                <Button
+                    text={
+                        search.elementType === ElementType.ASSEMBLY
+                            ? "Insert and fasten"
+                            : "Derive and fasten"
+                    }
+                    icon="plus"
+                    intent={Intent.SUCCESS}
+                    loading={isLoadingConfiguration || insertMutation.isPending}
+                    onClick={() => onClick(true)}
+                />
+            )}
+            <Button
+                text={
+                    search.elementType === ElementType.ASSEMBLY
+                        ? "Insert"
+                        : "Derive"
+                }
+                icon="plus"
+                intent={Intent.SUCCESS}
+                loading={isLoadingConfiguration || insertMutation.isPending}
+                onClick={() => onClick(false)}
+            />
+        </>
     );
 }
 

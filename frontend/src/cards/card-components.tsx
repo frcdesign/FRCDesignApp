@@ -17,8 +17,9 @@ import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { ElementObj, ThumbnailUrls } from "../api/models";
+import { ElementObj, ElementType, ThumbnailUrls } from "../api/models";
 import { Configuration } from "../insert/configuration-models";
+import { useSearch } from "@tanstack/react-router";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
@@ -54,28 +55,49 @@ interface QuickInsertItemProps {
 /**
  * MenuItems which can be used to quick insert a document.
  */
-export function QuickInsertItem(props: QuickInsertItemProps) {
+export function QuickInsertItems(props: QuickInsertItemProps) {
     const { element, defaultConfiguration, isFavorite } = props;
-    const insertMutation = useInsertMutation(
-        element,
-        defaultConfiguration,
+    const search = useSearch({ from: "/app" });
+
+    const insertMutation = useInsertMutation(element, defaultConfiguration, {
         isFavorite,
-        true
-    );
+        isQuickInsert: true
+    });
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
     const openAlert = useOpenAlert();
 
-    const handleClick = useCallback(() => {
-        if (isAssemblyInPartStudio) {
-            openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
-            return;
-        }
-        insertMutation.mutate();
-    }, [isAssemblyInPartStudio, insertMutation, openAlert]);
+    const handleClick = useCallback(
+        (fasten: boolean) => {
+            if (isAssemblyInPartStudio) {
+                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
+                return;
+            }
+            insertMutation.mutate(fasten);
+        },
+        [isAssemblyInPartStudio, insertMutation, openAlert]
+    );
 
-    return <MenuItem text="Quick insert" icon="add" onClick={handleClick} />;
+    const supportsFasten =
+        element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
+
+    return (
+        <>
+            {supportsFasten && (
+                <MenuItem
+                    text="Quick insert and fasten"
+                    icon="add"
+                    onClick={() => handleClick(true)}
+                />
+            )}
+            <MenuItem
+                text="Quick insert"
+                icon="add"
+                onClick={() => handleClick(false)}
+            />
+        </>
+    );
 }
 
 interface CardTitleProps {

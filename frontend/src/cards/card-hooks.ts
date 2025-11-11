@@ -17,7 +17,7 @@ export function useSetVisibilityMutation(
 ) {
     const library = useLibrary();
     return useMutation({
-        mutationKey: ["set-visibility"],
+        mutationKey: ["set-element-visibility"],
         mutationFn: async () => {
             if (!isVisible) {
                 const result = window.confirm(
@@ -28,7 +28,7 @@ export function useSetVisibilityMutation(
                     return;
                 }
             }
-            return apiPost("/set-visibility" + toLibraryPath(library), {
+            return apiPost("/set-element-visibility" + toLibraryPath(library), {
                 body: {
                     documentId,
                     elementIds,

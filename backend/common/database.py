@@ -124,11 +124,13 @@ class FirestoreDocument(BaseDocument[T]):
     def id(self) -> str:
         return self.document_ref.id
 
-    def maybe_get(self) -> T | None:
+    def _get_snapshot(self) -> DocumentSnapshot:
         if self.snapshot != None:
-            snapshot = self.snapshot
-        else:
-            snapshot = self.document_ref.get()
+            return self.snapshot
+        return self.document_ref.get()
+
+    def maybe_get(self) -> T | None:
+        snapshot = self._get_snapshot()
         if not snapshot.exists:
             return None
         try:
@@ -141,15 +143,20 @@ class FirestoreDocument(BaseDocument[T]):
 
         Note this will still fail if the document exists but is invalid.
         """
-        result = self.maybe_get()
-        if result == None:
+        snapshot = self._get_snapshot()
+        if not snapshot.exists:
             try:
                 return self.model.model_validate({})
             except ValidationError as e:
                 raise ServerException(
                     f"Failed to construct {self.model.__name__} with default values: {e}"
                 )
-        return result
+        try:
+            return self.model.model_validate(snapshot.to_dict() or {})
+        except ValidationError as e:
+            raise ServerException(
+                f"Failed to parse {self.model.__name__} from database: {e}"
+            )
 
     def set(self, data: T) -> None:
         self.document_ref.set(data.model_dump())
@@ -253,7 +260,7 @@ class OrderedCollection(BaseCollectionRef[T], Generic[D, T]):
         self.set_order(new_order)
 
     def set_order(self, new_order: list[str]):
-        """Replace the order list with a new explicit order (validated against existing docs)."""
+        """Replace the order list with a new explicit order."""
         self.parent.update({self.order_key: new_order})
 
 

@@ -27,6 +27,7 @@ import {
 } from "../queries";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
+import { getAppErrorHandler } from "../api/errors";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;
@@ -158,7 +159,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                         hideAllMutation.mutate();
                     }}
                 />
-                <ToggleDocumentSortItem document={document} />
+                <DocumentDataItems document={document} />
                 {modifyDocumentItems}
             </RequireAccessLevel>
         </Menu>
@@ -171,7 +172,7 @@ function useSetDocumentOrderMutation() {
     const library = useLibrary();
     const cacheOptions = useCacheOptions();
     return useMutation({
-        mutationKey: ["set-document-order"],
+        mutationKey: ["document-order"],
         mutationFn: async (documentOrder: string[]) => {
             return apiPost("/document-order" + toLibraryPath(library), {
                 body: { documentOrder }
@@ -194,41 +195,81 @@ function useSetDocumentOrderMutation() {
     });
 }
 
-function useToggleDocumentSortMutation(document: DocumentObj) {
+function useToggleSortOrderMutation(document: DocumentObj) {
     const library = useLibrary();
+    const cacheOptions = useCacheOptions();
+
     return useMutation({
-        mutationKey: ["set-document-sort"],
+        mutationKey: ["sort-document-alphabetically"],
         mutationFn: async () => {
-            return apiPost("/set-document-sort" + toLibraryPath(library), {
-                body: {
-                    documentId: document.id,
-                    sortAlphabetically: !document.sortAlphabetically
+            return apiPost(
+                "/sort-document-alphabetically" + toLibraryPath(library),
+                {
+                    body: {
+                        documentId: document.id,
+                        sortAlphabetically: !document.sortAlphabetically
+                    }
                 }
-            });
+            );
         },
-        onSuccess: () => {
+        onMutate: () => {
+            queryClient.setQueryData(
+                libraryQueryKey(library, cacheOptions),
+                getQueryUpdater((data: LibraryObj) => {
+                    const oldDocument = data.documents[document.id];
+                    if (oldDocument) {
+                        oldDocument.sortAlphabetically =
+                            !document.sortAlphabetically;
+                    }
+                    return data;
+                })
+            );
+        },
+        onError: getAppErrorHandler(
+            `Failed to update document ${document.name}.`
+        ),
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
         }
     });
 }
 
-interface ToggleDocumentSortItemProps {
+interface DocumentDataItemsProps {
     document: DocumentObj;
 }
 
-function ToggleDocumentSortItem({ document }: ToggleDocumentSortItemProps) {
-    const toggleDocumentSortMutation = useToggleDocumentSortMutation(document);
+function DocumentDataItems({ document }: DocumentDataItemsProps) {
+    const toggleSortOrderMutation = useToggleSortOrderMutation(document);
     return (
-        <MenuItem
-            onClick={() => {
-                toggleDocumentSortMutation.mutate();
-            }}
-            icon={document.sortAlphabetically ? "list" : "sort-alphabetical"}
-            text={
-                document.sortAlphabetically
-                    ? "Use tab order"
-                    : "Sort alphabetically"
-            }
-        />
+        <>
+            <MenuItem
+                onClick={() => {
+                    toggleSortOrderMutation.mutate();
+                }}
+                icon={
+                    document.sortAlphabetically ? "list" : "sort-alphabetical"
+                }
+                text={
+                    document.sortAlphabetically
+                        ? "Use tab order"
+                        : "Sort alphabetically"
+                }
+            />
+            {/* <MenuItem
+                onClick={() => {
+                    setDocumentDataMutation.mutate({
+                        supportsFasten: !document.supportsFasten
+                    });
+                }}
+                icon={
+                    document.sortAlphabetically ? "list" : "sort-alphabetical"
+                }
+                text={
+                    document.sortAlphabetically
+                        ? "Use tab order"
+                        : "Sort alphabetically"
+                }
+            /> */}
+        </>
     );
 }
