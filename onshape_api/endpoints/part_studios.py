@@ -2,6 +2,7 @@ import json
 
 from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_instance_type, assert_workspace
+from onshape_api.onshape_models import BTFeatureListResponse2457, BTMParameterFeatureList1749, BTMParametricPartStudioFeature3883
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.instance_type import InstanceType
 from onshape_api.paths.doc_path import ElementPath, InstancePath
@@ -38,3 +39,14 @@ def add_feature(api: Api, part_studio_path: ElementPath, feature: dict):
     return api.post(
         api_path("partstudios", part_studio_path, ElementPath, "features"), body=body
     )
+
+
+def get_features(api: Api, part_studio_path: ElementPath) -> dict:
+    """Returns the features in a part studio."""
+
+    query = {
+        "includeSketches": False,
+        "noSketchGeometry": True,
+        "includeGeometryIds": False,
+    }
+    return api.get(api_path("partstudios", part_studio_path, ElementPath, "features"), query=query)

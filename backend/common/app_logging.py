@@ -131,6 +131,8 @@ def log_part_inserted(
     version: dict,
     configuration: dict[str, str] | None = None,
     configuration_parameters: ConfigurationParameters | None = None,
+    supports_fasten: bool = False,
+    fasten: bool = False,
 ):
     """Logs adding an element to an assembly or part studio.
 
@@ -150,6 +152,8 @@ def log_part_inserted(
         "library": str(library),
         "quickInsert": is_quick_insert,
         "isFavorite": is_favorite,
+        "supportsFasten": supports_fasten,
+        "fasten": fasten,
     }
     if configuration != None:
         log_data["configuration"] = build_config_array(

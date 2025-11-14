@@ -242,12 +242,18 @@ class Element(BaseModel):
     thumbnailUrls: dict[ThumbnailSize, str] = Field(default_factory=dict)
 
 
+class MateLocation(StrEnum):
+    CHILD_FEATURE = "Child Feature"
+    CHILD_PART = "Child Part"
+    CHILD_ASSEMBLY = "Child Assembly"
+
+
 class FastenInfo(BaseModel):
     # The id of the mate connector feature.
     mateConnectorId: str
-    # If the mate connector is owned by subassembly/part in an assembly, this is the id of that subassembly/part.
-    # Note this is not needed/used for part studios.
-    occurrenceId: str | None = None
+    mateLocation: MateLocation = MateLocation.CHILD_FEATURE
+    # If the mate location is a child part or assembly instance, this is the path to that instance.
+    path: list[str] = Field(default_factory=list)
 
 
 class Document(BaseModel):

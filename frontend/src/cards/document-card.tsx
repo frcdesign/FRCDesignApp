@@ -255,21 +255,6 @@ function DocumentDataItems({ document }: DocumentDataItemsProps) {
                         : "Sort alphabetically"
                 }
             />
-            {/* <MenuItem
-                onClick={() => {
-                    setDocumentDataMutation.mutate({
-                        supportsFasten: !document.supportsFasten
-                    });
-                }}
-                icon={
-                    document.sortAlphabetically ? "list" : "sort-alphabetical"
-                }
-                text={
-                    document.sortAlphabetically
-                        ? "Use tab order"
-                        : "Sort alphabetically"
-                }
-            /> */}
         </>
     );
 }

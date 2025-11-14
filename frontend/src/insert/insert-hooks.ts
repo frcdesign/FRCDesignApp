@@ -9,6 +9,7 @@ import { getAppErrorHandler } from "../api/errors";
 import { useMemo } from "react";
 import { Configuration } from "./configuration-models";
 import { toLibraryPath, useLibrary } from "../api/library";
+import { sendOpenFeatureMessage } from "../api/messages";
 
 export interface InsertArgs {
     isFavorite: boolean;
@@ -39,19 +40,20 @@ export function useInsertMutation(
                 instanceId: element.instanceId,
                 elementId: element.id,
                 configuration,
-                name: element.name,
                 userId: search.userId,
                 isFavorite: insertArgs.isFavorite,
-                isQuickInsert: insertArgs.isQuickInsert ?? false,
-                fasten
+                isQuickInsert: insertArgs.isQuickInsert ?? false
             };
             if (search.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
-                body.elementType = element.elementType;
+                body.fasten = fasten;
             } else {
                 // Part studio derive also needs name and microversion id
                 endpoint = "/add-to-part-studio";
                 body.microversionId = element.microversionId;
+                body.name = element.name;
+                // Always use mate connector if the element supports fasten
+                body.useMateConnector = element.supportsFasten;
             }
             // Cancel any outstanding thumbnail queries
             queryClient.cancelQueries({ queryKey: ["thumbnail-id"] });
@@ -66,11 +68,22 @@ export function useInsertMutation(
             );
         },
         onError: getAppErrorHandler(
-            `Failed to insert ${element.name}.`,
+            `Unexpectedly failed to insert ${element.name}.`,
             toastId
         ),
-        onSuccess: () => {
-            showSuccessToast(`Successfully inserted ${element.name}.`, toastId);
+        onSuccess: (result, fasten: boolean) => {
+            if (fasten) {
+                sendOpenFeatureMessage(search, result.featureId);
+                showSuccessToast(
+                    `Successfully inserted ${element.name} and created a Fasten feature.`,
+                    toastId
+                );
+            } else {
+                showSuccessToast(
+                    `Successfully inserted ${element.name}.`,
+                    toastId
+                );
+            }
         }
     });
 }

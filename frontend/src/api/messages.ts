@@ -33,11 +33,6 @@ export function useMessageListener() {
     // });
 
     // sendMessage(search, {
-    //     messageName: MessageType.OPEN_FEATURE,
-    //     featureId: "MuBR6QtxMOJELRk/2"
-    // });
-
-    // sendMessage(search, {
     //     messageName: MessageType.REQUEST_SELECTION,
     //     messageId: "unique-message-id",
     //     entityTypeSpecifier: ["EDGE"]
@@ -60,6 +55,16 @@ export function useMessageSender() {
 
 function sendInitMessage(elementPath: ElementPath) {
     sendMessage(elementPath, { messageName: MessageType.APPLICATION_INIT });
+}
+
+export function sendOpenFeatureMessage(
+    elementPath: ElementPath,
+    featureId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.OPEN_FEATURE,
+        featureId
+    });
 }
 
 export enum MessageType {

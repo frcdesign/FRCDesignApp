@@ -25,7 +25,14 @@ import {
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../overlays/menu-params";
-import { useLibraryUserDataQuery } from "../queries";
+import { libraryQueryMatchKey, useLibraryUserDataQuery } from "../queries";
+import { useMutation } from "@tanstack/react-query";
+import { apiPost } from "../api/api";
+import { queryClient } from "../query-client";
+import { toElementApiPath } from "../api/path";
+import { showSuccessToast } from "../common/toaster";
+import { toLibraryPath, useLibrary } from "../api/library";
+import { getAppErrorHandler } from "../api/errors";
 
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
@@ -116,28 +123,97 @@ interface ElementContextMenuProps {
 export function ElementContextMenu(props: ElementContextMenuProps) {
     const { children, isFavorite, element } = props;
 
-    const mutation = useSetVisibilityMutation(
+    const library = useLibrary();
+
+    const setVisibilityMutation = useSetVisibilityMutation(
         element.documentId,
         [element.id],
         !element.isVisible
     );
 
+    const setOpenCompositeMutation = useMutation({
+        mutationKey: ["is-open-composite"],
+        mutationFn: () => {
+            return apiPost("/is-open-composite" + toLibraryPath(library), {
+                body: {
+                    isOpenComposite: element.isOpenComposite,
+                    documentId: element.documentId,
+                    elementId: element.elementId
+                }
+            });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+        }
+    });
+
+    const setSupportsFastenMutation = useMutation({
+        mutationKey: ["supports-fasten"],
+        mutationFn: (supportsFasten: boolean) => {
+            return apiPost(
+                "/supports-fasten" +
+                    toLibraryPath(library) +
+                    toElementApiPath(element),
+                {
+                    body: {
+                        supportsFasten
+                    }
+                }
+            );
+        },
+        onSuccess: (_result, supportsFasten: boolean) => {
+            if (supportsFasten) {
+                showSuccessToast("Successfully enabled Insert and fasten.");
+            }
+        },
+        onError: getAppErrorHandler("Failed to enable Insert and fasten."),
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+        }
+    });
+
     const menu = (
         <Menu>
             <QuickInsertItems element={element} isFavorite={isFavorite} />
             <MenuDivider />
-            <OpenDocumentItems path={element} />
-            <MenuDivider />
             <FavoriteElementItem isFavorite={isFavorite} element={element} />
+            <MenuDivider />
+            <OpenDocumentItems path={element} />
             <RequireAccessLevel>
                 <MenuDivider />
                 <MenuItem
                     onClick={() => {
-                        mutation.mutate();
+                        setVisibilityMutation.mutate();
                     }}
                     intent={element.isVisible ? "danger" : "primary"}
                     icon={element.isVisible ? "eye-off" : "eye-open"}
                     text={element.isVisible ? "Hide element" : "Show element"}
+                />
+                <MenuItem
+                    onClick={() => {
+                        setOpenCompositeMutation.mutate();
+                    }}
+                    intent={element.isOpenComposite ? "danger" : "primary"}
+                    icon={element.isOpenComposite ? "disable" : "confirm"}
+                    text={
+                        element.isOpenComposite
+                            ? "No open composites"
+                            : "Has open composite"
+                    }
+                />
+                <MenuItem
+                    onClick={() => {
+                        setSupportsFastenMutation.mutate(
+                            !element.supportsFasten
+                        );
+                    }}
+                    intent={element.supportsFasten ? "danger" : "primary"}
+                    icon={element.supportsFasten ? "disable" : "add"}
+                    text={
+                        element.supportsFasten
+                            ? "Disable insert and fasten"
+                            : "Enable Insert and fasten"
+                    }
                 />
             </RequireAccessLevel>
         </Menu>

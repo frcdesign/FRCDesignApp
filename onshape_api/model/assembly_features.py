@@ -8,32 +8,36 @@ def dummy_id():
     return "0" * 17
 
 
-def part_studio_mate_connector_query(instance_id: str, mate_id: str) -> dict:
-    """A query for a mate connector in a part studio."""
+def part_studio_mate_connector_query(feature_id: str, path: list[str] = []) -> dict:
+    """A query for a mate connector feature in a part studio."""
     return {
         "btType": "BTMPartStudioMateConnectorQuery-1324",
-        "featureId": mate_id,
-        "path": [instance_id],
+        "featureId": feature_id,
+        "path": path,
     }
 
 
-def occurrence_query(instance_id: str) -> dict:
+def individual_occurrence_query(path: list[str]) -> dict:
     """A query for a specific instance."""
     return {
         "btType": "BTMIndividualOccurrenceQuery-626",
-        "path": [instance_id],
+        "path": path,
     }
 
 
-def feature_query(feature_id: str, query_data: str = "") -> dict:
+def feature_occurrence_query(
+    feature_id: str, path: list[str] = [], query_data: str = ""
+) -> dict:
+    """A query for a feature in an assembly."""
     return {
         "btType": "BTMFeatureQueryWithOccurrence-157",
+        "path": path,
         "queryData": query_data,
         "featureId": feature_id,
     }
 
 
-ORIGIN_QUERY = feature_query("Origin", "ORIGIN_Z")
+ORIGIN_QUERY = feature_occurrence_query(feature_id="Origin", query_data="ORIGIN_Z")
 
 
 class FastenMateBuilder:
@@ -49,16 +53,18 @@ class FastenMateBuilder:
         self.queries = list(queries)
 
     def add_query(self, query: dict) -> Self:
-        """Add a query."""
+        """Add a query to the fasten mate."""
         self.queries.append(query)
         return self
 
     def add_mate_connector(self, mate_connector: dict) -> Self:
-        """Adds a query for an implicit (owned) mate connector."""
+        """
+        Adds a user-editable mate connector plus an implicit mate connector sub feature to the feature.
+        """
         mate_id = dummy_id()
         mate_connector["featureId"] = mate_id
         self.mate_connectors.append(mate_connector)
-        self.queries.append(feature_query(mate_id))
+        self.queries.append(feature_occurrence_query(mate_id))
         return self
 
     def build(self) -> dict:
@@ -71,7 +77,9 @@ def fasten_mate(
     """A fasten mate.
 
     Args:
-        queries: A tuple of two queries to use. Note Onshape has a tendency to preserve the location of the second query in cases where neither instance is constrained.
+        queries: A tuple of up to two queries to fasten.
+                Note Onshape has a tendency to preserve the location of the second query in cases where neither instance is constrained.
+        mate_connectors: A list of Implicit mate connectors owned by the feature.
     """
     fasten_mate = {
         "btType": "BTMMate-64",

@@ -136,7 +136,6 @@ DATABASE = Database(firestore.Client(project="frc-design-lib"))
 
 
 def get_db() -> Database:
-    # TODO: Get rid of get_db and just use DATABASE directly...
     return DATABASE
 
 

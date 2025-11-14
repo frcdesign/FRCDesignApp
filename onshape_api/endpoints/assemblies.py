@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Any, Iterable
 from urllib import parse
 
 
@@ -6,6 +6,7 @@ from onshape_api.api.api_base import Api
 from onshape_api.assertions import assert_workspace
 from onshape_api.endpoints.configurations import encode_configuration
 from onshape_api.endpoints.documents import ElementType, PartType
+from onshape_api.model.constants import IDENTITY_TRANSFORM
 from onshape_api.paths.api_path import api_path
 from onshape_api.paths.doc_path import ElementPath, InstancePath
 
@@ -62,7 +63,8 @@ def add_element_to_assembly(
     element_type: ElementType,
     configuration: dict[str, str] | None = None,
     part_types: list[PartType] | None = None,
-) -> None:
+    use_transform: bool = False,
+) -> Any:
     """
     Adds the contents of an element tab to an assembly.
 
@@ -71,6 +73,7 @@ def add_element_to_assembly(
         element_path: The path to the element tab to insert into the assembly.
         element_type: The type of the element being inserted (part studio or assembly).
         part_types: If inserting a part studio, the types of parts to include. If None, defaults to PARTS and COMPOSITE_PARTS.
+        use_transform: If True, the transformedinstances endpoint is used. Otherwise, the default endpoint is used and nothing is returned.
     """
     assert_workspace(assembly_path)
 
@@ -98,17 +101,24 @@ def add_element_to_assembly(
 
     instance.update(ElementPath.to_api_object(element_path))
 
-    # Could use the transformedinstances endpoint to get a return value
-    # body = {
-    #     "transformGroups": [{"instances": [instance], "transform": IDENTITY_TRANSFORM}]
-    # }
+    if use_transform:
+        # Use the transformedinstances endpoint to get a return value
+        body = {
+            "transformGroups": [
+                {"instances": [instance], "transform": IDENTITY_TRANSFORM}
+            ]
+        }
+        return api.post(
+            api_path("assemblies", assembly_path, ElementPath, "transformedinstances"),
+            body=body,
+        )
 
-    # The post instances endpoint has no return value :(
     api.post(
         api_path("assemblies", assembly_path, ElementPath, "instances"),
         body=instance,
         is_json=False,
     )
+    return None
 
 
 def transform_instance(

@@ -21,7 +21,7 @@ def api_exception(e: ApiError):
     """A handler for uncaught errors thrown by the Onshape API."""
     result = e.to_dict()
     result["type"] = backend_exceptions.ExceptionType.API
-    return e.to_dict(), e.status_code
+    return result, e.status_code
 
 
 @router.errorhandler(backend_exceptions.BaseAppException)
