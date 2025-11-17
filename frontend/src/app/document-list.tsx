@@ -82,7 +82,7 @@ export function DocumentList(): ReactNode {
                     query={uiState.searchQuery}
                     filters={{
                         vendors: uiState.vendorFilters,
-                        documentId: document.documentId
+                        documentId: document.id
                     }}
                 />
             </CardList>
