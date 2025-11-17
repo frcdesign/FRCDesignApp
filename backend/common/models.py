@@ -20,7 +20,7 @@ class Library(StrEnum):
 
 
 class LibraryData(BaseModel):
-    cacheVersion: int = 1
+    cacheVersion: int = 0
     searchDb: str | None = None
     documentOrder: list[str] = Field(default_factory=list)
 

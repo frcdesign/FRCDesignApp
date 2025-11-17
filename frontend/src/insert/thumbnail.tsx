@@ -78,19 +78,20 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
         queryFn: async ({ signal }) => {
-            if (url !== undefined) {
-                return apiGetRawImage(url, signal);
+            if (url === undefined) {
+                throw new Error("No URL");
             }
+            return apiGetRawImage(url, signal);
         },
         retry: 1,
         enabled: url !== undefined
     });
 
     let content;
-    if (imageQuery.isPending) {
-        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
-    } else if (url === undefined || imageQuery.isError) {
+    if (url === undefined || imageQuery.isError) {
         content = <Icon icon="help" size={spinnerSize} />;
+    } else if (imageQuery.isPending) {
+        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }

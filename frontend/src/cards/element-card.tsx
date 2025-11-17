@@ -129,7 +129,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
             <MenuDivider />
             <FavoriteElementItem isFavorite={isFavorite} element={element} />
             <MenuDivider />
-            <OpenDocumentItems path={element} />
+            <OpenDocumentItems path={element.path} />
             <AdminSubmenu>
                 <ElementAdminContextMenu element={element} />
             </AdminSubmenu>

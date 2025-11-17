@@ -128,13 +128,13 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             queryKey: ["configuration", element.configurationId]
         }) > 0;
 
-    const handleClick = useCallback(() => {
-        insertMutation.mutate(uiState.fasten);
-        closeDialog();
-    }, [insertMutation, closeDialog, uiState.fasten]);
-
     const canFasten =
         element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
+
+    const handleClick = useCallback(() => {
+        insertMutation.mutate(canFasten && uiState.fasten);
+        closeDialog();
+    }, [insertMutation, closeDialog, canFasten, uiState.fasten]);
 
     return (
         <div className="insert-menu-actions">

@@ -160,7 +160,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
             />
             {/* Only show second divider when we have more than one favorite since otherwise there's no reorder items */}
             {favoriteOrder.length > 1 && <MenuDivider />}
-            <OpenDocumentItems path={element} />
+            <OpenDocumentItems path={element.path} />
             <MenuDivider />
             <FavoriteElementItem isFavorite element={element} />
         </Menu>
