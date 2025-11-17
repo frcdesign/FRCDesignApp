@@ -1,7 +1,7 @@
 import http
 
 
-class ApiError(Exception):
+class OnshapeException(Exception):
     """The exception thrown by all Onshape API functions."""
 
     def __init__(
@@ -13,7 +13,6 @@ class ApiError(Exception):
 
     def to_dict(self) -> dict:
         return {
-            "type": "API_EXCEPTION",
             "message": self.message,
             "code": self.status_code,
         }

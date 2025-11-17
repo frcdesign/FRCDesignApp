@@ -64,7 +64,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 interface ThumbnailProps {
-    url: string;
+    url?: string;
     spinnerSize: SpinnerSize | number;
     heightAndWidth: HeightAndWidth;
 }
@@ -77,14 +77,19 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
-        queryFn: async ({ signal }) => apiGetRawImage(url, signal),
-        retry: 1
+        queryFn: async ({ signal }) => {
+            if (url !== undefined) {
+                return apiGetRawImage(url, signal);
+            }
+        },
+        retry: 1,
+        enabled: url !== undefined
     });
 
     let content;
     if (imageQuery.isPending) {
         content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
-    } else if (imageQuery.isError) {
+    } else if (url === undefined || imageQuery.isError) {
         content = <Icon icon="help" size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
@@ -106,12 +111,12 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 }
 
 interface PreviewImageProps {
-    elementPath: ElementPath;
+    path: ElementPath;
     configuration?: Configuration;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { elementPath, configuration } = props;
+    const { path, configuration } = props;
     const size = ThumbnailSize.SMALL;
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
@@ -121,18 +126,14 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     // So we use an undocumented alternate workflow where insertables returns an id
     // However, the id can take a while to update, so we have to basically poll the endpoint while waiting for it to load
     const thumbnailIdQuery = useQuery({
-        queryKey: [
-            "thumbnail-id",
-            toElementApiPath(elementPath),
-            configuration
-        ],
+        queryKey: ["thumbnail", "id", toElementApiPath(path), configuration],
         queryFn: async ({ signal }) => {
-            return apiGet("/thumbnail-id" + toElementApiPath(elementPath), {
+            return apiGet("/thumbnail-id" + toElementApiPath(path), {
                 query: {
                     configuration: encodeConfigurationForQuery(configuration)
                 },
                 signal
-            }).then((value) => value.thumbnailId);
+            }).then((value) => value.thumbnailId as string);
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: false,
@@ -143,12 +144,16 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     const cacheOptions = useCacheOptions();
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", toElementApiPath(elementPath), thumbnailId],
+        queryKey: ["thumbnail", thumbnailId],
         queryFn: async ({ signal }) => {
-            return apiGetImage("/thumbnail" + toElementApiPath(elementPath), {
+            if (!thumbnailId) {
+                // Shouldn't happen due to enabled guard
+                return;
+            }
+            return apiGetImage("/thumbnail", {
                 query: {
                     size,
-                    configuration: encodeConfigurationForQuery(configuration)
+                    thumbnailId
                 },
                 signal,
                 cacheOptions
@@ -157,22 +162,21 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 15 seconds with exponential backoff
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
-        retry: Infinity, // Allow indefinite retrying
-        enabled: thumbnailId && !isFetchingConfiguration,
-        staleTime: Infinity
+        retry: 15,
+        enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
 
-    if (thumbnailIdQuery.isError) {
+    if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
         return (
-            <div style={heightAndWidth}>
-                <AppErrorState title="Failed to thumbnail" inline={false} />
-            </div>
+            <AppErrorState
+                title="Thumbnail generation timed out."
+                description="You can still insert the part normally."
+                inline={false}
+            />
         );
-    }
-
-    if (thumbnailQuery.isPending && !thumbnailQuery.data) {
+    } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <div className="center" style={heightAndWidth}>
                 <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
@@ -180,15 +184,12 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
-    const showSmallSpinner =
-        thumbnailIdQuery.isFetching || thumbnailQuery.isFetching;
-
     return (
         <>
             <div style={{ position: "relative", ...heightAndWidth }}>
                 <img src={thumbnailQuery.data} {...heightAndWidth} />
             </div>
-            {showSmallSpinner && (
+            {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
                 <Spinner
                     size={SpinnerSize.SMALL}
                     intent={Intent.PRIMARY}

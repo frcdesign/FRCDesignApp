@@ -69,11 +69,11 @@ class OAuthApi(Api):
         status = http.HTTPStatus(res.status_code)
         if status.is_success:
             if is_json:
-                logging.info("request succeeded, details: " + res.text)
+                ONSHAPE_LOGGER.info("request succeeded, details: " + res.text)
             else:
                 ONSHAPE_LOGGER.info("request succeeded")
         else:
             ONSHAPE_LOGGER.exception("request failed, details: " + res.text)
-            raise exceptions.ApiError(res.text, status)
+            raise exceptions.OnshapeException(res.text, status)
 
         return res.json() if is_json else res

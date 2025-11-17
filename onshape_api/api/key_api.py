@@ -96,7 +96,7 @@ class KeyApi(Api):
         elif status is http.HTTPStatus.TEMPORARY_REDIRECT:
             # The official Onshape app has redirect handling here, we skip because lazy
             ONSHAPE_LOGGER.error("unhandled redirect, details: " + res.text)
-            raise exceptions.ApiError(res.text, status)
+            raise exceptions.OnshapeException(res.text, status)
 
             # location = parse.urlparse(res.headers["Location"])
             # if self._logging:
@@ -117,7 +117,7 @@ class KeyApi(Api):
             # return self.request(method, location.path, query=new_query, headers=headers, base_url=new_base_url)
         else:
             ONSHAPE_LOGGER.error("request failed, details: " + res.text)
-            raise exceptions.ApiError(res.text, status)
+            raise exceptions.OnshapeException(res.text, status)
 
         return res.json() if is_json else res
 

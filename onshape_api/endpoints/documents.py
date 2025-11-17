@@ -1,4 +1,5 @@
 import enum
+from operator import is_
 from typing import Iterable, override
 
 from onshape_api.assertions import (
@@ -27,6 +28,11 @@ def get_document(api: Api, document_path: DocumentPath) -> dict:
     )
 
 
+def get_workspaces(api: Api, document_path: DocumentPath) -> list[dict]:
+    """Retrieves the workspaces in a given document."""
+    return api.get(api_path("documents", document_path, DocumentPath, "workspaces"))
+
+
 def create_new_workspace(
     api: Api, document_path: DocumentPath, name: str, description: str | None = None
 ) -> dict:
@@ -48,10 +54,10 @@ def copy_workspace(
     return api.post(path, body)
 
 
-def create_new_workspace_from_instance(
+def create_new_workspace_from_version(
     api: Api, path: InstancePath, name: str, description: str | None = None
 ) -> dict:
-    """Creates a new workspace in a given document."""
+    """Creates a new workspace in a given document referencing a specific version."""
     key = get_instance_type_key(path.instance_type)
     body = {"name": name, key: path.instance_id}
     if description != None:
@@ -69,13 +75,15 @@ def delete_workspace(api: Api, workspace_path: InstancePath) -> dict:
             DocumentPath,
             "workspaces",
             workspace_path.instance_id,
-        )
+        ),
+        is_json=False,
     )
 
 
 def delete_document(api: Api, document_path: DocumentPath) -> dict:
     """Deletes an entire document."""
     return api.delete(f"/documents/{document_path.document_id}")
+
 
 class PartType(enum.StrEnum):
     """Describes possible part types."""

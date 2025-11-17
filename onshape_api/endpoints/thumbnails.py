@@ -1,6 +1,6 @@
+from datetime import datetime
 from enum import StrEnum
 from io import BytesIO
-
 from urllib import parse
 
 
@@ -51,21 +51,27 @@ def get_element_thumbnail(
     return BytesIO(api.get(path, is_json=False).content)
 
 
-def get_workspace_thumbnail(
+def get_thumbnail_from_workspace(
     api: Api,
     element_path: ElementPath,
     size: ThumbnailSize = ThumbnailSize.STANDARD,
     configuration: str | None = None,
 ) -> BytesIO:
-    assert_instance_type(element_path, InstanceType.WORKSPACE, InstanceType.VERSION)
+    """Returns the thumbnail of a given element in a workspace, optionally with a specific configuration.
+
+    Compared to get_element_thumbnail, this endpoint supports configurations but is limited to only workspaces.
+    """
+    assert_instance_type(element_path, InstanceType.WORKSPACE)
     path = api_path("thumbnails", element_path, ElementPath)
 
     if configuration:
-        path += "/ac/" + parse.quote(configuration)
+        path += "/ac/" + configuration
 
     path += "/s/" + size
 
-    return BytesIO(api.get(path, is_json=False).content)
+    query = {"rejectEmpty": True, "requireConfigMatch": True}
+
+    return BytesIO(api.get(path, query=query, is_json=False).content)
 
 
 def get_thumbnail_id(

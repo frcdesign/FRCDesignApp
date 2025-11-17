@@ -3,11 +3,17 @@ import {
     ButtonVariant,
     Classes,
     EntityTitle,
+    MenuDivider,
     MenuItem,
     Tag
 } from "@blueprintjs/core";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import { MouseEventHandler, ReactNode, useCallback } from "react";
+import {
+    MouseEventHandler,
+    PropsWithChildren,
+    ReactNode,
+    useCallback
+} from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
@@ -20,6 +26,7 @@ import {
 import { ElementObj, ElementType, ThumbnailUrls } from "../api/models";
 import { Configuration } from "../insert/configuration-models";
 import { useSearch } from "@tanstack/react-router";
+import { RequireAccessLevel } from "../api/access-level";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
@@ -173,5 +180,22 @@ export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
                 variant={ButtonVariant.MINIMAL}
             />
         </>
+    );
+}
+
+/**
+ * Wraps one or more admin-only menu items into an Admin submenu.
+ */
+export function AdminSubmenu(props: PropsWithChildren): ReactNode {
+    return (
+        <RequireAccessLevel>
+            <MenuDivider />
+            <MenuItem
+                text="Admin options"
+                icon="cog"
+                intent="primary"
+                children={props.children}
+            />
+        </RequireAccessLevel>
     );
 }

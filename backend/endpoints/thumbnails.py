@@ -2,11 +2,12 @@ from http import HTTPStatus
 import flask
 
 from backend.common import connect
+from backend.common.app_access import require_access_level
+from backend.common.firebase_storage import upload_thumbnails
 from backend.endpoints.cache import cacheable_route
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,
-    get_query_param,
     get_route_element_path,
 )
 from onshape_api.endpoints import thumbnails
@@ -14,12 +15,11 @@ from onshape_api.endpoints import thumbnails
 router = flask.Blueprint("thumbnails", __name__)
 
 
-@cacheable_route(router, "/thumbnail" + element_path_route())
+@cacheable_route(router, "/thumbnail")
 def get_element_thumbnail(**kwargs):
     api = connect.get_api()
-
-    size = get_optional_query_param("size")
-    thumbnail_id = get_query_param("thumbnailId")
+    thumbnail_id = connect.get_query_param("thumbnailId")
+    size = connect.get_query_param("size")
 
     thumbnail = thumbnails.get_thumbnail_from_id(api, thumbnail_id, size)
     return flask.send_file(thumbnail, mimetype="image/gif")
@@ -37,3 +37,14 @@ def get_thumbnail_id(**kwargs):
         }
     except:
         return flask.Response({"success": False}, status=HTTPStatus.REQUEST_TIMEOUT)
+
+
+@router.post("/thumbnail" + element_path_route())
+@require_access_level()
+def reload_element_thumbnail(**kwargs):
+    api = connect.get_api()
+    element_path = get_route_element_path()
+    microversion_id = connect.get_query_param("microversionId")
+
+    upload_thumbnails(api, element_path, microversion_id)
+    return {"success": True}

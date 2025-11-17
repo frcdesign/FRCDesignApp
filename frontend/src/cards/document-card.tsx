@@ -12,13 +12,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentObj, LibraryObj } from "../api/models";
 import { useMutation } from "@tanstack/react-query";
-import { RequireAccessLevel } from "../api/access-level";
 import { apiPost, apiDelete, useCacheOptions } from "../api/api";
 import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
-import { CardTitle, OpenDocumentItems } from "./card-components";
+import { AdminSubmenu, CardTitle, OpenDocumentItems } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
 import {
     libraryQueryKey,
@@ -141,9 +140,8 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
 
     const menu = (
         <Menu>
-            <OpenDocumentItems path={document} />
-            <RequireAccessLevel>
-                <MenuDivider />
+            <OpenDocumentItems path={document.path} />
+            <AdminSubmenu>
                 {orderItems}
                 <MenuItem
                     icon="eye-open"
@@ -161,7 +159,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                 />
                 <DocumentDataItems document={document} />
                 {modifyDocumentItems}
-            </RequireAccessLevel>
+            </AdminSubmenu>
         </Menu>
     );
 

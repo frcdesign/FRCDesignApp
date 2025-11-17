@@ -90,7 +90,7 @@ class Api(ABC):
     def post(
         self, path: str, body: dict | str = "", **kwargs: Unpack[ApiRequestArgs]
     ) -> Any:
-        return self._request(http.HTTPMethod.POST, path, body=body, **kwargs)
+        return self._request(http.HTTPMethod.POST, path=path, body=body, **kwargs)
 
     def delete(self, path: str, **kwargs: Unpack[ApiRequestArgs]) -> Any:
         return self._request(http.HTTPMethod.DELETE, path=path, **kwargs)

@@ -13,7 +13,8 @@ const UiStateSchema = z.object({
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().optional(),
-    openDocumentId: z.string().optional()
+    openDocumentId: z.string().optional(),
+    fasten: z.boolean().default(true)
 });
 
 type UiState = z.infer<typeof UiStateSchema>;

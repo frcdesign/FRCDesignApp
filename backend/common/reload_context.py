@@ -2,11 +2,22 @@ from __future__ import annotations
 
 from pydantic import BaseModel, field_validator
 
-from backend.common.models import Document, Element, FastenInfo
+from backend.common.models import (
+    LATEST_DOCUMENT_SCHEMA,
+    LATEST_ELEMENT_SCHEMA,
+    Document,
+    DocumentSchema,
+    Element,
+    ElementSchema,
+    FastenInfo,
+)
 from onshape_api.paths.doc_path import InstancePath
+
+# Note: We cannot assume the input models are well formed, so every field must have a valid default
 
 
 class SavedElement(BaseModel):
+    elementSchema: ElementSchema | None = None
     isVisible: bool = False
     isOpenComposite: bool = False
     fastenInfo: FastenInfo | None = None
@@ -23,6 +34,7 @@ class SavedElement(BaseModel):
 
 
 class SavedDocument(BaseModel):
+    documentSchema: DocumentSchema | None = None
     sortAlphabetically: bool = True
     instanceId: str | None = None
 
@@ -52,21 +64,34 @@ class ReloadContext:
         return self._preserved_elements.get(element_id, SavedElement())
 
     def should_reload_element(self, element_id: str, microversion_id: str) -> bool:
-        """Returns whether the given element should be reloaded from Onshape."""
+        """Returns True if the given element should be reloaded from Onshape."""
         if self.reload_all:
             return True
 
         preserved_element = self.get_element(element_id)
+        if (
+            preserved_element.elementSchema == None
+            or preserved_element.elementSchema < LATEST_ELEMENT_SCHEMA
+        ):
+            return True
+
         if preserved_element.microversionId == microversion_id:
             return False
 
         return True
 
     def should_reload_document(self, latest_version_path: InstancePath) -> bool:
+        """Returns True if the a given document should be reloaded from Onshape."""
         if self.reload_all:
             return True
 
         preserved_document = self.get_document(latest_version_path.document_id)
+        if (
+            preserved_document.documentSchema == None
+            or preserved_document.documentSchema < LATEST_DOCUMENT_SCHEMA
+        ):
+            return True
+
         if preserved_document.instanceId == latest_version_path.instance_id:
             return False
 

@@ -7,6 +7,7 @@ import { ReactNode, useCallback, useState } from "react";
 import { ElementObj, ElementType } from "../api/models";
 import {
     Button,
+    Checkbox,
     Dialog,
     DialogBody,
     DialogFooter,
@@ -26,6 +27,7 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "./configuration-models";
 import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
+import { useUiState } from "../api/ui-state";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -91,7 +93,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
             className="insert-menu"
         >
             <PreviewImageCard
-                elementPath={element}
+                path={element.path}
                 configuration={configuration}
             />
             <DialogBody>{parameters}</DialogBody>
@@ -119,36 +121,29 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         isFavorite
     });
     const closeDialog = useHandleCloseDialog();
+    const [uiState, setUiState] = useUiState();
 
     const isLoadingConfiguration =
         useIsFetching({
             queryKey: ["configuration", element.configurationId]
         }) > 0;
 
-    const onClick = useCallback(
-        (fasten: boolean) => {
-            insertMutation.mutate(fasten);
-            closeDialog();
-        },
-        [insertMutation, closeDialog]
-    );
+    const handleClick = useCallback(() => {
+        insertMutation.mutate(uiState.fasten);
+        closeDialog();
+    }, [insertMutation, closeDialog, uiState.fasten]);
 
     const supportsFasten =
         element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
 
     return (
-        <>
+        <div className="insert-menu-actions">
             {supportsFasten && (
-                <Button
-                    text={
-                        search.elementType === ElementType.ASSEMBLY
-                            ? "Insert and fasten"
-                            : "Derive and fasten"
-                    }
-                    icon="plus"
-                    intent={Intent.SUCCESS}
-                    loading={isLoadingConfiguration || insertMutation.isPending}
-                    onClick={() => onClick(true)}
+                <Checkbox
+                    label="Fasten"
+                    checked={uiState.fasten}
+                    onChange={() => setUiState({ fasten: !uiState.fasten })}
+                    inline
                 />
             )}
             <Button
@@ -160,9 +155,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 icon="plus"
                 intent={Intent.SUCCESS}
                 loading={isLoadingConfiguration || insertMutation.isPending}
-                onClick={() => onClick(false)}
+                onClick={handleClick}
             />
-        </>
+        </div>
     );
 }
 

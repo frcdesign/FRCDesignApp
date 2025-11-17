@@ -14,9 +14,9 @@ import {
     FavoriteButton,
     FavoriteElementItem
 } from "../favorites/favorite-button";
-import { RequireAccessLevel } from "../api/access-level";
 import { useIsElementHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
+    AdminSubmenu,
     CardTitle,
     ContextMenuButton,
     OpenDocumentItems,
@@ -60,7 +60,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         return null;
     }
 
-    const isFavorite = userData.favorites[element.elementId] !== undefined;
+    const isFavorite = userData.favorites[element.id] !== undefined;
 
     return (
         <ElementContextMenu isFavorite={isFavorite} element={element}>
@@ -85,7 +85,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                                 to: ".",
                                 search: {
                                     activeMenu: MenuType.INSERT_MENU,
-                                    activeElementId: element.elementId
+                                    activeElementId: element.id
                                 }
                             });
                         }}
@@ -123,6 +123,29 @@ interface ElementContextMenuProps {
 export function ElementContextMenu(props: ElementContextMenuProps) {
     const { children, isFavorite, element } = props;
 
+    const menu = (
+        <Menu>
+            <QuickInsertItems element={element} isFavorite={isFavorite} />
+            <MenuDivider />
+            <FavoriteElementItem isFavorite={isFavorite} element={element} />
+            <MenuDivider />
+            <OpenDocumentItems path={element} />
+            <AdminSubmenu>
+                <ElementAdminContextMenu element={element} />
+            </AdminSubmenu>
+        </Menu>
+    );
+
+    return <ContextMenu content={menu}>{children}</ContextMenu>;
+}
+
+interface ElementAdminContextMenuProps {
+    element: ElementObj;
+}
+
+export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
+    const { element } = props;
+
     const library = useLibrary();
 
     const setVisibilityMutation = useSetVisibilityMutation(
@@ -138,7 +161,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
                 body: {
                     isOpenComposite: element.isOpenComposite,
                     documentId: element.documentId,
-                    elementId: element.elementId
+                    elementId: element.id
                 }
             });
         },
@@ -153,7 +176,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
             return apiPost(
                 "/supports-fasten" +
                     toLibraryPath(library) +
-                    toElementApiPath(element),
+                    toElementApiPath(element.path),
                 {
                     body: {
                         supportsFasten
@@ -172,52 +195,65 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
         }
     });
 
-    const menu = (
-        <Menu>
-            <QuickInsertItems element={element} isFavorite={isFavorite} />
-            <MenuDivider />
-            <FavoriteElementItem isFavorite={isFavorite} element={element} />
-            <MenuDivider />
-            <OpenDocumentItems path={element} />
-            <RequireAccessLevel>
-                <MenuDivider />
-                <MenuItem
-                    onClick={() => {
-                        setVisibilityMutation.mutate();
-                    }}
-                    intent={element.isVisible ? "danger" : "primary"}
-                    icon={element.isVisible ? "eye-off" : "eye-open"}
-                    text={element.isVisible ? "Hide element" : "Show element"}
-                />
-                <MenuItem
-                    onClick={() => {
-                        setOpenCompositeMutation.mutate();
-                    }}
-                    intent={element.isOpenComposite ? "danger" : "primary"}
-                    icon={element.isOpenComposite ? "disable" : "confirm"}
-                    text={
-                        element.isOpenComposite
-                            ? "No open composites"
-                            : "Has open composite"
-                    }
-                />
-                <MenuItem
-                    onClick={() => {
-                        setSupportsFastenMutation.mutate(
-                            !element.supportsFasten
-                        );
-                    }}
-                    intent={element.supportsFasten ? "danger" : "primary"}
-                    icon={element.supportsFasten ? "disable" : "add"}
-                    text={
-                        element.supportsFasten
-                            ? "Disable insert and fasten"
-                            : "Enable Insert and fasten"
-                    }
-                />
-            </RequireAccessLevel>
-        </Menu>
-    );
+    const reloadThumbnailMutation = useMutation({
+        mutationKey: ["thumbnail", "reload"],
+        mutationFn: async () => {
+            return apiPost("/thumbnail" + toElementApiPath(element.path), {
+                body: { microversionId: element.microversionId }
+            });
+        },
+        onError: getAppErrorHandler(
+            "Unexpectedly failed to reload thumbnail. Does it exist in Onshape?"
+        ),
+        onSuccess: () => {
+            showSuccessToast("Successfully reloaded thumbnail.");
+        },
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["thumbnail"] });
+        }
+    });
 
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
+    return (
+        <>
+            <MenuItem
+                onClick={() => {
+                    setVisibilityMutation.mutate();
+                }}
+                intent={element.isVisible ? "danger" : "primary"}
+                icon={element.isVisible ? "eye-off" : "eye-open"}
+                text={element.isVisible ? "Hide element" : "Show element"}
+            />
+            <MenuItem
+                onClick={() => {
+                    setOpenCompositeMutation.mutate();
+                }}
+                intent={element.isOpenComposite ? "warning" : undefined}
+                icon={element.isOpenComposite ? "disable" : "confirm"}
+                text={
+                    element.isOpenComposite
+                        ? "No open composites"
+                        : "Has open composite"
+                }
+            />
+            <MenuItem
+                onClick={() => {
+                    setSupportsFastenMutation.mutate(!element.supportsFasten);
+                }}
+                intent={element.supportsFasten ? "danger" : "primary"}
+                icon={element.supportsFasten ? "disable" : "add"}
+                text={
+                    element.supportsFasten
+                        ? "Disable insert and fasten"
+                        : "Enable Insert and fasten"
+                }
+            />
+            <MenuItem
+                onClick={() => {
+                    reloadThumbnailMutation.mutate();
+                }}
+                icon="refresh"
+                text="Reload thumbnail"
+            />
+        </>
+    );
 }

@@ -101,15 +101,16 @@ export interface LibraryObj {
 export type Documents = Record<string, DocumentObj>;
 export type Elements = Record<string, ElementObj>;
 
-export interface DocumentObj extends InstancePath {
+export interface DocumentObj {
     id: string;
     name: string;
     thumbnailUrls: ThumbnailUrls;
     sortAlphabetically: boolean;
     elementOrder: string[];
+    path: InstancePath;
 }
 
-export interface ElementObj extends ElementPath {
+export interface ElementObj {
     id: string;
     documentId: string;
 
@@ -122,6 +123,7 @@ export interface ElementObj extends ElementPath {
     vendors: Vendor[];
     configurationId?: string;
     thumbnailUrls: ThumbnailUrls;
+    path: ElementPath;
 }
 
 export interface ThumbnailUrls {

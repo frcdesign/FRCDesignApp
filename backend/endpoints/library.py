@@ -16,19 +16,29 @@ from onshape_api.paths.instance_type import InstanceType
 router = flask.Blueprint("library", __name__)
 
 
-class ElementOut(BaseModel):
-    id: str
-
+class InstancePathOut(BaseModel):
     documentId: str
-    instanceType: InstanceType
     instanceId: str
+    instanceType: InstanceType
+
+
+class ElementPathOut(BaseModel):
+    documentId: str
+    instanceId: str
+    instanceType: InstanceType
     elementId: str
 
+
+class ElementOut(BaseModel):
+    id: str
+    documentId: str
+
+    path: ElementPathOut
     name: str
     microversionId: str
     isVisible: bool
     isOpenComposite: bool
-    supportsFasten: bool  # Whether the element supports Insert and fasten
+    supportsFasten: bool
     elementType: ElementType
     thumbnailUrls: dict[ThumbnailSize, str]
     configurationId: str | None
@@ -38,14 +48,10 @@ class ElementOut(BaseModel):
 class DocumentOut(BaseModel):
     id: str
 
-    documentId: str
-    instanceType: InstanceType
-    instanceId: str
-
+    path: InstancePathOut
     name: str
     sortAlphabetically: bool
     thumbnailUrls: dict[ThumbnailSize, str]
-
     elementOrder: list[str]
 
 
@@ -80,11 +86,14 @@ def build_documents_out(
 
     for document_ref in documents_ref.list():
         document: Document = document_ref.get()
-        documents_out[document_ref.id] = DocumentOut(
-            id=document_ref.id,
-            documentId=document_ref.id,
-            instanceId=document.instanceId,
-            instanceType=InstanceType.VERSION,
+        document_id = document_ref.id
+        documents_out[document_id] = DocumentOut(
+            id=document_id,
+            path=InstancePathOut(
+                documentId=document_id,
+                instanceId=document.instanceId,
+                instanceType=InstanceType.VERSION,
+            ),
             name=document.name,
             sortAlphabetically=document.sortAlphabetically,
             thumbnailUrls=document.thumbnailUrls,
@@ -95,10 +104,13 @@ def build_documents_out(
             element = element_ref.get()
             elements_out[element_ref.id] = ElementOut(
                 id=element_ref.id,
-                elementId=element_ref.id,
-                documentId=element.documentId,
-                instanceId=element.instanceId,
-                instanceType=InstanceType.VERSION,
+                documentId=document_id,
+                path=ElementPathOut(
+                    documentId=document_id,
+                    instanceId=document.instanceId,
+                    instanceType=InstanceType.VERSION,
+                    elementId=element_ref.id,
+                ),
                 name=element.name,
                 isVisible=element.isVisible,
                 isOpenComposite=element.isOpenComposite,

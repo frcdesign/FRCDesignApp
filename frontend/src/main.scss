@@ -146,3 +146,13 @@ $frc-design-green: #4cae4f;
 //     align-items: center;
 //     gap: 10px;
 // }
+
+.insert-menu-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .bp6-control {
+        margin: 0; // remove extra vertical offset
+    }
+}

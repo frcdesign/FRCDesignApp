@@ -76,7 +76,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 to: ".",
                                 search: {
                                     activeMenu: MenuType.INSERT_MENU,
-                                    activeElementId: element.elementId,
+                                    activeElementId: element.id,
                                     defaultConfiguration:
                                         favorite.defaultConfiguration
                                 }

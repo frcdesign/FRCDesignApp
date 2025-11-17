@@ -10,18 +10,18 @@ from backend.endpoints import (
     thumbnails,
     user_data,
 )
-from onshape_api.exceptions import ApiError
+from onshape_api.exceptions import OnshapeException
 
 
 router = flask.Blueprint("api", __name__, url_prefix="/api", static_folder="dist")
 
 
-@router.errorhandler(ApiError)
-def api_exception(e: ApiError):
+@router.errorhandler(OnshapeException)
+def onshape_exception(e: OnshapeException):
     """A handler for uncaught errors thrown by the Onshape API."""
-    result = e.to_dict()
-    result["type"] = backend_exceptions.ExceptionType.API
-    return result, e.status_code
+    # result = e.to_dict()
+    # result["type"] = backend_exceptions.ExceptionType.API
+    return e.to_dict(), e.status_code
 
 
 @router.errorhandler(backend_exceptions.BaseAppException)

@@ -134,7 +134,7 @@ function FavoriteMenuDialog(
             onClose={closeDialog}
         >
             <PreviewImageCard
-                elementPath={element}
+                path={element.path}
                 configuration={configuration}
             />
             <DialogBody>

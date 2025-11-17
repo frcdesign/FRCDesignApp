@@ -35,10 +35,7 @@ export function useInsertMutation(
         mutationFn: async (fasten: boolean) => {
             let endpoint;
             const body: Record<string, any> = {
-                documentId: element.documentId,
-                instanceType: element.instanceType,
-                instanceId: element.instanceId,
-                elementId: element.id,
+                ...element.path,
                 configuration,
                 userId: search.userId,
                 isFavorite: insertArgs.isFavorite,
@@ -56,7 +53,6 @@ export function useInsertMutation(
                 body.useMateConnector = element.supportsFasten;
             }
             // Cancel any outstanding thumbnail queries
-            queryClient.cancelQueries({ queryKey: ["thumbnail-id"] });
             queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
             showLoadingToast(`Inserting ${element.name}...`, toastId);
@@ -75,7 +71,7 @@ export function useInsertMutation(
             if (fasten) {
                 sendOpenFeatureMessage(search, result.featureId);
                 showSuccessToast(
-                    `Successfully inserted ${element.name} and created a Fasten feature.`,
+                    `Successfully inserted ${element.name} and created a Fasten mate.`,
                     toastId
                 );
             } else {

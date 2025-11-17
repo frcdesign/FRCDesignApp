@@ -43,7 +43,7 @@ S = TypeVar("S", bound=BaseModel)
 class BaseDocument(Protocol, Generic[T]):
     id: str
 
-    def get(self) -> T: ...
+    def get(self, unsafe: bool = False) -> T: ...
     def maybe_get(self) -> T | None: ...
 
     def set(self, data: T) -> None: ...
@@ -68,8 +68,8 @@ class BaseDocumentRef(BaseDocument[T], Generic[T]):
         self.ref = ref
         self.id = ref.id
 
-    def get(self) -> T:
-        return self.ref.get()
+    def get(self, unsafe: bool = False) -> T:
+        return self.ref.get(unsafe=unsafe)
 
     def maybe_get(self) -> T | None:
         return self.ref.maybe_get()
@@ -138,10 +138,10 @@ class FirestoreDocument(BaseDocument[T]):
         except ValidationError:
             return None
 
-    def get(self) -> T:
+    def get(self, unsafe: bool = False) -> T:
         """Returns the current value of the document, constructing it if it doesn't exist.
 
-        Note this will still fail if the document exists but is invalid.
+        Note this will still fail if the document exists but is invalid or does not have default values for all fields.
         """
         snapshot = self._get_snapshot()
         if not snapshot.exists:
@@ -152,6 +152,8 @@ class FirestoreDocument(BaseDocument[T]):
                     f"Failed to construct {self.model.__name__} with default values: {e}"
                 )
         try:
+            if unsafe:
+                return self.model.model_construct(values=snapshot.to_dict() or {})
             return self.model.model_validate(snapshot.to_dict() or {})
         except ValidationError as e:
             raise ServerException(

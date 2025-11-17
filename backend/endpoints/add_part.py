@@ -5,14 +5,13 @@ import flask
 
 from backend.common import connect
 from backend.common.app_access import require_access_level
-from backend.common.app_logging import APP_LOGGER, log_part_inserted
+from backend.common.app_logging import log_part_inserted
 from backend.common.backend_exceptions import HandledException
 from backend.common.database import ConfigurationParameters
 from backend.common.models import FastenInfo, MateLocation, ParameterType
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import part_studios, assemblies
 from onshape_api.endpoints.documents import ElementType, PartType
-from onshape_api.endpoints.versions import get_version
 from onshape_api.model.assembly_features import (
     FastenMateBuilder,
     feature_occurrence_query,
@@ -43,11 +42,9 @@ def add_to_assembly(**kwargs):
     is_favorite = connect.get_body_arg("isFavorite")
     is_quick_insert = connect.get_body_arg("isQuickInsert")
 
-    element = (
-        library_ref.documents.document(path_to_add.document_id)
-        .elements.element(path_to_add.element_id)
-        .get()
-    )
+    document_ref = library_ref.documents.document(path_to_add.document_id)
+
+    element = document_ref.elements.element(path_to_add.element_id).get()
 
     part_types = [PartType.PARTS, PartType.COMPOSITE_PARTS]
     if element.isOpenComposite:
@@ -82,21 +79,17 @@ def add_to_assembly(**kwargs):
                 )
             )
         else:
-            if fasten_info.mateLocation == MateLocation.CHILD_PART:
+            if fasten_info.mateLocation == MateLocation.PART:
                 fasten_mate.add_query(
                     part_studio_mate_connector_query(
                         feature_id=fasten_info.mateConnectorId,
                         path=instance_path + fasten_info.path,
                     )
                 )
-            elif fasten_info.mateLocation == MateLocation.CHILD_FEATURE:
-                fasten_mate.add_query(
-                    feature_occurrence_query(
-                        feature_id=fasten_info.mateConnectorId,
-                        path=instance_path + fasten_info.path,
-                    )
-                )
-            elif fasten_info.mateLocation == MateLocation.CHILD_ASSEMBLY:
+            elif (
+                fasten_info.mateLocation == MateLocation.FEATURE
+                or fasten_info.mateLocation == MateLocation.SUBASSEMBLY
+            ):
                 fasten_mate.add_query(
                     feature_occurrence_query(
                         feature_id=fasten_info.mateConnectorId,
@@ -112,13 +105,12 @@ def add_to_assembly(**kwargs):
     # Get the configuration parameters for logging purposes (not needed for the actual insert)
     parameters = None
     if configuration != None:
-        parameters = (
-            library_ref.documents.document(path_to_add.document_id)
-            .configurations.configuration(path_to_add.element_id)
-            .get()
-        )
+        parameters = document_ref.configurations.configuration(
+            path_to_add.element_id
+        ).get()
 
-    version = get_version(api, path_to_add)
+    document = document_ref.get()
+
     log_part_inserted(
         path_to_add.element_id,
         element.name,
@@ -127,7 +119,7 @@ def add_to_assembly(**kwargs):
         is_favorite=is_favorite,
         is_quick_insert=is_quick_insert,
         library=library,
-        version=version,
+        document=document,
         configuration=configuration,
         configuration_parameters=parameters,
         supports_fasten=element.fastenInfo != None,
@@ -179,7 +171,6 @@ def add_to_part_studio(**kwargs):
         api, part_studio_path, derived_feature.get_feature()
     )
 
-    version = get_version(api, path_to_add)
     log_part_inserted(
         path_to_add.element_id,
         part_name,
@@ -188,7 +179,7 @@ def add_to_part_studio(**kwargs):
         is_favorite=is_favorite,
         is_quick_insert=is_quick_insert,
         library=library,
-        version=version,
+        document=document_ref.get(),
         configuration=configuration,
         configuration_parameters=parameters,
     )
@@ -355,8 +346,9 @@ def set_element_supports_fasten(**kwargs):
 
     if supports_fasten:
         element = element_ref.get()
-        parse = ParseFastenInfo(element_path, element.elementType)
-        element.fastenInfo = parse.get_fasten_info(api)
+        element.fastenInfo = ParseFastenInfo().get_fasten_info(
+            api, element_path, element.elementType
+        )
         element_ref.set(element)
     else:
         element_ref.update({"fastenInfo": None})
@@ -365,18 +357,16 @@ def set_element_supports_fasten(**kwargs):
 
 
 class ParseFastenInfo:
-    def __init__(self, element_path: ElementPath, element_type: ElementType):
-        self.element_path = element_path
-        self.element_type = element_type
-
-    def get_fasten_info(self, api: Api) -> FastenInfo:
-        if self.element_type == ElementType.PART_STUDIO:
-            feature_list = part_studios.get_features(api, self.element_path)
+    def get_fasten_info(
+        self, api: Api, element_path: ElementPath, element_type: ElementType
+    ) -> FastenInfo:
+        if element_type == ElementType.PART_STUDIO:
+            feature_list = part_studios.get_features(api, element_path)
             return self.get_fasten_info_from_part_studio(feature_list)
         else:
             assembly_info = assemblies.get_assembly(
                 api,
-                self.element_path,
+                element_path,
                 include_mate_connectors=True,
                 include_mate_features=True,
             )
@@ -387,7 +377,7 @@ class ParseFastenInfo:
             if feature["featureType"] == "mateConnector":
                 return FastenInfo(
                     mateConnectorId=feature["featureId"],
-                    mateLocation=MateLocation.CHILD_FEATURE,
+                    mateLocation=MateLocation.FEATURE,
                 )
         raise HandledException("Failed to find a valid Mate connector feature.")
 
@@ -395,7 +385,7 @@ class ParseFastenInfo:
         root_assembly = assembly_info["rootAssembly"]
 
         fasten_info = self.search_features(
-            root_assembly["features"], mate_location=MateLocation.CHILD_ASSEMBLY
+            root_assembly["features"], mate_location=MateLocation.FEATURE
         )
         if fasten_info != None:
             return fasten_info
@@ -403,10 +393,12 @@ class ParseFastenInfo:
         parts = assembly_info["parts"]
         sub_assemblies = assembly_info["subAssemblies"]
 
-        # Onshape doesn't include the occurrence path in parts/sub assemblies, so we have to keep track ourselves...
         part_counter = 0
         sub_assembly_counter = 0
 
+        # Loop over each instance and grab the corresponding part or subAssembly
+        # Onshape doesn't include the occurrence path in parts/sub assemblies, so we rely on the order being consistent
+        # This is fragile, but Onshape doesn't provide a better way to do this currently
         for instance in root_assembly["instances"]:
             path = [instance["id"]]
             if instance["type"] == "Part":
@@ -418,7 +410,7 @@ class ParseFastenInfo:
                     return FastenInfo(
                         mateConnectorId=mate_connectors[0]["featureId"],
                         path=path,
-                        mateLocation=MateLocation.CHILD_PART,
+                        mateLocation=MateLocation.PART,
                     )
             elif instance["type"] == "Assembly":
                 sub_assembly = sub_assemblies[sub_assembly_counter]
@@ -426,7 +418,7 @@ class ParseFastenInfo:
                 fasten_info = self.search_features(
                     sub_assembly["features"],
                     path=path,
-                    mate_location=MateLocation.CHILD_ASSEMBLY,
+                    mate_location=MateLocation.SUBASSEMBLY,
                 )
                 if fasten_info != None:
                     return fasten_info
@@ -444,7 +436,7 @@ class ParseFastenInfo:
         for feature in features:
             if feature["featureType"] == "mateConnector":
                 path = path.copy()  # Don't mutate default list
-                path += feature["occurrence"]
+                path += feature["featureData"]["occurrence"]
                 return FastenInfo(
                     mateConnectorId=feature["id"],
                     mateLocation=mate_location,

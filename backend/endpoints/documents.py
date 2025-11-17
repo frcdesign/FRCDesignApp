@@ -20,9 +20,12 @@ from backend.common.app_access import require_access_level
 from backend.common.firebase_storage import upload_thumbnails
 from backend.common.models import (
     Element,
+    VersionInfo,
+    parse_version,
 )
 from backend.common.models import Document
 from backend.common.vendors import parse_vendors
+from backend.endpoints.add_part import ParseFastenInfo
 from backend.endpoints.configurations import parse_onshape_configuration
 from backend.common.reload_context import (
     ReloadContext,
@@ -31,7 +34,7 @@ from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
 from onshape_api.endpoints.documents import ElementType, get_document
-from onshape_api.endpoints.versions import get_latest_version_path
+from onshape_api.endpoints.versions import get_latest_version
 from onshape_api.paths.doc_path import (
     DocumentPath,
     ElementPath,
@@ -72,6 +75,11 @@ def save_element(
     thumbnailUrls = upload_thumbnails(api, path, microversion_id)
 
     preserved_element = reload_context.get_element(element_id)
+
+    fasten_info = None
+    if preserved_element.fastenInfo != None:
+        fasten_info = ParseFastenInfo().get_fasten_info(api, path, element_type)
+
     document_ref.elements.element(element_id).set(
         Element(
             name=element_name,
@@ -83,7 +91,7 @@ def save_element(
             configurationId=configuration_id,
             isVisible=preserved_element.isVisible,
             isOpenComposite=preserved_element.isOpenComposite,
-            fastenInfo=preserved_element.fastenInfo,
+            fastenInfo=fasten_info,
             thumbnailUrls=thumbnailUrls,
         ),
     )
@@ -149,34 +157,33 @@ async def save_document(
     api: Api,
     document_ref: DocumentRef,
     version_path: InstancePath,
+    version_info: VersionInfo,
     reload_context: ReloadContext,
 ) -> int:
     """Loads all of the elements of a given document into the database.
 
     Note this function does NOT update documentOrder; it is up to the caller to add it themselves.
+    This shouldn't generally matter since documentOrder is generally the source of truth in the library.
     """
     document_id = version_path.document_id
 
-    # Get document synchronously up front to do validation
-    onshape_document = await asyncio.to_thread(
-        documents.get_document, api, version_path
-    )
+    onshape_document = documents.get_document(api, version_path)
+    contents = documents.get_contents(api, version_path)
+
     thumbnail_element_id = onshape_document["documentThumbnailElementId"]
     if thumbnail_element_id == "":
-        raise HandledException(
-            onshape_document["name"] + " does not have a thumbnail tab set"
-        )
-
-    contents = await asyncio.to_thread(documents.get_contents, api, version_path)
+        # Just use the first element id if it isn't set since an error could leave the db in a bad state
+        thumbnail_element_id = contents["elements"][0]["id"]
 
     thumbnail_path = ElementPath.from_path(version_path, thumbnail_element_id)
+
     thumbnail_microversion_id = get_element_microversion_id(
         contents, thumbnail_element_id
     )
-
-    if thumbnail_microversion_id is None:
+    if thumbnail_microversion_id == None:
+        # This shouldn't ever happen because deleting the thumbnail tab = no more thumbnail tab
         raise HandledException(
-            f"Could not find the thumbnail tab for {onshape_document["name"]} in the latest version of a document"
+            f"Unexpectedly failed to find the saved thumbnail tab in {onshape_document["name"]}. Was it deleted?"
         )
     thumbnail_urls = upload_thumbnails(api, thumbnail_path, thumbnail_microversion_id)
 
@@ -215,8 +222,8 @@ async def save_document(
         document_ref.elements.element(element_id).delete()
         document_ref.configurations.configuration(element_id).delete()
 
-    preserved_document = reload_context.get_document(document_id)
     # Document order is externally managed, so just set the document directly
+    preserved_document = reload_context.get_document(document_id)
     document_ref.set(
         Document(
             name=onshape_document["name"],
@@ -224,6 +231,7 @@ async def save_document(
             instanceId=version_path.instance_id,
             elementOrder=ordered_ids,
             sortAlphabetically=preserved_document.sortAlphabetically,
+            versionInfo=version_info,
         ),
     )
     return len(elements_to_reload)
@@ -232,11 +240,11 @@ async def save_document(
 def build_reload_context(library_ref: LibraryRef, reload_all: bool) -> ReloadContext:
     reload_context = ReloadContext(reload_all=reload_all)
     for document_ref in library_ref.documents.list():
-        reload_context.save_document(document_ref.id, document_ref.get())
+        reload_context.save_document(document_ref.id, document_ref.get(unsafe=True))
 
         for element in document_ref.elements.list():
             element_id = element.id
-            reload_context.save_element(element_id, element.get())
+            reload_context.save_element(element_id, element.get(unsafe=True))
 
     return reload_context
 
@@ -247,22 +255,25 @@ async def reload_document(
     document_path: DocumentPath,
     reload_context: ReloadContext,
 ) -> int:
-    latest_version_path = await asyncio.to_thread(
-        get_latest_version_path, api, document_path
+    latest_version_dict = await asyncio.to_thread(
+        get_latest_version, api, document_path
     )
+    version_path, version_info = parse_version(latest_version_dict)
 
     document_ref = documents_ref.document(document_path.document_id)
     if not document_ref.maybe_get():
         # Document doesn't exist, create it immediately
         return await save_document(
-            api, document_ref, latest_version_path, reload_context
+            api, document_ref, version_path, version_info, reload_context
         )
 
-    if not reload_context.should_reload_document(latest_version_path):
+    if not reload_context.should_reload_document(version_path):
         return 0
 
     # Refresh document
-    return await save_document(api, document_ref, latest_version_path, reload_context)
+    return await save_document(
+        api, document_ref, version_path, version_info, reload_context
+    )
 
 
 @router.post("/reload-documents" + connect.library_route())
@@ -378,7 +389,7 @@ async def add_document_route(**kwargs):
         raise HandledException("Failed to find the specified document.")
 
     try:
-        latest_version = get_latest_version_path(api, new_path)
+        latest_version_dict = get_latest_version(api, new_path)
     except:
         raise HandledException("Failed to find a document version to use.")
 
@@ -396,7 +407,8 @@ async def add_document_route(**kwargs):
         document_order.append(new_document_id)
 
     document_ref = library_ref.documents.document(new_document_id)
-    await save_document(api, document_ref, latest_version, ReloadContext())
+    version_path, version_info = parse_version(latest_version_dict)
+    await save_document(api, document_ref, version_path, version_info, ReloadContext())
 
     # Update order after we've successfully added the document
     library_ref.documents.set_order(document_order)

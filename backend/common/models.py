@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from enum import StrEnum
+from datetime import datetime
+from enum import IntEnum, StrEnum
 from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
+from onshape_api.api.api_base import Api
+from onshape_api.endpoints import documents
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
+from onshape_api.paths.doc_path import InstancePath
+from onshape_api.paths.instance_type import InstanceType
 
 
 class Library(StrEnum):
@@ -225,7 +230,33 @@ def get_vendor_name(vendor: Vendor) -> str:
             return "West Coast Products"
 
 
+class DocumentSchema(IntEnum):
+    """The schema version of a document.
+
+    Increase it to bust the Document version cache.
+    """
+
+    V1 = 1
+
+
+LATEST_DOCUMENT_SCHEMA = DocumentSchema.V1
+
+
+class ElementSchema(IntEnum):
+    """The schema version of an element.
+
+    Increase it to bust the Element microversion cache.
+    Note the DocumentSchema also likely needs to be updated since Documents are reloaded alongside Elements.
+    """
+
+    V1 = 1
+
+
+LATEST_ELEMENT_SCHEMA = ElementSchema.V1
+
+
 class Element(BaseModel):
+    elementSchema: ElementSchema | None = LATEST_ELEMENT_SCHEMA
     name: str
     vendors: list[Vendor] = Field(default_factory=list)
     elementType: ElementType
@@ -243,25 +274,46 @@ class Element(BaseModel):
 
 
 class MateLocation(StrEnum):
-    CHILD_FEATURE = "Child Feature"
-    CHILD_PART = "Child Part"
-    CHILD_ASSEMBLY = "Child Assembly"
+    FEATURE = "Feature"
+    PART = "Part"
+    SUBASSEMBLY = "Subassembly"
 
 
 class FastenInfo(BaseModel):
     # The id of the mate connector feature.
     mateConnectorId: str
-    mateLocation: MateLocation = MateLocation.CHILD_FEATURE
+    mateLocation: MateLocation = MateLocation.FEATURE
     # If the mate location is a child part or assembly instance, this is the path to that instance.
     path: list[str] = Field(default_factory=list)
 
 
 class Document(BaseModel):
+    documentSchema: DocumentSchema | None = LATEST_DOCUMENT_SCHEMA
     name: str
+    # The version of the document.
     instanceId: str
     elementOrder: list[str] = Field(default_factory=list)
     sortAlphabetically: bool
     thumbnailUrls: dict[ThumbnailSize, str] = Field(default_factory=dict)
+    versionInfo: VersionInfo
+
+
+class VersionInfo(BaseModel):
+    name: str
+    createdAt: datetime
+
+
+def parse_version(version_dict: dict) -> tuple[InstancePath, VersionInfo]:
+    version_path = InstancePath(
+        document_id=version_dict["documentId"],
+        instance_id=version_dict["id"],
+        instance_type=InstanceType.VERSION,
+    )
+    version_info = VersionInfo(
+        name=version_dict["name"],
+        createdAt=version_dict["createdAt"],
+    )
+    return version_path, version_info
 
 
 class Theme(StrEnum):
