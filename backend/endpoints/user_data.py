@@ -58,10 +58,15 @@ def update_settings(**kwargs):
     user_path = get_route_user_path()
     user_data_ref = db.get_user_data(user_path.user_id)
 
-    theme = connect.get_body_arg("theme")
-    library = connect.get_body_arg("library")
+    theme = connect.get_optional_body_arg("theme")
+    library = connect.get_optional_body_arg("library")
 
-    settings = Settings(theme=Theme(theme), library=Library(library))
+    settings = user_data_ref.get().settings
+
+    if theme != None:
+        settings.theme = Theme(theme)
+    if library != None:
+        settings.library = Library(library)
 
     update_dict = {"settings": settings.model_dump()}
     user_data_ref.update(update_dict)

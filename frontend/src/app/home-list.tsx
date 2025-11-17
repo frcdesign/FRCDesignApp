@@ -24,6 +24,8 @@ import { useInteractiveSection } from "../common/utils";
 import { AddDocumentButton } from "./add-document-menu";
 import { FavoritesList } from "../favorites/favorites-list";
 import { useLibraryQuery } from "../queries";
+import { getLibraryText } from "../api/models";
+import { useLibrary } from "../api/library";
 
 /**
  * The list of all folders and/or top-level documents.
@@ -31,6 +33,7 @@ import { useLibraryQuery } from "../queries";
 export function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
     const [isSearchOpen, setIsSearchOpen] = useState(true);
+    const library = useLibrary();
 
     const favoritesList = (
         <ListContainer
@@ -65,7 +68,7 @@ export function HomeList(): ReactNode {
         documentList = (
             <ListContainer
                 icon={<Icon icon="manual" className="frc-design-green" />}
-                title="Library"
+                title={getLibraryText(library)}
                 isOpen={uiState.isLibraryOpen}
                 onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
             >

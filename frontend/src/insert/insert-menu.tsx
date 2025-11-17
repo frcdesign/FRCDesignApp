@@ -133,12 +133,12 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         closeDialog();
     }, [insertMutation, closeDialog, uiState.fasten]);
 
-    const supportsFasten =
+    const canFasten =
         element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
 
     return (
         <div className="insert-menu-actions">
-            {supportsFasten && (
+            {canFasten && (
                 <Checkbox
                     label="Fasten"
                     checked={uiState.fasten}

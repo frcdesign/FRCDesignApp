@@ -18,7 +18,9 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
+    getLibraryText as getLibraryName,
     hasMemberAccess,
+    Library,
     LibraryObj,
     Settings,
     Theme,
@@ -100,18 +102,25 @@ function UserSettings(): ReactNode {
 
     const settingsMutation = useMutation({
         mutationKey: updateSettingsKey(search),
-        mutationFn: async (newSettings: Settings) =>
+        mutationFn: async (newSettings: Partial<Settings>) =>
             apiPost("/settings" + toUserApiPath(search), {
-                body: newSettings
+                body: {
+                    ...newSettings
+                }
             }),
         onMutate: async (newSettings) => {
-            await queryClient.cancelQueries({
-                queryKey: userDataQueryKey(search)
-            });
+            await Promise.all([
+                queryClient.cancelQueries({
+                    queryKey: userDataQueryKey(search)
+                }),
+                queryClient.cancelQueries({
+                    queryKey: libraryQueryMatchKey()
+                })
+            ]);
             queryClient.setQueryData<UserData>(
                 userDataQueryKey(search),
                 getQueryUpdater((data) => {
-                    data.settings = newSettings;
+                    Object.assign(data.settings, newSettings);
                     return data;
                 })
             );
@@ -121,28 +130,103 @@ function UserSettings(): ReactNode {
             showErrorToast("Unexpectedly failed to update settings.");
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: userDataQueryKey(search)
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: userDataQueryKey(search)
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: libraryQueryMatchKey()
+                })
+            ]);
             router.invalidate();
         }
     });
 
     return (
         <>
-            <FormGroup label="Submit feedback" className="full-width" inline>
-                <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
-            </FormGroup>
+            <LibrarySelect
+                library={settings.library}
+                onLibrarySelect={(newLibrary) =>
+                    settingsMutation.mutate({
+                        library: newLibrary
+                    })
+                }
+            />
             <ThemeSelect
                 theme={settings.theme}
                 onThemeSelect={(newTheme) =>
                     settingsMutation.mutate({
-                        library: settings.library,
                         theme: newTheme
                     })
                 }
             />
+            <FormGroup label="Submit feedback" className="full-width" inline>
+                <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
+            </FormGroup>
         </>
+    );
+}
+
+interface LibrarySelectProps {
+    library: Library;
+    onLibrarySelect: Dispatch<Library>;
+}
+
+function LibrarySelect(props: LibrarySelectProps): ReactNode {
+    const { library, onLibrarySelect } = props;
+
+    const navigate = useNavigate();
+
+    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
+    const libraries = useMemo(() => {
+        return [Library.FRC_DESIGN_LIB, Library.MKCAD];
+    }, []);
+    const [activeLibrary, setActiveLibrary] = useState<Library | null>(library);
+    const renderLibrary: ItemRenderer<Library> = (
+        currentLibrary,
+        { handleClick, handleFocus, modifiers, ref }
+    ) => {
+        const selected = library === currentLibrary;
+        return (
+            <MenuItem
+                key={currentLibrary}
+                ref={ref}
+                onClick={handleClick}
+                onFocus={handleFocus}
+                active={modifiers.active}
+                text={getLibraryName(currentLibrary)}
+                roleStructure="listoption"
+                selected={selected}
+                intent={selected ? Intent.PRIMARY : Intent.NONE}
+            />
+        );
+    };
+
+    const select = (
+        <Select<Library>
+            items={libraries}
+            activeItem={activeLibrary}
+            onActiveItemChange={setActiveLibrary}
+            filterable={false}
+            popoverProps={{ minimal: true }}
+            itemRenderer={renderLibrary}
+            onItemSelect={(newLibrary: Library) => {
+                navigate({ to: "/app/documents" });
+                onLibrarySelect(newLibrary);
+            }}
+        >
+            <Button
+                alignText="start"
+                endIcon="caret-down"
+                text={getLibraryName(library)}
+            />
+        </Select>
+    );
+
+    return (
+        <FormGroup label="Library" className="full-width" inline>
+            {select}
+        </FormGroup>
     );
 }
 
@@ -151,7 +235,7 @@ interface ThemeSelectProps {
     onThemeSelect: Dispatch<Theme>;
 }
 
-function ThemeSelect(props: ThemeSelectProps) {
+function ThemeSelect(props: ThemeSelectProps): ReactNode {
     const { theme, onThemeSelect } = props;
 
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders

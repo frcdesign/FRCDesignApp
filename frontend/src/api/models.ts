@@ -10,6 +10,17 @@ export enum Library {
     MKCAD = "mkcad"
 }
 
+export function getLibraryText(library: Library): string {
+    switch (library) {
+        case Library.FRC_DESIGN_LIB:
+            return "FRCDesignLib";
+        case Library.FTC_DESIGN_LIB:
+            return "FTCDesignLib";
+        case Library.MKCAD:
+            return "MKCAD (Deprecated)";
+    }
+}
+
 export interface LibraryUserData {
     // recentElements:
     favorites: Favorites;
