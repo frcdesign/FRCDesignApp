@@ -24,7 +24,7 @@ import { useInteractiveSection } from "../common/utils";
 import { AddDocumentButton } from "./add-document-menu";
 import { FavoritesList } from "../favorites/favorites-list";
 import { useLibraryQuery } from "../queries";
-import { getLibraryText } from "../api/models";
+import { getLibraryName } from "../api/library";
 import { useLibrary } from "../api/library";
 
 /**
@@ -68,7 +68,7 @@ export function HomeList(): ReactNode {
         documentList = (
             <ListContainer
                 icon={<Icon icon="manual" className="frc-design-green" />}
-                title={getLibraryText(library)}
+                title={getLibraryName(library)}
                 isOpen={uiState.isLibraryOpen}
                 onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
             >

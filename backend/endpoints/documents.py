@@ -240,11 +240,11 @@ async def save_document(
 def build_reload_context(library_ref: LibraryRef, reload_all: bool) -> ReloadContext:
     reload_context = ReloadContext(reload_all=reload_all)
     for document_ref in library_ref.documents.list():
-        reload_context.save_document(document_ref.id, document_ref.get(unsafe=True))
+        reload_context.save_document(document_ref.id, document_ref.get_raw())
 
         for element in document_ref.elements.list():
             element_id = element.id
-            reload_context.save_element(element_id, element.get(unsafe=True))
+            reload_context.save_element(element_id, element.get_raw())
 
     return reload_context
 

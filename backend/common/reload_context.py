@@ -55,10 +55,8 @@ class ReloadContext:
         self._preserved_documents: dict[str, SavedDocument] = {}
         self.reload_all = reload_all
 
-    def save_element(self, element_id: str, element: Element) -> None:
-        self._preserved_elements[element_id] = SavedElement.model_validate(
-            element.model_dump()
-        )
+    def save_element(self, element_id: str, old_element: dict) -> None:
+        self._preserved_elements[element_id] = SavedElement.model_validate(old_element)
 
     def get_element(self, element_id: str) -> SavedElement:
         return self._preserved_elements.get(element_id, SavedElement())
@@ -97,9 +95,9 @@ class ReloadContext:
 
         return True
 
-    def save_document(self, document_id: str, document: Document) -> None:
+    def save_document(self, document_id: str, old_document: dict) -> None:
         self._preserved_documents[document_id] = SavedDocument.model_validate(
-            document.model_dump()
+            old_document
         )
 
     def get_document(self, document_id: str) -> SavedDocument:

@@ -18,7 +18,6 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
-    getLibraryText as getLibraryName,
     hasMemberAccess,
     Library,
     LibraryObj,
@@ -26,6 +25,7 @@ import {
     Theme,
     UserData
 } from "../api/models";
+import { getLibraryName as getLibraryName } from "../api/library";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";

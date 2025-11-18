@@ -55,7 +55,7 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
         "id",
         "documentId",
         "isVisible",
-        "vendor",
+        "vendors",
         "name",
         "documentName"
     ],
@@ -130,14 +130,14 @@ export function doSearch(
 
     let filtered = 0;
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
-        filter: (element) => {
-            if (!element.isVisible) {
+        filter: (searchResult) => {
+            if (!searchResult.isVisible) {
                 return false;
             }
 
             if (
                 filters?.documentId &&
-                element.documentId !== filters.documentId
+                searchResult.documentId !== filters.documentId
             ) {
                 return false;
             }
@@ -145,7 +145,7 @@ export function doSearch(
             if (
                 filters?.vendors &&
                 !filters.vendors.some((vendor) =>
-                    element.vendors.includes(vendor)
+                    searchResult.vendors.includes(vendor)
                 )
             ) {
                 filtered += 1;

@@ -23,7 +23,9 @@ def create_app():
 
     def serve_index():
         if env.IS_PRODUCTION:
-            return flask.send_from_directory("dist", "index.html")
+            response = flask.send_from_directory("dist", "index.html", etag=True)
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            return response
         else:
             APP_LOGGER.info("App running in development mode!")
             return flask.render_template("index.html")
@@ -60,7 +62,9 @@ def create_app():
 
         @app.get("/assets/<filename>")
         def serve_assets(filename: str):
-            return flask.send_from_directory("dist/assets", filename)
+            response = flask.send_from_directory("dist/assets", filename)
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return response
 
     else:
         # Development hmr handler which just reflects index.html since Vite handles it

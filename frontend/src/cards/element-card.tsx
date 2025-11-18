@@ -6,9 +6,9 @@ import {
     MenuDivider,
     MenuItem
 } from "@blueprintjs/core";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { ElementObj } from "../api/models";
+import { ElementObj, ElementType, LibraryObj } from "../api/models";
 import { SearchHit } from "../search/search";
 import {
     FavoriteButton,
@@ -25,7 +25,11 @@ import {
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../overlays/menu-params";
-import { libraryQueryMatchKey, useLibraryUserDataQuery } from "../queries";
+import {
+    libraryQueryKey,
+    libraryQueryMatchKey,
+    useLibraryUserDataQuery
+} from "../queries";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
@@ -33,6 +37,8 @@ import { toElementApiPath } from "../api/path";
 import { showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getAppErrorHandler } from "../api/errors";
+import { getQueryUpdater } from "../common/utils";
+import { router } from "../router";
 
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
@@ -147,6 +153,7 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
     const { element } = props;
 
     const library = useLibrary();
+    const search = useSearch({ from: "/app" });
 
     const setVisibilityMutation = useSetVisibilityMutation(
         element.documentId,
@@ -159,14 +166,31 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
         mutationFn: () => {
             return apiPost("/is-open-composite" + toLibraryPath(library), {
                 body: {
-                    isOpenComposite: element.isOpenComposite,
+                    isOpenComposite: !element.isOpenComposite,
                     documentId: element.documentId,
                     elementId: element.id
                 }
             });
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+        onMutate: () => {
+            queryClient.cancelQueries({ queryKey: libraryQueryMatchKey() });
+            queryClient.setQueryData(
+                libraryQueryKey(library, search),
+                getQueryUpdater((data: LibraryObj) => {
+                    const currentElement = data.elements[element.id];
+                    if (currentElement) {
+                        currentElement.isOpenComposite =
+                            !element.isOpenComposite;
+                    }
+                    return data;
+                })
+            );
+        },
+        onSettled: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
+            router.invalidate();
         }
     });
 
@@ -223,18 +247,20 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
                 icon={element.isVisible ? "eye-off" : "eye-open"}
                 text={element.isVisible ? "Hide element" : "Show element"}
             />
-            <MenuItem
-                onClick={() => {
-                    setOpenCompositeMutation.mutate();
-                }}
-                intent={element.isOpenComposite ? "warning" : undefined}
-                icon={element.isOpenComposite ? "disable" : "confirm"}
-                text={
-                    element.isOpenComposite
-                        ? "No open composites"
-                        : "Has open composite"
-                }
-            />
+            {element.elementType === ElementType.PART_STUDIO && (
+                <MenuItem
+                    onClick={() => {
+                        setOpenCompositeMutation.mutate();
+                    }}
+                    intent={element.isOpenComposite ? "warning" : undefined}
+                    icon={element.isOpenComposite ? "disable" : "confirm"}
+                    text={
+                        element.isOpenComposite
+                            ? "No open composites"
+                            : "Has open composite"
+                    }
+                />
+            )}
             <MenuItem
                 onClick={() => {
                     setSupportsFastenMutation.mutate(!element.supportsFasten);
