@@ -222,9 +222,14 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
     const reloadThumbnailMutation = useMutation({
         mutationKey: ["thumbnail", "reload"],
         mutationFn: async () => {
-            return apiPost("/thumbnail" + toElementApiPath(element.path), {
-                body: { microversionId: element.microversionId }
-            });
+            return apiPost(
+                "/reload-thumbnail" +
+                    toLibraryPath(library) +
+                    toElementApiPath(element.path),
+                {
+                    body: { microversionId: element.microversionId }
+                }
+            );
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to reload thumbnail. Does it exist in Onshape?"
