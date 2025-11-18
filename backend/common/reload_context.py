@@ -5,9 +5,7 @@ from pydantic import BaseModel, field_validator
 from backend.common.models import (
     LATEST_DOCUMENT_SCHEMA,
     LATEST_ELEMENT_SCHEMA,
-    Document,
     DocumentSchema,
-    Element,
     ElementSchema,
     FastenInfo,
 )

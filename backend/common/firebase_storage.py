@@ -53,8 +53,11 @@ def upload_thumbnails(
 
     urls = {}
     for size in [ThumbnailSize.TINY, ThumbnailSize.STANDARD]:
-        thumbnail = maybe_get_thumbnail(api, element_path, size)
+        if is_uploaded(element_path.element_id, microversion_id, size):
+            urls[size] = blob.public_url + "?v=" + microversion_id
+            continue
 
+        thumbnail = maybe_get_thumbnail(api, element_path, size)
         if thumbnail == None:
             continue
 
@@ -64,11 +67,10 @@ def upload_thumbnails(
             "microversionId": microversion_id,
         }
 
-        if not is_uploaded(element_path.element_id, microversion_id, size):
-            blob.upload_from_string(
-                thumbnail.getvalue(),
-                content_type="image/gif",
-            )
+        blob.upload_from_string(
+            thumbnail.getvalue(),
+            content_type="image/gif",
+        )
 
         urls[size] = blob.public_url + "?v=" + microversion_id
 

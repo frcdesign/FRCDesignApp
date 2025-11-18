@@ -325,7 +325,11 @@ def set_element_open_composite(**kwargs):
     element_ref = library_ref.documents.document(document_id).elements.element(
         element_id
     )
-    element_ref.update({"isOpenComposite": is_open_composite})
+    element = element_ref.get()
+    if element.elementType != ElementType.PART_STUDIO:
+        raise HandledException("Only Part Studios can be marked as open composites.")
+    element.isOpenComposite = is_open_composite
+    element_ref.set(element)
 
     return {"success": True}
 

@@ -54,7 +54,8 @@ def reload_element_thumbnail(**kwargs):
     )
 
     thumbnails = upload_thumbnails(api, element_path, microversion_id)
-    if thumbnails == {}:
-        raise HandledException("Failed to find any thumbnails to upload.")
+    if len(thumbnails) < 2:
+        raise HandledException("Failed to upload thumbnails. Do they exist in Onshape?")
+
     element_ref.update({"thumbnailUrls": thumbnails})
     return {"success": True}
