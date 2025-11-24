@@ -460,9 +460,11 @@ export function ReloadDocumentsButton(
                     "Successfully reloaded " + savedElements + " elements."
                 );
             }
-            queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            queryClient.invalidateQueries({ queryKey: ["storage-thumbnail"] });
+            router.invalidate();
         }
     });
 

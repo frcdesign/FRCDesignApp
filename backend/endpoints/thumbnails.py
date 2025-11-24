@@ -46,7 +46,7 @@ def get_thumbnail_id(**kwargs):
 def reload_element_thumbnail(**kwargs):
     api = connect.get_api()
     element_path = get_route_element_path()
-    microversion_id = connect.get_query_param("microversionId")
+    microversion_id = connect.get_body_arg("microversionId")
     element_ref = (
         connect.get_library_ref()
         .documents.document(element_path.document_id)
@@ -56,6 +56,10 @@ def reload_element_thumbnail(**kwargs):
     thumbnails = upload_thumbnails(api, element_path, microversion_id)
     if len(thumbnails) < 2:
         raise HandledException("Failed to upload thumbnails. Do they exist in Onshape?")
+
+    existing_thumbnails = element_ref.get().thumbnailUrls
+    if existing_thumbnails == thumbnails:
+        raise HandledException("Thumbnails are already up to date.")
 
     element_ref.update({"thumbnailUrls": thumbnails})
     return {"success": True}

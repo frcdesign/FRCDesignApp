@@ -61,7 +61,7 @@ def add_element_to_assembly(
     assembly_path: ElementPath,
     element_path: ElementPath,
     element_type: ElementType,
-    configuration: dict[str, str] | None = None,
+    configuration: dict[str, str] | str | None = None,
     part_types: list[PartType] | None = None,
     use_transform: bool = False,
 ) -> Any:
@@ -79,7 +79,11 @@ def add_element_to_assembly(
 
     instance = {}
     if configuration != None:
-        instance["configuration"] = encode_configuration(configuration)
+        instance["configuration"] = (
+            configuration
+            if isinstance(configuration, str)
+            else encode_configuration(configuration)
+        )
 
     if element_type == ElementType.ASSEMBLY:
         instance["isAssembly"] = True

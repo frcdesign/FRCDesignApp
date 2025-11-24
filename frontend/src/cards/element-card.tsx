@@ -231,14 +231,15 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
                 }
             );
         },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to reload thumbnail. Does it exist in Onshape?"
-        ),
+        onError: getAppErrorHandler("Unexpectedly failed to reload thumbnail."),
         onSuccess: () => {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["thumbnail"] });
+            await queryClient.invalidateQueries({
+                queryKey: ["storage-thumbnail"]
+            });
+            router.invalidate();
         }
     });
 

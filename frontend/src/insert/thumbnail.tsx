@@ -79,7 +79,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         queryKey: ["storage-thumbnail", url],
         queryFn: async ({ signal }) => {
             if (url === undefined) {
-                throw new Error("No URL");
+                throw new Error("Tried to get thumbnail with no URL");
             }
             return apiGetRawImage(url, signal);
         },

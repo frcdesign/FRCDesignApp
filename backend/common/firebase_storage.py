@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 from io import BytesIO
-import time
 
 import firebase_admin
 from firebase_admin import storage
-from google.cloud.storage import Bucket
+from google.cloud.storage import Bucket, Blob
 from google.cloud.exceptions import NotFound
 
-from backend.common.backend_exceptions import HandledException
 from backend.endpoints.cache import MAX_AGE
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import thumbnails
@@ -53,7 +51,9 @@ def upload_thumbnails(
 
     urls = {}
     for size in [ThumbnailSize.TINY, ThumbnailSize.STANDARD]:
-        if is_uploaded(element_path.element_id, microversion_id, size):
+        blob = bucket.blob(f"thumbnails/{size}/{element_path.element_id}")
+
+        if is_uploaded(blob, microversion_id):
             urls[size] = blob.public_url + "?v=" + microversion_id
             continue
 
@@ -61,28 +61,22 @@ def upload_thumbnails(
         if thumbnail == None:
             continue
 
-        blob = bucket.blob(f"thumbnails/{size}/{element_path.element_id}")
         blob.cache_control = f"public, max-age={MAX_AGE}"
         blob.metadata = {
             "microversionId": microversion_id,
         }
-
         blob.upload_from_string(
             thumbnail.getvalue(),
             content_type="image/gif",
         )
-
         urls[size] = blob.public_url + "?v=" + microversion_id
 
     return urls
 
 
-def is_uploaded(element_id: str, microversion_id: str, size: ThumbnailSize) -> bool:
-    """Checks the given thumbnail has already been uploaded to GCP storage."""
-    bucket = get_bucket()
-
+def is_uploaded(blob: Blob, microversion_id: str) -> bool:
+    """Checks if the given thumbnail has already been uploaded to GCP storage."""
     try:
-        blob = bucket.blob(f"thumbnails/{size}/{element_id}")
         blob.reload()  # raises NotFound if it doesn't exist
         if blob.metadata and blob.metadata.get("microversionId") == microversion_id:
             # This microversion has already been uploaded

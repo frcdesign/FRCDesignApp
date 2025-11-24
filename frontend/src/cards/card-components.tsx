@@ -55,7 +55,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 
 interface QuickInsertItemProps {
     element: ElementObj;
-    defaultConfiguration?: Configuration;
+    configuration?: Configuration;
     isFavorite: boolean;
 }
 
@@ -63,10 +63,10 @@ interface QuickInsertItemProps {
  * MenuItems which can be used to quick insert a document.
  */
 export function QuickInsertItems(props: QuickInsertItemProps) {
-    const { element, defaultConfiguration, isFavorite } = props;
+    const { element, configuration, isFavorite } = props;
     const search = useSearch({ from: "/app" });
 
-    const insertMutation = useInsertMutation(element, defaultConfiguration, {
+    const insertMutation = useInsertMutation(element, configuration, {
         isFavorite,
         isQuickInsert: true
     });

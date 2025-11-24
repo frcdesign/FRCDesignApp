@@ -88,8 +88,6 @@ def fasten_mate(
         "parameters": [
             mate_type_parameter("FASTENED"),
             query_parameter("mateConnectorsQuery", queries),
-            # Prevents primary axis flip bug
-            primary_axis_parameter("primaryAxisAlignment"),
         ],
     }
     # Avoid adding None

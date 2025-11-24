@@ -50,6 +50,18 @@ def add_to_assembly(**kwargs):
     if element.isOpenComposite:
         part_types = [PartType.COMPOSITE_PARTS]
 
+    # Get the configuration parameters for logging purposes (not needed for the actual insert)
+    parameters = None
+    if element.configurationId != None:
+        parameters = document_ref.configurations.configuration(
+            path_to_add.element_id
+        ).get()
+
+        if configuration == None:
+            configuration = {
+                parameter.id: parameter.default for parameter in parameters.parameters
+            }
+
     result = assemblies.add_element_to_assembly(
         api,
         target_path,
@@ -101,13 +113,6 @@ def add_to_assembly(**kwargs):
             api, target_path, fasten_mate.build()
         )
         feature_id = fasten_mate_result["feature"]["featureId"]
-
-    # Get the configuration parameters for logging purposes (not needed for the actual insert)
-    parameters = None
-    if configuration != None:
-        parameters = document_ref.configurations.configuration(
-            path_to_add.element_id
-        ).get()
 
     document = document_ref.get()
 

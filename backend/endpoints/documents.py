@@ -61,9 +61,9 @@ def save_element(
     element_id = onshape_element["id"]
     microversion_id = onshape_element["microversionId"]
 
-    path = ElementPath.from_path(version_path, element_id)
+    element_path = ElementPath.from_path(version_path, element_id)
 
-    onshape_configuration = get_configuration(api, path)
+    onshape_configuration = get_configuration(api, element_path)
     configuration_id = None
     configuration = None
     if len(onshape_configuration["configurationParameters"]) > 0:
@@ -72,13 +72,13 @@ def save_element(
         document_ref.configurations.configuration(element_id).set(configuration)
         configuration_id = element_id
 
-    thumbnailUrls = upload_thumbnails(api, path, microversion_id)
+    thumbnail_urls = upload_thumbnails(api, element_path, microversion_id)
 
     preserved_element = reload_context.get_element(element_id)
 
     fasten_info = None
     if preserved_element.fastenInfo != None:
-        fasten_info = ParseFastenInfo().get_fasten_info(api, path, element_type)
+        fasten_info = ParseFastenInfo().get_fasten_info(api, element_path, element_type)
 
     document_ref.elements.element(element_id).set(
         Element(
@@ -92,7 +92,7 @@ def save_element(
             isVisible=preserved_element.isVisible,
             isOpenComposite=preserved_element.isOpenComposite,
             fastenInfo=fasten_info,
-            thumbnailUrls=thumbnailUrls,
+            thumbnailUrls=thumbnail_urls,
         ),
     )
     return element_id

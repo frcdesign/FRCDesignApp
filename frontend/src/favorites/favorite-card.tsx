@@ -123,7 +123,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
         <Menu>
             <QuickInsertItems
                 element={element}
-                defaultConfiguration={favorite.defaultConfiguration}
+                configuration={favorite.defaultConfiguration}
                 isFavorite
             />
             <MenuDivider />
