@@ -30,6 +30,7 @@ from backend.endpoints.configurations import parse_onshape_configuration
 from backend.common.reload_context import (
     ReloadContext,
 )
+from backend.endpoints.thumbnails import ReloadDocumentThumbnail
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import documents
 from onshape_api.endpoints.configurations import get_configuration
@@ -146,13 +147,6 @@ def get_elements_to_reload(
             yield onshape_element
 
 
-def get_element_microversion_id(contents: dict, element_id: str) -> str | None:
-    for onshape_element in contents["elements"]:
-        if onshape_element["id"] == element_id:
-            return onshape_element["microversionId"]
-    return None
-
-
 async def save_document(
     api: Api,
     document_ref: DocumentRef,
@@ -170,22 +164,9 @@ async def save_document(
     onshape_document = documents.get_document(api, version_path)
     contents = documents.get_contents(api, version_path)
 
-    thumbnail_element_id = onshape_document["documentThumbnailElementId"]
-    if thumbnail_element_id == "":
-        # Just use the first element id if it isn't set since an error could leave the db in a bad state
-        thumbnail_element_id = contents["elements"][0]["id"]
-
-    thumbnail_path = ElementPath.from_path(version_path, thumbnail_element_id)
-
-    thumbnail_microversion_id = get_element_microversion_id(
-        contents, thumbnail_element_id
+    thumbnail_urls = ReloadDocumentThumbnail().upload_thumbnails(
+        api, onshape_document, contents, version_path
     )
-    if thumbnail_microversion_id == None:
-        # This shouldn't ever happen because deleting the thumbnail tab = no more thumbnail tab
-        raise HandledException(
-            f"Unexpectedly failed to find the saved thumbnail tab in {onshape_document["name"]}. Was it deleted?"
-        )
-    thumbnail_urls = upload_thumbnails(api, thumbnail_path, thumbnail_microversion_id)
 
     valid_elements = list(get_valid_elements(contents))
 

@@ -1,6 +1,7 @@
 from abc import ABC
 from enum import StrEnum
 from http import HTTPStatus
+from typing import override
 from onshape_api.endpoints.users import AccessLevel
 
 
@@ -64,7 +65,14 @@ class AuthException(BaseAppException):
 class HandledException(BaseAppException):
     """Exceptions which are returned to the frontend to be displayed to the user directly."""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, is_error: bool = True):
+        self.is_error = is_error
         super().__init__(
             message, type=ExceptionType.HANDLED, status_code=HTTPStatus.BAD_REQUEST
         )
+
+    @override
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result["isError"] = self.is_error
+        return result

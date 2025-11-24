@@ -4,11 +4,18 @@ import { queryClient } from "../query-client";
 import { ElementObj, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
-import { showErrorToast } from "../common/toaster";
+import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getAppErrorHandler } from "../api/errors";
 import { libraryQueryMatchKey } from "../queries";
 import { router } from "../router";
+import {
+    ElementPath,
+    InstancePath,
+    isElementPath,
+    toElementApiPath,
+    toInstanceApiPath
+} from "../api/path";
 
 export function useSetVisibilityMutation(
     documentId: string,
@@ -55,4 +62,33 @@ export function useIsElementHidden(element: ElementObj): boolean {
     return useMemo(() => {
         return !element.isVisible && hasUserAccess(search.currentAccessLevel);
     }, [element.isVisible, search.currentAccessLevel]);
+}
+
+export function useReloadThumbnailMutation(path: InstancePath | ElementPath) {
+    const library = useLibrary();
+
+    const apiPath = isElementPath(path)
+        ? toElementApiPath(path)
+        : toInstanceApiPath(path);
+
+    return useMutation({
+        mutationKey: ["thumbnail", "reload", apiPath],
+        mutationFn: async () => {
+            // Every element path is an instance path, but instance paths are not element paths
+            return apiPost(
+                "/reload-thumbnail" + toLibraryPath(library) + apiPath
+            );
+        },
+        onError: getAppErrorHandler("Unexpectedly failed to reload thumbnail."),
+        onSuccess: () => {
+            showSuccessToast("Successfully reloaded thumbnail.");
+        },
+        onSettled: async () => {
+            // Reload the library so we get up to date urls
+            await queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
+            router.invalidate();
+        }
+    });
 }

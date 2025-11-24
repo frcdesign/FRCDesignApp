@@ -26,6 +26,7 @@ import { getUiState, updateUiState } from "./api/ui-state";
 import { RootAppError } from "./app/root-error";
 import { AlertParams } from "./overlays/popup-params";
 import { UserPath } from "./api/path";
+import { BetaComplete } from "./pages/beta-complete";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
@@ -152,13 +153,20 @@ const safariErrorRoute = createRoute({
     component: SafariError
 });
 
+const betaCompleteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "beta-complete",
+    component: BetaComplete
+});
+
 const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
     grantDeniedRoute,
     licenseRoute,
-    safariErrorRoute
+    safariErrorRoute,
+    betaCompleteRoute
 ]);
 
 export const router = createRouter({

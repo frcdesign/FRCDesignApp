@@ -44,6 +44,8 @@ import {
     userDataQueryKey,
     useUserData
 } from "../queries";
+import { AppSelect } from "../common/app-select";
+import { makeSelectOption, useSelectOptions } from "../common/select-utils";
 
 export function SettingsMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -178,55 +180,21 @@ function LibrarySelect(props: LibrarySelectProps): ReactNode {
     const navigate = useNavigate();
 
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const libraries = useMemo(() => {
-        return [Library.FRC_DESIGN_LIB, Library.MKCAD];
-    }, []);
-    const [activeLibrary, setActiveLibrary] = useState<Library | null>(library);
-    const renderLibrary: ItemRenderer<Library> = (
-        currentLibrary,
-        { handleClick, handleFocus, modifiers, ref }
-    ) => {
-        const selected = library === currentLibrary;
-        return (
-            <MenuItem
-                key={currentLibrary}
-                ref={ref}
-                onClick={handleClick}
-                onFocus={handleFocus}
-                active={modifiers.active}
-                text={getLibraryName(currentLibrary)}
-                roleStructure="listoption"
-                selected={selected}
-                intent={selected ? Intent.PRIMARY : Intent.NONE}
-            />
-        );
-    };
-
-    const select = (
-        <Select<Library>
-            items={libraries}
-            activeItem={activeLibrary}
-            onActiveItemChange={setActiveLibrary}
-            filterable={false}
-            popoverProps={{ minimal: true }}
-            itemRenderer={renderLibrary}
-            onItemSelect={(newLibrary: Library) => {
-                navigate({ to: "/app/documents" });
-                onLibrarySelect(newLibrary);
-            }}
-        >
-            <Button
-                alignText="start"
-                endIcon="caret-down"
-                text={getLibraryName(library)}
-            />
-        </Select>
+    const libraries = useSelectOptions(
+        [Library.FRC_DESIGN_LIB, Library.MKCAD],
+        getLibraryName
     );
 
     return (
-        <FormGroup label="Library" className="full-width" inline>
-            {select}
-        </FormGroup>
+        <AppSelect
+            option={makeSelectOption(library, getLibraryName)}
+            options={libraries}
+            label="Library"
+            onSelect={(value: string) => {
+                navigate({ to: "/app/documents" });
+                onLibrarySelect(value as Library);
+            }}
+        />
     );
 }
 
@@ -239,54 +207,18 @@ function ThemeSelect(props: ThemeSelectProps): ReactNode {
     const { theme, onThemeSelect } = props;
 
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const themes = useMemo(() => {
-        return [Theme.SYSTEM, Theme.DARK, Theme.LIGHT];
-    }, []);
-
-    const [activeTheme, setActiveTheme] = useState<Theme | null>(theme);
-
-    const renderTheme: ItemRenderer<Theme> = (
-        currentTheme,
-        { handleClick, handleFocus, modifiers, ref }
-    ) => {
-        const selected = theme === currentTheme;
-        return (
-            <MenuItem
-                key={currentTheme}
-                ref={ref}
-                onClick={handleClick}
-                onFocus={handleFocus}
-                active={modifiers.active}
-                text={capitalize(currentTheme)}
-                roleStructure="listoption"
-                selected={selected}
-                intent={selected ? Intent.PRIMARY : Intent.NONE}
-            />
-        );
-    };
-
-    const select = (
-        <Select<Theme>
-            items={themes}
-            activeItem={activeTheme}
-            onActiveItemChange={setActiveTheme}
-            filterable={false}
-            popoverProps={{ minimal: true }}
-            itemRenderer={renderTheme}
-            onItemSelect={onThemeSelect}
-        >
-            <Button
-                alignText="start"
-                endIcon="caret-down"
-                text={capitalize(theme)}
-            />
-        </Select>
+    const themes = useSelectOptions(
+        [Theme.SYSTEM, Theme.DARK, Theme.LIGHT],
+        capitalize
     );
 
     return (
-        <FormGroup label="Theme" className="full-width" inline>
-            {select}
-        </FormGroup>
+        <AppSelect
+            option={makeSelectOption(theme, capitalize)}
+            options={themes}
+            label="Theme"
+            onSelect={(value) => onThemeSelect(value as Theme)}
+        />
     );
 }
 
@@ -461,9 +393,10 @@ export function ReloadDocumentsButton(
                 );
             }
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
-            queryClient.invalidateQueries({ queryKey: ["storage-thumbnail"] });
+        onSettled: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
             router.invalidate();
         }
     });
@@ -482,13 +415,11 @@ export function ReloadDocumentsButton(
         return button;
     }
 
+    const label = reloadAll
+        ? "Reload all documents"
+        : "Reload outdated documents";
     return (
-        <FormGroup
-            label={
-                reloadAll ? "Reload all documents" : "Reload outdated documents"
-            }
-            inline
-        >
+        <FormGroup label={label} inline>
             {button}
         </FormGroup>
     );

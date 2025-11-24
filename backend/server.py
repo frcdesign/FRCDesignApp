@@ -50,6 +50,7 @@ def create_app():
     @app.get("/license")
     @app.get("/grant-denied")
     @app.get("/safari-error")
+    @app.get("/beta-complete")
     def serve_static_pages():
         return serve_index()
 

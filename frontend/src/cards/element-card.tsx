@@ -20,7 +20,8 @@ import {
     CardTitle,
     ContextMenuButton,
     OpenDocumentItems,
-    QuickInsertItems
+    QuickInsertItems,
+    ReloadThumbnailMenuItem
 } from "./card-components";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
@@ -219,30 +220,6 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
         }
     });
 
-    const reloadThumbnailMutation = useMutation({
-        mutationKey: ["thumbnail", "reload"],
-        mutationFn: async () => {
-            return apiPost(
-                "/reload-thumbnail" +
-                    toLibraryPath(library) +
-                    toElementApiPath(element.path),
-                {
-                    body: { microversionId: element.microversionId }
-                }
-            );
-        },
-        onError: getAppErrorHandler("Unexpectedly failed to reload thumbnail."),
-        onSuccess: () => {
-            showSuccessToast("Successfully reloaded thumbnail.");
-        },
-        onSettled: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: ["storage-thumbnail"]
-            });
-            router.invalidate();
-        }
-    });
-
     return (
         <>
             <MenuItem
@@ -253,6 +230,7 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
                 icon={element.isVisible ? "eye-off" : "eye-open"}
                 text={element.isVisible ? "Hide element" : "Show element"}
             />
+            <ReloadThumbnailMenuItem path={element.path} />
             {element.elementType === ElementType.PART_STUDIO && (
                 <MenuItem
                     onClick={() => {
@@ -278,13 +256,6 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
                         ? "Disable insert and fasten"
                         : "Enable Insert and fasten"
                 }
-            />
-            <MenuItem
-                onClick={() => {
-                    reloadThumbnailMutation.mutate();
-                }}
-                icon="refresh"
-                text="Reload thumbnail"
             />
         </>
     );

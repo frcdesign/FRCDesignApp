@@ -1,13 +1,16 @@
-import { showErrorToast } from "../common/toaster";
+import { showErrorToast, showInfoToast } from "../common/toaster";
 
 /**
  * Errors which are generated and thrown on the client.
  * Unlike other errors, the message is displayed directly to the user.
  */
 export class HandledError extends Error {
-    constructor(message: string) {
+    public isError: boolean;
+
+    constructor(message: string, isError: boolean = true) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
+        this.isError = isError;
     }
 }
 
@@ -24,7 +27,11 @@ export function handleAppError(
     toastKey?: string
 ) {
     if (error instanceof HandledError) {
-        showErrorToast(error.message, toastKey);
+        if (!error.isError) {
+            showInfoToast(error.message, toastKey);
+        } else {
+            showErrorToast(error.message, toastKey);
+        }
         return;
     }
     // else if (error instanceof NoError) {

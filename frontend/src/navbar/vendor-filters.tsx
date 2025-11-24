@@ -1,7 +1,8 @@
 import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
-import { ReactNode } from "react";
+import { ReactNode, useCallback } from "react";
 import { getVendorName, Vendor } from "../api/models";
-import { useUiState } from "../api/ui-state";
+import { SetUiState, useUiState } from "../api/ui-state";
+// import { Select } from "@blueprintjs/select";
 
 interface ClearFiltersButtonProps {
     /**
@@ -38,11 +39,10 @@ export function VendorFilters(): ReactNode {
 
     const vendorFilters = uiState.vendorFilters;
 
-    const areAllTagsActive = vendorFilters === undefined;
+    const handleVendorSelect = useOnVendorSelect(vendorFilters, setUiState);
 
     const filterTags = Object.values(Vendor).map((vendor) => {
-        const isVendorActive =
-            areAllTagsActive || vendorFilters.includes(vendor);
+        const isActive = isVendorActive(vendor, vendorFilters);
         return (
             <Tag
                 round
@@ -51,35 +51,60 @@ export function VendorFilters(): ReactNode {
                 intent={Intent.PRIMARY}
                 title={getVendorName(vendor)}
                 onClick={() => {
-                    let newFilters;
-                    if (vendorFilters === undefined) {
-                        // First filter selected
-                        newFilters = [vendor];
-                    } else if (isVendorActive) {
-                        // Filter is already selected
-                        newFilters = vendorFilters.filter(
-                            (curr) => curr !== vendor
-                        );
-                        // It was the last filter
-                        if (newFilters.length === 0) {
-                            newFilters = undefined;
-                        }
-                    } else {
-                        newFilters = [...vendorFilters, vendor];
-                    }
-                    setUiState({ vendorFilters: newFilters });
+                    handleVendorSelect(vendor);
                 }}
-                active={!isVendorActive} // The active prop of tags is backwards
+                active={!isActive} // The active prop of tags is backwards
             >
                 {vendor}
             </Tag>
         );
     });
 
+    console.log(vendorFilters);
+
     return (
         <div className="split" style={{ gap: "5x" }}>
             <div className="vendor-filter-tags">{filterTags}</div>
             <ClearFiltersButton text="Clear" />
         </div>
+    );
+}
+
+function isVendorActive(
+    vendor: Vendor,
+    currentFilters: Vendor[] | undefined
+): boolean {
+    const areAllTagsActive = currentFilters === undefined;
+    if (areAllTagsActive) {
+        return true;
+    } else if (currentFilters.includes(vendor)) {
+        return true;
+    }
+    return false;
+}
+
+function useOnVendorSelect(
+    currentFilters: Vendor[] | undefined,
+    setUiState: SetUiState
+) {
+    return useCallback(
+        (vendor: Vendor) => {
+            let newFilters;
+            if (currentFilters === undefined) {
+                // First filter selected
+                newFilters = [vendor];
+            } else if (isVendorActive(vendor, currentFilters)) {
+                // Filter is already selected
+                newFilters = currentFilters.filter((curr) => curr !== vendor);
+                // It was the last filter
+                if (newFilters.length === 0) {
+                    newFilters = undefined;
+                }
+            } else {
+                newFilters = [...currentFilters, vendor];
+            }
+            setUiState({ vendorFilters: newFilters });
+        },
+        [currentFilters, setUiState]
     );
 }

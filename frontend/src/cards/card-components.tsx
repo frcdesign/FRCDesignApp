@@ -17,7 +17,7 @@ import {
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath } from "../api/path";
+import { DocumentPath, ElementPath, InstancePath } from "../api/path";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import {
     useInsertMutation,
@@ -27,6 +27,7 @@ import { ElementObj, ElementType, ThumbnailUrls } from "../api/models";
 import { Configuration } from "../insert/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api/access-level";
+import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
@@ -197,5 +198,24 @@ export function AdminSubmenu(props: PropsWithChildren): ReactNode {
                 children={props.children}
             />
         </RequireAccessLevel>
+    );
+}
+
+interface ReloadThumbnailMenuItemProps {
+    path: InstancePath | ElementPath;
+}
+
+export function ReloadThumbnailMenuItem(
+    props: ReloadThumbnailMenuItemProps
+): ReactNode {
+    const reloadThumbnailMutation = useReloadThumbnailMutation(props.path);
+    return (
+        <MenuItem
+            onClick={() => {
+                reloadThumbnailMutation.mutate();
+            }}
+            icon="refresh"
+            text="Reload thumbnail"
+        />
     );
 }

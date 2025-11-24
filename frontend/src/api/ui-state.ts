@@ -87,7 +87,9 @@ export function updateUiState(partialState: Partial<UiState>): UiState {
     return newState;
 }
 
-export function useUiState(): [UiState, (uiState: Partial<UiState>) => void] {
+export type SetUiState = (uiState: Partial<UiState>) => void;
+
+export function useUiState(): [UiState, SetUiState] {
     // Create a react version of the state to trigger re-renders
     const reactUiState = useSyncExternalStore(subscribeToUiState, getUiState);
 

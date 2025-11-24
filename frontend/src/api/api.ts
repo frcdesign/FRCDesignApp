@@ -129,7 +129,7 @@ async function handleResponse(response: Response) {
     const json = await response.json();
     if (!response.ok) {
         if (json.type === "handled") {
-            throw new HandledError(json.message);
+            throw new HandledError(json.message, json.isError);
         }
         throw new Error("Network response failed.");
     }

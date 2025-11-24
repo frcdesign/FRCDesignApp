@@ -16,8 +16,10 @@ import { apiPost, apiDelete, useCacheOptions } from "../api/api";
 import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
-import { useSetVisibilityMutation } from "./card-hooks";
-import { AdminSubmenu, CardTitle, OpenDocumentItems } from "./card-components";
+import {
+    useSetVisibilityMutation
+} from "./card-hooks";
+import { AdminSubmenu, CardTitle, OpenDocumentItems, ReloadThumbnailMenuItem } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
 import {
     libraryQueryKey,
@@ -158,6 +160,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                     }}
                 />
                 <DocumentDataItems document={document} />
+                <ReloadThumbnailMenuItem path={document.path} />
                 {modifyDocumentItems}
             </AdminSubmenu>
         </Menu>

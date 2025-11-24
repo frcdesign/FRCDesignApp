@@ -8,7 +8,7 @@ export function useLibrary() {
 export function toLibraryPath(library: Library): string {
     return `/library/${library}`;
 }
-export function getLibraryName(library: Library): string {
+export function getLibraryName(library: string): string {
     switch (library) {
         case Library.FRC_DESIGN_LIB:
             return "FRCDesignLib";
@@ -17,4 +17,5 @@ export function getLibraryName(library: Library): string {
         case Library.MKCAD:
             return "MKCAD (Deprecated)";
     }
+    throw new Error("Unknown library: " + library);
 }
