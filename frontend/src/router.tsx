@@ -27,6 +27,7 @@ import { RootAppError } from "./app/root-error";
 import { AlertParams } from "./overlays/popup-params";
 import { UserPath } from "./api/path";
 import { BetaComplete } from "./pages/beta-complete";
+import { CookieError } from "./pages/cookie-error";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
@@ -153,6 +154,12 @@ const safariErrorRoute = createRoute({
     component: SafariError
 });
 
+const cookieErrorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "cookie-error",
+    component: CookieError
+});
+
 const betaCompleteRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "beta-complete",
@@ -166,6 +173,7 @@ const routeTree = rootRoute.addChildren([
     grantDeniedRoute,
     licenseRoute,
     safariErrorRoute,
+    cookieErrorRoute,
     betaCompleteRoute
 ]);
 

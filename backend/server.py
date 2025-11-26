@@ -10,7 +10,7 @@ from onshape_api.endpoints.users import ping
 def create_app():
     app = flask.Flask(__name__)
     app.config.update(
-        SESSION_COOKIE_NAME="frc-design-lib",
+        SESSION_COOKIE_NAME="frc-design-app",
         SECRET_KEY=env.SESSION_SECRET,
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,

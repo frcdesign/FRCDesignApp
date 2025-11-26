@@ -10,7 +10,6 @@ The frontend should have a /redirect route which calls the /redirect route below
 import flask
 from flask import request
 from backend.common import connect, env
-from backend.common.backend_exceptions import ServerException
 
 
 router = flask.Blueprint("oauth", __name__)
@@ -55,7 +54,6 @@ def redirect():
     if redirect_url == None:
         if connect.is_safari_webkit():
             return flask.redirect("/safari-error")
-        raise ServerException(
-            "Failed to find redirect_url, there may be an issue with cookie handling"
-        )
+        return flask.redirect("/cookie-error")
+
     return flask.redirect(redirect_url)
