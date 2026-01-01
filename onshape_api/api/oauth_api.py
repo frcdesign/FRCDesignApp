@@ -2,11 +2,9 @@ from __future__ import annotations
 from typing import Unpack, override
 import http
 import json
-import logging
 from urllib import parse
 
 from requests_oauthlib import OAuth2Session
-from requests.adapters import HTTPAdapter
 
 from onshape_api import exceptions
 from onshape_api.api.onshape_logger import ONSHAPE_LOGGER
@@ -32,11 +30,7 @@ class OAuthApi(Api):
             raise ValueError("The OAuth2Session must have a client_id")
         self.client_id: str = oauth.client_id
 
-        adapter = HTTPAdapter(
-            pool_connections=100,
-            pool_maxsize=100,
-        )
-        self.oauth.mount("https://", adapter)
+
 
     @override
     def _request(

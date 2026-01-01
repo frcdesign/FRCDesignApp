@@ -10,6 +10,7 @@ from uuid import uuid4
 import flask
 from pydantic import BaseModel
 from requests_oauthlib import OAuth2Session
+from requests.adapters import HTTPAdapter
 from google.cloud import firestore
 
 from backend.common.database import Database, LibraryRef
@@ -144,7 +145,15 @@ def get_library_ref() -> LibraryRef:
 
 
 def get_api() -> onshape_api.OAuthApi:
-    return onshape_api.make_oauth_api(get_oauth_session(DATABASE))
+    # make oauth sessions per request so auth works correctly
+    oauth = get_oauth_session(DATABASE)
+
+    adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10, pool_block=True)
+
+    oauth.mount("https://", adapter)
+    oauth.mount("http://", adapter)
+
+    return onshape_api.make_oauth_api(oauth)
 
 
 def get_route_instance_path() -> onshape_api.InstancePath:
