@@ -2,7 +2,7 @@ import MiniSearch, {
     Options,
     SearchResult as MiniSearchResult
 } from "minisearch";
-import { LibraryObj, Vendor } from "../api/models";
+import { Favorites, LibraryObj, Vendor } from "../api/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -137,7 +137,8 @@ export interface SearchResult {
 export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
-    filters?: SearchFilters
+    filters?: SearchFilters,
+    favoriteElements?: Favorites
 ): SearchResult {
     const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
 
@@ -149,6 +150,15 @@ export function doSearch(
         filter: (searchResult) => {
             if (!searchResult.isVisible) {
                 return false;
+            }
+
+            if (filters?.isFavorite) {
+                // If there are no favorites, this element is not a favorite
+                if (!favoriteElements) {
+                    return false;
+                } else if (favoriteElements[searchResult.id] === undefined) {
+                    return false;
+                }
             }
 
             let filteredByDocument = false;
