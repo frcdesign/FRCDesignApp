@@ -19,7 +19,7 @@ import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
 import { ElementCard } from "../cards/element-card";
 import { ContextMenuButton } from "../cards/card-components";
-import { FilterCallout } from "../search/filter-callout";
+import { SearchCallout } from "../search/search-errors";
 import {
     AppErrorState,
     AppInternalErrorState,
@@ -174,17 +174,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
                 icon="warning-sign"
                 iconIntent="warning"
                 title="All elements are hidden by filters"
-                action={<ClearFiltersButton standardSize />}
-            />
-        );
-    }
-
-    let callout = null;
-    if (filterResult.filtered > 0) {
-        callout = (
-            <FilterCallout
-                objectLabel="elements"
-                filtered={filterResult.filtered}
+                action={<ClearFiltersButton />}
             />
         );
     }
@@ -192,6 +182,10 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     const elementCards = filterResult.elements.map((element) => (
         <ElementCard key={element.id} element={element} />
     ));
+
+    const callout = (
+        <SearchCallout objectLabel="element" filtered={filterResult.filtered} />
+    );
 
     return (
         <>

@@ -8,7 +8,7 @@ import {
     AppLoadingState,
     AppErrorState
 } from "../common/app-zero-state";
-import { FilterCallout } from "../search/filter-callout";
+import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FavoriteCard } from "./favorite-card";
 import {
@@ -17,7 +17,6 @@ import {
     useSearchDbQuery
 } from "../queries";
 import { doSearch, SearchHit } from "../search/search";
-import { NoSearchResultError } from "../search/search-results";
 
 /**
  * A list of current favorite cards.
@@ -93,7 +92,7 @@ export function FavoritesList(): ReactNode {
         if (searchResults.hits.length === 0) {
             return (
                 <NoSearchResultError
-                    objectLabel="favorites"
+                    objectLabel="favorite"
                     filtered={searchResults.filtered}
                 />
             );
@@ -123,23 +122,20 @@ export function FavoritesList(): ReactNode {
                     title="All favorites are hidden by filters"
                     icon="heart-broken"
                     iconColor={Colors.RED3}
-                    action={<ClearFiltersButton standardSize />}
+                    action={<ClearFiltersButton />}
                 />
             );
         }
     }
 
-    let callout;
-    if (filterResult.filtered > 0) {
-        callout = (
-            <Card className="item-card" style={{ padding: "0px" }}>
-                <FilterCallout
-                    objectLabel="favorites"
-                    filtered={filterResult.filtered}
-                />
-            </Card>
-        );
-    }
+    const callout = (
+        <Card className="item-card" style={{ padding: "0px" }}>
+            <SearchCallout
+                objectLabel="favorite"
+                filtered={filterResult.filtered}
+            />
+        </Card>
+    );
 
     const cards = filterResult.elements.map((element: ElementObj) => {
         const favorite = userData.favorites[element.id];

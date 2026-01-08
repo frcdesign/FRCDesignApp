@@ -9,13 +9,16 @@ interface ClearFiltersButtonProps {
      * @default "Clear filters"
      */
     text?: string;
-    standardSize?: boolean;
+    /**
+     * @default false
+     */
+    small?: boolean;
 }
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
     const [uiState, setUiState] = useUiState();
     const text = props.text ?? "Clear filters";
-    const standardSize = props.standardSize ?? false;
+    const small = props.small ?? false;
 
     const vendorFilters = uiState.vendorFilters;
     const areAllTagsActive = vendorFilters === undefined;
@@ -25,7 +28,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
             text={text}
             disabled={areAllTagsActive}
             variant={ButtonVariant.OUTLINED}
-            size={standardSize ? Size.MEDIUM : Size.SMALL}
+            size={small ? Size.SMALL : Size.MEDIUM}
             icon="filter-remove"
             onClick={() => {
                 setUiState({ vendorFilters: undefined });
@@ -65,7 +68,7 @@ export function VendorFilters(): ReactNode {
     return (
         <div className="split" style={{ gap: "5x" }}>
             <div className="vendor-filter-tags">{filterTags}</div>
-            <ClearFiltersButton text="Clear" />
+            <ClearFiltersButton text="Clear" small />
         </div>
     );
 }
