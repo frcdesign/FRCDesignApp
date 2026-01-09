@@ -61,6 +61,14 @@ $frc-design-green: #4cae4f;
     }
 }
 
+.search-bar {
+    max-width: 200px;
+    .search-input {
+        // flex-shrink: 1;
+        // min-width: 50px;
+    }
+}
+
 .app-content {
     overflow-y: auto;
     flex-grow: 1;

@@ -5,11 +5,9 @@ import { ElementObj } from "../api/models";
 import { useUiState } from "../api/ui-state";
 import {
     AppInternalErrorState,
-    AppLoadingState,
-    AppErrorState
+    AppLoadingState
 } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
-import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FavoriteCard } from "./favorite-card";
 import {
     useLibraryQuery,
@@ -62,16 +60,6 @@ export function FavoritesList(): ReactNode {
         .map((favorite) => elements[favorite.id])
         .filter((element) => !!element);
 
-    if (favoriteElements.length == 0) {
-        return (
-            <AppErrorState
-                title="No favorites"
-                icon="heart-broken"
-                iconColor={Colors.RED3}
-            />
-        );
-    }
-
     let filteredElements: ElementObj[];
     let filterResult: FilterResult;
     let searchHits: Record<string, SearchHit> = {};
@@ -91,34 +79,18 @@ export function FavoritesList(): ReactNode {
             userData.favorites
         );
 
-        if (searchResults.hits.length === 0) {
-            return (
-                <NoSearchResultError
-                    objectLabel="favorite"
-                    filtered={searchResults.filtered}
-                />
-            );
-        }
-
+        // Search hits are just ids and positions, so convert back into array of elements
         filteredElements = searchResults.hits
             .map((hit) => elements[hit.id])
             .filter((element) => !!element);
 
         filterResult = searchResults.filtered;
 
-        searchHits = searchResults.hits.reduce((acc, hit) => {
-            acc[hit.id] = hit;
-            return acc;
+        // To get the search hits later build a map of actual hits as well
+        searchHits = searchResults.hits.reduce((searchHits, hit) => {
+            searchHits[hit.id] = hit;
+            return searchHits;
         }, {} as Record<string, SearchHit>);
-
-        if (filteredElements.length === 0) {
-            return (
-                <NoSearchResultError
-                    objectLabel="favorite"
-                    filtered={filterResult}
-                />
-            );
-        }
     } else {
         const filterElementResult = filterElements(favoriteElements, {
             vendors: uiState.vendorFilters,
@@ -128,22 +100,20 @@ export function FavoritesList(): ReactNode {
 
         filteredElements = filterElementResult.elements;
         filterResult = filterElementResult.filtered;
+    }
 
-        if (filteredElements.length === 0) {
-            return (
-                <AppErrorState
-                    title="All favorites are hidden by filters"
-                    icon="heart-broken"
-                    iconColor={Colors.RED3}
-                    action={<ClearFiltersButton />}
-                />
-            );
-        }
+    if (filteredElements.length === 0) {
+        return (
+            <NoSearchResultError
+                objectLabel="favorite"
+                filtered={filterResult}
+            />
+        );
     }
 
     let callout = null;
     // Favorites specifically are displayed inline inside a ListContainer, so we need to wrap a custom Card around it
-    // So we can't rely in SearchCallout returning null :(
+    // So we can't rely on SearchCallout returning null :(
     if (filterResult.byDocument > 0 || filterResult.byVendor > 0) {
         callout = (
             <Card className="item-card" style={{ padding: "0px" }}>
