@@ -104,11 +104,27 @@ export function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const [uiState, setUiState] = useUiState();
 
+    const clearButton = uiState.searchQuery ? (
+        <Button
+            variant="minimal"
+            icon="cross-circle"
+            onClick={() => {
+                if (ref.current) {
+                    ref.current.value = "";
+                }
+                setUiState({ searchQuery: undefined });
+            }}
+            size="small"
+        />
+    ) : undefined;
+
     return (
         <InputGroup
             type="search"
             leftIcon="search"
             placeholder="Search library..."
+            className="search-bar"
+            inputClassName="search-input"
             inputRef={ref}
             value={uiState.searchQuery}
             onFocus={() => {
@@ -118,6 +134,7 @@ export function SearchBar() {
                 const query = value === "" ? undefined : value;
                 setUiState({ searchQuery: query });
             }}
+            rightElement={clearButton}
         />
     );
 }

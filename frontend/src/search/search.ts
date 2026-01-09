@@ -2,12 +2,19 @@ import MiniSearch, {
     Options,
     SearchResult as MiniSearchResult
 } from "minisearch";
-import { LibraryObj, Vendor } from "../api/models";
+import { Favorites, LibraryObj, Vendor } from "../api/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
  */
-export type ObjectLabel = "elements" | "favorites" | "search results";
+export type ObjectLabel = "element" | "favorite" | "search result";
+
+/**
+ * Returns the plural form of an object label.
+ */
+export function plural(objectLabel: ObjectLabel): string {
+    return objectLabel + "s";
+}
 
 const deliminator = "^";
 
@@ -110,36 +117,57 @@ export interface SearchHit {
     positions: Position[];
 }
 
+export interface FilterResult {
+    /**
+     * The number of items filtered out by vendor filters.
+     */
+    byVendor: number;
+    /**
+     * The number of items filtered out by being in a sub-document.
+     * Does not include results that would have been filtered out by vendors.
+     */
+    byDocument: number;
+}
+
 export interface SearchResult {
     hits: SearchHit[];
-
-    /**
-     * The number of items filtered out of the result by user controllable filters (e.g., vendor filters).
-     */
-    filtered: number;
+    filtered: FilterResult;
 }
 
 export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
-    filters?: SearchFilters
+    filters?: SearchFilters,
+    favoriteElements?: Favorites
 ): SearchResult {
+    const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
+
     if (!query || query.trim() === "") {
-        return { hits: [], filtered: 0 };
+        return { hits: [], filtered };
     }
 
-    let filtered = 0;
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
         filter: (searchResult) => {
             if (!searchResult.isVisible) {
                 return false;
             }
 
+            if (filters?.isFavorite) {
+                // If there are no favorites, this element is not a favorite
+                if (!favoriteElements) {
+                    return false;
+                } else if (favoriteElements[searchResult.id] === undefined) {
+                    return false;
+                }
+            }
+
+            let filteredByDocument = false;
+            let filteredByVendor = false;
             if (
                 filters?.documentId &&
                 searchResult.documentId !== filters.documentId
             ) {
-                return false;
+                filteredByDocument = true;
             }
 
             if (
@@ -148,7 +176,17 @@ export function doSearch(
                     searchResult.vendors.includes(vendor)
                 )
             ) {
-                filtered += 1;
+                filteredByVendor = true;
+            }
+
+            if (filteredByVendor && filteredByDocument) {
+                // If something is filtered by vendors and documents, don't count it since neither button would show it on its own
+                return false;
+            } else if (filteredByDocument) {
+                filtered.byDocument += 1;
+                return false;
+            } else if (filteredByVendor) {
+                filtered.byVendor += 1;
                 return false;
             }
 

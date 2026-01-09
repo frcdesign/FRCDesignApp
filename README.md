@@ -186,6 +186,14 @@ To see documents, add one or more documents and push a new app version to rebuil
 
 Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see the current database state directly.
 
+# Troubleshooting
+
+## Port Taken/Not Available
+
+Occasionally, a process will fail to fully shut down, causing problems when you next attempt to `Launch servers` since the port is already taken.
+If a process fails to start because a port is already taken, you can kill the process squatting on the port by running `lsof -i :<port number>`, e.g., `lsof -i :8080`, to get the PID of the process.
+You can then kill the process using `kill <PID>` (or, possibly, `kill -9 <PID>`).
+
 # Deploying To Production
 
 To allow the App to connect to Firestore, the default compute service account must be given the Cloud Datastore User role in IAM.
