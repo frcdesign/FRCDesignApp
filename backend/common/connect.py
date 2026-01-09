@@ -148,7 +148,7 @@ def get_api() -> onshape_api.OAuthApi:
     # make oauth sessions per request so auth works correctly
     oauth = get_oauth_session(DATABASE)
 
-    adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10, pool_block=True)
+    adapter = HTTPAdapter(pool_connections=100, pool_maxsize=100, pool_block=True)
 
     oauth.mount("https://", adapter)
     oauth.mount("http://", adapter)
