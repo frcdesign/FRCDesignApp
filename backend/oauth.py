@@ -52,7 +52,7 @@ def redirect():
 
     redirect_url = flask.session.get("redirect_url")
     if redirect_url == None:
-        if connect.is_safari_webkit():
+        if connect.is_safari():
             return flask.redirect("/safari-error")
         return flask.redirect("/cookie-error")
 
