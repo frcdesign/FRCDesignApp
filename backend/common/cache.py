@@ -3,7 +3,12 @@ from flask import request, make_response
 import flask
 
 
-MAX_AGE = 7 * 24 * 3600  # 7 days
+MAX_AGE = 30 * 24 * 3600  # 30 days
+
+
+def cache_control_header(private: bool = False) -> str:
+    """Returns a Cache-Control header."""
+    return f"{"private" if private else "public"}, max-age={MAX_AGE}, immutable"
 
 
 def cacheable_route(router: flask.Blueprint, rule: str, private: bool = False):
@@ -22,9 +27,7 @@ def cacheable_route(router: flask.Blueprint, rule: str, private: bool = False):
             if "/admin" in request.path:
                 response.headers["Cache-Control"] = "no-cache"
             else:
-                response.headers["Cache-Control"] = (
-                    f"{"private" if private else "public"}, max-age={MAX_AGE}, immutable"
-                )
+                response.headers["Cache-Control"] = cache_control_header(private)
             return response
 
         router.add_url_rule(rule, func.__name__, wrapped, methods=["GET"])
@@ -37,6 +40,3 @@ def cacheable_route(router: flask.Blueprint, rule: str, private: bool = False):
         return wrapped
 
     return decorator
-
-
-router = flask.Blueprint("cache-control", __name__)

@@ -2,7 +2,7 @@ from __future__ import annotations
 import flask
 
 from backend.common import connect
-from backend.endpoints.cache import cacheable_route
+from backend.common.cache import cacheable_route
 from backend.common.database import ConfigurationParameters
 from backend.common.models import (
     EqualCondition,

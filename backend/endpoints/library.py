@@ -7,7 +7,7 @@ from backend.common.app_access import require_access_level
 from backend.common.database import DocumentsRef, LibraryRef
 from backend.common.models import Document, Favorite
 from backend.common.models import Document, Favorite, Vendor
-from backend.endpoints.cache import cacheable_route
+from backend.common.cache import cacheable_route
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
 from onshape_api.paths.instance_type import InstanceType

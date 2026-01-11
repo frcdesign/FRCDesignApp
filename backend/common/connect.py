@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 import enum
-import re
+import threading
 from typing import Any, TypeVar
 
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -144,16 +144,18 @@ def get_library_ref() -> LibraryRef:
     return DATABASE.get_library(get_route_library())
 
 
+ADAPTER = HTTPAdapter(pool_connections=100, pool_maxsize=100, pool_block=True)
+SEMAPHORE = threading.BoundedSemaphore(12)
+
+
 def get_api() -> onshape_api.OAuthApi:
     # make oauth sessions per request so auth works correctly
     oauth = get_oauth_session(DATABASE)
 
-    adapter = HTTPAdapter(pool_connections=100, pool_maxsize=100, pool_block=True)
+    oauth.mount("https://", ADAPTER)
+    oauth.mount("http://", ADAPTER)
 
-    oauth.mount("https://", adapter)
-    oauth.mount("http://", adapter)
-
-    return onshape_api.make_oauth_api(oauth)
+    return onshape_api.make_oauth_api(oauth, SEMAPHORE)
 
 
 def get_route_instance_path() -> onshape_api.InstancePath:

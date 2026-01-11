@@ -5,7 +5,7 @@ from backend.common import connect
 from backend.common.app_access import require_access_level
 from backend.common.backend_exceptions import HandledException
 from backend.common.firebase_storage import upload_thumbnails
-from backend.endpoints.cache import cacheable_route
+from backend.common.cache import cacheable_route
 from backend.common.connect import (
     element_path_route,
     get_optional_query_param,
@@ -30,7 +30,7 @@ def get_element_thumbnail(**kwargs):
     return flask.send_file(thumbnail, mimetype="image/gif")
 
 
-@router.get("/thumbnail-id" + element_path_route())
+@cacheable_route(router, "/thumbnail-id" + element_path_route())
 def get_thumbnail_id(**kwargs):
     api = connect.get_api()
     element_path = get_route_element_path()

@@ -8,7 +8,7 @@ from firebase_admin import storage
 from google.cloud.storage import Bucket, Blob
 from google.cloud.exceptions import NotFound
 
-from backend.endpoints.cache import MAX_AGE
+from backend.common.cache import MAX_AGE
 from onshape_api.api.api_base import Api
 from onshape_api.endpoints import thumbnails
 from onshape_api.endpoints.thumbnails import ThumbnailSize
