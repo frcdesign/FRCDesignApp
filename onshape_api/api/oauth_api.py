@@ -14,7 +14,7 @@ from onshape_api.api.api_base import Api, ApiArgs, get_api_base_args
 
 
 def make_oauth_api(
-    oauth: OAuth2Session, semaphore: Semaphore, load_dotenv: bool = False
+    oauth: OAuth2Session, semaphore: Semaphore | None = None, load_dotenv: bool = False
 ) -> OAuthApi:
     if load_dotenv:
         env_utils.load_env()
@@ -26,7 +26,10 @@ class OAuthApi(Api):
     """Provides access to the Onshape API via OAuth."""
 
     def __init__(
-        self, oauth: OAuth2Session, semaphore: Semaphore, **kwargs: Unpack[ApiArgs]
+        self,
+        oauth: OAuth2Session,
+        semaphore: Semaphore | None = None,
+        **kwargs: Unpack[ApiArgs],
     ):
         super().__init__(**kwargs)
 
@@ -47,7 +50,7 @@ class OAuthApi(Api):
         headers: dict[str, str] = {},
         is_json: bool = True,
     ):
-        if not self.semaphore.acquire(timeout=30):
+        if self.semaphore and not self.semaphore.acquire(timeout=30):
             raise exceptions.OnshapeException(
                 "Timed out waiting for semaphore", http.HTTPStatus.REQUEST_TIMEOUT
             )
@@ -84,4 +87,5 @@ class OAuthApi(Api):
             return res.json() if is_json else res
 
         finally:
-            self.semaphore.release()
+            if self.semaphore:
+                self.semaphore.release()
