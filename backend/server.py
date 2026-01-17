@@ -42,8 +42,12 @@ def create_app():
 
             return flask.redirect("/sign-in")
 
-        user_id = connect.get_query_param("userId")
-        log_app_opened(user_id)
+        try:
+            # This should never fail, but not worth crashing over
+            user_id = connect.get_query_param("userId")
+            log_app_opened(user_id)
+        except:
+            pass
 
         return serve_index()
 

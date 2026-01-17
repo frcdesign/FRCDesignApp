@@ -23,7 +23,7 @@ import { SafariError } from "./pages/safari-error";
 import { MenuParams } from "./overlays/menu-params";
 import { OnshapeParams } from "./api/onshape-params";
 import { getUiState, updateUiState } from "./api/ui-state";
-import { RootAppError } from "./app/root-error";
+import { NotFoundError, RootAppError } from "./app/root-error";
 import { AlertParams } from "./overlays/popup-params";
 import { UserPath } from "./api/path";
 import { BetaComplete } from "./pages/beta-complete";
@@ -32,7 +32,8 @@ import { CookieError } from "./pages/cookie-error";
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
 const rootRoute = createRootRoute({
-    errorComponent: () => <RootAppError isRoot />
+    errorComponent: () => <RootAppError isRoot />,
+    notFoundComponent: () => <NotFoundError />
 });
 
 /**

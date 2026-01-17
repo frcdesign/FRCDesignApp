@@ -1,7 +1,9 @@
 import { ReloadDocumentsButton } from "../navbar/settings-menu";
 import { RequireAccessLevel } from "../api/access-level";
-import { AppInternalErrorState } from "../common/app-zero-state";
+import { AppErrorState, AppInternalErrorState } from "../common/app-zero-state";
 import { ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { Button } from "@blueprintjs/core";
 
 interface RootAppErrorProps {
     /**
@@ -30,6 +32,26 @@ export function RootAppError(props: RootAppErrorProps): ReactNode {
                     <ReloadDocumentsButton reloadAll hideFormGroup />
                 </RequireAccessLevel>
             }
+        />
+    );
+}
+
+export function NotFoundError(): ReactNode {
+    const navigate = useNavigate();
+    const homeButton = (
+        <Button
+            intent="primary"
+            text="Go home"
+            icon="home"
+            onClick={() => navigate({ to: "/app" })}
+        />
+    );
+
+    return (
+        <AppErrorState
+            title="Failed to find page."
+            description="Clicking this button should fix the issue. If it doesn't, contact the FRCDesignApp developers."
+            action={homeButton}
         />
     );
 }
