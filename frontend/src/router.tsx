@@ -31,10 +31,7 @@ import { CookieError } from "./pages/cookie-error";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
-const rootRoute = createRootRoute({
-    errorComponent: () => <RootAppError isRoot />,
-    notFoundComponent: () => <NotFoundError />
-});
+const rootRoute = createRootRoute();
 
 /**
  * When the app is first loaded by Onshape, Onshape provides search params indiciating the context the app is being accessed from.
@@ -179,5 +176,7 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({
-    routeTree
+    routeTree,
+    defaultErrorComponent: () => <RootAppError isRoot />,
+    defaultNotFoundComponent: () => <NotFoundError />
 });

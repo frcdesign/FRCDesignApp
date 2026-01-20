@@ -144,7 +144,6 @@ def get_library_ref() -> LibraryRef:
 
 
 ADAPTER = HTTPAdapter(pool_connections=100, pool_maxsize=100, pool_block=True)
-# SEMAPHORE = threading.BoundedSemaphore(12)
 
 
 def get_api() -> onshape_api.OAuthApi:
