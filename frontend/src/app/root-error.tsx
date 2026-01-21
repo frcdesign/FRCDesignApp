@@ -50,7 +50,7 @@ export function NotFoundError(): ReactNode {
     return (
         <AppErrorState
             title="Failed to find page."
-            description="Clicking this button should fix the issue. If it doesn't, contact the FRCDesignApp developers."
+            description="Click this button to fix the issue. If it doesn't, contact the FRCDesignApp developers."
             action={homeButton}
         />
     );

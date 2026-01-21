@@ -134,6 +134,12 @@ const documentListRoute = createRoute({
     }
 });
 
+const notFoundRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "not-found",
+    component: NotFoundError
+});
+
 const grantDeniedRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "grant-denied",
@@ -168,6 +174,7 @@ const routeTree = rootRoute.addChildren([
     appRoute.addChildren([
         homeRoute.addChildren([homeListRoute, documentListRoute])
     ]),
+    notFoundRoute,
     grantDeniedRoute,
     licenseRoute,
     safariErrorRoute,

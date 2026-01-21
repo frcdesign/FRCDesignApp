@@ -51,8 +51,14 @@ def create_app():
 
         return serve_index()
 
-    @app.get("/license")
+    @app.errorhandler(404)
+    def page_not_found(error):
+        # Not found errors are handled on the client
+        return serve_index()
+
+    @app.get("/not-found")
     @app.get("/grant-denied")
+    @app.get("/license")
     @app.get("/safari-error")
     @app.get("/beta-complete")
     def serve_static_pages():
