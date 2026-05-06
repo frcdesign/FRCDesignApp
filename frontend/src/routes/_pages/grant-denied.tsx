@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_pages/grant-denied")({
 
 const URL = "https://cad.onshape.com/user/applications";
 
-export function GrantDenied(): JSX.Element {
+function GrantDenied(): JSX.Element {
     const applicationAccessButton = (
         <OpenUrlButton text="Open Onshape Applications page" url={URL} />
     );

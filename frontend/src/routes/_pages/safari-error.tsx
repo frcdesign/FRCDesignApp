@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_pages/safari-error")({
 const URL =
     "https://support.apple.com/guide/safari/prevent-cross-site-tracking-sfri40732/mac";
 
-export function SafariError(): JSX.Element {
+function SafariError(): JSX.Element {
     const applicationAccessButton = (
         <OpenUrlButton text="More information" url={URL} />
     );

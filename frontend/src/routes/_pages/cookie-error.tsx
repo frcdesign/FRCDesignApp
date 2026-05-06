@@ -5,7 +5,7 @@ export const Route = createFileRoute("/_pages/cookie-error")({
     component: CookieError
 });
 
-export function CookieError(): JSX.Element {
+function CookieError(): JSX.Element {
     return (
         <div style={{ height: "80vh" }}>
             <NonIdealState
