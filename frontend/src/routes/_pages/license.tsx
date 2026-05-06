@@ -1,3 +1,9 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_pages/license")({
+    component: License
+});
+
 export function License() {
     return (
         <>

@@ -5,9 +5,9 @@
     "type": "module",
     "scripts": {
         "dev": "vite dev",
-        "build": "tsc && vite build",
-        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-        "preview": "vite preview"
+        "build": "vite build && tsc --noEmit",
+        "preview": "vite preview",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
     },
     "dependencies": {
         "@blueprintjs/core": "^6.0.0",
@@ -23,14 +23,21 @@
         "minisearch": "^7.2.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "typescript-parsec": "^0.3.4",
         "zod": "^4.1.11"
     },
     "devDependencies": {
+        "@tanstack/router-plugin": "^1.167.33",
         "@types/jest": "^30.0.0",
         "@types/node": "^25.6.0",
         "@types/react": "^18.2.43",
         "@types/react-dom": "^18.2.17",
+        "@typescript-eslint/eslint-plugin": "^8.59.2",
+        "@typescript-eslint/parser": "^8.59.2",
         "@vitejs/plugin-react": "^6.0.1",
+        "eslint": "^10.3.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-react-refresh": "^0.5.2",
         "jest": "^30.3.0",
         "jest-environment-jsdom": "^30.2.0",
         "sass": "^1.69.5",

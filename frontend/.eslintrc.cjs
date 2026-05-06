@@ -6,7 +6,7 @@ module.exports = {
         "plugin:@typescript-eslint/recommended",
         "plugin:react-hooks/recommended"
     ],
-    ignorePatterns: ["dist", ".eslintrc.cjs"],
+    ignorePatterns: ["dist", ".eslintrc.cjs", "routeTree.gen.ts"],
     parser: "@typescript-eslint/parser",
     plugins: ["react-refresh"],
     rules: {
@@ -15,6 +15,7 @@ module.exports = {
             { allowConstantExport: true }
         ],
         "@typescript-eslint/no-explicit-any": "off",
-        "eslint/no-fallthrough": "off"
+        // noFallthroughCasesInSwitch in tsconfig handles this
+        "no-fallthrough": "off"
     }
 };

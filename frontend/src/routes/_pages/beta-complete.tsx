@@ -1,5 +1,10 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
-import { OpenUrlButton } from "../common/open-url-button";
+import { OpenUrlButton } from "../../common/open-url-button";
+
+export const Route = createFileRoute("/_pages/beta-complete")({
+    component: BetaComplete
+});
 
 const URL =
     "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";

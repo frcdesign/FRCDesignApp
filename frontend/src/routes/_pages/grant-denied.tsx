@@ -1,5 +1,10 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
-import { OpenUrlButton } from "../common/open-url-button";
+import { OpenUrlButton } from "../../common/open-url-button";
+
+export const Route = createFileRoute("/_pages/grant-denied")({
+    component: GrantDenied
+});
 
 const URL = "https://cad.onshape.com/user/applications";
 

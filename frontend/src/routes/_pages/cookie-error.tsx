@@ -1,4 +1,9 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
+
+export const Route = createFileRoute("/_pages/cookie-error")({
+    component: CookieError
+});
 
 export function CookieError(): JSX.Element {
     return (
