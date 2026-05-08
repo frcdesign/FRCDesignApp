@@ -64,13 +64,13 @@ export const Route = createFileRoute("/app")({
             return redirect({
                 to: "/app/documents/$documentId",
                 params: { documentId: uiState.openDocumentId },
-                search: () => contextData
+                search: contextData
             });
         }
 
         return redirect({
             to: "/app/documents",
-            search: () => contextData
+            search: contextData
         });
     },
     loaderDeps: ({ search }) => ({
