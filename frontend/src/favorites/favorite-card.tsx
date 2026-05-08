@@ -11,7 +11,12 @@ import {
     MenuDivider,
     MenuItem
 } from "@blueprintjs/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import {
+    useNavigate,
+    useRouteContext,
+    useRouter,
+    useSearch
+} from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteElementItem } from "./favorite-button";
 import {
@@ -25,7 +30,6 @@ import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { toUserApiPath } from "../api/path";
 import { useUiState } from "../api/ui-state";
-import { router } from "../router";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { getAppErrorHandler } from "../api/errors";
 import { useLibraryUserDataQuery } from "../queries";
@@ -171,6 +175,8 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
 function useSetFavoriteOrderMutation() {
     const userPath = useSearch({ from: "/app" });
     const library = useLibrary();
+    const router = useRouter();
+
     return useMutation({
         mutationKey: ["set-favorite-order"],
         mutationFn: async (favoriteOrder: string[]) => {

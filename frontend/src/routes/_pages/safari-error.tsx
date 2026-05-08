@@ -1,10 +1,15 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
-import { OpenUrlButton } from "../common/open-url-button";
+import { OpenUrlButton } from "../../common/open-url-button";
+
+export const Route = createFileRoute("/_pages/safari-error")({
+    component: SafariError
+});
 
 const URL =
     "https://support.apple.com/guide/safari/prevent-cross-site-tracking-sfri40732/mac";
 
-export function SafariError(): JSX.Element {
+function SafariError(): JSX.Element {
     const applicationAccessButton = (
         <OpenUrlButton text="More information" url={URL} />
     );

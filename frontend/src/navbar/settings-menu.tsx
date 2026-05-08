@@ -11,7 +11,7 @@ import {
 } from "@blueprintjs/core";
 import { Dispatch, ReactNode, useMemo, useState } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
@@ -30,7 +30,6 @@ import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
 import { toUserApiPath } from "../api/path";
-import { router } from "../router";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
@@ -60,7 +59,7 @@ function SettingsMenuDialog(): ReactNode {
 
     const search = useSearch({ from: "/app" });
 
-    let adminSettings = null;
+    let adminSettings: ReactNode = null;
     // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
     if (hasMemberAccess(search.maxAccessLevel)) {
         adminSettings = (
@@ -101,6 +100,7 @@ function SettingsMenuDialog(): ReactNode {
 function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
     const settings = useUserData().settings;
+    const router = useRouter();
 
     const settingsMutation = useMutation({
         mutationKey: updateSettingsKey(search),
@@ -366,6 +366,7 @@ export function ReloadDocumentsButton(
     const hideFormGroup = props.hideFormGroup ?? false;
 
     const library = useLibrary();
+    const router = useRouter();
 
     const mutation = useMutation({
         mutationKey: ["reload-documents"],

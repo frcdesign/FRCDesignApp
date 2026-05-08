@@ -1,4 +1,10 @@
-export function License() {
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_pages/license")({
+    component: License
+});
+
+function License() {
     return (
         <>
             <h3 style={{ textAlign: "center" }}>GNU GENERAL PUBLIC LICENSE</h3>

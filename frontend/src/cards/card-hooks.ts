@@ -3,12 +3,11 @@ import { apiPost } from "../api/api";
 import { queryClient } from "../query-client";
 import { ElementObj, hasUserAccess } from "../api/models";
 import { useMemo } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getAppErrorHandler } from "../api/errors";
 import { libraryQueryMatchKey } from "../queries";
-import { router } from "../router";
 import {
     ElementPath,
     InstancePath,
@@ -23,6 +22,8 @@ export function useSetVisibilityMutation(
     isVisible: boolean
 ) {
     const library = useLibrary();
+    const router = useRouter();
+
     return useMutation({
         mutationKey: ["set-element-visibility"],
         mutationFn: async () => {
@@ -66,6 +67,7 @@ export function useIsElementHidden(element: ElementObj): boolean {
 
 export function useReloadThumbnailMutation(path: InstancePath | ElementPath) {
     const library = useLibrary();
+    const router = useRouter();
 
     const apiPath = isElementPath(path)
         ? toElementApiPath(path)

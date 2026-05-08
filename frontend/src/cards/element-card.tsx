@@ -6,7 +6,7 @@ import {
     MenuDivider,
     MenuItem
 } from "@blueprintjs/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { ElementObj, ElementType, LibraryObj } from "../api/models";
 import { SearchHit } from "../search/search";
@@ -39,7 +39,6 @@ import { showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api/library";
 import { getAppErrorHandler } from "../api/errors";
 import { getQueryUpdater } from "../common/utils";
-import { router } from "../router";
 
 interface ElementCardProps extends PropsWithChildren {
     element: ElementObj;
@@ -155,6 +154,7 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
 
     const library = useLibrary();
     const search = useSearch({ from: "/app" });
+    const router = useRouter();
 
     const setVisibilityMutation = useSetVisibilityMutation(
         element.documentId,

@@ -2,8 +2,8 @@ import { createRoot } from "react-dom/client";
 import { IconPaths, Icons } from "@blueprintjs/icons";
 
 // Router
-import { RouterProvider } from "@tanstack/react-router";
-import { router } from "./router";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
 
 // Used to make static assets work in dev
 import "vite/modulepreload-polyfill";
@@ -36,6 +36,8 @@ Icons.setLoaderOptions({
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
+const router = createRouter({ routeTree, scrollRestoration: true });
+
 declare module "@tanstack/react-router" {
     interface Register {
         router: typeof router;
@@ -43,6 +45,8 @@ declare module "@tanstack/react-router" {
 }
 
 const rootElement: HTMLElement = document.getElementById("root")!;
-const root = createRoot(rootElement);
-// Note: We can't use React StrictMode because it breaks Blueprint portals and hence, ContextMenus
-root.render(<RouterProvider router={router} />);
+
+if (!rootElement.innerHTML) {
+    const root = createRoot(rootElement);
+    root.render(<RouterProvider router={router} />);
+}

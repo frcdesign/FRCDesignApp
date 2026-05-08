@@ -133,7 +133,7 @@ export function CardTitle(props: CardTitleProps) {
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
-    let hiddenTag = null;
+    let hiddenTag: ReactNode = null;
     if (isHidden) {
         hiddenTag = (
             <Tag round intent="warning" icon="eye-off" title="Hidden" />

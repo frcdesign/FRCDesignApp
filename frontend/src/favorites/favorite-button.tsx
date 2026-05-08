@@ -11,8 +11,7 @@ import { apiDelete, apiPost } from "../api/api";
 import { ElementObj, LibraryUserData } from "../api/models";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
-import { useSearch } from "@tanstack/react-router";
-import { router } from "../router";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api/errors";
 import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibrary } from "../api/library";
@@ -53,6 +52,7 @@ function updateFavorites(
 function useUpdateFavoritesMutation(isFavorite: boolean) {
     const search = useSearch({ from: "/app" });
     const library = useLibrary();
+    const router = useRouter();
 
     return useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorite", isFavorite],

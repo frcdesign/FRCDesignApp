@@ -204,3 +204,5 @@ temp/
 firestore_data/
 
 *.pem
+
+.tanstack

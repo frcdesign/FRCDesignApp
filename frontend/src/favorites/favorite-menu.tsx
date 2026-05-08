@@ -12,7 +12,7 @@ import {
     MenuDialogProps,
     useHandleCloseDialog
 } from "../overlays/menu-params";
-import { useSearch } from "@tanstack/react-router";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
@@ -23,7 +23,6 @@ import { AppInternalErrorState } from "../common/app-zero-state";
 import { HeartIcon } from "./favorite-button";
 import { toUserApiPath } from "../api/path";
 import { queryClient } from "../query-client";
-import { router } from "../router";
 import { Configuration } from "../insert/configuration-models";
 import { libraryUserDataQueryMatchKey, useLibraryQuery } from "../queries";
 import { getQueryUpdater } from "../common/utils";
@@ -48,6 +47,7 @@ function FavoriteMenuDialog(
     const { favoriteId, defaultConfiguration } = props;
 
     const search = useSearch({ from: "/app" });
+    const router = useRouter();
     const library = useLibrary();
     const elements = useLibraryQuery().data?.elements;
 
