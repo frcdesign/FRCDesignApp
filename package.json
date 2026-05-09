@@ -1,0 +1,51 @@
+{
+    "name": "frc-design-lib",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite dev",
+        "build": "vite build && tsc --noEmit",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    },
+    "dependencies": {
+        "@blueprintjs/core": "^6.0.0",
+        "@blueprintjs/icons": "^6.0.0",
+        "@blueprintjs/select": "^6.0.0",
+        "@tailwindcss/vite": "^4.2.4",
+        "@tanstack/react-query": "^5.87.0",
+        "@tanstack/react-router": "^1.121.12",
+        "@tanstack/react-router-devtools": "^1.121.12",
+        "@tanstack/react-start": "^1.167.65",
+        "arctic": "^3.7.0",
+        "dotenv": "^17.4.2",
+        "firebase-admin": "^13.9.0",
+        "immer": "^11.1.6",
+        "jose": "^6.2.3",
+        "minisearch": "^7.2.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "typescript-parsec": "^0.3.4",
+        "zod": "^4.1.11"
+    },
+    "devDependencies": {
+        "@tanstack/router-plugin": "^1.167.33",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^25.6.0",
+        "@types/react": "^18.2.43",
+        "@types/react-dom": "^18.2.17",
+        "@typescript-eslint/eslint-plugin": "^8.59.2",
+        "@typescript-eslint/parser": "^8.59.2",
+        "@vitejs/plugin-react": "^6.0.1",
+        "eslint": "^10.3.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-react-refresh": "^0.5.2",
+        "jest": "^30.3.0",
+        "jest-environment-jsdom": "^30.2.0",
+        "sass": "^1.69.5",
+        "ts-jest": "^29.1.1",
+        "tsx": "^4.7.0",
+        "typescript": "^5.9.3",
+        "vite": "^8.0.10"
+    }
+}
