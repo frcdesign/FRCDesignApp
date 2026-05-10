@@ -7,25 +7,23 @@ import {
     CacheOptions,
     toCacheOptions,
     useCacheOptions
-} from "./api/api";
-import {
-    LibraryUserData,
-    UserData,
-    Library,
-    LibraryObj,
-    ContextData
-} from "./api/models";
-import {
-    InstancePath,
-    toInstanceApiPath,
-    toUserApiPath,
-    UserPath
-} from "./api/path";
-import { toLibraryPath, useLibrary } from "./api/library";
-import { UnitInfo } from "./insert/configuration-models";
+} from "./api-utils/api";
+import { Library, LibraryUserData } from "./api-utils/client-models";
+import { LibraryOut } from "./api/library.server";
+import { useLibrary } from "./api-utils/library";
+import { UnitInfo } from "./configurations/configuration-models";
 import { useLoaderData, useSearch } from "@tanstack/react-router";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
+import { fetchLibraryUserData } from "./api/library.server";
+import {
+    fetchContextData,
+    fetchUserData,
+    ContextDataOut
+} from "./api/user.server";
+import { fetchUnitInfo } from "./configurations/configurations.server";
+import { InstancePath } from "./onshape-api/path";
+import { UserData } from "./connect/db-models";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];
@@ -37,10 +35,6 @@ export function getConfigurationKey(
     cacheOptions?: CacheOptions
 ) {
     return ["configuration", library, configurationId, cacheOptions];
-}
-
-export function updateSettingsKey(userPath: UserPath) {
-    return ["user-data", toUserApiPath(userPath)];
 }
 
 export function useLibraryQuery() {
@@ -58,9 +52,10 @@ export function libraryQueryMatchKey() {
 }
 
 export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
-    return queryOptions<LibraryObj>({
+    return queryOptions<LibraryOut>({
         queryKey: libraryQueryKey(library, cacheOptions),
-        queryFn: async () => apiGet(toLibraryPath(library), { cacheOptions }),
+        queryFn: async () =>
+            apiGet("/library-data", { query: { library }, cacheOptions }),
         staleTime: Infinity,
         gcTime: Infinity
     });
@@ -70,68 +65,56 @@ export function libraryUserDataQueryMatchKey() {
     return ["library-user-data"];
 }
 
-export function libraryUserDataQueryKey(library: Library, userPath: UserPath) {
-    return ["library-user-data", library, userPath.userId];
+export function libraryUserDataQueryKey(library: Library, userId: string) {
+    return ["library-user-data", library, userId];
 }
 
-export function getLibraryUserDataQuery(library: Library, userPath: UserPath) {
+export function getLibraryUserDataQuery(library: Library, userId: string) {
     return queryOptions<LibraryUserData>({
-        queryKey: libraryUserDataQueryKey(library, userPath),
-        queryFn: async () =>
-            apiGet(
-                "/library-user-data" +
-                    toLibraryPath(library) +
-                    toUserApiPath(userPath)
-            )
+        queryKey: libraryUserDataQueryKey(library, userId),
+        queryFn: () => fetchLibraryUserData({ data: { library } })
     });
 }
 
 export function useLibraryUserDataQuery() {
-    const search = useSearch({ from: "/app" });
     const library = useLibrary();
-    return useQuery(getLibraryUserDataQuery(library, search));
+    const search = useSearch({ from: "/app" });
+    return useQuery(getLibraryUserDataQuery(library, search.userId));
 }
 
-export function contextDataQueryKey(userPath: UserPath) {
-    return ["context-data", userPath.userId];
+export function contextDataQueryKey(library: Library) {
+    return ["context-data", library];
 }
 
-/**
- * Returns core application context data needed to load most other endpoints.
- */
-export function getContextDataQuery(userPath: UserPath) {
-    return queryOptions<ContextData>({
-        queryKey: contextDataQueryKey(userPath),
-        queryFn: async () => apiGet("/context-data" + toUserApiPath(userPath))
+/** Returns core application context data needed to load most other endpoints. */
+export function getContextDataQuery(library: Library) {
+    return queryOptions<ContextDataOut>({
+        queryKey: contextDataQueryKey(library),
+        queryFn: () => fetchContextData({ data: { library } })
     });
 }
 
-export function userDataQueryKey(userPath: UserPath) {
-    return ["user-data", userPath.userId];
+export function userDataQueryKey() {
+    return ["user-data"];
 }
 
-/**
- * Returns user data needed to load most other endpoints.
- */
-export function getUserDataQuery(userPath: UserPath) {
+/** Returns the current user's stored data. */
+export function getUserDataQuery() {
     return queryOptions<UserData>({
-        queryKey: userDataQueryKey(userPath),
-        queryFn: async () => apiGet("/user-data" + toUserApiPath(userPath))
+        queryKey: userDataQueryKey(),
+        queryFn: () => fetchUserData()
     });
 }
 
-export function useUserData() {
+export function useUserData(): UserData {
     return useLoaderData({ from: "/app" });
 }
 
-/**
- * Returns information needed to format unit expressions in the Insert dialog.
- */
+/** Returns information needed to format unit expressions in the Insert dialog. */
 export function useUnitInfoQuery(instancePath: InstancePath) {
     return useQuery<UnitInfo>({
         queryKey: ["unit-info", instancePath],
-        queryFn: async () =>
-            apiGet("/unit-info" + toInstanceApiPath(instancePath))
+        queryFn: () => fetchUnitInfo({ data: { instancePath } })
     });
 }
 
@@ -147,15 +130,12 @@ export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
     return queryOptions<MiniSearch | null>({
         queryKey: searchDbQueryKey(library, cacheOptions),
         queryFn: async () =>
-            apiGet("/search-db" + toLibraryPath(library), {
-                cacheOptions
-            }).then((result) => {
-                if (!result.searchDb) {
-                    // Have to use null since TanstackQuery doesn't allow null
-                    return null;
+            apiGet("/search-db", { query: { library }, cacheOptions }).then(
+                (result: { searchDb: string | null }) => {
+                    if (!result.searchDb) return null;
+                    return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
                 }
-                return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
-            }),
+            ),
         staleTime: Infinity,
         gcTime: Infinity
     });

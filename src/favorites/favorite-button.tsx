@@ -7,14 +7,14 @@ import {
 } from "@blueprintjs/core";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import { apiDelete, apiPost } from "../api/api";
-import { ElementObj, LibraryUserData } from "../api/models";
-import { toUserApiPath } from "../api/path";
+import { apiDelete, apiPost } from "../api-utils/api";
+import { ElementObj, LibraryUserData } from "../api-utils/client-models";
+import { toUserApiPath } from "../onshape-api/path";
 import { queryClient } from "../query-client";
 import { useRouter, useSearch } from "@tanstack/react-router";
-import { handleAppError, HandledError } from "../api/errors";
+import { handleAppError, HandledError } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 import {
     libraryUserDataQueryKey,
     libraryUserDataQueryMatchKey

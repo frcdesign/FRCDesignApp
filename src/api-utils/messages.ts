@@ -8,7 +8,7 @@
  */
 
 import { useSearch } from "@tanstack/react-router";
-import { ElementPath } from "./path";
+import { ElementPath } from "../onshape-api/path";
 import { useCallback } from "react";
 
 export function useMessageListener() {

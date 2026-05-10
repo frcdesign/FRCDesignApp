@@ -4,7 +4,7 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useCallback, useState } from "react";
-import { ElementObj, ElementType } from "../api/models";
+import { ElementObj, ElementType } from "../api-utils/client-models";
 import {
     Button,
     Checkbox,
@@ -23,11 +23,11 @@ import {
 import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
 import { showToast } from "../common/toaster";
-import { ConfigurationWrapper } from "./configurations";
+import { ConfigurationWrapper } from "../configurations/configurations";
 import { useInsertMutation } from "./insert-hooks";
-import { Configuration } from "./configuration-models";
+import { Configuration } from "../configurations/configuration-models";
 import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
-import { useUiState } from "../api/ui-state";
+import { useUiState } from "../api-utils/ui-state";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });

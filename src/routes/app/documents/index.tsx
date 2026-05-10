@@ -13,15 +13,15 @@ import { PropsWithChildren, ReactNode, useRef, useState } from "react";
 import { DocumentCard } from "../../../cards/document-card";
 import { HeartIcon } from "../../../favorites/favorite-button";
 import { SearchResults } from "../../../search/search-results";
-import { useUiState } from "../../../api/ui-state";
+import { useUiState } from "../../../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../../../common/app-zero-state";
-import { RequireAccessLevel } from "../../../api/access-level";
+import { RequireAccessLevel } from "../../../api-utils/access-level";
 import { useInteractiveSection } from "../../../common/utils";
 import { AddDocumentButton } from "../../../app/add-document-menu";
 import { FavoritesList } from "../../../favorites/favorites-list";
 import { useLibraryQuery } from "../../../queries";
-import { getLibraryName, useLibrary } from "../../../api/library";
-import { updateUiState } from "../../../api/ui-state";
+import { getLibraryName, useLibrary } from "../../../api-utils/library";
+import { updateUiState } from "../../../api-utils/ui-state";
 
 export const Route = createFileRoute("/app/documents/")({
     component: HomeList,

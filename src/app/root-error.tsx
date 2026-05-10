@@ -1,5 +1,5 @@
 import { ReloadDocumentsButton } from "../navbar/settings-menu";
-import { RequireAccessLevel } from "../api/access-level";
+import { RequireAccessLevel } from "../api-utils/access-level";
 import { PageError } from "../common/app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";

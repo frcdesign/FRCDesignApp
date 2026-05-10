@@ -14,7 +14,7 @@ import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import {
     AccessLevel,
@@ -24,22 +24,21 @@ import {
     Settings,
     Theme,
     UserData
-} from "../api/models";
-import { getLibraryName as getLibraryName } from "../api/library";
+} from "../api-utils/client-models";
+import { getLibraryName as getLibraryName } from "../api-utils/library";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
-import { toUserApiPath } from "../api/path";
+import { updateSettings } from "../api/user.server";
 import { OpenUrlButton } from "../common/open-url-button";
-import { RequireAccessLevel } from "../api/access-level";
+import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { getAppErrorHandler, HandledError } from "../api/errors";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { getAppErrorHandler, HandledError } from "../api-utils/errors";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
     searchDbQueryMatchKey,
-    updateSettingsKey,
     userDataQueryKey,
     useUserData
 } from "../queries";
@@ -103,24 +102,20 @@ function UserSettings(): ReactNode {
     const router = useRouter();
 
     const settingsMutation = useMutation({
-        mutationKey: updateSettingsKey(search),
+        mutationKey: ["update-settings"],
         mutationFn: async (newSettings: Partial<Settings>) =>
-            apiPost("/settings" + toUserApiPath(search), {
-                body: {
-                    ...newSettings
-                }
-            }),
+            updateSettings({ data: newSettings }),
         onMutate: async (newSettings) => {
             await Promise.all([
                 queryClient.cancelQueries({
-                    queryKey: userDataQueryKey(search)
+                    queryKey: userDataQueryKey()
                 }),
                 queryClient.cancelQueries({
                     queryKey: libraryQueryMatchKey()
                 })
             ]);
             queryClient.setQueryData<UserData>(
-                userDataQueryKey(search),
+                userDataQueryKey(),
                 getQueryUpdater((data) => {
                     Object.assign(data.settings, newSettings);
                     return data;
@@ -134,7 +129,7 @@ function UserSettings(): ReactNode {
         onSettled: async () => {
             await Promise.all([
                 queryClient.invalidateQueries({
-                    queryKey: userDataQueryKey(search)
+                    queryKey: userDataQueryKey()
                 }),
                 queryClient.invalidateQueries({
                     queryKey: libraryQueryMatchKey()

@@ -13,6 +13,9 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AppDocumentsRouteImport } from './routes/app/documents'
+import { Route as ApiSearchDbRouteImport } from './routes/api/search-db'
+import { Route as ApiLibraryDataRouteImport } from './routes/api/library-data'
+import { Route as ApiConfigurationRouteImport } from './routes/api/configuration'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
@@ -20,6 +23,9 @@ import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-err
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as AppDocumentsIndexRouteImport } from './routes/app/documents/index'
 import { Route as AppDocumentsDocumentIdRouteImport } from './routes/app/documents/$documentId'
+import { Route as ApiAdminSearchDbRouteImport } from './routes/api/admin/search-db'
+import { Route as ApiAdminLibraryDataRouteImport } from './routes/api/admin/library-data'
+import { Route as ApiAdminConfigurationRouteImport } from './routes/api/admin/configuration'
 
 const AppRoute = AppRouteImport.update({
   id: '/app',
@@ -40,6 +46,21 @@ const AppDocumentsRoute = AppDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiSearchDbRoute = ApiSearchDbRouteImport.update({
+  id: '/api/search-db',
+  path: '/api/search-db',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLibraryDataRoute = ApiLibraryDataRouteImport.update({
+  id: '/api/library-data',
+  path: '/api/library-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConfigurationRoute = ApiConfigurationRouteImport.update({
+  id: '/api/configuration',
+  path: '/api/configuration',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -76,6 +97,21 @@ const AppDocumentsDocumentIdRoute = AppDocumentsDocumentIdRouteImport.update({
   path: '/$documentId',
   getParentRoute: () => AppDocumentsRoute,
 } as any)
+const ApiAdminSearchDbRoute = ApiAdminSearchDbRouteImport.update({
+  id: '/api/admin/search-db',
+  path: '/api/admin/search-db',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminLibraryDataRoute = ApiAdminLibraryDataRouteImport.update({
+  id: '/api/admin/library-data',
+  path: '/api/admin/library-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminConfigurationRoute = ApiAdminConfigurationRouteImport.update({
+  id: '/api/admin/configuration',
+  path: '/api/admin/configuration',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
@@ -84,9 +120,15 @@ export interface FileRoutesByFullPath {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/api/configuration': typeof ApiConfigurationRoute
+  '/api/library-data': typeof ApiLibraryDataRoute
+  '/api/search-db': typeof ApiSearchDbRoute
   '/app/documents': typeof AppDocumentsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/api/admin/configuration': typeof ApiAdminConfigurationRoute
+  '/api/admin/library-data': typeof ApiAdminLibraryDataRoute
+  '/api/admin/search-db': typeof ApiAdminSearchDbRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
@@ -97,8 +139,14 @@ export interface FileRoutesByTo {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/api/configuration': typeof ApiConfigurationRoute
+  '/api/library-data': typeof ApiLibraryDataRoute
+  '/api/search-db': typeof ApiSearchDbRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/api/admin/configuration': typeof ApiAdminConfigurationRoute
+  '/api/admin/library-data': typeof ApiAdminLibraryDataRoute
+  '/api/admin/search-db': typeof ApiAdminSearchDbRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents': typeof AppDocumentsIndexRoute
 }
@@ -110,9 +158,15 @@ export interface FileRoutesById {
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
+  '/api/configuration': typeof ApiConfigurationRoute
+  '/api/library-data': typeof ApiLibraryDataRoute
+  '/api/search-db': typeof ApiSearchDbRoute
   '/app/documents': typeof AppDocumentsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/api/admin/configuration': typeof ApiAdminConfigurationRoute
+  '/api/admin/library-data': typeof ApiAdminLibraryDataRoute
+  '/api/admin/search-db': typeof ApiAdminSearchDbRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
@@ -125,9 +179,15 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/api/configuration'
+    | '/api/library-data'
+    | '/api/search-db'
     | '/app/documents'
     | '/auth/callback'
     | '/auth/sign-in'
+    | '/api/admin/configuration'
+    | '/api/admin/library-data'
+    | '/api/admin/search-db'
     | '/app/documents/$documentId'
     | '/app/documents/'
   fileRoutesByTo: FileRoutesByTo
@@ -138,8 +198,14 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/api/configuration'
+    | '/api/library-data'
+    | '/api/search-db'
     | '/auth/callback'
     | '/auth/sign-in'
+    | '/api/admin/configuration'
+    | '/api/admin/library-data'
+    | '/api/admin/search-db'
     | '/app/documents/$documentId'
     | '/app/documents'
   id:
@@ -150,9 +216,15 @@ export interface FileRouteTypes {
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
+    | '/api/configuration'
+    | '/api/library-data'
+    | '/api/search-db'
     | '/app/documents'
     | '/auth/callback'
     | '/auth/sign-in'
+    | '/api/admin/configuration'
+    | '/api/admin/library-data'
+    | '/api/admin/search-db'
     | '/app/documents/$documentId'
     | '/app/documents/'
   fileRoutesById: FileRoutesById
@@ -164,8 +236,14 @@ export interface RootRouteChildren {
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
   PagesLicenseRoute: typeof PagesLicenseRoute
   PagesSafariErrorRoute: typeof PagesSafariErrorRoute
+  ApiConfigurationRoute: typeof ApiConfigurationRoute
+  ApiLibraryDataRoute: typeof ApiLibraryDataRoute
+  ApiSearchDbRoute: typeof ApiSearchDbRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
+  ApiAdminConfigurationRoute: typeof ApiAdminConfigurationRoute
+  ApiAdminLibraryDataRoute: typeof ApiAdminLibraryDataRoute
+  ApiAdminSearchDbRoute: typeof ApiAdminSearchDbRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -197,6 +275,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/documents'
       preLoaderRoute: typeof AppDocumentsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/search-db': {
+      id: '/api/search-db'
+      path: '/api/search-db'
+      fullPath: '/api/search-db'
+      preLoaderRoute: typeof ApiSearchDbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/library-data': {
+      id: '/api/library-data'
+      path: '/api/library-data'
+      fullPath: '/api/library-data'
+      preLoaderRoute: typeof ApiLibraryDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/configuration': {
+      id: '/api/configuration'
+      path: '/api/configuration'
+      fullPath: '/api/configuration'
+      preLoaderRoute: typeof ApiConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -247,6 +346,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDocumentsDocumentIdRouteImport
       parentRoute: typeof AppDocumentsRoute
     }
+    '/api/admin/search-db': {
+      id: '/api/admin/search-db'
+      path: '/api/admin/search-db'
+      fullPath: '/api/admin/search-db'
+      preLoaderRoute: typeof ApiAdminSearchDbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/library-data': {
+      id: '/api/admin/library-data'
+      path: '/api/admin/library-data'
+      fullPath: '/api/admin/library-data'
+      preLoaderRoute: typeof ApiAdminLibraryDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/configuration': {
+      id: '/api/admin/configuration'
+      path: '/api/admin/configuration'
+      fullPath: '/api/admin/configuration'
+      preLoaderRoute: typeof ApiAdminConfigurationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -281,18 +401,15 @@ const rootRouteChildren: RootRouteChildren = {
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,
   PagesLicenseRoute: PagesLicenseRoute,
   PagesSafariErrorRoute: PagesSafariErrorRoute,
+  ApiConfigurationRoute: ApiConfigurationRoute,
+  ApiLibraryDataRoute: ApiLibraryDataRoute,
+  ApiSearchDbRoute: ApiSearchDbRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,
+  ApiAdminConfigurationRoute: ApiAdminConfigurationRoute,
+  ApiAdminLibraryDataRoute: ApiAdminLibraryDataRoute,
+  ApiAdminSearchDbRoute: ApiAdminSearchDbRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

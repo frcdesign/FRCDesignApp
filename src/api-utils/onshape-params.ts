@@ -1,5 +1,5 @@
-import { ElementType, Theme } from "./models";
-import { UserPath, ElementPath } from "./path";
+import { ElementType, Theme } from "./client-models";
+import { UserPath, ElementPath } from "../onshape-api/path";
 import { Classes } from "@blueprintjs/core";
 
 /**

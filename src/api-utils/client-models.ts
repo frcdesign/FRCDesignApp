@@ -1,8 +1,8 @@
 /**
  * A collection of type and result definitions mirroring backend endpoints and/or Onshape.
  */
-import { Configuration } from "../insert/configuration-models";
-import { ElementPath, InstancePath } from "./path";
+import { Configuration } from "../configurations/configuration-models";
+import { ElementPath, InstancePath } from "../onshape-api/path";
 
 export enum Library {
     FRC_DESIGN_LIB = "frc-design-lib",

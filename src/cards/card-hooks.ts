@@ -1,12 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { ElementObj, hasUserAccess } from "../api/models";
+import { ElementObj, hasUserAccess } from "../api-utils/client-models";
 import { useMemo } from "react";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
-import { toLibraryPath, useLibrary } from "../api/library";
-import { getAppErrorHandler } from "../api/errors";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { getAppErrorHandler } from "../api-utils/errors";
 import { libraryQueryMatchKey } from "../queries";
 import {
     ElementPath,
@@ -14,7 +14,7 @@ import {
     isElementPath,
     toElementApiPath,
     toInstanceApiPath
-} from "../api/path";
+} from "../onshape-api/path";
 
 export function useSetVisibilityMutation(
     documentId: string,

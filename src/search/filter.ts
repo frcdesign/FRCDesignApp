@@ -1,4 +1,4 @@
-import { ElementObj, Vendor } from "../api/models";
+import { ElementObj, Vendor } from "../api-utils/client-models";
 import { FilterResult } from "./search";
 
 export enum SortOrder {

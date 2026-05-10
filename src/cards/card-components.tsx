@@ -17,16 +17,20 @@ import {
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath, ElementPath, InstancePath } from "../api/path";
+import { DocumentPath, ElementPath, InstancePath } from "../onshape-api/path";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { ElementObj, ElementType, ThumbnailUrls } from "../api/models";
-import { Configuration } from "../insert/configuration-models";
+import {
+    ElementObj,
+    ElementType,
+    ThumbnailUrls
+} from "../api-utils/client-models";
+import { Configuration } from "../configurations/configuration-models";
 import { useSearch } from "@tanstack/react-router";
-import { RequireAccessLevel } from "../api/access-level";
+import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {

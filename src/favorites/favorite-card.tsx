@@ -1,7 +1,11 @@
 import { ReactNode } from "react";
-import { ElementObj, Favorite, LibraryUserData } from "../api/models";
+import {
+    ElementObj,
+    Favorite,
+    LibraryUserData
+} from "../api-utils/client-models";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import {
     Card,
@@ -28,14 +32,14 @@ import {
 import { useIsElementHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
-import { toUserApiPath } from "../api/path";
-import { useUiState } from "../api/ui-state";
+import { toUserApiPath } from "../onshape-api/path";
+import { useUiState } from "../api-utils/ui-state";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
-import { getAppErrorHandler } from "../api/errors";
+import { getAppErrorHandler } from "../api-utils/errors";
 import { useLibraryUserDataQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 
 interface FavoriteCardProps {
     element: ElementObj;

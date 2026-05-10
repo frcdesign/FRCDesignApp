@@ -8,7 +8,11 @@ import {
 } from "@blueprintjs/core";
 import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { ElementObj, ElementType, LibraryObj } from "../api/models";
+import {
+    ElementObj,
+    ElementType,
+    LibraryObj
+} from "../api-utils/client-models";
 import { SearchHit } from "../search/search";
 import {
     FavoriteButton,
@@ -32,12 +36,12 @@ import {
     useLibraryUserDataQuery
 } from "../queries";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { toElementApiPath } from "../api/path";
+import { toElementApiPath } from "../onshape-api/path";
 import { showSuccessToast } from "../common/toaster";
-import { toLibraryPath, useLibrary } from "../api/library";
-import { getAppErrorHandler } from "../api/errors";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 
 interface ElementCardProps extends PropsWithChildren {

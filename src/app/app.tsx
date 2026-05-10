@@ -6,13 +6,13 @@ import {
     getBackgroundClass,
     getColorTheme,
     getThemeClass
-} from "../api/onshape-params";
+} from "../api-utils/onshape-params";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AppAlerts } from "../overlays/app-popups";
 import { useUserData } from "../queries";
 import { AppMenus } from "../overlays/app-menus";
-import { useMessageListener } from "../api/messages";
+import { useMessageListener } from "../api-utils/messages";
 
 export function App() {
     const search = useSearch({ from: "/app" });

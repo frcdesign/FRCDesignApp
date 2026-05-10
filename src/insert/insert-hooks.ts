@@ -1,15 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { apiPost } from "../api/api";
-import { ElementObj, ElementType } from "../api/models";
-import { toElementApiPath } from "../api/path";
+import { apiPost } from "../api-utils/api";
+import { ElementObj, ElementType } from "../api-utils/client-models";
+import { toElementApiPath } from "../onshape-api/path";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
-import { getAppErrorHandler } from "../api/errors";
+import { getAppErrorHandler } from "../api-utils/errors";
 import { useMemo } from "react";
-import { Configuration } from "./configuration-models";
-import { toLibraryPath, useLibrary } from "../api/library";
-import { sendOpenFeatureMessage } from "../api/messages";
+import { Configuration } from "../configurations/configuration-models";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { sendOpenFeatureMessage } from "../api-utils/messages";
 
 export interface InsertArgs {
     isFavorite: boolean;

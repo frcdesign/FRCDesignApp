@@ -4,14 +4,14 @@ import {
     apiGetImage,
     apiGetRawImage,
     useCacheOptions
-} from "../api/api";
+} from "../api-utils/api";
 import {
     getHeightAndWidth,
     HeightAndWidth,
     ThumbnailSize,
     ThumbnailUrls
-} from "../api/models";
-import { ElementPath, toElementApiPath } from "../api/path";
+} from "../api-utils/client-models";
+import { ElementPath, toElementApiPath } from "../onshape-api/path";
 import {
     Card,
     Icon,
@@ -22,10 +22,8 @@ import {
 } from "@blueprintjs/core";
 
 import { ReactNode } from "react";
-import {
-    Configuration,
-    encodeConfigurationForQuery
-} from "./configuration-models";
+import { Configuration } from "../configurations/configuration-models";
+import { encodeConfigurationForQuery } from "../configurations/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../common/app-zero-state";
 

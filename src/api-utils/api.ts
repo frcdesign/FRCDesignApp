@@ -1,6 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
-import { AccessLevel, hasMemberAccess } from "./models";
+import { AccessLevel, hasMemberAccess } from "./client-models";
 import { HandledError } from "./errors";
 
 function getUrl(

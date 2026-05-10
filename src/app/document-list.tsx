@@ -13,8 +13,12 @@ import {
 } from "@tanstack/react-router";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../search/search-results";
-import { DocumentObj, Elements, hasMemberAccess } from "../api/models";
-import { useUiState } from "../api/ui-state";
+import {
+    DocumentObj,
+    Elements,
+    hasMemberAccess
+} from "../api-utils/client-models";
+import { useUiState } from "../api-utils/ui-state";
 import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
 import { ElementCard } from "../cards/element-card";

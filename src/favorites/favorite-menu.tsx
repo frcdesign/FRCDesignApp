@@ -14,18 +14,18 @@ import {
 } from "../overlays/menu-params";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { PreviewImageCard } from "../insert/thumbnail";
-import { ConfigurationWrapper } from "../insert/configurations";
-import { LibraryUserData } from "../api/models";
+import { ConfigurationWrapper } from "../configurations/configurations";
+import { LibraryUserData } from "../api-utils/client-models";
 import { HeartIcon } from "./favorite-button";
-import { toUserApiPath } from "../api/path";
+import { toUserApiPath } from "../onshape-api/path";
 import { queryClient } from "../query-client";
-import { Configuration } from "../insert/configuration-models";
+import { Configuration } from "../configurations/configuration-models";
 import { libraryUserDataQueryMatchKey, useLibraryQuery } from "../queries";
 import { getQueryUpdater } from "../common/utils";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { PageError } from "../common/app-zero-state";
 
 export function FavoriteMenu(): ReactNode {

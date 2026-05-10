@@ -1,4 +1,4 @@
-import { Library } from "./models";
+import { Library } from "./client-models";
 import { useUserData } from "../queries";
 
 export function useLibrary() {

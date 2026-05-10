@@ -1,6 +1,5 @@
 import {
     createFileRoute,
-    notFound,
     Outlet,
     redirect,
     retainSearchParams,
@@ -18,22 +17,21 @@ import {
     getSearchDbQuery,
     useUserData
 } from "../queries";
-import { ContextData } from "../api/models";
+import { ContextData } from "../api-utils/client-models";
 import { MenuParams } from "../overlays/menu-params";
 import {
     getBackgroundClass,
     getColorTheme,
     getThemeClass,
     OnshapeParams
-} from "../api/onshape-params";
-import { getUiState } from "../api/ui-state";
+} from "../api-utils/onshape-params";
+import { getUiState } from "../api-utils/ui-state";
 import { RootAppError } from "../app/root-error";
 import { AlertParams } from "../overlays/popup-params";
-import { UserPath } from "../api/path";
 import { AppNavbar } from "../navbar/app-navbar";
 import { AppAlerts } from "../overlays/app-popups";
 import { AppMenus } from "../overlays/app-menus";
-import { useMessageListener } from "../api/messages";
+import { useMessageListener } from "../api-utils/messages";
 import { getAuthSession } from "./auth/-auth.server";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
@@ -61,12 +59,10 @@ export const Route = createFileRoute("/app")({
             });
         }
 
-        const search = location.search as OnshapeParams;
-        const userPath: UserPath = { userId: search.userId };
-
-        queryClient.prefetchQuery(getUserDataQuery(userPath));
+        const userData = await queryClient.ensureQueryData(getUserDataQuery());
+        const library = userData.settings.library;
         const contextData = await queryClient.ensureQueryData(
-            getContextDataQuery(userPath)
+            getContextDataQuery(library)
         );
 
         const uiState = getUiState();
@@ -91,9 +87,7 @@ export const Route = createFileRoute("/app")({
         }
     }),
     loader: async ({ deps }) => {
-        const userData = await queryClient.ensureQueryData(
-            getUserDataQuery(deps)
-        );
+        const userData = await queryClient.ensureQueryData(getUserDataQuery());
 
         const library = userData.settings.library;
 

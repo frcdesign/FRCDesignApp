@@ -22,6 +22,7 @@
         "firebase-admin": "^13.9.0",
         "immer": "^11.1.6",
         "jose": "^6.2.3",
+        "ky": "^2.0.2",
         "minisearch": "^7.2.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",

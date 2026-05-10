@@ -10,9 +10,9 @@ import {
 } from "@blueprintjs/core";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { DocumentObj, LibraryObj } from "../api/models";
+import { DocumentObj, LibraryObj } from "../api-utils/client-models";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost, apiDelete, useCacheOptions } from "../api/api";
+import { apiPost, apiDelete, useCacheOptions } from "../api-utils/api";
 import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
@@ -29,9 +29,9 @@ import {
     libraryQueryMatchKey,
     useLibraryQuery
 } from "../queries";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
-import { getAppErrorHandler } from "../api/errors";
+import { getAppErrorHandler } from "../api-utils/errors";
 
 interface DocumentCardProps extends PropsWithChildren {
     document: DocumentObj;

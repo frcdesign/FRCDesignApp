@@ -1,8 +1,8 @@
 import { Colors, Card } from "@blueprintjs/core";
 import { ReactNode } from "react";
 import { filterElements } from "../search/filter";
-import { ElementObj } from "../api/models";
-import { useUiState } from "../api/ui-state";
+import { ElementObj } from "../api-utils/client-models";
+import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";

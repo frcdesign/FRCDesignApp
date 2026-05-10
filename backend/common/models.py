@@ -5,8 +5,6 @@ from enum import IntEnum, StrEnum
 from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
-from onshape_api.api.api_base import Api
-from onshape_api.endpoints import documents
 from onshape_api.endpoints.documents import ElementType
 from onshape_api.endpoints.thumbnails import ThumbnailSize
 from onshape_api.paths.doc_path import InstancePath

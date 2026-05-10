@@ -11,7 +11,11 @@ import {
     seq,
     tok
 } from "typescript-parsec";
-import { getUnitDisplayStr, QuantityType, Unit } from "./configuration-models";
+import {
+    getUnitDisplayStr,
+    QuantityType,
+    Unit
+} from "../configurations/configuration-models";
 
 class ParseError extends Error {
     constructor(message: string) {

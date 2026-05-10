@@ -22,12 +22,11 @@ import {
     useState,
     useCallback
 } from "react";
-import { useCacheOptions, apiGet } from "../api/api";
+import { useCacheOptions, apiGet } from "../api-utils/api";
 import {
     Configuration,
     ConfigurationResult,
     ParameterObj,
-    evaluateCondition,
     ConfigurationParameterType,
     EnumParameterObj,
     OptionVisibilityConditionType,
@@ -39,17 +38,18 @@ import {
     Unit,
     EnumOption
 } from "./configuration-models";
+import { evaluateCondition } from "./configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "./parser";
+} from "../insert/input-parser";
 import { Select } from "@blueprintjs/select";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { useLibrary } from "../api-utils/library";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -67,8 +67,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const query = useQuery<ConfigurationResult>({
         queryKey: getConfigurationKey(library, configurationId, cacheOptions),
         queryFn: async () => {
-            return apiGet("/configuration" + toLibraryPath(library), {
+            return apiGet("/configuration", {
                 query: {
+                    library,
                     documentId,
                     configurationId
                 },

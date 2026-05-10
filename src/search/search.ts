@@ -2,7 +2,7 @@ import MiniSearch, {
     Options,
     SearchResult as MiniSearchResult
 } from "minisearch";
-import { Favorites, LibraryObj, Vendor } from "../api/models";
+import { Favorites, LibraryObj, Vendor } from "../api-utils/client-models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -43,8 +43,8 @@ export function processTerm(term: string): string[] {
 
 export function tokenize(text: string): string[] {
     // Don't lowercase so we can use casing for term splitting
-    // Remove -, (, ), ", ', #, &, and whitespace
-    return text.split(/[-()"'#&\s^]+/).filter(Boolean);
+    // Remove -, (, ), ", ', #, &, /, and whitespace
+    return text.split(/[-()"'#&\s^/]+/).filter(Boolean);
 }
 
 export interface SearchDocument {

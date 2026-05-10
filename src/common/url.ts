@@ -4,32 +4,25 @@ import {
     ElementPath,
     isInstancePath,
     isElementPath,
-    isWorkspacePath,
-    WorkspacePath,
     InstanceType
-} from "../api/path";
-import { encodeConfigurationForQuery } from "../insert/configuration-models";
+} from "../onshape-api/path";
+import { encodeConfigurationForQuery } from "../configurations/configuration-utils";
 import { showToast } from "./toaster";
 
 export function makeUrl(path: DocumentPath): string;
-export function makeUrl(path: WorkspacePath): string;
 export function makeUrl(path: InstancePath): string;
 export function makeUrl(path: ElementPath): string;
 export function makeUrl(
     path: ElementPath,
     configuration?: Record<string, string>
 ): string;
-// Impelmentation handler
 export function makeUrl(
     path: DocumentPath,
     configuration?: Record<string, string>
 ): string {
     let url = `https://cad.onshape.com/documents/${path.documentId}`;
-    // Match most specific match first
     if (isInstancePath(path)) {
         url += `/${path.instanceType}/${path.instanceId}`;
-    } else if (isWorkspacePath(path)) {
-        url += `/w/${path.instanceId}`;
     }
     if (isElementPath(path)) {
         url += `/e/${path.elementId}`;
@@ -45,8 +38,8 @@ export interface ConfigurationPath {
 }
 
 /**
- * Parses Onshape urls into an ElementPath.
- * Returns `undefined` if the url could not be parsed successfully.
+ * Parses an Onshape document URL into an ElementPath.
+ * Returns `undefined` if the URL could not be parsed successfully.
  */
 export function parseUrl(
     urlString: string
@@ -70,7 +63,7 @@ export function parseUrl(
 }
 
 /**
- * Opens the given url in a new tab.
+ * Opens the given URL in a new tab.
  */
 export function openUrlInNewTab(url: string) {
     window.open(url, "_blank");
@@ -85,7 +78,8 @@ export async function copyUrlToClipboard(url: string) {
         timeout: 3000
     });
 }
+
 /**
- * URL of the FRCDesign feedback google form.
+ * URL of the FRCDesign feedback Google Form.
  */
 export const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";

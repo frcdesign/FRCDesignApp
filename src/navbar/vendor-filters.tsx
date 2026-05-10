@@ -1,7 +1,7 @@
 import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
 import { ReactNode, useCallback } from "react";
-import { getVendorName, Vendor } from "../api/models";
-import { SetUiState, useUiState } from "../api/ui-state";
+import { getVendorName, Vendor } from "../api-utils/client-models";
+import { SetUiState, useUiState } from "../api-utils/ui-state";
 // import { Select } from "@blueprintjs/select";
 
 interface ClearFiltersButtonProps {

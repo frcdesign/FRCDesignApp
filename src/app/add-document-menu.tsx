@@ -16,12 +16,12 @@ import {
 } from "../overlays/menu-params";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api/api";
+import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
-import { getAppErrorHandler, HandledError } from "../api/errors";
+import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
-import { toLibraryPath, useLibrary } from "../api/library";
+import { toLibraryPath, useLibrary } from "../api-utils/library";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });

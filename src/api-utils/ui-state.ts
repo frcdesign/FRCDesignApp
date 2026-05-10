@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { Vendor } from "./models";
+import { Vendor } from "./client-models";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 2;
@@ -8,7 +8,7 @@ const LATEST_VERSION = 2;
 const VendorType = z.enum(Object.values(Vendor));
 
 const UiStateSchema = z.object({
-    version: z.number().default(1), // We can't default version to LATEST_VERSION because of parsing older versions
+    version: z.number().default(1), // We can't default the parsed version to LATEST_VERSION because of old versions floating around
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),

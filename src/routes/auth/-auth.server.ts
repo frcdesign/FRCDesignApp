@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { OAuth2Client, OAuth2Tokens } from "arctic";
 import { Timestamp } from "firebase-admin/firestore";
-import { DB } from "./-db.server";
+import { DB } from "../../connect/db";
 
 export const onshapeClient = new OAuth2Client(
     process.env.OAUTH_CLIENT_ID!,
