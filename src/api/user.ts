@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Library, Theme } from "../api-utils/client-models";
 import { OAuthClient } from "../onshape-api/client/oauth-client";
-import { AccessLevel, getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
+import {
+    AccessLevel,
+    getAccessLevel,
+    getUserId
+} from "../onshape-api/endpoints/users";
 import { getLibrary } from "../connect/library";
 import { getUser } from "../connect/user";
-import { getAuthSession } from "../routes/auth/-auth.server";
+import { getAuthSession } from "../routes/auth/-auth";
 import { UserData } from "../connect/db-models";
 
 // --- Output types ---
@@ -28,7 +32,10 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
     if (override) return override as AccessLevel;
 
     const adminTeam = process.env.ADMIN_TEAM;
-    if (!adminTeam) throw new Error("ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured");
+    if (!adminTeam)
+        throw new Error(
+            "ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured"
+        );
 
     return getAccessLevel(client, adminTeam);
 }
@@ -42,23 +49,30 @@ export const fetchContextData = createServerFn()
         const client = await getClient();
         const maxAccessLevel = await getAppAccessLevel(client);
         const currentAccessLevel =
-            process.env.NODE_ENV === "production" ? AccessLevel.USER : maxAccessLevel;
+            process.env.NODE_ENV === "production"
+                ? AccessLevel.USER
+                : maxAccessLevel;
 
         const libraryData = await getLibrary(library).get();
         if (!libraryData) throw new Error("Library not found");
 
-        return { maxAccessLevel, currentAccessLevel, cacheVersion: libraryData.cacheVersion };
+        return {
+            maxAccessLevel,
+            currentAccessLevel,
+            cacheVersion: libraryData.cacheVersion
+        };
     });
 
 /** Returns the current user's stored data. */
-export const fetchUserData = createServerFn()
-    .handler(async (): Promise<UserData> => {
+export const fetchUserData = createServerFn().handler(
+    async (): Promise<UserData> => {
         const client = await getClient();
         const userId = await getUserId(client);
         const userData = await getUser(userId).get();
         if (!userData) throw new Error("User data not found");
         return userData;
-    });
+    }
+);
 
 /** Updates one or more of the current user's settings. */
 export const updateSettings = createServerFn()

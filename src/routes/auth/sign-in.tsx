@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useSession } from "@tanstack/react-start/server";
 import {
-    onshapeClient,
     OAUTH_SESSION_CONFIG,
-    type OAuthSessionData
-} from "./-auth.server";
+    OAuthSessionData,
+    onshapeClient
+} from "./-onshape-client.server";
 import { generateState } from "arctic";
 
 export const Route = createFileRoute("/auth/sign-in")({
@@ -12,8 +12,12 @@ export const Route = createFileRoute("/auth/sign-in")({
         handlers: {
             GET: async ({ request }) => {
                 const requestUrl = new URL(request.url);
-                const redirectUrl =
-                    requestUrl.searchParams.get("redirectUrl") + "/ahh/afafe";
+                const redirectUrl = requestUrl.searchParams.get("redirectUrl");
+
+                // TODO: Make sure this works with the redirectUrl param from Onshape themselves
+                if (!redirectUrl) {
+                    throw new Error("Failed to get valid redirectUrl!");
+                }
 
                 const state = generateState();
 

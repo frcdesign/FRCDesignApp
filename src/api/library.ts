@@ -13,7 +13,7 @@ import {
     getUserId
 } from "../onshape-api/endpoints/users";
 import { getLibrary, LibraryRef } from "../connect/library";
-import { getAuthSession } from "../routes/auth/-auth.server";
+import { getAuthSession } from "../routes/auth/-auth";
 
 // --- Output types ---
 

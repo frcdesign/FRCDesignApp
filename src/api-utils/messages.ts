@@ -14,13 +14,16 @@ import { useCallback } from "react";
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });
     const handlePostMessage = (event: MessageEvent) => {
+        console.log("received message from: " + search.server);
         if (search.server !== event.origin) {
             return;
         }
         const messageName = event.data.messageName;
+        console.log("message name: " + messageName);
         if (!messageName) {
             return;
         }
+        console.log(event.data);
     };
 
     window.addEventListener("message", handlePostMessage);

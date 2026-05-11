@@ -3,11 +3,14 @@ import { Library } from "../api-utils/client-models";
 import { OAuthClient } from "../onshape-api/client/oauth-client";
 import { AccessLevel, getAccessLevel } from "../onshape-api/endpoints/users";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
-import { getThumbnailId, ThumbnailSize } from "../onshape-api/endpoints/thumbnails";
+import {
+    getThumbnailId,
+    ThumbnailSize
+} from "../onshape-api/endpoints/thumbnails";
 import { ElementPath, InstancePath } from "../onshape-api/path";
 import { getLibrary } from "../connect/library";
 import { uploadThumbnails } from "../connect/storage";
-import { getAuthSession } from "../routes/auth/-auth.server";
+import { getAuthSession } from "../routes/auth/-auth";
 
 // --- Server-side helpers ---
 
@@ -22,7 +25,10 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
     if (override) return override as AccessLevel;
 
     const adminTeam = process.env.ADMIN_TEAM;
-    if (!adminTeam) throw new Error("ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured");
+    if (!adminTeam)
+        throw new Error(
+            "ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured"
+        );
 
     return getAccessLevel(client, adminTeam);
 }
@@ -32,7 +38,11 @@ async function requireAccess(
     required: AccessLevel = AccessLevel.MEMBER
 ): Promise<void> {
     const level = await getAppAccessLevel(client);
-    if (required === AccessLevel.MEMBER && (level === AccessLevel.MEMBER || level === AccessLevel.ADMIN)) return;
+    if (
+        required === AccessLevel.MEMBER &&
+        (level === AccessLevel.MEMBER || level === AccessLevel.ADMIN)
+    )
+        return;
     if (required === AccessLevel.ADMIN && level === AccessLevel.ADMIN) return;
     throw new Error("Insufficient permissions");
 }
@@ -46,13 +56,22 @@ function getThumbnailElementId(document: any, contents: any): string {
     if (thumbnailElementId) return thumbnailElementId;
 
     const elements: any[] = contents.elements;
-    if (elements.length < 1) throw new Error(`Document ${document.name} has no elements to use as a thumbnail.`);
+    if (elements.length < 1)
+        throw new Error(
+            `Document ${document.name} has no elements to use as a thumbnail.`
+        );
     return elements[0].id;
 }
 
-function getThumbnailMicroversionId(contents: any, thumbnailElementId: string): string {
-    const element = (contents.elements as any[]).find((e) => e.id === thumbnailElementId);
-    if (!element) throw new Error("Unexpectedly failed to find the thumbnail element.");
+function getThumbnailMicroversionId(
+    contents: any,
+    thumbnailElementId: string
+): string {
+    const element = (contents.elements as any[]).find(
+        (e) => e.id === thumbnailElementId
+    );
+    if (!element)
+        throw new Error("Unexpectedly failed to find the thumbnail element.");
     return element.microversionId;
 }
 
@@ -63,8 +82,14 @@ async function uploadDocumentThumbnails(
     versionPath: InstancePath
 ): Promise<Partial<Record<ThumbnailSize, string>>> {
     const thumbnailElementId = getThumbnailElementId(document, contents);
-    const thumbnailPath: ElementPath = { ...versionPath, elementId: thumbnailElementId };
-    const microversionId = getThumbnailMicroversionId(contents, thumbnailElementId);
+    const thumbnailPath: ElementPath = {
+        ...versionPath,
+        elementId: thumbnailElementId
+    };
+    const microversionId = getThumbnailMicroversionId(
+        contents,
+        thumbnailElementId
+    );
     return uploadThumbnails(client, thumbnailPath, microversionId);
 }
 
@@ -75,7 +100,9 @@ async function uploadDocumentThumbnails(
  * Requires MEMBER-level access.
  */
 export const reloadDocumentThumbnail = createServerFn()
-    .inputValidator((data: { library: Library; instancePath: InstancePath }) => data)
+    .inputValidator(
+        (data: { library: Library; instancePath: InstancePath }) => data
+    )
     .handler(async ({ data: { library, instancePath } }) => {
         const client = await getClient();
         await requireAccess(client);
@@ -85,15 +112,27 @@ export const reloadDocumentThumbnail = createServerFn()
             getContents(client, instancePath)
         ]);
 
-        const thumbnails = await uploadDocumentThumbnails(client, document, contents, instancePath);
+        const thumbnails = await uploadDocumentThumbnails(
+            client,
+            document,
+            contents,
+            instancePath
+        );
 
         if (Object.keys(thumbnails).length < 2) {
-            throw new Error("Failed to upload thumbnail. Does it exist in Onshape?");
+            throw new Error(
+                "Failed to upload thumbnail. Does it exist in Onshape?"
+            );
         }
 
-        const documentRef = getLibrary(library).documents.document(instancePath.documentId);
+        const documentRef = getLibrary(library).documents.document(
+            instancePath.documentId
+        );
         const existing = await documentRef.get();
-        if (JSON.stringify(existing?.thumbnailUrls) === JSON.stringify(thumbnails)) {
+        if (
+            JSON.stringify(existing?.thumbnailUrls) ===
+            JSON.stringify(thumbnails)
+        ) {
             throw new Error("Thumbnail is already up to date.");
         }
 
@@ -106,7 +145,9 @@ export const reloadDocumentThumbnail = createServerFn()
  * Requires MEMBER-level access.
  */
 export const reloadElementThumbnail = createServerFn()
-    .inputValidator((data: { library: Library; elementPath: ElementPath }) => data)
+    .inputValidator(
+        (data: { library: Library; elementPath: ElementPath }) => data
+    )
     .handler(async ({ data: { library, elementPath } }) => {
         const client = await getClient();
         await requireAccess(client);
@@ -118,12 +159,20 @@ export const reloadElementThumbnail = createServerFn()
         const element = await elementRef.get();
         if (!element) throw new Error("Element not found");
 
-        const thumbnails = await uploadThumbnails(client, elementPath, element.microversionId);
+        const thumbnails = await uploadThumbnails(
+            client,
+            elementPath,
+            element.microversionId
+        );
         if (Object.keys(thumbnails).length < 2) {
-            throw new Error("Failed to upload thumbnail. Does it exist in Onshape?");
+            throw new Error(
+                "Failed to upload thumbnail. Does it exist in Onshape?"
+            );
         }
 
-        if (JSON.stringify(element.thumbnailUrls) === JSON.stringify(thumbnails)) {
+        if (
+            JSON.stringify(element.thumbnailUrls) === JSON.stringify(thumbnails)
+        ) {
             throw new Error("Thumbnail is already up to date.");
         }
 
@@ -137,9 +186,19 @@ export const reloadElementThumbnail = createServerFn()
  * The thumbnail ID can be polled — Onshape generates it asynchronously and may not return immediately.
  */
 export const fetchThumbnailId = createServerFn()
-    .inputValidator((data: { elementPath: ElementPath; configuration?: string }) => data)
-    .handler(async ({ data: { elementPath, configuration } }): Promise<{ thumbnailId: string }> => {
-        const client = await getClient();
-        const thumbnailId = await getThumbnailId(client, elementPath, configuration);
-        return { thumbnailId };
-    });
+    .inputValidator(
+        (data: { elementPath: ElementPath; configuration?: string }) => data
+    )
+    .handler(
+        async ({
+            data: { elementPath, configuration }
+        }): Promise<{ thumbnailId: string }> => {
+            const client = await getClient();
+            const thumbnailId = await getThumbnailId(
+                client,
+                elementPath,
+                configuration
+            );
+            return { thumbnailId };
+        }
+    );

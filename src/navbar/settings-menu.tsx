@@ -29,7 +29,7 @@ import { getLibraryName as getLibraryName } from "../api-utils/library";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
-import { updateSettings } from "../api/user.server";
+import { updateSettings } from "../api/user";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";

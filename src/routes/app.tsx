@@ -32,7 +32,7 @@ import { AppNavbar } from "../navbar/app-navbar";
 import { AppAlerts } from "../overlays/app-popups";
 import { AppMenus } from "../overlays/app-menus";
 import { useMessageListener } from "../api-utils/messages";
-import { getAuthSession } from "./auth/-auth.server";
+import { getAuthSession } from "./auth/-auth";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 

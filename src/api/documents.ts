@@ -26,7 +26,7 @@ import {
     VersionInfo
 } from "../connect/db-models";
 import { uploadThumbnails, uploadDocumentThumbnails } from "../connect/storage";
-import { getAuthSession } from "../routes/auth/-auth.server";
+import { getAuthSession } from "../routes/auth/-auth";
 import { parseOnshapeConfiguration } from "../configurations/parse-configuration";
 import {
     ConfigurationParameterType,

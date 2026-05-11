@@ -1,16 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { Timestamp } from "@google-cloud/firestore";
 import { OAuth2Client, OAuth2Tokens } from "arctic";
-import { Timestamp } from "firebase-admin/firestore";
 import { DB } from "../../connect/db";
-
-export const onshapeClient = new OAuth2Client(
-    process.env.OAUTH_CLIENT_ID!,
-    process.env.OAUTH_CLIENT_SECRET!,
-    null
-);
-
-export const SESSION_COOKIE = "auth-session";
 
 // SameSite=None + Secure required because the app runs embedded in an Onshape iframe.
 export const COOKIE_BASE = {
@@ -42,6 +32,11 @@ export interface AuthSession {
     refreshToken: string | null;
 }
 
+export const onshapeClient = new OAuth2Client(
+    process.env.OAUTH_CLIENT_ID!,
+    process.env.OAUTH_CLIENT_SECRET!,
+    null
+);
 export async function createSession(tokens: OAuth2Tokens): Promise<string> {
     const sessionId = crypto.randomUUID();
     const expiresAt = new Date();
@@ -59,8 +54,9 @@ export async function createSession(tokens: OAuth2Tokens): Promise<string> {
         });
     return sessionId;
 }
-
-async function getSession(sessionId: string): Promise<AuthSession | null> {
+export async function getSession(
+    sessionId: string
+): Promise<AuthSession | null> {
     const doc = await DB.collection("sessions").doc(sessionId).get();
     if (!doc.exists) return null;
 
@@ -73,9 +69,4 @@ async function getSession(sessionId: string): Promise<AuthSession | null> {
         refreshToken: (data.refreshToken as string | null) ?? null
     };
 }
-
-export const getAuthSession = createServerFn().handler(async () => {
-    const sessionId = getCookie(SESSION_COOKIE);
-    if (!sessionId) return null;
-    return getSession(sessionId);
-});
+export const SESSION_COOKIE = "auth-session";

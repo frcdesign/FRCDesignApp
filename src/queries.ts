@@ -9,21 +9,17 @@ import {
     useCacheOptions
 } from "./api-utils/api";
 import { Library, LibraryUserData } from "./api-utils/client-models";
-import { LibraryOut } from "./api/library.server";
+import { LibraryOut } from "./api/library";
 import { useLibrary } from "./api-utils/library";
 import { UnitInfo } from "./configurations/configuration-models";
 import { useLoaderData, useSearch } from "@tanstack/react-router";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
-import { fetchLibraryUserData } from "./api/library.server";
-import {
-    fetchContextData,
-    fetchUserData,
-    ContextDataOut
-} from "./api/user.server";
-import { fetchUnitInfo } from "./configurations/configurations.server";
+import { fetchLibraryUserData } from "./api/library";
+import { fetchContextData, fetchUserData, ContextDataOut } from "./api/user";
 import { InstancePath } from "./onshape-api/path";
 import { UserData } from "./connect/db-models";
+import { fetchUnitInfo } from "./configurations/configurations.functions";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];

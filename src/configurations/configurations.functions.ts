@@ -4,7 +4,7 @@ import { OAuthClient } from "../onshape-api/client/oauth-client";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { InstancePath } from "../onshape-api/path";
 import { getLibrary } from "../connect/library";
-import { getAuthSession } from "../routes/auth/-auth.server";
+import { getAuthSession } from "../routes/auth/-auth";
 import {
     ConfigurationResult,
     QuantityType,

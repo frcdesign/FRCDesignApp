@@ -1,13 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useSession, setCookie } from "@tanstack/react-start/server";
 import {
-    onshapeClient,
-    createSession,
-    OAUTH_SESSION_CONFIG,
-    SESSION_COOKIE,
     COOKIE_BASE,
-    type OAuthSessionData
-} from "./-auth.server";
+    OAUTH_SESSION_CONFIG,
+    OAuthSessionData,
+    SESSION_COOKIE
+} from "./-onshape-client.server";
+import { createSession } from "./-onshape-client.server";
+import { onshapeClient } from "./-onshape-client.server";
 
 export const Route = createFileRoute("/auth/callback")({
     server: {
