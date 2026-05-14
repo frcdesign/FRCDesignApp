@@ -1,5 +1,5 @@
 import { HTTPError } from "ky";
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { DocumentPath, toDocumentApiPath } from "../path";
 import { apiPath } from "../api-path";
 
@@ -21,7 +21,7 @@ export enum Permission {
  * Returns an empty array if the document is not shared with the user (Onshape returns 403 in that case).
  */
 export async function getPermissions(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<Permission[]> {
     try {
@@ -40,7 +40,7 @@ export async function getPermissions(
 }
 
 export async function hasPermissions(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath,
     ...neededPermissions: Permission[]
 ): Promise<boolean> {

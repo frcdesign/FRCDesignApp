@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -14,7 +14,7 @@ import { IDENTITY_TRANSFORM } from "../objects/constants";
 
 /** Retrieves information about an assembly. */
 export function getAssembly(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     options: {
         includeNonSolids?: boolean;
@@ -41,7 +41,7 @@ export function getAssembly(
  * @param featureIds Feature IDs to retrieve. If omitted, all features are returned.
  */
 export function getAssemblyFeatures(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     featureIds: string[] = []
 ): Promise<any> {
@@ -59,7 +59,7 @@ export function getAssemblyFeatures(
 
 /** Constructs an assembly with the given name. */
 export function createAssembly(
-    client: OnshapeClient,
+    client: OnshapeApi,
     workspacePath: InstancePath,
     assemblyName: string
 ): Promise<any> {
@@ -78,7 +78,7 @@ export function createAssembly(
  * @param options.useTransform If true, uses the `transformedinstances` endpoint and returns a result.
  */
 export function addElementToAssembly(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     elementPath: ElementPath,
     elementType: ElementType,
@@ -147,7 +147,7 @@ export function addElementToAssembly(
  * false to apply it relative to the assembly origin.
  */
 export function transformInstance(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     instanceId: string,
     transform: number[],
@@ -174,7 +174,7 @@ export function transformInstance(
  * @param featureId If specified, the existing feature with this ID is updated rather than creating a new one.
  */
 export function addFeature(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     feature: object,
     featureId?: string
@@ -191,7 +191,7 @@ export function addFeature(
 
 /** Deletes a feature from an assembly. */
 export function deleteFeature(
-    client: OnshapeClient,
+    client: OnshapeApi,
     assemblyPath: ElementPath,
     featureId: string
 ): Promise<any> {

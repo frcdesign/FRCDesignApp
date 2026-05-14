@@ -18,7 +18,7 @@ import {
     Elements,
     hasMemberAccess
 } from "../api-utils/client-models";
-import { useUiState } from "../api-utils/ui-state";
+import { useUiState } from "../api-utils/ui-state.client";
 import { filterElements, SortOrder } from "../search/filter";
 import { DocumentContextMenu } from "../cards/document-card";
 import { ElementCard } from "../cards/element-card";
@@ -30,7 +30,7 @@ import {
     PageError
 } from "../common/app-zero-state";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
-import { useInteractiveSection } from "../common/utils";
+// import { useInteractiveSection } from "../common/utils";
 import { useLibraryQuery } from "../queries";
 
 /**
@@ -49,7 +49,7 @@ export function DocumentList(): ReactNode {
     const sectionRef = useRef<HTMLDivElement>(null);
 
     // Include documents and elements as dependencies so it stays interactive even if the query isn't complete
-    useInteractiveSection(sectionRef, [libraryQuery]);
+    // useInteractiveSection(sectionRef, [libraryQuery]);
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading documents..." />;

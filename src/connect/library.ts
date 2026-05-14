@@ -1,7 +1,7 @@
 import { Library } from "../api-utils/client-models";
 import { ConfigurationResult } from "../configurations/configuration-models";
 import {
-    Collection,
+    DbCollection,
     DB,
     OrderedCollection,
     TypedCollection,
@@ -30,7 +30,7 @@ class ElementsRef extends OrderedCollection<ElementData> {
 class DocumentRef extends TypedDoc<DocumentData> {
     get elements(): ElementsRef {
         return new ElementsRef(
-            this.collection(Collection.ELEMENTS),
+            this.collection(DbCollection.ELEMENTS),
             this,
             "elementOrder"
         );
@@ -38,7 +38,7 @@ class DocumentRef extends TypedDoc<DocumentData> {
 
     get configurations(): ConfigurationsRef {
         return new ConfigurationsRef(
-            this.collection(Collection.CONFIGURATIONS)
+            this.collection(DbCollection.CONFIGURATIONS)
         );
     }
 }
@@ -58,7 +58,7 @@ class FavoritesRef extends OrderedCollection<FavoriteData> {
 class LibraryUserDataRef extends TypedDoc<LibraryUserData> {
     get favorites(): FavoritesRef {
         return new FavoritesRef(
-            this.collection(Collection.FAVORITES),
+            this.collection(DbCollection.FAVORITES),
             this,
             "favoriteOrder"
         );
@@ -74,7 +74,7 @@ class AllLibraryUserDataRef extends TypedCollection<LibraryUserData> {
 export class LibraryRef extends TypedDoc<LibraryData> {
     get documents(): DocumentsRef {
         return new DocumentsRef(
-            this.collection(Collection.DOCUMENTS),
+            this.collection(DbCollection.DOCUMENTS),
             this,
             "documentOrder"
         );
@@ -82,11 +82,11 @@ export class LibraryRef extends TypedDoc<LibraryData> {
 
     get userData(): AllLibraryUserDataRef {
         return new AllLibraryUserDataRef(
-            this.collection(Collection.LIBRARY_USER_DATA)
+            this.collection(DbCollection.LIBRARY_USER_DATA)
         );
     }
 }
 
 export function getLibrary(library: Library): LibraryRef {
-    return new LibraryRef(DB.collection(Collection.LIBRARIES).doc(library));
+    return new LibraryRef(DB.collection(DbCollection.LIBRARIES).doc(library));
 }

@@ -1,9 +1,9 @@
-import { OAuthClient } from "../client/oauth-client";
+import { OAuthApi } from "../client/oauth-api";
 import { UserPath, toUserApiPath } from "../path";
 
 /** Gets a setting with a specific key. Returns `null` if the key is not set. */
 export async function getSetting(
-    client: OAuthClient,
+    client: OAuthApi,
     clientId: string,
     userPath: UserPath,
     key: string
@@ -21,7 +21,7 @@ export async function getSetting(
  * @param keys If omitted, all settings are returned.
  */
 export async function getSettings(
-    client: OAuthClient,
+    client: OAuthApi,
     clientId: string,
     userPath: UserPath,
     keys?: string[]
@@ -51,7 +51,7 @@ export interface Update {
 }
 
 export function updateSettings(
-    client: OAuthClient,
+    client: OAuthApi,
     clientId: string,
     userPath: UserPath,
     updates: Update[]
@@ -64,7 +64,7 @@ export function updateSettings(
 
 /** Applies a single settings update. */
 export function updateSetting(
-    client: OAuthClient,
+    client: OAuthApi,
     clientId: string,
     userPath: UserPath,
     update: Update
@@ -74,7 +74,7 @@ export function updateSetting(
 
 /** Sets the value of a given key. */
 export function setSetting(
-    client: OAuthClient,
+    client: OAuthApi,
     clientId: string,
     userPath: UserPath,
     key: string,

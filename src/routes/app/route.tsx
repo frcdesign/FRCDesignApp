@@ -9,30 +9,30 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { queryClient } from "../query-client";
+import { queryClient } from "../../query-client";
 import {
     getUserDataQuery,
     getLibraryQuery,
     getContextDataQuery,
     getSearchDbQuery,
     useUserData
-} from "../queries";
-import { ContextData } from "../api-utils/client-models";
-import { MenuParams } from "../overlays/menu-params";
+} from "../../queries";
+import { ContextData } from "../../api-utils/client-models";
+import { MenuParams } from "../../overlays/menu-params";
 import {
     getBackgroundClass,
     getColorTheme,
     getThemeClass,
     OnshapeParams
-} from "../api-utils/onshape-params";
-import { getUiState } from "../api-utils/ui-state";
-import { RootAppError } from "../app/root-error";
-import { AlertParams } from "../overlays/popup-params";
-import { AppNavbar } from "../navbar/app-navbar";
-import { AppAlerts } from "../overlays/app-popups";
-import { AppMenus } from "../overlays/app-menus";
-import { useMessageListener } from "../api-utils/messages";
-import { getAuthSession } from "./auth/-auth";
+} from "../../api-utils/onshape-params";
+import { getUiState } from "../../api-utils/ui-state.client";
+import { RootAppError } from "../../app/root-error";
+import { AlertParams } from "../../overlays/popup-params";
+import { AppNavbar } from "../../navbar/app-navbar";
+import { AppAlerts } from "../../overlays/app-popups";
+import { AppMenus } from "../../overlays/app-menus";
+import { useMessageListener } from "../../api-utils/messages";
+import { checkAuth } from "../auth/-auth.functions";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
@@ -47,17 +47,21 @@ export const Route = createFileRoute("/app")({
         middlewares: [retainSearchParams(true)]
     },
     beforeLoad: async ({ location }) => {
+        console.log("Begin load");
         if (location.pathname !== "/app") {
             return;
         }
 
-        const session = await getAuthSession();
-        if (!session) {
-            return redirect({
+        console.log("Check auth");
+        if (!(await checkAuth())) {
+            console.log("Log in");
+            throw redirect({
                 to: "/auth/sign-in",
                 search: { redirectUrl: encodeURIComponent(location.href) }
             });
         }
+
+        console.log("Load app");
 
         const userData = await queryClient.ensureQueryData(getUserDataQuery());
         const library = userData.settings.library;
@@ -67,15 +71,15 @@ export const Route = createFileRoute("/app")({
 
         const uiState = getUiState();
         if (uiState.openDocumentId) {
-            return redirect({
+            throw redirect({
                 to: "/app/documents/$documentId",
-                params: { documentId: uiState.openDocumentId },
-                search: contextData
+                params: { documentId: uiState.openDocumentId }
+                // search: contextData
             });
         }
 
         return redirect({
-            to: "/app/documents",
+            to: "/app",
             search: contextData
         });
     },
@@ -88,9 +92,7 @@ export const Route = createFileRoute("/app")({
     }),
     loader: async ({ deps }) => {
         const userData = await queryClient.ensureQueryData(getUserDataQuery());
-
         const library = userData.settings.library;
-
         Promise.all([
             queryClient.prefetchQuery(
                 getLibraryQuery(library, deps.cacheOptions)
@@ -99,7 +101,6 @@ export const Route = createFileRoute("/app")({
                 getSearchDbQuery(library, deps.cacheOptions)
             )
         ]);
-
         return userData;
     },
     errorComponent: RootAppError

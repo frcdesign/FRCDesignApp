@@ -1,8 +1,7 @@
 import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
 import { ReactNode, useCallback } from "react";
 import { getVendorName, Vendor } from "../api-utils/client-models";
-import { SetUiState, useUiState } from "../api-utils/ui-state";
-// import { Select } from "@blueprintjs/select";
+import { SetUiState, useUiState } from "../api-utils/ui-state.client";
 
 interface ClearFiltersButtonProps {
     /**
@@ -90,7 +89,7 @@ function useOnVendorSelect(
 ) {
     return useCallback(
         (vendor: Vendor) => {
-            let newFilters;
+            let newFilters: Vendor[] | undefined;
             if (currentFilters === undefined) {
                 // First filter selected
                 newFilters = [vendor];

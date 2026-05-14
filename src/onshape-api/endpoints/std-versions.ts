@@ -1,11 +1,9 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { getLatestVersion, getVersions } from "./versions";
 import { STD_PATH } from "../objects/constants";
 
 /** Returns the version number of the latest release of the Onshape standard library. */
-export async function getLatestStdVersion(
-    client: OnshapeClient
-): Promise<string> {
+export async function getLatestStdVersion(client: OnshapeApi): Promise<string> {
     const latest = await getLatestVersion(client, STD_PATH);
     const version = extractVersionNumber(latest.name);
     if (version === null) {
@@ -19,7 +17,7 @@ export async function getLatestStdVersion(
  *
  * Results are in chronological order, oldest first. The "Start" version is excluded.
  */
-export async function getStdVersions(client: OnshapeClient): Promise<string[]> {
+export async function getStdVersions(client: OnshapeApi): Promise<string[]> {
     const versions = await getVersions(client, STD_PATH);
     return versions
         .slice(1) // omit "Start"

@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -10,7 +10,7 @@ import { apiPath } from "../api-path";
 
 /** Creates a part studio in a document. */
 export function createPartStudio(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     name: string
 ): Promise<any> {
@@ -27,7 +27,7 @@ export function createPartStudio(
  * Returns the printed output of the script parsed as JSON.
  */
 export async function evaluateFeatureScript(
-    client: OnshapeClient,
+    client: OnshapeApi,
     partStudioPath: ElementPath,
     script: string
 ): Promise<any> {
@@ -42,7 +42,7 @@ export async function evaluateFeatureScript(
 
 /** Adds a feature to a part studio. */
 export function addFeature(
-    client: OnshapeClient,
+    client: OnshapeApi,
     partStudioPath: ElementPath,
     feature: object
 ): Promise<any> {
@@ -57,7 +57,7 @@ export function addFeature(
 
 /** Returns the features in a part studio. */
 export function getFeatures(
-    client: OnshapeClient,
+    client: OnshapeApi,
     partStudioPath: ElementPath
 ): Promise<any> {
     return client.get(

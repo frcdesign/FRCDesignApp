@@ -1,9 +1,9 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 
 export function getConfiguration(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath
 ): Promise<any> {
     return client.get(
@@ -14,7 +14,7 @@ export function getConfiguration(
 }
 
 export function setConfiguration(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     parameters: any[] | null,
     currentConfiguration: any[] | null
@@ -35,7 +35,7 @@ export function setConfiguration(
 
 /** Converts a configuration string back into a record mapping parameter IDs to values. */
 export async function decodeConfiguration(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     configurationString: string
 ): Promise<Record<string, string>> {

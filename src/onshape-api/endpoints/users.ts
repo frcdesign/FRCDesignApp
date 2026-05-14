@@ -1,15 +1,15 @@
-import { OnshapeClient } from "../client/client";
-import { OAuthClient } from "../client/oauth-client";
+import { OnshapeApi } from "../client/onshape-api";
+import { OAuthApi } from "../client/oauth-api";
 import { apiPath } from "../api-path";
 
-export function getSessionInfo(client: OAuthClient): Promise<any> {
+export function getSessionInfo(client: OAuthApi): Promise<any> {
     return client.get(
         apiPath("users", undefined, undefined, { endRoute: "sessioninfo" })
     );
 }
 
 /** Returns the user ID associated with the current session. */
-export function getUserId(client: OAuthClient): Promise<string> {
+export function getUserId(client: OAuthApi): Promise<string> {
     return getSessionInfo(client).then((info) => info.id);
 }
 
@@ -21,7 +21,7 @@ export function getUserId(client: OAuthClient): Promise<string> {
  * @param catchErrors True to return `false` in place of any thrown exceptions.
  */
 export async function ping(
-    client: OAuthClient,
+    client: OAuthApi,
     catchErrors = false
 ): Promise<boolean> {
     try {
@@ -34,14 +34,14 @@ export async function ping(
 }
 
 export enum AccessLevel {
-    MEMBER = "member",
+    EDITOR = "editor",
     ADMIN = "admin",
     USER = "user"
 }
 
 /** Returns the access level of the authenticated user relative to a given team. */
 export async function getAccessLevel(
-    client: OnshapeClient,
+    client: OnshapeApi,
     teamId: string
 ): Promise<AccessLevel> {
     try {
@@ -49,7 +49,7 @@ export async function getAccessLevel(
             apiPath("teams", undefined, undefined, { endId: teamId })
         );
         if (teamInfo.admin) return AccessLevel.ADMIN;
-        if (teamInfo.member) return AccessLevel.MEMBER;
+        if (teamInfo.member) return AccessLevel.EDITOR;
         return AccessLevel.USER;
     } catch {
         // Onshape returns an error for teams the user isn't a member of

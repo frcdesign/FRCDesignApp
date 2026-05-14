@@ -11,6 +11,7 @@ export enum AppPopup {
     RELOAD_DOCUMENTS = "reload-documents"
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface Empty {}
 
 export type PopupParamsMap = {

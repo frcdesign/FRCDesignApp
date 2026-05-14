@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -18,7 +18,7 @@ export enum ThumbnailSize {
 
 /** Returns the thumbnail of a given document instance. */
 export function getInstanceThumbnail(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     size = ThumbnailSize.STANDARD
 ): Promise<ArrayBuffer> {
@@ -32,7 +32,7 @@ export function getInstanceThumbnail(
 
 /** Returns the thumbnail for a given element in a workspace or version. */
 export function getElementThumbnail(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     size = ThumbnailSize.STANDARD
 ): Promise<ArrayBuffer> {
@@ -50,7 +50,7 @@ export function getElementThumbnail(
  * Compared to `getElementThumbnail`, this endpoint supports configurations but is limited to workspaces only.
  */
 export function getThumbnailFromWorkspace(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     size = ThumbnailSize.STANDARD,
     configuration?: string
@@ -68,7 +68,7 @@ export function getThumbnailFromWorkspace(
 }
 
 export async function getThumbnailId(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     configuration?: string
 ): Promise<string> {
@@ -95,7 +95,7 @@ export async function getThumbnailId(
  * WARNING: This endpoint is very buggy and can fail repeatedly while Onshape generates the thumbnail in the background.
  */
 export function getThumbnailFromId(
-    client: OnshapeClient,
+    client: OnshapeApi,
     thumbnailId: string,
     size = ThumbnailSize.STANDARD
 ): Promise<ArrayBuffer> {

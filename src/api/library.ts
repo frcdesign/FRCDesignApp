@@ -6,16 +6,14 @@ import {
     ThumbnailUrls,
     Vendor
 } from "../api-utils/client-models";
-import { OAuthClient } from "../onshape-api/client/oauth-client";
+import { OAuthApi } from "../onshape-api/client/oauth-api";
 import {
     AccessLevel,
     getAccessLevel,
     getUserId
 } from "../onshape-api/endpoints/users";
 import { getLibrary, LibraryRef } from "../connect/library";
-import { getAuthSession } from "../routes/auth/-auth";
-
-// --- Output types ---
+import { getOnshapeApi } from "../routes/auth/-auth.server";
 
 export interface DocumentPathOut {
     documentId: string;
@@ -67,15 +65,7 @@ export interface LibraryUserDataOut {
     favoriteOrder: string[];
 }
 
-// --- Server-side helpers ---
-
-async function getClient(): Promise<OAuthClient> {
-    const session = await getAuthSession();
-    if (!session) throw new Error("Unauthorized");
-    return new OAuthClient(session.accessToken);
-}
-
-async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
+async function getAppAccessLevel(onshapeApi: OAuthApi): Promise<AccessLevel> {
     const override = process.env.ACCESS_LEVEL_OVERRIDE;
     if (override) return override as AccessLevel;
 
@@ -85,17 +75,17 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
             "ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured"
         );
 
-    return getAccessLevel(client, adminTeam);
+    return getAccessLevel(onshapeApi, adminTeam);
 }
 
 async function requireAccess(
-    client: OAuthClient,
-    required: AccessLevel = AccessLevel.MEMBER
+    onshapeApi: OAuthApi,
+    required: AccessLevel = AccessLevel.EDITOR
 ): Promise<void> {
-    const level = await getAppAccessLevel(client);
+    const level = await getAppAccessLevel(onshapeApi);
     if (
-        required === AccessLevel.MEMBER &&
-        (level === AccessLevel.MEMBER || level === AccessLevel.ADMIN)
+        required === AccessLevel.EDITOR &&
+        (level === AccessLevel.EDITOR || level === AccessLevel.ADMIN)
     )
         return;
     if (required === AccessLevel.ADMIN && level === AccessLevel.ADMIN) return;
@@ -182,8 +172,8 @@ export const fetchSearchDb = createServerFn()
 export const fetchLibraryUserData = createServerFn()
     .inputValidator((data: { library: Library }) => data)
     .handler(async ({ data: { library } }): Promise<LibraryUserDataOut> => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
 
         const favoritesRef =
             getLibrary(library).userData.userDataFor(userId).favorites;
@@ -212,8 +202,8 @@ export const addFavorite = createServerFn()
         }) => data
     )
     .handler(async ({ data: { library, elementId, defaultConfiguration } }) => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
 
         await getLibrary(library)
             .userData.userDataFor(userId)
@@ -227,8 +217,8 @@ export const addFavorite = createServerFn()
 export const removeFavorite = createServerFn()
     .inputValidator((data: { library: Library; elementId: string }) => data)
     .handler(async ({ data: { library, elementId } }) => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
 
         await getLibrary(library)
             .userData.userDataFor(userId)
@@ -243,8 +233,8 @@ export const setFavoriteOrder = createServerFn()
         (data: { library: Library; favoriteOrder: string[] }) => data
     )
     .handler(async ({ data: { library, favoriteOrder } }) => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
 
         await getLibrary(library)
             .userData.userDataFor(userId)
@@ -263,8 +253,8 @@ export const updateDefaultConfiguration = createServerFn()
     )
     .handler(
         async ({ data: { library, favoriteId, defaultConfiguration } }) => {
-            const client = await getClient();
-            const userId = await getUserId(client);
+            const onshapeApi = await getOnshapeApi();
+            const userId = await getUserId(onshapeApi);
 
             await getLibrary(library)
                 .userData.userDataFor(userId)
@@ -281,8 +271,8 @@ export const updateDefaultConfiguration = createServerFn()
 export const pushLibraryVersion = createServerFn({ method: "POST" })
     .inputValidator((data: { library: Library; searchDb: string }) => data)
     .handler(async ({ data: { library, searchDb } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         const libraryRef = getLibrary(library);
         await libraryRef.ref.update({

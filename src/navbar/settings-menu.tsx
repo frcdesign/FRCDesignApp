@@ -97,7 +97,6 @@ function SettingsMenuDialog(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const search = useSearch({ from: "/app" });
     const settings = useUserData().settings;
     const router = useRouter();
 

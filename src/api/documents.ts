@@ -9,7 +9,7 @@ import {
     getVendorName,
     ElementType
 } from "../api-utils/client-models";
-import { OAuthClient } from "../onshape-api/client/oauth-client";
+import { OAuthApi } from "../onshape-api/client/oauth-api";
 import { AccessLevel, getAccessLevel } from "../onshape-api/endpoints/users";
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
@@ -18,6 +18,7 @@ import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { ElementPath, DocumentPath, InstancePath } from "../onshape-api/path";
 import { getLibrary, LibraryRef } from "../connect/library";
+import { getOnshapeApi } from "../routes/auth/-auth.server";
 import {
     DocumentData,
     ElementData,
@@ -26,7 +27,6 @@ import {
     VersionInfo
 } from "../connect/db-models";
 import { uploadThumbnails, uploadDocumentThumbnails } from "../connect/storage";
-import { getAuthSession } from "../routes/auth/-auth";
 import { parseOnshapeConfiguration } from "../configurations/parse-configuration";
 import {
     ConfigurationParameterType,
@@ -36,13 +36,7 @@ import {
 const LATEST_DOCUMENT_SCHEMA = 1;
 const LATEST_ELEMENT_SCHEMA = 1;
 
-async function getClient(): Promise<OAuthClient> {
-    const session = await getAuthSession();
-    if (!session) throw new Error("Unauthorized");
-    return new OAuthClient(session.accessToken);
-}
-
-async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
+async function getAppAccessLevel(onshapeApi: OAuthApi): Promise<AccessLevel> {
     const override = process.env.ACCESS_LEVEL_OVERRIDE;
     if (override) return override as AccessLevel;
 
@@ -52,17 +46,17 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
             "ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured"
         );
 
-    return getAccessLevel(client, adminTeam);
+    return getAccessLevel(onshapeApi, adminTeam);
 }
 
 async function requireAccess(
-    client: OAuthClient,
-    required: AccessLevel = AccessLevel.MEMBER
+    onshapeApi: OAuthApi,
+    required: AccessLevel = AccessLevel.EDITOR
 ): Promise<void> {
-    const level = await getAppAccessLevel(client);
+    const level = await getAppAccessLevel(onshapeApi);
     if (
-        required === AccessLevel.MEMBER &&
-        (level === AccessLevel.MEMBER || level === AccessLevel.ADMIN)
+        required === AccessLevel.EDITOR &&
+        (level === AccessLevel.EDITOR || level === AccessLevel.ADMIN)
     )
         return;
     if (required === AccessLevel.ADMIN && level === AccessLevel.ADMIN) return;
@@ -109,8 +103,6 @@ function parseVendors(
     }
     return [...vendors];
 }
-
-// ─── Reload context ──────────────────────────────────────────────────────────
 
 interface SavedElement {
     elementSchema?: number;
@@ -182,8 +174,6 @@ class ReloadContext {
         return saved.instanceId !== instancePath.instanceId;
     }
 }
-
-// ─── Fasten info parsing ─────────────────────────────────────────────────────
 
 function searchFeatures(
     features: any[],
@@ -259,15 +249,15 @@ function parseFastenInfoFromAssembly(assemblyInfo: any): FastenInfo {
 }
 
 async function parseFastenInfo(
-    client: OAuthClient,
+    onshapeApi: OAuthApi,
     elementPath: ElementPath,
     elementType: ElementType
 ): Promise<FastenInfo> {
     if (elementType === ElementType.PART_STUDIO) {
-        const featureList = await getFeatures(client, elementPath);
+        const featureList = await getFeatures(onshapeApi, elementPath);
         return parseFastenInfoFromPartStudio(featureList);
     } else {
-        const assemblyInfo = await getAssembly(client, elementPath, {
+        const assemblyInfo = await getAssembly(onshapeApi, elementPath, {
             includeMateConnectors: true,
             includeMateFeatures: true
         });
@@ -325,7 +315,7 @@ function parseVersion(
 }
 
 async function saveElement(
-    client: OAuthClient,
+    onshapeApi: OAuthApi,
     libraryRef: LibraryRef,
     documentId: string,
     versionPath: InstancePath,
@@ -339,7 +329,7 @@ async function saveElement(
     const elementPath: ElementPath = { ...versionPath, elementId };
     const docRef = libraryRef.documents.document(documentId);
 
-    const onshapeConfig = await getConfiguration(client, elementPath);
+    const onshapeConfig = await getConfiguration(onshapeApi, elementPath);
     let configuration: ConfigurationResult | undefined;
     let configurationId: string | undefined;
 
@@ -350,7 +340,7 @@ async function saveElement(
     }
 
     const thumbnailUrls = await uploadThumbnails(
-        client,
+        onshapeApi,
         elementPath,
         microversionId
     );
@@ -359,7 +349,7 @@ async function saveElement(
 
     let fastenInfo: FastenInfo | undefined;
     if (preserved.fastenInfo) {
-        fastenInfo = await parseFastenInfo(client, elementPath, elementType);
+        fastenInfo = await parseFastenInfo(onshapeApi, elementPath, elementType);
     }
 
     await docRef.elements.element(elementId).set({
@@ -379,7 +369,7 @@ async function saveElement(
 }
 
 async function saveDocument(
-    client: OAuthClient,
+    onshapeApi: OAuthApi,
     libraryRef: LibraryRef,
     documentId: string,
     versionPath: InstancePath,
@@ -389,12 +379,12 @@ async function saveDocument(
     const documentRef = libraryRef.documents.document(documentId);
 
     const [onshapeDocument, contents] = await Promise.all([
-        getDocument(client, versionPath),
-        getContents(client, versionPath)
+        getDocument(onshapeApi, versionPath),
+        getContents(onshapeApi, versionPath)
     ]);
 
     const thumbnailUrls = await uploadDocumentThumbnails(
-        client,
+        onshapeApi,
         onshapeDocument,
         contents,
         versionPath
@@ -412,7 +402,7 @@ async function saveDocument(
     await Promise.all(
         elementsToReload.map((e: any) =>
             saveElement(
-                client,
+                onshapeApi,
                 libraryRef,
                 documentId,
                 versionPath,
@@ -450,12 +440,12 @@ async function saveDocument(
 }
 
 async function reloadDocument(
-    client: OAuthClient,
+    onshapeApi: OAuthApi,
     libraryRef: LibraryRef,
     documentId: string,
     reloadContext: ReloadContext
 ): Promise<number> {
-    const versionDict = await getLatestVersion(client, { documentId });
+    const versionDict = await getLatestVersion(onshapeApi, { documentId });
     const { instancePath, versionInfo } = parseVersion(versionDict, documentId);
 
     const documentRef = libraryRef.documents.document(documentId);
@@ -466,7 +456,7 @@ async function reloadDocument(
     }
 
     return saveDocument(
-        client,
+        onshapeApi,
         libraryRef,
         documentId,
         instancePath,
@@ -538,8 +528,8 @@ async function cleanFavorites(libraryRef: LibraryRef): Promise<void> {
 export const reloadDocuments = createServerFn()
     .inputValidator((data: { library: Library; reloadAll?: boolean }) => data)
     .handler(async ({ data: { library, reloadAll = false } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         const libraryRef = getLibrary(library);
         const reloadContext = await buildReloadContext(libraryRef, reloadAll);
@@ -547,7 +537,7 @@ export const reloadDocuments = createServerFn()
 
         const results = await Promise.all(
             documentIds.map((documentId) =>
-                reloadDocument(client, libraryRef, documentId, reloadContext)
+                reloadDocument(onshapeApi, libraryRef, documentId, reloadContext)
             )
         );
 
@@ -571,8 +561,8 @@ export const setElementVisibility = createServerFn()
     )
     .handler(
         async ({ data: { library, documentId, elementIds, isVisible } }) => {
-            const client = await getClient();
-            await requireAccess(client);
+            const onshapeApi = await getOnshapeApi();
+            await requireAccess(onshapeApi);
 
             const libraryRef = getLibrary(library);
             const documentRef = libraryRef.documents.document(documentId);
@@ -617,8 +607,8 @@ export const setSortAlphabetically = createServerFn()
         }) => data
     )
     .handler(async ({ data: { library, documentId, sortAlphabetically } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         await getLibrary(library)
             .documents.document(documentId)
@@ -635,8 +625,8 @@ export const setDocumentOrder = createServerFn()
         (data: { library: Library; documentOrder: string[] }) => data
     )
     .handler(async ({ data: { library, documentOrder } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         await getLibrary(library).ref.update({ documentOrder });
         return { success: true };
@@ -658,14 +648,14 @@ export const addDocument = createServerFn()
         async ({
             data: { library, documentId: newDocumentId, selectedDocumentId }
         }) => {
-            const client = await getClient();
-            await requireAccess(client);
+            const onshapeApi = await getOnshapeApi();
+            await requireAccess(onshapeApi);
 
             const documentPath: DocumentPath = { documentId: newDocumentId };
 
             let documentName: string;
             try {
-                const doc = await getDocument(client, documentPath);
+                const doc = await getDocument(onshapeApi, documentPath);
                 documentName = doc.name;
             } catch {
                 throw new Error("Failed to find the specified document.");
@@ -673,7 +663,7 @@ export const addDocument = createServerFn()
 
             let versionDict: any;
             try {
-                versionDict = await getLatestVersion(client, documentPath);
+                versionDict = await getLatestVersion(onshapeApi, documentPath);
             } catch {
                 throw new Error("Failed to find a document version to use.");
             }
@@ -699,7 +689,7 @@ export const addDocument = createServerFn()
                 newDocumentId
             );
             await saveDocument(
-                client,
+                onshapeApi,
                 libraryRef,
                 newDocumentId,
                 instancePath,
@@ -720,8 +710,8 @@ export const addDocument = createServerFn()
 export const deleteDocument = createServerFn()
     .inputValidator((data: { library: Library; documentId: string }) => data)
     .handler(async ({ data: { library, documentId } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         const libraryRef = getLibrary(library);
         const documentRef = libraryRef.documents.document(documentId);

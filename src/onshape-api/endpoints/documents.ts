@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     DocumentPath,
@@ -11,7 +11,7 @@ import {
     toInstanceTypeKey
 } from "../path";
 import { apiPath } from "../api-path";
-import { OAuthClient } from "../client/oauth-client";
+import { OAuthApi } from "../client/oauth-api";
 import { getLatestVersion } from "./versions";
 
 /** Describes possible part types. */
@@ -31,7 +31,7 @@ export enum ElementType {
 
 /** Retrieves a given document's metadata. */
 export function getDocument(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<any> {
     return client.get(
@@ -43,7 +43,7 @@ export function getDocument(
 
 /** Retrieves the workspaces in a given document. */
 export function getWorkspaces(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<any[]> {
     return client.get(
@@ -55,7 +55,7 @@ export function getWorkspaces(
 
 /** Creates a new workspace in a given document. */
 export function createWorkspace(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath,
     name: string,
     description?: string
@@ -69,7 +69,7 @@ export function createWorkspace(
 }
 
 export function copyWorkspace(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     newName: string,
     isPublic = false
@@ -81,7 +81,7 @@ export function copyWorkspace(
 
 /** Creates a new workspace in a given document referencing a specific version. */
 export function createWorkspaceFromVersion(
-    client: OnshapeClient,
+    client: OnshapeApi,
     path: InstancePath,
     name: string,
     description?: string
@@ -102,7 +102,7 @@ export function createWorkspaceFromVersion(
 
 /** Deletes a workspace. */
 export function deleteWorkspace(
-    client: OnshapeClient,
+    client: OnshapeApi,
     workspacePath: InstancePath
 ): Promise<any> {
     assertInstanceType(workspacePath, "w");
@@ -117,7 +117,7 @@ export function deleteWorkspace(
 
 /** Deletes an entire document. */
 export function deleteDocument(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<any> {
     return client.delete(`/documents/${documentPath.documentId}`);
@@ -129,7 +129,7 @@ export function deleteDocument(
  * @param elementType The type of element (tab) to get. If omitted, all elements are returned.
  */
 export async function getDocumentElements(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     elementType?: ElementType
 ): Promise<any[]> {
@@ -147,7 +147,7 @@ export async function getDocumentElements(
  * Fetches an element in a document, or null if it doesn't exist.
  */
 export async function getDocumentElement(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath
 ): Promise<any | null> {
     const query = {
@@ -170,7 +170,7 @@ export async function getDocumentElement(
  * Individual elements also have their own microversion ids which are unrelated to the workspace's.
  */
 export function getWorkspaceMicroversionId(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath
 ): Promise<string> {
     assertInstanceType(instancePath, "w", "v");
@@ -189,7 +189,7 @@ export function getWorkspaceMicroversionId(
  * Generally speaking, this returns a list of the external workspaces referenced by each tab in the instance.
  */
 export function getExternalReferences(
-    client: OAuthClient,
+    client: OAuthApi,
     instancePath: InstancePath
 ): Promise<any> {
     return client.get(
@@ -235,9 +235,10 @@ export class VersionUpdate extends ReferenceUpdate {
  * Note this endpoint does not have any return information.
  */
 export function updateReferences(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     referenceUpdates: ReferenceUpdate[]
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 ): Promise<{}> {
     assertWorkspace(elementPath);
     return client.post(
@@ -254,7 +255,7 @@ export function updateReferences(
 
 /** Moves one or more tabs from the source to the target. */
 export function moveElements(
-    client: OnshapeClient,
+    client: OnshapeApi,
     sourcePath: InstancePath,
     elementIds: string[],
     targetPath: InstancePath | ElementPath,
@@ -282,7 +283,7 @@ export function moveElements(
 }
 
 export function getInsertables(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     options: {
         includeParts?: boolean;
@@ -307,7 +308,7 @@ export function getInsertables(
 }
 
 export function getContents(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     includeThumbnails = false
 ): Promise<any> {
@@ -324,7 +325,7 @@ export function getContents(
  * Note the microversion is global for the entire workspace.
  */
 export function getMicroversionId(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath
 ): Promise<string> {
     return client
@@ -340,10 +341,10 @@ export function getMicroversionId(
  * Returns units and precision settings for a given document.
  */
 export function getUnitInfo(
-    client: OnshapeClient,
+    onshapeApi: OnshapeApi,
     instancePath: InstancePath
 ): Promise<any> {
-    return client.get(
+    return onshapeApi.get(
         apiPath("documents", instancePath, toInstanceApiPath, {
             endRoute: "unitinfo"
         })
@@ -357,12 +358,12 @@ export function getUnitInfo(
  * are updated to use the latest version of that reference.
  */
 export async function updateToLatestVersion(
-    client: OnshapeClient,
+    onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     oldReferencePath: ElementPath
 ): Promise<void> {
-    const latest = await getLatestVersion(client, oldReferencePath);
-    await updateReferences(client, elementPath, [
+    const latest = await getLatestVersion(onshapeApi, oldReferencePath);
+    await updateReferences(onshapeApi, elementPath, [
         new VersionUpdate(oldReferencePath, latest.id)
     ]);
 }

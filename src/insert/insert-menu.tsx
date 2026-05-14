@@ -27,7 +27,7 @@ import { ConfigurationWrapper } from "../configurations/configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "../configurations/configuration-models";
 import { useLibraryQuery, useLibraryUserDataQuery } from "../queries";
-import { useUiState } from "../api-utils/ui-state";
+import { useUiState } from "../api-utils/ui-state.client";
 
 export function InsertMenu(): ReactNode {
     const search = useSearch({ from: "/app" });

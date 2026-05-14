@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -14,7 +14,7 @@ import { apiPath } from "../api-path";
  * @param rawResponse True to get the entire response object, false to get just the code string.
  */
 export async function pullCode(
-    client: OnshapeClient,
+    client: OnshapeApi,
     featureStudioPath: ElementPath,
     rawResponse = false
 ): Promise<any> {
@@ -26,7 +26,7 @@ export async function pullCode(
 
 /** Sends code to the given feature studio. */
 export function pushCode(
-    client: OnshapeClient,
+    client: OnshapeApi,
     featureStudioPath: ElementPath,
     code: string
 ): Promise<any> {
@@ -39,7 +39,7 @@ export function pushCode(
 
 /** Creates a feature studio with the given name. */
 export function createFeatureStudio(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     studioName: string
 ): Promise<any> {
@@ -51,7 +51,7 @@ export function createFeatureStudio(
 }
 
 export function getFeatureSpecs(
-    client: OnshapeClient,
+    client: OnshapeApi,
     featureStudioPath: ElementPath
 ): Promise<any> {
     return client.get(
@@ -63,7 +63,7 @@ export function getFeatureSpecs(
 
 /** Returns the feature spec for the first custom feature in a given Feature Studio. */
 export async function getFeatureSpec(
-    client: OnshapeClient,
+    client: OnshapeApi,
     featureStudioPath: ElementPath
 ): Promise<any> {
     const featureSpecs = await getFeatureSpecs(client, featureStudioPath);

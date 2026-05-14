@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Library } from "../api-utils/client-models";
-import { OAuthClient } from "../onshape-api/client/oauth-client";
+import { OAuthApi } from "../onshape-api/client/oauth-api";
 import { AccessLevel, getAccessLevel } from "../onshape-api/endpoints/users";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import {
@@ -10,17 +10,9 @@ import {
 import { ElementPath, InstancePath } from "../onshape-api/path";
 import { getLibrary } from "../connect/library";
 import { uploadThumbnails } from "../connect/storage";
-import { getAuthSession } from "../routes/auth/-auth";
+import { getOnshapeApi } from "../routes/auth/-auth.server";
 
-// --- Server-side helpers ---
-
-async function getClient(): Promise<OAuthClient> {
-    const session = await getAuthSession();
-    if (!session) throw new Error("Unauthorized");
-    return new OAuthClient(session.accessToken);
-}
-
-async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
+async function getAppAccessLevel(client: OAuthApi): Promise<AccessLevel> {
     const override = process.env.ACCESS_LEVEL_OVERRIDE;
     if (override) return override as AccessLevel;
 
@@ -34,13 +26,13 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
 }
 
 async function requireAccess(
-    client: OAuthClient,
-    required: AccessLevel = AccessLevel.MEMBER
+    onshapeApi: OAuthApi,
+    required: AccessLevel = AccessLevel.EDITOR
 ): Promise<void> {
-    const level = await getAppAccessLevel(client);
+    const level = await getAppAccessLevel(onshapeApi);
     if (
-        required === AccessLevel.MEMBER &&
-        (level === AccessLevel.MEMBER || level === AccessLevel.ADMIN)
+        required === AccessLevel.EDITOR &&
+        (level === AccessLevel.EDITOR || level === AccessLevel.ADMIN)
     )
         return;
     if (required === AccessLevel.ADMIN && level === AccessLevel.ADMIN) return;
@@ -76,7 +68,7 @@ function getThumbnailMicroversionId(
 }
 
 async function uploadDocumentThumbnails(
-    client: OAuthClient,
+    onshapeApi: OAuthApi,
     document: any,
     contents: any,
     versionPath: InstancePath
@@ -90,7 +82,7 @@ async function uploadDocumentThumbnails(
         contents,
         thumbnailElementId
     );
-    return uploadThumbnails(client, thumbnailPath, microversionId);
+    return uploadThumbnails(onshapeApi, thumbnailPath, microversionId);
 }
 
 // --- Server functions ---
@@ -104,16 +96,16 @@ export const reloadDocumentThumbnail = createServerFn()
         (data: { library: Library; instancePath: InstancePath }) => data
     )
     .handler(async ({ data: { library, instancePath } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         const [document, contents] = await Promise.all([
-            getDocument(client, instancePath),
-            getContents(client, instancePath)
+            getDocument(onshapeApi, instancePath),
+            getContents(onshapeApi, instancePath)
         ]);
 
         const thumbnails = await uploadDocumentThumbnails(
-            client,
+            onshapeApi,
             document,
             contents,
             instancePath
@@ -149,8 +141,8 @@ export const reloadElementThumbnail = createServerFn()
         (data: { library: Library; elementPath: ElementPath }) => data
     )
     .handler(async ({ data: { library, elementPath } }) => {
-        const client = await getClient();
-        await requireAccess(client);
+        const onshapeApi = await getOnshapeApi();
+        await requireAccess(onshapeApi);
 
         const elementRef = getLibrary(library)
             .documents.document(elementPath.documentId)
@@ -160,7 +152,7 @@ export const reloadElementThumbnail = createServerFn()
         if (!element) throw new Error("Element not found");
 
         const thumbnails = await uploadThumbnails(
-            client,
+            onshapeApi,
             elementPath,
             element.microversionId
         );
@@ -193,9 +185,9 @@ export const fetchThumbnailId = createServerFn()
         async ({
             data: { elementPath, configuration }
         }): Promise<{ thumbnailId: string }> => {
-            const client = await getClient();
+            const onshapeApi = await getOnshapeApi();
             const thumbnailId = await getThumbnailId(
-                client,
+                onshapeApi,
                 elementPath,
                 configuration
             );

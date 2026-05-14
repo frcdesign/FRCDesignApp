@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import {
     ElementPath,
     InstancePath,
@@ -8,7 +8,7 @@ import {
 import { apiPath } from "../api-path";
 
 export function getInstanceMetadata(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath
 ): Promise<any> {
     return client.get(apiPath("metadata", instancePath, toInstanceApiPath), {
@@ -17,7 +17,7 @@ export function getInstanceMetadata(
 }
 
 export function getAllElementMetadata(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath
 ): Promise<any> {
     return client.get(
@@ -27,7 +27,7 @@ export function getAllElementMetadata(
 }
 
 export function getElementMetadata(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath
 ): Promise<any> {
     return client.get(apiPath("metadata", elementPath, toElementApiPath), {
@@ -36,7 +36,7 @@ export function getElementMetadata(
 }
 
 export function updateElementMetadata(
-    client: OnshapeClient,
+    client: OnshapeApi,
     elementPath: ElementPath,
     propertyId: string,
     value: unknown

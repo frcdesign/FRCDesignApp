@@ -1,37 +1,28 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useSession } from "@tanstack/react-start/server";
-import {
-    OAUTH_SESSION_CONFIG,
-    OAuthSessionData,
-    onshapeClient
-} from "./-onshape-client.server";
-import { generateState } from "arctic";
+import { doSignIn } from "./-auth.server";
+import { getRequestUrl, setResponseStatus } from "@tanstack/react-start/server";
 
 export const Route = createFileRoute("/auth/sign-in")({
     server: {
         handlers: {
-            GET: async ({ request }) => {
-                const requestUrl = new URL(request.url);
-                const redirectUrl = requestUrl.searchParams.get("redirectUrl");
+            GET: async () => {
+                console.log("/auth/sign-in");
+                const search = getRequestUrl().searchParams;
 
-                // TODO: Make sure this works with the redirectUrl param from Onshape themselves
-                if (!redirectUrl) {
-                    throw new Error("Failed to get valid redirectUrl!");
+                // If Onshape hits this endpoint from, e.g., the user sign in page, they will populate redirectOnshapeUri with that page
+                let redirectUrl = search.get("redirectOnshapeUri");
+                if (redirectUrl === null) {
+                    // Otherwise we should have one passed in
+                    redirectUrl = search.get("redirectUrl");
                 }
 
-                const state = generateState();
+                if (!redirectUrl) {
+                    setResponseStatus(400);
+                    throw new Error("Failed to get a valid redirectUrl");
+                }
 
-                const session =
-                    await useSession<OAuthSessionData>(OAUTH_SESSION_CONFIG);
-                await session.update({ state, redirectUrl });
-
-                const authUrl = onshapeClient.createAuthorizationURL(
-                    "https://oauth.onshape.com/oauth/authorize",
-                    state,
-                    []
-                );
-
-                throw redirect({ href: authUrl.toString() });
+                const authorizationUrl = await doSignIn(redirectUrl);
+                return redirect({ href: authorizationUrl });
             }
         }
     },

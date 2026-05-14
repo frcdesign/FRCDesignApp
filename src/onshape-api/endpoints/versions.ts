@@ -1,4 +1,4 @@
-import { OnshapeClient } from "../client/client";
+import { OnshapeApi } from "../client/onshape-api";
 import { assertVersion } from "../assertions";
 import {
     DocumentPath,
@@ -14,7 +14,7 @@ import { apiPath } from "../api-path";
  * Versions are returned in chronological order, with the oldest version ("Start") first.
  */
 export function getVersions(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<any[]> {
     return client.get(
@@ -26,7 +26,7 @@ export function getVersions(
 
 /** Fetches information about a version of a document. */
 export function getVersion(
-    client: OnshapeClient,
+    client: OnshapeApi,
     versionPath: InstancePath
 ): Promise<any> {
     assertVersion(versionPath);
@@ -39,7 +39,7 @@ export function getVersion(
 }
 
 export function getLatestVersionPath(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<InstancePath> {
     return getLatestVersion(client, documentPath).then((v) => ({
@@ -50,7 +50,7 @@ export function getLatestVersionPath(
 }
 
 export function getLatestVersion(
-    client: OnshapeClient,
+    client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<any> {
     return getVersions(client, documentPath).then(
@@ -60,7 +60,7 @@ export function getLatestVersion(
 
 /** Creates a new version of a document from a given instance. */
 export function createVersion(
-    client: OnshapeClient,
+    client: OnshapeApi,
     instancePath: InstancePath,
     versionName: string,
     description: string

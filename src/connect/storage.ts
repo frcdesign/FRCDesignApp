@@ -1,6 +1,9 @@
 import { getStorage } from "firebase-admin/storage";
-import { OAuthClient } from "../onshape-api/client/oauth-client";
-import { getElementThumbnail, ThumbnailSize } from "../onshape-api/endpoints/thumbnails";
+import { OAuthApi } from "../onshape-api/client/oauth-api";
+import {
+    getElementThumbnail,
+    ThumbnailSize
+} from "../onshape-api/endpoints/thumbnails";
 import { ElementPath, InstancePath } from "../onshape-api/path";
 
 const BUCKET_NAME = "frc-design-app-data";
@@ -15,7 +18,10 @@ function publicUrl(blobPath: string, microversionId: string): string {
     return `https://storage.googleapis.com/${BUCKET_NAME}/${blobPath}?v=${microversionId}`;
 }
 
-async function isCurrentVersion(blobPath: string, microversionId: string): Promise<boolean> {
+async function isCurrentVersion(
+    blobPath: string,
+    microversionId: string
+): Promise<boolean> {
     const file = getBucket().file(blobPath);
     const [exists] = await file.exists();
     if (!exists) return false;
@@ -28,7 +34,7 @@ async function isCurrentVersion(blobPath: string, microversionId: string): Promi
  * skipping any that are already current. Returns a map of size → public URL.
  */
 export async function uploadThumbnails(
-    client: OAuthClient,
+    client: OAuthApi,
     elementPath: ElementPath,
     microversionId: string,
     sizes: ThumbnailSize[] = [ThumbnailSize.TINY, ThumbnailSize.STANDARD]
@@ -47,7 +53,11 @@ export async function uploadThumbnails(
 
             let thumbnail: ArrayBuffer;
             try {
-                thumbnail = await getElementThumbnail(client, elementPath, size);
+                thumbnail = await getElementThumbnail(
+                    client,
+                    elementPath,
+                    size
+                );
             } catch {
                 return;
             }
@@ -72,7 +82,7 @@ export async function uploadThumbnails(
  * Falls back to the first element if `documentThumbnailElementId` is empty.
  */
 export async function uploadDocumentThumbnails(
-    client: OAuthClient,
+    client: OAuthApi,
     onshapeDocument: any,
     contents: any,
     versionPath: InstancePath
@@ -81,13 +91,21 @@ export async function uploadDocumentThumbnails(
     if (!thumbnailElementId) {
         const elements: any[] = contents.elements;
         if (elements.length < 1)
-            throw new Error(`Document ${onshapeDocument.name} has no elements to use as a thumbnail.`);
+            throw new Error(
+                `Document ${onshapeDocument.name} has no elements to use as a thumbnail.`
+            );
         thumbnailElementId = elements[0].id;
     }
 
-    const element = (contents.elements as any[]).find((e) => e.id === thumbnailElementId);
-    if (!element) throw new Error("Unexpectedly failed to find the thumbnail element.");
+    const element = (contents.elements as any[]).find(
+        (e) => e.id === thumbnailElementId
+    );
+    if (!element)
+        throw new Error("Unexpectedly failed to find the thumbnail element.");
 
-    const thumbnailPath: ElementPath = { ...versionPath, elementId: thumbnailElementId };
+    const thumbnailPath: ElementPath = {
+        ...versionPath,
+        elementId: thumbnailElementId
+    };
     return uploadThumbnails(client, thumbnailPath, element.microversionId);
 }

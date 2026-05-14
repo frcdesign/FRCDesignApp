@@ -1,28 +1,25 @@
 import { createHmac, randomBytes } from "node:crypto";
-import { baseUrlFromEnv, OnshapeBaseClient, ONSHAPE_BASE_URL } from "./client";
+import { OnshapeApi } from "./onshape-api";
 
-export class KeyClient extends OnshapeBaseClient {
-    constructor(accessKey: string, secretKey: string, baseUrl = ONSHAPE_BASE_URL) {
-        super(
-            {
-                hooks: {
-                    beforeRequest: [
-                        ({ request }) => {
-                            const headers = makeSignedHeaders(
-                                request.method,
-                                request.url,
-                                accessKey,
-                                secretKey
-                            );
-                            for (const [key, value] of Object.entries(headers)) {
-                                request.headers.set(key, value);
-                            }
+export class KeyApi extends OnshapeApi {
+    constructor(accessKey: string, secretKey: string) {
+        super({
+            hooks: {
+                beforeRequest: [
+                    ({ request }) => {
+                        const headers = makeSignedHeaders(
+                            request.method,
+                            request.url,
+                            accessKey,
+                            secretKey
+                        );
+                        for (const [key, value] of Object.entries(headers)) {
+                            request.headers.set(key, value);
                         }
-                    ]
-                }
-            },
-            baseUrl
-        );
+                    }
+                ]
+            }
+        });
     }
 
     /**
@@ -32,7 +29,7 @@ export class KeyClient extends OnshapeBaseClient {
      */
     static async fromEnv({
         loadDotenv = true
-    }: { loadDotenv?: boolean } = {}): Promise<KeyClient> {
+    }: { loadDotenv?: boolean } = {}): Promise<KeyApi> {
         if (loadDotenv) {
             const { config } = await import("dotenv");
             config();
@@ -41,7 +38,7 @@ export class KeyClient extends OnshapeBaseClient {
         const secretKey = process.env.API_SECRET_KEY;
         if (!accessKey) throw new Error("API_ACCESS_KEY is required");
         if (!secretKey) throw new Error("API_SECRET_KEY is required");
-        return new KeyClient(accessKey, secretKey, baseUrlFromEnv());
+        return new KeyApi(accessKey, secretKey);
     }
 }
 

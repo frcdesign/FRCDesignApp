@@ -13,7 +13,7 @@ import { PropsWithChildren, ReactNode, useRef, useState } from "react";
 import { DocumentCard } from "../cards/document-card";
 import { HeartIcon } from "../favorites/favorite-button";
 import { SearchResults } from "../search/search-results";
-import { useUiState } from "../api-utils/ui-state";
+import { useUiState } from "../api-utils/ui-state.client";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useInteractiveSection } from "../common/utils";

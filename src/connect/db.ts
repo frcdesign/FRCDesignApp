@@ -15,18 +15,16 @@ if (getApps().length === 0) {
 
 export const DB = getFirestore();
 
-export const Collection = {
-    LIBRARIES: "libraries",
-    DOCUMENTS: "documents",
-    ELEMENTS: "elements",
-    CONFIGURATIONS: "configurations",
-    LIBRARY_USER_DATA: "library-user-data",
-    FAVORITES: "favorites",
-    USER_DATA: "user-data",
-    SESSIONS: "sessions"
-} as const;
-
-export type CollectionName = (typeof Collection)[keyof typeof Collection];
+export enum DbCollection {
+    LIBRARIES = "libraries",
+    DOCUMENTS = "documents",
+    ELEMENTS = "elements",
+    CONFIGURATIONS = "configurations",
+    LIBRARY_USER_DATA = "library-user-data",
+    FAVORITES = "favorites",
+    USER_DATA = "user-data",
+    SESSIONS = "sessions"
+}
 
 export class TypedDoc<T> {
     constructor(readonly ref: DocumentReference) {}
@@ -49,7 +47,7 @@ export class TypedDoc<T> {
         await this.ref.delete();
     }
 
-    collection(name: CollectionName): CollectionReference {
+    collection(name: DbCollection): CollectionReference {
         return this.ref.collection(name);
     }
 }
@@ -74,7 +72,6 @@ export class TypedCollection<T> {
 
 /**
  * A typed collection whose iteration order is maintained in an `orderKey` field of a parent document.
- * Mirrors the Python `OrderedCollection` class.
  */
 export class OrderedCollection<T> {
     constructor(
@@ -94,7 +91,9 @@ export class OrderedCollection<T> {
 
     async list(): Promise<Array<{ id: string; data: T }>> {
         const ids = await this.keys();
-        const snaps = await Promise.all(ids.map((id) => this.ref.doc(id).get()));
+        const snaps = await Promise.all(
+            ids.map((id) => this.ref.doc(id).get())
+        );
         return snaps
             .filter((s) => s.exists)
             .map((s) => ({ id: s.id, data: s.data() as T }));
@@ -102,11 +101,15 @@ export class OrderedCollection<T> {
 
     async add(id: string, data: T): Promise<void> {
         await this.ref.doc(id).set(data as FirebaseFirestore.DocumentData);
-        await this.parent.ref.update({ [this.orderKey]: FieldValue.arrayUnion(id) });
+        await this.parent.ref.update({
+            [this.orderKey]: FieldValue.arrayUnion(id)
+        });
     }
 
     async remove(id: string): Promise<void> {
         await this.ref.doc(id).delete();
-        await this.parent.ref.update({ [this.orderKey]: FieldValue.arrayRemove(id) });
+        await this.parent.ref.update({
+            [this.orderKey]: FieldValue.arrayRemove(id)
+        });
     }
 }

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { Library, Theme } from "../api-utils/client-models";
-import { OAuthClient } from "../onshape-api/client/oauth-client";
+import { OAuthApi } from "../onshape-api/client/oauth-api";
 import {
     AccessLevel,
     getAccessLevel,
@@ -8,8 +8,8 @@ import {
 } from "../onshape-api/endpoints/users";
 import { getLibrary } from "../connect/library";
 import { getUser } from "../connect/user";
-import { getAuthSession } from "../routes/auth/-auth";
 import { UserData } from "../connect/db-models";
+import { getOnshapeApi } from "../routes/auth/-auth.server";
 
 // --- Output types ---
 
@@ -21,13 +21,7 @@ export interface ContextDataOut {
 
 // --- Server-side helpers ---
 
-async function getClient(): Promise<OAuthClient> {
-    const session = await getAuthSession();
-    if (!session) throw new Error("Unauthorized");
-    return new OAuthClient(session.accessToken);
-}
-
-async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
+async function getAppAccessLevel(onshapeApi: OAuthApi): Promise<AccessLevel> {
     const override = process.env.ACCESS_LEVEL_OVERRIDE;
     if (override) return override as AccessLevel;
 
@@ -37,7 +31,7 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
             "ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured"
         );
 
-    return getAccessLevel(client, adminTeam);
+    return getAccessLevel(onshapeApi, adminTeam);
 }
 
 // --- Server functions ---
@@ -46,8 +40,8 @@ async function getAppAccessLevel(client: OAuthClient): Promise<AccessLevel> {
 export const fetchContextData = createServerFn()
     .inputValidator((data: { library: Library }) => data)
     .handler(async ({ data: { library } }): Promise<ContextDataOut> => {
-        const client = await getClient();
-        const maxAccessLevel = await getAppAccessLevel(client);
+        const onshapeApi = await getOnshapeApi();
+        const maxAccessLevel = await getAppAccessLevel(onshapeApi);
         const currentAccessLevel =
             process.env.NODE_ENV === "production"
                 ? AccessLevel.USER
@@ -66,8 +60,8 @@ export const fetchContextData = createServerFn()
 /** Returns the current user's stored data. */
 export const fetchUserData = createServerFn().handler(
     async (): Promise<UserData> => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
         const userData = await getUser(userId).get();
         if (!userData) throw new Error("User data not found");
         return userData;
@@ -78,8 +72,8 @@ export const fetchUserData = createServerFn().handler(
 export const updateSettings = createServerFn()
     .inputValidator((data: { theme?: Theme; library?: Library }) => data)
     .handler(async ({ data: { theme, library } }) => {
-        const client = await getClient();
-        const userId = await getUserId(client);
+        const onshapeApi = await getOnshapeApi();
+        const userId = await getUserId(onshapeApi);
 
         const updates: Record<string, unknown> = {};
         if (theme !== undefined) updates["settings.theme"] = theme;

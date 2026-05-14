@@ -19,7 +19,6 @@ import {
     Elements,
     hasMemberAccess
 } from "../../../api-utils/client-models";
-import { useUiState } from "../../../api-utils/ui-state";
 import { filterElements, SortOrder } from "../../../search/filter";
 import { DocumentContextMenu } from "../../../cards/document-card";
 import { ElementCard } from "../../../cards/element-card";
@@ -33,7 +32,7 @@ import {
 import { ClearFiltersButton } from "../../../navbar/vendor-filters";
 import { useInteractiveSection } from "../../../common/utils";
 import { useLibraryQuery } from "../../../queries";
-import { updateUiState } from "../../../api-utils/ui-state";
+import { useUiState, updateUiState } from "../../../api-utils/ui-state.client";
 
 export const Route = createFileRoute("/app/documents/$documentId")({
     component: DocumentList,
@@ -85,7 +84,7 @@ function DocumentList(): ReactNode {
         );
     }
 
-    let content;
+    let content: ReactNode;
     if (uiState.searchQuery) {
         content = (
             <CardList bordered={false} compact>

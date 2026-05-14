@@ -9,41 +9,34 @@
 
 import { useSearch } from "@tanstack/react-router";
 import { ElementPath } from "../onshape-api/path";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });
-    const handlePostMessage = (event: MessageEvent) => {
-        console.log("received message from: " + search.server);
-        if (search.server !== event.origin) {
-            return;
-        }
-        const messageName = event.data.messageName;
-        console.log("message name: " + messageName);
-        if (!messageName) {
-            return;
-        }
-        console.log(event.data);
-    };
 
-    window.addEventListener("message", handlePostMessage);
+    useEffect(() => {
+        sendInitMessage(search);
+    }, []);
 
-    sendInitMessage(search);
+    useEffect(() => {
+        const handlePostMessage = (event: MessageEvent) => {
+            console.log("received message from: " + search.server);
+            if (search.server !== event.origin) {
+                return;
+            }
+            const messageName = event.data.messageName;
+            console.log("message name: " + messageName);
+            if (!messageName) {
+                return;
+            }
+            console.log(event.data);
+        };
 
-    // sendMessage(search, {
-    //     messageName: MessageType.SWITCH_TAB,
-    //     anotherElementId: "6f1b9432e53b84c105518d80"
-    // });
-
-    // sendMessage(search, {
-    //     messageName: MessageType.REQUEST_SELECTION,
-    //     messageId: "unique-message-id",
-    //     entityTypeSpecifier: ["EDGE"]
-    // });
-
-    return () => {
-        window.removeEventListener("message", handlePostMessage);
-    };
+        window.addEventListener("message", handlePostMessage);
+        return () => {
+            window.removeEventListener("message", handlePostMessage);
+        };
+    }, [search.server]);
 }
 
 export function useMessageSender() {
