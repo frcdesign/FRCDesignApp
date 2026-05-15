@@ -1,56 +1,34 @@
 {
-    "name": "frc-design-lib",
-    "private": true,
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-        "dev": "vite dev",
-        "build": "vite build && tsc --noEmit",
-        "lint": "eslint . --report-unused-disable-directives --max-warnings 0"
-    },
-    "dependencies": {
-        "@blueprintjs/core": "^6.0.0",
-        "@blueprintjs/icons": "^6.0.0",
-        "@blueprintjs/select": "^6.0.0",
-        "@tailwindcss/vite": "^4.2.4",
-        "@tanstack/react-query": "^5.87.0",
-        "@tanstack/react-router": "^1.169.2",
-        "@tanstack/react-router-devtools": "^1.166.13",
-        "@tanstack/react-start": "^1.167.65",
-        "@tanstack/react-start-client": "^1.166.48",
-        "@tanstack/react-start-server": "^1.166.52",
-        "arctic": "^3.7.0",
-        "dotenv": "^17.4.2",
-        "firebase-admin": "^13.9.0",
-        "immer": "^11.1.6",
-        "jose": "^6.2.3",
-        "ky": "^2.0.2",
-        "minisearch": "^7.2.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "typescript-parsec": "^0.3.4",
-        "zod": "^4.1.11"
-    },
-    "devDependencies": {
-        "@eslint/js": "^10.0.1",
-        "@tanstack/router-plugin": "^1.167.33",
-        "@types/jest": "^30.0.0",
-        "@types/node": "^25.6.0",
-        "@types/react": "^18.2.43",
-        "@types/react-dom": "^18.2.17",
-        "@typescript-eslint/eslint-plugin": "^8.59.2",
-        "@typescript-eslint/parser": "^8.59.2",
-        "@vitejs/plugin-react": "^6.0.1",
-        "eslint": "^10.3.0",
-        "eslint-plugin-react-hooks": "^7.1.1",
-        "eslint-plugin-react-refresh": "^0.5.2",
-        "globals": "^17.6.0",
-        "jest": "^30.3.0",
-        "jest-environment-jsdom": "^30.2.0",
-        "sass": "^1.69.5",
-        "ts-jest": "^29.1.1",
-        "tsx": "^4.7.0",
-        "typescript": "^5.9.3",
-        "vite": "^8.0.10"
-    }
+  "name": "frc-design-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "npm run build && vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.36.4",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10",
+    "wrangler": "^4.90.1"
+  }
 }

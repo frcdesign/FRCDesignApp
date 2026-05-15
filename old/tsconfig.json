@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "esModuleInterop": true,
+        "jsx": "react-jsx",
+        "lib": ["DOM", "DOM.Iterable", "ES2022"],
+        "skipLibCheck": true,
+        // Bundler
+        "target": "ESNext",
+        "moduleResolution": "Bundler",
+        "module": "ESNext",
+        // Prevent Tanstack Router type errors
+        "noImplicitAny": false,
+        // Rely on eslint for some rules
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noFallthroughCasesInSwitch": true,
+        "types": ["vite/client", "jest"]
+    },
+    "include": ["./src"]
+}
