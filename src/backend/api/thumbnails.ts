@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type Bindings } from "../app";
+import { type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel } from "../onshape-api/endpoints/users";
@@ -9,11 +9,8 @@ import {
   getThumbnailId,
   ThumbnailSize,
 } from "../onshape-api/endpoints/thumbnails";
-import {
-  getDocument,
-  getContents,
-} from "../onshape-api/endpoints/documents";
-import { type ElementPath, type InstancePath } from "../onshape-api/path";
+import { getDocument, getContents } from "../onshape-api/endpoints/documents";
+import { type ElementPath, type InstancePath } from "../../shared/path";
 import { documents, elements } from "../../shared/schema";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
@@ -55,7 +52,8 @@ export async function uploadThumbnails(
         customMetadata: { microversionId },
       });
 
-      urls[size] = `/api/thumbnail/${size}/${elementPath.elementId}?v=${microversionId}`;
+      urls[size] =
+        `/api/thumbnail/${size}/${elementPath.elementId}?v=${microversionId}`;
     }),
   );
 
@@ -102,7 +100,9 @@ export async function uploadDocumentThumbnails(
 
 // ─── Access helpers ────────────────────────────────────────────────────────────
 
-async function requireEditorAccess(c: { env: Bindings }): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
+async function requireEditorAccess(c: {
+  env: AppBindings;
+}): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
   const onshapeApi = await getOnshapeApi(c as any);
   const adminTeam = (c.env as any).ADMIN_TEAM;
   if (!adminTeam) throw new Error("ADMIN_TEAM must be configured");
@@ -114,7 +114,7 @@ async function requireEditorAccess(c: { env: Bindings }): Promise<Awaited<Return
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-export const thumbnailRoutes = new Hono<{ Bindings: Bindings }>();
+export const thumbnailRoutes = new Hono<{ Bindings: AppBindings }>();
 
 /** GET /api/thumbnail/:size/:elementId — serve static thumbnail from R2 */
 thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
@@ -126,7 +126,10 @@ thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
 
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
-  headers.set("Cache-Control", `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`);
+  headers.set(
+    "Cache-Control",
+    `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`,
+  );
 
   return new Response(obj.body, { headers });
 });
@@ -138,9 +141,8 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
   const thumbnailId = c.req.query("thumbnailId");
   if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
 
-  const { getThumbnailFromId } = await import(
-    "../onshape-api/endpoints/thumbnails"
-  );
+  const { getThumbnailFromId } =
+    await import("../onshape-api/endpoints/thumbnails");
   const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
   return new Response(buffer, {
     headers: { "Content-Type": "image/gif" },
@@ -194,7 +196,11 @@ thumbnailRoutes.post(
 
     if (Object.keys(thumbnails).length < 2) {
       return c.json(
-        { type: "handled", message: "Failed to upload thumbnail. Does it exist in Onshape?", isError: true },
+        {
+          type: "handled",
+          message: "Failed to upload thumbnail. Does it exist in Onshape?",
+          isError: true,
+        },
         422,
       );
     }
@@ -239,7 +245,11 @@ thumbnailRoutes.post(
 
     if (Object.keys(thumbnails).length < 2) {
       return c.json(
-        { type: "handled", message: "Failed to upload thumbnail. Does it exist in Onshape?", isError: true },
+        {
+          type: "handled",
+          message: "Failed to upload thumbnail. Does it exist in Onshape?",
+          isError: true,
+        },
         422,
       );
     }

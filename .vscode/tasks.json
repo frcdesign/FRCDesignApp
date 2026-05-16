@@ -1,63 +1,53 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Deploy app",
-            "type": "shell",
-            "command": "gcloud run deploy frcdesignapp --project=frc-design-lib --source=. --region=us-central1",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build"
-            },
-            "dependsOn": ["Build app"],
-            "dependsOrder": "sequence"
-        },
-        {
-            "label": "Build app",
-            "type": "npm",
-            "script": "build",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build"
-            },
-            "options": {
-                "cwd": "${workspaceFolder}/frontend"
-            }
-        },
-        {
-            "label": "Launch servers",
-            "dependsOn": ["Launch frontend", "Launch db"],
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "dedicated",
-                "clear": true
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "Launch frontend",
-            "type": "npm",
-            "script": "dev",
-            "problemMatcher": [],
-            "presentation": {
-                "group": "server"
-            }
-        },
-        {
-            "label": "Launch db",
-            "type": "shell",
-            "command": "firebase emulators:start --import=./firestore_data --export-on-exit",
-            "presentation": {
-                "group": "server"
-            },
-            "problemMatcher": []
-        }
-    ]
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    // {
+    //     "label": "Deploy app",
+    //     "type": "shell",
+    //     "command": "gcloud run deploy frcdesignapp --project=frc-design-lib --source=. --region=us-central1",
+    //     "problemMatcher": [],
+    //     "group": {
+    //         "kind": "build"
+    //     },
+    //     "dependsOn": ["Build app"],
+    //     "dependsOrder": "sequence"
+    // },
+    {
+      "label": "Build app",
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "Launch dev",
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+    // {
+    //     "label": "Launch db",
+    //     "type": "shell",
+    //     "command": "firebase emulators:start --import=./firestore_data --export-on-exit",
+    //     "presentation": {
+    //         "group": "server"
+    //     },
+    //     "problemMatcher": []
+    // }
+  ]
 }

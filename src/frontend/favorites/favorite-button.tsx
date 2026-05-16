@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
 import { ElementObj, LibraryUserData } from "../api-utils/client-models";
-import { toUserApiPath } from "../../backend/onshape-api/path";
+import { toUserApiPath } from "../../shared/path";
 import { queryClient } from "../query-client";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";

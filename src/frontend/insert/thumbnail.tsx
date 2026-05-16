@@ -8,10 +8,10 @@ import {
 import {
   getHeightAndWidth,
   HeightAndWidth,
-  ThumbnailSize,
   ThumbnailUrls,
 } from "../api-utils/client-models";
-import { ElementPath, toElementApiPath } from "../../backend/onshape-api/path";
+import { ThumbnailSize } from "../../shared/types";
+import { ElementPath, toElementApiPath } from "../../shared/path";
 import {
   Card,
   Icon,

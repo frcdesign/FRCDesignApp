@@ -27,8 +27,8 @@ import {
 import { useIsElementHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
-import { toUserApiPath } from "../../backend/onshape-api/path";
-import { useUiState } from "../api-utils/ui-state.client";
+import { toUserApiPath } from "../../shared/path";
+import { useUiState } from "../api-utils/ui-state";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { useLibraryUserDataQuery } from "../queries";

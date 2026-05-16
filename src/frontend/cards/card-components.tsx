@@ -17,11 +17,7 @@ import {
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import {
-  DocumentPath,
-  ElementPath,
-  InstancePath,
-} from "../../backend/onshape-api/path";
+import { DocumentPath, ElementPath, InstancePath } from "../../shared/path";
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import {
   useInsertMutation,

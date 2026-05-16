@@ -20,7 +20,7 @@ import { PreviewImageCard } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../configurations/configurations";
 import { LibraryUserData } from "../api-utils/client-models";
 import { HeartIcon } from "./favorite-button";
-import { toUserApiPath } from "../../backend/onshape-api/path";
+import { toUserApiPath } from "../../shared/path";
 import { queryClient } from "../query-client";
 import { Configuration } from "../configurations/configuration-models";
 import { libraryUserDataQueryMatchKey, useLibraryQuery } from "../queries";

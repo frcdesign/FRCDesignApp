@@ -3,7 +3,7 @@
  */
 import { Hono } from "hono";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
-import { type Bindings } from "../app";
+import { type AppBindings } from "../app";
 import { getDb, type Db } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel } from "../onshape-api/endpoints/users";
@@ -12,14 +12,21 @@ import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
-import { type ElementPath, type DocumentPath, type InstancePath } from "../onshape-api/path";
-import { libraries, documents, elements, configurations, favorites } from "../../shared/schema";
 import {
-  Library,
-  Vendor,
-  getVendorName,
-  ElementType,
-} from "../../frontend/api-utils/client-models";
+  type ElementPath,
+  type DocumentPath,
+  type InstancePath,
+} from "../../shared/path";
+import {
+  libraries,
+  documents,
+  elements,
+  configurations,
+  favorites,
+} from "../../shared/schema";
+import { Library, ElementType } from "../../frontend/api-utils/client-models";
+import { getVendorName } from "../../shared/types";
+import { Vendor } from "../../shared/types";
 import {
   ConfigurationParameterType,
   type ConfigurationResult,
@@ -32,7 +39,9 @@ const LATEST_ELEMENT_SCHEMA = 1;
 
 // ─── Access ───────────────────────────────────────────────────────────────────
 
-async function requireEditorAccess(c: { env: Bindings }): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
+async function requireEditorAccess(c: {
+  env: AppBindings;
+}): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
   const onshapeApi = await getOnshapeApi(c as any);
   const adminTeam = (c.env as any).ADMIN_TEAM;
   if (!adminTeam) throw new Error("ADMIN_TEAM must be configured");
@@ -68,7 +77,10 @@ function parseVendors(
     if (param.type !== ConfigurationParameterType.ENUM) continue;
     for (const option of param.options) {
       const vendor = parseNameVendor(option.name);
-      if (vendor) { vendors.add(vendor); continue; }
+      if (vendor) {
+        vendors.add(vendor);
+        continue;
+      }
       const byFullName = Object.values(Vendor).find(
         (v) => getVendorName(v).toUpperCase() === option.name.toUpperCase(),
       );
@@ -129,7 +141,11 @@ function parseFastenInfoFromAssembly(assemblyInfo: any): FastenInfo {
       const part = parts[partCounter++];
       const mateConnectors: any[] = part.mateConnectors ?? [];
       if (mateConnectors.length > 0) {
-        return { mateConnectorId: mateConnectors[0].featureId, path, mateLocation: "Part" };
+        return {
+          mateConnectorId: mateConnectors[0].featureId,
+          path,
+          mateLocation: "Part",
+        };
       }
     } else if (instance.type === "Assembly") {
       const subAssembly = subAssemblies[subAssemblyCounter++];
@@ -179,13 +195,16 @@ class ReloadContext {
 
   constructor(public readonly reloadAll: boolean = false) {}
 
-  saveElement(elementId: string, data: {
-    isVisible: boolean;
-    isOpenComposite: boolean;
-    supportsFasten: boolean;
-    microversionId: string;
-    fastenInfo?: string | null;
-  }): void {
+  saveElement(
+    elementId: string,
+    data: {
+      isVisible: boolean;
+      isOpenComposite: boolean;
+      supportsFasten: boolean;
+      microversionId: string;
+      fastenInfo?: string | null;
+    },
+  ): void {
     this.savedElements.set(elementId, {
       elementSchema: LATEST_ELEMENT_SCHEMA,
       isVisible: data.isVisible,
@@ -196,20 +215,29 @@ class ReloadContext {
   }
 
   getElement(elementId: string): SavedElement {
-    return this.savedElements.get(elementId) ?? { isVisible: false, isOpenComposite: false };
+    return (
+      this.savedElements.get(elementId) ?? {
+        isVisible: false,
+        isOpenComposite: false,
+      }
+    );
   }
 
   shouldReloadElement(elementId: string, microversionId: string): boolean {
     if (this.reloadAll) return true;
     const saved = this.getElement(elementId);
-    if (!saved.elementSchema || saved.elementSchema < LATEST_ELEMENT_SCHEMA) return true;
+    if (!saved.elementSchema || saved.elementSchema < LATEST_ELEMENT_SCHEMA)
+      return true;
     return saved.microversionId !== microversionId;
   }
 
-  saveDocument(documentId: string, data: {
-    sortAlphabetically: boolean;
-    instanceId: string;
-  }): void {
+  saveDocument(
+    documentId: string,
+    data: {
+      sortAlphabetically: boolean;
+      instanceId: string;
+    },
+  ): void {
     this.savedDocuments.set(documentId, {
       documentSchema: LATEST_DOCUMENT_SCHEMA,
       sortAlphabetically: data.sortAlphabetically,
@@ -224,7 +252,8 @@ class ReloadContext {
   shouldReloadDocument(instancePath: InstancePath): boolean {
     if (this.reloadAll) return true;
     const saved = this.getDocument(instancePath.documentId);
-    if (!saved.documentSchema || saved.documentSchema < LATEST_DOCUMENT_SCHEMA) return true;
+    if (!saved.documentSchema || saved.documentSchema < LATEST_DOCUMENT_SCHEMA)
+      return true;
     return saved.instanceId !== instancePath.instanceId;
   }
 }
@@ -333,7 +362,9 @@ async function saveElement(
       target: elements.id,
       set: {
         name: onshapeElement.name,
-        vendors: JSON.stringify(parseVendors(onshapeElement.name, configuration)),
+        vendors: JSON.stringify(
+          parseVendors(onshapeElement.name, configuration),
+        ),
         elementType,
         instanceId: versionPath.instanceId,
         microversionId,
@@ -369,7 +400,9 @@ async function saveDocument(
   );
 
   const validElements = getValidElements(contents);
-  const validElementIds = new Set(validElements.map((e: any) => e.id as string));
+  const validElementIds = new Set(
+    validElements.map((e: any) => e.id as string),
+  );
 
   const elementsToReload = validElements.filter((e: any) =>
     reloadContext.shouldReloadElement(e.id, e.microversionId),
@@ -377,7 +410,16 @@ async function saveDocument(
 
   await Promise.all(
     elementsToReload.map((e: any) =>
-      saveElement(db, bucket, onshapeApi, libraryId, documentId, versionPath, e, reloadContext),
+      saveElement(
+        db,
+        bucket,
+        onshapeApi,
+        libraryId,
+        documentId,
+        versionPath,
+        e,
+        reloadContext,
+      ),
     ),
   );
 
@@ -392,10 +434,20 @@ async function saveDocument(
   if (toDeleteIds.length > 0) {
     await db
       .delete(elements)
-      .where(and(eq(elements.documentId, documentId), notInArray(elements.id, [...validElementIds])));
+      .where(
+        and(
+          eq(elements.documentId, documentId),
+          notInArray(elements.id, [...validElementIds]),
+        ),
+      );
     await db
       .delete(configurations)
-      .where(and(eq(configurations.documentId, documentId), notInArray(configurations.id, [...validElementIds])));
+      .where(
+        and(
+          eq(configurations.documentId, documentId),
+          notInArray(configurations.id, [...validElementIds]),
+        ),
+      );
   }
 
   const preserved = reloadContext.getDocument(documentId);
@@ -443,7 +495,9 @@ async function reloadDocument(
     instanceType: "v",
   };
   const versionName: string = versionDict.name;
-  const versionCreatedAt: string = new Date(versionDict.createdAt).toISOString();
+  const versionCreatedAt: string = new Date(
+    versionDict.createdAt,
+  ).toISOString();
 
   const existingDoc = await db
     .select({ instanceId: documents.instanceId })
@@ -455,10 +509,24 @@ async function reloadDocument(
     return 0;
   }
 
-  return saveDocument(db, bucket, onshapeApi, libraryId, documentId, instancePath, versionName, versionCreatedAt, reloadContext);
+  return saveDocument(
+    db,
+    bucket,
+    onshapeApi,
+    libraryId,
+    documentId,
+    instancePath,
+    versionName,
+    versionCreatedAt,
+    reloadContext,
+  );
 }
 
-async function buildReloadContext(db: Db, libraryId: string, reloadAll: boolean): Promise<ReloadContext> {
+async function buildReloadContext(
+  db: Db,
+  libraryId: string,
+  reloadAll: boolean,
+): Promise<ReloadContext> {
   const context = new ReloadContext(reloadAll);
 
   const allDocs = await db
@@ -517,7 +585,7 @@ async function cleanFavorites(db: Db, libraryId: string): Promise<void> {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-export const documentRoutes = new Hono<{ Bindings: Bindings }>();
+export const documentRoutes = new Hono<{ Bindings: AppBindings }>();
 
 /** POST /api/reload-documents/:library?reloadAll=true */
 documentRoutes.post("/reload-documents/:library", async (c) => {
@@ -526,10 +594,7 @@ documentRoutes.post("/reload-documents/:library", async (c) => {
   const reloadAll = c.req.query("reloadAll") === "true";
 
   const db = getDb(c.env.DB);
-  await db
-    .insert(libraries)
-    .values({ id: library })
-    .onConflictDoNothing();
+  await db.insert(libraries).values({ id: library }).onConflictDoNothing();
 
   const reloadContext = await buildReloadContext(db, library, reloadAll);
 
@@ -543,7 +608,14 @@ documentRoutes.post("/reload-documents/:library", async (c) => {
 
   const results = await Promise.all(
     documentOrder.map((documentId) =>
-      reloadDocument(db, c.env.THUMBNAILS, onshapeApi, library, documentId, reloadContext),
+      reloadDocument(
+        db,
+        c.env.THUMBNAILS,
+        onshapeApi,
+        library,
+        documentId,
+        reloadContext,
+      ),
     ),
   );
 
@@ -600,7 +672,9 @@ documentRoutes.post("/sort-document-alphabetically/:library", async (c) => {
   await db
     .update(documents)
     .set({ sortAlphabetically: body.sortAlphabetically })
-    .where(and(eq(documents.id, body.documentId), eq(documents.libraryId, library)));
+    .where(
+      and(eq(documents.id, body.documentId), eq(documents.libraryId, library)),
+    );
 
   return c.json({ success: true });
 });
@@ -637,7 +711,11 @@ documentRoutes.post("/document/:library", async (c) => {
     documentName = doc.name;
   } catch {
     return c.json(
-      { type: "handled", message: "Failed to find the specified document.", isError: true },
+      {
+        type: "handled",
+        message: "Failed to find the specified document.",
+        isError: true,
+      },
       422,
     );
   }
@@ -647,7 +725,11 @@ documentRoutes.post("/document/:library", async (c) => {
     versionDict = await getLatestVersion(onshapeApi, documentPath);
   } catch {
     return c.json(
-      { type: "handled", message: "Failed to find a document version to use.", isError: true },
+      {
+        type: "handled",
+        message: "Failed to find a document version to use.",
+        isError: true,
+      },
       422,
     );
   }
@@ -666,7 +748,11 @@ documentRoutes.post("/document/:library", async (c) => {
 
   if (documentOrder.includes(body.newDocumentId)) {
     return c.json(
-      { type: "handled", message: "Document has already been added to library.", isError: true },
+      {
+        type: "handled",
+        message: "Document has already been added to library.",
+        isError: true,
+      },
       422,
     );
   }
@@ -675,7 +761,11 @@ documentRoutes.post("/document/:library", async (c) => {
     const selectedIndex = documentOrder.indexOf(body.selectedDocumentId);
     if (selectedIndex === -1) {
       return c.json(
-        { type: "handled", message: "Selected document not found in library.", isError: true },
+        {
+          type: "handled",
+          message: "Selected document not found in library.",
+          isError: true,
+        },
         422,
       );
     }
@@ -728,7 +818,9 @@ documentRoutes.delete("/document/:library", async (c) => {
       // favorites whose element is in this document
     ),
   );
-  await db.delete(documents).where(and(eq(documents.id, documentId), eq(documents.libraryId, library)));
+  await db
+    .delete(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.libraryId, library)));
 
   const lib = await db
     .select({ documentOrder: libraries.documentOrder })

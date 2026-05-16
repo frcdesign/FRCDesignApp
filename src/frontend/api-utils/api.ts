@@ -1,6 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
-import { AccessLevel, hasEditorAccess } from "./client-models";
+import { hasEditorAccess } from "../../shared/types";
+import { AccessLevel } from "../../shared/types";
 import { HandledError } from "./errors";
 
 function getUrl(
@@ -126,7 +127,7 @@ export async function apiDelete(
 }
 
 async function handleResponse(response: Response) {
-  const json = await response.json() as any;
+  const json = (await response.json()) as any;
   if (!response.ok) {
     if (json.type === "handled") {
       throw new HandledError(json.message, json.isError);

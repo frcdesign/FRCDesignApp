@@ -1,39 +1,22 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type Bindings } from "../app";
+import { AppContext, type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
 import { users, libraries } from "../../shared/schema";
-import { Library, Theme } from "../../frontend/api-utils/client-models";
+import { Library, UserData } from "../../frontend/api-utils/client-models";
+import { AccessLevel, ContextData, Theme } from "../../shared/types";
+import { env } from "cloudflare:workers";
 
-export { AccessLevel } from "../onshape-api/endpoints/users";
+export const userRoutes = new Hono<{ Bindings: AppBindings }>();
 
-export interface ContextDataOut {
-  maxAccessLevel: string;
-  currentAccessLevel: string;
-  cacheVersion: number;
-}
+async function getAppAccessLevel(c: AppContext): Promise<AccessLevel> {
+  const override = env.ACCESS_LEVEL_OVERRIDE;
+  if (override) return override as AccessLevel;
 
-export interface UserDataOut {
-  settings: {
-    theme: Theme;
-    library: Library;
-  };
-}
-
-export const userRoutes = new Hono<{ Bindings: Bindings }>();
-
-async function getAppAccessLevel(c: { env: Bindings }): Promise<string> {
-  const override = (c.env as any).ACCESS_LEVEL_OVERRIDE;
-  if (override) return override as string;
-
-  const adminTeam = (c.env as any).ADMIN_TEAM;
-  if (!adminTeam)
-    throw new Error("ADMIN_TEAM or ACCESS_LEVEL_OVERRIDE must be configured");
-
-  const onshapeApi = await getOnshapeApi(c as any);
-  return getAccessLevel(onshapeApi, adminTeam);
+  const onshapeApi = await getOnshapeApi(c);
+  return getAccessLevel(onshapeApi, "TODO: GET ADMIN TEAM ID HERE I GUESS");
 }
 
 /** GET /api/context-data?library=X */
@@ -55,20 +38,18 @@ userRoutes.get("/context-data", async (c) => {
     maxAccessLevel,
     currentAccessLevel,
     cacheVersion: lib?.cacheVersion ?? 0,
-  } satisfies ContextDataOut);
+  } satisfies ContextData);
 });
 
 /** GET /api/user-data */
 userRoutes.get("/user-data", async (c) => {
+  console.log("Get user data");
+
   const onshapeApi = await getOnshapeApi(c);
   const userId = await getUserId(onshapeApi);
 
   const db = getDb(c.env.DB);
-  let user = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .get();
+  let user = await db.select().from(users).where(eq(users.id, userId)).get();
 
   if (!user) {
     await db.insert(users).values({ id: userId }).onConflictDoNothing();
@@ -80,7 +61,7 @@ userRoutes.get("/user-data", async (c) => {
       theme: user.theme as Theme,
       library: user.library as Library,
     },
-  } satisfies UserDataOut);
+  } satisfies UserData);
 });
 
 /** POST /api/user-data — update settings */

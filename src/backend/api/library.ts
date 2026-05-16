@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { and, asc, eq } from "drizzle-orm";
-import { type Bindings } from "../app";
+import { type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
@@ -15,8 +15,8 @@ import {
   Library,
   ElementType,
   ThumbnailUrls,
-  Vendor,
 } from "../../frontend/api-utils/client-models";
+import { Vendor } from "../../shared/types";
 
 // ─── Output types ─────────────────────────────────────────────────────────────
 
@@ -73,16 +73,15 @@ export interface LibraryUserDataOut {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getAppAccessLevel(
-  c: { env: Bindings },
+  c: { env: AppBindings },
   onshapeApi: Awaited<ReturnType<typeof getOnshapeApi>>,
 ): Promise<string> {
   const adminTeam = (c.env as any).ADMIN_TEAM;
-  if (!adminTeam)
-    throw new Error("ADMIN_TEAM must be configured");
+  if (!adminTeam) throw new Error("ADMIN_TEAM must be configured");
   return getAccessLevel(onshapeApi, adminTeam);
 }
 
-async function requireEditorAccess(c: { env: Bindings }): Promise<void> {
+async function requireEditorAccess(c: { env: AppBindings }): Promise<void> {
   const onshapeApi = await getOnshapeApi(c as any);
   const level = await getAppAccessLevel(c, onshapeApi);
   if (level !== "editor" && level !== "admin")
@@ -160,7 +159,7 @@ export async function buildLibraryOut(
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-export const libraryRoutes = new Hono<{ Bindings: Bindings }>();
+export const libraryRoutes = new Hono<{ Bindings: AppBindings }>();
 
 /** GET /api/library-data?library=X */
 libraryRoutes.get("/library-data", async (c) => {
@@ -210,7 +209,10 @@ libraryRoutes.get("/library-user-data", async (c) => {
     favoriteOrder.push(row.elementId);
   }
 
-  return c.json({ favorites: favoritesOut, favoriteOrder } satisfies LibraryUserDataOut);
+  return c.json({
+    favorites: favoritesOut,
+    favoriteOrder,
+  } satisfies LibraryUserDataOut);
 });
 
 /** POST /api/library-version/:library */
@@ -321,25 +323,28 @@ libraryRoutes.post("/favorite-order/:library/users/:userId", async (c) => {
 });
 
 /** POST /api/default-configuration/:library/users/:userId */
-libraryRoutes.post("/default-configuration/:library/users/:userId", async (c) => {
-  const library = c.req.param("library") as Library;
-  const userId = c.req.param("userId");
-  const body = await c.req.json<{
-    favoriteId: string;
-    defaultConfiguration: Record<string, string>;
-  }>();
+libraryRoutes.post(
+  "/default-configuration/:library/users/:userId",
+  async (c) => {
+    const library = c.req.param("library") as Library;
+    const userId = c.req.param("userId");
+    const body = await c.req.json<{
+      favoriteId: string;
+      defaultConfiguration: Record<string, string>;
+    }>();
 
-  const db = getDb(c.env.DB);
-  await db
-    .update(favorites)
-    .set({ defaultConfiguration: JSON.stringify(body.defaultConfiguration) })
-    .where(
-      and(
-        eq(favorites.userId, userId),
-        eq(favorites.libraryId, library),
-        eq(favorites.elementId, body.favoriteId),
-      ),
-    );
+    const db = getDb(c.env.DB);
+    await db
+      .update(favorites)
+      .set({ defaultConfiguration: JSON.stringify(body.defaultConfiguration) })
+      .where(
+        and(
+          eq(favorites.userId, userId),
+          eq(favorites.libraryId, library),
+          eq(favorites.elementId, body.favoriteId),
+        ),
+      );
 
-  return c.json({ success: true });
-});
+    return c.json({ success: true });
+  },
+);

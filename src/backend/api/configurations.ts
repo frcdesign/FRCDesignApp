@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type Bindings } from "../app";
+import { type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
@@ -11,14 +11,15 @@ import {
   QuantityType,
   type Unit,
 } from "../../frontend/configurations/configuration-models";
-import { type InstancePath } from "../onshape-api/path";
+import { type InstancePath } from "../../shared/path";
 
-export const configurationRoutes = new Hono<{ Bindings: Bindings }>();
+export const configurationRoutes = new Hono<{ Bindings: AppBindings }>();
 
 /** GET /api/configuration?library=X&documentId=Y&configurationId=Z */
 configurationRoutes.get("/configuration", async (c) => {
   const configurationId = c.req.query("configurationId");
-  if (!configurationId) return c.json({ error: "configurationId required" }, 400);
+  if (!configurationId)
+    return c.json({ error: "configurationId required" }, 400);
 
   const db = getDb(c.env.DB);
   const config = await db
@@ -65,6 +66,9 @@ interface OnshapeUnit {
   value: Unit;
 }
 
-function getDefaultUnit(units: OnshapeUnit[], quantityType: QuantityType): Unit {
+function getDefaultUnit(
+  units: OnshapeUnit[],
+  quantityType: QuantityType,
+): Unit {
   return units.find((u) => u.key === quantityType)?.value as Unit;
 }

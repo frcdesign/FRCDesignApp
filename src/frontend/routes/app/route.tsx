@@ -17,7 +17,6 @@ import {
   getSearchDbQuery,
   useUserData,
 } from "../../queries";
-import { type ContextData } from "../../api-utils/client-models";
 import { type MenuParams } from "../../overlays/menu-params";
 import {
   getBackgroundClass,
@@ -25,13 +24,14 @@ import {
   getThemeClass,
   type OnshapeParams,
 } from "../../api-utils/onshape-params";
-import { getUiState } from "../../api-utils/ui-state.client";
-import { RootAppError } from "../../app/root-error";
+import { getUiState } from "../../api-utils/ui-state";
 import { type AlertParams } from "../../overlays/popup-params";
 import { AppNavbar } from "../../navbar/app-navbar";
 import { AppAlerts } from "../../overlays/app-popups";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
+import { RootAppError } from "../../app/root-error";
+import { ContextData } from "../../../shared/types";
 
 type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
 
@@ -46,29 +46,29 @@ export const Route = createFileRoute("/app")({
     middlewares: [retainSearchParams(true)],
   },
   beforeLoad: async ({ location }) => {
-    console.log("Begin load");
     if (location.pathname !== "/app") {
       return;
     }
 
     const userData = await queryClient.ensureQueryData(getUserDataQuery());
     const library = userData.settings.library;
+
     const contextData = await queryClient.ensureQueryData(
       getContextDataQuery(library),
     );
 
     const uiState = getUiState();
     if (uiState.openDocumentId) {
-      throw redirect({
+      return redirect({
         to: "/app/documents/$documentId",
         params: { documentId: uiState.openDocumentId },
-        // search: contextData
+        search: () => contextData,
       });
     }
 
     return redirect({
-      to: "/app",
-      search: contextData,
+      to: "/app/documents",
+      search: () => contextData,
     });
   },
   loaderDeps: ({ search }) => ({

@@ -8,15 +8,15 @@ import {
   toCacheOptions,
   useCacheOptions,
 } from "./api-utils/api";
-import { Library, LibraryUserData } from "./api-utils/client-models";
+import { Library, LibraryUserData, UserData } from "./api-utils/client-models";
+import { ContextData } from "../shared/types";
 import { type LibraryOut } from "../backend/api/library";
 import { useLibrary } from "./api-utils/library";
 import { type UnitInfo } from "./configurations/configuration-models";
 import { useLoaderData, useSearch } from "@tanstack/react-router";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
-import { type ContextDataOut, type UserDataOut } from "../backend/api/user";
-import { type InstancePath } from "../backend/onshape-api/path";
+import { InstancePath } from "../shared/path";
 
 export function getConfigurationMatchKey() {
   return ["configuration"];
@@ -81,7 +81,7 @@ export function contextDataQueryKey(library: Library) {
 
 /** Returns core application context data needed to load most other endpoints. */
 export function getContextDataQuery(library: Library) {
-  return queryOptions<ContextDataOut>({
+  return queryOptions<ContextData>({
     queryKey: contextDataQueryKey(library),
     queryFn: () => apiGet("/context-data", { query: { library } }),
   });
@@ -93,13 +93,13 @@ export function userDataQueryKey() {
 
 /** Returns the current user's stored data. */
 export function getUserDataQuery() {
-  return queryOptions<UserDataOut>({
+  return queryOptions<UserData>({
     queryKey: userDataQueryKey(),
     queryFn: () => apiGet("/user-data"),
   });
 }
 
-export function useUserData(): UserDataOut {
+export function useUserData(): UserData {
   return useLoaderData({ from: "/app" });
 }
 

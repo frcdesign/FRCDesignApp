@@ -1,5 +1,7 @@
 import { PropsWithChildren } from "react";
-import { AccessLevel, hasAdminAccess, hasEditorAccess } from "./client-models";
+import { hasEditorAccess } from "../../shared/types";
+import { hasAdminAccess } from "../../shared/types";
+import { AccessLevel } from "../../shared/types";
 import { useSearch } from "@tanstack/react-router";
 
 interface RequireAccessLevelProps extends PropsWithChildren {

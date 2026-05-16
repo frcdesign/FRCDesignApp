@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
 import { ElementObj, ElementType } from "../api-utils/client-models";
-import { toElementApiPath } from "../../backend/onshape-api/path";
+import { toElementApiPath } from "../../shared/path";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";

@@ -16,15 +16,11 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import {
-  AccessLevel,
-  hasEditorAccess,
-  Library,
-  LibraryObj,
-  Settings,
-  Theme,
-  UserData,
-} from "../api-utils/client-models";
+import { Library, LibraryObj, UserData } from "../api-utils/client-models";
+import { Settings } from "../../shared/types";
+import { Theme } from "../../shared/types";
+import { hasEditorAccess } from "../../shared/types";
+import { AccessLevel } from "../../shared/types";
 import { getLibraryName as getLibraryName } from "../api-utils/library";
 import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";

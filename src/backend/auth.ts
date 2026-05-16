@@ -1,32 +1,26 @@
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
-import type { OnshapeApi } from "./onshape-api/client/onshape-api";
 import { OAuthApi } from "./onshape-api/client/oauth-api";
-import { app, type AppContext } from "./app";
+import { AppBindings, type AppContext } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
+import { Hono } from "hono";
+import { ping } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
 const SESSION_TTL = 30 * 24 * 3600; // 30 days
 
 export async function isAuthenticated(c: AppContext) {
-  const sessionId = getCookie(c, SESSION_COOKIE);
-
-  if (!sessionId) {
+  try {
+    const onshapeApi = await getOnshapeApi(c);
+    return ping(onshapeApi);
+  } catch {
     return false;
   }
-
-  const tokens = await getTokens(c, sessionId);
-  if (!tokens) {
-    return false;
-  }
-
-  // TODO: ping Onshape or something
-  return true;
 }
 
-export async function getOnshapeApi(c: AppContext): Promise<OnshapeApi> {
+export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
   const sessionId = getCookie(c, SESSION_COOKIE);
 
   if (!sessionId) {
@@ -65,7 +59,9 @@ function getOauthClient(): OAuth2Client {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-app.get("/auth/sign-in", async (c) => {
+export const authRoutes = new Hono<{ Bindings: AppBindings }>();
+
+authRoutes.get("/sign-in", async (c) => {
   const query = c.req.query();
 
   // If Onshape hits this endpoint from, e.g., the user sign in page, they will populate redirectOnshapeUri with that page
@@ -85,7 +81,7 @@ app.get("/auth/sign-in", async (c) => {
   return c.redirect(authorizationUrl);
 });
 
-app.get("/auth/callback", async (c) => {
+authRoutes.get("/callback", async (c) => {
   return doCallback(c);
 });
 

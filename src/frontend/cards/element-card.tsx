@@ -38,7 +38,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { toElementApiPath } from "../../backend/onshape-api/path";
+import { toElementApiPath } from "../../shared/path";
 import { showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
