@@ -1,28 +1,25 @@
-// import { doCallback, doSignIn } from "./auth/auth";
-
 import { app } from "./app";
+import { isAuthenticated } from "./auth";
+import { userRoutes } from "./api/user";
+import { libraryRoutes } from "./api/library";
+import { thumbnailRoutes } from "./api/thumbnails";
+import { documentRoutes } from "./api/documents";
+import { configurationRoutes } from "./api/configurations";
 
-// app.get("/auth/callback", (c) => {
-//   return c.text("Ahhh");
-// });
+// Mount all API routes
+app.route("/api", userRoutes);
+app.route("/api", libraryRoutes);
+app.route("/api", thumbnailRoutes);
+app.route("/api", documentRoutes);
+app.route("/api", configurationRoutes);
+
+app.get("/app", async (c) => {
+  if (!(await isAuthenticated(c))) {
+    return c.redirect(
+      `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`,
+    );
+  }
+  return c.env.ASSETS.fetch(c.req.raw);
+});
 
 export default app;
-
-// export default {
-//   fetch(request) {
-//     const url = new URL(request.url);
-
-//     if (url.pathname.startsWith("/api/")) {
-//       return Response.json({
-//         name: "Cloudflare",
-//       });
-//     } else if (url.pathname.startsWith("/auth/callback")) {
-//       const redirectUrl = doCallback(request);
-//       // return redirect({ href: redirectUrl });
-//     } else if (url.pathname.startsWith("/auth/sign-in")) {
-//       const redirectUrl = doSignIn(url.href);
-//     }
-
-//     return new Response(null, { status: 404 });
-//   },
-// } satisfies ExportedHandler<Env>;

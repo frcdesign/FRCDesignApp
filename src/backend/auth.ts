@@ -1,20 +1,23 @@
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
-import { redirect } from "@tanstack/react-router";
-import type { OnshapeApi } from "../onshape-api/client/onshape-api";
-import { OAuthApi } from "../onshape-api/client/oauth-api";
-import { app } from "./app";
+import type { OnshapeApi } from "./onshape-api/client/onshape-api";
+import { OAuthApi } from "./onshape-api/client/oauth-api";
+import { app, type AppContext } from "./app";
 import { HTTPException } from "hono/http-exception";
+import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
 
-export async function isAuthenticated() {
-  const sessionManager = await getAppSession();
-  const sessionId = sessionManager.id;
+const SESSION_COOKIE = "frc-design-app-cookie";
+const LOGIN_TTL = 600; // 10 minutes
+const SESSION_TTL = 30 * 24 * 3600; // 30 days
+
+export async function isAuthenticated(c: AppContext) {
+  const sessionId = getCookie(c, SESSION_COOKIE);
 
   if (!sessionId) {
     return false;
   }
 
-  const tokens = await getTokens(sessionId);
+  const tokens = await getTokens(c, sessionId);
   if (!tokens) {
     return false;
   }
@@ -23,17 +26,16 @@ export async function isAuthenticated() {
   return true;
 }
 
-export async function getOnshapeApi(): Promise<OnshapeApi> {
-  const sessionManager = await getAppSession();
-  const sessionId = sessionManager.id;
+export async function getOnshapeApi(c: AppContext): Promise<OnshapeApi> {
+  const sessionId = getCookie(c, SESSION_COOKIE);
 
   if (!sessionId) {
-    throw new Error("Failed to find valid session");
+    throw new HTTPException(401, { message: "Failed to find valid session" });
   }
 
-  const tokens = await getTokens(sessionId);
+  const tokens = await getTokens(c, sessionId);
   if (!tokens) {
-    throw new Error("Failed to find valid tokens");
+    throw new HTTPException(401, { message: "Failed to find valid tokens" });
   }
 
   const refreshTokens = async () => {
@@ -42,7 +44,7 @@ export async function getOnshapeApi(): Promise<OnshapeApi> {
       .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
       .then(makeAuthTokens);
 
-    saveTokens(sessionId, newTokens);
+    saveTokens(c, sessionId, newTokens);
 
     return newTokens.accessToken;
   };
@@ -63,11 +65,6 @@ function getOauthClient(): OAuth2Client {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-interface OAuthSessionData {
-  state: string;
-  redirectUrl: string;
-}
-
 app.get("/auth/sign-in", async (c) => {
   const query = c.req.query();
 
@@ -84,8 +81,12 @@ app.get("/auth/sign-in", async (c) => {
     });
   }
 
-  const authorizationUrl = await doSignIn(redirectUrl);
-  return redirect({ href: authorizationUrl });
+  const authorizationUrl = await doSignIn(c, redirectUrl);
+  return c.redirect(authorizationUrl);
+});
+
+app.get("/auth/callback", async (c) => {
+  return doCallback(c);
 });
 
 /**
@@ -93,53 +94,52 @@ app.get("/auth/sign-in", async (c) => {
  *
  * Returns the URL the user should be redirected to.
  */
-export async function doSignIn(redirectUrl: string): Promise<string> {
+export async function doSignIn(
+  c: AppContext,
+  redirectUrl: string,
+): Promise<string> {
   const oauthClient = getOauthClient();
 
   const state = generateState();
 
   // Store the state and redirectUrl
-  const sessionManager = await getAppSession();
-  await sessionManager.update({ state, redirectUrl });
+  await initSession(c, { state, redirectUrl });
 
   return oauthClient
     .createAuthorizationURL(AUTH_ENDPOINT, state, [])
     .toString();
 }
 
-export async function doCallback(request: Request): Promise<string> {
-  const search = new URL(request.url).searchParams;
-  if (search.get("error") === "access_denied") {
-    throw redirect({ to: "/grant-denied" });
+export async function doCallback(c: AppContext): Promise<Response> {
+  const search = c.req.query() as Record<string, string | undefined>;
+
+  // The user clicked "Deny access" on the sign in page
+  if (search.error === "access_denied") {
+    return c.redirect("/grant-denied");
   }
 
-  const code = search.get("code");
-
-  const sessionManager = await getAppSession();
-
-  const data = sessionManager.data;
-  const sessionId = sessionManager.id;
-  const redirectUrl = data.redirectUrl;
-  const cookieState = data.state;
+  const session = await getSession(c);
 
   // There was a problem with the cookie used to store redirect information
-  if (!redirectUrl || !cookieState) {
-    if (isSafari(request)) {
-      throw redirect({ to: "/safari-error" });
+  if (!session) {
+    if (isSafari(c.req.raw)) {
+      return c.redirect("/safari-error");
     }
-    throw redirect({ to: "/cookie-error" });
-  } else if (!sessionId || !code || cookieState !== search.get("state")) {
-    throw new Error("Invalid response from Onshape");
+    return c.redirect("/cookie-error");
+  }
+
+  if (!search.code || session.state !== search.state) {
+    throw new HTTPException(401, { message: "Invalid response from Onshape" });
   }
 
   const oauthClient = getOauthClient();
 
   await oauthClient
-    .validateAuthorizationCode(TOKEN_ENDPOINT, code, null)
+    .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
     .then(makeAuthTokens)
-    .then((tokens) => saveTokens(sessionId, tokens));
+    .then((tokens) => saveTokens(c, session.sessionId, tokens));
 
-  return redirectUrl;
+  return c.redirect(session.redirectUrl);
 }
 
 function isSafari(request: Request): boolean {
@@ -155,22 +155,45 @@ function isSafari(request: Request): boolean {
   );
 }
 
-async function getAppSession() {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useSession<OAuthSessionData>({
-    password: env.SESSION_SECRET,
-    name: "oauth-state",
-    maxAge: 30 * 24 * 3600, // Same amount of time as the database expiration
-    cookie: {
-      // SameSite=none + secure required because the app runs embedded in an Onshape iframe
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-    },
-  });
+interface OAuthSessionData {
+  state: string;
+  redirectUrl: string;
 }
 
+async function getSession(
+  c: AppContext,
+): Promise<(OAuthSessionData & { sessionId: string }) | null> {
+  const sessionId = getCookie(c, SESSION_COOKIE);
+  if (!sessionId) return null;
+  const raw = await c.env.KV.get(`login-session:${sessionId}`);
+  if (!raw) return null;
+
+  const session = JSON.parse(raw);
+  session.sessionId = sessionId;
+
+  c.env.KV.delete(`login-session:${sessionId}`);
+  return session;
+}
+
+async function initSession(
+  c: AppContext,
+  data: OAuthSessionData,
+): Promise<string> {
+  const sessionId = crypto.randomUUID();
+  // SameSite=none + secure required because the app runs embedded in an Onshape iframe
+  setCookie(c, SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    path: "/",
+    maxAge: SESSION_TTL,
+  });
+
+  await c.env.KV.put(`login-session:${sessionId}`, JSON.stringify(data), {
+    expirationTtl: LOGIN_TTL,
+  });
+  return sessionId;
+}
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -186,40 +209,27 @@ function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
 }
 
 /**
- * Saves a set of tokens into the database.
+ * Saves a set of tokens into KV.
  */
-async function saveTokens(sessionId: string, tokens: AuthTokens) {
-  await env.DB.collection("sessions").doc(sessionId).set({
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    expiresAt: tokens.expiresAt,
-    deleteAt: getDeleteAt(),
-    createdAt: Date.now(),
+async function saveTokens(
+  c: AppContext,
+  sessionId: string,
+  tokens: AuthTokens,
+) {
+  const tokenString = JSON.stringify(tokens);
+  await c.env.KV.put(`tokens:${sessionId}`, tokenString, {
+    expirationTtl: SESSION_TTL,
   });
 }
 
 /**
- * Returns a timestamp 30 days from now.
+ * Retrieves a set of tokens from KV.
  */
-function getDeleteAt(): number {
-  const date = new Date(); // A date object containing the current time
-  date.setDate(date.getDate() + 30); // date = days in JavaScript
-  return date.getTime();
-}
-
-/**
- * Retrieves a set of tokens from the database.
- */
-async function getTokens(sessionId: string): Promise<AuthTokens | null> {
-  const doc = await DB.collection("sessions").doc(sessionId).get();
-  if (!doc.exists) return null;
-
-  const data = doc.data();
-  if (!data) return null;
-
-  return {
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-    expiresAt: data.expiresAt,
-  };
+async function getTokens(
+  c: AppContext,
+  sessionId: string,
+): Promise<AuthTokens | null> {
+  const raw = await c.env.KV.get(`tokens:${sessionId}`);
+  if (!raw) return null;
+  return JSON.parse(raw) as AuthTokens;
 }

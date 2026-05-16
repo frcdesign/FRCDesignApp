@@ -9,6 +9,7 @@
   "compatibility_date": "2026-05-14",
   "assets": {
     "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
   },
   "observability": {
     "enabled": true,
@@ -28,15 +29,22 @@
    */
   "d1_databases": [
     {
-      "binding": "db",
+      "binding": "DB",
       "database_name": "db",
       "database_id": "d68c107e-2e40-407f-837b-eccdaa0ee3eb",
+      "migrations_dir": "drizzle",
     },
   ],
   "kv_namespaces": [
     {
-      "binding": "kv",
+      "binding": "KV",
       "id": "f3a2097219654fa99a2ac3cc1573b7e8",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "THUMBNAILS",
+      "bucket_name": "frc-thumbnails",
     },
   ],
   /**

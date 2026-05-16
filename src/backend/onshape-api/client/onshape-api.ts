@@ -1,8 +1,32 @@
 import ky, { HTTPError, type KyInstance, type Options } from "ky";
-import {
-  createSearchParams,
-  URLSearchParamsInit,
-} from "../../../../old/src/common/utils";
+import { env } from "cloudflare:workers";
+
+type ParamKeyValuePair = [string, string];
+type URLSearchParamsInit =
+  | string
+  | ParamKeyValuePair[]
+  | Record<string, boolean | string | string[]>
+  | URLSearchParams;
+
+function createSearchParams(init: URLSearchParamsInit = ""): URLSearchParams {
+  return new URLSearchParams(
+    typeof init === "string" ||
+    Array.isArray(init) ||
+    init instanceof URLSearchParams
+      ? init
+      : Object.keys(init).reduce(
+          (memo, key) => {
+            const value = init[key as keyof typeof init];
+            return memo.concat(
+              Array.isArray(value)
+                ? value.map((v) => [key, v])
+                : [[key, (value as boolean | string).toString()]],
+            );
+          },
+          [] as ParamKeyValuePair[],
+        ),
+  );
+}
 
 export interface GetOptions {
   query?: URLSearchParamsInit;
@@ -17,8 +41,8 @@ export interface PostOptions extends GetOptions {
 export type DeleteOptions = GetOptions;
 
 export function getBaseUrl(): string {
-  const rawUrl = process.env.API_BASE_URL ?? "https://cad.onshape.com";
-  const rawVersion = process.env.API_VERSION;
+  const rawUrl = env.API_BASE_PATH ?? "https://cad.onshape.com";
+  const rawVersion = env.API_VERSION;
   const version = rawVersion !== undefined ? parseInt(rawVersion) : 8;
 
   return `${rawUrl}/api/v${version}`;

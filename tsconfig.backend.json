@@ -4,5 +4,5 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
     "types": ["./worker-configuration.d.ts", "vite/client"]
   },
-  "include": ["src/backend", "src/onshape-api"]
+  "include": ["src/backend", "src/shared"]
 }

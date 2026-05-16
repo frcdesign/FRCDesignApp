@@ -1,8 +1,12 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
-type Bindings = {
-  db: D1Database;
-  kv: KVNamespace;
+export type Bindings = {
+  DB: D1Database;
+  KV: KVNamespace;
+  ASSETS: Fetcher;
+  THUMBNAILS: R2Bucket;
 };
+
+export type AppContext = Context<{ Bindings: Bindings }>;
 
 export const app = new Hono<{ Bindings: Bindings }>();

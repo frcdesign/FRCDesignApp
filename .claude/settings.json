@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "cloudflare@cloudflare": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx wrangler *)"
+    ]
+  }
+}
