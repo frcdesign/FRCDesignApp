@@ -1,28 +1,28 @@
 import {
-  createFileRoute,
-  Outlet,
-  redirect,
-  retainSearchParams,
-  type SearchSchemaInput,
-  useSearch,
+    createFileRoute,
+    Outlet,
+    redirect,
+    retainSearchParams,
+    type SearchSchemaInput,
+    useLoaderData,
+    useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BlueprintProvider } from "@blueprintjs/core";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
 import {
-  getUserDataQuery,
-  getLibraryQuery,
-  getContextDataQuery,
-  getSearchDbQuery,
-  useUserData,
+    getFavoritesQuery,
+    getContextDataQuery,
+    getLibraryQuery,
+    getSearchDbQuery
 } from "../../queries";
 import { type MenuParams } from "../../overlays/menu-params";
 import {
-  getBackgroundClass,
-  getColorTheme,
-  getThemeClass,
-  type OnshapeParams,
+    getBackgroundClass,
+    getColorTheme,
+    getThemeClass,
+    OnshapeParams
 } from "../../api-utils/onshape-params";
 import { getUiState } from "../../api-utils/ui-state";
 import { type AlertParams } from "../../overlays/popup-params";
@@ -31,90 +31,99 @@ import { AppAlerts } from "../../overlays/app-popups";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
-import { ContextData } from "../../../shared/types";
+import { type AccessData, type Settings } from "../../../shared/types";
 
-type SearchParams = OnshapeParams & MenuParams & AlertParams & ContextData;
+type SearchParams = OnshapeParams &
+    MenuParams &
+    AlertParams & { settings: Settings };
 
 export const Route = createFileRoute("/app")({
-  component: App,
-  validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-    search.systemTheme = search.theme;
-    delete search.theme;
-    return search as unknown as SearchParams;
-  },
-  search: {
-    middlewares: [retainSearchParams(true)],
-  },
-  beforeLoad: async ({ location }) => {
-    if (location.pathname !== "/app") {
-      return;
-    }
-
-    const userData = await queryClient.ensureQueryData(getUserDataQuery());
-    const library = userData.settings.library;
-
-    const contextData = await queryClient.ensureQueryData(
-      getContextDataQuery(library),
-    );
-
-    const uiState = getUiState();
-    if (uiState.openDocumentId) {
-      return redirect({
-        to: "/app/documents/$documentId",
-        params: { documentId: uiState.openDocumentId },
-        search: () => contextData,
-      });
-    }
-
-    return redirect({
-      to: "/app/documents",
-      search: () => contextData,
-    });
-  },
-  loaderDeps: ({ search }) => ({
-    userId: search.userId,
-    cacheOptions: {
-      currentAccessLevel: search.currentAccessLevel,
-      cacheVersion: search.cacheVersion,
+    component: App,
+    validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
+        search.systemTheme = search.theme;
+        delete search.theme;
+        return search as unknown as SearchParams;
     },
-  }),
-  loader: async ({ deps }) => {
-    const userData = await queryClient.ensureQueryData(getUserDataQuery());
-    const library = userData.settings.library;
-    Promise.all([
-      queryClient.prefetchQuery(getLibraryQuery(library, deps.cacheOptions)),
-      queryClient.prefetchQuery(getSearchDbQuery(library, deps.cacheOptions)),
-    ]);
-    return userData;
-  },
-  errorComponent: RootAppError,
+    search: {
+        middlewares: [retainSearchParams(true)]
+    },
+    beforeLoad: async ({ location }) => {
+        const contextData = await queryClient.ensureQueryData(
+            getContextDataQuery()
+        );
+        const context = { accessData: contextData.accessData };
+        if (location.pathname !== "/app") {
+            return context;
+        }
+
+        const settings = { settings: contextData.settings };
+
+        const uiState = getUiState();
+        if (uiState.openDocumentId) {
+            throw redirect({
+                to: "/app/documents/$documentId",
+                params: { documentId: uiState.openDocumentId },
+                search: settings
+            });
+        }
+        // must throw redirects here for type inference to work
+        throw redirect({
+            to: "/app/documents",
+            search: settings
+        });
+    },
+    loaderDeps: ({ search }) => ({
+        library: search.settings?.library
+    }),
+    loader: async ({ context, deps }): Promise<AccessData> => {
+        const accessData = context.accessData!;
+        await Promise.all([
+            queryClient.prefetchQuery(
+                getLibraryQuery(deps.library, accessData)
+            ),
+            queryClient.prefetchQuery(
+                getSearchDbQuery(deps.library, accessData)
+            ),
+            queryClient.prefetchQuery(getFavoritesQuery(deps.library))
+        ]);
+        return accessData;
+    },
+    errorComponent: RootAppError
 });
 
 function App() {
-  const search = useSearch({ from: "/app" });
-  const settings = useUserData().settings;
-  const colorTheme = getColorTheme(settings.theme, search.systemTheme);
-  const themeClass = getThemeClass(colorTheme);
+    const search = useSearch({ from: "/app" });
+    const loaderData = useLoaderData({ from: "/app" });
+    const colorTheme = getColorTheme(
+        search.settings?.theme,
+        search.systemTheme
+    );
+    const themeClass = getThemeClass(colorTheme);
+    void loaderData; // consumed by child components via useLoaderData
 
-  useMessageListener();
+    useMessageListener();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BlueprintProvider
-        portalClassName={themeClass}
-        // Very important, context menus do not work with the default container :(
-        portalContainer={document.getElementById("root")!}
-      >
-        <div className={themeClass + " app-background"}>
-          <AppNavbar />
-          <div className={getBackgroundClass(colorTheme) + " app-content"}>
-            <Outlet />
-            <AppAlerts />
-            <AppMenus />
-            <TanStackRouterDevtools />
-          </div>
-        </div>
-      </BlueprintProvider>
-    </QueryClientProvider>
-  );
+    return (
+        <QueryClientProvider client={queryClient}>
+            <BlueprintProvider
+                portalClassName={themeClass}
+                // Very important, context menus do not work with the default container :(
+                portalContainer={document.getElementById("root")!}
+            >
+                <div className={themeClass + " app-background"}>
+                    <AppNavbar />
+                    <div
+                        className={
+                            getBackgroundClass(colorTheme) + " app-content"
+                        }
+                    >
+                        <Outlet />
+                        <AppAlerts />
+                        <AppMenus />
+                        <TanStackRouterDevtools />
+                    </div>
+                </div>
+            </BlueprintProvider>
+        </QueryClientProvider>
+    );
 }

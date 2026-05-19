@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 import { hasEditorAccess } from "../../shared/types";
 import { hasAdminAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
-import { useSearch } from "@tanstack/react-router";
+import { useLoaderData } from "@tanstack/react-router";
 
 interface RequireAccessLevelProps extends PropsWithChildren {
   /**
@@ -21,11 +21,11 @@ interface RequireAccessLevelProps extends PropsWithChildren {
  * Simple component which renders children only if the given accessLevel requirement is met.
  */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
   const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
   const currentAccessLevel = props.useMaxAccessLevel
-    ? search.maxAccessLevel
-    : search.currentAccessLevel;
+    ? loaderData.maxAccessLevel
+    : loaderData.currentAccessLevel;
 
   if (
     requiredAccessLevel === AccessLevel.ADMIN &&

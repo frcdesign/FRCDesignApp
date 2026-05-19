@@ -20,18 +20,18 @@ import { FocusStyleManager } from "@blueprintjs/core";
 // See also: https://vitejs.dev/guide/features.html#glob-import
 // And: https://blueprintjs.com/docs/#icons/loading-icons
 const iconModules: Record<string, { default: IconPaths }> = import.meta.glob(
-  [
-    "../node_modules/@blueprintjs/icons/lib/esm/generated/16px/paths/*.js",
-    "../node_modules/@blueprintjs/icons/lib/esm/generated/20px/paths/*.js",
-  ],
-  { eager: true },
+    [
+        "../../node_modules/@blueprintjs/icons/lib/esm/generated/16px/paths/*.js",
+        "../../node_modules/@blueprintjs/icons/lib/esm/generated/20px/paths/*.js"
+    ],
+    { eager: true }
 );
 
 Icons.setLoaderOptions({
-  loader: async (name, size) =>
-    iconModules[
-      `../node_modules/@blueprintjs/icons/lib/esm/generated/${size}px/paths/${name}.js`
-    ].default,
+    loader: async (name, size) =>
+        iconModules[
+            `../../node_modules/@blueprintjs/icons/lib/esm/generated/${size}px/paths/${name}.js`
+        ].default
 });
 
 FocusStyleManager.onlyShowFocusOnTabs();
@@ -39,6 +39,6 @@ FocusStyleManager.onlyShowFocusOnTabs();
 const rootElement: HTMLElement = document.getElementById("root")!;
 
 if (!rootElement.innerHTML) {
-  const root = createRoot(rootElement);
-  root.render(<RouterProvider router={router} />);
+    const root = createRoot(rootElement);
+    root.render(<RouterProvider router={router} />);
 }

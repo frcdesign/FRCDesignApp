@@ -3,7 +3,7 @@
  */
 import { Configuration } from "../configurations/configuration-models";
 import { ElementPath, InstancePath } from "../../shared/path";
-import { Settings, ThumbnailSize, Vendor } from "../../shared/types";
+import { ThumbnailSize, Vendor } from "../../shared/types";
 
 export enum Library {
   FRC_DESIGN_LIB = "frc-design-lib",
@@ -11,16 +11,16 @@ export enum Library {
   MKCAD = "mkcad",
 }
 
-export interface LibraryUserData {
-  // recentElements:
-  favorites: Favorites;
-  favoriteOrder: string[];
-}
-
 export type Favorites = Record<string, Favorite | undefined>;
+
+export interface FavoritesData {
+    favorites: Favorites;
+    favoriteOrder: string[];
+}
 
 export interface Favorite {
   id: string;
+  library: Library;
   defaultConfiguration?: Configuration;
 }
 
@@ -87,7 +87,3 @@ export function getHeightAndWidth(
   };
 }
 
-export interface UserData {
-  // We could also move LibraryUserData in here
-  settings: Settings;
-}

@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { AppContext, type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
-import { users, libraries } from "../../shared/schema";
-import { Library, UserData } from "../../frontend/api-utils/client-models";
+import { users, libraries, favorites } from "../../shared/schema";
+import { Favorite, Favorites, FavoritesData, Library } from "../../frontend/api-utils/client-models";
 import { AccessLevel, ContextData, Theme } from "../../shared/types";
 import { env } from "cloudflare:workers";
 
@@ -19,15 +19,46 @@ async function getAppAccessLevel(c: AppContext): Promise<AccessLevel> {
   return getAccessLevel(onshapeApi, "TODO: GET ADMIN TEAM ID HERE I GUESS");
 }
 
-/** GET /api/context-data?library=X */
+async function getFavorites(db: ReturnType<typeof getDb>, userId: string, library: Library): Promise<FavoritesData> {
+  const rows = await db
+    .select()
+    .from(favorites)
+    .where(and(eq(favorites.userId, userId), eq(favorites.libraryId, library)))
+    .orderBy(asc(favorites.sortOrder))
+    .all();
+
+  const favoritesOut: Favorites = {};
+  const favoriteOrder: string[] = [];
+  for (const row of rows) {
+    favoritesOut[row.elementId] = {
+      id: row.elementId,
+      library,
+      defaultConfiguration: row.defaultConfiguration
+        ? JSON.parse(row.defaultConfiguration)
+        : undefined,
+    } satisfies Favorite;
+    favoriteOrder.push(row.elementId);
+  }
+  return { favorites: favoritesOut, favoriteOrder };
+}
+
+/** GET /api/context-data */
 userRoutes.get("/context-data", async (c) => {
-  const library = c.req.query("library") as Library;
-  if (!library) return c.json({ error: "library required" }, 400);
+  const onshapeApi = await getOnshapeApi(c);
+  const userId = await getUserId(onshapeApi);
 
-  const maxAccessLevel = await getAppAccessLevel(c);
-  const currentAccessLevel = maxAccessLevel;
+  const [maxAccessLevel, db] = await Promise.all([
+    getAppAccessLevel(c),
+    Promise.resolve(getDb(c.env.DB)),
+  ]);
 
-  const db = getDb(c.env.DB);
+  let user = await db.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) {
+    await db.insert(users).values({ id: userId }).onConflictDoNothing();
+    user = { id: userId, theme: "system", library: "frc-design-lib" };
+  }
+
+  const library = user.library as Library;
   const lib = await db
     .select({ cacheVersion: libraries.cacheVersion })
     .from(libraries)
@@ -35,33 +66,26 @@ userRoutes.get("/context-data", async (c) => {
     .get();
 
   return c.json({
-    maxAccessLevel,
-    currentAccessLevel,
-    cacheVersion: lib?.cacheVersion ?? 0,
+    accessData: {
+      maxAccessLevel,
+      currentAccessLevel: maxAccessLevel,
+      cacheVersion: lib?.cacheVersion ?? 0,
+    },
+    settings: {
+      theme: user.theme as Theme,
+      library,
+    },
   } satisfies ContextData);
 });
 
-/** GET /api/user-data */
-userRoutes.get("/user-data", async (c) => {
-  console.log("Get user data");
-
+/** GET /api/favorites/:library */
+userRoutes.get("/favorites/:library", async (c) => {
   const onshapeApi = await getOnshapeApi(c);
   const userId = await getUserId(onshapeApi);
+  const library = c.req.param("library") as Library;
 
   const db = getDb(c.env.DB);
-  let user = await db.select().from(users).where(eq(users.id, userId)).get();
-
-  if (!user) {
-    await db.insert(users).values({ id: userId }).onConflictDoNothing();
-    user = { id: userId, theme: "system", library: "frc-design-lib" };
-  }
-
-  return c.json({
-    settings: {
-      theme: user.theme as Theme,
-      library: user.library as Library,
-    },
-  } satisfies UserData);
+  return c.json(await getFavorites(db, userId, library));
 });
 
 /** POST /api/user-data — update settings */

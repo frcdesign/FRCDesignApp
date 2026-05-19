@@ -58,7 +58,6 @@
     "**/package-lock.json": true
   },
   "jest.runMode": "on-demand",
-  "jest.rootPath": "frontend/src",
   "jest.outputConfig": {
     "revealWithFocus": "test-results",
     "revealOn": "error",

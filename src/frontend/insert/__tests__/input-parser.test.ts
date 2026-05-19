@@ -148,12 +148,12 @@ describe("evaluateExpression - failure cases", () => {
     });
 
     it("fails if value is less than min", () => {
-        const res = evaluateExpression("-1000 mm", defaultOptions());
+        const res = evaluateExpression("-100.001 mm", defaultOptions());
         expect(res.hasError).toBe(true);
     });
 
     it("fails if value is greater than max", () => {
-        const res = evaluateExpression("2000 mm", defaultOptions());
+        const res = evaluateExpression("100.001 mm", defaultOptions());
         expect(res.hasError).toBe(true);
     });
 });

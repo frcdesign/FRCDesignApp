@@ -37,7 +37,6 @@ export function useInsertMutation(
       const body: Record<string, any> = {
         ...element.path,
         configuration,
-        userId: search.userId,
         isFavorite: insertArgs.isFavorite,
         isQuickInsert: insertArgs.isQuickInsert ?? false,
       };

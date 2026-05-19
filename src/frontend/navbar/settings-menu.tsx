@@ -11,14 +11,13 @@ import {
 } from "@blueprintjs/core";
 import { Dispatch, ReactNode, useMemo, useState } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
-import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import { useLoaderData, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { Library, LibraryObj, UserData } from "../api-utils/client-models";
-import { Settings } from "../../shared/types";
-import { Theme } from "../../shared/types";
+import { Library, LibraryObj } from "../api-utils/client-models";
+import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { getLibraryName as getLibraryName } from "../api-utils/library";
@@ -31,11 +30,10 @@ import { FEEDBACK_FORM_URL } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 import {
+  contextDataQueryKey,
   libraryQueryKey,
   libraryQueryMatchKey,
   searchDbQueryMatchKey,
-  userDataQueryKey,
-  useUserData,
 } from "../queries";
 import { AppSelect } from "../common/app-select";
 import { makeSelectOption, useSelectOptions } from "../common/select-utils";
@@ -51,11 +49,11 @@ export function SettingsMenu(): ReactNode {
 function SettingsMenuDialog(): ReactNode {
   const closeDialog = useHandleCloseDialog();
 
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
 
   let adminSettings: ReactNode = null;
   // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
-  if (hasEditorAccess(search.maxAccessLevel)) {
+  if (hasEditorAccess(loaderData.maxAccessLevel)) {
     adminSettings = (
       <>
         <H6>Admin Settings</H6>
@@ -92,64 +90,29 @@ function SettingsMenuDialog(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-  const settings = useUserData().settings;
-  const router = useRouter();
+  const search = useSearch({ from: "/app" });
+  const navigate = useNavigate();
 
-  const settingsMutation = useMutation({
-    mutationKey: ["update-settings"],
-    mutationFn: async (newSettings: Partial<Settings>) =>
-      apiPost("/user-data", { body: newSettings }),
-    onMutate: async (newSettings) => {
-      await Promise.all([
-        queryClient.cancelQueries({
-          queryKey: userDataQueryKey(),
-        }),
-        queryClient.cancelQueries({
-          queryKey: libraryQueryMatchKey(),
-        }),
-      ]);
-      queryClient.setQueryData<UserData>(
-        userDataQueryKey(),
-        getQueryUpdater((data) => {
-          Object.assign(data.settings, newSettings);
-          return data;
-        }),
-      );
-      router.invalidate();
-    },
-    onError: () => {
+  const saveSettings = (newSettings: { theme?: Theme; library?: Library }) => {
+    // Navigate immediately — this IS the optimistic update since settings live in search params
+    navigate({
+      to: ".",
+      search: { settings: { ...search.settings, ...newSettings } }
+    });
+    apiPost("/user-data", { body: newSettings }).catch(() => {
       showErrorToast("Unexpectedly failed to update settings.");
-    },
-    onSettled: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: userDataQueryKey(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: libraryQueryMatchKey(),
-        }),
-      ]);
-      router.invalidate();
-    },
-  });
+    });
+  };
 
   return (
     <>
       <LibrarySelect
-        library={settings.library}
-        onLibrarySelect={(newLibrary) =>
-          settingsMutation.mutate({
-            library: newLibrary,
-          })
-        }
+        library={search.settings.library}
+        onLibrarySelect={(newLibrary) => saveSettings({ library: newLibrary })}
       />
       <ThemeSelect
-        theme={settings.theme}
-        onThemeSelect={(newTheme) =>
-          settingsMutation.mutate({
-            theme: newTheme,
-          })
-        }
+        theme={search.settings.theme}
+        onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
       />
       <FormGroup label="Submit feedback" className="full-width" inline>
         <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
@@ -230,14 +193,14 @@ function AdminSettings(): ReactNode {
  */
 function PushVersionButton(): ReactNode {
   const library = useLibrary();
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
+  const router = useRouter();
 
-  const navigate = useNavigate();
   const pushVersionMutation = useMutation({
     mutationKey: ["library-version", library],
     mutationFn: async () => {
       const libraryData = await queryClient.fetchQuery<LibraryObj>({
-        queryKey: libraryQueryKey(library, search),
+        queryKey: libraryQueryKey(library, loaderData),
       });
       if (!libraryData) {
         throw new HandledError("Failed to fetch library data.");
@@ -248,14 +211,15 @@ function PushVersionButton(): ReactNode {
       });
     },
     onError: getAppErrorHandler("Unexpectedly failed to push new version."),
-    onSuccess: (data: { newVersion: number }) => {
+    onSuccess: () => {
       showSuccessToast("Successfully updated the FRCDesignApp version.");
-      navigate({ to: ".", search: { cacheVersion: data.newVersion } });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: searchDbQueryMatchKey(),
-      });
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: searchDbQueryMatchKey() }),
+        queryClient.refetchQueries({ queryKey: contextDataQueryKey() }),
+      ]);
+      router.invalidate();
     },
   });
 
@@ -274,10 +238,10 @@ function PushVersionButton(): ReactNode {
 }
 
 function AccessLevelSelect(): ReactNode {
-  const search = useSearch({ from: "/app" });
-  const navigate = useNavigate();
+  const loaderData = useLoaderData({ from: "/app" });
+  const router = useRouter();
 
-  const maxAccessLevel = search.maxAccessLevel;
+  const { maxAccessLevel, currentAccessLevel } = loaderData;
   // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
   const accessLevels = useMemo(() => {
     return maxAccessLevel === AccessLevel.ADMIN
@@ -286,14 +250,14 @@ function AccessLevelSelect(): ReactNode {
   }, [maxAccessLevel]);
 
   const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(
-    search.currentAccessLevel,
+    currentAccessLevel,
   );
 
   const button = (
     <Button
       alignText="start"
       endIcon="caret-down"
-      text={capitalize(search.currentAccessLevel)}
+      text={capitalize(currentAccessLevel)}
     />
   );
 
@@ -301,7 +265,7 @@ function AccessLevelSelect(): ReactNode {
     accessLevel,
     { handleClick, handleFocus, modifiers, ref },
   ) => {
-    const selected = search.currentAccessLevel === accessLevel;
+    const selected = currentAccessLevel === accessLevel;
     return (
       <MenuItem
         key={accessLevel}
@@ -326,10 +290,14 @@ function AccessLevelSelect(): ReactNode {
       popoverProps={{ minimal: true }}
       itemRenderer={renderAccessLevel}
       onItemSelect={(accessLevel) => {
-        navigate({
-          to: ".",
-          search: { currentAccessLevel: accessLevel },
-        });
+        queryClient.setQueryData(
+          contextDataQueryKey(),
+          getQueryUpdater((data: ContextData) => {
+            data.accessData.currentAccessLevel = accessLevel;
+            return data;
+          })
+        );
+        router.invalidate();
       }}
     >
       {button}

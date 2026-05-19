@@ -1,4 +1,4 @@
-import { useSearch } from "@tanstack/react-router";
+import { useLoaderData } from "@tanstack/react-router";
 import { createSearchParams, URLSearchParamsInit } from "../common/utils";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
@@ -60,10 +60,10 @@ export function toCacheOptions(cacheOptions: CacheOptions): CacheOptions {
 }
 
 export function useCacheOptions(): CacheOptions {
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
   return {
-    currentAccessLevel: search.currentAccessLevel,
-    cacheVersion: search.cacheVersion,
+    currentAccessLevel: loaderData.currentAccessLevel,
+    cacheVersion: loaderData.cacheVersion,
   };
 }
 

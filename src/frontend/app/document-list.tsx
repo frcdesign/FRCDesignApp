@@ -7,9 +7,9 @@ import {
 } from "@blueprintjs/core";
 import {
   Outlet,
+  useLoaderData,
   useNavigate,
   useParams,
-  useSearch,
 } from "@tanstack/react-router";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../search/search-results";
@@ -141,7 +141,7 @@ interface DocumentListCardsProps {
 export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
   const { document, elements } = props;
 
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
   const uiState = useUiState()[0];
 
   const documentSortOrder = document.sortAlphabetically
@@ -165,7 +165,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     sortOrder: documentSortOrder,
     vendors: uiState.vendorFilters,
     // Only show visible elements to users
-    isVisible: !hasEditorAccess(search.currentAccessLevel),
+    isVisible: !hasEditorAccess(loaderData.currentAccessLevel),
   });
 
   if (filterResult.elements.length === 0) {

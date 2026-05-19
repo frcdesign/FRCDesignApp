@@ -4,7 +4,7 @@ import { queryClient } from "../query-client";
 import { ElementObj } from "../api-utils/client-models";
 import { hasUserAccess } from "../../shared/types";
 import { useMemo } from "react";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
@@ -58,10 +58,10 @@ export function useSetVisibilityMutation(
  * Note this is different from whether the element is visible since admins can always see hidden elements.
  */
 export function useIsElementHidden(element: ElementObj): boolean {
-  const search = useSearch({ from: "/app" });
+  const loaderData = useLoaderData({ from: "/app" });
   return useMemo(() => {
-    return !element.isVisible && hasUserAccess(search.currentAccessLevel);
-  }, [element.isVisible, search.currentAccessLevel]);
+    return !element.isVisible && hasUserAccess(loaderData.currentAccessLevel);
+  }, [element.isVisible, loaderData.currentAccessLevel]);
 }
 
 export function useReloadThumbnailMutation(path: InstancePath | ElementPath) {

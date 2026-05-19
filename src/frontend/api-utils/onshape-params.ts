@@ -1,12 +1,12 @@
 import { ElementType } from "./client-models";
 import { Theme } from "../../shared/types";
-import { UserPath, ElementPath } from "../../shared/path";
+import { ElementPath } from "../../shared/path";
 import { Classes } from "@blueprintjs/core";
 
 /**
  * Documents search parameter values received from Onshape.
  */
-export interface OnshapeParams extends ElementPath, UserPath {
+export interface OnshapeParams extends ElementPath {
   elementType: ElementType;
   systemTheme: ColorTheme;
   server: string;

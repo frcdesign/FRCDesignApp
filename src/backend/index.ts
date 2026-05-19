@@ -15,6 +15,9 @@ app.route("/api", libraryRoutes);
 app.route("/api", thumbnailRoutes);
 app.route("/api", documentRoutes);
 app.route("/api", configurationRoutes);
+// Admin prefix bypasses Cloudflare CDN cache for editor/admin users
+app.route("/api/admin", libraryRoutes);
+app.route("/api/admin", configurationRoutes);
 app.route("/auth", authRoutes);
 
 app.get("/app", async (c) => {
