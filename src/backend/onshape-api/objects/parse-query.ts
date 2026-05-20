@@ -26,7 +26,9 @@ function parseId(id: string[]): string {
 }
 
 function parseList(values: unknown[]): string {
-    return values.map((v) => parseQuery(v as Record<string, unknown>)).join(", ");
+    return values
+        .map((v) => parseQuery(v as Record<string, unknown>))
+        .join(", ");
 }
 
 function parseQueryValue(key: string, value: unknown): string {

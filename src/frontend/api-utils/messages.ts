@@ -12,76 +12,76 @@ import { type ElementPath } from "../../shared/path";
 import { useCallback, useEffect } from "react";
 
 export function useMessageListener() {
-  const search = useSearch({ from: "/app" });
+    const search = useSearch({ from: "/app" });
 
-  useEffect(() => {
-    sendInitMessage(search);
-  }, []);
+    useEffect(() => {
+        sendInitMessage(search);
+    }, []);
 
-  useEffect(() => {
-    const handlePostMessage = (event: MessageEvent) => {
-      if (search.server !== event.origin) {
-        return;
-      }
-      const messageName = event.data.messageName;
-      if (!messageName) {
-        return;
-      }
-    };
+    useEffect(() => {
+        const handlePostMessage = (event: MessageEvent) => {
+            if (search.server !== event.origin) {
+                return;
+            }
+            const messageName = event.data.messageName;
+            if (!messageName) {
+                return;
+            }
+        };
 
-    window.addEventListener("message", handlePostMessage);
-    return () => {
-      window.removeEventListener("message", handlePostMessage);
-    };
-  }, [search.server]);
+        window.addEventListener("message", handlePostMessage);
+        return () => {
+            window.removeEventListener("message", handlePostMessage);
+        };
+    }, [search.server]);
 }
 
 export function useMessageSender() {
-  const search = useSearch({ from: "/app" });
-  return useCallback(
-    (message: Message) => {
-      sendMessage(search, message);
-    },
-    [search],
-  );
+    const search = useSearch({ from: "/app" });
+    return useCallback(
+        (message: Message) => {
+            sendMessage(search, message);
+        },
+        [search]
+    );
 }
 
 function sendInitMessage(elementPath: ElementPath) {
-  sendMessage(elementPath, { messageName: MessageType.APPLICATION_INIT });
+    sendMessage(elementPath, { messageName: MessageType.APPLICATION_INIT });
 }
 
 export function sendOpenFeatureMessage(
-  elementPath: ElementPath,
-  featureId: string,
+    elementPath: ElementPath,
+    featureId: string
 ) {
-  sendMessage(elementPath, {
-    messageName: MessageType.OPEN_FEATURE,
-    featureId,
-  });
+    sendMessage(elementPath, {
+        messageName: MessageType.OPEN_FEATURE,
+        featureId
+    });
 }
 
 export enum MessageType {
-  APPLICATION_INIT = "applicationInit",
-  SHOW_MESSAGE_BUBBLE = "showMessageBubble",
-  REQUEST_IMAGE = "requestViewerImage",
-  REQUEST_SELECTION = "requestSelection",
-  REQUEST_HIGHLIGHT_SELECTION = "requestSelectionHighlight",
-  SWITCH_TAB = "openAnotherElementInCurrentWorkspace",
-  OPEN_FEATURE = "openFeatureDialog",
-  CLOSE_FEATURE = "closeFeatureDialog",
+    APPLICATION_INIT = "applicationInit",
+    SHOW_MESSAGE_BUBBLE = "showMessageBubble",
+    REQUEST_IMAGE = "requestViewerImage",
+    REQUEST_SELECTION = "requestSelection",
+    REQUEST_HIGHLIGHT_SELECTION = "requestSelectionHighlight",
+    SWITCH_TAB = "openAnotherElementInCurrentWorkspace",
+    OPEN_FEATURE = "openFeatureDialog",
+    CLOSE_FEATURE = "closeFeatureDialog"
 }
 
 interface Message {
-  messageName: MessageType;
-  [key: string]: any;
+    messageName: MessageType;
+    [key: string]: any;
 }
 
 function sendMessage(elementPath: ElementPath, message: Message) {
-  const messageToSend = {
-    ...message,
-    documentId: elementPath.documentId,
-    workspaceId: elementPath.instanceId,
-    elementId: elementPath.elementId,
-  };
-  window.parent.postMessage(messageToSend, "*");
+    const messageToSend = {
+        ...message,
+        documentId: elementPath.documentId,
+        workspaceId: elementPath.instanceId,
+        elementId: elementPath.elementId
+    };
+    window.parent.postMessage(messageToSend, "*");
 }

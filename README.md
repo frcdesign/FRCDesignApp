@@ -78,15 +78,15 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
 1. Open your OAuth application in the [Onshape Developer Portal](https://cad.onshape.com/appstore/dev-portal/oauthApps).
 2. Go to the Extensions tab.
 3. Create two extensions with the following properties:
-   - Name: (Arbitrary) FRC Design App Test
-   - Location: Element right panel
-   - Context: Inside assembly/Inside part studio
-   - Action URL:
-     - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-     - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-   - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
+    - Name: (Arbitrary) FRC Design App Test
+    - Location: Element right panel
+    - Context: Inside assembly/Inside part studio
+    - Action URL:
+        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+    - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
-   - If it doesn't show up, try creating a Store Entry first.
+    - If it doesn't show up, try creating a Store Entry first.
 
 You should now be able to see your Test App in the right panel of any Part Studios or Assemblies you open.
 

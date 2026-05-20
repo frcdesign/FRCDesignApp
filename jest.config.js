@@ -11,10 +11,10 @@ export default {
                 useESM: true,
                 tsconfig: {
                     module: "ESNext",
-                    moduleResolution: "node",
-                },
-            },
-        ],
+                    moduleResolution: "node"
+                }
+            }
+        ]
     },
     testMatch: [
         "**/__tests__/**/*.(ts|tsx|js)",

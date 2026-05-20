@@ -6,13 +6,20 @@ import { readFileSync } from "fs";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [tanstackRouter({ routesDirectory: "src/frontend/routes", generatedRouteTree: "src/frontend/routeTree.gen.ts" }), react(), cloudflare()],
-  server: {
-    https: {
-      key: readFileSync("localhost-key.pem"),
-      cert: readFileSync("localhost.pem"),
-    },
-    port: 3000,
-    strictPort: true,
-  },
+    plugins: [
+        tanstackRouter({
+            routesDirectory: "src/frontend/routes",
+            generatedRouteTree: "src/frontend/routeTree.gen.ts"
+        }),
+        react(),
+        cloudflare()
+    ],
+    server: {
+        https: {
+            key: readFileSync("localhost-key.pem"),
+            cert: readFileSync("localhost.pem")
+        },
+        port: 3000,
+        strictPort: true
+    }
 });

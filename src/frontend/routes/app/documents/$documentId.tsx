@@ -3,7 +3,7 @@ import {
     Outlet,
     useLoaderData,
     useNavigate,
-    useParams,
+    useParams
 } from "@tanstack/react-router";
 import {
     Button,

@@ -30,7 +30,9 @@ export function isInstancePath(path: DocumentPath): path is InstancePath {
 }
 
 export function isElementPath(path: DocumentPath): path is ElementPath {
-    return isInstancePath(path) && (path as ElementPath).elementId !== undefined;
+    return (
+        isInstancePath(path) && (path as ElementPath).elementId !== undefined
+    );
 }
 
 export function isPartPath(path: DocumentPath): path is PartPath {
@@ -66,7 +68,9 @@ export function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
     }
 }
 
-export function toDocumentApiObject(path: DocumentPath): { documentId: string } {
+export function toDocumentApiObject(path: DocumentPath): {
+    documentId: string;
+} {
     return { documentId: path.documentId };
 }
 
@@ -74,7 +78,9 @@ export function toDocumentApiObject(path: DocumentPath): { documentId: string } 
  * Returns the named-ID object that Onshape API bodies/query params expect,
  * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
  */
-export function toInstanceApiObject(path: InstancePath): Record<string, string> {
+export function toInstanceApiObject(
+    path: InstancePath
+): Record<string, string> {
     return {
         documentId: path.documentId,
         [toInstanceTypeKey(path.instanceType)]: path.instanceId

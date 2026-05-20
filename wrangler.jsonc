@@ -3,62 +3,62 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "frc-design-app",
-  "main": "src/backend/index.ts",
-  "compatibility_date": "2026-05-14",
-  "assets": {
-    "not_found_handling": "single-page-application",
-    "binding": "ASSETS",
-    // Route app + API paths through the Worker; static assets bypass it
-    "run_worker_first": ["/app", "/api/*", "/auth/*"],
-  },
-  "observability": {
-    "enabled": true,
-  },
-  "upload_source_maps": true,
-  "compatibility_flags": ["nodejs_compat"],
-  /**
-   * Smart Placement
-   * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-   */
-  // "placement": {  "mode": "smart" }
-  /**
-   * Bindings
-   * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-   * databases, object storage, AI inference, real-time communication and more.
-   * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-   */
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "db",
-      "database_id": "d68c107e-2e40-407f-837b-eccdaa0ee3eb",
-      "migrations_dir": "drizzle",
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "frc-design-app",
+    "main": "src/backend/index.ts",
+    "compatibility_date": "2026-05-14",
+    "assets": {
+        "not_found_handling": "single-page-application",
+        "binding": "ASSETS",
+        // Route app + API paths through the Worker; static assets bypass it
+        "run_worker_first": ["/app", "/api/*", "/auth/*"]
     },
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "KV",
-      "id": "f3a2097219654fa99a2ac3cc1573b7e8",
+    "observability": {
+        "enabled": true
     },
-  ],
-  "r2_buckets": [
-    {
-      "binding": "THUMBNAILS",
-      "bucket_name": "frc-thumbnails",
-    },
-  ],
-  /**
-   * Environment Variables
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-   * Note: Use secrets to store sensitive data.
-   * https://developers.cloudflare.com/workers/configuration/secrets/
-   */
-  // "vars": {  "MY_VARIABLE": "production_value" }
-  /**
-   * Service Bindings (communicate between multiple Workers)
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-   */
-  // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+    "upload_source_maps": true,
+    "compatibility_flags": ["nodejs_compat"],
+    /**
+     * Smart Placement
+     * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+     */
+    // "placement": {  "mode": "smart" }
+    /**
+     * Bindings
+     * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+     * databases, object storage, AI inference, real-time communication and more.
+     * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+     */
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "db",
+            "database_id": "d68c107e-2e40-407f-837b-eccdaa0ee3eb",
+            "migrations_dir": "drizzle"
+        }
+    ],
+    "kv_namespaces": [
+        {
+            "binding": "KV",
+            "id": "f3a2097219654fa99a2ac3cc1573b7e8"
+        }
+    ],
+    "r2_buckets": [
+        {
+            "binding": "THUMBNAILS",
+            "bucket_name": "frc-thumbnails"
+        }
+    ]
+    /**
+     * Environment Variables
+     * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+     * Note: Use secrets to store sensitive data.
+     * https://developers.cloudflare.com/workers/configuration/secrets/
+     */
+    // "vars": {  "MY_VARIABLE": "production_value" }
+    /**
+     * Service Bindings (communicate between multiple Workers)
+     * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+     */
+    // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
 }

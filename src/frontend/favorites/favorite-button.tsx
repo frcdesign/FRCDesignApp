@@ -8,7 +8,11 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
-import { type FavoritesData, ElementObj, Library } from "../api-utils/client-models";
+import {
+    type FavoritesData,
+    ElementObj,
+    Library
+} from "../api-utils/client-models";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";
@@ -73,7 +77,9 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
             await queryClient.cancelQueries({ queryKey });
             queryClient.setQueryData(
                 queryKey,
-                getQueryUpdater((data: FavoritesData) => updateFavorites(data, args, library))
+                getQueryUpdater((data: FavoritesData) =>
+                    updateFavorites(data, args, library)
+                )
             );
             router.invalidate();
         },

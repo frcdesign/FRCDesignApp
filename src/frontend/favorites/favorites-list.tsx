@@ -6,7 +6,11 @@ import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
-import { useFavoritesQuery, useLibraryQuery, useSearchDbQuery } from "../queries";
+import {
+    useFavoritesQuery,
+    useLibraryQuery,
+    useSearchDbQuery
+} from "../queries";
 import { doSearch, FilterResult, SearchHit } from "../search/search";
 
 /**
@@ -20,9 +24,17 @@ export function FavoritesList(): ReactNode {
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
 
-    if (libraryQuery.isPending || searchDbQuery.isPending || favoritesQuery.isPending) {
+    if (
+        libraryQuery.isPending ||
+        searchDbQuery.isPending ||
+        favoritesQuery.isPending
+    ) {
         return <SectionLoading title="Loading favorites..." />;
-    } else if (libraryQuery.isError || searchDbQuery.isError || favoritesQuery.isError) {
+    } else if (
+        libraryQuery.isError ||
+        searchDbQuery.isError ||
+        favoritesQuery.isError
+    ) {
         return (
             <SectionError
                 title="Failed to load favorites."

@@ -1,6 +1,6 @@
 import MiniSearch, {
-  Options,
-  SearchResult as MiniSearchResult,
+    Options,
+    SearchResult as MiniSearchResult
 } from "minisearch";
 import { Favorites, LibraryObj } from "../api-utils/client-models";
 import { Vendor } from "../../shared/types";
@@ -14,7 +14,7 @@ export type ObjectLabel = "element" | "favorite" | "search result";
  * Returns the plural form of an object label.
  */
 export function plural(objectLabel: ObjectLabel): string {
-  return objectLabel + "s";
+    return objectLabel + "s";
 }
 
 const deliminator = "^";
@@ -23,191 +23,198 @@ const deliminator = "^";
  * Adds spaces to a given string so prefix matching is more efficient.
  */
 export function processTerm(term: string): string[] {
-  // Split between lowercase-to-uppercase (camelCase -> camel case)
-  const camelSplit = term
-    .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
-    .split(deliminator);
+    // Split between lowercase-to-uppercase (camelCase -> camel case)
+    const camelSplit = term
+        .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
+        .split(deliminator);
 
-  // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
-  const pascalSplit = term
-    .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
-    .split(deliminator);
+    // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
+    const pascalSplit = term
+        .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
+        .split(deliminator);
 
-  const base = term.toLowerCase();
+    const base = term.toLowerCase();
 
-  const terms = [...camelSplit, ...pascalSplit, base].map((t) =>
-    t.toLowerCase(),
-  );
-  // Deduplicate
-  return Array.from(new Set(terms));
+    const terms = [...camelSplit, ...pascalSplit, base].map((t) =>
+        t.toLowerCase()
+    );
+    // Deduplicate
+    return Array.from(new Set(terms));
 }
 
 export function tokenize(text: string): string[] {
-  // Don't lowercase so we can use casing for term splitting
-  // Remove -, (, ), ", ', #, &, /, and whitespace
-  return text.split(/[-()"'#&\s^/]+/).filter(Boolean);
+    // Don't lowercase so we can use casing for term splitting
+    // Remove -, (, ), ", ', #, &, /, and whitespace
+    return text.split(/[-()"'#&\s^/]+/).filter(Boolean);
 }
 
 export interface SearchDocument {
-  id: string;
-  documentId: string;
-  isVisible: boolean;
-  vendors: Vendor[];
-  name: string;
-  documentName: string;
+    id: string;
+    documentId: string;
+    isVisible: boolean;
+    vendors: Vendor[];
+    name: string;
+    documentName: string;
 }
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-  fields: ["name", "documentName"],
-  storeFields: [
-    "id",
-    "documentId",
-    "isVisible",
-    "vendors",
-    "name",
-    "documentName",
-  ],
-  searchOptions: {
-    boost: { documentName: 0.5 },
-    prefix: true,
-  },
-  // Custom tokenizer to split on special characters
-  tokenize,
-  processTerm,
+    fields: ["name", "documentName"],
+    storeFields: [
+        "id",
+        "documentId",
+        "isVisible",
+        "vendors",
+        "name",
+        "documentName"
+    ],
+    searchOptions: {
+        boost: { documentName: 0.5 },
+        prefix: true
+    },
+    // Custom tokenizer to split on special characters
+    tokenize,
+    processTerm
 };
 
 export function buildSearchDb(
-  libraryData: LibraryObj,
+    libraryData: LibraryObj
 ): MiniSearch<SearchDocument> {
-  const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
+    const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
-  const searchDocuments: SearchDocument[] = Object.values(libraryData.elements)
-    .filter((element) => !!element)
-    .map((element) => {
-      const parentDocument = libraryData.documents[element.documentId];
-      return {
-        id: element.id,
-        documentId: element.documentId,
-        isVisible: element.isVisible,
-        vendors: element.vendors,
-        name: element.name,
-        documentName: parentDocument?.name ?? "",
-      };
-    });
+    const searchDocuments: SearchDocument[] = Object.values(
+        libraryData.elements
+    )
+        .filter((element) => !!element)
+        .map((element) => {
+            const parentDocument = libraryData.documents[element.documentId];
+            return {
+                id: element.id,
+                documentId: element.documentId,
+                isVisible: element.isVisible,
+                vendors: element.vendors,
+                name: element.name,
+                documentName: parentDocument?.name ?? ""
+            };
+        });
 
-  searchDb.addAll(searchDocuments);
-  return searchDb;
+    searchDb.addAll(searchDocuments);
+    return searchDb;
 }
 
 export interface SearchFilters {
-  documentId?: string;
-  vendors?: Vendor[];
-  isFavorite?: boolean;
+    documentId?: string;
+    vendors?: Vendor[];
+    isFavorite?: boolean;
 }
 
 // Range is already defined by TypeScript
 export interface Position {
-  start: number;
-  length: number;
+    start: number;
+    length: number;
 }
 
 export interface SearchHit {
-  id: string;
-  positions: Position[];
+    id: string;
+    positions: Position[];
 }
 
 export interface FilterResult {
-  /**
-   * The number of items filtered out by vendor filters.
-   */
-  byVendor: number;
-  /**
-   * The number of items filtered out by being in a sub-document.
-   * Does not include results that would have been filtered out by vendors.
-   */
-  byDocument: number;
+    /**
+     * The number of items filtered out by vendor filters.
+     */
+    byVendor: number;
+    /**
+     * The number of items filtered out by being in a sub-document.
+     * Does not include results that would have been filtered out by vendors.
+     */
+    byDocument: number;
 }
 
 export interface SearchResult {
-  hits: SearchHit[];
-  filtered: FilterResult;
+    hits: SearchHit[];
+    filtered: FilterResult;
 }
 
 export function doSearch(
-  searchDb: MiniSearch<SearchDocument>,
-  query?: string,
-  filters?: SearchFilters,
-  favoriteElements?: Favorites,
+    searchDb: MiniSearch<SearchDocument>,
+    query?: string,
+    filters?: SearchFilters,
+    favoriteElements?: Favorites
 ): SearchResult {
-  const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
+    const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
 
-  if (!query || query.trim() === "") {
-    return { hits: [], filtered };
-  }
+    if (!query || query.trim() === "") {
+        return { hits: [], filtered };
+    }
 
-  const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
-    filter: (searchResult) => {
-      if (!searchResult.isVisible) {
-        return false;
-      }
+    const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
+        filter: (searchResult) => {
+            if (!searchResult.isVisible) {
+                return false;
+            }
 
-      if (filters?.isFavorite) {
-        // If there are no favorites, this element is not a favorite
-        if (!favoriteElements) {
-          return false;
-        } else if (favoriteElements[searchResult.id] === undefined) {
-          return false;
+            if (filters?.isFavorite) {
+                // If there are no favorites, this element is not a favorite
+                if (!favoriteElements) {
+                    return false;
+                } else if (favoriteElements[searchResult.id] === undefined) {
+                    return false;
+                }
+            }
+
+            let filteredByDocument = false;
+            let filteredByVendor = false;
+            if (
+                filters?.documentId &&
+                searchResult.documentId !== filters.documentId
+            ) {
+                filteredByDocument = true;
+            }
+
+            if (
+                filters?.vendors &&
+                !filters.vendors.some((vendor) =>
+                    searchResult.vendors.includes(vendor)
+                )
+            ) {
+                filteredByVendor = true;
+            }
+
+            if (filteredByVendor && filteredByDocument) {
+                // If something is filtered by vendors and documents, don't count it since neither button would show it on its own
+                return false;
+            } else if (filteredByDocument) {
+                filtered.byDocument += 1;
+                return false;
+            } else if (filteredByVendor) {
+                filtered.byVendor += 1;
+                return false;
+            }
+
+            return true;
         }
-      }
+    });
 
-      let filteredByDocument = false;
-      let filteredByVendor = false;
-      if (
-        filters?.documentId &&
-        searchResult.documentId !== filters.documentId
-      ) {
-        filteredByDocument = true;
-      }
+    // Add highlighting
+    const hits: SearchHit[] = miniSearchResults
+        .map((miniSearchResult) => {
+            // Stored fields should be the same as SearchDocument
+            const document = searchDb.getStoredFields(
+                miniSearchResult.id
+            ) as unknown as SearchDocument;
+            const positions = generateHighlightPositions(
+                miniSearchResult,
+                document
+            );
 
-      if (
-        filters?.vendors &&
-        !filters.vendors.some((vendor) => searchResult.vendors.includes(vendor))
-      ) {
-        filteredByVendor = true;
-      }
+            return {
+                id: document.id,
+                positions
+            };
+        })
+        .slice(0, 50); // Limit to 50 results
 
-      if (filteredByVendor && filteredByDocument) {
-        // If something is filtered by vendors and documents, don't count it since neither button would show it on its own
-        return false;
-      } else if (filteredByDocument) {
-        filtered.byDocument += 1;
-        return false;
-      } else if (filteredByVendor) {
-        filtered.byVendor += 1;
-        return false;
-      }
-
-      return true;
-    },
-  });
-
-  // Add highlighting
-  const hits: SearchHit[] = miniSearchResults
-    .map((miniSearchResult) => {
-      // Stored fields should be the same as SearchDocument
-      const document = searchDb.getStoredFields(
-        miniSearchResult.id,
-      ) as unknown as SearchDocument;
-      const positions = generateHighlightPositions(miniSearchResult, document);
-
-      return {
-        id: document.id,
-        positions,
-      };
-    })
-    .slice(0, 50); // Limit to 50 results
-
-  return { hits, filtered };
+    return { hits, filtered };
 }
 
 /**
@@ -215,29 +222,29 @@ export function doSearch(
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(
-  result: MiniSearchResult,
-  document: SearchDocument,
+    result: MiniSearchResult,
+    document: SearchDocument
 ): Position[] {
-  // Terms is an array of values in name (or spacedName) which matched
-  // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
+    // Terms is an array of values in name (or spacedName) which matched
+    // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
 
-  const name = document.name.toLowerCase();
+    const name = document.name.toLowerCase();
 
-  const positions: Position[] = [];
+    const positions: Position[] = [];
 
-  for (const [term, matchedFields] of Object.entries(result.match)) {
-    // Only include terms that matched something in the name field
-    if (!matchedFields.includes("name")) {
-      continue;
+    for (const [term, matchedFields] of Object.entries(result.match)) {
+        // Only include terms that matched something in the name field
+        if (!matchedFields.includes("name")) {
+            continue;
+        }
+        const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
+        for (const match of matchedLocations) {
+            positions.push({
+                start: match.index,
+                length: term.length
+            });
+        }
     }
-    const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
-    for (const match of matchedLocations) {
-      positions.push({
-        start: match.index,
-        length: term.length,
-      });
-    }
-  }
 
-  return positions;
+    return positions;
 }

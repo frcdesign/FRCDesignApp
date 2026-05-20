@@ -30,7 +30,11 @@ import {
 import { AppPopup, useOpenAlert } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../overlays/menu-params";
-import { libraryQueryKey, libraryQueryMatchKey, useFavoritesQuery } from "../queries";
+import {
+    libraryQueryKey,
+    libraryQueryMatchKey,
+    useFavoritesQuery
+} from "../queries";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";

@@ -104,7 +104,10 @@ export function fastenMate(
     };
 }
 
-export function queryParameter(parameterId: string, queries: Iterable<object>): object {
+export function queryParameter(
+    parameterId: string,
+    queries: Iterable<object>
+): object {
     return {
         btType: "BTMParameterQueryWithOccurrenceList-67",
         parameterId,
@@ -121,7 +124,10 @@ export function mateTypeParameter(value: string): object {
     };
 }
 
-export function primaryAxisParameter(parameterId: string, value = false): object {
+export function primaryAxisParameter(
+    parameterId: string,
+    value = false
+): object {
     return {
         btType: "BTMParameterBoolean-144",
         parameterId,

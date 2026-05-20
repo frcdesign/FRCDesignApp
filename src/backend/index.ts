@@ -21,12 +21,12 @@ app.route("/api/admin", configurationRoutes);
 app.route("/auth", authRoutes);
 
 app.get("/app", async (c) => {
-  if (!(await isAuthenticated(c))) {
-    return c.redirect(
-      `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`,
-    );
-  }
-  return c.env.ASSETS.fetch(c.req.raw);
+    if (!(await isAuthenticated(c))) {
+        return c.redirect(
+            `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`
+        );
+    }
+    return c.env.ASSETS.fetch(c.req.raw);
 });
 
 export default app;
