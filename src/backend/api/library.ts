@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { type AppBindings } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
@@ -18,8 +18,6 @@ import {
 } from "../../frontend/api-utils/client-models";
 import { Vendor } from "../../shared/types";
 import { HTTPException } from "hono/http-exception";
-
-// ─── Output types ─────────────────────────────────────────────────────────────
 
 export interface DocumentPathOut {
     documentId: string;
@@ -145,8 +143,6 @@ async function getLibraryOut(
 
     return { documentOrder, documents: documentsOut, elements: elementsOut };
 }
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
 
 export const libraryRoutes = new Hono<{ Bindings: AppBindings }>();
 
