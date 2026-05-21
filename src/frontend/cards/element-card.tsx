@@ -27,7 +27,7 @@ import {
     QuickInsertItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
-import { AppPopup, useOpenAlert } from "../overlays/popup-params";
+import { AppPopup, useOpenPopup } from "../overlays/popup-params";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../overlays/menu-params";
 import {
@@ -64,7 +64,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
-    const openAlert = useOpenAlert();
+    const openAlert = useOpenPopup();
 
     if (isHidden || !favorites) {
         return null;

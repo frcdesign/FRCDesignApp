@@ -1,5 +1,10 @@
 import { useLoaderData } from "@tanstack/react-router";
-import { createSearchParams, URLSearchParamsInit } from "../common/utils";
+import {
+    createSearchParams,
+    type URLSearchParamsInit,
+    type QueryOptions,
+    type PostOptions
+} from "../common/utils";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { HandledError } from "./errors";
@@ -21,15 +26,6 @@ function getUrl(
     }
 
     return "/api" + path + `?${searchParams}`;
-}
-
-interface QueryOptions {
-    query?: URLSearchParamsInit;
-    signal?: AbortSignal;
-}
-
-interface PostOptions extends QueryOptions {
-    body?: object;
 }
 
 /**

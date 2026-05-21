@@ -24,7 +24,7 @@ import { useIsElementHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { useUiState } from "../api-utils/ui-state";
-import { AppPopup, useOpenAlert } from "../overlays/popup-params";
+import { AppPopup, useOpenPopup } from "../overlays/popup-params";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
@@ -50,7 +50,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
-    const openAlert = useOpenAlert();
+    const openAlert = useOpenPopup();
 
     if (isHidden) {
         return null;
@@ -115,7 +115,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
-    const openAlert = useOpenAlert();
+    const openAlert = useOpenPopup();
 
     const menu = (
         <Menu>

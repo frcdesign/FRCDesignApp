@@ -1,4 +1,4 @@
-import { OAuthApi } from "../client/oauth-api";
+import { OAuthApi } from "../onshape-api";
 import { UserPath, toUserApiPath } from "../../../shared/path";
 
 /** Gets a setting with a specific key. Returns `null` if the key is not set. */
@@ -56,9 +56,9 @@ export function updateSettings(
     userPath: UserPath,
     updates: Update[]
 ): Promise<void> {
-    return client.post(
+    return client.postNone(
         `/applications/clients/${clientId}/settings` + toUserApiPath(userPath),
-        { body: { settings: updates }, isJson: false }
+        { body: { settings: updates } }
     );
 }
 

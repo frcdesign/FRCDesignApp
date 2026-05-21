@@ -1,5 +1,4 @@
-import { HTTPError } from "ky";
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi, OnshapeApiError } from "../onshape-api";
 import { DocumentPath, toDocumentApiPath } from "../../../shared/path";
 import { apiPath } from "../api-path";
 
@@ -33,8 +32,7 @@ export async function getPermissions(
         );
         return permissions.map((p: string) => p as Permission);
     } catch (error) {
-        if (error instanceof HTTPError && error.response.status === 403)
-            return [];
+        if (error instanceof OnshapeApiError && error.status === 403) return [];
         throw error;
     }
 }

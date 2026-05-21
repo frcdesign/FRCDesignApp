@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi } from "../onshape-api";
 import { getLatestVersion, getVersions } from "./versions";
 import { STD_PATH } from "../objects/constants";
 

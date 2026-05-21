@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi } from "../onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -25,9 +25,7 @@ export function getInstanceThumbnail(
     assertInstanceType(instancePath, "w", "v");
     const path =
         apiPath("thumbnails", instancePath, toInstanceApiPath) + "/s/" + size;
-    return (client.get(path, { isJson: false }) as Promise<Response>).then(
-        (r) => r.arrayBuffer()
-    );
+    return client.getImage(path);
 }
 
 /** Returns the thumbnail for a given element in a workspace or version. */
@@ -39,9 +37,7 @@ export function getElementThumbnail(
     assertInstanceType(elementPath, "w", "v");
     const path =
         apiPath("thumbnails", elementPath, toElementApiPath) + "/s/" + size;
-    return (client.get(path, { isJson: false }) as Promise<Response>).then(
-        (r) => r.arrayBuffer()
-    );
+    return client.getImage(path);
 }
 
 /**
@@ -59,12 +55,9 @@ export function getThumbnailFromWorkspace(
     let path = apiPath("thumbnails", elementPath, toElementApiPath);
     if (configuration) path += "/ac/" + configuration;
     path += "/s/" + size;
-    return (
-        client.get(path, {
-            isJson: false,
-            query: { rejectEmpty: "true", requireConfigMatch: "true" }
-        }) as Promise<Response>
-    ).then((r) => r.arrayBuffer());
+    return client.getImage(path, {
+        query: { rejectEmpty: "true", requireConfigMatch: "true" }
+    });
 }
 
 export async function getThumbnailId(
@@ -103,7 +96,5 @@ export function getThumbnailFromId(
         apiPath("thumbnails", undefined, undefined, { endId: thumbnailId }) +
         "/s/" +
         size;
-    return (client.get(path, { isJson: false }) as Promise<Response>).then(
-        (r) => r.arrayBuffer()
-    );
+    return client.getImage(path);
 }

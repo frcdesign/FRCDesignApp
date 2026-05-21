@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi } from "../onshape-api";
 import { assertWorkspace } from "../assertions";
 import {
     ElementPath,
@@ -134,11 +134,11 @@ export function addElementToAssembly(
         );
     }
 
-    return client.post(
+    return client.postNone(
         apiPath("assemblies", assemblyPath, toElementApiPath, {
             endRoute: "instances"
         }),
-        { body: instance, isJson: false }
+        { body: instance }
     );
 }
 

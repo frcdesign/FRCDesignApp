@@ -25,9 +25,9 @@ import {
     OnshapeParams
 } from "../../api-utils/onshape-params";
 import { getUiState } from "../../api-utils/ui-state";
-import { type AlertParams } from "../../overlays/popup-params";
+import { type PopupParams } from "../../overlays/popup-params";
 import { AppNavbar } from "../../navbar/app-navbar";
-import { AppAlerts } from "../../overlays/app-popups";
+import { AppPopups } from "../../overlays/app-popups";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
@@ -35,7 +35,7 @@ import { type AccessData, type Settings } from "../../../shared/types";
 
 type SearchParams = OnshapeParams &
     MenuParams &
-    AlertParams & { settings: Settings };
+    PopupParams & { settings: Settings };
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -118,7 +118,7 @@ function App() {
                         }
                     >
                         <Outlet />
-                        <AppAlerts />
+                        <AppPopups />
                         <AppMenus />
                         <TanStackRouterDevtools />
                     </div>

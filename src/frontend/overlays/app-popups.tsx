@@ -65,18 +65,18 @@ function CannotEditDefaultConfiguration() {
     );
 }
 
-export function AppAlerts(): ReactNode {
-    const activeAlert = useSearch({ from: "/app" }).activeAlert;
-    if (!activeAlert) {
+export function AppPopups(): ReactNode {
+    const activePopup = useSearch({ from: "/app" }).activePopup;
+    if (!activePopup) {
         return null;
     }
     return (
         <>
-            {activeAlert === AppPopup.CANNOT_DERIVE_ASSEMBLY && (
+            {activePopup === AppPopup.CANNOT_DERIVE_ASSEMBLY && (
                 <CannotDeriveAssemblyAlert />
             )}
-            {activeAlert === AppPopup.CANNOT_REORDER && <CannotReorderAlert />}
-            {activeAlert === AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION && (
+            {activePopup === AppPopup.CANNOT_REORDER && <CannotReorderAlert />}
+            {activePopup === AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION && (
                 <CannotEditDefaultConfiguration />
             )}
         </>

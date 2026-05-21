@@ -1,5 +1,5 @@
-import { OnshapeApi } from "../client/onshape-api";
-import { OAuthApi } from "../client/oauth-api";
+import { OnshapeApi } from "../onshape-api";
+import { OAuthApi } from "../onshape-api";
 import { apiPath } from "../api-path";
 import { AccessLevel } from "../../../shared/types";
 

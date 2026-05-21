@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi } from "../onshape-api";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     DocumentPath,
@@ -11,7 +11,7 @@ import {
     toInstanceTypeKey
 } from "../../../shared/path";
 import { apiPath } from "../api-path";
-import { OAuthApi } from "../client/oauth-api";
+import { OAuthApi } from "../onshape-api";
 import { getLatestVersion } from "./versions";
 
 /** Describes possible part types. */
@@ -106,12 +106,11 @@ export function deleteWorkspace(
     workspacePath: InstancePath
 ): Promise<any> {
     assertInstanceType(workspacePath, "w");
-    return client.delete(
+    return client.deleteNone(
         apiPath("documents", workspacePath, toDocumentApiPath, {
             endRoute: "workspaces",
             endId: workspacePath.instanceId
-        }),
-        { isJson: false }
+        })
     );
 }
 

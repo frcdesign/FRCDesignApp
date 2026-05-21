@@ -1,5 +1,5 @@
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
-import { OAuthApi } from "./onshape-api/client/oauth-api";
+import { OAuthApi } from "./onshape-api/onshape-api";
 import { AppBindings, type AppContext } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
@@ -36,7 +36,7 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
         });
     }
 
-    const refreshTokens = async () => {
+    const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
             .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
@@ -50,10 +50,10 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     let accessToken = tokens.accessToken;
     // If the token expired in the past, refresh immediately
     if (tokens.expiresAt <= Date.now()) {
-        accessToken = await refreshTokens();
+        accessToken = await refreshCallback();
     }
 
-    return new OAuthApi(accessToken);
+    return new OAuthApi(accessToken, refreshCallback);
 }
 
 function getOauthClient(): OAuth2Client {

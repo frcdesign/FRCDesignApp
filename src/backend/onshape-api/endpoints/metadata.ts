@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client/onshape-api";
+import { OnshapeApi } from "../onshape-api";
 import {
     ElementPath,
     InstancePath,

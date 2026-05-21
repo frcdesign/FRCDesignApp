@@ -1,71 +1,71 @@
 {
-  "terminal.integrated.profiles.linux": {
-    "bash": {
-      "path": "bash",
-      "args": ["-i"]
-    }
-  },
-  "editor.formatOnSave": true,
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 1000,
-  "files.associations": {
-    "wrangler.json": "jsonc"
-  },
-  "files.eol": "\n",
-  "cSpell.allowCompoundWords": true,
-  "cSpell.ignorePaths": ["build", ".git", ".vscode", ".devcontainer"],
-  "cSpell.words": [
-    "apikey",
-    "blueprintjs",
-    "creds",
-    "ctxt",
-    "digestmod",
-    "doseq",
-    "dotenv",
-    "ellipsize",
-    "exportstl",
-    "favorited",
-    "featureid",
-    "FEATURESTUDIO",
-    "gunicorn",
-    "jsonify",
-    "Kempen",
-    "kmid",
-    "levelname",
-    "mkcad",
-    "Onshape",
-    "Orama",
-    "SWYFT",
-    "UNCONFIGURABLE",
-    "Unopenable",
-    "updateversion",
-    "updateversions",
-    "vite"
-  ],
-  "cSpell.flagWords": ["coincentric", "expresion"],
-  "npm.packageManager": "npm",
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/assets": true,
-    "**/dist": true,
-    "**/package-lock.json": true
-  },
-  "jest.runMode": "on-demand",
-  "jest.outputConfig": {
-    "revealWithFocus": "test-results",
-    "revealOn": "error",
-    "clearOnRun": "none"
-  },
-  "jest.nodeEnv": {
-    "NODE_OPTIONS": "--experimental-vm-modules"
-  },
-  "testing.automaticallyOpenTestResults": "openOnTestFailure",
-  "eslint.format.enable": true
+    "terminal.integrated.profiles.linux": {
+        "bash": {
+            "path": "bash",
+            "args": ["-i"]
+        }
+    },
+    "editor.formatOnSave": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "files.associations": {
+        "wrangler.json": "jsonc"
+    },
+    "files.eol": "\n",
+    "cSpell.allowCompoundWords": true,
+    "cSpell.ignorePaths": ["build", ".git", ".vscode", ".devcontainer"],
+    "cSpell.words": [
+        "apikey",
+        "blueprintjs",
+        "creds",
+        "ctxt",
+        "digestmod",
+        "doseq",
+        "dotenv",
+        "ellipsize",
+        "exportstl",
+        "favorited",
+        "featureid",
+        "FEATURESTUDIO",
+        "gunicorn",
+        "jsonify",
+        "Kempen",
+        "kmid",
+        "levelname",
+        "mkcad",
+        "Onshape",
+        "Orama",
+        "SWYFT",
+        "UNCONFIGURABLE",
+        "Unopenable",
+        "updateversion",
+        "updateversions",
+        "vite"
+    ],
+    "cSpell.flagWords": ["coincentric", "expresion"],
+    "npm.packageManager": "npm",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/package-lock.json": true,
+        "worker-configuration.d.ts": true
+    },
+    "jest.runMode": "on-demand",
+    "jest.outputConfig": {
+        "revealWithFocus": "test-results",
+        "revealOn": "error",
+        "clearOnRun": "none"
+    },
+    "jest.nodeEnv": {
+        "NODE_OPTIONS": "--experimental-vm-modules"
+    },
+    "testing.automaticallyOpenTestResults": "openOnTestFailure",
+    "eslint.format.enable": true
 }

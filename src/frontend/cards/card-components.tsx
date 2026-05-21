@@ -18,7 +18,7 @@ import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
 import { DocumentPath, ElementPath, InstancePath } from "../../shared/path";
-import { AppPopup, useOpenAlert } from "../overlays/popup-params";
+import { AppPopup, useOpenPopup } from "../overlays/popup-params";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
@@ -78,7 +78,7 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         element.elementType
     );
-    const openAlert = useOpenAlert();
+    const openAlert = useOpenPopup();
 
     const handleClick = useCallback(
         (fasten: boolean) => {
