@@ -11,6 +11,34 @@ const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
 const SESSION_TTL = 30 * 24 * 3600; // 30 days
 
+export function getSessionId(c: AppContext): string | undefined {
+    return getCookie(c, SESSION_COOKIE);
+}
+
+export async function getOnshapeApiForSessionId(
+    kv: KVNamespace,
+    sessionId: string
+): Promise<OAuthApi> {
+    const raw = await kv.get(`tokens:${sessionId}`);
+    if (!raw) throw new Error("No tokens found for session");
+    const tokens: AuthTokens = JSON.parse(raw);
+    const refreshCallback = async () => {
+        const oauthClient = getOauthClient();
+        const newTokens = await oauthClient
+            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
+            .then(makeAuthTokens);
+        await kv.put(`tokens:${sessionId}`, JSON.stringify(newTokens), {
+            expirationTtl: SESSION_TTL
+        });
+        return newTokens.accessToken;
+    };
+    let accessToken = tokens.accessToken;
+    if (tokens.expiresAt <= Date.now()) {
+        accessToken = await refreshCallback();
+    }
+    return new OAuthApi(accessToken, refreshCallback);
+}
+
 export async function isAuthenticated(c: AppContext) {
     try {
         const onshapeApi = await getOnshapeApi(c);

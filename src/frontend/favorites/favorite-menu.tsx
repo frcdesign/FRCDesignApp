@@ -47,7 +47,7 @@ function FavoriteMenuDialog(
 
     const router = useRouter();
     const library = useLibrary();
-    const elements = useLibraryQuery().data?.elements;
+    const elements = useLibraryQuery().data?.insertables;
 
     const [configuration, setConfiguration] = useState<
         Configuration | undefined

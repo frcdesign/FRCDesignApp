@@ -18,8 +18,7 @@ import {
 } from "../../shared/path";
 
 export function useSetVisibilityMutation(
-    documentId: string,
-    elementIds: string[],
+    insertableIds: string[],
     isVisible: boolean
 ) {
     const library = useLibrary();
@@ -39,8 +38,7 @@ export function useSetVisibilityMutation(
             }
             return apiPost("/set-element-visibility" + toLibraryPath(library), {
                 body: {
-                    documentId,
-                    elementIds,
+                    insertableIds,
                     isVisible
                 }
             });

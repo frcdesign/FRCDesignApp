@@ -1,0 +1,563 @@
+import { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
+import type { WorkflowStep } from "cloudflare:workers";
+import { and, eq, getTableColumns, notInArray, sql } from "drizzle-orm";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { AppBindings } from "../app";
+import { getOnshapeApiForSessionId } from "../auth";
+import { getDb } from "../db";
+import { documents, insertables, configurations } from "../../shared/schema";
+import { getLatestVersion } from "../onshape-api/endpoints/versions";
+import { getDocument, getContents } from "../onshape-api/endpoints/documents";
+import { getConfiguration } from "../onshape-api/endpoints/configurations";
+import { parseFastenInfo } from "./insert-and-fasten";
+import type { FastenInfo } from "./insert-and-fasten";
+import { uploadThumbnails, uploadDocumentThumbnails } from "./thumbnails";
+import { parseOnshapeConfiguration } from "../../frontend/configurations/parse-configuration";
+import { ConfigurationParameterType } from "../../frontend/configurations/configuration-models";
+import type { ConfigurationResult } from "../../frontend/configurations/configuration-models";
+import { ElementType } from "../../frontend/api-utils/client-models";
+import type { ElementPath, InstancePath } from "../../shared/path";
+import { Vendor, getVendorName } from "../../shared/types";
+
+export interface LoadDocumentParams {
+    documentId: string;
+    libraryId: string;
+    sessionId: string;
+    forceReload?: boolean;
+}
+
+type ThumbnailUrls = Record<string, string>;
+
+const VALID_ELEMENT_TYPES = new Set<string>([
+    ElementType.ASSEMBLY,
+    ElementType.PART_STUDIO
+]);
+
+const ENTRY_TYPE_GROUP = "BTElementGroup-1458";
+const ENTRY_TYPE_ELEMENT = "BTDocumentElementReference-2484";
+
+function* traverseEntry(entry: any): Generator<string> {
+    if (entry.btType === ENTRY_TYPE_GROUP) {
+        for (const child of entry.groups) yield* traverseEntry(child);
+    } else if (entry.btType === ENTRY_TYPE_ELEMENT) {
+        yield entry.elementId;
+    }
+}
+
+function getOrderedElementIds(contents: any): string[] {
+    const ids: string[] = [];
+    for (const entry of contents.folders.groups) {
+        ids.push(...traverseEntry(entry));
+    }
+    return ids;
+}
+
+function getValidElements(contents: any): {
+    elementId: string;
+    name: string;
+    elementType: ElementType;
+    microversionId: string;
+}[] {
+    return (contents.elements as any[])
+        .filter((e) => VALID_ELEMENT_TYPES.has(e.elementType))
+        .map((e) => ({
+            elementId: e.id as string,
+            name: e.name as string,
+            elementType: e.elementType as ElementType,
+            microversionId: e.microversionId as string
+        }));
+}
+
+function parseNameVendor(name: string): Vendor | undefined {
+    const words = name.toUpperCase().match(/\b(\w+)\b/g) ?? [];
+    for (const word of words) {
+        const vendor = Object.values(Vendor).find(
+            (v) => (v as string).toUpperCase() === word
+        );
+        if (vendor !== undefined) return vendor;
+    }
+    return undefined;
+}
+
+function parseVendors(
+    name: string,
+    configuration?: ConfigurationResult
+): Vendor[] {
+    const nameVendor = parseNameVendor(name);
+    if (nameVendor) return [nameVendor];
+    if (!configuration) return [];
+
+    const vendors = new Set<Vendor>();
+    for (const param of configuration.parameters) {
+        if (param.type !== ConfigurationParameterType.ENUM) continue;
+        for (const option of param.options) {
+            const vendor = parseNameVendor(option.name);
+            if (vendor) {
+                vendors.add(vendor);
+                continue;
+            }
+            const byFullName = Object.values(Vendor).find(
+                (v) =>
+                    getVendorName(v).toUpperCase() === option.name.toUpperCase()
+            );
+            if (byFullName) vendors.add(byFullName);
+        }
+    }
+    return [...vendors];
+}
+
+function conflictUpdateSet(
+    table: SQLiteTable,
+    except: string[]
+): Record<string, unknown> {
+    return Object.fromEntries(
+        Object.entries(getTableColumns(table))
+            .filter(([key]) => !except.includes(key))
+            .map(([key, col]) => [
+                key,
+                sql`excluded.${sql.identifier(col.name)}`
+            ])
+    );
+}
+
+interface ElementLoadResult {
+    elementId: string;
+    fastenInfo: FastenInfo | null;
+    supportsFasten: boolean;
+    vendors: Vendor[];
+    configuration: ConfigurationResult | null;
+    thumbnailUrls: ThumbnailUrls;
+}
+
+export class LoadDocumentWorkflow extends WorkflowEntrypoint<
+    AppBindings,
+    LoadDocumentParams
+> {
+    async run(
+        event: WorkflowEvent<LoadDocumentParams>,
+        step: WorkflowStep
+    ): Promise<void> {
+        const {
+            documentId,
+            libraryId,
+            sessionId,
+            forceReload = false
+        } = event.payload;
+
+        // Step 1: Fetch the latest version from Onshape
+        const versionInfo = await step.do("fetch-version", async () => {
+            const onshapeApi = await getOnshapeApiForSessionId(
+                this.env.KV,
+                sessionId
+            );
+            const versionDict = await getLatestVersion(onshapeApi, {
+                documentId
+            });
+            return {
+                instanceId: versionDict.id as string,
+                versionName: versionDict.name as string,
+                versionCreatedAt: new Date(versionDict.createdAt).toISOString()
+            };
+        });
+
+        // Step 2: Check if reload is needed
+        const needsReload = await step.do("check-needs-reload", async () => {
+            if (forceReload) return true;
+            const db = getDb(this.env.DB);
+            const existing = await db
+                .select({ instanceId: documents.instanceId })
+                .from(documents)
+                .where(eq(documents.id, documentId))
+                .get();
+            return !existing || existing.instanceId !== versionInfo.instanceId;
+        });
+
+        if (!needsReload) return;
+
+        // Step 3: Fetch document contents
+        const contentsInfo = await step.do("fetch-contents", async () => {
+            const onshapeApi = await getOnshapeApiForSessionId(
+                this.env.KV,
+                sessionId
+            );
+            const instancePath: InstancePath = {
+                documentId,
+                instanceId: versionInfo.instanceId,
+                instanceType: "v"
+            };
+            const [onshapeDoc, contents] = await Promise.all([
+                getDocument(onshapeApi, instancePath),
+                getContents(onshapeApi, instancePath)
+            ]);
+
+            const validElements = getValidElements(contents);
+            const validElementIds = new Set(
+                validElements.map((e) => e.elementId)
+            );
+            const orderedElementIds = getOrderedElementIds(contents).filter(
+                (id) => validElementIds.has(id)
+            );
+
+            return {
+                docName: onshapeDoc.name as string,
+                thumbnailElementId: onshapeDoc.documentThumbnailElementId as
+                    | string
+                    | undefined,
+                validElements,
+                orderedElementIds
+            };
+        });
+
+        const instancePath: InstancePath = {
+            documentId,
+            instanceId: versionInfo.instanceId,
+            instanceType: "v"
+        };
+
+        // Step 4: Check existing insertables for skip/fastenInfo decisions
+        const existingInsertables = await step.do(
+            "check-existing-insertables",
+            async () => {
+                const db = getDb(this.env.DB);
+                return await db
+                    .select({
+                        id: insertables.id,
+                        elementId: insertables.elementId,
+                        microversionId: insertables.microversionId,
+                        hasFastenInfo: sql<number>`(${insertables.fastenInfo} IS NOT NULL)`
+                    })
+                    .from(insertables)
+                    .where(eq(insertables.documentId, documentId))
+                    .all();
+            }
+        );
+
+        const existingByElementId = new Map(
+            existingInsertables.map((e) => [
+                e.elementId,
+                {
+                    id: e.id,
+                    microversionId: e.microversionId,
+                    hasFastenInfo: !!e.hasFastenInfo
+                }
+            ])
+        );
+
+        // Step 5: Upload document-level thumbnails (with retry)
+        const docThumbnailUrls = await this.uploadThumbnailsWithRetry(
+            step,
+            `doc-thumbnail-${documentId}`,
+            async () => {
+                const onshapeApi = await getOnshapeApiForSessionId(
+                    this.env.KV,
+                    sessionId
+                );
+                return (await uploadDocumentThumbnails(
+                    this.env.THUMBNAILS,
+                    onshapeApi,
+                    instancePath
+                )) as ThumbnailUrls;
+            }
+        );
+
+        // Step 6: Load elements that need reloading
+        const elementsToReload = forceReload
+            ? contentsInfo.validElements
+            : contentsInfo.validElements.filter((e) => {
+                  const existing = existingByElementId.get(e.elementId);
+                  return (
+                      !existing || existing.microversionId !== e.microversionId
+                  );
+              });
+
+        const elementResults = await Promise.all(
+            elementsToReload.map((element) =>
+                this.loadElement(
+                    step,
+                    sessionId,
+                    instancePath,
+                    element,
+                    existingByElementId.get(element.elementId)?.hasFastenInfo ??
+                        false
+                )
+            )
+        );
+
+        // Step 7: Save everything to DB
+        await step.do("save-to-db", async () => {
+            const db = getDb(this.env.DB);
+            const validElementIds = contentsInfo.validElements.map(
+                (e) => e.elementId
+            );
+
+            // Build a per-elementId lookup for validElements to avoid repeated .find()
+            const validElementMap = new Map(
+                contentsInfo.validElements.map((e) => [e.elementId, e])
+            );
+
+            const configUpserts = elementResults
+                .filter((r) => r.configuration !== null)
+                .map((r) =>
+                    db
+                        .insert(configurations)
+                        .values({
+                            elementId: r.elementId,
+                            documentId,
+                            libraryId,
+                            parameters: r.configuration!.parameters
+                        })
+                        .onConflictDoUpdate({
+                            target: [
+                                configurations.elementId,
+                                configurations.documentId
+                            ],
+                            set: conflictUpdateSet(configurations, [
+                                "id",
+                                "elementId",
+                                "documentId",
+                                "libraryId"
+                            ])
+                        })
+                );
+
+            const insertableUpserts = elementResults.map((r) => {
+                const ve = validElementMap.get(r.elementId)!;
+                return db
+                    .insert(insertables)
+                    .values({
+                        elementId: r.elementId,
+                        documentId,
+                        libraryId,
+                        name: ve.name,
+                        elementType: ve.elementType,
+                        microversionId: ve.microversionId,
+                        versionName: versionInfo.versionName,
+                        versionCreatedAt: versionInfo.versionCreatedAt,
+                        vendors: r.vendors,
+                        thumbnailUrls: r.thumbnailUrls,
+                        fastenInfo: r.fastenInfo as Record<
+                            string,
+                            unknown
+                        > | null,
+                        supportsFasten: r.supportsFasten
+                    })
+                    .onConflictDoUpdate({
+                        target: [insertables.elementId, insertables.documentId],
+                        set: conflictUpdateSet(insertables, [
+                            "id",
+                            "elementId",
+                            "documentId",
+                            "libraryId",
+                            "isVisible",
+                            "isOpenComposite"
+                        ])
+                    });
+            });
+
+            const documentUpsert = db
+                .insert(documents)
+                .values({
+                    id: documentId,
+                    libraryId,
+                    name: contentsInfo.docName,
+                    instanceId: versionInfo.instanceId,
+                    insertableOrder: contentsInfo.orderedElementIds,
+                    thumbnailUrls: docThumbnailUrls
+                })
+                .onConflictDoUpdate({
+                    target: documents.id,
+                    set: {
+                        name: contentsInfo.docName,
+                        instanceId: versionInfo.instanceId,
+                        insertableOrder: contentsInfo.orderedElementIds,
+                        thumbnailUrls: docThumbnailUrls
+                    }
+                });
+
+            const deleteStaleInsertables =
+                validElementIds.length > 0
+                    ? db
+                          .delete(insertables)
+                          .where(
+                              and(
+                                  eq(insertables.documentId, documentId),
+                                  notInArray(
+                                      insertables.elementId,
+                                      validElementIds
+                                  )
+                              )
+                          )
+                    : db
+                          .delete(insertables)
+                          .where(eq(insertables.documentId, documentId));
+
+            const deleteStaleConfigurations =
+                validElementIds.length > 0
+                    ? db
+                          .delete(configurations)
+                          .where(
+                              and(
+                                  eq(configurations.documentId, documentId),
+                                  notInArray(
+                                      configurations.elementId,
+                                      validElementIds
+                                  )
+                              )
+                          )
+                    : db
+                          .delete(configurations)
+                          .where(eq(configurations.documentId, documentId));
+
+            await db.batch([
+                documentUpsert,
+                ...configUpserts,
+                ...insertableUpserts,
+                deleteStaleInsertables,
+                deleteStaleConfigurations
+            ]);
+        });
+    }
+
+    private async loadElement(
+        step: WorkflowStep,
+        sessionId: string,
+        instancePath: InstancePath,
+        element: {
+            elementId: string;
+            name: string;
+            elementType: ElementType;
+            microversionId: string;
+        },
+        hasFastenInfo: boolean
+    ): Promise<ElementLoadResult> {
+        const elementPath: ElementPath = {
+            ...instancePath,
+            elementId: element.elementId
+        };
+
+        // Load basic element data + fasten info
+        const elementData = await step.do(
+            `load-element-${element.elementId}`,
+            async () => {
+                const onshapeApi = await getOnshapeApiForSessionId(
+                    this.env.KV,
+                    sessionId
+                );
+
+                let fastenInfo: FastenInfo | null = null;
+                let supportsFasten = false;
+
+                if (hasFastenInfo) {
+                    try {
+                        fastenInfo = await parseFastenInfo(
+                            onshapeApi,
+                            elementPath,
+                            element.elementType
+                        );
+                        supportsFasten = true;
+                    } catch {
+                        // Mate connector no longer present
+                        fastenInfo = null;
+                        supportsFasten = false;
+                    }
+                }
+
+                return {
+                    fastenInfo: fastenInfo
+                        ? (JSON.stringify(fastenInfo) as string)
+                        : null,
+                    supportsFasten
+                };
+            }
+        );
+
+        // Load configuration (separate step for future extensibility)
+        const configData = await step.do(
+            `load-configuration-${element.elementId}`,
+            async () => {
+                const onshapeApi = await getOnshapeApiForSessionId(
+                    this.env.KV,
+                    sessionId
+                );
+                const onshapeConfig = await getConfiguration(
+                    onshapeApi,
+                    elementPath
+                );
+                if (onshapeConfig.configurationParameters.length === 0) {
+                    return null;
+                }
+                const configuration = parseOnshapeConfiguration(onshapeConfig);
+                return {
+                    parameters: JSON.stringify(configuration.parameters),
+                    vendors: JSON.stringify(
+                        parseVendors(element.name, configuration)
+                    )
+                };
+            }
+        );
+
+        // Upload element thumbnails with retry
+        const thumbnailUrls = await this.uploadThumbnailsWithRetry(
+            step,
+            `element-thumbnail-${element.elementId}`,
+            async () => {
+                const onshapeApi = await getOnshapeApiForSessionId(
+                    this.env.KV,
+                    sessionId
+                );
+                const urls = await uploadThumbnails(
+                    this.env.THUMBNAILS,
+                    onshapeApi,
+                    elementPath,
+                    element.microversionId
+                );
+                return urls as ThumbnailUrls;
+            }
+        );
+
+        const configuration = configData
+            ? (JSON.parse(configData.parameters) as ConfigurationResult)
+            : null;
+        const vendors = configData
+            ? (JSON.parse(configData.vendors) as Vendor[])
+            : parseVendors(element.name);
+
+        return {
+            elementId: element.elementId,
+            fastenInfo: elementData.fastenInfo
+                ? (JSON.parse(elementData.fastenInfo) as FastenInfo)
+                : null,
+            supportsFasten: elementData.supportsFasten,
+            vendors,
+            configuration,
+            thumbnailUrls
+        };
+    }
+
+    private async uploadThumbnailsWithRetry(
+        step: WorkflowStep,
+        prefix: string,
+        uploadFn: () => Promise<ThumbnailUrls>
+    ): Promise<ThumbnailUrls> {
+        const tryUpload = (n: number) =>
+            step.do(
+                `${prefix}-${n}`,
+                { retries: { limit: 0, delay: 0, backoff: "constant" } },
+                async () => {
+                    try {
+                        return (await uploadFn()) as ThumbnailUrls | null;
+                    } catch {
+                        return null as ThumbnailUrls | null;
+                    }
+                }
+            );
+
+        const r1 = await tryUpload(1);
+        if (r1) return r1;
+        await step.sleep(`${prefix}-wait-1`, "5 seconds");
+        const r2 = await tryUpload(2);
+        if (r2) return r2;
+        await step.sleep(`${prefix}-wait-2`, "5 minutes");
+        return (await tryUpload(3)) ?? {};
+    }
+}

@@ -1,8 +1,11 @@
 {
+    "permissions": {
+        "allow": [
+            "Bash(npx wrangler *)",
+            "mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation"
+        ]
+    },
     "enabledPlugins": {
         "cloudflare@cloudflare": true
-    },
-    "permissions": {
-        "allow": ["Bash(npx wrangler *)"]
     }
 }

@@ -7,6 +7,7 @@ import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
 import {
     type ConfigurationResult,
+    type ParameterObj,
     type UnitInfo,
     QuantityType,
     type Unit
@@ -39,7 +40,7 @@ configurationRoutes.get("/configuration", async (c) => {
     }
 
     const result: ConfigurationResult = {
-        parameters: JSON.parse(config.parameters)
+        parameters: config.parameters as ParameterObj[]
     };
     return c.json(result);
 });

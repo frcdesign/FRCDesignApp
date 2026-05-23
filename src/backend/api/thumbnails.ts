@@ -15,7 +15,7 @@ import {
     type ElementPath,
     type InstancePath
 } from "../../shared/path";
-import { documents, elements } from "../../shared/schema";
+import { documents, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
@@ -73,10 +73,13 @@ export async function uploadThumbnails(
 export async function uploadDocumentThumbnails(
     bucket: R2Bucket,
     onshapeApi: Awaited<ReturnType<typeof getOnshapeApi>>,
-    onshapeDocument: any,
-    contents: any,
     versionPath: InstancePath
 ): Promise<Partial<Record<ThumbnailSize, string>>> {
+    const [onshapeDocument, contents] = await Promise.all([
+        getDocument(onshapeApi, versionPath),
+        getContents(onshapeApi, versionPath)
+    ]);
+
     let thumbnailElementId: string = onshapeDocument.documentThumbnailElementId;
     if (!thumbnailElementId) {
         const els: any[] = contents.elements;
@@ -105,8 +108,6 @@ export async function uploadDocumentThumbnails(
     );
 }
 
-// ─── Access helpers ────────────────────────────────────────────────────────────
-
 async function requireEditorAccess(c: {
     env: AppBindings;
 }): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
@@ -118,8 +119,6 @@ async function requireEditorAccess(c: {
         throw new Error("Insufficient permissions");
     return onshapeApi;
 }
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
 
 export const thumbnailRoutes = new Hono<{ Bindings: AppBindings }>();
 
@@ -189,16 +188,9 @@ thumbnailRoutes.post(
             instanceType: c.req.param("instanceType") as "w" | "v" | "m"
         };
 
-        const [onshapeDoc, contents] = await Promise.all([
-            getDocument(onshapeApi, instancePath),
-            getContents(onshapeApi, instancePath)
-        ]);
-
         const thumbnails = await uploadDocumentThumbnails(
             c.env.THUMBNAILS,
             onshapeApi,
-            onshapeDoc,
-            contents,
             instancePath
         );
 
@@ -217,7 +209,7 @@ thumbnailRoutes.post(
         const db = getDb(c.env.DB);
         await db
             .update(documents)
-            .set({ thumbnailUrls: JSON.stringify(thumbnails) })
+            .set({ thumbnailUrls: thumbnails as Record<string, string> })
             .where(eq(documents.id, instancePath.documentId));
 
         return c.json({ success: true });
@@ -243,13 +235,17 @@ thumbnailRoutes.post(
         }
 
         const db = getDb(c.env.DB);
-        const element = await db
-            .select()
-            .from(elements)
-            .where(eq(elements.id, elementPath.elementId))
+        const insertable = await db
+            .select({
+                id: insertables.id,
+                microversionId: insertables.microversionId,
+                documentId: insertables.documentId
+            })
+            .from(insertables)
+            .where(eq(insertables.elementId, elementPath.elementId))
             .get();
 
-        if (!element) {
+        if (!insertable) {
             throw new HTTPException(404, {
                 message: "Failed to find element"
             });
@@ -259,7 +255,7 @@ thumbnailRoutes.post(
             c.env.THUMBNAILS,
             onshapeApi,
             elementPath,
-            element.microversionId
+            insertable.microversionId
         );
 
         if (Object.keys(thumbnails).length < 2) {
@@ -275,9 +271,9 @@ thumbnailRoutes.post(
         }
 
         await db
-            .update(elements)
-            .set({ thumbnailUrls: JSON.stringify(thumbnails) })
-            .where(eq(elements.id, elementPath.elementId));
+            .update(insertables)
+            .set({ thumbnailUrls: thumbnails as Record<string, string> })
+            .where(eq(insertables.id, insertable.id));
 
         return c.json({ success: true });
     }

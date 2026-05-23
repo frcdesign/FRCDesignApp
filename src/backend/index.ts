@@ -1,3 +1,4 @@
+export { LoadDocumentWorkflow } from "./api/load-document";
 import { authRoutes, isAuthenticated } from "./auth";
 import { userRoutes } from "./api/user";
 import { libraryRoutes } from "./api/library";

@@ -82,7 +82,7 @@ export function buildSearchDb(
     const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
     const searchDocuments: SearchDocument[] = Object.values(
-        libraryData.elements
+        libraryData.insertables
     )
         .filter((element) => !!element)
         .map((element) => {

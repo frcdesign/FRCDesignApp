@@ -35,28 +35,31 @@ export enum ElementType {
 export interface LibraryObj {
     documentOrder: string[];
     documents: Documents;
-    elements: Elements;
+    insertables: Insertables;
 }
 
 export type Documents = Record<string, DocumentObj | undefined>;
-export type Elements = Record<string, ElementObj | undefined>;
+export type Insertables = Record<string, ElementObj | undefined>;
 
 export interface DocumentObj {
     id: string;
     name: string;
     thumbnailUrls: ThumbnailUrls;
     sortAlphabetically: boolean;
-    elementOrder: string[];
+    insertableOrder: string[];
     path: InstancePath;
 }
 
 export interface ElementObj {
     id: string;
+    elementId: string;
     documentId: string;
 
     name: string;
     elementType: ElementType;
     microversionId: string;
+    versionName: string;
+    versionCreatedAt: string;
     isVisible: boolean;
     isOpenComposite: boolean;
     supportsFasten: boolean;

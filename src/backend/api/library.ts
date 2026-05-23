@@ -7,7 +7,8 @@ import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
 import {
     libraries,
     documents,
-    elements,
+    insertables,
+    configurations,
     favorites,
     users
 } from "../../shared/schema";
@@ -31,10 +32,13 @@ export interface ElementPathOut extends DocumentPathOut {
 
 export interface ElementOut {
     id: string;
+    elementId: string;
     documentId: string;
     path: ElementPathOut;
     name: string;
     microversionId: string;
+    versionName: string;
+    versionCreatedAt: string;
     isVisible: boolean;
     isOpenComposite: boolean;
     supportsFasten: boolean;
@@ -50,13 +54,13 @@ export interface DocumentOut {
     name: string;
     sortAlphabetically: boolean;
     thumbnailUrls: ThumbnailUrls;
-    elementOrder: string[];
+    insertableOrder: string[];
 }
 
 export interface LibraryOut {
     documentOrder: string[];
     documents: Record<string, DocumentOut>;
-    elements: Record<string, ElementOut>;
+    insertables: Record<string, ElementOut>;
 }
 
 async function getAppAccessLevel(
@@ -84,24 +88,53 @@ async function getLibraryOut(
         .from(libraries)
         .where(eq(libraries.id, library))
         .get();
-    if (!lib) return { documentOrder: [], documents: {}, elements: {} };
+    if (!lib) return { documentOrder: [], documents: {}, insertables: {} };
 
-    const documentOrder: string[] = JSON.parse(lib.documentOrder);
+    const documentOrder: string[] = lib.documentOrder;
 
-    const allDocuments = await db
-        .select()
-        .from(documents)
-        .where(eq(documents.libraryId, library))
-        .all();
+    const [allDocuments, allInsertables, allConfigurations] = await Promise.all(
+        [
+            db
+                .select()
+                .from(documents)
+                .where(eq(documents.libraryId, library))
+                .all(),
+            db
+                .select()
+                .from(insertables)
+                .where(eq(insertables.libraryId, library))
+                .all(),
+            db
+                .select({
+                    id: configurations.id,
+                    elementId: configurations.elementId,
+                    documentId: configurations.documentId
+                })
+                .from(configurations)
+                .where(eq(configurations.libraryId, library))
+                .all()
+        ]
+    );
 
-    const allElements = await db
-        .select()
-        .from(elements)
-        .where(eq(elements.libraryId, library))
-        .all();
+    // Map (elementId:documentId) → configuration UUID for quick lookup
+    const configMap = new Map(
+        allConfigurations.map((c) => [`${c.elementId}:${c.documentId}`, c.id])
+    );
+
+    // Map (elementId:documentId) → insertable UUID to convert stored element IDs to UUIDs
+    const insertableUUIDMap = new Map(
+        allInsertables.map((ins) => [
+            `${ins.elementId}:${ins.documentId}`,
+            ins.id
+        ])
+    );
 
     const documentsOut: Record<string, DocumentOut> = {};
     for (const doc of allDocuments) {
+        const storedOrder: string[] = doc.insertableOrder;
+        const insertableOrder = storedOrder
+            .map((eid) => insertableUUIDMap.get(`${eid}:${doc.id}`))
+            .filter((id): id is string => id !== undefined);
         documentsOut[doc.id] = {
             id: doc.id,
             path: {
@@ -111,37 +144,45 @@ async function getLibraryOut(
             },
             name: doc.name,
             sortAlphabetically: doc.sortAlphabetically,
-            thumbnailUrls: JSON.parse(doc.thumbnailUrls) as ThumbnailUrls,
-            elementOrder: JSON.parse(doc.elementOrder)
+            thumbnailUrls: doc.thumbnailUrls as ThumbnailUrls,
+            insertableOrder
         };
     }
 
-    const elementsOut: Record<string, ElementOut> = {};
-    for (const el of allElements) {
-        const doc = allDocuments.find((d) => d.id === el.documentId);
+    const insertablesOut: Record<string, ElementOut> = {};
+    for (const ins of allInsertables) {
+        const doc = allDocuments.find((d) => d.id === ins.documentId);
         if (!doc) continue;
-        elementsOut[el.id] = {
-            id: el.id,
-            documentId: el.documentId,
+        const configId = configMap.get(`${ins.elementId}:${ins.documentId}`);
+        insertablesOut[ins.id] = {
+            id: ins.id,
+            elementId: ins.elementId,
+            documentId: ins.documentId,
             path: {
-                documentId: el.documentId,
+                documentId: ins.documentId,
                 instanceId: doc.instanceId,
                 instanceType: "v",
-                elementId: el.id
+                elementId: ins.elementId
             },
-            name: el.name,
-            microversionId: el.microversionId,
-            isVisible: el.isVisible,
-            isOpenComposite: el.isOpenComposite,
-            supportsFasten: el.supportsFasten,
-            elementType: el.elementType as ElementType,
-            thumbnailUrls: JSON.parse(el.thumbnailUrls) as ThumbnailUrls,
-            configurationId: el.configurationId ?? undefined,
-            vendors: JSON.parse(el.vendors) as Vendor[]
+            name: ins.name,
+            microversionId: ins.microversionId,
+            versionName: ins.versionName,
+            versionCreatedAt: ins.versionCreatedAt,
+            isVisible: ins.isVisible,
+            isOpenComposite: ins.isOpenComposite,
+            supportsFasten: ins.supportsFasten,
+            elementType: ins.elementType as ElementType,
+            thumbnailUrls: ins.thumbnailUrls as ThumbnailUrls,
+            configurationId: configId,
+            vendors: ins.vendors as Vendor[]
         };
     }
 
-    return { documentOrder, documents: documentsOut, elements: elementsOut };
+    return {
+        documentOrder,
+        documents: documentsOut,
+        insertables: insertablesOut
+    };
 }
 
 export const libraryRoutes = new Hono<{ Bindings: AppBindings }>();
@@ -202,8 +243,8 @@ libraryRoutes.post("/favorites/:library", async (c) => {
     const library = c.req.param("library") as Library;
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
-    const elementId = c.req.query("elementId");
-    if (!elementId) return c.json({ error: "elementId required" }, 400);
+    const insertableId = c.req.query("insertableId");
+    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
 
     const db = getDb(c.env.DB);
 
@@ -224,7 +265,7 @@ libraryRoutes.post("/favorites/:library", async (c) => {
         .values({
             userId,
             libraryId: library,
-            elementId,
+            insertableId,
             sortOrder: nextOrder
         })
         .onConflictDoNothing();
@@ -237,8 +278,8 @@ libraryRoutes.delete("/favorites/:library", async (c) => {
     const library = c.req.param("library") as Library;
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
-    const elementId = c.req.query("elementId");
-    if (!elementId) return c.json({ error: "elementId required" }, 400);
+    const insertableId = c.req.query("insertableId");
+    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
 
     const db = getDb(c.env.DB);
     await db
@@ -247,7 +288,7 @@ libraryRoutes.delete("/favorites/:library", async (c) => {
             and(
                 eq(favorites.userId, userId),
                 eq(favorites.libraryId, library),
-                eq(favorites.elementId, elementId)
+                eq(favorites.insertableId, insertableId)
             )
         );
 
@@ -263,7 +304,7 @@ libraryRoutes.post("/favorite-order/:library", async (c) => {
 
     const db = getDb(c.env.DB);
     await Promise.all(
-        body.favoriteOrder.map((elementId, i) =>
+        body.favoriteOrder.map((insertableId, i) =>
             db
                 .update(favorites)
                 .set({ sortOrder: i })
@@ -271,7 +312,7 @@ libraryRoutes.post("/favorite-order/:library", async (c) => {
                     and(
                         eq(favorites.userId, userId),
                         eq(favorites.libraryId, library),
-                        eq(favorites.elementId, elementId)
+                        eq(favorites.insertableId, insertableId)
                     )
                 )
         )
@@ -286,7 +327,7 @@ libraryRoutes.post("/default-configuration/:library", async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const body = await c.req.json<{
-        favoriteId: string;
+        insertableId: string;
         defaultConfiguration: Record<string, string>;
     }>();
 
@@ -294,13 +335,13 @@ libraryRoutes.post("/default-configuration/:library", async (c) => {
     await db
         .update(favorites)
         .set({
-            defaultConfiguration: JSON.stringify(body.defaultConfiguration)
+            defaultConfiguration: body.defaultConfiguration
         })
         .where(
             and(
                 eq(favorites.userId, userId),
                 eq(favorites.libraryId, library),
-                eq(favorites.elementId, body.favoriteId)
+                eq(favorites.insertableId, body.insertableId)
             )
         );
 

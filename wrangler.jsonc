@@ -48,6 +48,13 @@
             "binding": "THUMBNAILS",
             "bucket_name": "frc-thumbnails"
         }
+    ],
+    "workflows": [
+        {
+            "name": "load-document-workflow",
+            "binding": "LOAD_DOCUMENT_WORKFLOW",
+            "class_name": "LoadDocumentWorkflow"
+        }
     ]
     /**
      * Environment Variables

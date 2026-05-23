@@ -161,7 +161,6 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
     const router = useRouter();
 
     const setVisibilityMutation = useSetVisibilityMutation(
-        element.documentId,
         [element.id],
         !element.isVisible
     );
@@ -182,7 +181,7 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
             queryClient.setQueryData(
                 libraryQueryKey(library, loaderData),
                 getQueryUpdater((data: LibraryObj) => {
-                    const currentElement = data.elements[element.id];
+                    const currentElement = data.insertables[element.id];
                     if (currentElement) {
                         currentElement.isOpenComposite =
                             !element.isOpenComposite;

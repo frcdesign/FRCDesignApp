@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../search/search-results";
-import { DocumentObj, Elements } from "../api-utils/client-models";
+import { DocumentObj, Insertables } from "../api-utils/client-models";
 import { hasEditorAccess } from "../../shared/types";
 import { useUiState } from "../api-utils/ui-state";
 import { filterElements, SortOrder } from "../search/filter";
@@ -54,7 +54,7 @@ export function DocumentList(): ReactNode {
         return <SectionError title="Failed to load document." />;
     }
     const documents = libraryQuery.data.documents;
-    const elements = libraryQuery.data.elements;
+    const elements = libraryQuery.data.insertables;
 
     const document = documents[documentId];
 
@@ -139,7 +139,7 @@ export function DocumentList(): ReactNode {
 
 interface DocumentListCardsProps {
     document: DocumentObj;
-    elements: Elements;
+    elements: Insertables;
 }
 
 export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
@@ -152,7 +152,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         ? SortOrder.ASCENDING
         : SortOrder.DEFAULT;
 
-    const documentElements = document.elementOrder
+    const documentElements = document.insertableOrder
         .map((elementOrder) => elements[elementOrder])
         .filter((element) => !!element);
 

@@ -44,7 +44,7 @@ export function FavoritesList(): ReactNode {
         );
     }
 
-    const elements = libraryQuery.data.elements;
+    const elements = libraryQuery.data.insertables;
 
     const orderedFavorites = favoritesQuery.data.favoriteOrder
         .map((favoriteId) => favoritesQuery.data.favorites[favoriteId])

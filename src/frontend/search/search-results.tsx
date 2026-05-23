@@ -28,7 +28,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     ) {
         return <SectionError title="Failed to load library." />;
     }
-    const elements = libraryQuery.data.elements;
+    const elements = libraryQuery.data.insertables;
     const searchResults = doSearch(searchDbQuery.data, query, filters);
 
     if (searchResults.hits.length === 0) {

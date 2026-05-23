@@ -103,14 +103,12 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
     const documentOrder = useLibraryQuery().data?.documentOrder ?? [];
 
     const showAllMutation = useSetVisibilityMutation(
-        document.id,
-        document.elementOrder,
+        document.insertableOrder,
         true
     );
 
     const hideAllMutation = useSetVisibilityMutation(
-        document.id,
-        document.elementOrder,
+        document.insertableOrder,
         false
     );
 

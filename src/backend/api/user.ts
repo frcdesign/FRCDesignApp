@@ -41,14 +41,12 @@ async function getFavorites(
     const favoritesOut: Favorites = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
-        favoritesOut[row.elementId] = {
-            id: row.elementId,
+        favoritesOut[row.insertableId] = {
+            id: row.insertableId,
             library,
-            defaultConfiguration: row.defaultConfiguration
-                ? JSON.parse(row.defaultConfiguration)
-                : undefined
+            defaultConfiguration: row.defaultConfiguration ?? undefined
         } satisfies Favorite;
-        favoriteOrder.push(row.elementId);
+        favoriteOrder.push(row.insertableId);
     }
     return { favorites: favoritesOut, favoriteOrder };
 }

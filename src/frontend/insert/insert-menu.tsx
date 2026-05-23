@@ -45,7 +45,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     const elementId = props.activeElementId;
     const favorites = useFavoritesQuery().data?.favorites;
 
-    const elements = useLibraryQuery().data?.elements;
+    const elements = useLibraryQuery().data?.insertables;
 
     const navigate = useNavigate();
     const closeDialog = useHandleCloseDialog();

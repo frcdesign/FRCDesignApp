@@ -59,7 +59,7 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
     return useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorite", isFavorite],
         mutationFn: async (args) => {
-            const query = { elementId: args.element.id };
+            const query = { insertableId: args.element.id };
             const path = "/favorites" + toLibraryPath(library);
 
             if (args.operation === Operation.ADD) {
