@@ -3,13 +3,13 @@
  */
 import { Configuration } from "../configurations/configuration-models";
 import { ElementPath, InstancePath } from "../../shared/path";
-import { ThumbnailSize, Vendor } from "../../shared/types";
-
-export enum Library {
-    FRC_DESIGN_LIB = "frc-design-lib",
-    FTC_DESIGN_LIB = "ftc-design-lib",
-    MKCAD = "mkcad"
-}
+import {
+    ElementType,
+    Library,
+    ThumbnailSize,
+    ThumbnailUrls,
+    Vendor
+} from "../../shared/types";
 
 export type Favorites = Record<string, Favorite | undefined>;
 
@@ -22,14 +22,6 @@ export interface Favorite {
     id: string;
     library: Library;
     defaultConfiguration?: Configuration;
-}
-
-/**
- * The type of the Onshape tab the app is open in.
- */
-export enum ElementType {
-    PART_STUDIO = "PARTSTUDIO",
-    ASSEMBLY = "ASSEMBLY"
 }
 
 export interface LibraryObj {
@@ -67,11 +59,6 @@ export interface ElementObj {
     configurationId?: string;
     thumbnailUrls: ThumbnailUrls;
     path: ElementPath;
-}
-
-export interface ThumbnailUrls {
-    [ThumbnailSize.TINY]: string;
-    [ThumbnailSize.STANDARD]: string;
 }
 
 export interface HeightAndWidth {

@@ -1,4 +1,4 @@
-import { ElementType } from "../../frontend/api-utils/client-models";
+import { ElementType } from "../../shared/types";
 import type { ElementPath } from "../../shared/path";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";

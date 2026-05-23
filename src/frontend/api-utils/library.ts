@@ -1,4 +1,4 @@
-import { Library } from "./client-models";
+import { Library } from "../../shared/types";
 import { useSearch } from "@tanstack/react-router";
 
 export function useLibrary() {

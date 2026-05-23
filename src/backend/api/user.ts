@@ -8,9 +8,9 @@ import { users, libraries, favorites } from "../../shared/schema";
 import {
     Favorite,
     Favorites,
-    FavoritesData,
-    Library
+    FavoritesData
 } from "../../frontend/api-utils/client-models";
+import { Library } from "../../shared/types";
 import { AccessLevel, ContextData, Theme } from "../../shared/types";
 import { env } from "cloudflare:workers";
 

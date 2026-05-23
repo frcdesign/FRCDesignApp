@@ -13,7 +13,7 @@ import {
     insertables,
     favorites
 } from "../../shared/schema";
-import { Library } from "../../frontend/api-utils/client-models";
+import { Library } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { env } from "cloudflare:workers";
 import type { LoadDocumentParams } from "./load-document";

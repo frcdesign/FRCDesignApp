@@ -23,11 +23,9 @@ import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import {
-    ElementObj,
-    ElementType,
-    ThumbnailUrls
-} from "../api-utils/client-models";
+import { ElementObj } from "../api-utils/client-models";
+import { ElementType } from "../../shared/types";
+import { ThumbnailUrls } from "../../shared/types";
 import { Configuration } from "../configurations/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";

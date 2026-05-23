@@ -8,11 +8,8 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
-import {
-    type FavoritesData,
-    ElementObj,
-    Library
-} from "../api-utils/client-models";
+import { type FavoritesData, ElementObj } from "../api-utils/client-models";
+import { Library } from "../../shared/types";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";

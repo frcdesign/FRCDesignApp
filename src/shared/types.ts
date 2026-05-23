@@ -1,5 +1,3 @@
-import { Library } from "../frontend/api-utils/client-models";
-
 export enum AccessLevel {
     ADMIN = "admin",
     EDITOR = "editor",
@@ -86,4 +84,20 @@ export interface AccessData {
 export interface ContextData {
     accessData: AccessData;
     settings: Settings;
+}
+export interface ThumbnailUrls {
+    [ThumbnailSize.TINY]: string;
+    [ThumbnailSize.STANDARD]: string;
+}
+export enum Library {
+    FRC_DESIGN_LIB = "frc-design-lib",
+    FTC_DESIGN_LIB = "ftc-design-lib",
+    MKCAD = "mkcad"
+} /**
+ * The type of the Onshape tab the app is open in.
+ */
+
+export enum ElementType {
+    PART_STUDIO = "PARTSTUDIO",
+    ASSEMBLY = "ASSEMBLY"
 }

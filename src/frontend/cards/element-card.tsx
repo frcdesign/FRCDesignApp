@@ -8,11 +8,8 @@ import {
 } from "@blueprintjs/core";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import {
-    ElementObj,
-    ElementType,
-    LibraryObj
-} from "../api-utils/client-models";
+import { ElementObj, LibraryObj } from "../api-utils/client-models";
+import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
 import {
     FavoriteButton,

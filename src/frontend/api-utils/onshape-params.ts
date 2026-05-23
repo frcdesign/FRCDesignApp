@@ -1,4 +1,4 @@
-import { ElementType } from "./client-models";
+import { ElementType } from "../../shared/types";
 import { Theme } from "../../shared/types";
 import { ElementPath } from "../../shared/path";
 import { Classes } from "@blueprintjs/core";

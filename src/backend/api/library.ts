@@ -12,11 +12,9 @@ import {
     favorites,
     users
 } from "../../shared/schema";
-import {
-    Library,
-    ElementType,
-    ThumbnailUrls
-} from "../../frontend/api-utils/client-models";
+import { ElementType } from "../../shared/types";
+import { Library } from "../../shared/types";
+import { ThumbnailUrls } from "../../shared/types";
 import { Vendor } from "../../shared/types";
 import { HTTPException } from "hono/http-exception";
 

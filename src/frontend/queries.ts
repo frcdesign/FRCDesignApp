@@ -8,7 +8,8 @@ import {
     toCacheOptions,
     useCacheOptions
 } from "./api-utils/api";
-import { type FavoritesData, Library } from "./api-utils/client-models";
+import { type FavoritesData } from "./api-utils/client-models";
+import { Library } from "../shared/types";
 import { ContextData } from "../shared/types";
 import { type LibraryOut } from "../backend/api/library";
 import { useLibrary } from "./api-utils/library";

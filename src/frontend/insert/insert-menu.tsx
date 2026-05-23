@@ -4,7 +4,8 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useCallback, useState } from "react";
-import { ElementObj, ElementType } from "../api-utils/client-models";
+import { ElementObj } from "../api-utils/client-models";
+import { ElementType } from "../../shared/types";
 import {
     Button,
     Checkbox,

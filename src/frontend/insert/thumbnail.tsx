@@ -5,11 +5,8 @@ import {
     apiGetRawImage,
     useCacheOptions
 } from "../api-utils/api";
-import {
-    getHeightAndWidth,
-    HeightAndWidth,
-    ThumbnailUrls
-} from "../api-utils/client-models";
+import { getHeightAndWidth, HeightAndWidth } from "../api-utils/client-models";
+import { ThumbnailUrls } from "../../shared/types";
 import { ThumbnailSize } from "../../shared/types";
 import { ElementPath, toElementApiPath } from "../../shared/path";
 import {

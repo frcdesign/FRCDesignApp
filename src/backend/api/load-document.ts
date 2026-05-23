@@ -15,7 +15,7 @@ import { uploadThumbnails, uploadDocumentThumbnails } from "./thumbnails";
 import { parseOnshapeConfiguration } from "../../frontend/configurations/parse-configuration";
 import { ConfigurationParameterType } from "../../frontend/configurations/configuration-models";
 import type { ConfigurationResult } from "../../frontend/configurations/configuration-models";
-import { ElementType } from "../../frontend/api-utils/client-models";
+import { ElementType, ThumbnailUrls } from "../../shared/types";
 import type { ElementPath, InstancePath } from "../../shared/path";
 import { Vendor, getVendorName } from "../../shared/types";
 
@@ -25,8 +25,6 @@ export interface LoadDocumentParams {
     sessionId: string;
     forceReload?: boolean;
 }
-
-type ThumbnailUrls = Record<string, string>;
 
 const VALID_ELEMENT_TYPES = new Set<string>([
     ElementType.ASSEMBLY,
@@ -126,7 +124,7 @@ interface ElementLoadResult {
     supportsFasten: boolean;
     vendors: Vendor[];
     configuration: ConfigurationResult | null;
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls: ThumbnailUrls | null;
 }
 
 export class LoadDocumentWorkflow extends WorkflowEntrypoint<
@@ -335,10 +333,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         versionCreatedAt: versionInfo.versionCreatedAt,
                         vendors: r.vendors,
                         thumbnailUrls: r.thumbnailUrls,
-                        fastenInfo: r.fastenInfo as Record<
-                            string,
-                            unknown
-                        > | null,
+                        fastenInfo: r.fastenInfo,
                         supportsFasten: r.supportsFasten
                     })
                     .onConflictDoUpdate({
@@ -366,12 +361,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 })
                 .onConflictDoUpdate({
                     target: documents.id,
-                    set: {
-                        name: contentsInfo.docName,
-                        instanceId: versionInfo.instanceId,
-                        insertableOrder: contentsInfo.orderedElementIds,
-                        thumbnailUrls: docThumbnailUrls
-                    }
+                    set: conflictUpdateSet(documents, [
+                        "id",
+                        "libraryId",
+                        "sortAlphabetically"
+                    ])
                 });
 
             const deleteStaleInsertables =
@@ -537,27 +531,27 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     private async uploadThumbnailsWithRetry(
         step: WorkflowStep,
         prefix: string,
-        uploadFn: () => Promise<ThumbnailUrls>
-    ): Promise<ThumbnailUrls> {
-        const tryUpload = (n: number) =>
-            step.do(
+        uploadFn: () => Promise<ThumbnailUrls | null>
+    ): Promise<ThumbnailUrls | null> {
+        const tryUpload = (n: number) => {
+            return step.do(
                 `${prefix}-${n}`,
                 { retries: { limit: 0, delay: 0, backoff: "constant" } },
-                async () => {
-                    try {
-                        return (await uploadFn()) as ThumbnailUrls | null;
-                    } catch {
-                        return null as ThumbnailUrls | null;
-                    }
-                }
+                uploadFn
             );
+        };
 
-        const r1 = await tryUpload(1);
-        if (r1) return r1;
+        let thumbnails = await tryUpload(1);
+        if (thumbnails) return thumbnails;
         await step.sleep(`${prefix}-wait-1`, "5 seconds");
-        const r2 = await tryUpload(2);
-        if (r2) return r2;
+        thumbnails = await tryUpload(2);
+        if (thumbnails) return thumbnails;
+
         await step.sleep(`${prefix}-wait-2`, "5 minutes");
-        return (await tryUpload(3)) ?? {};
+        thumbnails = await tryUpload(3);
+        if (thumbnails) return thumbnails;
+
+        await step.sleep(`${prefix}-wait-3`, "5 minutes");
+        return await tryUpload(4);
     }
 }

@@ -1,4 +1,6 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
+import { FastenInfo } from "../backend/api/insert-and-fasten";
+import { ThumbnailUrls } from "./types";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -23,10 +25,9 @@ export const documents = sqliteTable("documents", {
         .$type<string[]>()
         .notNull()
         .default([]),
-    thumbnailUrls: text("thumbnail_urls", { mode: "json" })
-        .$type<Record<string, string>>()
-        .notNull()
-        .default({})
+    thumbnailUrls: text("thumbnail_urls", {
+        mode: "json"
+    }).$type<ThumbnailUrls>()
 });
 
 export const insertables = sqliteTable(
@@ -60,13 +61,12 @@ export const insertables = sqliteTable(
             .$type<string[]>()
             .notNull()
             .default([]),
-        thumbnailUrls: text("thumbnail_urls", { mode: "json" })
-            .$type<Record<string, string>>()
-            .notNull()
-            .default({}),
-        fastenInfo: text("fasten_info", { mode: "json" }).$type<
-            Record<string, unknown>
-        >()
+        thumbnailUrls: text("thumbnail_urls", {
+            mode: "json"
+        }).$type<ThumbnailUrls | null>(),
+        fastenInfo: text("fasten_info", {
+            mode: "json"
+        }).$type<FastenInfo | null>()
     },
     (t) => [unique().on(t.elementId, t.documentId)]
 );
