@@ -5,11 +5,7 @@ import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
 import { users, libraries, favorites } from "../../shared/schema";
-import {
-    Favorite,
-    Favorites,
-    FavoritesData
-} from "../../frontend/api-utils/client-models";
+import { Favorite, Favorites, FavoritesData } from "../../shared/api-models";
 import { Library } from "../../shared/types";
 import { AccessLevel, ContextData, Theme } from "../../shared/types";
 import { env } from "cloudflare:workers";

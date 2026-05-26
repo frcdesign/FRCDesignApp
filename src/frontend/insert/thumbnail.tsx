@@ -5,9 +5,23 @@ import {
     apiGetRawImage,
     useCacheOptions
 } from "../api-utils/api";
-import { getHeightAndWidth, HeightAndWidth } from "../api-utils/client-models";
-import { ThumbnailUrls } from "../../shared/types";
-import { ThumbnailSize } from "../../shared/types";
+import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
+
+interface HeightAndWidth {
+    height: number;
+    width: number;
+}
+
+function getHeightAndWidth(
+    size: ThumbnailSize,
+    multiplier: number = 1
+): HeightAndWidth {
+    const parts = size.split("x");
+    return {
+        width: parseInt(parts[0]) * multiplier,
+        height: parseInt(parts[1]) * multiplier
+    };
+}
 import { ElementPath, toElementApiPath } from "../../shared/path";
 import {
     Card,

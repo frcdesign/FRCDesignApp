@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
@@ -57,7 +57,7 @@ export function useSetVisibilityMutation(
  * Returns true if the current element should be hidden from the current user.
  * Note this is different from whether the element is visible since admins can always see hidden elements.
  */
-export function useIsElementHidden(element: ElementObj): boolean {
+export function useIsElementHidden(element: InsertableOut): boolean {
     const loaderData = useLoaderData({ from: "/app" });
     return useMemo(() => {
         return (

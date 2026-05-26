@@ -1,7 +1,7 @@
 import { Colors, Card } from "@blueprintjs/core";
 import { ReactNode } from "react";
 import { filterElements } from "../search/filter";
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
@@ -55,7 +55,7 @@ export function FavoritesList(): ReactNode {
         .map((favorite) => elements[favorite.id])
         .filter((element) => !!element);
 
-    let filteredElements: ElementObj[];
+    let filteredElements: InsertableOut[];
     let filterResult: FilterResult;
     let searchHits: Record<string, SearchHit> = {};
     if (uiState.searchQuery) {
@@ -118,7 +118,7 @@ export function FavoritesList(): ReactNode {
         );
     }
 
-    const cards = filteredElements.map((element: ElementObj) => {
+    const cards = filteredElements.map((element: InsertableOut) => {
         // Fetch the favorite again so we have it's data
         const favorite = favoritesQuery.data.favorites[element.id];
         if (!favorite) {

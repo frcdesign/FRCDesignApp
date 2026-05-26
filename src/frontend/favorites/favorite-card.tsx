@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ElementObj, Favorite } from "../api-utils/client-models";
+import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
@@ -32,7 +32,7 @@ import { SearchHit } from "../search/search";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 
 interface FavoriteCardProps {
-    element: ElementObj;
+    element: InsertableOut;
     favorite: Favorite;
     searchHit?: SearchHit;
 }
@@ -102,7 +102,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
 }
 
 interface FavoriteContextMenuProps {
-    element: ElementObj;
+    element: InsertableOut;
     favorite: Favorite;
     children: any;
 }

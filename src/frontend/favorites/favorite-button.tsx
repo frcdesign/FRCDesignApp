@@ -8,7 +8,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
-import { type FavoritesData, ElementObj } from "../api-utils/client-models";
+import { type FavoritesData, InsertableOut } from "../../shared/api-models";
 import { Library } from "../../shared/types";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
@@ -24,7 +24,7 @@ enum Operation {
 
 interface UpdateFavoritesArgs {
     operation: Operation;
-    element: ElementObj;
+    element: InsertableOut;
 }
 
 function updateFavorites(
@@ -94,7 +94,7 @@ function useUpdateFavoritesMutation(isFavorite: boolean) {
 }
 interface FavoriteButtonProps {
     isFavorite: boolean;
-    element: ElementObj;
+    element: InsertableOut;
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
@@ -132,7 +132,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 
 interface FavoriteElementItemProps {
     isFavorite: boolean;
-    element: ElementObj;
+    element: InsertableOut;
 }
 
 /**

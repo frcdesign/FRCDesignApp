@@ -14,7 +14,7 @@ import {
 } from "@blueprintjs/core";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../../../search/search-results";
-import { DocumentObj, Insertables } from "../../../api-utils/client-models";
+import { DocumentOut, Insertables } from "../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
 import { filterElements, SortOrder } from "../../../search/filter";
 import { DocumentContextMenu } from "../../../cards/document-card";
@@ -144,7 +144,7 @@ function DocumentList(): ReactNode {
 }
 
 interface DocumentListCardsProps {
-    document: DocumentObj;
+    document: DocumentOut;
     elements: Insertables;
 }
 

@@ -2,7 +2,7 @@ import MiniSearch, {
     Options,
     SearchResult as MiniSearchResult
 } from "minisearch";
-import { Favorites, LibraryObj } from "../api-utils/client-models";
+import { Favorites, LibraryOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
 
 /**
@@ -77,7 +77,7 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
 };
 
 export function buildSearchDb(
-    libraryData: LibraryObj
+    libraryData: LibraryOut
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 

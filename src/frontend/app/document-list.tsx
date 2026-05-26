@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../search/search-results";
-import { DocumentObj, Insertables } from "../api-utils/client-models";
+import { DocumentOut, Insertables } from "../../shared/api-models";
 import { hasEditorAccess } from "../../shared/types";
 import { useUiState } from "../api-utils/ui-state";
 import { filterElements, SortOrder } from "../search/filter";
@@ -138,7 +138,7 @@ export function DocumentList(): ReactNode {
 }
 
 interface DocumentListCardsProps {
-    document: DocumentObj;
+    document: DocumentOut;
     elements: Insertables;
 }
 

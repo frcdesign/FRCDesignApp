@@ -18,7 +18,7 @@ import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { PreviewImageCard } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../configurations/configurations";
-import { type FavoritesData } from "../api-utils/client-models";
+import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import { Configuration } from "../../shared/configuration-models";

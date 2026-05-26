@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { toElementApiPath } from "../../shared/path";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
@@ -22,7 +22,7 @@ export interface InsertArgs {
  * @param onClick Callback function to call when the mutation is triggered.
  */
 export function useInsertMutation(
-    element: ElementObj,
+    element: InsertableOut,
     configuration: Configuration | undefined,
     insertArgs: InsertArgs
 ) {

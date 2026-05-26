@@ -10,16 +10,19 @@ import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { parseFastenInfo } from "./insert-and-fasten";
-import type { FastenInfo } from "../../shared/types";
+import type { ElementPath, InstancePath } from "../../shared/path";
+import type { ConfigurationResult } from "../../shared/configuration-models";
+import {
+    type FastenInfo,
+    ElementType,
+    type ThumbnailUrls,
+    type Vendor
+} from "../../shared/types";
 import {
     uploadThumbnails,
     uploadDocumentThumbnails
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
-import type { ConfigurationResult } from "../../shared/configuration-models";
-import { ElementType, ThumbnailUrls } from "../../shared/types";
-import type { ElementPath, InstancePath } from "../../shared/path";
-import { Vendor } from "../../shared/types";
 import { parseVendors } from "./parse-vendors";
 
 export interface LoadDocumentParams {
@@ -53,12 +56,14 @@ function getOrderedElementIds(contents: any): string[] {
     return ids;
 }
 
-function getValidElements(contents: any): {
+interface ValidElement {
     elementId: string;
     name: string;
     elementType: ElementType;
     microversionId: string;
-}[] {
+}
+
+function getValidElements(contents: any): ValidElement[] {
     return (contents.elements as any[])
         .filter((e) => VALID_ELEMENT_TYPES.has(e.elementType))
         .map((e) => ({
@@ -381,12 +386,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep,
         sessionId: string,
         instancePath: InstancePath,
-        element: {
-            elementId: string;
-            name: string;
-            elementType: ElementType;
-            microversionId: string;
-        },
+        element: ValidElement,
         hasFastenInfo: boolean
     ): Promise<ElementLoadResult> {
         const elementPath: ElementPath = {

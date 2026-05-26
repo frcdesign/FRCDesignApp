@@ -23,7 +23,7 @@ import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { ThumbnailUrls } from "../../shared/types";
 import { Configuration } from "../../shared/configuration-models";
@@ -57,7 +57,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 }
 
 interface QuickInsertItemProps {
-    element: ElementObj;
+    element: InsertableOut;
     configuration?: Configuration;
     isFavorite: boolean;
 }

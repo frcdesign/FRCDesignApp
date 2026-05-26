@@ -8,10 +8,9 @@ import {
     toCacheOptions,
     useCacheOptions
 } from "./api-utils/api";
-import { type FavoritesData } from "./api-utils/client-models";
+import { type FavoritesData, type LibraryOut } from "../shared/api-models";
 import { Library } from "../shared/types";
 import { ContextData } from "../shared/types";
-import { type LibraryOut } from "../backend/routes/library";
 import { useLibrary } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";

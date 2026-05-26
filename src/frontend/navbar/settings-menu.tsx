@@ -21,7 +21,7 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { LibraryObj } from "../api-utils/client-models";
+import { LibraryOut } from "../../shared/api-models";
 import { Library } from "../../shared/types";
 import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
@@ -210,7 +210,7 @@ function PushVersionButton(): ReactNode {
     const pushVersionMutation = useMutation({
         mutationKey: ["library-version", library],
         mutationFn: async () => {
-            const libraryData = await queryClient.fetchQuery<LibraryObj>({
+            const libraryData = await queryClient.fetchQuery<LibraryOut>({
                 queryKey: libraryQueryKey(library, loaderData)
             });
             if (!libraryData) {

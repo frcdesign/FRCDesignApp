@@ -1,4 +1,4 @@
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
 import { FilterResult } from "./search";
 
@@ -32,7 +32,7 @@ interface VendorFilterResult extends FilterResult {
  * A list of elements which have (possibly) been filtered down.
  */
 export interface FilteredElements {
-    elements: ElementObj[];
+    elements: InsertableOut[];
     filtered: VendorFilterResult;
 }
 
@@ -41,7 +41,7 @@ export interface FilteredElements {
  * Does not include handling for being in a document since this should only be used when search is not active.
  */
 export function filterElements(
-    elements: ElementObj[],
+    elements: InsertableOut[],
     args: FilterArgs
 ): FilteredElements {
     let filteredElements = [...elements];

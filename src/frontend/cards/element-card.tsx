@@ -8,7 +8,7 @@ import {
 } from "@blueprintjs/core";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { ElementObj, LibraryObj } from "../api-utils/client-models";
+import { InsertableOut, LibraryOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
 import {
@@ -42,7 +42,7 @@ import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 
 interface ElementCardProps extends PropsWithChildren {
-    element: ElementObj;
+    element: InsertableOut;
     searchHit?: SearchHit;
     onClick?: () => void;
 }
@@ -123,7 +123,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
 
 interface ElementContextMenuProps {
     isFavorite: boolean;
-    element: ElementObj;
+    element: InsertableOut;
     children: any;
 }
 
@@ -147,7 +147,7 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
 }
 
 interface ElementAdminContextMenuProps {
-    element: ElementObj;
+    element: InsertableOut;
 }
 
 export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
@@ -177,7 +177,7 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
             queryClient.cancelQueries({ queryKey: libraryQueryMatchKey() });
             queryClient.setQueryData(
                 libraryQueryKey(library, loaderData),
-                getQueryUpdater((data: LibraryObj) => {
+                getQueryUpdater((data: LibraryOut) => {
                     const currentElement = data.insertables[element.id];
                     if (currentElement) {
                         currentElement.isOpenComposite =

@@ -4,7 +4,7 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useCallback, useState } from "react";
-import { ElementObj } from "../api-utils/client-models";
+import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import {
     Button,
@@ -106,7 +106,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
 }
 
 interface InsertButtonsProps {
-    element: ElementObj;
+    element: InsertableOut;
     configuration?: Configuration;
     isFavorite: boolean;
 }
@@ -163,7 +163,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 }
 
 function showRestoreToast(
-    element: ElementObj,
+    element: InsertableOut,
     navigate: UseNavigateResult<string>,
     configuration?: Configuration
 ) {

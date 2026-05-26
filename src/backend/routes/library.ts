@@ -12,54 +12,18 @@ import {
     favorites,
     users
 } from "../../shared/schema";
-import { ElementType } from "../../shared/types";
 import { Library } from "../../shared/types";
 import { ThumbnailUrls } from "../../shared/types";
+import { ElementType } from "../../shared/types";
 import { Vendor } from "../../shared/types";
+import {
+    InsertableOut,
+    DocumentOut,
+    LibraryOut,
+    Insertables,
+    Documents
+} from "../../shared/api-models";
 import { HTTPException } from "hono/http-exception";
-
-export interface DocumentPathOut {
-    documentId: string;
-    instanceId: string;
-    instanceType: "v";
-}
-
-export interface ElementPathOut extends DocumentPathOut {
-    elementId: string;
-}
-
-export interface ElementOut {
-    id: string;
-    elementId: string;
-    documentId: string;
-    path: ElementPathOut;
-    name: string;
-    microversionId: string;
-    versionName: string;
-    versionCreatedAt: string;
-    isVisible: boolean;
-    isOpenComposite: boolean;
-    supportsFasten: boolean;
-    elementType: ElementType;
-    thumbnailUrls: ThumbnailUrls;
-    configurationId?: string;
-    vendors: Vendor[];
-}
-
-export interface DocumentOut {
-    id: string;
-    path: DocumentPathOut;
-    name: string;
-    sortAlphabetically: boolean;
-    thumbnailUrls: ThumbnailUrls;
-    insertableOrder: string[];
-}
-
-export interface LibraryOut {
-    documentOrder: string[];
-    documents: Record<string, DocumentOut>;
-    insertables: Record<string, ElementOut>;
-}
 
 async function getAppAccessLevel(
     c: { env: AppBindings },
@@ -127,7 +91,7 @@ async function getLibraryOut(
         ])
     );
 
-    const documentsOut: Record<string, DocumentOut> = {};
+    const documentsOut: Documents = {};
     for (const doc of allDocuments) {
         const storedOrder: string[] = doc.insertableOrder;
         const insertableOrder = storedOrder
@@ -147,7 +111,7 @@ async function getLibraryOut(
         };
     }
 
-    const insertablesOut: Record<string, ElementOut> = {};
+    const insertablesOut: Insertables = {};
     for (const ins of allInsertables) {
         const doc = allDocuments.find((d) => d.id === ins.documentId);
         if (!doc) continue;
@@ -173,7 +137,7 @@ async function getLibraryOut(
             thumbnailUrls: ins.thumbnailUrls as ThumbnailUrls,
             configurationId: configId,
             vendors: ins.vendors as Vendor[]
-        };
+        } satisfies InsertableOut;
     }
 
     return {

@@ -10,7 +10,7 @@ import {
 } from "@blueprintjs/core";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { DocumentObj, LibraryObj } from "../api-utils/client-models";
+import { DocumentOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, apiDelete, useCacheOptions } from "../api-utils/api";
 import { showErrorToast } from "../common/toaster";
@@ -34,7 +34,7 @@ import { getQueryUpdater, useIsHome } from "../common/utils";
 import { getAppErrorHandler } from "../api-utils/errors";
 
 interface DocumentCardProps extends PropsWithChildren {
-    document: DocumentObj;
+    document: DocumentOut;
 }
 
 /**
@@ -77,7 +77,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
 }
 
 interface DocumentContextMenuProps {
-    document: DocumentObj;
+    document: DocumentOut;
     children: any;
 }
 
@@ -183,7 +183,7 @@ function useSetDocumentOrderMutation() {
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
                 libraryQueryKey(library, cacheOptions),
-                getQueryUpdater((data: LibraryObj) => {
+                getQueryUpdater((data: LibraryOut) => {
                     data.documentOrder = newOrder;
                     return data;
                 })
@@ -197,7 +197,7 @@ function useSetDocumentOrderMutation() {
     });
 }
 
-function useToggleSortOrderMutation(document: DocumentObj) {
+function useToggleSortOrderMutation(document: DocumentOut) {
     const library = useLibrary();
     const cacheOptions = useCacheOptions();
 
@@ -217,7 +217,7 @@ function useToggleSortOrderMutation(document: DocumentObj) {
         onMutate: () => {
             queryClient.setQueryData(
                 libraryQueryKey(library, cacheOptions),
-                getQueryUpdater((data: LibraryObj) => {
+                getQueryUpdater((data: LibraryOut) => {
                     const oldDocument = data.documents[document.id];
                     if (oldDocument) {
                         oldDocument.sortAlphabetically =
@@ -237,7 +237,7 @@ function useToggleSortOrderMutation(document: DocumentObj) {
 }
 
 interface DocumentDataItemsProps {
-    document: DocumentObj;
+    document: DocumentOut;
 }
 
 function DocumentDataItems({ document }: DocumentDataItemsProps) {
