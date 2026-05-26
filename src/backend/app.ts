@@ -1,5 +1,5 @@
 import { type Context } from "hono";
-import type { LoadDocumentParams } from "./api/load-document";
+import type { LoadDocumentParams } from "./parse/load-document";
 
 export type AppBindings = {
     DB: D1Database;

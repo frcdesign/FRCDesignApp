@@ -1,7 +1,3 @@
-/**
- * Transforms raw Onshape configuration API responses into the normalized format
- * stored in Firestore and consumed by the client.
- */
 import {
     ConfigurationParameterType,
     ConfigurationResult,
@@ -15,7 +11,7 @@ import {
     VisibilityConditionType,
     getUnitDisplayStr,
     LogicalOp
-} from "./configuration-models";
+} from "../../shared/configuration-models";
 
 const VISIBILITY_CONDITION_NONE = "BTParameterVisibilityCondition-177";
 
@@ -93,7 +89,6 @@ function parseOptionVisibilityConditions(
         .filter((condition: OptionVisibilityCondition | null) => !!condition);
 }
 
-/** Parses an Onshape configuration API response into a normalized ConfigurationResult for storage. */
 export function parseOnshapeConfiguration(
     onshapeConfiguration: any
 ): ConfigurationResult {

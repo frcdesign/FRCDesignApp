@@ -19,7 +19,7 @@ import {
 } from "@blueprintjs/core";
 
 import { ReactNode } from "react";
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../configurations/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../common/app-zero-state";

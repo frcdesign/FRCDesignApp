@@ -26,7 +26,7 @@ import { FavoriteButton } from "../favorites/favorite-button";
 import { showToast } from "../common/toaster";
 import { ConfigurationWrapper } from "../configurations/configurations";
 import { useInsertMutation } from "./insert-hooks";
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 import { useFavoritesQuery, useLibraryQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 

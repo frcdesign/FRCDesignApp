@@ -11,7 +11,7 @@ import {
     type UnitInfo,
     QuantityType,
     type Unit
-} from "../../frontend/configurations/configuration-models";
+} from "../../shared/configuration-models";
 import { type InstancePath } from "../../shared/path";
 import { HTTPException } from "hono/http-exception";
 
@@ -54,8 +54,8 @@ configurationRoutes.get("/unit-info", async (c) => {
         instanceType: (c.req.query("instanceType") ?? "v") as "w" | "v" | "m"
     };
 
-    const unitInfo = await getUnitInfo(onshapeApi, instancePath);
-    const units: OnshapeUnit[] = unitInfo.defaultUnits.units;
+    const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
+    const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;
 
     const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
     const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);
@@ -63,8 +63,8 @@ configurationRoutes.get("/unit-info", async (c) => {
     const result: UnitInfo = {
         angleUnit,
         lengthUnit,
-        anglePrecision: unitInfo.unitsDisplayPrecision[angleUnit],
-        lengthPrecision: unitInfo.unitsDisplayPrecision[lengthUnit],
+        anglePrecision: rawUnitInfo.unitsDisplayPrecision[angleUnit],
+        lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
         realPrecision: 3
     };
     return c.json(result);

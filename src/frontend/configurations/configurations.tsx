@@ -37,8 +37,8 @@ import {
     QuantityType,
     Unit,
     EnumOption
-} from "./configuration-models";
-import { evaluateCondition } from "./configuration-utils";
+} from "../../shared/configuration-models";
+import { evaluateCondition } from "../../shared/configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,

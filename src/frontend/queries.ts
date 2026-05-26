@@ -11,9 +11,9 @@ import {
 import { type FavoritesData } from "./api-utils/client-models";
 import { Library } from "../shared/types";
 import { ContextData } from "../shared/types";
-import { type LibraryOut } from "../backend/api/library";
+import { type LibraryOut } from "../backend/routes/library";
 import { useLibrary } from "./api-utils/library";
-import { type UnitInfo } from "./configurations/configuration-models";
+import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
 import { InstancePath } from "../shared/path";

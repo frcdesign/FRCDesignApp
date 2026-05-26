@@ -1,9 +1,9 @@
-import { ElementType } from "../../shared/types";
+import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
 import type { ElementPath } from "../../shared/path";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";
 
-export function searchFeatures(
+function searchFeatures(
     features: any[],
     mateLocation: MateLocation,
     path: string[] = []
@@ -20,8 +20,9 @@ export function searchFeatures(
     }
     return undefined;
 }
-export function parseFastenInfoFromPartStudio(featureList: any): FastenInfo {
-    for (const feature of featureList.features) {
+
+export function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
+    for (const feature of rawFeatureList.features) {
         if (feature.featureType === "mateConnector") {
             return {
                 mateConnectorId: feature.featureId,
@@ -32,16 +33,17 @@ export function parseFastenInfoFromPartStudio(featureList: any): FastenInfo {
     }
     throw new Error("Failed to find a valid Mate connector feature.");
 }
-export function parseFastenInfoFromAssembly(assemblyInfo: any): FastenInfo {
-    const rootAssembly = assemblyInfo.rootAssembly;
+
+export function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
+    const rootAssembly = rawAssemblyInfo.rootAssembly;
     const fromFeatures = searchFeatures(
         rootAssembly.features,
         MateLocation.Feature
     );
     if (fromFeatures) return fromFeatures;
 
-    const parts: any[] = assemblyInfo.parts;
-    const subAssemblies: any[] = assemblyInfo.subAssemblies;
+    const parts: any[] = rawAssemblyInfo.parts;
+    const subAssemblies: any[] = rawAssemblyInfo.subAssemblies;
     let partCounter = 0;
     let subAssemblyCounter = 0;
 
@@ -71,31 +73,20 @@ export function parseFastenInfoFromAssembly(assemblyInfo: any): FastenInfo {
         "Failed to find a valid Mate connector feature or instance."
     );
 }
+
 export async function parseFastenInfo(
     onshapeApi: any,
     elementPath: ElementPath,
     elementType: ElementType
 ): Promise<FastenInfo> {
     if (elementType === ElementType.PART_STUDIO) {
-        const featureList = await getFeatures(onshapeApi, elementPath);
-        return parseFastenInfoFromPartStudio(featureList);
+        const rawFeatureList = await getFeatures(onshapeApi, elementPath);
+        return parseFastenInfoFromPartStudio(rawFeatureList);
     } else {
-        const assemblyInfo = await getAssembly(onshapeApi, elementPath, {
+        const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
             includeMateConnectors: true,
             includeMateFeatures: true
         });
-        return parseFastenInfoFromAssembly(assemblyInfo);
+        return parseFastenInfoFromAssembly(rawAssemblyInfo);
     }
-}
-
-export enum MateLocation {
-    Feature = "Feature",
-    Part = "Part",
-    Subassembly = "Subassembly"
-}
-
-export interface FastenInfo {
-    mateConnectorId: string;
-    mateLocation: MateLocation;
-    path: string[];
 }

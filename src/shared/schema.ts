@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { FastenInfo } from "../backend/api/insert-and-fasten";
+import { FastenInfo } from "./types";
 import { ThumbnailUrls } from "./types";
 
 export const libraries = sqliteTable("libraries", {

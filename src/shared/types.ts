@@ -101,3 +101,13 @@ export enum ElementType {
     PART_STUDIO = "PARTSTUDIO",
     ASSEMBLY = "ASSEMBLY"
 }
+export interface FastenInfo {
+    mateConnectorId: string;
+    mateLocation: MateLocation;
+    path: string[];
+}
+export enum MateLocation {
+    Feature = "Feature",
+    Part = "Part",
+    Subassembly = "Subassembly"
+}

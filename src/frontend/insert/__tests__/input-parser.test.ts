@@ -1,4 +1,4 @@
-import { QuantityType, Unit } from "../../configurations/configuration-models";
+import { QuantityType, Unit } from "../../../shared/configuration-models";
 import {
     evaluateExpression,
     EvaluateOptions,

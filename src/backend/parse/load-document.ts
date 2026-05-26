@@ -10,14 +10,17 @@ import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { parseFastenInfo } from "./insert-and-fasten";
-import type { FastenInfo } from "./insert-and-fasten";
-import { uploadThumbnails, uploadDocumentThumbnails } from "./thumbnails";
-import { parseOnshapeConfiguration } from "../../frontend/configurations/parse-configuration";
-import { ConfigurationParameterType } from "../../frontend/configurations/configuration-models";
-import type { ConfigurationResult } from "../../frontend/configurations/configuration-models";
+import type { FastenInfo } from "../../shared/types";
+import {
+    uploadThumbnails,
+    uploadDocumentThumbnails
+} from "../routes/thumbnails";
+import { parseOnshapeConfiguration } from "./parse-configuration";
+import type { ConfigurationResult } from "../../shared/configuration-models";
 import { ElementType, ThumbnailUrls } from "../../shared/types";
 import type { ElementPath, InstancePath } from "../../shared/path";
-import { Vendor, getVendorName } from "../../shared/types";
+import { Vendor } from "../../shared/types";
+import { parseVendors } from "./parse-vendors";
 
 export interface LoadDocumentParams {
     documentId: string;
@@ -66,44 +69,6 @@ function getValidElements(contents: any): {
         }));
 }
 
-function parseNameVendor(name: string): Vendor | undefined {
-    const words = name.toUpperCase().match(/\b(\w+)\b/g) ?? [];
-    for (const word of words) {
-        const vendor = Object.values(Vendor).find(
-            (v) => (v as string).toUpperCase() === word
-        );
-        if (vendor !== undefined) return vendor;
-    }
-    return undefined;
-}
-
-function parseVendors(
-    name: string,
-    configuration?: ConfigurationResult
-): Vendor[] {
-    const nameVendor = parseNameVendor(name);
-    if (nameVendor) return [nameVendor];
-    if (!configuration) return [];
-
-    const vendors = new Set<Vendor>();
-    for (const param of configuration.parameters) {
-        if (param.type !== ConfigurationParameterType.ENUM) continue;
-        for (const option of param.options) {
-            const vendor = parseNameVendor(option.name);
-            if (vendor) {
-                vendors.add(vendor);
-                continue;
-            }
-            const byFullName = Object.values(Vendor).find(
-                (v) =>
-                    getVendorName(v).toUpperCase() === option.name.toUpperCase()
-            );
-            if (byFullName) vendors.add(byFullName);
-        }
-    }
-    return [...vendors];
-}
-
 function conflictUpdateSet(
     table: SQLiteTable,
     except: string[]
@@ -148,13 +113,13 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 this.env.KV,
                 sessionId
             );
-            const versionDict = await getLatestVersion(onshapeApi, {
+            const rawVersion = await getLatestVersion(onshapeApi, {
                 documentId
             });
             return {
-                instanceId: versionDict.id as string,
-                versionName: versionDict.name as string,
-                versionCreatedAt: new Date(versionDict.createdAt).toISOString()
+                instanceId: rawVersion.id as string,
+                versionName: rawVersion.name as string,
+                versionCreatedAt: new Date(rawVersion.createdAt).toISOString()
             };
         });
 
@@ -183,22 +148,22 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 instanceId: versionInfo.instanceId,
                 instanceType: "v"
             };
-            const [onshapeDoc, contents] = await Promise.all([
+            const [rawDoc, rawContents] = await Promise.all([
                 getDocument(onshapeApi, instancePath),
                 getContents(onshapeApi, instancePath)
             ]);
 
-            const validElements = getValidElements(contents);
+            const validElements = getValidElements(rawContents);
             const validElementIds = new Set(
                 validElements.map((e) => e.elementId)
             );
-            const orderedElementIds = getOrderedElementIds(contents).filter(
+            const orderedElementIds = getOrderedElementIds(rawContents).filter(
                 (id) => validElementIds.has(id)
             );
 
             return {
-                docName: onshapeDoc.name as string,
-                thumbnailElementId: onshapeDoc.documentThumbnailElementId as
+                docName: rawDoc.name as string,
+                thumbnailElementId: rawDoc.documentThumbnailElementId as
                     | string
                     | undefined,
                 validElements,
@@ -473,14 +438,14 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     this.env.KV,
                     sessionId
                 );
-                const onshapeConfig = await getConfiguration(
+                const rawConfig = await getConfiguration(
                     onshapeApi,
                     elementPath
                 );
-                if (onshapeConfig.configurationParameters.length === 0) {
+                if (rawConfig.configurationParameters.length === 0) {
                     return null;
                 }
-                const configuration = parseOnshapeConfiguration(onshapeConfig);
+                const configuration = parseOnshapeConfiguration(rawConfig);
                 return {
                     parameters: JSON.stringify(configuration.parameters),
                     vendors: JSON.stringify(

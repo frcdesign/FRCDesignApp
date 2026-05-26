@@ -1,7 +1,7 @@
 /**
  * A collection of type and result definitions mirroring backend endpoints and/or Onshape.
  */
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 import { ElementPath, InstancePath } from "../../shared/path";
 import {
     ElementType,

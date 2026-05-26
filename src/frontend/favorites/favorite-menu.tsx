@@ -21,7 +21,7 @@ import { ConfigurationWrapper } from "../configurations/configurations";
 import { type FavoritesData } from "../api-utils/client-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 import { favoritesQueryKey, useLibraryQuery } from "../queries";
 import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibrary } from "../api-utils/library";

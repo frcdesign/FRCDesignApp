@@ -1,10 +1,10 @@
-export { LoadDocumentWorkflow } from "./api/load-document";
+export { LoadDocumentWorkflow } from "./parse/load-document";
 import { authRoutes, isAuthenticated } from "./auth";
-import { userRoutes } from "./api/user";
-import { libraryRoutes } from "./api/library";
-import { thumbnailRoutes } from "./api/thumbnails";
-import { documentRoutes } from "./api/documents";
-import { configurationRoutes } from "./api/configurations";
+import { userRoutes } from "./routes/user";
+import { libraryRoutes } from "./routes/library";
+import { thumbnailRoutes } from "./routes/thumbnails";
+import { documentRoutes } from "./routes/documents";
+import { configurationRoutes } from "./routes/configurations";
 import { Hono } from "hono";
 import { AppBindings } from "./app";
 

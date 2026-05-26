@@ -17,7 +17,7 @@ describe("processTerm", () => {
 });
 
 describe("tokenize", () => {
-    it("should strip punctuation", () => {
+    it("should keep quotes", () => {
         const result = tokenize('1" Linear (REV)');
         expect(result).toEqual(["1", "Linear", "REV"]);
     });

@@ -63,6 +63,7 @@
         "revealOn": "error",
         "clearOnRun": "none"
     },
+    "jest.jestCommandLine": "npx jest",
     "jest.nodeEnv": {
         "NODE_OPTIONS": "--experimental-vm-modules"
     },

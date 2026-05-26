@@ -16,7 +16,7 @@ import {
 import { Library } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { env } from "cloudflare:workers";
-import type { LoadDocumentParams } from "./load-document";
+import type { LoadDocumentParams } from "../parse/load-document";
 
 async function requireEditorAccess(
     c: AppContext

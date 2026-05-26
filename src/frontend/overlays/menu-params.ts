@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 
 export enum MenuType {
     INSERT_MENU = "insert-menu",

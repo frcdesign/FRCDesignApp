@@ -8,7 +8,7 @@ import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { useMemo } from "react";
-import { Configuration } from "../configurations/configuration-models";
+import { Configuration } from "../../shared/configuration-models";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { sendOpenFeatureMessage } from "../api-utils/messages";
 
