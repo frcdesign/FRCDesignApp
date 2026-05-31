@@ -2,6 +2,7 @@ export { LoadDocumentWorkflow } from "./parse/load-document";
 import { authRoutes, isAuthenticated } from "./auth";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
+import { favoriteRoutes } from "./routes/favorites";
 import { thumbnailRoutes } from "./routes/thumbnails";
 import { documentRoutes } from "./routes/documents";
 import { configurationRoutes } from "./routes/configurations";
@@ -13,6 +14,7 @@ const app = new Hono<{ Bindings: AppBindings }>();
 // Mount all API routes
 app.route("/api", userRoutes);
 app.route("/api", libraryRoutes);
+app.route("/api", favoriteRoutes);
 app.route("/api", thumbnailRoutes);
 app.route("/api", documentRoutes);
 app.route("/api", configurationRoutes);

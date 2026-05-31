@@ -80,6 +80,10 @@ function getValidElements(contents: any): ValidElement[] {
         }));
 }
 
+/**
+ * When writing a new row to a table that conflicts with an existing row,
+ * use this helper to overwrite all values in the existing row except the rows in `except`.
+ */
 function conflictUpdateSet(
     table: SQLiteTable,
     except: string[]

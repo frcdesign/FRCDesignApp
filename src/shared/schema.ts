@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { FastenInfo } from "./types";
+import { FastenInfo, Library, Theme } from "./types";
 import { ThumbnailUrls } from "./types";
+import { Configuration, ParameterObj } from "./configuration-models";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -85,7 +86,7 @@ export const configurations = sqliteTable(
             .notNull()
             .references(() => libraries.id),
         parameters: text("parameters", { mode: "json" })
-            .$type<unknown[]>()
+            .$type<ParameterObj[]>()
             .notNull()
             .default([])
     },
@@ -94,8 +95,11 @@ export const configurations = sqliteTable(
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
-    theme: text("theme").notNull().default("system"),
-    library: text("library").notNull().default("frc-design-lib")
+    theme: text("theme").$type<Theme>().notNull().default(Theme.SYSTEM),
+    library: text("library")
+        .$type<Library>()
+        .notNull()
+        .default(Library.FRC_DESIGN_LIB)
 });
 
 export const favorites = sqliteTable(
@@ -112,7 +116,7 @@ export const favorites = sqliteTable(
             .references(() => insertables.id, { onDelete: "cascade" }),
         defaultConfiguration: text("default_configuration", {
             mode: "json"
-        }).$type<Record<string, string>>(),
+        }).$type<Configuration | null>(),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

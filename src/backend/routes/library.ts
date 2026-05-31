@@ -1,17 +1,13 @@
 import { Hono } from "hono";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
-import { getOnshapeApi } from "../auth";
-import { getUserId } from "../onshape-api/endpoints/users";
 import { requireEditorAccess } from "../access-level-utils";
 import {
     libraries,
     documents,
     insertables,
-    configurations,
-    favorites,
-    users
+    configurations
 } from "../../shared/schema";
 import {
     Library,
@@ -157,106 +153,20 @@ libraryRoutes.post("/library-version" + libraryRoute(), async (c) => {
 
     const db = getDb(c.env.DB);
 
+    // Create the library if it doesn't exist and return the cacheVersion
     const lib = await db
-        .select({ cacheVersion: libraries.cacheVersion })
-        .from(libraries)
-        .where(eq(libraries.id, library))
+        .insert(libraries)
+        .values({ id: library })
+        .onConflictDoNothing()
+        .returning({ cacheVersion: libraries.cacheVersion })
         .get();
 
-    const newVersion = (lib?.cacheVersion ?? 0) + 1;
-
+    const newVersion = lib.cacheVersion + 1;
     await db
         .insert(libraries)
-        .values({ id: library, cacheVersion: newVersion })
-        .onConflictDoUpdate({
-            target: libraries.id,
-            set: { cacheVersion: newVersion }
-        });
+        .values({ id: library, cacheVersion: newVersion });
 
     await c.env.KV.put(`searchdb:${library}`, body.searchDb);
 
     return c.json({ newVersion });
-});
-
-/** POST /api/favorites/library/:library */
-libraryRoutes.post("/favorites" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
-    const insertableId = c.req.query("insertableId");
-    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-
-    const db = getDb(c.env.DB);
-
-    await db.insert(users).values({ id: userId }).onConflictDoNothing();
-
-    const existingCount = await db
-        .select({ sortOrder: favorites.sortOrder })
-        .from(favorites)
-        .where(
-            and(eq(favorites.userId, userId), eq(favorites.libraryId, library))
-        )
-        .all();
-
-    const nextOrder = existingCount.length;
-
-    await db
-        .insert(favorites)
-        .values({
-            userId,
-            libraryId: library,
-            insertableId,
-            sortOrder: nextOrder
-        })
-        .onConflictDoNothing();
-
-    return c.json({ success: true });
-});
-
-/** DELETE /api/favorites/library/:library */
-libraryRoutes.delete("/favorites" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
-    const insertableId = c.req.query("insertableId");
-    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-
-    const db = getDb(c.env.DB);
-    await db
-        .delete(favorites)
-        .where(
-            and(
-                eq(favorites.userId, userId),
-                eq(favorites.libraryId, library),
-                eq(favorites.insertableId, insertableId)
-            )
-        );
-
-    return c.json({ success: true });
-});
-
-/** POST /api/favorite-order/library/:library */
-libraryRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
-    const body = await c.req.json<{ favoriteOrder: string[] }>();
-
-    const db = getDb(c.env.DB);
-    await Promise.all(
-        body.favoriteOrder.map((insertableId, i) =>
-            db
-                .update(favorites)
-                .set({ sortOrder: i })
-                .where(
-                    and(
-                        eq(favorites.userId, userId),
-                        eq(favorites.libraryId, library),
-                        eq(favorites.insertableId, insertableId)
-                    )
-                )
-        )
-    );
-
-    return c.json({ success: true });
 });
