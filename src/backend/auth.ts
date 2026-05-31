@@ -11,31 +11,39 @@ const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
 const SESSION_TTL = 30 * 24 * 3600; // 30 days
 
-export function getSessionId(c: AppContext): string | undefined {
-    return getCookie(c, SESSION_COOKIE);
+export function getSessionId(c: AppContext): string {
+    const sessionId = getCookie(c, SESSION_COOKIE);
+    if (!sessionId) {
+        throw new HTTPException(401, {
+            message: "Failed to find a valid session"
+        });
+    }
+    return sessionId;
 }
 
 export async function getOnshapeApiForSessionId(
     kv: KVNamespace,
     sessionId: string
 ): Promise<OAuthApi> {
-    const raw = await kv.get(`tokens:${sessionId}`);
-    if (!raw) throw new Error("No tokens found for session");
-    const tokens: AuthTokens = JSON.parse(raw);
+    const tokens = await getTokens(kv, sessionId);
+
     const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
             .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
             .then(makeAuthTokens);
-        await kv.put(`tokens:${sessionId}`, JSON.stringify(newTokens), {
-            expirationTtl: SESSION_TTL
-        });
+
+        saveTokens(kv, sessionId, newTokens);
+
         return newTokens.accessToken;
     };
+
     let accessToken = tokens.accessToken;
+    // If the token expired in the past, refresh immediately
     if (tokens.expiresAt <= Date.now()) {
         accessToken = await refreshCallback();
     }
+
     return new OAuthApi(accessToken, refreshCallback);
 }
 
@@ -49,39 +57,8 @@ export async function isAuthenticated(c: AppContext) {
 }
 
 export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
-    const sessionId = getCookie(c, SESSION_COOKIE);
-
-    if (!sessionId) {
-        throw new HTTPException(401, {
-            message: "Failed to find valid session"
-        });
-    }
-
-    const tokens = await getTokens(c, sessionId);
-    if (!tokens) {
-        throw new HTTPException(401, {
-            message: "Failed to find valid tokens"
-        });
-    }
-
-    const refreshCallback = async () => {
-        const oauthClient = getOauthClient();
-        const newTokens = await oauthClient
-            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
-            .then(makeAuthTokens);
-
-        saveTokens(c, sessionId, newTokens);
-
-        return newTokens.accessToken;
-    };
-
-    let accessToken = tokens.accessToken;
-    // If the token expired in the past, refresh immediately
-    if (tokens.expiresAt <= Date.now()) {
-        accessToken = await refreshCallback();
-    }
-
-    return new OAuthApi(accessToken, refreshCallback);
+    const sessionId = getSessionId(c);
+    return getOnshapeApiForSessionId(c.env.KV, sessionId);
 }
 
 function getOauthClient(): OAuth2Client {
@@ -167,7 +144,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
     await oauthClient
         .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
         .then(makeAuthTokens)
-        .then((tokens) => saveTokens(c, session.sessionId, tokens));
+        .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
 }
@@ -242,12 +219,12 @@ function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
  * Saves a set of tokens into KV.
  */
 async function saveTokens(
-    c: AppContext,
+    kv: KVNamespace,
     sessionId: string,
     tokens: AuthTokens
 ) {
     const tokenString = JSON.stringify(tokens);
-    await c.env.KV.put(`tokens:${sessionId}`, tokenString, {
+    await kv.put(`tokens:${sessionId}`, tokenString, {
         expirationTtl: SESSION_TTL
     });
 }
@@ -256,10 +233,14 @@ async function saveTokens(
  * Retrieves a set of tokens from KV.
  */
 async function getTokens(
-    c: AppContext,
+    kv: KVNamespace,
     sessionId: string
-): Promise<AuthTokens | null> {
-    const raw = await c.env.KV.get(`tokens:${sessionId}`);
-    if (!raw) return null;
+): Promise<AuthTokens> {
+    const raw = await kv.get(`tokens:${sessionId}`);
+    if (!raw) {
+        throw new HTTPException(401, {
+            message: "Failed to find valid auth tokens to use"
+        });
+    }
     return JSON.parse(raw) as AuthTokens;
 }

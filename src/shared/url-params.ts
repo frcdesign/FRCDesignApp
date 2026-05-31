@@ -28,6 +28,7 @@ export function createSearchParams(
 export interface QueryOptions {
     query?: URLSearchParamsInit;
     signal?: AbortSignal;
+    accept?: string;
 }
 
 export interface PostOptions extends QueryOptions {

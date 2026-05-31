@@ -1,24 +1,16 @@
 import { Hono } from "hono";
 import { and, asc, eq } from "drizzle-orm";
-import { AppContext, type AppBindings } from "../app";
+import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
-import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
+import { getUserId } from "../onshape-api/endpoints/users";
+import { getAppAccessLevel } from "../access-level-utils";
 import { users, libraries, favorites } from "../../shared/schema";
 import { Favorite, Favorites, FavoritesData } from "../../shared/api-models";
-import { Library } from "../../shared/types";
-import { AccessLevel, ContextData, Theme } from "../../shared/types";
-import { env } from "cloudflare:workers";
+import { Library, ContextData, Theme } from "../../shared/types";
+import { Configuration } from "../../shared/configuration-models";
 
 export const userRoutes = new Hono<{ Bindings: AppBindings }>();
-
-async function getAppAccessLevel(c: AppContext): Promise<AccessLevel> {
-    const override = env.ACCESS_LEVEL_OVERRIDE;
-    if (override) return override as AccessLevel;
-
-    const onshapeApi = await getOnshapeApi(c);
-    return getAccessLevel(onshapeApi, "TODO: GET ADMIN TEAM ID HERE I GUESS");
-}
 
 async function getFavorites(
     db: ReturnType<typeof getDb>,
@@ -83,11 +75,11 @@ userRoutes.get("/context-data", async (c) => {
     } satisfies ContextData);
 });
 
-/** GET /api/favorites/:library */
-userRoutes.get("/favorites/:library", async (c) => {
+/** GET /api/favorites/library/:library */
+userRoutes.get("/favorites" + libraryRoute(), async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
-    const library = c.req.param("library") as Library;
+    const library = getLibraryParam(c);
 
     const db = getDb(c.env.DB);
     return c.json(await getFavorites(db, userId, library));
@@ -116,6 +108,33 @@ userRoutes.post("/user-data", async (c) => {
                 ...(body.library !== undefined && { library: body.library })
             }
         });
+
+    return c.json({ success: true });
+});
+
+/** POST /api/default-configuration/library/:library */
+userRoutes.post("/default-configuration" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
+    const onshapeApi = await getOnshapeApi(c);
+    const userId = await getUserId(onshapeApi);
+    const body = await c.req.json<{
+        insertableId: string;
+        defaultConfiguration: Configuration;
+    }>();
+
+    const db = getDb(c.env.DB);
+    await db
+        .update(favorites)
+        .set({
+            defaultConfiguration: body.defaultConfiguration
+        })
+        .where(
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, library),
+                eq(favorites.insertableId, body.insertableId)
+            )
+        );
 
     return c.json({ success: true });
 });

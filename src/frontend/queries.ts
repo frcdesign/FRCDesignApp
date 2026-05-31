@@ -47,7 +47,7 @@ export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
     return queryOptions<LibraryOut>({
         queryKey: libraryQueryKey(library, cacheOptions),
         queryFn: async () =>
-            apiGet("/library-data", { query: { library }, cacheOptions }),
+            apiGet("/library-data/library/" + library, { cacheOptions }),
         staleTime: Infinity,
         gcTime: Infinity
     });
@@ -92,7 +92,7 @@ export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
     return queryOptions<MiniSearch | null>({
         queryKey: searchDbQueryKey(library, cacheOptions),
         queryFn: async () =>
-            apiGet("/search-db", { query: { library }, cacheOptions }).then(
+            apiGet("/search-db/library/" + library, { cacheOptions }).then(
                 (result: { searchDb: string | null }) => {
                     if (!result.searchDb) return null;
                     return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
@@ -116,7 +116,7 @@ export function favoritesQueryKey(library: Library) {
 export function getFavoritesQuery(library: Library) {
     return queryOptions<FavoritesData>({
         queryKey: favoritesQueryKey(library),
-        queryFn: () => apiGet("/favorites/" + library)
+        queryFn: () => apiGet("/favorites/library/" + library)
     });
 }
 

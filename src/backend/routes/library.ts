@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
-import { type AppBindings } from "../app";
+import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
-import { getAccessLevel, getUserId } from "../onshape-api/endpoints/users";
+import { getUserId } from "../onshape-api/endpoints/users";
+import { requireEditorAccess } from "../access-level-utils";
 import {
     libraries,
     documents,
@@ -12,34 +13,18 @@ import {
     favorites,
     users
 } from "../../shared/schema";
-import { Library } from "../../shared/types";
-import { ThumbnailUrls } from "../../shared/types";
-import { ElementType } from "../../shared/types";
-import { Vendor } from "../../shared/types";
+import {
+    Library,
+    ThumbnailUrls,
+    ElementType,
+    Vendor
+} from "../../shared/types";
 import {
     InsertableOut,
-    DocumentOut,
     LibraryOut,
     Insertables,
     Documents
 } from "../../shared/api-models";
-import { HTTPException } from "hono/http-exception";
-
-async function getAppAccessLevel(
-    c: { env: AppBindings },
-    onshapeApi: Awaited<ReturnType<typeof getOnshapeApi>>
-): Promise<string> {
-    const adminTeam = (c.env as any).ADMIN_TEAM;
-    if (!adminTeam) throw new Error("ADMIN_TEAM must be configured");
-    return getAccessLevel(onshapeApi, adminTeam);
-}
-
-async function requireEditorAccess(c: { env: AppBindings }): Promise<void> {
-    const onshapeApi = await getOnshapeApi(c as any);
-    const level = await getAppAccessLevel(c, onshapeApi);
-    if (level !== "editor" && level !== "admin")
-        throw new Error("Insufficient permissions");
-}
 
 async function getLibraryOut(
     db: ReturnType<typeof getDb>,
@@ -50,6 +35,7 @@ async function getLibraryOut(
         .from(libraries)
         .where(eq(libraries.id, library))
         .get();
+
     if (!lib) return { documentOrder: [], documents: {}, insertables: {} };
 
     const documentOrder: string[] = lib.documentOrder;
@@ -149,32 +135,24 @@ async function getLibraryOut(
 
 export const libraryRoutes = new Hono<{ Bindings: AppBindings }>();
 
-/** GET /api/library-data?library=X */
-libraryRoutes.get("/library-data", async (c) => {
-    const library = c.req.query("library") as Library;
-    if (!library) {
-        throw new HTTPException(400, {
-            message: "Library is required"
-        });
-    }
-
+/** GET /api/library-data/library/:library */
+libraryRoutes.get("/library-data" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
     const db = getDb(c.env.DB);
     return c.json(await getLibraryOut(db, library));
 });
 
-/** GET /api/search-db?library=X */
-libraryRoutes.get("/search-db", async (c) => {
-    const library = c.req.query("library") as Library;
-    if (!library) return c.json({ error: "library required" }, 400);
-
+/** GET /api/search-db/library/:library */
+libraryRoutes.get("/search-db" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
     const raw = await c.env.KV.get(`searchdb:${library}`);
     return c.json({ searchDb: raw });
 });
 
-/** POST /api/library-version/:library */
-libraryRoutes.post("/library-version/:library", async (c) => {
+/** POST /api/library-version/library/:library */
+libraryRoutes.post("/library-version" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const library = c.req.param("library") as Library;
+    const library = getLibraryParam(c);
     const body = await c.req.json<{ searchDb: string }>();
 
     const db = getDb(c.env.DB);
@@ -200,9 +178,9 @@ libraryRoutes.post("/library-version/:library", async (c) => {
     return c.json({ newVersion });
 });
 
-/** POST /api/favorites/:library */
-libraryRoutes.post("/favorites/:library", async (c) => {
-    const library = c.req.param("library") as Library;
+/** POST /api/favorites/library/:library */
+libraryRoutes.post("/favorites" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
@@ -235,9 +213,9 @@ libraryRoutes.post("/favorites/:library", async (c) => {
     return c.json({ success: true });
 });
 
-/** DELETE /api/favorites/:library */
-libraryRoutes.delete("/favorites/:library", async (c) => {
-    const library = c.req.param("library") as Library;
+/** DELETE /api/favorites/library/:library */
+libraryRoutes.delete("/favorites" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
@@ -257,9 +235,9 @@ libraryRoutes.delete("/favorites/:library", async (c) => {
     return c.json({ success: true });
 });
 
-/** POST /api/favorite-order/:library */
-libraryRoutes.post("/favorite-order/:library", async (c) => {
-    const library = c.req.param("library") as Library;
+/** POST /api/favorite-order/library/:library */
+libraryRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
+    const library = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const body = await c.req.json<{ favoriteOrder: string[] }>();
@@ -279,33 +257,6 @@ libraryRoutes.post("/favorite-order/:library", async (c) => {
                 )
         )
     );
-
-    return c.json({ success: true });
-});
-
-/** POST /api/default-configuration/:library */
-libraryRoutes.post("/default-configuration/:library", async (c) => {
-    const library = c.req.param("library") as Library;
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
-    const body = await c.req.json<{
-        insertableId: string;
-        defaultConfiguration: Record<string, string>;
-    }>();
-
-    const db = getDb(c.env.DB);
-    await db
-        .update(favorites)
-        .set({
-            defaultConfiguration: body.defaultConfiguration
-        })
-        .where(
-            and(
-                eq(favorites.userId, userId),
-                eq(favorites.libraryId, library),
-                eq(favorites.insertableId, body.insertableId)
-            )
-        );
 
     return c.json({ success: true });
 });

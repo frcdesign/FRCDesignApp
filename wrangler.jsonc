@@ -55,14 +55,17 @@
             "binding": "LOAD_DOCUMENT_WORKFLOW",
             "class_name": "LoadDocumentWorkflow"
         }
-    ]
+    ],
     /**
      * Environment Variables
      * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
      * Note: Use secrets to store sensitive data.
      * https://developers.cloudflare.com/workers/configuration/secrets/
      */
-    // "vars": {  "MY_VARIABLE": "production_value" }
+    "vars": {
+        // Onshape team ID used to determine editor/admin access level in production
+        "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+    }
     /**
      * Service Bindings (communicate between multiple Workers)
      * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings

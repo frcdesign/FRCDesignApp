@@ -5,7 +5,12 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
 import { getDb } from "../db";
-import { documents, insertables, configurations } from "../../shared/schema";
+import {
+    documents,
+    insertables,
+    configurations,
+    libraries
+} from "../../shared/schema";
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
@@ -28,6 +33,7 @@ import { parseVendors } from "./parse-vendors";
 export interface LoadDocumentParams {
     documentId: string;
     libraryId: string;
+    selectedDocumentId?: string;
     sessionId: string;
     forceReload?: boolean;
 }
@@ -109,6 +115,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             documentId,
             libraryId,
             sessionId,
+            selectedDocumentId,
             forceReload = false
         } = event.payload;
 
@@ -254,6 +261,33 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         // Step 7: Save everything to DB
         await step.do("save-to-db", async () => {
             const db = getDb(this.env.DB);
+
+            // Add to document order if this is a new document
+            await db
+                .insert(libraries)
+                .values({ id: libraryId })
+                .onConflictDoNothing();
+            const lib = await db
+                .select({ documentOrder: libraries.documentOrder })
+                .from(libraries)
+                .where(eq(libraries.id, libraryId))
+                .get();
+            const currentOrder: string[] = lib?.documentOrder ?? [];
+            if (!currentOrder.includes(documentId)) {
+                const newOrder = [...currentOrder];
+                const insertAfter = selectedDocumentId
+                    ? newOrder.indexOf(selectedDocumentId)
+                    : -1;
+                newOrder.splice(
+                    insertAfter !== -1 ? insertAfter + 1 : newOrder.length,
+                    0,
+                    documentId
+                );
+                await db
+                    .update(libraries)
+                    .set({ documentOrder: newOrder })
+                    .where(eq(libraries.id, libraryId));
+            }
             const validElementIds = contentsInfo.validElements.map(
                 (e) => e.elementId
             );

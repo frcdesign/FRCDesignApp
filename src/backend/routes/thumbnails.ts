@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type AppBindings } from "../app";
+import { type AppBindings, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
-import { getAccessLevel } from "../onshape-api/endpoints/users";
+import { requireEditorAccess } from "../access-level-utils";
 import {
     getElementThumbnail,
+    getThumbnailFromId,
     getThumbnailId,
     ThumbnailSize
 } from "../onshape-api/endpoints/thumbnails";
@@ -17,6 +18,8 @@ import {
 } from "../../shared/path";
 import { documents, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
+import { ThumbnailUrls } from "../../shared/types";
+import { OnshapeApi } from "../onshape-api/onshape-api";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
@@ -24,47 +27,55 @@ function r2Key(size: string, elementId: string): string {
     return `thumbnails/${size}/${elementId}`;
 }
 
-/**
- * Uploads thumbnails for an element to R2.
- * Returns a thumbnailUrls map: { size: "/api/thumbnail/{size}/{elementId}?v={microversionId}" }
- */
 export async function uploadThumbnails(
     bucket: R2Bucket,
-    onshapeApi: Awaited<ReturnType<typeof getOnshapeApi>>,
+    onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    microversionId: string,
-    sizes: ThumbnailSize[] = [ThumbnailSize.TINY, ThumbnailSize.STANDARD]
-): Promise<Partial<Record<ThumbnailSize, string>>> {
-    const urls: Partial<Record<ThumbnailSize, string>> = {};
+    microversionId: string
+): Promise<ThumbnailUrls> {
+    const fetchThumbnail = async (
+        size: ThumbnailSize
+    ): Promise<ArrayBuffer | null> => {
+        try {
+            return getElementThumbnail(onshapeApi, elementPath, size);
+        } catch {
+            return null;
+        }
+    };
 
-    await Promise.all(
-        sizes.map(async (size) => {
-            let thumbnail: ArrayBuffer;
-            try {
-                thumbnail = await getElementThumbnail(
-                    onshapeApi,
-                    elementPath,
-                    size
-                );
-            } catch {
-                return;
-            }
+    // Fetch in parallel
+    const [tinyThumbnail, standardThumbnail] = await Promise.all([
+        fetchThumbnail(ThumbnailSize.TINY),
+        fetchThumbnail(ThumbnailSize.STANDARD)
+    ]);
 
-            const key = r2Key(size, elementPath.elementId);
-            await bucket.put(key, thumbnail, {
-                httpMetadata: {
-                    contentType: "image/gif",
-                    cacheControl: `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-                },
-                customMetadata: { microversionId }
-            });
+    if (!tinyThumbnail || !standardThumbnail) {
+        throw new Error("Failed to find thumbnails. Try again later.");
+    }
 
-            urls[size] =
-                `/api/thumbnail/${size}/${elementPath.elementId}?v=${microversionId}`;
-        })
-    );
+    const uploadThumbnail = async (
+        size: ThumbnailSize,
+        thumbnail: ArrayBuffer
+    ) => {
+        await bucket.put(r2Key(size, elementPath.elementId), thumbnail, {
+            httpMetadata: {
+                contentType: "image/gif",
+                cacheControl: `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+            },
+            customMetadata: { microversionId }
+        });
+        return `/api/thumbnail/${size}/${elementPath.elementId}?v=${microversionId}`;
+    };
 
-    return urls;
+    const [tinyUrl, standardUrl] = await Promise.all([
+        uploadThumbnail(ThumbnailSize.TINY, tinyThumbnail),
+        uploadThumbnail(ThumbnailSize.STANDARD, standardThumbnail)
+    ]);
+
+    return {
+        [ThumbnailSize.TINY]: tinyUrl,
+        [ThumbnailSize.STANDARD]: standardUrl
+    };
 }
 
 /**
@@ -72,9 +83,9 @@ export async function uploadThumbnails(
  */
 export async function uploadDocumentThumbnails(
     bucket: R2Bucket,
-    onshapeApi: Awaited<ReturnType<typeof getOnshapeApi>>,
+    onshapeApi: OnshapeApi,
     versionPath: InstancePath
-): Promise<Partial<Record<ThumbnailSize, string>>> {
+): Promise<ThumbnailUrls> {
     const [onshapeDocument, contents] = await Promise.all([
         getDocument(onshapeApi, versionPath),
         getContents(onshapeApi, versionPath)
@@ -93,8 +104,9 @@ export async function uploadDocumentThumbnails(
     const element = (contents.elements as any[]).find(
         (e) => e.id === thumbnailElementId
     );
-    if (!element)
+    if (!element) {
         throw new Error("Unexpectedly failed to find the thumbnail element.");
+    }
 
     const thumbnailPath: ElementPath = {
         ...versionPath,
@@ -106,18 +118,6 @@ export async function uploadDocumentThumbnails(
         thumbnailPath,
         element.microversionId
     );
-}
-
-async function requireEditorAccess(c: {
-    env: AppBindings;
-}): Promise<Awaited<ReturnType<typeof getOnshapeApi>>> {
-    const onshapeApi = await getOnshapeApi(c as any);
-    const adminTeam = (c.env as any).ADMIN_TEAM;
-    if (!adminTeam) throw new Error("ADMIN_TEAM must be configured");
-    const level = await getAccessLevel(onshapeApi, adminTeam);
-    if (level !== "editor" && level !== "admin")
-        throw new Error("Insufficient permissions");
-    return onshapeApi;
 }
 
 export const thumbnailRoutes = new Hono<{ Bindings: AppBindings }>();
@@ -148,8 +148,6 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
     const thumbnailId = c.req.query("thumbnailId");
     if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
 
-    const { getThumbnailFromId } =
-        await import("../onshape-api/endpoints/thumbnails");
     const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
     return new Response(buffer, {
         headers: { "Content-Type": "image/gif" }
@@ -179,12 +177,14 @@ thumbnailRoutes.get(
 
 /** POST /api/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId — reload document thumbnail */
 thumbnailRoutes.post(
-    "/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId",
+    "/reload-thumbnail" +
+        libraryRoute() +
+        "/d/:documentId/:instanceType/:instanceId",
     async (c) => {
         const onshapeApi = await requireEditorAccess(c);
         const instancePath: InstancePath = {
-            documentId: c.req.param("docId"),
-            instanceId: c.req.param("instanceId"),
+            documentId: c.req.param("documentId") as string,
+            instanceId: c.req.param("instanceId") as string,
             instanceType: c.req.param("instanceType") as "w" | "v" | "m"
         };
 
@@ -194,22 +194,10 @@ thumbnailRoutes.post(
             instancePath
         );
 
-        if (Object.keys(thumbnails).length < 2) {
-            return c.json(
-                {
-                    type: "handled",
-                    message:
-                        "Failed to upload thumbnail. Does it exist in Onshape?",
-                    isError: true
-                },
-                422
-            );
-        }
-
         const db = getDb(c.env.DB);
         await db
             .update(documents)
-            .set({ thumbnailUrls: thumbnails as Record<string, string> })
+            .set({ thumbnailUrls: thumbnails })
             .where(eq(documents.id, instancePath.documentId));
 
         return c.json({ success: true });
@@ -218,14 +206,16 @@ thumbnailRoutes.post(
 
 /** POST /api/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId/e/:elementId — reload element thumbnail */
 thumbnailRoutes.post(
-    "/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId/e/:elementId",
+    "/reload-thumbnail" +
+        libraryRoute() +
+        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
         const onshapeApi = await requireEditorAccess(c);
         const elementPath: ElementPath = {
-            documentId: c.req.param("docId"),
-            instanceId: c.req.param("instanceId"),
+            documentId: c.req.param("documentId") as string,
+            instanceId: c.req.param("instanceId") as string,
             instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")
+            elementId: c.req.param("elementId") as string
         };
 
         if (!isElementPath(elementPath)) {
@@ -258,21 +248,9 @@ thumbnailRoutes.post(
             insertable.microversionId
         );
 
-        if (Object.keys(thumbnails).length < 2) {
-            return c.json(
-                {
-                    type: "handled",
-                    message:
-                        "Failed to upload thumbnail. Does it exist in Onshape?",
-                    isError: true
-                },
-                422
-            );
-        }
-
         await db
             .update(insertables)
-            .set({ thumbnailUrls: thumbnails as Record<string, string> })
+            .set({ thumbnailUrls: thumbnails })
             .where(eq(insertables.id, insertable.id));
 
         return c.json({ success: true });

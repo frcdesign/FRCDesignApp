@@ -149,6 +149,9 @@ export interface QuantityParameterObj extends ParameterBase {
     unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
+/**
+ * A specific configuration, consisting of a mapping of parameterIds to the value.
+ */
 export type Configuration = Record<string, string>;
 
 /**

@@ -41,7 +41,10 @@ export abstract class OnshapeApi {
     }
 
     async getImage(path: string, options?: QueryOptions): Promise<ArrayBuffer> {
-        const res = await this._call("GET", path, options);
+        const res = await this._call("GET", path, {
+            ...options,
+            accept: "image/*"
+        });
         return res.arrayBuffer();
     }
 
@@ -71,9 +74,13 @@ export abstract class OnshapeApi {
     ): Promise<Response> {
         const params = createSearchParams(options?.query);
         const url = `${this._baseUrl}${path}?${params}`;
+        const headers = options?.accept
+            ? new Headers({ Accept: options.accept })
+            : undefined;
         const res = await this._request(method, url, {
             body: body !== undefined ? JSON.stringify(body) : undefined,
-            signal: options?.signal
+            signal: options?.signal,
+            headers
         });
         if (!res.ok) {
             const text = await res.text();
@@ -104,25 +111,28 @@ export class OAuthApi extends OnshapeApi {
         const res = await fetch(url, {
             ...init,
             method,
-            headers: this._makeHeaders()
+            headers: this._makeHeaders(init.headers)
         });
         if (res.status === 401) {
             this._accessToken = await this._refreshCallback();
             return fetch(url, {
                 ...init,
                 method,
-                headers: this._makeHeaders()
+                headers: this._makeHeaders(init.headers)
             });
         }
         return res;
     }
 
-    private _makeHeaders(): Headers {
-        return new Headers({
+    private _makeHeaders(overrides?: HeadersInit): Headers {
+        const headers = new Headers({
             Authorization: `Bearer ${this._accessToken}`,
             "Content-Type": "application/json",
             Accept: "application/json"
         });
+        if (overrides)
+            new Headers(overrides).forEach((v, k) => headers.set(k, v));
+        return headers;
     }
 }
 
@@ -147,11 +157,15 @@ export class KeyApi extends OnshapeApi {
         url: string,
         init: RequestInit
     ): Promise<Response> {
-        const headers = await this._makeHeaders(method, url);
+        const headers = await this._makeHeaders(method, url, init.headers);
         return fetch(url, { ...init, method, headers });
     }
 
-    private async _makeHeaders(method: string, url: string): Promise<Headers> {
+    private async _makeHeaders(
+        method: string,
+        url: string,
+        overrides?: HeadersInit
+    ): Promise<Headers> {
         const date = new Date().toUTCString();
         const nonce = crypto.randomUUID().replace(/-/g, "");
         const parsed = new URL(url);
@@ -175,7 +189,7 @@ export class KeyApi extends OnshapeApi {
         );
         const signature = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
 
-        return new Headers({
+        const headers = new Headers({
             Date: date,
             "On-Nonce": nonce,
             Authorization: `On ${this._accessKey}:HmacSHA256:${signature}`,
@@ -183,5 +197,8 @@ export class KeyApi extends OnshapeApi {
             "User-Agent": "Onshape App",
             Accept: "application/json"
         });
+        if (overrides)
+            new Headers(overrides).forEach((v, k) => headers.set(k, v));
+        return headers;
     }
 }

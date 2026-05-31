@@ -9,11 +9,11 @@
         ]
     },
     "scripts": {
-        "dev": "vite",
+        "dev": "wrangler d1 migrations apply db --local && vite",
         "build": "tsc -b && vite build",
         "lint": "eslint .",
         "preview": "npm run build && vite preview",
-        "deploy": "npm run build && wrangler deploy",
+        "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",
         "cf-typegen": "wrangler types",
         "prepare": "husky"
     },
