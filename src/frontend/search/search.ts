@@ -2,7 +2,7 @@ import MiniSearch, {
     Options,
     SearchResult as MiniSearchResult
 } from "minisearch";
-import { Favorites, LibraryOut } from "../../shared/api-models";
+import { LibraryOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
 
 /**
@@ -139,7 +139,7 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters,
-    favoriteElements?: Favorites
+    favoritedInsertableIds?: Set<string>
 ): SearchResult {
     const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
 
@@ -154,10 +154,7 @@ export function doSearch(
             }
 
             if (filters?.isFavorite) {
-                // If there are no favorites, this element is not a favorite
-                if (!favoriteElements) {
-                    return false;
-                } else if (favoriteElements[searchResult.id] === undefined) {
+                if (!favoritedInsertableIds?.has(searchResult.id)) {
                     return false;
                 }
             }

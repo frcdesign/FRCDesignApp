@@ -4,7 +4,10 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { ReactNode, useCallback, useState } from "react";
-import { InsertableOut } from "../../shared/api-models";
+import {
+    getFavoriteForInsertable,
+    InsertableOut
+} from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import {
     Button,
@@ -37,16 +40,16 @@ export function InsertMenu(): ReactNode {
     }
     return (
         <InsertMenuDialog
-            activeElementId={search.activeElementId}
+            activeInsertableId={search.activeInsertableId}
             defaultConfiguration={search.defaultConfiguration}
         />
     );
 }
 function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
-    const elementId = props.activeElementId;
+    const insertableId = props.activeInsertableId;
     const favorites = useFavoritesQuery().data?.favorites;
 
-    const elements = useLibraryQuery().data?.insertables;
+    const insertables = useLibraryQuery().data?.insertables;
 
     const navigate = useNavigate();
     const closeDialog = useHandleCloseDialog();
@@ -55,20 +58,20 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         Configuration | undefined
     >(props.defaultConfiguration);
 
-    const element = elements ? elements[elementId] : undefined;
+    const insertable = insertables ? insertables[insertableId] : undefined;
 
-    if (!element || !favorites) {
+    if (!insertable || !favorites) {
         return null;
     }
 
-    const isFavorite = favorites[elementId] !== undefined;
+    const favorite = getFavoriteForInsertable(favorites, insertableId);
 
     let parameters: ReactNode = null;
-    if (element.configurationId) {
+    if (insertable.configurationId) {
         parameters = (
             <ConfigurationWrapper
-                configurationId={element.configurationId}
-                documentId={element.documentId}
+                configurationId={insertable.configurationId}
+                documentId={insertable.documentId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
             />
@@ -77,36 +80,36 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
 
     const actions = (
         <InsertButtons
-            element={element}
+            insertable={insertable}
             configuration={configuration}
-            isFavorite={isFavorite}
+            isFavorite={favorite !== undefined}
         />
     );
 
     return (
         <Dialog
             isOpen
-            title={element.name}
+            title={insertable.name}
             onClose={() => {
-                showRestoreToast(element, navigate, configuration);
+                showRestoreToast(insertable, navigate, configuration);
                 closeDialog();
             }}
             className="insert-menu"
         >
             <PreviewImageCard
-                path={element.path}
+                path={insertable.path}
                 configuration={configuration}
             />
             <DialogBody>{parameters}</DialogBody>
             <DialogFooter actions={actions}>
-                <FavoriteButton isFavorite={isFavorite} element={element} />
+                <FavoriteButton favorite={favorite} insertable={insertable} />
             </DialogFooter>
         </Dialog>
     );
 }
 
 interface InsertButtonsProps {
-    element: InsertableOut;
+    insertable: InsertableOut;
     configuration?: Configuration;
     isFavorite: boolean;
 }
@@ -115,10 +118,10 @@ interface InsertButtonsProps {
  * The Insert and Insert and fasten buttons in the insert menu.
  */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const { element, configuration, isFavorite } = props;
+    const { insertable, configuration, isFavorite } = props;
 
     const search = useSearch({ from: "/app" });
-    const insertMutation = useInsertMutation(element, configuration, {
+    const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
     const closeDialog = useHandleCloseDialog();
@@ -126,11 +129,12 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const isLoadingConfiguration =
         useIsFetching({
-            queryKey: ["configuration", element.configurationId]
+            queryKey: ["configuration", insertable.configurationId]
         }) > 0;
 
     const canFasten =
-        element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
+        insertable.supportsFasten &&
+        search.elementType === ElementType.ASSEMBLY;
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
@@ -163,13 +167,13 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 }
 
 function showRestoreToast(
-    element: InsertableOut,
+    insertable: InsertableOut,
     navigate: UseNavigateResult<string>,
     configuration?: Configuration
 ) {
     showToast(
         {
-            message: `Cancelled ${element.name}.`,
+            message: `Cancelled ${insertable.name}.`,
             intent: "primary",
             icon: "info-sign",
             timeout: 3000,
@@ -180,7 +184,7 @@ function showRestoreToast(
                         to: ".",
                         search: {
                             activeMenu: MenuType.INSERT_MENU,
-                            activeElementId: element.id,
+                            activeInsertableId: insertable.id,
                             defaultConfiguration: configuration
                         }
                     });
@@ -188,6 +192,6 @@ function showRestoreToast(
                 icon: "share"
             }
         },
-        `cancel-insert ${element.id}`
+        `cancel-insert ${insertable.id}`
     );
 }

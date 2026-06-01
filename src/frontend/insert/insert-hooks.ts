@@ -18,25 +18,24 @@ export interface InsertArgs {
 }
 
 /**
- * Creates a mutation for inserting an element.
- * @param onClick Callback function to call when the mutation is triggered.
+ * Creates a mutation for inserting an insertable.
  */
 export function useInsertMutation(
-    element: InsertableOut,
+    insertable: InsertableOut,
     configuration: Configuration | undefined,
     insertArgs: InsertArgs
 ) {
     const search = useSearch({ from: "/app" });
     const library = useLibrary();
 
-    const toastId = "insert-" + element.id;
+    const toastId = "insert-" + insertable.id;
 
     return useMutation({
-        mutationKey: ["insert", element.id],
+        mutationKey: ["insert", insertable.id],
         mutationFn: async (fasten: boolean) => {
             let endpoint;
             const body: Record<string, any> = {
-                ...element.path,
+                ...insertable.path,
                 configuration,
                 isFavorite: insertArgs.isFavorite,
                 isQuickInsert: insertArgs.isQuickInsert ?? false
@@ -45,38 +44,33 @@ export function useInsertMutation(
                 endpoint = "/add-to-assembly";
                 body.fasten = fasten;
             } else {
-                // Part studio derive also needs name and microversion id
                 endpoint = "/add-to-part-studio";
-                body.microversionId = element.microversionId;
-                body.name = element.name;
-                // Always use mate connector if the element supports fasten
-                body.useMateConnector = element.supportsFasten;
+                body.microversionId = insertable.microversionId;
+                body.name = insertable.name;
+                body.useMateConnector = insertable.supportsFasten;
             }
-            // Cancel any outstanding thumbnail queries
-            queryClient.cancelQueries({ queryKey: ["thumbnail"] });
+            await queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
-            showLoadingToast(`Inserting ${element.name}...`, toastId);
+            showLoadingToast(`Inserting ${insertable.name}...`, toastId);
             return apiPost(
                 endpoint + toLibraryPath(library) + toElementApiPath(search),
-                {
-                    body
-                }
+                { body }
             );
         },
         onError: getAppErrorHandler(
-            `Unexpectedly failed to insert ${element.name}.`,
+            `Unexpectedly failed to insert ${insertable.name}.`,
             toastId
         ),
         onSuccess: (result, fasten: boolean) => {
             if (fasten) {
                 sendOpenFeatureMessage(search, result.featureId);
                 showSuccessToast(
-                    `Successfully inserted ${element.name} and created a Fasten mate.`,
+                    `Successfully inserted ${insertable.name} and created a Fasten mate.`,
                     toastId
                 );
             } else {
                 showSuccessToast(
-                    `Successfully inserted ${element.name}.`,
+                    `Successfully inserted ${insertable.name}.`,
                     toastId
                 );
             }

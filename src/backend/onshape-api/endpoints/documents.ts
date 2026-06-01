@@ -21,7 +21,7 @@ export enum PartType {
 }
 
 /** Describes possible element (tab) types in a document. */
-export enum ElementType {
+export enum OnshapeElementType {
     PART_STUDIO = "PARTSTUDIO",
     ASSEMBLY = "ASSEMBLY",
     DRAWING = "DRAWING",
@@ -130,7 +130,7 @@ export function deleteDocument(
 export async function getDocumentElements(
     client: OnshapeApi,
     instancePath: InstancePath,
-    elementType?: ElementType
+    elementType?: OnshapeElementType
 ): Promise<any[]> {
     const query: Record<string, string | boolean> = { withThumbnails: false };
     if (elementType !== undefined) query.elementType = elementType;

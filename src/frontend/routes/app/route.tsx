@@ -76,7 +76,7 @@ export const Route = createFileRoute("/app")({
         library: search.settings?.library
     }),
     loader: async ({ context, deps }): Promise<AccessData> => {
-        const accessData = context.accessData!;
+        const accessData = context.accessData;
         await Promise.all([
             queryClient.prefetchQuery(
                 getLibraryQuery(deps.library, accessData)

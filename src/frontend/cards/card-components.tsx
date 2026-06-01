@@ -57,7 +57,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 }
 
 interface QuickInsertItemProps {
-    element: InsertableOut;
+    insertable: InsertableOut;
     configuration?: Configuration;
     isFavorite: boolean;
 }
@@ -66,15 +66,15 @@ interface QuickInsertItemProps {
  * MenuItems which can be used to quick insert a document.
  */
 export function QuickInsertItems(props: QuickInsertItemProps) {
-    const { element, configuration, isFavorite } = props;
+    const { insertable, configuration, isFavorite } = props;
     const search = useSearch({ from: "/app" });
 
-    const insertMutation = useInsertMutation(element, configuration, {
+    const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite,
         isQuickInsert: true
     });
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
-        element.elementType
+        insertable.elementType
     );
     const openAlert = useOpenPopup();
 
@@ -90,7 +90,8 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     );
 
     const supportsFasten =
-        element.supportsFasten && search.elementType === ElementType.ASSEMBLY;
+        insertable.supportsFasten &&
+        search.elementType === ElementType.ASSEMBLY;
 
     return (
         <>

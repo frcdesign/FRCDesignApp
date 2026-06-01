@@ -1,7 +1,10 @@
 import { Colors, Card } from "@blueprintjs/core";
 import { ReactNode } from "react";
-import { filterElements } from "../search/filter";
-import { InsertableOut } from "../../shared/api-models";
+import { filterInsertables } from "../search/filter";
+import {
+    getFavoriteForInsertable,
+    InsertableOut
+} from "../../shared/api-models";
 import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
@@ -44,24 +47,28 @@ export function FavoritesList(): ReactNode {
         );
     }
 
-    const elements = libraryQuery.data.insertables;
+    const insertables = libraryQuery.data.insertables;
 
     const orderedFavorites = favoritesQuery.data.favoriteOrder
         .map((favoriteId) => favoritesQuery.data.favorites[favoriteId])
         .filter((favorite) => !!favorite);
 
-    // Only ever show elements that aren't hidden
-    const favoriteElements = orderedFavorites
-        .map((favorite) => elements[favorite.id])
-        .filter((element) => !!element);
+    const favoriteInsertables = orderedFavorites
+        .map((favorite) => insertables[favorite.insertableId])
+        .filter((insertable) => !!insertable);
 
-    let filteredElements: InsertableOut[];
+    let filteredInsertables: InsertableOut[];
     let filterResult: FilterResult;
     let searchHits: Record<string, SearchHit> = {};
     if (uiState.searchQuery) {
         if (!searchDbQuery.data) {
             return <SectionError title="Failed to load search database." />;
         }
+        const favoriteInsertableIds = new Set(
+            Object.values(favoritesQuery.data.favorites).map(
+                (f) => f.insertableId
+            )
+        );
         const searchResults = doSearch(
             searchDbQuery.data,
             uiState.searchQuery,
@@ -69,36 +76,33 @@ export function FavoritesList(): ReactNode {
                 vendors: uiState.vendorFilters,
                 isFavorite: true
             },
-            favoritesQuery.data.favorites
+            favoriteInsertableIds
         );
 
-        // Search hits are just ids and positions, so convert back into array of elements
-        filteredElements = searchResults.hits
-            .map((hit) => elements[hit.id])
-            .filter((element) => !!element);
+        filteredInsertables = searchResults.hits
+            .map((hit) => insertables[hit.id])
+            .filter((insertable) => !!insertable);
 
         filterResult = searchResults.filtered;
 
-        // To get the search hits later build a map of actual hits as well
         searchHits = searchResults.hits.reduce(
-            (searchHits, hit) => {
-                searchHits[hit.id] = hit;
-                return searchHits;
+            (acc, hit) => {
+                acc[hit.id] = hit;
+                return acc;
             },
             {} as Record<string, SearchHit>
         );
     } else {
-        const filterElementResult = filterElements(favoriteElements, {
+        const filterResult2 = filterInsertables(favoriteInsertables, {
             vendors: uiState.vendorFilters,
-            // Only elements which haven't been disabled can be shown
             isVisible: true
         });
 
-        filteredElements = filterElementResult.elements;
-        filterResult = filterElementResult.filtered;
+        filteredInsertables = filterResult2.insertables;
+        filterResult = filterResult2.filtered;
     }
 
-    if (filteredElements.length === 0) {
+    if (filteredInsertables.length === 0) {
         return (
             <NoSearchResultError
                 objectLabel="favorite"
@@ -108,8 +112,6 @@ export function FavoritesList(): ReactNode {
     }
 
     let callout: ReactNode = null;
-    // Favorites specifically are displayed inline inside a ListContainer, so we need to wrap a custom Card around it
-    // So we can't rely on SearchCallout returning null :(
     if (filterResult.byDocument > 0 || filterResult.byVendor > 0) {
         callout = (
             <Card className="item-card" style={{ padding: "0px" }}>
@@ -118,18 +120,20 @@ export function FavoritesList(): ReactNode {
         );
     }
 
-    const cards = filteredElements.map((element: InsertableOut) => {
-        // Fetch the favorite again so we have it's data
-        const favorite = favoritesQuery.data.favorites[element.id];
+    const cards = filteredInsertables.map((insertable: InsertableOut) => {
+        const favorite = getFavoriteForInsertable(
+            favoritesQuery.data.favorites,
+            insertable.id
+        );
         if (!favorite) {
             return null; // Shouldn't happen
         }
         return (
             <FavoriteCard
                 key={favorite.id}
-                element={element}
+                insertable={insertable}
                 favorite={favorite}
-                searchHit={searchHits[element.id]}
+                searchHit={searchHits[insertable.id]}
             />
         );
     });

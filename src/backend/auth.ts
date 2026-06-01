@@ -1,10 +1,9 @@
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { OAuthApi } from "./onshape-api/onshape-api";
-import { AppBindings, type AppContext } from "./app";
+import { type AppContext, getApp } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
-import { Hono } from "hono";
 import { ping } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
@@ -33,7 +32,7 @@ export async function getOnshapeApiForSessionId(
             .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
             .then(makeAuthTokens);
 
-        saveTokens(kv, sessionId, newTokens);
+        void saveTokens(kv, sessionId, newTokens);
 
         return newTokens.accessToken;
     };
@@ -57,8 +56,12 @@ export async function isAuthenticated(c: AppContext) {
 }
 
 export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
+    const cached = c.get("onshapeApi");
+    if (cached) return cached;
     const sessionId = getSessionId(c);
-    return getOnshapeApiForSessionId(c.env.KV, sessionId);
+    const api = await getOnshapeApiForSessionId(c.env.KV, sessionId);
+    c.set("onshapeApi", api);
+    return api;
 }
 
 function getOauthClient(): OAuth2Client {
@@ -68,7 +71,7 @@ function getOauthClient(): OAuth2Client {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-export const authRoutes = new Hono<{ Bindings: AppBindings }>();
+export const authRoutes = getApp();
 
 authRoutes.get("/sign-in", async (c) => {
     const query = c.req.query();
@@ -178,7 +181,7 @@ async function getSession(
     const session = JSON.parse(raw);
     session.sessionId = sessionId;
 
-    c.env.KV.delete(`login-session:${sessionId}`);
+    void c.env.KV.delete(`login-session:${sessionId}`);
     return session;
 }
 

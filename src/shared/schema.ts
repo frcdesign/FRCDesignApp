@@ -1,15 +1,11 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { FastenInfo, Library, Theme } from "./types";
+import { ElementType, FastenInfo, Library, Theme } from "./types";
 import { ThumbnailUrls } from "./types";
 import { Configuration, ParameterObj } from "./configuration-models";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
-    cacheVersion: integer("cache_version").notNull().default(0),
-    documentOrder: text("document_order", { mode: "json" })
-        .$type<string[]>()
-        .notNull()
-        .default([])
+    cacheVersion: integer("cache_version").notNull().default(0)
 });
 
 export const documents = sqliteTable("documents", {
@@ -22,10 +18,7 @@ export const documents = sqliteTable("documents", {
     sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
         .notNull()
         .default(false),
-    insertableOrder: text("insertable_order", { mode: "json" })
-        .$type<string[]>()
-        .notNull()
-        .default([]),
+    sortOrder: integer("sort_order").notNull().default(0),
     thumbnailUrls: text("thumbnail_urls", {
         mode: "json"
     }).$type<ThumbnailUrls>()
@@ -45,7 +38,7 @@ export const insertables = sqliteTable(
             .notNull()
             .references(() => libraries.id),
         name: text("name").notNull(),
-        elementType: text("element_type").notNull(),
+        elementType: text("element_type").notNull().$type<ElementType>(),
         microversionId: text("microversion_id").notNull(),
         versionName: text("version_name").notNull(),
         versionCreatedAt: text("version_created_at").notNull(),
@@ -58,6 +51,8 @@ export const insertables = sqliteTable(
         supportsFasten: integer("supports_fasten", { mode: "boolean" })
             .notNull()
             .default(false),
+        instanceId: text("instance_id").notNull(),
+        sortOrder: integer("sort_order").notNull().default(0),
         vendors: text("vendors", { mode: "json" })
             .$type<string[]>()
             .notNull()
@@ -72,26 +67,16 @@ export const insertables = sqliteTable(
     (t) => [unique().on(t.elementId, t.documentId)]
 );
 
-export const configurations = sqliteTable(
-    "configurations",
-    {
-        id: text("id")
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        elementId: text("element_id").notNull(),
-        documentId: text("document_id")
-            .notNull()
-            .references(() => documents.id, { onDelete: "cascade" }),
-        libraryId: text("library_id")
-            .notNull()
-            .references(() => libraries.id),
-        parameters: text("parameters", { mode: "json" })
-            .$type<ParameterObj[]>()
-            .notNull()
-            .default([])
-    },
-    (t) => [unique().on(t.elementId, t.documentId)]
-);
+export const configurations = sqliteTable("configurations", {
+    id: text("id")
+        .primaryKey()
+        .notNull()
+        .references(() => insertables.id, { onDelete: "cascade" }),
+    parameters: text("parameters", { mode: "json" })
+        .$type<ParameterObj[]>()
+        .notNull()
+        .default([])
+});
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
@@ -105,6 +90,9 @@ export const users = sqliteTable("users", {
 export const favorites = sqliteTable(
     "favorites",
     {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
         userId: text("user_id")
             .notNull()
             .references(() => users.id),

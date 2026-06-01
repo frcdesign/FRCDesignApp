@@ -31,7 +31,7 @@ export function evaluateCondition(
         const parameter = parameters.find(
             (parameter) => parameter.id === condition.id
         );
-        if (!parameter || parameter.type != ConfigurationParameterType.ENUM) {
+        if (parameter?.type != ConfigurationParameterType.ENUM) {
             throw new Error(
                 "Visibility condition does not target a valid enum parameter."
             );

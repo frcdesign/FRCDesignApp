@@ -17,7 +17,7 @@ export type MenuDialogProps<T extends MenuParams> = Omit<T, "activeMenu">;
 export interface InsertMenuParams {
     activeMenu: MenuType.INSERT_MENU;
     // Cannot use elementId since that's already used by OnshapeData
-    activeElementId: string;
+    activeInsertableId: string;
     defaultConfiguration?: Configuration;
 }
 
@@ -49,12 +49,12 @@ export function useHandleCloseDialog() {
     const navigate = useNavigate();
 
     return useCallback(() => {
-        navigate({
+        void navigate({
             to: ".",
             search: {
                 // Attempt to clear search params, although this doesn't really have any functional impact
                 activeMenu: undefined,
-                activeElementId: undefined,
+                activeInsertableId: undefined,
                 selectedDocumentId: undefined,
                 defaultConfiguration: undefined,
                 favoriteId: undefined

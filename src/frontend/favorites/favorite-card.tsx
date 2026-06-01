@@ -13,14 +13,14 @@ import {
 } from "@blueprintjs/core";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
-import { FavoriteButton, FavoriteElementItem } from "./favorite-button";
+import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
     ContextMenuButton,
     OpenDocumentItems,
     QuickInsertItems
 } from "../cards/card-components";
-import { useIsElementHidden } from "../cards/card-hooks";
+import { useIsInsertableHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { useUiState } from "../api-utils/ui-state";
@@ -32,23 +32,23 @@ import { SearchHit } from "../search/search";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 
 interface FavoriteCardProps {
-    element: InsertableOut;
+    insertable: InsertableOut;
     favorite: Favorite;
     searchHit?: SearchHit;
 }
 
 /**
- * A card for displaying a Favorited element directly to the user.
- * Very similar in nature to an ElementCard but with a few tweaks.
+ * A card for displaying a favorited insertable directly to the user.
+ * Very similar in nature to an InsertableCard but with a few tweaks.
  */
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
-    const { element, favorite, searchHit } = props;
+    const { insertable, favorite, searchHit } = props;
 
     const navigate = useNavigate();
 
-    const isHidden = useIsElementHidden(element);
+    const isHidden = useIsInsertableHidden(insertable);
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
-        element.elementType
+        insertable.elementType
     );
     const openAlert = useOpenPopup();
 
@@ -57,7 +57,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     }
 
     return (
-        <FavoriteContextMenu element={element} favorite={favorite}>
+        <FavoriteContextMenu insertable={insertable} favorite={favorite}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
                 <>
                     <Card
@@ -70,11 +70,11 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
                                 return;
                             }
-                            navigate({
+                            void navigate({
                                 to: ".",
                                 search: {
                                     activeMenu: MenuType.INSERT_MENU,
-                                    activeElementId: element.id,
+                                    activeInsertableId: insertable.id,
                                     defaultConfiguration:
                                         favorite.defaultConfiguration
                                 }
@@ -83,12 +83,15 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     >
                         <CardTitle
                             disabled={isAssemblyInPartStudio}
-                            title={element.name}
-                            thumbnailUrls={element.thumbnailUrls}
+                            title={insertable.name}
+                            thumbnailUrls={insertable.thumbnailUrls}
                             searchHit={searchHit}
                         />
                         <div className="item-card-right-content">
-                            <FavoriteButton isFavorite element={element} />
+                            <FavoriteButton
+                                favorite={favorite}
+                                insertable={insertable}
+                            />
                             <ContextMenuButton
                                 onClick={ctxMenuProps.onContextMenu}
                             />
@@ -102,13 +105,13 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
 }
 
 interface FavoriteContextMenuProps {
-    element: InsertableOut;
+    insertable: InsertableOut;
     favorite: Favorite;
     children: any;
 }
 
 function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
-    const { children, element, favorite } = props;
+    const { children, insertable, favorite } = props;
 
     const uiState = useUiState()[0];
     const navigate = useNavigate();
@@ -120,7 +123,7 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
     const menu = (
         <Menu>
             <QuickInsertItems
-                element={element}
+                insertable={insertable}
                 configuration={favorite.defaultConfiguration}
                 isFavorite
             />
@@ -130,11 +133,11 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
                 text="Edit default configuration"
                 intent="primary"
                 onClick={() => {
-                    if (element.configurationId === undefined) {
+                    if (insertable.configurationId === undefined) {
                         openAlert(AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION);
                         return;
                     }
-                    navigate({
+                    void navigate({
                         to: ".",
                         search: {
                             activeMenu: MenuType.FAVORITE_MENU,
@@ -158,9 +161,12 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
             />
             {/* Only show second divider when we have more than one favorite since otherwise there's no reorder items */}
             {favoriteOrder.length > 1 && <MenuDivider />}
-            <OpenDocumentItems path={element.path} />
+            <OpenDocumentItems path={insertable.path} />
             <MenuDivider />
-            <FavoriteElementItem isFavorite element={element} />
+            <FavoriteInsertableItem
+                favorite={favorite}
+                insertable={insertable}
+            />
         </Menu>
     );
     return <ContextMenu content={menu}>{children}</ContextMenu>;
@@ -189,14 +195,14 @@ function useSetFavoriteOrderMutation() {
                     return data;
                 })
             );
-            router.invalidate();
+            void router.invalidate();
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."
         ),
         onSettled: async () => {
             await queryClient.invalidateQueries({ queryKey });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 }

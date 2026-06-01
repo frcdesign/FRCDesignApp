@@ -1,6 +1,5 @@
-import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type AppBindings } from "../app";
+import { getApp } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
@@ -8,7 +7,7 @@ import { getAppAccessLevel } from "../access-level-utils";
 import { users, libraries } from "../../shared/schema";
 import { Library, ContextData, Theme } from "../../shared/types";
 
-export const userRoutes = new Hono<{ Bindings: AppBindings }>();
+export const userRoutes = getApp();
 
 /** GET /api/context-data */
 userRoutes.get("/context-data", async (c) => {

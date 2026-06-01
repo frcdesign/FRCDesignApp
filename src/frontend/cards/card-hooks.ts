@@ -54,16 +54,17 @@ export function useSetVisibilityMutation(
 }
 
 /**
- * Returns true if the current element should be hidden from the current user.
- * Note this is different from whether the element is visible since admins can always see hidden elements.
+ * Returns true if the insertable should be hidden from the current user.
+ * Note this is different from whether the insertable is visible since admins can always see hidden insertables.
  */
-export function useIsElementHidden(element: InsertableOut): boolean {
+export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     const loaderData = useLoaderData({ from: "/app" });
     return useMemo(() => {
         return (
-            !element.isVisible && hasUserAccess(loaderData.currentAccessLevel)
+            !insertable.isVisible &&
+            hasUserAccess(loaderData.currentAccessLevel)
         );
-    }, [element.isVisible, loaderData.currentAccessLevel]);
+    }, [insertable.isVisible, loaderData.currentAccessLevel]);
 }
 
 export function useReloadThumbnailMutation(path: InstancePath | ElementPath) {

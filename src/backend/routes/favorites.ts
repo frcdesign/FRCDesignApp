@@ -1,19 +1,14 @@
-import { Hono } from "hono";
 import { and, asc, eq } from "drizzle-orm";
-import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
+import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
 import { users, favorites } from "../../shared/schema";
-import {
-    type Favorite,
-    type Favorites,
-    type FavoritesData
-} from "../../shared/api-models";
+import { type Favorite, type FavoritesData } from "../../shared/api-models";
 import { type Library } from "../../shared/types";
 import { type Configuration } from "../../shared/configuration-models";
 
-export const favoriteRoutes = new Hono<{ Bindings: AppBindings }>();
+export const favoriteRoutes = getApp();
 
 async function getFavorites(
     db: ReturnType<typeof getDb>,
@@ -29,15 +24,17 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
-    const favoritesOut: Favorites = {};
+    const favoritesOut: Record<string, Favorite> = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
-        favoritesOut[row.insertableId] = {
-            id: row.insertableId,
+        const fav: Favorite = {
+            id: row.id,
+            insertableId: row.insertableId,
             library,
             defaultConfiguration: row.defaultConfiguration ?? undefined
-        } satisfies Favorite;
-        favoriteOrder.push(row.insertableId);
+        };
+        favoritesOut[row.id] = fav;
+        favoriteOrder.push(row.id);
     }
     return { favorites: favoritesOut, favoriteOrder };
 }
@@ -57,7 +54,9 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
+    const id = c.req.query("id");
     if (!insertableId) return c.json({ error: "insertableId required" }, 400);
+    if (!id) return c.json({ error: "id required" }, 400);
 
     const db = getDb(c.env.DB);
 
@@ -74,6 +73,7 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     await db
         .insert(favorites)
         .values({
+            id,
             userId,
             libraryId: library,
             insertableId,
@@ -84,61 +84,35 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** DELETE /api/favorites/library/:library */
-favoriteRoutes.delete("/favorites" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
-    const insertableId = c.req.query("insertableId");
-    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-
+/** DELETE /api/favorites/:favoriteId */
+favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
+    const favoriteId = c.req.param("favoriteId");
     const db = getDb(c.env.DB);
-    await db
-        .delete(favorites)
-        .where(
-            and(
-                eq(favorites.userId, userId),
-                eq(favorites.libraryId, library),
-                eq(favorites.insertableId, insertableId)
-            )
-        );
-
+    await db.delete(favorites).where(eq(favorites.id, favoriteId));
     return c.json({ success: true });
 });
 
 /** POST /api/favorite-order/library/:library */
 favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
     const body = await c.req.json<{ favoriteOrder: string[] }>();
 
     const db = getDb(c.env.DB);
     await Promise.all(
-        body.favoriteOrder.map((insertableId, i) =>
+        body.favoriteOrder.map((id, i) =>
             db
                 .update(favorites)
                 .set({ sortOrder: i })
-                .where(
-                    and(
-                        eq(favorites.userId, userId),
-                        eq(favorites.libraryId, library),
-                        eq(favorites.insertableId, insertableId)
-                    )
-                )
+                .where(eq(favorites.id, id))
         )
     );
 
     return c.json({ success: true });
 });
 
-/** POST /api/default-configuration/library/:library */
-favoriteRoutes.post("/default-configuration" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
+/** POST /api/default-configuration/:favoriteId */
+favoriteRoutes.post("/default-configuration/:favoriteId", async (c) => {
+    const favoriteId = c.req.param("favoriteId");
     const body = await c.req.json<{
-        insertableId: string;
         defaultConfiguration: Configuration;
     }>();
 
@@ -146,13 +120,7 @@ favoriteRoutes.post("/default-configuration" + libraryRoute(), async (c) => {
     await db
         .update(favorites)
         .set({ defaultConfiguration: body.defaultConfiguration })
-        .where(
-            and(
-                eq(favorites.userId, userId),
-                eq(favorites.libraryId, library),
-                eq(favorites.insertableId, body.insertableId)
-            )
-        );
+        .where(eq(favorites.id, favoriteId));
 
     return c.json({ success: true });
 });

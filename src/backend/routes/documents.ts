@@ -1,8 +1,7 @@
-import { Hono } from "hono";
-import { and, eq, inArray } from "drizzle-orm";
-import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
-import { getSessionId } from "../auth";
+import { getOnshapeApi, getSessionId } from "../auth";
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorAccess } from "../access-level-utils";
@@ -15,7 +14,7 @@ import {
 } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
 
-export const documentRoutes = new Hono<{ Bindings: AppBindings }>();
+export const documentRoutes = getApp();
 
 /** POST /api/reload-documents/library/:library?forceReload=true */
 documentRoutes.post("/reload-documents" + libraryRoute(), async (c) => {
@@ -28,16 +27,15 @@ documentRoutes.post("/reload-documents" + libraryRoute(), async (c) => {
     const db = getDb(c.env.DB);
     await db.insert(libraries).values({ id: library }).onConflictDoNothing();
 
-    const lib = await db
-        .select({ documentOrder: libraries.documentOrder })
-        .from(libraries)
-        .where(eq(libraries.id, library))
-        .get();
-
-    const documentOrder: string[] = lib?.documentOrder ?? [];
+    const docs = await db
+        .select({ id: documents.id })
+        .from(documents)
+        .where(eq(documents.libraryId, library))
+        .orderBy(asc(documents.sortOrder))
+        .all();
 
     const instances = await Promise.all(
-        documentOrder.map((documentId) => {
+        docs.map(({ id: documentId }) => {
             const params: LoadDocumentParams = {
                 documentId,
                 libraryId: library,
@@ -119,17 +117,24 @@ documentRoutes.post("/document-order" + libraryRoute(), async (c) => {
     const body = await c.req.json<{ documentOrder: string[] }>();
 
     const db = getDb(c.env.DB);
-    await db
-        .update(libraries)
-        .set({ documentOrder: body.documentOrder })
-        .where(eq(libraries.id, library));
+    await Promise.all(
+        body.documentOrder.map((id, i) =>
+            db
+                .update(documents)
+                .set({ sortOrder: i })
+                .where(
+                    and(eq(documents.id, id), eq(documents.libraryId, library))
+                )
+        )
+    );
 
     return c.json({ success: true });
 });
 
 /** POST /api/document/library/:library — add a new document */
 documentRoutes.post("/document" + libraryRoute(), async (c) => {
-    const onshapeApi = await requireEditorAccess(c);
+    await requireEditorAccess(c);
+    const onshapeApi = await getOnshapeApi(c);
     const library = getLibraryParam(c);
     const body = await c.req.json<{
         newDocumentId: string;
@@ -170,12 +175,19 @@ documentRoutes.post("/document" + libraryRoute(), async (c) => {
     const db = getDb(c.env.DB);
 
     await db.insert(libraries).values({ id: library }).onConflictDoNothing();
-    const lib = await db
-        .select({ documentOrder: libraries.documentOrder })
-        .from(libraries)
-        .where(eq(libraries.id, library))
+
+    const existingDoc = await db
+        .select({ id: documents.id })
+        .from(documents)
+        .where(
+            and(
+                eq(documents.id, body.newDocumentId),
+                eq(documents.libraryId, library)
+            )
+        )
         .get();
-    if ((lib?.documentOrder ?? []).includes(body.newDocumentId)) {
+
+    if (existingDoc) {
         return c.json(
             {
                 type: "handled",
@@ -212,20 +224,6 @@ documentRoutes.delete("/document" + libraryRoute(), async (c) => {
         .where(
             and(eq(documents.id, documentId), eq(documents.libraryId, library))
         );
-
-    const lib = await db
-        .select({ documentOrder: libraries.documentOrder })
-        .from(libraries)
-        .where(eq(libraries.id, library))
-        .get();
-
-    const documentOrder: string[] = lib?.documentOrder ?? [];
-    const newOrder = documentOrder.filter((id) => id !== documentId);
-
-    await db
-        .update(libraries)
-        .set({ documentOrder: newOrder })
-        .where(eq(libraries.id, library));
 
     return c.json({ success: true });
 });

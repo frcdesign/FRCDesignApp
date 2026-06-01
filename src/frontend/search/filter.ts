@@ -2,18 +2,7 @@ import { InsertableOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
 import { FilterResult } from "./search";
 
-export enum SortOrder {
-    DEFAULT = "default",
-    ASCENDING = "asc",
-    DESCENDING = "desc"
-}
-
 export interface FilterArgs {
-    /**
-     * An order to sort in.
-     * @default SortOrder.DEFAULT
-     */
-    sortOrder?: SortOrder;
     /**
      * A list of one or more vendors to keep.
      */
@@ -29,53 +18,41 @@ interface VendorFilterResult extends FilterResult {
 }
 
 /**
- * A list of elements which have (possibly) been filtered down.
+ * A list of insertables which have (possibly) been filtered down.
  */
-export interface FilteredElements {
-    elements: InsertableOut[];
+export interface FilteredInsertables {
+    insertables: InsertableOut[];
     filtered: VendorFilterResult;
 }
 
 /**
- * Returns an ordered list of elements in a document and tracks how many were filtered by vendors.
+ * Returns an ordered list of insertables in a document and tracks how many were filtered by vendors.
  * Does not include handling for being in a document since this should only be used when search is not active.
  */
-export function filterElements(
-    elements: InsertableOut[],
+export function filterInsertables(
+    insertables: InsertableOut[],
     args: FilterArgs
-): FilteredElements {
-    let filteredElements = [...elements];
+): FilteredInsertables {
+    let filtered = [...insertables];
 
     // Filter by visibility
     if (args.isVisible) {
-        filteredElements = filteredElements.filter(
-            (element) => element.isVisible
-        );
+        filtered = filtered.filter((ins) => ins.isVisible);
     }
 
     // Filter by vendors and track how many were removed
     let filteredByVendor = 0;
     if (args.vendors && args.vendors.length > 0) {
         const vendorSet = new Set(args.vendors);
-        const beforeCount = filteredElements.length;
-        filteredElements = filteredElements.filter(
-            (element) =>
-                element.vendors &&
-                element.vendors.some((vendor) => vendorSet.has(vendor))
+        const beforeCount = filtered.length;
+        filtered = filtered.filter((ins) =>
+            ins?.vendors.some((vendor) => vendorSet.has(vendor))
         );
-        filteredByVendor = beforeCount - filteredElements.length;
-    }
-
-    // Sorting
-    if (args.sortOrder && args.sortOrder !== SortOrder.DEFAULT) {
-        filteredElements.sort((a, b) => {
-            const cmp = a.name.localeCompare(b.name);
-            return args.sortOrder === SortOrder.ASCENDING ? cmp : -cmp;
-        });
+        filteredByVendor = beforeCount - filtered.length;
     }
 
     return {
-        elements: filteredElements,
+        insertables: filtered,
         filtered: { byDocument: 0, byVendor: filteredByVendor }
     };
 }

@@ -8,14 +8,19 @@ import {
 } from "@blueprintjs/core";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { InsertableOut, LibraryOut } from "../../shared/api-models";
+import {
+    Favorite,
+    getFavoriteForInsertable,
+    InsertableOut,
+    LibraryOut
+} from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
 import {
     FavoriteButton,
-    FavoriteElementItem
+    FavoriteInsertableItem
 } from "../favorites/favorite-button";
-import { useIsElementHidden, useSetVisibilityMutation } from "./card-hooks";
+import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
     AdminSubmenu,
     CardTitle,
@@ -41,8 +46,8 @@ import { toLibraryPath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 
-interface ElementCardProps extends PropsWithChildren {
-    element: InsertableOut;
+interface InsertableCardProps extends PropsWithChildren {
+    insertable: InsertableOut;
     searchHit?: SearchHit;
     onClick?: () => void;
 }
@@ -50,16 +55,16 @@ interface ElementCardProps extends PropsWithChildren {
 /**
  * A card representing a part studio or assembly.
  */
-export function ElementCard(props: ElementCardProps): ReactNode {
-    const { element, searchHit } = props;
+export function InsertableCard(props: InsertableCardProps): ReactNode {
+    const { insertable, searchHit } = props;
     const navigate = useNavigate();
 
     const favorites = useFavoritesQuery().data?.favorites;
 
-    const isHidden = useIsElementHidden(element);
+    const isHidden = useIsInsertableHidden(insertable);
 
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
-        element.elementType
+        insertable.elementType
     );
     const openAlert = useOpenPopup();
 
@@ -67,10 +72,10 @@ export function ElementCard(props: ElementCardProps): ReactNode {
         return null;
     }
 
-    const isFavorite = favorites[element.id] !== undefined;
+    const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
     return (
-        <ElementContextMenu isFavorite={isFavorite} element={element}>
+        <InsertableContextMenu favorite={favorite} insertable={insertable}>
             {(ctxMenuProps: ContextMenuChildrenProps) => (
                 <>
                     <Card
@@ -92,7 +97,7 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                                 to: ".",
                                 search: {
                                     activeMenu: MenuType.INSERT_MENU,
-                                    activeElementId: element.id
+                                    activeInsertableId: insertable.id
                                 }
                             });
                         }}
@@ -100,14 +105,14 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                         <CardTitle
                             disabled={isAssemblyInPartStudio}
                             searchHit={searchHit}
-                            title={element.name}
-                            thumbnailUrls={element.thumbnailUrls}
-                            showHiddenTag={!element.isVisible}
+                            title={insertable.name}
+                            thumbnailUrls={insertable.thumbnailUrls}
+                            showHiddenTag={!insertable.isVisible}
                         />
                         <div className="item-card-right-content">
                             <FavoriteButton
-                                isFavorite={isFavorite}
-                                element={element}
+                                favorite={favorite}
+                                insertable={insertable}
                             />
                             <ContextMenuButton
                                 onClick={ctxMenuProps.onContextMenu}
@@ -117,28 +122,34 @@ export function ElementCard(props: ElementCardProps): ReactNode {
                     {ctxMenuProps.popover}
                 </>
             )}
-        </ElementContextMenu>
+        </InsertableContextMenu>
     );
 }
 
-interface ElementContextMenuProps {
-    isFavorite: boolean;
-    element: InsertableOut;
+interface InsertableContextMenuProps {
+    favorite: Favorite | undefined;
+    insertable: InsertableOut;
     children: any;
 }
 
-export function ElementContextMenu(props: ElementContextMenuProps) {
-    const { children, isFavorite, element } = props;
+export function InsertableContextMenu(props: InsertableContextMenuProps) {
+    const { children, favorite, insertable } = props;
 
     const menu = (
         <Menu>
-            <QuickInsertItems element={element} isFavorite={isFavorite} />
+            <QuickInsertItems
+                insertable={insertable}
+                isFavorite={favorite !== undefined}
+            />
             <MenuDivider />
-            <FavoriteElementItem isFavorite={isFavorite} element={element} />
+            <FavoriteInsertableItem
+                favorite={favorite}
+                insertable={insertable}
+            />
             <MenuDivider />
-            <OpenDocumentItems path={element.path} />
+            <OpenDocumentItems path={insertable.path} />
             <AdminSubmenu>
-                <ElementAdminContextMenu element={element} />
+                <InsertableAdminContextMenu insertable={insertable} />
             </AdminSubmenu>
         </Menu>
     );
@@ -146,20 +157,22 @@ export function ElementContextMenu(props: ElementContextMenuProps) {
     return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
-interface ElementAdminContextMenuProps {
-    element: InsertableOut;
+interface InsertableAdminContextMenuProps {
+    insertable: InsertableOut;
 }
 
-export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
-    const { element } = props;
+export function InsertableAdminContextMenu(
+    props: InsertableAdminContextMenuProps
+) {
+    const { insertable } = props;
 
     const library = useLibrary();
     const loaderData = useLoaderData({ from: "/app" });
     const router = useRouter();
 
     const setVisibilityMutation = useSetVisibilityMutation(
-        [element.id],
-        !element.isVisible
+        [insertable.id],
+        !insertable.isVisible
     );
 
     const setOpenCompositeMutation = useMutation({
@@ -167,9 +180,9 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
         mutationFn: () => {
             return apiPost("/is-open-composite" + toLibraryPath(library), {
                 body: {
-                    isOpenComposite: !element.isOpenComposite,
-                    documentId: element.documentId,
-                    elementId: element.id
+                    isOpenComposite: !insertable.isOpenComposite,
+                    documentId: insertable.documentId,
+                    insertableId: insertable.id
                 }
             });
         },
@@ -178,10 +191,9 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
             queryClient.setQueryData(
                 libraryQueryKey(library, loaderData),
                 getQueryUpdater((data: LibraryOut) => {
-                    const currentElement = data.insertables[element.id];
-                    if (currentElement) {
-                        currentElement.isOpenComposite =
-                            !element.isOpenComposite;
+                    const current = data.insertables[insertable.id];
+                    if (current) {
+                        current.isOpenComposite = !insertable.isOpenComposite;
                     }
                     return data;
                 })
@@ -201,11 +213,9 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
             return apiPost(
                 "/supports-fasten" +
                     toLibraryPath(library) +
-                    toElementApiPath(element.path),
+                    toElementApiPath(insertable.path),
                 {
-                    body: {
-                        supportsFasten
-                    }
+                    body: { supportsFasten }
                 }
             );
         },
@@ -223,36 +233,32 @@ export function ElementAdminContextMenu(props: ElementAdminContextMenuProps) {
     return (
         <>
             <MenuItem
-                onClick={() => {
-                    setVisibilityMutation.mutate();
-                }}
-                intent={element.isVisible ? "danger" : "primary"}
-                icon={element.isVisible ? "eye-off" : "eye-open"}
-                text={element.isVisible ? "Hide element" : "Show element"}
+                onClick={() => setVisibilityMutation.mutate()}
+                intent={insertable.isVisible ? "danger" : "primary"}
+                icon={insertable.isVisible ? "eye-off" : "eye-open"}
+                text={insertable.isVisible ? "Hide element" : "Show element"}
             />
-            <ReloadThumbnailMenuItem path={element.path} />
-            {element.elementType === ElementType.PART_STUDIO && (
+            <ReloadThumbnailMenuItem path={insertable.path} />
+            {insertable.elementType === ElementType.PART_STUDIO && (
                 <MenuItem
-                    onClick={() => {
-                        setOpenCompositeMutation.mutate();
-                    }}
-                    intent={element.isOpenComposite ? "warning" : undefined}
-                    icon={element.isOpenComposite ? "disable" : "confirm"}
+                    onClick={() => setOpenCompositeMutation.mutate()}
+                    intent={insertable.isOpenComposite ? "warning" : undefined}
+                    icon={insertable.isOpenComposite ? "disable" : "confirm"}
                     text={
-                        element.isOpenComposite
+                        insertable.isOpenComposite
                             ? "No open composites"
                             : "Has open composite"
                     }
                 />
             )}
             <MenuItem
-                onClick={() => {
-                    setSupportsFastenMutation.mutate(!element.supportsFasten);
-                }}
-                intent={element.supportsFasten ? "danger" : "primary"}
-                icon={element.supportsFasten ? "disable" : "add"}
+                onClick={() =>
+                    setSupportsFastenMutation.mutate(!insertable.supportsFasten)
+                }
+                intent={insertable.supportsFasten ? "danger" : "primary"}
+                icon={insertable.supportsFasten ? "disable" : "add"}
                 text={
-                    element.supportsFasten
+                    insertable.supportsFasten
                         ? "Disable insert and fasten"
                         : "Enable Insert and fasten"
                 }

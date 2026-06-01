@@ -6,10 +6,9 @@ import { favoriteRoutes } from "./routes/favorites";
 import { thumbnailRoutes } from "./routes/thumbnails";
 import { documentRoutes } from "./routes/documents";
 import { configurationRoutes } from "./routes/configurations";
-import { Hono } from "hono";
-import { AppBindings } from "./app";
+import { getApp } from "./app";
 
-const app = new Hono<{ Bindings: AppBindings }>();
+const app = getApp();
 
 // Mount all API routes
 app.route("/api", userRoutes);

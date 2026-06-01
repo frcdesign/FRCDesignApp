@@ -93,19 +93,22 @@ export enum Library {
     FRC_DESIGN_LIB = "frc-design-lib",
     FTC_DESIGN_LIB = "ftc-design-lib",
     MKCAD = "mkcad"
-} /**
+}
+
+/**
  * The type of the Onshape tab the app is open in.
  */
-
 export enum ElementType {
     PART_STUDIO = "PARTSTUDIO",
     ASSEMBLY = "ASSEMBLY"
 }
+
 export interface FastenInfo {
     mateConnectorId: string;
     mateLocation: MateLocation;
     path: string[];
 }
+
 export enum MateLocation {
     Feature = "Feature",
     Part = "Part",

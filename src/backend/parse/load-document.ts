@@ -1,6 +1,14 @@
 import { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 import type { WorkflowStep } from "cloudflare:workers";
-import { and, eq, getTableColumns, notInArray, sql } from "drizzle-orm";
+import {
+    and,
+    asc,
+    eq,
+    getTableColumns,
+    inArray,
+    notInArray,
+    sql
+} from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
@@ -266,34 +274,76 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         await step.do("save-to-db", async () => {
             const db = getDb(this.env.DB);
 
-            // Add to document order if this is a new document
+            // Ensure library row exists
             await db
                 .insert(libraries)
                 .values({ id: libraryId })
                 .onConflictDoNothing();
-            const lib = await db
-                .select({ documentOrder: libraries.documentOrder })
-                .from(libraries)
-                .where(eq(libraries.id, libraryId))
-                .get();
-            const currentOrder: string[] = lib?.documentOrder ?? [];
+
+            // Update document sort order (insert after selectedDocumentId, or at end)
+            const orderedDocs = await db
+                .select({ id: documents.id })
+                .from(documents)
+                .where(eq(documents.libraryId, libraryId))
+                .orderBy(asc(documents.sortOrder))
+                .all();
+            const currentOrder = orderedDocs.map((d) => d.id);
             if (!currentOrder.includes(documentId)) {
-                const newOrder = [...currentOrder];
                 const insertAfter = selectedDocumentId
-                    ? newOrder.indexOf(selectedDocumentId)
+                    ? currentOrder.indexOf(selectedDocumentId)
                     : -1;
-                newOrder.splice(
-                    insertAfter !== -1 ? insertAfter + 1 : newOrder.length,
+                currentOrder.splice(
+                    insertAfter !== -1 ? insertAfter + 1 : currentOrder.length,
                     0,
                     documentId
                 );
-                await db
-                    .update(libraries)
-                    .set({ documentOrder: newOrder })
-                    .where(eq(libraries.id, libraryId));
+                await Promise.all(
+                    currentOrder.map((id, i) =>
+                        db
+                            .update(documents)
+                            .set({ sortOrder: i })
+                            .where(eq(documents.id, id))
+                    )
+                );
             }
+
             const validElementIds = contentsInfo.validElements.map(
                 (e) => e.elementId
+            );
+
+            // Pre-query existing insertable UUIDs so config upserts use the real IDs
+            const existingRows =
+                validElementIds.length > 0
+                    ? await db
+                          .select({
+                              id: insertables.id,
+                              elementId: insertables.elementId
+                          })
+                          .from(insertables)
+                          .where(
+                              and(
+                                  eq(insertables.documentId, documentId),
+                                  inArray(
+                                      insertables.elementId,
+                                      validElementIds
+                                  )
+                              )
+                          )
+                          .all()
+                    : [];
+
+            const insertableIdMap = new Map(
+                existingRows.map((r) => [r.elementId, r.id])
+            );
+            // Assign new UUIDs for elements not yet in DB
+            for (const e of contentsInfo.validElements) {
+                if (!insertableIdMap.has(e.elementId)) {
+                    insertableIdMap.set(e.elementId, crypto.randomUUID());
+                }
+            }
+
+            const sortOrderMap = new Map(
+                contentsInfo.orderedElementIds.map((id, i) => [id, i])
             );
 
             // Build a per-elementId lookup for validElements to avoid repeated .find()
@@ -301,44 +351,22 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 contentsInfo.validElements.map((e) => [e.elementId, e])
             );
 
-            const configUpserts = elementResults
-                .filter((r) => r.configuration !== null)
-                .map((r) =>
-                    db
-                        .insert(configurations)
-                        .values({
-                            elementId: r.elementId,
-                            documentId,
-                            libraryId,
-                            parameters: r.configuration!.parameters
-                        })
-                        .onConflictDoUpdate({
-                            target: [
-                                configurations.elementId,
-                                configurations.documentId
-                            ],
-                            set: conflictUpdateSet(configurations, [
-                                "id",
-                                "elementId",
-                                "documentId",
-                                "libraryId"
-                            ])
-                        })
-                );
-
             const insertableUpserts = elementResults.map((r) => {
                 const ve = validElementMap.get(r.elementId)!;
                 return db
                     .insert(insertables)
                     .values({
+                        id: insertableIdMap.get(r.elementId)!,
                         elementId: r.elementId,
                         documentId,
                         libraryId,
                         name: ve.name,
                         elementType: ve.elementType,
                         microversionId: ve.microversionId,
+                        instanceId: versionInfo.instanceId,
                         versionName: versionInfo.versionName,
                         versionCreatedAt: versionInfo.versionCreatedAt,
+                        sortOrder: sortOrderMap.get(r.elementId) ?? 0,
                         vendors: r.vendors,
                         thumbnailUrls: r.thumbnailUrls,
                         fastenInfo: r.fastenInfo,
@@ -352,10 +380,26 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                             "documentId",
                             "libraryId",
                             "isVisible",
-                            "isOpenComposite"
+                            "isOpenComposite",
+                            "sortOrder"
                         ])
                     });
             });
+
+            const configUpserts = elementResults
+                .filter((r) => r.configuration !== null)
+                .map((r) =>
+                    db
+                        .insert(configurations)
+                        .values({
+                            id: insertableIdMap.get(r.elementId)!,
+                            parameters: r.configuration!.parameters
+                        })
+                        .onConflictDoUpdate({
+                            target: configurations.id,
+                            set: conflictUpdateSet(configurations, ["id"])
+                        })
+                );
 
             const documentUpsert = db
                 .insert(documents)
@@ -364,7 +408,6 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     libraryId,
                     name: contentsInfo.docName,
                     instanceId: versionInfo.instanceId,
-                    insertableOrder: contentsInfo.orderedElementIds,
                     thumbnailUrls: docThumbnailUrls
                 })
                 .onConflictDoUpdate({
@@ -372,7 +415,8 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     set: conflictUpdateSet(documents, [
                         "id",
                         "libraryId",
-                        "sortAlphabetically"
+                        "sortAlphabetically",
+                        "sortOrder"
                     ])
                 });
 
@@ -393,29 +437,12 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                           .delete(insertables)
                           .where(eq(insertables.documentId, documentId));
 
-            const deleteStaleConfigurations =
-                validElementIds.length > 0
-                    ? db
-                          .delete(configurations)
-                          .where(
-                              and(
-                                  eq(configurations.documentId, documentId),
-                                  notInArray(
-                                      configurations.elementId,
-                                      validElementIds
-                                  )
-                              )
-                          )
-                    : db
-                          .delete(configurations)
-                          .where(eq(configurations.documentId, documentId));
-
+            // Stale configurations are cascade-deleted when their insertable is deleted
             await db.batch([
                 documentUpsert,
-                ...configUpserts,
                 ...insertableUpserts,
-                deleteStaleInsertables,
-                deleteStaleConfigurations
+                ...configUpserts,
+                deleteStaleInsertables
             ]);
         });
     }

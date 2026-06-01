@@ -1,8 +1,9 @@
-import { type Context } from "hono";
+import { type Context, Hono } from "hono";
 import type { LoadDocumentParams } from "./parse/load-document";
 import { type Library } from "../shared/types";
+import { type OAuthApi } from "./onshape-api/onshape-api";
 
-export type AppBindings = {
+export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
     ASSETS: Fetcher;
@@ -10,9 +11,22 @@ export type AppBindings = {
     LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
-};
+}
 
-export type AppContext = Context<{ Bindings: AppBindings }>;
+interface AppVariables {
+    onshapeApi: OAuthApi;
+}
+
+export interface AppContextEnv {
+    Bindings: AppBindings;
+    Variables: AppVariables;
+}
+
+export type AppContext = Context<AppContextEnv>;
+
+export function getApp() {
+    return new Hono<AppContextEnv>();
+}
 
 export function libraryRoute(): string {
     return "/library/:library";

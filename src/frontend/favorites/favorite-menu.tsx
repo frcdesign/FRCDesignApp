@@ -22,9 +22,13 @@ import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import { Configuration } from "../../shared/configuration-models";
-import { favoritesQueryKey, useLibraryQuery } from "../queries";
+import {
+    favoritesQueryKey,
+    useFavoritesQuery,
+    useLibraryQuery
+} from "../queries";
 import { getQueryUpdater } from "../common/utils";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { useLibrary } from "../api-utils/library";
 import { PageError } from "../common/app-zero-state";
 
 export function FavoriteMenu(): ReactNode {
@@ -47,7 +51,8 @@ function FavoriteMenuDialog(
 
     const router = useRouter();
     const library = useLibrary();
-    const elements = useLibraryQuery().data?.insertables;
+    const insertables = useLibraryQuery().data?.insertables;
+    const favoritesData = useFavoritesQuery().data;
 
     const [configuration, setConfiguration] = useState<
         Configuration | undefined
@@ -57,8 +62,8 @@ function FavoriteMenuDialog(
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            return apiPost("/default-configuration" + toLibraryPath(library), {
-                body: { favoriteId, defaultConfiguration: configuration }
+            return apiPost("/default-configuration/" + favoriteId, {
+                body: { defaultConfiguration: configuration }
             });
         },
         onMutate: async () => {
@@ -67,10 +72,8 @@ function FavoriteMenuDialog(
             queryClient.setQueryData(
                 queryKey,
                 getQueryUpdater((data: FavoritesData) => {
-                    if (data.favorites[favoriteId]) {
-                        data.favorites[favoriteId]!.defaultConfiguration =
-                            configuration;
-                    }
+                    const fav = data.favorites[favoriteId];
+                    if (fav) fav.defaultConfiguration = configuration;
                     return data;
                 })
             );
@@ -92,11 +95,15 @@ function FavoriteMenuDialog(
         }
     });
 
-    const element = elements ? elements[favoriteId] : undefined;
-    if (!element) {
+    const favorite = favoritesData?.favorites[favoriteId];
+    const insertable =
+        favorite && insertables
+            ? insertables[favorite.insertableId]
+            : undefined;
+    if (!insertable) {
         return null;
     }
-    if (!element.configurationId) {
+    if (!insertable.configurationId) {
         return (
             <PageError
                 title="Cannot edit unconfigurable favorite"
@@ -122,19 +129,19 @@ function FavoriteMenuDialog(
             isOpen
             icon={<HeartIcon />}
             className="insert-menu"
-            title={element.name}
+            title={insertable.name}
             onClose={closeDialog}
         >
             <PreviewImageCard
-                path={element.path}
+                path={insertable.path}
                 configuration={configuration}
             />
             <DialogBody>
                 <ConfigurationWrapper
                     configuration={configuration}
                     setConfiguration={setConfiguration}
-                    configurationId={element.configurationId}
-                    documentId={element.documentId}
+                    configurationId={insertable.configurationId}
+                    documentId={insertable.documentId}
                 />
             </DialogBody>
             <DialogFooter minimal actions={closeButton} />

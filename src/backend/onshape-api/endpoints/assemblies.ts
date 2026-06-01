@@ -9,7 +9,7 @@ import {
 } from "../../../shared/path";
 import { apiPath } from "../api-path";
 import { encodeConfiguration } from "./configurations";
-import { ElementType, PartType } from "./documents";
+import { OnshapeElementType, PartType } from "./documents";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
 
 /** Retrieves information about an assembly. */
@@ -83,7 +83,7 @@ export function addElementToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,
     elementPath: ElementPath,
-    elementType: ElementType,
+    elementType: OnshapeElementType,
     options: {
         configuration?: Record<string, string> | string;
         partTypes?: PartType[];
@@ -105,9 +105,9 @@ export function addElementToAssembly(
                 : encodeConfiguration(configuration);
     }
 
-    if (elementType === ElementType.ASSEMBLY) {
+    if (elementType === OnshapeElementType.ASSEMBLY) {
         instance.isAssembly = true;
-    } else if (elementType === ElementType.PART_STUDIO) {
+    } else if (elementType === OnshapeElementType.PART_STUDIO) {
         instance.includePartTypes = partTypes ?? [
             PartType.PARTS,
             PartType.COMPOSITE_PARTS

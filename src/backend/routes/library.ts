@@ -1,6 +1,5 @@
-import { Hono } from "hono";
-import { eq } from "drizzle-orm";
-import { type AppBindings, getLibraryParam, libraryRoute } from "../app";
+import { asc, eq } from "drizzle-orm";
+import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { requireEditorAccess } from "../access-level-utils";
 import {
@@ -9,12 +8,7 @@ import {
     insertables,
     configurations
 } from "../../shared/schema";
-import {
-    Library,
-    ThumbnailUrls,
-    ElementType,
-    Vendor
-} from "../../shared/types";
+import { Library, ThumbnailUrls, Vendor } from "../../shared/types";
 import {
     InsertableOut,
     LibraryOut,
@@ -26,59 +20,40 @@ async function getLibraryOut(
     db: ReturnType<typeof getDb>,
     library: Library
 ): Promise<LibraryOut> {
-    const lib = await db
+    const allDocuments = await db
         .select()
-        .from(libraries)
-        .where(eq(libraries.id, library))
-        .get();
+        .from(documents)
+        .where(eq(documents.libraryId, library))
+        .orderBy(asc(documents.sortOrder))
+        .all();
 
-    if (!lib) return { documentOrder: [], documents: {}, insertables: {} };
+    if (allDocuments.length === 0) {
+        return { documentOrder: [], documents: {}, insertables: {} };
+    }
 
-    const documentOrder: string[] = lib.documentOrder;
+    const documentOrder = allDocuments.map((d) => d.id);
 
-    const [allDocuments, allInsertables, allConfigurations] = await Promise.all(
-        [
-            db
-                .select()
-                .from(documents)
-                .where(eq(documents.libraryId, library))
-                .all(),
-            db
-                .select()
-                .from(insertables)
-                .where(eq(insertables.libraryId, library))
-                .all(),
-            db
-                .select({
-                    id: configurations.id,
-                    elementId: configurations.elementId,
-                    documentId: configurations.documentId
-                })
-                .from(configurations)
-                .where(eq(configurations.libraryId, library))
-                .all()
-        ]
-    );
+    const [allInsertables, allConfigurations] = await Promise.all([
+        db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.libraryId, library))
+            .orderBy(asc(insertables.sortOrder))
+            .all(),
+        db.select({ id: configurations.id }).from(configurations).all()
+    ]);
 
-    // Map (elementId:documentId) → configuration UUID for quick lookup
-    const configMap = new Map(
-        allConfigurations.map((c) => [`${c.elementId}:${c.documentId}`, c.id])
-    );
-
-    // Map (elementId:documentId) → insertable UUID to convert stored element IDs to UUIDs
-    const insertableUUIDMap = new Map(
-        allInsertables.map((ins) => [
-            `${ins.elementId}:${ins.documentId}`,
-            ins.id
-        ])
-    );
+    const configSet = new Set(allConfigurations.map((c) => c.id));
 
     const documentsOut: Documents = {};
     for (const doc of allDocuments) {
-        const storedOrder: string[] = doc.insertableOrder;
-        const insertableOrder = storedOrder
-            .map((eid) => insertableUUIDMap.get(`${eid}:${doc.id}`))
-            .filter((id): id is string => id !== undefined);
+        const docInsertables = allInsertables.filter(
+            (ins) => ins.documentId === doc.id
+        );
+        if (doc.sortAlphabetically) {
+            docInsertables.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        const insertableOrder = docInsertables.map((ins) => ins.id);
         documentsOut[doc.id] = {
             id: doc.id,
             path: {
@@ -95,16 +70,14 @@ async function getLibraryOut(
 
     const insertablesOut: Insertables = {};
     for (const ins of allInsertables) {
-        const doc = allDocuments.find((d) => d.id === ins.documentId);
-        if (!doc) continue;
-        const configId = configMap.get(`${ins.elementId}:${ins.documentId}`);
         insertablesOut[ins.id] = {
             id: ins.id,
             elementId: ins.elementId,
             documentId: ins.documentId,
+            instanceId: ins.instanceId,
             path: {
                 documentId: ins.documentId,
-                instanceId: doc.instanceId,
+                instanceId: ins.instanceId,
                 instanceType: "v",
                 elementId: ins.elementId
             },
@@ -115,9 +88,9 @@ async function getLibraryOut(
             isVisible: ins.isVisible,
             isOpenComposite: ins.isOpenComposite,
             supportsFasten: ins.supportsFasten,
-            elementType: ins.elementType as ElementType,
+            elementType: ins.elementType,
             thumbnailUrls: ins.thumbnailUrls as ThumbnailUrls,
-            configurationId: configId,
+            configurationId: configSet.has(ins.id) ? ins.id : undefined,
             vendors: ins.vendors as Vendor[]
         } satisfies InsertableOut;
     }
@@ -129,7 +102,7 @@ async function getLibraryOut(
     };
 }
 
-export const libraryRoutes = new Hono<{ Bindings: AppBindings }>();
+export const libraryRoutes = getApp();
 
 /** GET /api/library-data/library/:library */
 libraryRoutes.get("/library-data" + libraryRoute(), async (c) => {

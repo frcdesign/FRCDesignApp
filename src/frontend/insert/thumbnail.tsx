@@ -14,7 +14,7 @@ interface HeightAndWidth {
 
 function getHeightAndWidth(
     size: ThumbnailSize,
-    multiplier: number = 1
+    multiplier = 1
 ): HeightAndWidth {
     const parts = size.split("x");
     return {

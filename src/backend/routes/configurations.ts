@@ -1,6 +1,5 @@
-import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type AppBindings } from "../app";
+import { getApp } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
@@ -15,7 +14,7 @@ import {
 import { type InstancePath } from "../../shared/path";
 import { HTTPException } from "hono/http-exception";
 
-export const configurationRoutes = new Hono<{ Bindings: AppBindings }>();
+export const configurationRoutes = getApp();
 
 /** GET /api/configuration?library=X&documentId=Y&configurationId=Z */
 configurationRoutes.get("/configuration", async (c) => {

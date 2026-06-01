@@ -14,11 +14,11 @@ import {
 } from "@blueprintjs/core";
 import { ReactNode, useRef } from "react";
 import { SearchResults } from "../../../search/search-results";
-import { DocumentOut, Insertables } from "../../../shared/api-models";
+import { DocumentOut, Insertables } from "../../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
-import { filterElements, SortOrder } from "../../../search/filter";
+import { filterInsertables } from "../../../search/filter";
 import { DocumentContextMenu } from "../../../cards/document-card";
-import { ElementCard } from "../../../cards/element-card";
+import { InsertableCard } from "../../../cards/insertable-card";
 import { ContextMenuButton } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
 import {
@@ -47,10 +47,8 @@ function DocumentList(): ReactNode {
 
     const uiState = useUiState()[0];
 
-    // Manually inject the interactive class into the section
     const sectionRef = useRef<HTMLDivElement>(null);
 
-    // Include documents and elements as dependencies so it stays interactive even if the query isn't complete
     useInteractiveSection(sectionRef, [libraryQuery]);
 
     if (libraryQuery.isPending) {
@@ -59,7 +57,7 @@ function DocumentList(): ReactNode {
         return <SectionError title="Failed to load document." />;
     }
     const documents = libraryQuery.data.documents;
-    const elements = libraryQuery.data.insertables;
+    const insertables = libraryQuery.data.insertables;
 
     const document = documents[documentId];
 
@@ -74,7 +72,9 @@ function DocumentList(): ReactNode {
                         text="Go back"
                         icon="undo"
                         intent="primary"
-                        onClick={() => navigate({ to: "/app/documents" })}
+                        onClick={() => {
+                            void navigate({ to: "/app/documents" });
+                        }}
                     />
                 }
             />
@@ -96,7 +96,10 @@ function DocumentList(): ReactNode {
         );
     } else {
         content = (
-            <DocumentListContent document={document} elements={elements} />
+            <DocumentListContent
+                document={document}
+                insertables={insertables}
+            />
         );
     }
 
@@ -111,7 +114,7 @@ function DocumentList(): ReactNode {
                             ref={sectionRef}
                             title={document.name}
                             onClick={() => {
-                                navigate({ to: "/app/documents" });
+                                void navigate({ to: "/app/documents" });
                             }}
                             style={{
                                 display: "flex",
@@ -126,7 +129,6 @@ function DocumentList(): ReactNode {
                             }
                         >
                             <SectionCard
-                                // Stop propagation in the card so clicks around the edge/inside child cards don't close the section
                                 onClick={(event) => event.stopPropagation()}
                                 padded={false}
                                 style={{ overflowY: "auto" }}
@@ -145,24 +147,20 @@ function DocumentList(): ReactNode {
 
 interface DocumentListCardsProps {
     document: DocumentOut;
-    elements: Insertables;
+    insertables: Insertables;
 }
 
 export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
-    const { document, elements } = props;
+    const { document, insertables } = props;
 
     const loaderData = useLoaderData({ from: "/app" });
     const uiState = useUiState()[0];
 
-    const documentSortOrder = document.sortAlphabetically
-        ? SortOrder.ASCENDING
-        : SortOrder.DEFAULT;
+    const documentInsertables = document.insertableOrder
+        .map((insertableId) => insertables[insertableId])
+        .filter((insertable) => !!insertable);
 
-    const documentElements = document.insertableOrder
-        .map((elementOrder) => elements[elementOrder])
-        .filter((element) => !!element);
-
-    if (documentElements.length === 0) {
+    if (documentInsertables.length === 0) {
         return (
             <SectionError
                 title="This document has no visible elements"
@@ -171,14 +169,12 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         );
     }
 
-    const filterResult = filterElements(documentElements, {
-        sortOrder: documentSortOrder,
+    const filterResult = filterInsertables(documentInsertables, {
         vendors: uiState.vendorFilters,
-        // Only show visible elements to users
         isVisible: !hasEditorAccess(loaderData.currentAccessLevel)
     });
 
-    if (filterResult.elements.length === 0) {
+    if (filterResult.insertables.length === 0) {
         return (
             <SectionError
                 icon="warning-sign"
@@ -189,8 +185,8 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         );
     }
 
-    const elementCards = filterResult.elements.map((element) => (
-        <ElementCard key={element.id} element={element} />
+    const insertableCards = filterResult.insertables.map((insertable) => (
+        <InsertableCard key={insertable.id} insertable={insertable} />
     ));
 
     const callout = (
@@ -201,7 +197,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
         <>
             {callout}
             <CardList bordered={false} compact>
-                {elementCards}
+                {insertableCards}
             </CardList>
         </>
     );

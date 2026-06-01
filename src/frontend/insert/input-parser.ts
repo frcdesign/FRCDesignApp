@@ -447,7 +447,7 @@ function parseExpression(input: string): Expr {
         return expectSingleResult(expectEOF(result));
     } else {
         // Throw as normal error so it gets redirected to a generic error message
-        throw new Error(result.error.toString());
+        throw new Error(result.error.message);
     }
 }
 

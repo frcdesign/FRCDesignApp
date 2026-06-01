@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Position, SearchFilters, SearchHit, doSearch } from "./search";
-import { ElementCard } from "../cards/element-card";
+import { InsertableCard } from "../cards/insertable-card";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery, useSearchDbQuery } from "../queries";
@@ -28,7 +28,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     ) {
         return <SectionError title="Failed to load library." />;
     }
-    const elements = libraryQuery.data.insertables;
+    const insertables = libraryQuery.data.insertables;
     const searchResults = doSearch(searchDbQuery.data, query, filters);
 
     if (searchResults.hits.length === 0) {
@@ -47,15 +47,15 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         />
     );
     const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
-        const elementId = searchHit.id;
-        const element = elements[elementId];
-        if (!element) {
+        const insertableId = searchHit.id;
+        const insertable = insertables[insertableId];
+        if (!insertable) {
             return null;
         }
         return (
-            <ElementCard
-                key={elementId}
-                element={element}
+            <InsertableCard
+                key={insertableId}
+                insertable={insertable}
                 searchHit={searchHit}
             />
         );

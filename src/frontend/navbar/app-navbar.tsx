@@ -80,7 +80,7 @@ export function SettingsButton() {
             icon="cog"
             variant={ButtonVariant.MINIMAL}
             onClick={() =>
-                navigate({
+                void navigate({
                     to: ".",
                     search: () => ({
                         activeMenu: MenuType.SETTINGS_MENU

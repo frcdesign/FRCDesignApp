@@ -1,6 +1,5 @@
-import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { type AppBindings, libraryRoute } from "../app";
+import { getApp, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { requireEditorAccess } from "../access-level-utils";
@@ -120,7 +119,7 @@ export async function uploadDocumentThumbnails(
     );
 }
 
-export const thumbnailRoutes = new Hono<{ Bindings: AppBindings }>();
+export const thumbnailRoutes = getApp();
 
 /** GET /api/thumbnail/:size/:elementId — serve static thumbnail from R2 */
 thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
@@ -181,7 +180,8 @@ thumbnailRoutes.post(
         libraryRoute() +
         "/d/:documentId/:instanceType/:instanceId",
     async (c) => {
-        const onshapeApi = await requireEditorAccess(c);
+        await requireEditorAccess(c);
+        const onshapeApi = await getOnshapeApi(c);
         const instancePath: InstancePath = {
             documentId: c.req.param("documentId") as string,
             instanceId: c.req.param("instanceId") as string,
@@ -210,7 +210,8 @@ thumbnailRoutes.post(
         libraryRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await requireEditorAccess(c);
+        await requireEditorAccess(c);
+        const onshapeApi = await getOnshapeApi(c);
         const elementPath: ElementPath = {
             documentId: c.req.param("documentId") as string,
             instanceId: c.req.param("instanceId") as string,

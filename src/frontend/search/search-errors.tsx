@@ -135,7 +135,9 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
             text="Search all documents"
             icon="search"
             size={small ? Size.SMALL : Size.MEDIUM}
-            onClick={() => navigate({ to: "/app/documents" })}
+            onClick={() => {
+                void navigate({ to: "/app/documents" });
+            }}
         />
     );
 }

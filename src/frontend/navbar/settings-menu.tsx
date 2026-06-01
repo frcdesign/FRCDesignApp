@@ -104,7 +104,7 @@ function UserSettings(): ReactNode {
         library?: Library;
     }) => {
         // Navigate immediately — this IS the optimistic update since settings live in search params
-        navigate({
+        void navigate({
             to: ".",
             search: { settings: { ...search.settings, ...newSettings } }
         });
@@ -154,7 +154,7 @@ function LibrarySelect(props: LibrarySelectProps): ReactNode {
             options={libraries}
             label="Library"
             onSelect={(value: string) => {
-                navigate({ to: "/app/documents" });
+                void navigate({ to: "/app/documents" });
                 onLibrarySelect(value as Library);
             }}
         />
@@ -232,7 +232,7 @@ function PushVersionButton(): ReactNode {
                 }),
                 queryClient.refetchQueries({ queryKey: contextDataQueryKey() })
             ]);
-            router.invalidate();
+            void router.invalidate();
         }
     });
 
@@ -310,7 +310,7 @@ function AccessLevelSelect(): ReactNode {
                         return data;
                     })
                 );
-                router.invalidate();
+                void router.invalidate();
             }}
         >
             {button}
@@ -355,7 +355,7 @@ export function ReloadDocumentsButton(
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: async (result) => {
-            const savedElements = result["savedElements"];
+            const savedElements = result.savedElements;
             if (savedElements === 0) {
                 showSuccessToast("All documents are already up to date.");
             } else {
@@ -368,7 +368,7 @@ export function ReloadDocumentsButton(
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 
