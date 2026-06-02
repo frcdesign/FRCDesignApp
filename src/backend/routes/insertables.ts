@@ -22,14 +22,9 @@ import {
 } from "../onshape-api/endpoints/documents";
 import { getInsertableElementPath } from "../db-helpers";
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
-import {
-    partStudioMateConnectorQuery,
-    featureOccurrenceQuery,
-    FastenMateBuilder
-} from "../onshape-api/objects/assembly-features";
-import { ElementType, MateLocation } from "../../shared/types";
+import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
+import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
 
-// Editor-only routes (toggle visibility settings, etc.)
 export const insertableRoutes = getApp();
 
 /** POST /api/toggle-open-composite/insertable/:insertableId */
@@ -52,13 +47,42 @@ insertableRoutes
 insertableRoutes
     .use(requireAdminMiddleware)
     .post("/toggle-insert-and-fasten" + insertableRoute(), async (c) => {
+        const db = getDb(c.env.DB);
+
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{ supportsFasten: boolean }>();
 
-        const db = getDb(c.env.DB);
+        let fastenInfo = null;
+        if (body.supportsFasten) {
+            const onshapeApi = await getOnshapeApi(c);
+            const elementPath = await getInsertableElementPath(
+                db,
+                insertableId
+            );
+            const insertable = await db
+                .select({
+                    elementType: insertables.elementType
+                })
+                .from(insertables)
+                .where(eq(insertables.id, insertableId))
+                .get();
+
+            if (!insertable) {
+                throw new HTTPException(404, {
+                    message: "Insertable not found"
+                });
+            }
+
+            fastenInfo = await parseFastenInfo(
+                onshapeApi,
+                elementPath,
+                insertable.elementType
+            );
+        }
+
         await db
             .update(insertables)
-            .set({ supportsFasten: body.supportsFasten })
+            .set({ supportsFasten: body.supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
         return c.json({ success: true });
@@ -90,7 +114,7 @@ insertableRoutes.post(
         const db = getDb(c.env.DB);
         const sourcePath = await getInsertableElementPath(db, insertableId);
 
-        const row = await db
+        const insertable = await db
             .select({
                 name: insertables.name,
                 microversionId: insertables.microversionId
@@ -99,8 +123,10 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
 
-        if (!row) {
-            return c.json({ error: "Insertable not found" }, 404);
+        if (!insertable) {
+            throw new HTTPException(404, {
+                message: "Insertable not found"
+            });
         }
 
         // Look up parsed configuration parameters from D1 if configuration is provided
@@ -115,9 +141,9 @@ insertableRoutes.post(
         }
 
         const feature = new DerivedFeature(
-            row.name,
+            insertable.name,
             sourcePath,
-            row.microversionId,
+            insertable.microversionId,
             body.useMateConnector,
             body.configuration,
             parameters
@@ -233,29 +259,9 @@ insertableRoutes.post(
             result?.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
         const builder = new FastenMateBuilder(row.name);
-
-        if (row.elementType === ElementType.PART_STUDIO) {
-            builder.addQuery(
-                partStudioMateConnectorQuery(
-                    fastenInfo.mateConnectorId,
-                    instancePath
-                )
-            );
-        } else {
-            const path = [...instancePath, ...fastenInfo.path];
-            if (fastenInfo.mateLocation === MateLocation.Part) {
-                builder.addQuery(
-                    partStudioMateConnectorQuery(
-                        fastenInfo.mateConnectorId,
-                        path
-                    )
-                );
-            } else {
-                builder.addQuery(
-                    featureOccurrenceQuery(fastenInfo.mateConnectorId, path)
-                );
-            }
-        }
+        builder.addQuery(
+            getFastenQuery(row.elementType, instancePath, fastenInfo)
+        );
 
         const fastenResult = await addAssemblyFeature(
             onshapeApi,

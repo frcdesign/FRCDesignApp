@@ -1,7 +1,12 @@
 import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
-import type { ElementPath } from "../../shared/path";
+import { type ElementPath } from "../../shared/path";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";
+import {
+    featureOccurrenceQuery,
+    partStudioMateConnectorQuery
+} from "../onshape-api/objects/assembly-features";
+import { OnshapeApi } from "../onshape-api/onshape-api";
 
 function searchFeatures(
     features: any[],
@@ -21,7 +26,7 @@ function searchFeatures(
     return undefined;
 }
 
-export function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
+function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
     for (const feature of rawFeatureList.features) {
         if (feature.featureType === "mateConnector") {
             return {
@@ -34,7 +39,7 @@ export function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
     throw new Error("Failed to find a valid Mate connector feature.");
 }
 
-export function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
+function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
     const rootAssembly = rawAssemblyInfo.rootAssembly;
     const fromFeatures = searchFeatures(
         rootAssembly.features,
@@ -75,7 +80,7 @@ export function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
 }
 
 export async function parseFastenInfo(
-    onshapeApi: any,
+    onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType
 ): Promise<FastenInfo> {
@@ -89,4 +94,23 @@ export async function parseFastenInfo(
         });
         return parseFastenInfoFromAssembly(rawAssemblyInfo);
     }
+}
+
+export function getFastenQuery(
+    targetElementType: ElementType,
+    path: string[],
+    fastenInfo: FastenInfo
+): object {
+    if (targetElementType === ElementType.PART_STUDIO) {
+        return partStudioMateConnectorQuery(fastenInfo.mateConnectorId, path);
+    }
+
+    const assemblyPath = [...path, ...fastenInfo.path];
+    if (fastenInfo.mateLocation === MateLocation.Part) {
+        return partStudioMateConnectorQuery(
+            fastenInfo.mateConnectorId,
+            assemblyPath
+        );
+    }
+    return featureOccurrenceQuery(fastenInfo.mateConnectorId, assemblyPath);
 }
