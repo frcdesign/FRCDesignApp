@@ -3,7 +3,8 @@ import { RequireAccessLevel } from "../api-utils/access-level";
 import { PageError } from "../common/app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@blueprintjs/core";
+import { Button } from "@mantine/core";
+import { IconHome } from "@tabler/icons-react";
 
 interface RootAppErrorProps {
     /**
@@ -42,13 +43,14 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            intent="primary"
-            text="Go home"
-            icon="home"
+            color="blue"
+            leftSection={<IconHome size={16} />}
             onClick={() => {
                 void navigate({ to: "/app" });
             }}
-        />
+        >
+            Go home
+        </Button>
     );
 
     return (

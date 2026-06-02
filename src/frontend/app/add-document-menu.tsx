@@ -1,12 +1,5 @@
-import {
-    Button,
-    Dialog,
-    DialogBody,
-    Icon,
-    InputGroup,
-    Intent,
-    MenuItem
-} from "@blueprintjs/core";
+import { Button, Group, Modal, TextInput } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import { ReactNode, useState } from "react";
 import {
     AddDocumentMenuParams,
@@ -22,6 +15,7 @@ import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { AppMenuItem } from "../common/app-menu";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -71,36 +65,28 @@ function AddDocumentMenuDialog(
         }
     });
 
-    const submitButton = (
-        <Button
-            text="Add"
-            icon="add"
-            intent={Intent.PRIMARY}
-            onClick={() => {
-                mutation.mutate();
-            }}
-            loading={mutation.isPending}
-        />
-    );
-
-    const body = (
-        <div style={{ display: "flex", gap: "10px" }}>
-            <InputGroup
-                placeholder="Document url..."
-                value={url}
-                onValueChange={setUrl}
-                intent={mutation.isError ? "danger" : undefined}
-                fill
-            />
-            {submitButton}
-        </div>
-    );
-
     return (
-        <Dialog isOpen icon="add" title="Add document" onClose={closeDialog}>
-            <DialogBody>{body}</DialogBody>
-            {/* <DialogFooter minimal actions={submitButton} /> */}
-        </Dialog>
+        <Modal opened onClose={closeDialog} title="Add document" centered>
+            <Group align="flex-end" gap="sm" wrap="nowrap">
+                <TextInput
+                    style={{ flex: 1 }}
+                    placeholder="Document url..."
+                    value={url}
+                    onChange={(event) => setUrl(event.currentTarget.value)}
+                    error={mutation.isError}
+                />
+                <Button
+                    color="blue"
+                    leftSection={<IconPlus size={16} />}
+                    onClick={() => {
+                        mutation.mutate();
+                    }}
+                    loading={mutation.isPending}
+                >
+                    Add
+                </Button>
+            </Group>
+        </Modal>
     );
 }
 
@@ -108,9 +94,8 @@ export function AddDocumentButton(): ReactNode {
     const navigate = useNavigate();
     return (
         <Button
-            icon="add"
-            text="Add document"
-            intent="primary"
+            color="blue"
+            leftSection={<IconPlus size={16} />}
             onClick={() => {
                 void navigate({
                     to: ".",
@@ -119,7 +104,9 @@ export function AddDocumentButton(): ReactNode {
                     }
                 });
             }}
-        />
+        >
+            Add document
+        </Button>
     );
 }
 
@@ -130,11 +117,9 @@ interface AddDocumentItemProps {
 export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
     const navigate = useNavigate();
     return (
-        <MenuItem
-            icon="add"
-            text="Add document"
-            labelElement={<Icon icon="share" />}
-            intent="primary"
+        <AppMenuItem
+            icon={<IconPlus size={16} />}
+            color="blue"
             onClick={() => {
                 void navigate({
                     to: ".",
@@ -144,6 +129,8 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
                     }
                 });
             }}
-        />
+        >
+            Add document
+        </AppMenuItem>
     );
 }

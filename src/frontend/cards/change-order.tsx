@@ -1,5 +1,11 @@
-import { MenuItem } from "@blueprintjs/core";
+import {
+    IconChevronDown,
+    IconChevronsDown,
+    IconChevronsUp,
+    IconChevronUp
+} from "@tabler/icons-react";
 import { type ReactNode } from "react";
+import { AppMenuItem } from "../common/app-menu";
 
 enum MoveOperation {
     MOVE_UP,
@@ -106,20 +112,20 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     return (
         <>
             {operations.includes(MoveOperation.MOVE_UP) && (
-                <MenuItem
-                    icon="chevron-up"
-                    text="Move up"
+                <AppMenuItem
+                    icon={<IconChevronUp size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(id, order, MoveOperation.MOVE_UP)
                         );
                     }}
-                />
+                >
+                    Move up
+                </AppMenuItem>
             )}
             {operations.includes(MoveOperation.MOVE_DOWN) && (
-                <MenuItem
-                    icon="chevron-down"
-                    text="Move down"
+                <AppMenuItem
+                    icon={<IconChevronDown size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -129,12 +135,13 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                             )
                         );
                     }}
-                />
+                >
+                    Move down
+                </AppMenuItem>
             )}
             {operations.includes(MoveOperation.MOVE_TO_TOP) && (
-                <MenuItem
-                    icon="double-chevron-up"
-                    text="Move to top"
+                <AppMenuItem
+                    icon={<IconChevronsUp size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -144,12 +151,13 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                             )
                         );
                     }}
-                />
+                >
+                    Move to top
+                </AppMenuItem>
             )}
             {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
-                <MenuItem
-                    icon="double-chevron-down"
-                    text="Move to bottom"
+                <AppMenuItem
+                    icon={<IconChevronsDown size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -159,7 +167,9 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                             )
                         );
                     }}
-                />
+                >
+                    Move to bottom
+                </AppMenuItem>
             )}
         </>
     );

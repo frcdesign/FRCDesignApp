@@ -1,4 +1,6 @@
-@use "@blueprintjs/core/lib/scss/variables" as bp;
+// Declare layer order so our unlayered custom styles below win the cascade
+// over Mantine's layered styles.
+@layer mantine, mantine-contextmenu;
 
 // Disable drag text highlighting
 * {
@@ -71,40 +73,24 @@ $frc-design-green: #4cae4f;
 }
 
 .app-light-background {
-    background-color: bp.$pt-app-background-color;
+    background-color: var(--mantine-color-gray-0);
 }
 
 .app-dark-background {
-    background-color: bp.$pt-dark-app-background-color;
+    background-color: var(--mantine-color-dark-7);
 }
 
 // Insert dialog
-
-// Make checkbox green when hovered/checked
-// .checkbox {
-//     input:checked ~ .bp6-control-indicator {
-//         background-color: bp.$green3;
-//     }
-// }
-// .checkbox:hover {
-//     input:checked ~ .bp6-control-indicator {
-//         background-color: bp.$green2 !important;
-//     }
-// }
-
 .insert-menu {
     max-height: 90vh;
     width: 90%;
     max-width: 500px;
 }
 
-// Makes insert dialog inputs full width
+// Makes inputs full width
 .full-width {
     display: flex;
-
-    .bp6-form-content {
-        flex: 1;
-    }
+    width: 100%;
 }
 
 .enum-menu {
@@ -115,7 +101,7 @@ $frc-design-green: #4cae4f;
 .preview-image-card {
     margin: 10px;
     margin-bottom: 0px;
-    background-color: bp.$light-gray4;
+    background-color: var(--mantine-color-gray-1);
     position: relative;
 }
 
@@ -126,13 +112,26 @@ $frc-design-green: #4cae4f;
 // Home/document lists
 .item-card {
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: var(--mantine-spacing-sm);
+    transition: background 0.15s;
+
+    &:hover {
+        background: var(--mantine-color-gray-0);
+    }
 
     .item-card-right-content {
+        display: flex;
+        align-items: center;
         // Shimmy more button and heart over
         margin-right: -6px;
         flex-shrink: 0;
     }
+}
+
+[data-mantine-color-scheme="dark"] .item-card:hover {
+    background: var(--mantine-color-dark-6);
 }
 
 .inline-app-loading-state {
@@ -145,18 +144,53 @@ $frc-design-green: #4cae4f;
     padding-bottom: 50px;
 }
 
-// .home-card-title {
-//     display: flex;
-//     align-items: center;
-//     gap: 10px;
-// }
-
 .insert-menu-actions {
     display: flex;
     align-items: center;
     gap: 10px;
+}
 
-    .bp6-control {
-        margin: 0; // remove extra vertical offset
+// Context menu items (custom content rendered inside mantine-contextmenu /
+// Mantine Menu surfaces).
+.app-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: calc(var(--mantine-spacing-sm) / 2) var(--mantine-spacing-sm);
+    text-align: start;
+    border-radius: var(--mantine-radius-sm);
+    transition: background 0.15s;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--mantine-color-gray-1);
     }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+
+        &:hover {
+            background: transparent;
+        }
+    }
+
+    .app-menu-item-icon {
+        display: flex;
+        align-items: center;
+        font-size: 0;
+    }
+
+    .app-menu-item-label {
+        white-space: nowrap;
+    }
+}
+
+[data-mantine-color-scheme="dark"] .app-menu-item:hover {
+    background: var(--mantine-color-dark-4);
+}
+
+.app-menu-divider {
+    margin-top: 4px;
+    margin-bottom: 4px;
 }

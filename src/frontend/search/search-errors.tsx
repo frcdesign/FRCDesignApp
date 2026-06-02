@@ -1,14 +1,8 @@
-import {
-    Button,
-    Callout,
-    Colors,
-    IconName,
-    Intent,
-    Size
-} from "@blueprintjs/core";
+import { Alert, Button } from "@mantine/core";
+import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
+import { ReactNode } from "react";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "./search";
-import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../common/app-zero-state";
 
@@ -46,17 +40,17 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
 
     if (filtered.byDocument > 0) {
         return (
-            <Callout intent="primary" className="split">
+            <Alert color="blue" className="split" p="xs">
                 {getDocumentString(filtered, objectLabel)}
                 <SearchAllButton small />
-            </Callout>
+            </Alert>
         );
     }
     return (
-        <Callout intent="primary" className="split">
+        <Alert color="blue" className="split" p="xs">
             {getVendorString(filtered, objectLabel)}
             <ClearFiltersButton small />
-        </Callout>
+        </Alert>
     );
 }
 
@@ -70,25 +64,18 @@ export function NoSearchResultError(
 ): ReactNode {
     const { objectLabel, filtered } = props;
 
-    let icon: IconName;
-    let iconIntent: Intent | undefined = undefined;
-    let iconColor: string | undefined = undefined;
-
-    if (objectLabel === "search result") {
-        icon = "search";
-        iconIntent = Intent.PRIMARY;
-    } else {
-        icon = "heart-broken";
-        iconColor = Colors.RED3;
-    }
+    const icon =
+        objectLabel === "search result" ? (
+            <IconSearch size={36} color="var(--mantine-color-blue-6)" />
+        ) : (
+            <IconHeartBroken size={36} color="var(--mantine-color-red-6)" />
+        );
 
     if (filtered.byDocument > 0) {
         // User is in a subdocument
         return (
             <SectionError
                 icon={icon}
-                iconIntent={iconIntent}
-                iconColor={iconColor}
                 title={`No ${plural(objectLabel)}.`}
                 description={getDocumentString(filtered, objectLabel)}
                 action={<SearchAllButton />}
@@ -99,8 +86,6 @@ export function NoSearchResultError(
         return (
             <SectionError
                 icon={icon}
-                iconIntent={iconIntent}
-                iconColor={iconColor}
                 title={`No ${plural(objectLabel)}.`}
                 description={getVendorString(filtered, objectLabel)}
                 action={<ClearFiltersButton />}
@@ -111,8 +96,6 @@ export function NoSearchResultError(
     return (
         <SectionError
             icon={icon}
-            iconIntent={iconIntent}
-            iconColor={iconColor}
             title={`No ${plural(objectLabel)}`}
             description={null}
         />
@@ -131,13 +114,14 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            intent="primary"
-            text="Search all documents"
-            icon="search"
-            size={small ? Size.SMALL : Size.MEDIUM}
+            color="blue"
+            leftSection={<IconSearch size={16} />}
+            size={small ? "xs" : undefined}
             onClick={() => {
                 void navigate({ to: "/app/documents" });
             }}
-        />
+        >
+            Search all documents
+        </Button>
     );
 }

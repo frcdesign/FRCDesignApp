@@ -1,7 +1,6 @@
 import { ElementType } from "../../shared/types";
 import { Theme } from "../../shared/types";
 import { ElementPath } from "../../shared/path";
-import { Classes } from "@blueprintjs/core";
 
 /**
  * Documents search parameter values received from Onshape.
@@ -24,8 +23,11 @@ export function getColorTheme(
     return theme;
 }
 
-export function getThemeClass(colorTheme: ColorTheme) {
-    return colorTheme === "dark" ? Classes.DARK : "";
+/**
+ * Returns the Mantine color scheme to force based on the resolved color theme.
+ */
+export function getThemeClass(colorTheme: ColorTheme): "light" | "dark" {
+    return colorTheme;
 }
 
 export function getBackgroundClass(colorTheme: ColorTheme) {

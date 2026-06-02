@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../common/open-url-button";
 import { PageError } from "../../common/app-zero-state";

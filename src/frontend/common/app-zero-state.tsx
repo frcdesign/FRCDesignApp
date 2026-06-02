@@ -1,12 +1,38 @@
-import {
-    Icon,
-    Intent,
-    NonIdealState,
-    NonIdealStateIconSize,
-    Spinner
-} from "@blueprintjs/core";
-import { IconName } from "@blueprintjs/icons";
-import { ReactNode } from "react";
+import { Loader, Stack, Text, Title } from "@mantine/core";
+import { IconCircleX } from "@tabler/icons-react";
+import { type JSX, ReactNode } from "react";
+
+const ZERO_STATE_ICON_SIZE = 36;
+
+interface ZeroStateProps {
+    icon?: ReactNode;
+    title: string;
+    description?: ReactNode;
+    action?: ReactNode;
+    className?: string;
+}
+
+/**
+ * A centered icon/title/description/action block used to indicate empty,
+ * loading, or error states.
+ */
+function ZeroState(props: ZeroStateProps): ReactNode {
+    const { icon, title, description, action, className } = props;
+    return (
+        <Stack align="center" justify="center" gap="xs" ta="center" className={className}>
+            {icon}
+            <Title order={5} fw={600}>
+                {title}
+            </Title>
+            {description != null && (
+                <Text c="dimmed" size="sm" maw={400}>
+                    {description}
+                </Text>
+            )}
+            {action}
+        </Stack>
+    );
+}
 
 interface SectionLoadingProps {
     /**
@@ -19,13 +45,11 @@ interface SectionLoadingProps {
  * Used to indicate a section of the UI is loading.
  */
 export function SectionLoading(props: SectionLoadingProps): ReactNode {
-    const { title } = props;
-
     return (
-        <NonIdealState
+        <ZeroState
             className="inline-app-loading-state"
-            title={title}
-            icon={<Spinner intent="primary" />}
+            title={props.title}
+            icon={<Loader color="blue" />}
         />
     );
 }
@@ -43,15 +67,26 @@ interface ErrorProps {
     description?: string | null | JSX.Element;
     className?: string;
     /**
-     * @default "cross"
+     * Defaults to a danger-colored cross icon.
      */
-    icon?: IconName | JSX.Element;
-    iconColor?: string;
-    /**
-     * @default "danger"
-     */
-    iconIntent?: Intent;
+    icon?: ReactNode;
     action?: JSX.Element;
+}
+
+const DEFAULT_ERROR_ICON = (
+    <IconCircleX
+        size={ZERO_STATE_ICON_SIZE}
+        color="var(--mantine-color-red-6)"
+    />
+);
+
+function resolveDescription(
+    description: ErrorProps["description"]
+): ReactNode {
+    if (description === undefined) {
+        return "If the problem persists, contact the FRCDesignApp developers.";
+    }
+    return description;
 }
 
 /**
@@ -59,28 +94,12 @@ interface ErrorProps {
  */
 export function SectionError(props: ErrorProps): ReactNode {
     const { title, action, className } = props;
-    const icon = props.icon ?? "cross";
-    const iconIntent = props.iconIntent ?? "danger";
-
-    let description = props.description;
-    if (description === undefined) {
-        description =
-            "If the problem persists, contact the FRCDesignApp developers.";
-    }
-
     return (
-        <NonIdealState
-            className={className + " inline-app-error-state"}
+        <ZeroState
+            className={(className ?? "") + " inline-app-error-state"}
             title={title}
-            icon={
-                <Icon
-                    icon={icon}
-                    intent={iconIntent}
-                    color={props.iconColor}
-                    size={NonIdealStateIconSize.SMALL}
-                />
-            }
-            description={description}
+            icon={props.icon ?? DEFAULT_ERROR_ICON}
+            description={resolveDescription(props.description)}
             action={action}
         />
     );
@@ -100,29 +119,14 @@ interface PageErrorProps extends ErrorProps {
  */
 export function PageError(props: PageErrorProps): ReactNode {
     const { title, action, className } = props;
-    const icon = props.icon ?? "cross";
-    const iconIntent = props.iconIntent ?? "danger";
     const justifyUp = props.justifyUp ?? false;
 
-    let description = props.description;
-    if (description === undefined) {
-        description =
-            "If the problem persists, contact the FRCDesignApp developers.";
-    }
-
     const error = (
-        <NonIdealState
+        <ZeroState
             className={className}
             title={title}
-            icon={
-                <Icon
-                    icon={icon}
-                    intent={iconIntent}
-                    color={props.iconColor}
-                    size={NonIdealStateIconSize.STANDARD}
-                />
-            }
-            description={description}
+            icon={props.icon ?? DEFAULT_ERROR_ICON}
+            description={resolveDescription(props.description)}
             action={action}
         />
     );
@@ -131,5 +135,12 @@ export function PageError(props: PageErrorProps): ReactNode {
         return error;
     }
 
-    return <div style={{ height: "80vh" }}>{error}</div>;
+    return (
+        <div style={{ height: "80vh", display: "flex", alignItems: "center" }}>
+            {error}
+        </div>
+    );
 }
+
+/** Standard icon size for zero-state icons, exported for call sites. */
+export { ZERO_STATE_ICON_SIZE };

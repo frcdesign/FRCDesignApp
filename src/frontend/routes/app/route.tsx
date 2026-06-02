@@ -8,7 +8,10 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BlueprintProvider } from "@blueprintjs/core";
+import { MantineProvider } from "@mantine/core";
+import { ModalsProvider } from "@mantine/modals";
+import { Notifications } from "@mantine/notifications";
+import { ContextMenuProvider } from "mantine-contextmenu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
 import {
@@ -25,17 +28,13 @@ import {
     OnshapeParams
 } from "../../api-utils/onshape-params";
 import { getUiState } from "../../api-utils/ui-state";
-import { type PopupParams } from "../../overlays/popup-params";
 import { AppNavbar } from "../../navbar/app-navbar";
-import { AppPopups } from "../../overlays/app-popups";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
 import { type AccessData, type Settings } from "../../../shared/types";
 
-type SearchParams = OnshapeParams &
-    MenuParams &
-    PopupParams & { settings: Settings };
+type SearchParams = OnshapeParams & MenuParams & { settings: Settings };
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -98,8 +97,9 @@ function App() {
         search.settings?.theme,
         search.systemTheme
     );
-    const themeClass = getThemeClass(colorTheme);
     void loaderData; // consumed by child components via useLoaderData
+    // The app runs inside an Onshape iframe; portals (modals, context menus,
+    // notifications) must mount inside #root so they pick up Mantine styles.
     // eslint-disable-next-line react-x/purity
     const portalContainer = document.getElementById("root")!;
 
@@ -107,25 +107,36 @@ function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <BlueprintProvider
-                portalClassName={themeClass}
-                // Very important, context menus do not work with the default container :(
-                portalContainer={portalContainer}
+            <MantineProvider
+                forceColorScheme={getThemeClass(colorTheme)}
+                getRootElement={() => portalContainer}
+                cssVariablesSelector="#root"
             >
-                <div className={themeClass + " app-background"}>
-                    <AppNavbar />
-                    <div
-                        className={
-                            getBackgroundClass(colorTheme) + " app-content"
-                        }
+                <ContextMenuProvider>
+                    <ModalsProvider
+                        labels={{ confirm: "Confirm", cancel: "Cancel" }}
                     >
-                        <Outlet />
-                        <AppPopups />
-                        <AppMenus />
-                        <TanStackRouterDevtools />
-                    </div>
-                </div>
-            </BlueprintProvider>
+                        <Notifications
+                            position="bottom-center"
+                            limit={3}
+                            portalProps={{ target: portalContainer }}
+                        />
+                        <div className="app-background">
+                            <AppNavbar />
+                            <div
+                                className={
+                                    getBackgroundClass(colorTheme) +
+                                    " app-content"
+                                }
+                            >
+                                <Outlet />
+                                <AppMenus />
+                                <TanStackRouterDevtools />
+                            </div>
+                        </div>
+                    </ModalsProvider>
+                </ContextMenuProvider>
+            </MantineProvider>
         </QueryClientProvider>
     );
 }

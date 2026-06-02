@@ -1,4 +1,5 @@
-import { Button, ButtonVariant, Intent, Size, Tag } from "@blueprintjs/core";
+import { Button, Chip } from "@mantine/core";
+import { IconFilterOff } from "@tabler/icons-react";
 import { ReactNode, useCallback } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
@@ -25,15 +26,16 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
 
     return (
         <Button
-            text={text}
             disabled={areAllTagsActive}
-            variant={ButtonVariant.OUTLINED}
-            size={small ? Size.SMALL : Size.MEDIUM}
-            icon="filter-remove"
+            variant="default"
+            size={small ? "xs" : undefined}
+            leftSection={<IconFilterOff size={16} />}
             onClick={() => {
                 setUiState({ vendorFilters: undefined });
             }}
-        />
+        >
+            {text}
+        </Button>
     );
 }
 
@@ -47,19 +49,19 @@ export function VendorFilters(): ReactNode {
     const filterTags = Object.values(Vendor).map((vendor) => {
         const isActive = isVendorActive(vendor, vendorFilters);
         return (
-            <Tag
-                round
-                interactive
+            <Chip
                 key={vendor}
-                intent={Intent.PRIMARY}
+                checked={isActive}
+                color="blue"
+                variant="filled"
+                size="xs"
                 title={getVendorName(vendor)}
                 onClick={() => {
                     handleVendorSelect(vendor);
                 }}
-                active={!isActive} // The active prop of tags is backwards
             >
                 {vendor}
-            </Tag>
+            </Chip>
         );
     });
 

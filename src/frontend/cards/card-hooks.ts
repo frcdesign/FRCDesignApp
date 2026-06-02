@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
+import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { InsertableOut } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import {
@@ -21,18 +22,9 @@ export function useSetVisibilityMutation(
     const library = useLibrary();
     const router = useRouter();
 
-    return useMutation({
+    const mutation = useMutation({
         mutationKey: ["set-element-visibility"],
         mutationFn: async () => {
-            if (!isVisible) {
-                const result = window.confirm(
-                    "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?"
-                );
-                if (!result) {
-                    showErrorToast("Cancelled hide operation.");
-                    return;
-                }
-            }
             return apiPost("/set-element-visibility" + toLibraryPath(library), {
                 body: {
                     insertableIds,
@@ -50,6 +42,27 @@ export function useSetVisibilityMutation(
             void router.invalidate();
         }
     });
+
+    // Hiding elements is destructive (it removes them from all users'
+    // favorites), so confirm before mutating. Showing elements proceeds
+    // immediately.
+    const mutate = useCallback(() => {
+        if (isVisible) {
+            mutation.mutate();
+            return;
+        }
+        modals.openConfirmModal({
+            title: "Hide elements",
+            children:
+                "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
+            labels: { confirm: "Hide", cancel: "Cancel" },
+            confirmProps: { color: "red" },
+            onConfirm: () => mutation.mutate(),
+            onCancel: () => showErrorToast("Cancelled hide operation.")
+        });
+    }, [isVisible, mutation]);
+
+    return { mutate };
 }
 
 /**

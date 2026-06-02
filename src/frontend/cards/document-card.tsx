@@ -1,13 +1,13 @@
+import { Card } from "@mantine/core";
 import {
-    Icon,
-    Card,
-    Classes,
-    ContextMenuChildrenProps,
-    ContextMenu,
-    Menu,
-    MenuDivider,
-    MenuItem
-} from "@blueprintjs/core";
+    IconArrowRight,
+    IconEye,
+    IconEyeOff,
+    IconList,
+    IconSortAZ,
+    IconTrash
+} from "@tabler/icons-react";
+import { useContextMenu } from "mantine-contextmenu";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentOut, LibraryOut } from "../../shared/api-models";
@@ -24,6 +24,7 @@ import {
     ReloadThumbnailMenuItem
 } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
+import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -38,51 +39,46 @@ interface DocumentCardProps extends PropsWithChildren {
 }
 
 /**
- * A collapsible card representing a single document.
+ * A card representing a single document.
  */
 export function DocumentCard(props: DocumentCardProps): ReactNode {
     const { document } = props;
     const navigate = useNavigate();
+    const { showContextMenu } = useContextMenu();
 
     return (
-        <DocumentContextMenu document={document}>
-            {(ctxMenuProps: ContextMenuChildrenProps) => (
-                <>
-                    <Card
-                        onContextMenu={ctxMenuProps.onContextMenu}
-                        ref={ctxMenuProps.ref}
-                        interactive
-                        onClick={() => {
-                            void navigate({
-                                to: "/app/documents/$documentId",
-                                params: { documentId: document.id }
-                            });
-                        }}
-                        className="item-card"
-                    >
-                        <CardTitle
-                            title={document.name}
-                            thumbnailUrls={document.thumbnailUrls}
-                        />
-                        <Icon
-                            icon="arrow-right"
-                            className={Classes.TEXT_MUTED}
-                        />
-                    </Card>
-                    {ctxMenuProps.popover}
-                </>
-            )}
-        </DocumentContextMenu>
+        <Card
+            withBorder
+            padding="sm"
+            radius="md"
+            className="item-card"
+            style={{ cursor: "pointer" }}
+            onContextMenu={showContextMenu((close) => (
+                <DocumentMenu document={document} close={close} />
+            ))}
+            onClick={() => {
+                void navigate({
+                    to: "/app/documents/$documentId",
+                    params: { documentId: document.id }
+                });
+            }}
+        >
+            <CardTitle
+                title={document.name}
+                thumbnailUrls={document.thumbnailUrls}
+            />
+            <IconArrowRight size={16} color="var(--mantine-color-dimmed)" />
+        </Card>
     );
 }
 
-interface DocumentContextMenuProps {
+interface DocumentMenuProps {
     document: DocumentOut;
-    children: any;
+    close: () => void;
 }
 
-export function DocumentContextMenu(props: DocumentContextMenuProps) {
-    const { children, document } = props;
+export function DocumentMenu(props: DocumentMenuProps): ReactNode {
+    const { document, close } = props;
 
     const isHome = useIsHome();
     const library = useLibrary();
@@ -124,52 +120,53 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                 }
             />
             {/* Only show second divider when we have more than one document since otherwise there's no reorder items */}
-            {documentOrder.length > 1 && <MenuDivider />}
+            {documentOrder.length > 1 && <AppMenuDivider />}
         </>
     );
 
     const modifyDocumentItems = isHome && (
         <>
-            <MenuDivider />
-            <MenuItem
-                icon="trash"
-                text="Delete"
-                intent="danger"
+            <AppMenuDivider />
+            <AppMenuItem
+                icon={<IconTrash size={16} />}
+                color="red"
                 onClick={() => {
                     deleteDocumentMutation.mutate();
                 }}
-            />
+            >
+                Delete
+            </AppMenuItem>
             <AddDocumentItem />
         </>
     );
 
-    const menu = (
-        <Menu>
+    return (
+        <AppMenu close={close}>
             <OpenDocumentItems path={document.path} />
             <AdminSubmenu>
                 {orderItems}
-                <MenuItem
-                    icon="eye-open"
-                    text="Show all elements"
+                <AppMenuItem
+                    icon={<IconEye size={16} />}
                     onClick={() => {
                         showAllMutation.mutate();
                     }}
-                />
-                <MenuItem
-                    icon="eye-off"
-                    text="Hide all elements"
+                >
+                    Show all elements
+                </AppMenuItem>
+                <AppMenuItem
+                    icon={<IconEyeOff size={16} />}
                     onClick={() => {
                         hideAllMutation.mutate();
                     }}
-                />
+                >
+                    Hide all elements
+                </AppMenuItem>
                 <DocumentDataItems document={document} />
                 <ReloadThumbnailMenuItem id={document.id} isDocumentId={true} />
                 {modifyDocumentItems}
             </AdminSubmenu>
-        </Menu>
+        </AppMenu>
     );
-
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 function useSetDocumentOrderMutation() {
@@ -249,20 +246,21 @@ interface DocumentDataItemsProps {
 function DocumentDataItems({ document }: DocumentDataItemsProps) {
     const toggleSortOrderMutation = useToggleSortOrderMutation(document);
     return (
-        <>
-            <MenuItem
-                onClick={() => {
-                    toggleSortOrderMutation.mutate();
-                }}
-                icon={
-                    document.sortAlphabetically ? "list" : "sort-alphabetical"
-                }
-                text={
-                    document.sortAlphabetically
-                        ? "Use tab order"
-                        : "Sort alphabetically"
-                }
-            />
-        </>
+        <AppMenuItem
+            icon={
+                document.sortAlphabetically ? (
+                    <IconList size={16} />
+                ) : (
+                    <IconSortAZ size={16} />
+                )
+            }
+            onClick={() => {
+                toggleSortOrderMutation.mutate();
+            }}
+        >
+            {document.sortAlphabetically
+                ? "Use tab order"
+                : "Sort alphabetically"}
+        </AppMenuItem>
     );
 }

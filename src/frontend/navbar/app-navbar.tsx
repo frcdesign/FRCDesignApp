@@ -1,16 +1,10 @@
+import { ActionIcon, Collapse, Divider, Group, TextInput } from "@mantine/core";
 import {
-    Alignment,
-    Button,
-    ButtonVariant,
-    Collapse,
-    ControlGroup,
-    IconSize,
-    InputGroup,
-    Intent,
-    Navbar,
-    NavbarDivider,
-    NavbarGroup
-} from "@blueprintjs/core";
+    IconCircleX,
+    IconFilter,
+    IconSearch,
+    IconSettings
+} from "@tabler/icons-react";
 import { ReactNode, RefObject, useRef, useState } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
@@ -32,43 +26,41 @@ export function AppNavbar(): ReactNode {
                 src={frcDesignBook}
                 alt="FRCDesign.org"
                 className="frc-design-icon"
-                width={IconSize.LARGE}
+                width={20}
             />
         </a>
     );
 
     return (
-        <Navbar className="app-navbar">
-            {/* Add div to make display: flex work */}
-            <div>
-                <NavbarGroup>
+        <div className="app-navbar">
+            <Group justify="space-between" px="sm" py="xs" wrap="nowrap">
+                <Group gap="xs" wrap="nowrap">
                     {frcDesignIcon}
-                    <NavbarDivider />
-                    <ControlGroup>
-                        <Button
-                            icon="filter"
-                            variant={ButtonVariant.MINIMAL}
-                            onClick={() => setShowFilters(!showFilters)}
-                            active={showFilters}
-                            intent={
-                                uiState.vendorFilters
-                                    ? Intent.PRIMARY
-                                    : Intent.NONE
-                            }
-                        />
-                        <SearchBar />
-                    </ControlGroup>
-                </NavbarGroup>
-                <NavbarGroup align={Alignment.END}>
-                    <SettingsButton />
-                </NavbarGroup>
-            </div>
-            <div style={{ marginBottom: showFilters ? "10px" : "0px" }}>
-                <Collapse isOpen={showFilters}>
+                    <Divider orientation="vertical" />
+                    <ActionIcon
+                        variant={showFilters ? "light" : "subtle"}
+                        color={uiState.vendorFilters ? "blue" : "gray"}
+                        onClick={() => setShowFilters(!showFilters)}
+                        title="Filters"
+                    >
+                        <IconFilter size={18} />
+                    </ActionIcon>
+                    <SearchBar />
+                </Group>
+                <SettingsButton />
+            </Group>
+            <div
+                style={{
+                    marginBottom: showFilters ? "10px" : "0px",
+                    paddingLeft: "var(--mantine-spacing-sm)",
+                    paddingRight: "var(--mantine-spacing-sm)"
+                }}
+            >
+                <Collapse in={showFilters}>
                     <VendorFilters />
                 </Collapse>
             </div>
-        </Navbar>
+        </div>
     );
 }
 
@@ -76,9 +68,10 @@ export function SettingsButton() {
     const navigate = useNavigate();
 
     return (
-        <Button
-            icon="cog"
-            variant={ButtonVariant.MINIMAL}
+        <ActionIcon
+            variant="subtle"
+            color="gray"
+            title="Settings"
             onClick={() =>
                 void navigate({
                     to: ".",
@@ -87,11 +80,13 @@ export function SettingsButton() {
                     })
                 })
             }
-        />
+        >
+            <IconSettings size={18} />
+        </ActionIcon>
     );
 }
 
-function selectAllInputText(ref: RefObject<HTMLInputElement>) {
+function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     const input = ref.current;
     if (!input) {
         return;
@@ -105,36 +100,38 @@ export function SearchBar() {
     const [uiState, setUiState] = useUiState();
 
     const clearButton = uiState.searchQuery ? (
-        <Button
-            variant="minimal"
-            icon="cross-circle"
+        <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
             onClick={() => {
                 if (ref.current) {
                     ref.current.value = "";
                 }
                 setUiState({ searchQuery: undefined });
             }}
-            size="small"
-        />
+        >
+            <IconCircleX size={16} />
+        </ActionIcon>
     ) : undefined;
 
     return (
-        <InputGroup
+        <TextInput
             type="search"
-            leftIcon="search"
+            leftSection={<IconSearch size={16} />}
             placeholder="Search library..."
             className="search-bar"
-            inputClassName="search-input"
-            inputRef={ref}
-            value={uiState.searchQuery}
+            ref={ref}
+            value={uiState.searchQuery ?? ""}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
-            onValueChange={(value) => {
+            onChange={(event) => {
+                const value = event.currentTarget.value;
                 const query = value === "" ? undefined : value;
                 setUiState({ searchQuery: query });
             }}
-            rightElement={clearButton}
+            rightSection={clearButton}
         />
     );
 }

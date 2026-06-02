@@ -7,17 +7,24 @@ import {
 } from "@tanstack/react-router";
 import {
     Button,
-    CardList,
-    ContextMenuChildrenProps,
-    Section,
-    SectionCard
-} from "@blueprintjs/core";
-import { ReactNode, useRef } from "react";
+    Card,
+    Group,
+    Stack,
+    Text,
+    UnstyledButton
+} from "@mantine/core";
+import {
+    IconAlertTriangle,
+    IconArrowBackUp,
+    IconArrowLeft
+} from "@tabler/icons-react";
+import { useContextMenu } from "mantine-contextmenu";
+import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
 import { DocumentOut, Insertables } from "../../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
-import { DocumentContextMenu } from "../../../cards/document-card";
+import { DocumentMenu } from "../../../cards/document-card";
 import { InsertableCard } from "../../../cards/insertable-card";
 import { ContextMenuButton } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
@@ -27,7 +34,6 @@ import {
     SectionLoading
 } from "../../../common/app-zero-state";
 import { ClearFiltersButton } from "../../../navbar/vendor-filters";
-import { useInteractiveSection } from "../../../common/utils";
 import { useLibraryQuery } from "../../../queries";
 import { useUiState, updateUiState } from "../../../api-utils/ui-state";
 
@@ -46,10 +52,7 @@ function DocumentList(): ReactNode {
     }).documentId;
 
     const uiState = useUiState()[0];
-
-    const sectionRef = useRef<HTMLDivElement>(null);
-
-    useInteractiveSection(sectionRef, [libraryQuery]);
+    const { showContextMenu } = useContextMenu();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading documents..." />;
@@ -69,13 +72,14 @@ function DocumentList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        text="Go back"
-                        icon="undo"
-                        intent="primary"
+                        color="blue"
+                        leftSection={<IconArrowBackUp size={16} />}
                         onClick={() => {
                             void navigate({ to: "/app/documents" });
                         }}
-                    />
+                    >
+                        Go back
+                    </Button>
                 }
             />
         );
@@ -84,7 +88,7 @@ function DocumentList(): ReactNode {
     let content: ReactNode;
     if (uiState.searchQuery) {
         content = (
-            <CardList bordered={false} compact>
+            <Stack gap={0}>
                 <SearchResults
                     query={uiState.searchQuery}
                     filters={{
@@ -92,7 +96,7 @@ function DocumentList(): ReactNode {
                         documentId: document.id
                     }}
                 />
-            </CardList>
+            </Stack>
         );
     } else {
         content = (
@@ -103,43 +107,48 @@ function DocumentList(): ReactNode {
         );
     }
 
+    const menuHandler = showContextMenu((close) => (
+        <DocumentMenu document={document} close={close} />
+    ));
+
     return (
         <>
-            <DocumentContextMenu document={document}>
-                {(ctxMenuProps: ContextMenuChildrenProps) => (
-                    <>
-                        <Section
-                            icon="arrow-left"
-                            onContextMenu={ctxMenuProps.onContextMenu}
-                            ref={sectionRef}
-                            title={document.name}
-                            onClick={() => {
-                                void navigate({ to: "/app/documents" });
-                            }}
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                flexGrow: 0,
-                                maxHeight: "100%"
-                            }}
-                            rightElement={
-                                <ContextMenuButton
-                                    onClick={ctxMenuProps.onContextMenu}
-                                />
-                            }
-                        >
-                            <SectionCard
-                                onClick={(event) => event.stopPropagation()}
-                                padded={false}
-                                style={{ overflowY: "auto" }}
-                            >
-                                {content}
-                            </SectionCard>
-                        </Section>
-                        {ctxMenuProps.popover}
-                    </>
-                )}
-            </DocumentContextMenu>
+            <Card
+                withBorder
+                radius="md"
+                padding={0}
+                onContextMenu={menuHandler}
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    flexGrow: 0,
+                    maxHeight: "100%"
+                }}
+            >
+                <Group
+                    justify="space-between"
+                    px="sm"
+                    py="xs"
+                    wrap="nowrap"
+                    style={{ flexShrink: 0 }}
+                >
+                    <UnstyledButton
+                        onClick={() => {
+                            void navigate({ to: "/app/documents" });
+                        }}
+                        style={{ flex: 1, minWidth: 0 }}
+                    >
+                        <Group gap="sm" wrap="nowrap">
+                            <IconArrowLeft size={18} />
+                            <Text fw={600} truncate>
+                                {document.name}
+                            </Text>
+                        </Group>
+                    </UnstyledButton>
+                    <ContextMenuButton onClick={menuHandler} />
+                </Group>
+                <div style={{ overflowY: "auto" }}>{content}</div>
+            </Card>
             <Outlet />
         </>
     );
@@ -177,8 +186,12 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     if (filterResult.insertables.length === 0) {
         return (
             <SectionError
-                icon="warning-sign"
-                iconIntent="warning"
+                icon={
+                    <IconAlertTriangle
+                        size={36}
+                        color="var(--mantine-color-yellow-6)"
+                    />
+                }
                 title="All elements are hidden by filters"
                 action={<ClearFiltersButton />}
             />
@@ -196,9 +209,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     return (
         <>
             {callout}
-            <CardList bordered={false} compact>
-                {insertableCards}
-            </CardList>
+            <Stack gap={0}>{insertableCards}</Stack>
         </>
     );
 }

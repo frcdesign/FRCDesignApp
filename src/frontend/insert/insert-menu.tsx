@@ -9,14 +9,8 @@ import {
     InsertableOut
 } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import {
-    Button,
-    Checkbox,
-    Dialog,
-    DialogBody,
-    DialogFooter,
-    Intent
-} from "@blueprintjs/core";
+import { Button, Checkbox, Group, Modal } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import { useIsFetching } from "@tanstack/react-query";
 import {
     MenuType,
@@ -78,33 +72,31 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
         );
     }
 
-    const actions = (
-        <InsertButtons
-            insertable={insertable}
-            configuration={configuration}
-            isFavorite={favorite !== undefined}
-        />
-    );
-
     return (
-        <Dialog
-            isOpen
+        <Modal
+            opened
             title={insertable.name}
             onClose={() => {
                 showRestoreToast(insertable, navigate, configuration);
                 closeDialog();
             }}
             className="insert-menu"
+            centered
         >
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
             />
-            <DialogBody>{parameters}</DialogBody>
-            <DialogFooter actions={actions}>
+            {parameters}
+            <Group justify="space-between" mt="md" wrap="nowrap">
                 <FavoriteButton favorite={favorite} insertable={insertable} />
-            </DialogFooter>
-        </Dialog>
+                <InsertButtons
+                    insertable={insertable}
+                    configuration={configuration}
+                    isFavorite={favorite !== undefined}
+                />
+            </Group>
+        </Modal>
     );
 }
 
@@ -148,20 +140,18 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                     label="Fasten"
                     checked={uiState.fasten}
                     onChange={() => setUiState({ fasten: !uiState.fasten })}
-                    inline
                 />
             )}
             <Button
-                text={
-                    search.elementType === ElementType.ASSEMBLY
-                        ? "Insert"
-                        : "Derive"
-                }
-                icon="plus"
-                intent={Intent.SUCCESS}
+                color="green"
+                leftSection={<IconPlus size={16} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
-            />
+            >
+                {search.elementType === ElementType.ASSEMBLY
+                    ? "Insert"
+                    : "Derive"}
+            </Button>
         </div>
     );
 }
@@ -188,8 +178,7 @@ function showRestoreToast(
                             defaultConfiguration: configuration
                         }
                     });
-                },
-                icon: "share"
+                }
             }
         },
         `cancel-insert ${insertable.id}`

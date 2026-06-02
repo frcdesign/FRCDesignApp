@@ -1,7 +1,6 @@
-import { Classes } from "@blueprintjs/core";
 import { useMatch } from "@tanstack/react-router";
 import { produce } from "immer";
-import { Dispatch, FormEvent, RefObject, useLayoutEffect } from "react";
+import { Dispatch, FormEvent } from "react";
 
 export { createSearchParams } from "../../shared/url-params";
 export type {
@@ -34,24 +33,6 @@ export function handleStringChange(handler: Dispatch<string>) {
 export function handleValueChange<T>(handler: Dispatch<T>) {
     return (event: FormEvent<HTMLElement>) =>
         handler((event.target as HTMLInputElement).value as T);
-}
-
-/**
- * Adds the Interactive class to a Blueprint Section.
- */
-export function useInteractiveSection(
-    sectionRef: RefObject<HTMLDivElement>,
-    dependencies: any[] = []
-) {
-    useLayoutEffect(() => {
-        const section = sectionRef.current;
-        if (!section) {
-            return;
-        }
-        const child = section.children[0];
-        child.className += " " + Classes.INTERACTIVE;
-        // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
-    }, [sectionRef, ...dependencies]);
 }
 
 type Updater<T> = (value: T | undefined) => T | undefined;

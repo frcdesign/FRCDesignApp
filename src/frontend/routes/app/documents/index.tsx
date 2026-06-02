@@ -1,21 +1,24 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import {
-    CardList,
-    Classes,
+    Card,
     Collapse,
-    Icon,
-    Intent,
-    MaybeElement,
-    Section,
-    SectionCard
-} from "@blueprintjs/core";
-import { PropsWithChildren, ReactNode, useRef, useState } from "react";
+    Group,
+    Stack,
+    Text,
+    UnstyledButton
+} from "@mantine/core";
+import {
+    IconBook,
+    IconChevronDown,
+    IconChevronUp,
+    IconSearch
+} from "@tabler/icons-react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard } from "../../../cards/document-card";
 import { HeartIcon } from "../../../favorites/favorite-button";
 import { SearchResults } from "../../../search/search-results";
 import { SectionError, SectionLoading } from "../../../common/app-zero-state";
 import { RequireAccessLevel } from "../../../api-utils/access-level";
-import { useInteractiveSection } from "../../../common/utils";
 import { AddDocumentButton } from "../../../app/add-document-menu";
 import { FavoritesList } from "../../../favorites/favorites-list";
 import { useLibraryQuery } from "../../../queries";
@@ -52,7 +55,12 @@ function HomeList(): ReactNode {
         documentList = (
             <ListContainer
                 key="search"
-                icon={<Icon icon="search" intent={Intent.PRIMARY} />}
+                icon={
+                    <IconSearch
+                        size={18}
+                        color="var(--mantine-color-blue-6)"
+                    />
+                }
                 title="Search Results"
                 isOpen={isSearchOpen}
                 onClick={setIsSearchOpen}
@@ -66,7 +74,7 @@ function HomeList(): ReactNode {
     } else {
         documentList = (
             <ListContainer
-                icon={<Icon icon="manual" className="frc-design-green" />}
+                icon={<IconBook size={18} className="frc-design-green" />}
                 title={getLibraryName(library)}
                 isOpen={uiState.isLibraryOpen}
                 onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
@@ -78,10 +86,8 @@ function HomeList(): ReactNode {
 
     return (
         <>
-            {/* <CardList compact style={{ margin: "0px" }} bordered={false}> */}
             {favoritesList}
             {documentList}
-            {/* </CardList> */}
             <Outlet />
         </>
     );
@@ -126,62 +132,40 @@ function LibraryList() {
 interface ListContainerProps extends PropsWithChildren {
     isOpen: boolean;
     onClick?: (isOpen: boolean) => void;
-    icon: MaybeElement;
+    icon: ReactNode;
     title: string;
 }
 
 function ListContainer(props: ListContainerProps): ReactNode {
     const { icon, title, children, isOpen, onClick } = props;
 
-    const sectionRef = useRef<HTMLDivElement>(null);
-    useInteractiveSection(sectionRef);
-
     return (
-        <>
-            <Section
-                icon={icon}
-                title={title}
-                ref={sectionRef}
+        <Card withBorder radius="md" padding={0} mb="sm">
+            <UnstyledButton
                 onClick={() => onClick && onClick(!isOpen)}
-                style={{
-                    display: "flex",
-                    flexDirection: "column"
-                }}
-                rightElement={
-                    <Icon
-                        icon={isOpen ? "chevron-up" : "chevron-down"}
-                        className={Classes.TEXT_MUTED}
-                    />
-                }
+                style={{ width: "100%" }}
             >
-                <SectionCard
-                    padded={false}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <Collapse isOpen={isOpen}>
-                        <CardList compact bordered={false}>
-                            {children}
-                        </CardList>
-                    </Collapse>
-                </SectionCard>
-            </Section>
-            {/* <Card
-                className="split"
-                onClick={() => onClick && onClick(!isOpen)}
-                interactive
-            >
-                <div className="home-card-title">
-                    {icon}
-                    <H6 style={{ marginBottom: "1px" }}>{title}</H6>
-                </div>
-                <Icon
-                    icon={isOpen ? "chevron-up" : "chevron-down"}
-                    className={Classes.TEXT_MUTED}
-                />
-            </Card>
-            <Collapse isOpen={isOpen}>
-                <CardList compact>{children}</CardList>
-            </Collapse> */}
-        </>
+                <Group justify="space-between" px="sm" py="xs" wrap="nowrap">
+                    <Group gap="sm" wrap="nowrap">
+                        {icon}
+                        <Text fw={600}>{title}</Text>
+                    </Group>
+                    {isOpen ? (
+                        <IconChevronUp
+                            size={16}
+                            color="var(--mantine-color-dimmed)"
+                        />
+                    ) : (
+                        <IconChevronDown
+                            size={16}
+                            color="var(--mantine-color-dimmed)"
+                        />
+                    )}
+                </Group>
+            </UnstyledButton>
+            <Collapse in={isOpen}>
+                <Stack gap={0}>{children}</Stack>
+            </Collapse>
+        </Card>
     );
 }

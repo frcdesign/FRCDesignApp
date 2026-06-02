@@ -1,10 +1,5 @@
-import {
-    Button,
-    Dialog,
-    DialogBody,
-    DialogFooter,
-    Intent
-} from "@blueprintjs/core";
+import { Button, Group, Modal } from "@mantine/core";
+import { IconDeviceFloppy } from "@tabler/icons-react";
 import { ReactNode, useState } from "react";
 import {
     MenuType,
@@ -112,39 +107,41 @@ function FavoriteMenuDialog(
         );
     }
 
-    const closeButton = (
-        <Button
-            text="Save"
-            icon="floppy-disk"
-            intent={Intent.PRIMARY}
-            onClick={() => {
-                setDefaultConfigurationMutation.mutate();
-                closeDialog();
-            }}
-        />
-    );
-
     return (
-        <Dialog
-            isOpen
-            icon={<HeartIcon />}
+        <Modal
+            opened
             className="insert-menu"
-            title={insertable.name}
+            title={
+                <Group gap="xs" wrap="nowrap">
+                    <HeartIcon />
+                    {insertable.name}
+                </Group>
+            }
             onClose={closeDialog}
+            centered
         >
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
             />
-            <DialogBody>
-                <ConfigurationWrapper
-                    configuration={configuration}
-                    setConfiguration={setConfiguration}
-                    configurationId={insertable.configurationId}
-                    documentId={insertable.documentId}
-                />
-            </DialogBody>
-            <DialogFooter minimal actions={closeButton} />
-        </Dialog>
+            <ConfigurationWrapper
+                configuration={configuration}
+                setConfiguration={setConfiguration}
+                configurationId={insertable.configurationId}
+                documentId={insertable.documentId}
+            />
+            <Group justify="flex-end" mt="md">
+                <Button
+                    color="blue"
+                    leftSection={<IconDeviceFloppy size={16} />}
+                    onClick={() => {
+                        setDefaultConfigurationMutation.mutate();
+                        closeDialog();
+                    }}
+                >
+                    Save
+                </Button>
+            </Group>
+        </Modal>
     );
 }

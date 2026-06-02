@@ -18,14 +18,8 @@ function getHeightAndWidth(
     };
 }
 import { ElementPath, toElementApiPath } from "../../shared/path";
-import {
-    Card,
-    Icon,
-    Intent,
-    Popover,
-    Spinner,
-    SpinnerSize
-} from "@blueprintjs/core";
+import { Card, HoverCard, Loader } from "@mantine/core";
+import { IconHelp } from "@tabler/icons-react";
 
 import { ReactNode } from "react";
 import { Configuration } from "../../shared/configuration-models";
@@ -41,35 +35,33 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { thumbnailUrls } = props;
 
     return (
-        <Popover
-            content={
-                <Card>
+        <HoverCard withinPortal shadow="md" openDelay={150} closeDelay={50}>
+            <HoverCard.Target>
+                <div style={{ marginRight: "5px", display: "flex" }}>
                     <Thumbnail
-                        url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                        url={thumbnailUrls[ThumbnailSize.TINY]}
                         heightAndWidth={getHeightAndWidth(
-                            ThumbnailSize.STANDARD,
-                            0.6
+                            ThumbnailSize.TINY,
+                            0.8
                         )}
-                        spinnerSize={SpinnerSize.LARGE}
+                        spinnerSize={25}
                     />
-                </Card>
-            }
-            interactionKind="hover"
-        >
-            <div style={{ marginRight: "5px" }}>
+                </div>
+            </HoverCard.Target>
+            <HoverCard.Dropdown p="xs">
                 <Thumbnail
-                    url={thumbnailUrls[ThumbnailSize.TINY]}
-                    heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
-                    spinnerSize={25}
+                    url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                    heightAndWidth={getHeightAndWidth(ThumbnailSize.STANDARD, 0.6)}
+                    spinnerSize={48}
                 />
-            </div>
-        </Popover>
+            </HoverCard.Dropdown>
+        </HoverCard>
     );
 }
 
 interface ThumbnailProps {
     url?: string;
-    spinnerSize: SpinnerSize | number;
+    spinnerSize: number;
     heightAndWidth: HeightAndWidth;
 }
 
@@ -93,9 +85,9 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     let content;
     if (url === undefined || imageQuery.isError) {
-        content = <Icon icon="help" size={spinnerSize} />;
+        content = <IconHelp size={spinnerSize} />;
     } else if (imageQuery.isPending) {
-        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
+        content = <Loader color="blue" size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
@@ -181,7 +173,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <div className="center" style={heightAndWidth}>
-                <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
+                <Loader color="blue" size={36} />
             </div>
         );
     }
@@ -192,9 +184,9 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 <img src={thumbnailQuery.data} {...heightAndWidth} />
             </div>
             {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
-                <Spinner
-                    size={SpinnerSize.SMALL}
-                    intent={Intent.PRIMARY}
+                <Loader
+                    color="blue"
+                    size={18}
                     style={{
                         position: "absolute",
                         bottom: "15px",

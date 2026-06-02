@@ -1,11 +1,12 @@
+import { Card } from "@mantine/core";
 import {
-    ContextMenuChildrenProps,
-    Card,
-    ContextMenu,
-    Menu,
-    MenuDivider,
-    MenuItem
-} from "@blueprintjs/core";
+    IconCircleCheck,
+    IconCircleOff,
+    IconEye,
+    IconEyeOff,
+    IconPlus
+} from "@tabler/icons-react";
+import { useContextMenu } from "mantine-contextmenu";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -29,7 +30,7 @@ import {
     QuickInsertItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
-import { AppPopup, useOpenPopup } from "../overlays/popup-params";
+import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { MenuType } from "../overlays/menu-params";
 import {
@@ -44,6 +45,7 @@ import { showSuccessToast } from "../common/toaster";
 import { toInsertablePath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
+import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
@@ -57,6 +59,7 @@ interface InsertableCardProps extends PropsWithChildren {
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, searchHit } = props;
     const navigate = useNavigate();
+    const { showContextMenu } = useContextMenu();
 
     const favorites = useFavoritesQuery().data?.favorites;
 
@@ -65,7 +68,6 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
-    const openAlert = useOpenPopup();
 
     if (isHidden || !favorites) {
         return null;
@@ -73,87 +75,83 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
+    const menuContent = (close: () => void) => (
+        <InsertableMenu
+            favorite={favorite}
+            insertable={insertable}
+            close={close}
+        />
+    );
+
     return (
-        <InsertableContextMenu favorite={favorite} insertable={insertable}>
-            {(ctxMenuProps: ContextMenuChildrenProps) => (
-                <>
-                    <Card
-                        className="item-card"
-                        onContextMenu={ctxMenuProps.onContextMenu}
-                        ref={ctxMenuProps.ref}
-                        interactive
-                        onClick={() => {
-                            if (props.onClick) {
-                                props.onClick();
-                            }
+        <Card
+            withBorder
+            padding="sm"
+            radius="md"
+            className="item-card"
+            style={{ cursor: "pointer" }}
+            onContextMenu={showContextMenu(menuContent)}
+            onClick={() => {
+                if (props.onClick) {
+                    props.onClick();
+                }
 
-                            if (isAssemblyInPartStudio) {
-                                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
-                                return;
-                            }
+                if (isAssemblyInPartStudio) {
+                    openCannotDeriveAssemblyAlert();
+                    return;
+                }
 
-                            void navigate({
-                                to: ".",
-                                search: {
-                                    activeMenu: MenuType.INSERT_MENU,
-                                    activeInsertableId: insertable.id
-                                }
-                            });
-                        }}
-                    >
-                        <CardTitle
-                            disabled={isAssemblyInPartStudio}
-                            searchHit={searchHit}
-                            title={insertable.name}
-                            thumbnailUrls={insertable.thumbnailUrls}
-                            showHiddenTag={!insertable.isVisible}
-                        />
-                        <div className="item-card-right-content">
-                            <FavoriteButton
-                                favorite={favorite}
-                                insertable={insertable}
-                            />
-                            <ContextMenuButton
-                                onClick={ctxMenuProps.onContextMenu}
-                            />
-                        </div>
-                    </Card>
-                    {ctxMenuProps.popover}
-                </>
-            )}
-        </InsertableContextMenu>
+                void navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: MenuType.INSERT_MENU,
+                        activeInsertableId: insertable.id
+                    }
+                });
+            }}
+        >
+            <CardTitle
+                disabled={isAssemblyInPartStudio}
+                searchHit={searchHit}
+                title={insertable.name}
+                thumbnailUrls={insertable.thumbnailUrls}
+                showHiddenTag={!insertable.isVisible}
+            />
+            <div className="item-card-right-content">
+                <FavoriteButton favorite={favorite} insertable={insertable} />
+                <ContextMenuButton onClick={showContextMenu(menuContent)} />
+            </div>
+        </Card>
     );
 }
 
-interface InsertableContextMenuProps {
+interface InsertableMenuProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
-    children: any;
+    close: () => void;
 }
 
-export function InsertableContextMenu(props: InsertableContextMenuProps) {
-    const { children, favorite, insertable } = props;
+export function InsertableMenu(props: InsertableMenuProps): ReactNode {
+    const { favorite, insertable, close } = props;
 
-    const menu = (
-        <Menu>
+    return (
+        <AppMenu close={close}>
             <QuickInsertItems
                 insertable={insertable}
                 isFavorite={favorite !== undefined}
             />
-            <MenuDivider />
+            <AppMenuDivider />
             <FavoriteInsertableItem
                 favorite={favorite}
                 insertable={insertable}
             />
-            <MenuDivider />
+            <AppMenuDivider />
             <OpenDocumentItems path={insertable.path} />
             <AdminSubmenu>
                 <InsertableAdminContextMenu insertable={insertable} />
             </AdminSubmenu>
-        </Menu>
+        </AppMenu>
     );
-
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 interface InsertableAdminContextMenuProps {
@@ -231,37 +229,54 @@ export function InsertableAdminContextMenu(
 
     return (
         <>
-            <MenuItem
+            <AppMenuItem
                 onClick={() => setVisibilityMutation.mutate()}
-                intent={insertable.isVisible ? "danger" : "primary"}
-                icon={insertable.isVisible ? "eye-off" : "eye-open"}
-                text={insertable.isVisible ? "Hide element" : "Show element"}
-            />
+                color={insertable.isVisible ? "red" : "blue"}
+                icon={
+                    insertable.isVisible ? (
+                        <IconEyeOff size={16} />
+                    ) : (
+                        <IconEye size={16} />
+                    )
+                }
+            >
+                {insertable.isVisible ? "Hide element" : "Show element"}
+            </AppMenuItem>
             <ReloadThumbnailMenuItem id={insertable.id} isDocumentId={false} />
             {insertable.elementType === ElementType.PART_STUDIO && (
-                <MenuItem
+                <AppMenuItem
                     onClick={() => setOpenCompositeMutation.mutate()}
-                    intent={insertable.isOpenComposite ? "warning" : undefined}
-                    icon={insertable.isOpenComposite ? "disable" : "confirm"}
-                    text={
-                        insertable.isOpenComposite
-                            ? "No open composites"
-                            : "Has open composite"
+                    color={insertable.isOpenComposite ? "yellow" : undefined}
+                    icon={
+                        insertable.isOpenComposite ? (
+                            <IconCircleOff size={16} />
+                        ) : (
+                            <IconCircleCheck size={16} />
+                        )
                     }
-                />
+                >
+                    {insertable.isOpenComposite
+                        ? "No open composites"
+                        : "Has open composite"}
+                </AppMenuItem>
             )}
-            <MenuItem
+            <AppMenuItem
                 onClick={() =>
                     setSupportsFastenMutation.mutate(!insertable.supportsFasten)
                 }
-                intent={insertable.supportsFasten ? "danger" : "primary"}
-                icon={insertable.supportsFasten ? "disable" : "add"}
-                text={
-                    insertable.supportsFasten
-                        ? "Disable insert and fasten"
-                        : "Enable Insert and fasten"
+                color={insertable.supportsFasten ? "red" : "blue"}
+                icon={
+                    insertable.supportsFasten ? (
+                        <IconCircleOff size={16} />
+                    ) : (
+                        <IconPlus size={16} />
+                    )
                 }
-            />
+            >
+                {insertable.supportsFasten
+                    ? "Disable insert and fasten"
+                    : "Enable Insert and fasten"}
+            </AppMenuItem>
         </>
     );
 }

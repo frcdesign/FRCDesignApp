@@ -1,17 +1,4 @@
-import {
-    Spinner,
-    Intent,
-    NonIdealState,
-    Icon,
-    NonIdealStateIconSize,
-    FormGroup,
-    MenuItem,
-    Button,
-    Checkbox,
-    Alignment,
-    InputGroup,
-    NumericInput
-} from "@blueprintjs/core";
+import { Checkbox, Loader, Select, TextInput } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -46,9 +33,9 @@ import {
     valueWithUnits,
     evaluateExpression
 } from "../insert/input-parser";
-import { Select } from "@blueprintjs/select";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
+import { SectionError } from "../common/app-zero-state";
 import { useLibrary } from "../api-utils/library";
 
 interface ConfigurationWrapperProps {
@@ -100,21 +87,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     if (query.isPending || unitInfoQuery.isPending || !configuration) {
-        return <Spinner intent={Intent.PRIMARY} />;
+        return <Loader color="blue" />;
     } else if (query.isError || unitInfoQuery.isError) {
-        return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        intent="danger"
-                        icon="cross"
-                        size={NonIdealStateIconSize.STANDARD}
-                    />
-                }
-                title="Failed to load configuration"
-                description="If the problem persists, contact the FRCDesignApp developers."
-            />
-        );
+        return <SectionError title="Failed to load configuration" />;
     }
 
     return (
@@ -267,20 +242,11 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const { parameter, value, onValueChange, configuration, parameters } =
         props;
 
-    // The active option is the option currently focused by the user
-    // const [activeOption, setActiveOption] = useState<EnumOption | null>(null);
-
     const visibleOptions = getVisibleOptions(
         parameter,
         configuration,
         parameters
     );
-
-    // useMemo to stabilize options across re-renders so, e.g., active item changes work
-    // const visibleOptions = useMemo(
-    //     () => getVisibleOptions(parameter, configuration, parameters),
-    //     [configuration, parameter, parameters]
-    // );
 
     useEffect(() => {
         if (visibleOptions.length === 0) {
@@ -311,54 +277,25 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     }
 
     return (
-        <FormGroup
-            label={parameter.name}
-            labelFor={parameter.id}
-            inline
+        <Select
             className="full-width"
-        >
-            <Select<EnumOption>
-                items={visibleOptions}
-                activeItem={currentOption}
-                onItemSelect={(option) => {
-                    onValueChange(option.id);
-                }}
-                itemsEqual="id"
-                fill
-                popoverProps={{
-                    minimal: true,
-                    popoverClassName: "enum-menu"
-                }}
-                filterable={false}
-                itemRenderer={(
-                    currentOption,
-                    { handleClick, handleFocus, modifiers, ref }
-                ) => {
-                    const selected = value === currentOption.id;
-                    return (
-                        <MenuItem
-                            key={currentOption.id}
-                            ref={ref}
-                            onClick={handleClick}
-                            onFocus={handleFocus}
-                            active={modifiers.active}
-                            text={currentOption.name}
-                            roleStructure="listoption"
-                            selected={selected}
-                            intent={selected ? Intent.PRIMARY : Intent.NONE}
-                        />
-                    );
-                }}
-            >
-                <Button
-                    id={parameter.id}
-                    alignText="start"
-                    endIcon="caret-down"
-                    text={currentOption.name}
-                    fill
-                />
-            </Select>
-        </FormGroup>
+            label={parameter.name}
+            id={parameter.id}
+            data={visibleOptions.map((option) => ({
+                value: option.id,
+                label: option.name
+            }))}
+            value={currentOption.id}
+            allowDeselect={false}
+            checkIconPosition="right"
+            maxDropdownHeight={250}
+            comboboxProps={{ withinPortal: true }}
+            onChange={(newValue) => {
+                if (newValue !== null) {
+                    onValueChange(newValue);
+                }
+            }}
+        />
     );
 }
 
@@ -371,9 +308,9 @@ function BooleanParameter(
     return (
         <div style={{ width: "100%" }}>
             <Checkbox
+                my="xs"
                 label={parameter.name}
-                alignIndicator={Alignment.END}
-                inline
+                labelPosition="left"
                 checked={value === "true"}
                 onChange={handleBooleanChange((checked) =>
                     onValueChange(checked ? "true" : "false")
@@ -386,18 +323,13 @@ function BooleanParameter(
 function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup
-            label={parameter.name}
-            inline
-            labelFor={parameter.id}
+        <TextInput
             className="full-width"
-        >
-            <InputGroup
-                id={parameter.id}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        </FormGroup>
+            label={parameter.name}
+            id={parameter.id}
+            value={value}
+            onChange={(event) => onValueChange(event.currentTarget.value)}
+        />
     );
 }
 
@@ -493,40 +425,28 @@ function QuantityParameter(
         }
     }, [evaluateOptions, expression, onValueChange]);
 
-    const intent = errorMessage ? "danger" : undefined;
-
     return (
-        <FormGroup
-            label={parameter.name}
-            inline
-            labelFor={parameter.id}
+        <TextInput
             className="full-width"
-            helperText={errorMessage}
-            intent={intent}
-        >
-            <NumericInput
-                id={parameter.id}
-                value={focused ? expression : display}
-                fill
-                intent={intent}
-                inputRef={ref}
-                selectAllOnFocus
-                onFocus={() => {
-                    setFocused(true);
-                }}
-                onBlur={handleSubmit}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                        ref.current?.blur();
-                        handleSubmit();
-                    }
-                }}
-                allowNumericCharactersOnly={false}
-                onValueChange={(_, expression) => {
-                    setExpression(expression);
-                }}
-                buttonPosition="none"
-            />
-        </FormGroup>
+            label={parameter.name}
+            id={parameter.id}
+            ref={ref}
+            value={focused ? expression : display}
+            error={errorMessage}
+            onFocus={(event) => {
+                setFocused(true);
+                event.currentTarget.select();
+            }}
+            onBlur={handleSubmit}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                    ref.current?.blur();
+                    handleSubmit();
+                }
+            }}
+            onChange={(event) => {
+                setExpression(event.currentTarget.value);
+            }}
+        />
     );
 }

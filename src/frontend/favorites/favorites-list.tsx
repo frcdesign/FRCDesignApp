@@ -1,4 +1,5 @@
-import { Colors, Card } from "@blueprintjs/core";
+import { Card } from "@mantine/core";
+import { IconHeartBroken } from "@tabler/icons-react";
 import { ReactNode } from "react";
 import { filterInsertables } from "../search/filter";
 import {
@@ -41,8 +42,12 @@ export function FavoritesList(): ReactNode {
         return (
             <SectionError
                 title="Failed to load favorites."
-                icon="heart-broken"
-                iconColor={Colors.RED3}
+                icon={
+                    <IconHeartBroken
+                        size={36}
+                        color="var(--mantine-color-red-6)"
+                    />
+                }
             />
         );
     }

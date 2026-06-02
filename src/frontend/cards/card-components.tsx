@@ -1,12 +1,13 @@
+import { ActionIcon, Badge, Group, Text } from "@mantine/core";
 import {
-    Button,
-    ButtonVariant,
-    Classes,
-    EntityTitle,
-    MenuDivider,
-    MenuItem,
-    Tag
-} from "@blueprintjs/core";
+    IconDots,
+    IconEyeOff,
+    IconLink,
+    IconPlus,
+    IconRefresh,
+    IconSettings,
+    IconShare
+} from "@tabler/icons-react";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import {
     MouseEventHandler,
@@ -18,7 +19,7 @@ import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
 import { DocumentPath } from "../../shared/path";
-import { AppPopup, useOpenPopup } from "../overlays/popup-params";
+import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
@@ -30,30 +31,33 @@ import { Configuration } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
+import { AppMenuItem, AppMenuDivider, AppSubmenu } from "../common/app-menu";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
 }
 
 /**
- * MenuItems which can be used to open or copy a link to a document.
+ * Menu items which can be used to open or copy a link to a document.
  */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
         <>
-            <MenuItem
-                text="Open document"
-                icon="share"
+            <AppMenuItem
+                icon={<IconShare size={16} />}
                 onClick={() => openUrlInNewTab(url)}
-            />
-            <MenuItem
-                text="Copy link"
-                icon="link"
+            >
+                Open document
+            </AppMenuItem>
+            <AppMenuItem
+                icon={<IconLink size={16} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
-            />
+            >
+                Copy link
+            </AppMenuItem>
         </>
     );
 }
@@ -65,7 +69,7 @@ interface QuickInsertItemProps {
 }
 
 /**
- * MenuItems which can be used to quick insert a document.
+ * Menu items which can be used to quick insert a document.
  */
 export function QuickInsertItems(props: QuickInsertItemProps) {
     const { insertable, configuration, isFavorite } = props;
@@ -78,17 +82,16 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
-    const openAlert = useOpenPopup();
 
     const handleClick = useCallback(
         (fasten: boolean) => {
             if (isAssemblyInPartStudio) {
-                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
+                openCannotDeriveAssemblyAlert();
                 return;
             }
             insertMutation.mutate(fasten);
         },
-        [isAssemblyInPartStudio, insertMutation, openAlert]
+        [isAssemblyInPartStudio, insertMutation]
     );
 
     const supportsFasten =
@@ -98,17 +101,19 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     return (
         <>
             {supportsFasten && (
-                <MenuItem
-                    text="Quick insert and fasten"
-                    icon="add"
+                <AppMenuItem
+                    icon={<IconPlus size={16} />}
                     onClick={() => handleClick(true)}
-                />
+                >
+                    Quick insert and fasten
+                </AppMenuItem>
             )}
-            <MenuItem
-                text="Quick insert"
-                icon="add"
+            <AppMenuItem
+                icon={<IconPlus size={16} />}
                 onClick={() => handleClick(false)}
-            />
+            >
+                Quick insert
+            </AppMenuItem>
         </>
     );
 }
@@ -138,14 +143,7 @@ export function CardTitle(props: CardTitleProps) {
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
-    let hiddenTag: ReactNode = null;
-    if (isHidden) {
-        hiddenTag = (
-            <Tag round intent="warning" icon="eye-off" title="Hidden" />
-        );
-    }
-
-    let cardTitle;
+    let cardTitle: ReactNode;
     if (searchHit) {
         cardTitle = <SearchHitTitle title={title} searchHit={searchHit} />;
     } else {
@@ -153,13 +151,23 @@ export function CardTitle(props: CardTitleProps) {
     }
 
     return (
-        <EntityTitle
-            className={disabled ? Classes.TEXT_MUTED : undefined}
-            ellipsize
-            title={cardTitle}
-            icon={<CardThumbnail thumbnailUrls={thumbnailUrls} />}
-            tags={hiddenTag}
-        />
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+            <CardThumbnail thumbnailUrls={thumbnailUrls} />
+            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                {cardTitle}
+            </Text>
+            {isHidden && (
+                <Badge
+                    color="yellow"
+                    variant="light"
+                    circle
+                    title="Hidden"
+                    style={{ flexShrink: 0 }}
+                >
+                    <IconEyeOff size={12} style={{ display: "block" }} />
+                </Badge>
+            )}
+        </Group>
     );
 }
 
@@ -175,17 +183,17 @@ interface ContextMenuButtonProps {
  */
 export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
     return (
-        <>
-            <Button
-                icon="more"
-                onClick={(event) => {
-                    event.stopPropagation();
-                    props.onClick(event);
-                }}
-                title="View options"
-                variant={ButtonVariant.MINIMAL}
-            />
-        </>
+        <ActionIcon
+            variant="subtle"
+            color="gray"
+            title="View options"
+            onClick={(event) => {
+                event.stopPropagation();
+                props.onClick(event);
+            }}
+        >
+            <IconDots size={18} />
+        </ActionIcon>
     );
 }
 
@@ -195,13 +203,18 @@ export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
 export function AdminSubmenu(props: PropsWithChildren): ReactNode {
     return (
         <RequireAccessLevel>
-            <MenuDivider />
-            <MenuItem
-                text="Admin options"
-                icon="cog"
-                intent="primary"
-                children={props.children}
-            />
+            <AppMenuDivider />
+            <AppSubmenu
+                title="Admin options"
+                icon={
+                    <IconSettings
+                        size={16}
+                        color="var(--mantine-color-blue-6)"
+                    />
+                }
+            >
+                {props.children}
+            </AppSubmenu>
         </RequireAccessLevel>
     );
 }
@@ -219,12 +232,13 @@ export function ReloadThumbnailMenuItem(
         props.isDocumentId
     );
     return (
-        <MenuItem
+        <AppMenuItem
+            icon={<IconRefresh size={16} />}
             onClick={() => {
                 reloadThumbnailMutation.mutate();
             }}
-            icon="refresh"
-            text="Reload thumbnail"
-        />
+        >
+            Reload thumbnail
+        </AppMenuItem>
     );
 }

@@ -3,14 +3,9 @@ import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import {
-    Card,
-    ContextMenu,
-    ContextMenuChildrenProps,
-    Menu,
-    MenuDivider,
-    MenuItem
-} from "@blueprintjs/core";
+import { Card } from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
+import { useContextMenu } from "mantine-contextmenu";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
@@ -24,12 +19,17 @@ import { useIsInsertableHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../cards/change-order";
 import { useUiState } from "../api-utils/ui-state";
-import { AppPopup, useOpenPopup } from "../overlays/popup-params";
+import {
+    openCannotDeriveAssemblyAlert,
+    openCannotEditDefaultConfigurationAlert,
+    openCannotReorderAlert
+} from "../overlays/alerts";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;
@@ -45,96 +45,91 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
 
     const navigate = useNavigate();
+    const { showContextMenu } = useContextMenu();
 
     const isHidden = useIsInsertableHidden(insertable);
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
-    const openAlert = useOpenPopup();
 
     if (isHidden) {
         return null;
     }
 
+    const menuContent = (close: () => void) => (
+        <FavoriteMenu
+            insertable={insertable}
+            favorite={favorite}
+            close={close}
+        />
+    );
+
     return (
-        <FavoriteContextMenu insertable={insertable} favorite={favorite}>
-            {(ctxMenuProps: ContextMenuChildrenProps) => (
-                <>
-                    <Card
-                        className="item-card"
-                        onContextMenu={ctxMenuProps.onContextMenu}
-                        ref={ctxMenuProps.ref}
-                        interactive
-                        onClick={() => {
-                            if (isAssemblyInPartStudio) {
-                                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
-                                return;
-                            }
-                            void navigate({
-                                to: ".",
-                                search: {
-                                    activeMenu: MenuType.INSERT_MENU,
-                                    activeInsertableId: insertable.id,
-                                    defaultConfiguration:
-                                        favorite.defaultConfiguration
-                                }
-                            });
-                        }}
-                    >
-                        <CardTitle
-                            disabled={isAssemblyInPartStudio}
-                            title={insertable.name}
-                            thumbnailUrls={insertable.thumbnailUrls}
-                            searchHit={searchHit}
-                        />
-                        <div className="item-card-right-content">
-                            <FavoriteButton
-                                favorite={favorite}
-                                insertable={insertable}
-                            />
-                            <ContextMenuButton
-                                onClick={ctxMenuProps.onContextMenu}
-                            />
-                        </div>
-                    </Card>
-                    {ctxMenuProps.popover}
-                </>
-            )}
-        </FavoriteContextMenu>
+        <Card
+            withBorder
+            padding="sm"
+            radius="md"
+            className="item-card"
+            style={{ cursor: "pointer" }}
+            onContextMenu={showContextMenu(menuContent)}
+            onClick={() => {
+                if (isAssemblyInPartStudio) {
+                    openCannotDeriveAssemblyAlert();
+                    return;
+                }
+                void navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: MenuType.INSERT_MENU,
+                        activeInsertableId: insertable.id,
+                        defaultConfiguration: favorite.defaultConfiguration
+                    }
+                });
+            }}
+        >
+            <CardTitle
+                disabled={isAssemblyInPartStudio}
+                title={insertable.name}
+                thumbnailUrls={insertable.thumbnailUrls}
+                searchHit={searchHit}
+            />
+            <div className="item-card-right-content">
+                <FavoriteButton favorite={favorite} insertable={insertable} />
+                <ContextMenuButton onClick={showContextMenu(menuContent)} />
+            </div>
+        </Card>
     );
 }
 
-interface FavoriteContextMenuProps {
+interface FavoriteMenuProps {
     insertable: InsertableOut;
     favorite: Favorite;
-    children: any;
+    close: () => void;
 }
 
-function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
-    const { children, insertable, favorite } = props;
+function FavoriteMenu(props: FavoriteMenuProps): ReactNode {
+    const { insertable, favorite, close } = props;
 
     const uiState = useUiState()[0];
     const navigate = useNavigate();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
-    const openAlert = useOpenPopup();
 
-    const menu = (
-        <Menu>
+    return (
+        <AppMenu close={close}>
             <QuickInsertItems
                 insertable={insertable}
                 configuration={favorite.defaultConfiguration}
                 isFavorite
             />
-            <MenuDivider />
-            <MenuItem
-                icon="edit"
-                text="Edit default configuration"
-                intent="primary"
+            <AppMenuDivider />
+            <AppMenuItem
+                icon={<IconPencil size={16} />}
+                color="blue"
                 onClick={() => {
                     if (insertable.configurationId === undefined) {
-                        openAlert(AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION);
+                        openCannotEditDefaultConfigurationAlert();
                         return;
                     }
                     void navigate({
@@ -146,30 +141,31 @@ function FavoriteContextMenu(props: FavoriteContextMenuProps): ReactNode {
                         }
                     });
                 }}
-            />
-            <MenuDivider />
+            >
+                Edit default configuration
+            </AppMenuItem>
+            <AppMenuDivider />
             <ChangeOrderItems
                 id={favorite.id}
                 order={favoriteOrder}
                 onOrderChange={(newOrder) => {
                     if (uiState.vendorFilters !== undefined) {
-                        openAlert(AppPopup.CANNOT_REORDER);
+                        openCannotReorderAlert();
                         return;
                     }
                     setFavoriteOrderMutation.mutate(newOrder);
                 }}
             />
             {/* Only show second divider when we have more than one favorite since otherwise there's no reorder items */}
-            {favoriteOrder.length > 1 && <MenuDivider />}
+            {favoriteOrder.length > 1 && <AppMenuDivider />}
             <OpenDocumentItems path={insertable.path} />
-            <MenuDivider />
+            <AppMenuDivider />
             <FavoriteInsertableItem
                 favorite={favorite}
                 insertable={insertable}
             />
-        </Menu>
+        </AppMenu>
     );
-    return <ContextMenu content={menu}>{children}</ContextMenu>;
 }
 
 function useSetFavoriteOrderMutation() {

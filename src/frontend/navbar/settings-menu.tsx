@@ -1,15 +1,18 @@
 import {
     Button,
-    Dialog,
-    DialogBody,
-    DialogFooter,
     Divider,
-    FormGroup,
-    H6,
-    Intent,
-    MenuItem
-} from "@blueprintjs/core";
-import { Dispatch, ReactNode, useMemo, useState } from "react";
+    Group,
+    Modal,
+    Text,
+    Title
+} from "@mantine/core";
+import { modals } from "@mantine/modals";
+import {
+    IconCloudUpload,
+    IconRefresh,
+    IconX
+} from "@tabler/icons-react";
+import { Dispatch, ReactNode, useMemo } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import {
     useLoaderData,
@@ -27,7 +30,6 @@ import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { getLibraryName as getLibraryName } from "../api-utils/library";
-import { ItemRenderer, Select } from "@blueprintjs/select";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
 import { OpenUrlButton } from "../common/open-url-button";
@@ -52,6 +54,23 @@ export function SettingsMenu(): ReactNode {
     return <SettingsMenuDialog />;
 }
 
+/**
+ * A labeled row holding a single setting control.
+ */
+function SettingRow(props: {
+    label: string;
+    children: ReactNode;
+}): ReactNode {
+    return (
+        <Group justify="space-between" wrap="nowrap" my="sm">
+            <Text size="sm" fw={500}>
+                {props.label}
+            </Text>
+            {props.children}
+        </Group>
+    );
+}
+
 function SettingsMenuDialog(): ReactNode {
     const closeDialog = useHandleCloseDialog();
 
@@ -62,36 +81,35 @@ function SettingsMenuDialog(): ReactNode {
     if (hasEditorAccess(loaderData.maxAccessLevel)) {
         adminSettings = (
             <>
-                <H6>Admin Settings</H6>
-                <Divider />
+                <Title order={6} mt="md">
+                    Admin Settings
+                </Title>
+                <Divider mb="sm" />
                 <AdminSettings />
             </>
         );
     }
 
-    const closeButton = (
-        <Button
-            text="Close"
-            icon="cross"
-            intent={Intent.PRIMARY}
-            onClick={closeDialog}
-        />
-    );
-
     return (
-        <Dialog
+        <Modal
             className="settings-menu"
-            isOpen
-            icon="cog"
-            title="Settings"
+            opened
             onClose={closeDialog}
+            title="Settings"
+            centered
         >
-            <DialogBody>
-                <UserSettings />
-                {adminSettings}
-            </DialogBody>
-            <DialogFooter minimal actions={closeButton} />
-        </Dialog>
+            <UserSettings />
+            {adminSettings}
+            <Group justify="flex-end" mt="md">
+                <Button
+                    color="blue"
+                    leftSection={<IconX size={16} />}
+                    onClick={closeDialog}
+                >
+                    Close
+                </Button>
+            </Group>
+        </Modal>
     );
 }
 
@@ -125,9 +143,9 @@ function UserSettings(): ReactNode {
                 theme={search.settings.theme}
                 onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
             />
-            <FormGroup label="Submit feedback" className="full-width" inline>
+            <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
-            </FormGroup>
+            </SettingRow>
         </>
     );
 }
@@ -237,16 +255,17 @@ function PushVersionButton(): ReactNode {
     });
 
     return (
-        <FormGroup label="Push new app version" inline>
+        <SettingRow label="Push new app version">
             <Button
-                icon="cloud-upload"
-                text="Push version"
+                color="blue"
+                leftSection={<IconCloudUpload size={16} />}
                 onClick={() => {
                     pushVersionMutation.mutate();
                 }}
-                intent={Intent.PRIMARY}
-            />
-        </FormGroup>
+            >
+                Push version
+            </Button>
+        </SettingRow>
     );
 }
 
@@ -256,71 +275,34 @@ function AccessLevelSelect(): ReactNode {
 
     const { maxAccessLevel, currentAccessLevel } = loaderData;
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const accessLevels = useMemo(() => {
-        return maxAccessLevel === AccessLevel.ADMIN
-            ? [AccessLevel.ADMIN, AccessLevel.EDITOR, AccessLevel.USER]
-            : [AccessLevel.EDITOR, AccessLevel.USER];
-    }, [maxAccessLevel]);
-
-    const [activeLevel, setActiveLevel] = useState<AccessLevel | null>(
-        currentAccessLevel
+    const accessLevels = useSelectOptions(
+        useMemo(
+            () =>
+                maxAccessLevel === AccessLevel.ADMIN
+                    ? [AccessLevel.ADMIN, AccessLevel.EDITOR, AccessLevel.USER]
+                    : [AccessLevel.EDITOR, AccessLevel.USER],
+            [maxAccessLevel]
+        ),
+        capitalize
     );
 
-    const button = (
-        <Button
-            alignText="start"
-            endIcon="caret-down"
-            text={capitalize(currentAccessLevel)}
-        />
-    );
-
-    const renderAccessLevel: ItemRenderer<AccessLevel> = (
-        accessLevel,
-        { handleClick, handleFocus, modifiers, ref }
-    ) => {
-        const selected = currentAccessLevel === accessLevel;
-        return (
-            <MenuItem
-                key={accessLevel}
-                ref={ref}
-                onClick={handleClick}
-                onFocus={handleFocus}
-                active={modifiers.active}
-                text={capitalize(accessLevel)}
-                roleStructure="listoption"
-                selected={selected}
-                intent={selected ? Intent.PRIMARY : Intent.NONE}
-            />
-        );
-    };
-
-    const select = (
-        <Select<AccessLevel>
-            items={accessLevels}
-            activeItem={activeLevel}
-            onActiveItemChange={setActiveLevel}
-            filterable={false}
-            popoverProps={{ minimal: true }}
-            itemRenderer={renderAccessLevel}
-            onItemSelect={(accessLevel) => {
+    return (
+        <AppSelect
+            label="Access level"
+            option={makeSelectOption(currentAccessLevel, capitalize)}
+            options={accessLevels}
+            onSelect={(value) => {
                 queryClient.setQueryData(
                     contextDataQueryKey(),
                     getQueryUpdater((data: ContextData) => {
-                        data.accessData.currentAccessLevel = accessLevel;
+                        data.accessData.currentAccessLevel =
+                            value as AccessLevel;
                         return data;
                     })
                 );
                 void router.invalidate();
             }}
-        >
-            {button}
-        </Select>
-    );
-
-    return (
-        <FormGroup label="Access level" className="full-width" inline>
-            {select}
-        </FormGroup>
+        />
     );
 }
 
@@ -341,14 +323,6 @@ export function ReloadDocumentsButton(
     const mutation = useMutation({
         mutationKey: ["reload-documents"],
         mutationFn: async () => {
-            const confirmMessage =
-                "Are you sure you want to reload" +
-                (reloadAll ? " all documents?" : " outdated documents?");
-
-            if (!window.confirm(confirmMessage)) {
-                throw new HandledError("Cancelled operation.");
-            }
-
             return apiPost("/reload-documents" + toLibraryPath(library), {
                 query: { reloadAll }
             });
@@ -372,14 +346,29 @@ export function ReloadDocumentsButton(
         }
     });
 
+    const handleClick = () => {
+        modals.openConfirmModal({
+            title: reloadAll
+                ? "Reload all documents"
+                : "Reload outdated documents",
+            children:
+                "Are you sure you want to reload" +
+                (reloadAll ? " all documents?" : " outdated documents?"),
+            labels: { confirm: "Reload", cancel: "Cancel" },
+            confirmProps: { color: reloadAll ? "red" : "blue" },
+            onConfirm: () => mutation.mutate()
+        });
+    };
+
     const button = (
         <Button
-            icon="refresh"
-            text="Reload"
-            onClick={() => mutation.mutate()}
+            color={reloadAll ? "red" : "blue"}
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleClick}
             loading={mutation.isPending}
-            intent={reloadAll ? Intent.DANGER : Intent.PRIMARY}
-        />
+        >
+            Reload
+        </Button>
     );
 
     if (hideFormGroup) {
@@ -389,31 +378,5 @@ export function ReloadDocumentsButton(
     const label = reloadAll
         ? "Reload all documents"
         : "Reload outdated documents";
-    return (
-        <FormGroup label={label} inline>
-            {button}
-        </FormGroup>
-    );
+    return <SettingRow label={label}>{button}</SettingRow>;
 }
-
-// interface ReloadAlertProps {
-//     reloadAll?: boolean;
-// }
-
-// export function ReloadAlert(props: ReloadAlertProps) {
-//     return (
-//         <Alert
-//             confirmButtonText="Reload"
-//             icon="refresh"
-//             intent={Intent.PRIMARY}
-//             isOpen={props.isOpen}
-//             onClose={props.onClose}
-//             canEscapeKeyCancel
-//             canOutsideClickCancel
-//             cancelButtonText="Cancel"
-//         >
-//             Are you sure you want to reload
-//             {props.reloadAll ? " all documents?" : " outdated documents?"}
-//         </Alert>
-//     );
-// }
