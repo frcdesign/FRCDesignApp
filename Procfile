@@ -1,1 +1,0 @@
-web: gunicorn --bind :$PORT --workers=2 -k gthread --threads=16 --timeout=300 "backend.server:create_app()"

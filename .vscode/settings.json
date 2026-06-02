@@ -9,7 +9,7 @@
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
     "files.associations": {
-        "*.json": "jsonc"
+        "wrangler.json": "jsonc"
     },
     "files.eol": "\n",
     "cSpell.allowCompoundWords": true,
@@ -43,11 +43,6 @@
         "vite"
     ],
     "cSpell.flagWords": ["coincentric", "expresion"],
-    "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": true,
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
-    },
     "npm.packageManager": "npm",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[jsonc]": {
@@ -58,22 +53,17 @@
     },
     "search.exclude": {
         "**/node_modules": true,
-        "**/*.pyc": true,
-        "**/assets": true,
         "**/dist": true,
-        "**/.venv": true,
-        "**/package-lock.json": true
+        "**/package-lock.json": true,
+        "worker-configuration.d.ts": true
     },
-    "python.testing.pytestEnabled": true,
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestArgs": ["backend", "onshape_api"],
     "jest.runMode": "on-demand",
-    "jest.rootPath": "frontend/src",
     "jest.outputConfig": {
         "revealWithFocus": "test-results",
         "revealOn": "error",
         "clearOnRun": "none"
     },
+    "jest.jestCommandLine": "npx jest",
     "jest.nodeEnv": {
         "NODE_OPTIONS": "--experimental-vm-modules"
     },

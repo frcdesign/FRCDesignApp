@@ -1,0 +1,59 @@
+import js from "@eslint/js";
+import globals from "globals";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import reactX from "eslint-plugin-react-x";
+import reactDom from "eslint-plugin-react-dom";
+import tseslint from "typescript-eslint";
+import { defineConfig, globalIgnores } from "eslint/config";
+
+export default defineConfig([
+    globalIgnores(["dist", "worker-configuration.d.ts"]),
+    {
+        files: ["**/*.{ts,tsx}"],
+        extends: [
+            js.configs.recommended,
+            tseslint.configs.recommendedTypeChecked,
+            tseslint.configs.stylisticTypeChecked,
+            reactHooks.configs.flat.recommended,
+            reactRefresh.configs.vite,
+            reactX.configs["recommended-typescript"],
+            reactDom.configs.recommended
+        ],
+        rules: {
+            // any-cascade rules — Onshape API responses are untyped; fixing requires
+            // full API type definitions which don't exist
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-unsafe-assignment": "off",
+            "@typescript-eslint/no-unsafe-member-access": "off",
+            "@typescript-eslint/no-unsafe-return": "off",
+            "@typescript-eslint/no-unsafe-argument": "off",
+            "@typescript-eslint/no-unsafe-call": "off",
+            "@typescript-eslint/no-unsafe-enum-comparison": "off",
+
+            // TanStack Router files must export both component and route config object
+            "react-refresh/only-export-components": "off",
+
+            // `!x || x.y` is the preferred style in this codebase over optional chaining
+            "@typescript-eslint/prefer-optional-chain": "off",
+
+            // throw redirect() is idiomatic TanStack Router — not an Error, but intentional
+            "@typescript-eslint/only-throw-error": "off",
+
+            // prefer `if (!x)` over `??=` — style preference
+            "@typescript-eslint/prefer-nullish-coalescing": "off"
+        },
+        languageOptions: {
+            globals: globals.browser,
+            parserOptions: {
+                projectService: {
+                    allowDefaultProject: [
+                        "drizzle.config.ts",
+                        "worker-configuration.d.ts"
+                    ]
+                },
+                tsconfigRootDir: import.meta.dirname
+            }
+        }
+    }
+]);

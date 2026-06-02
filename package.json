@@ -1,0 +1,65 @@
+{
+    "name": "frc-design-app",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "lint-staged": {
+        "**/*.{ts,tsx,js,jsx,json,css,md}": [
+            "prettier --write"
+        ]
+    },
+    "scripts": {
+        "dev": "wrangler d1 migrations apply db --local && vite",
+        "tsc": "tsc -b",
+        "build": "tsc -b && vite build",
+        "lint": "eslint .",
+        "preview": "npm run build && vite preview",
+        "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",
+        "cf-typegen": "wrangler types",
+        "prepare": "husky"
+    },
+    "dependencies": {
+        "@blueprintjs/core": "^6.13.0",
+        "@blueprintjs/icons": "^6.10.0",
+        "@blueprintjs/select": "^6.1.11",
+        "@tanstack/react-query": "^5.100.10",
+        "@tanstack/react-router": "^1.169.2",
+        "@tanstack/react-router-devtools": "^1.166.13",
+        "arctic": "^3.7.0",
+        "drizzle-kit": "^0.31.10",
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.12.18",
+        "immer": "^11.1.8",
+        "minisearch": "^7.2.0",
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0",
+        "typescript-parsec": "^0.3.4",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.36.4",
+        "@eslint/js": "^10.0.1",
+        "@tanstack/router-plugin": "^1.168.2",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^24.12.4",
+        "@types/react": "^18.0.0",
+        "@types/react-dom": "^18.0.0",
+        "@vitejs/plugin-react": "^6.0.2",
+        "eslint": "^10.2.1",
+        "eslint-plugin-react-dom": "^5.7.8",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-react-refresh": "^0.5.2",
+        "eslint-plugin-react-x": "^5.7.8",
+        "globals": "^17.5.0",
+        "husky": "^9.1.7",
+        "jest": "^30.4.2",
+        "jest-environment-jsdom": "^30.4.1",
+        "lint-staged": "^17.0.5",
+        "sass": "^1.99.0",
+        "ts-jest": "^29.4.9",
+        "typescript": "~6.0.2",
+        "typescript-eslint": "^8.58.2",
+        "vite": "^8.0.10",
+        "wrangler": "^4.93.0"
+    }
+}
