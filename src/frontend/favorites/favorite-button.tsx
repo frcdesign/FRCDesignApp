@@ -1,4 +1,4 @@
-import { ActionIcon } from "@mantine/core";
+import { ActionIcon, Menu } from "@mantine/core";
 import {
     IconHeart,
     IconHeartBroken,
@@ -6,7 +6,6 @@ import {
 } from "@tabler/icons-react";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import { AppMenuItem } from "../common/app-menu";
 import { apiDelete, apiPost } from "../api-utils/api";
 import {
     type Favorite,
@@ -155,8 +154,8 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     const mutation = useUpdateFavoritesMutation();
 
     return (
-        <AppMenuItem
-            icon={
+        <Menu.Item
+            leftSection={
                 operation === Operation.ADD ? (
                     <HeartIcon />
                 ) : (
@@ -170,7 +169,7 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
             }}
         >
             {operation === Operation.ADD ? "Favorite" : "Unfavorite"}
-        </AppMenuItem>
+        </Menu.Item>
     );
 }
 

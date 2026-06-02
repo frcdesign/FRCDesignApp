@@ -9,6 +9,7 @@ import {
     Button,
     Card,
     Group,
+    Menu,
     Stack,
     Text,
     UnstyledButton
@@ -18,13 +19,12 @@ import {
     IconArrowBackUp,
     IconArrowLeft
 } from "@tabler/icons-react";
-import { useContextMenu } from "mantine-contextmenu";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
 import { DocumentOut, Insertables } from "../../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
-import { DocumentMenu } from "../../../cards/document-card";
+import { DocumentMenuItems } from "../../../cards/document-card";
 import { InsertableCard } from "../../../cards/insertable-card";
 import { ContextMenuButton } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
@@ -52,7 +52,6 @@ function DocumentList(): ReactNode {
     }).documentId;
 
     const uiState = useUiState()[0];
-    const { showContextMenu } = useContextMenu();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading documents..." />;
@@ -107,48 +106,50 @@ function DocumentList(): ReactNode {
         );
     }
 
-    const menuHandler = showContextMenu((close) => (
-        <DocumentMenu document={document} close={close} />
-    ));
+    const menuItems = <DocumentMenuItems document={document} />;
 
     return (
         <>
-            <Card
-                withBorder
-                radius="md"
-                padding={0}
-                onContextMenu={menuHandler}
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    flexGrow: 0,
-                    maxHeight: "100%"
-                }}
-            >
-                <Group
-                    justify="space-between"
-                    px="sm"
-                    py="xs"
-                    wrap="nowrap"
-                    style={{ flexShrink: 0 }}
-                >
-                    <UnstyledButton
-                        onClick={() => {
-                            void navigate({ to: "/app/documents" });
+            <Menu shadow="md" width={220} withinPortal>
+                <Menu.ContextMenu>
+                    <Card
+                        withBorder
+                        radius="md"
+                        padding={0}
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            flexGrow: 0,
+                            maxHeight: "100%"
                         }}
-                        style={{ flex: 1, minWidth: 0 }}
                     >
-                        <Group gap="sm" wrap="nowrap">
-                            <IconArrowLeft size={18} />
-                            <Text fw={600} truncate>
-                                {document.name}
-                            </Text>
+                        <Group
+                            justify="space-between"
+                            px="sm"
+                            py="xs"
+                            wrap="nowrap"
+                            style={{ flexShrink: 0 }}
+                        >
+                            <UnstyledButton
+                                onClick={() => {
+                                    void navigate({ to: "/app/documents" });
+                                }}
+                                style={{ flex: 1, minWidth: 0 }}
+                            >
+                                <Group gap="sm" wrap="nowrap">
+                                    <IconArrowLeft size={18} />
+                                    <Text fw={600} truncate>
+                                        {document.name}
+                                    </Text>
+                                </Group>
+                            </UnstyledButton>
+                            <ContextMenuButton>{menuItems}</ContextMenuButton>
                         </Group>
-                    </UnstyledButton>
-                    <ContextMenuButton onClick={menuHandler} />
-                </Group>
-                <div style={{ overflowY: "auto" }}>{content}</div>
-            </Card>
+                        <div style={{ overflowY: "auto" }}>{content}</div>
+                    </Card>
+                </Menu.ContextMenu>
+                <Menu.Dropdown>{menuItems}</Menu.Dropdown>
+            </Menu>
             <Outlet />
         </>
     );

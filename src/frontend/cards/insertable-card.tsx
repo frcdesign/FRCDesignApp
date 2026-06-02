@@ -1,4 +1,4 @@
-import { Card } from "@mantine/core";
+import { Card, Menu } from "@mantine/core";
 import {
     IconCircleCheck,
     IconCircleOff,
@@ -6,7 +6,6 @@ import {
     IconEyeOff,
     IconPlus
 } from "@tabler/icons-react";
-import { useContextMenu } from "mantine-contextmenu";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -45,7 +44,6 @@ import { showSuccessToast } from "../common/toaster";
 import { toInsertablePath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
-import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
@@ -59,7 +57,6 @@ interface InsertableCardProps extends PropsWithChildren {
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, searchHit } = props;
     const navigate = useNavigate();
-    const { showContextMenu } = useContextMenu();
 
     const favorites = useFavoritesQuery().data?.favorites;
 
@@ -75,82 +72,86 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
-    const menuContent = (close: () => void) => (
-        <InsertableMenu
-            favorite={favorite}
-            insertable={insertable}
-            close={close}
-        />
+    const menuItems = (
+        <InsertableMenuItems favorite={favorite} insertable={insertable} />
     );
 
     return (
-        <Card
-            withBorder
-            padding="sm"
-            radius="md"
-            className="item-card"
-            style={{ cursor: "pointer" }}
-            onContextMenu={showContextMenu(menuContent)}
-            onClick={() => {
-                if (props.onClick) {
-                    props.onClick();
-                }
+        <Menu shadow="md" width={220} withinPortal>
+            <Menu.ContextMenu>
+                <Card
+                    withBorder
+                    padding="sm"
+                    radius="md"
+                    className="item-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                        if (props.onClick) {
+                            props.onClick();
+                        }
 
-                if (isAssemblyInPartStudio) {
-                    openCannotDeriveAssemblyAlert();
-                    return;
-                }
+                        if (isAssemblyInPartStudio) {
+                            openCannotDeriveAssemblyAlert();
+                            return;
+                        }
 
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.INSERT_MENU,
-                        activeInsertableId: insertable.id
-                    }
-                });
-            }}
-        >
-            <CardTitle
-                disabled={isAssemblyInPartStudio}
-                searchHit={searchHit}
-                title={insertable.name}
-                thumbnailUrls={insertable.thumbnailUrls}
-                showHiddenTag={!insertable.isVisible}
-            />
-            <div className="item-card-right-content">
-                <FavoriteButton favorite={favorite} insertable={insertable} />
-                <ContextMenuButton onClick={showContextMenu(menuContent)} />
-            </div>
-        </Card>
+                        void navigate({
+                            to: ".",
+                            search: {
+                                activeMenu: MenuType.INSERT_MENU,
+                                activeInsertableId: insertable.id
+                            }
+                        });
+                    }}
+                >
+                    <CardTitle
+                        disabled={isAssemblyInPartStudio}
+                        searchHit={searchHit}
+                        title={insertable.name}
+                        thumbnailUrls={insertable.thumbnailUrls}
+                        showHiddenTag={!insertable.isVisible}
+                    />
+                    <div className="item-card-right-content">
+                        <FavoriteButton
+                            favorite={favorite}
+                            insertable={insertable}
+                        />
+                        <ContextMenuButton>{menuItems}</ContextMenuButton>
+                    </div>
+                </Card>
+            </Menu.ContextMenu>
+            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
+        </Menu>
     );
 }
 
-interface InsertableMenuProps {
+interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
-    close: () => void;
 }
 
-export function InsertableMenu(props: InsertableMenuProps): ReactNode {
-    const { favorite, insertable, close } = props;
+export function InsertableMenuItems(
+    props: InsertableMenuItemsProps
+): ReactNode {
+    const { favorite, insertable } = props;
 
     return (
-        <AppMenu close={close}>
+        <>
             <QuickInsertItems
                 insertable={insertable}
                 isFavorite={favorite !== undefined}
             />
-            <AppMenuDivider />
+            <Menu.Divider />
             <FavoriteInsertableItem
                 favorite={favorite}
                 insertable={insertable}
             />
-            <AppMenuDivider />
+            <Menu.Divider />
             <OpenDocumentItems path={insertable.path} />
             <AdminSubmenu>
                 <InsertableAdminContextMenu insertable={insertable} />
             </AdminSubmenu>
-        </AppMenu>
+        </>
     );
 }
 
@@ -229,10 +230,10 @@ export function InsertableAdminContextMenu(
 
     return (
         <>
-            <AppMenuItem
+            <Menu.Item
                 onClick={() => setVisibilityMutation.mutate()}
                 color={insertable.isVisible ? "red" : "blue"}
-                icon={
+                leftSection={
                     insertable.isVisible ? (
                         <IconEyeOff size={16} />
                     ) : (
@@ -241,13 +242,13 @@ export function InsertableAdminContextMenu(
                 }
             >
                 {insertable.isVisible ? "Hide element" : "Show element"}
-            </AppMenuItem>
+            </Menu.Item>
             <ReloadThumbnailMenuItem id={insertable.id} isDocumentId={false} />
             {insertable.elementType === ElementType.PART_STUDIO && (
-                <AppMenuItem
+                <Menu.Item
                     onClick={() => setOpenCompositeMutation.mutate()}
                     color={insertable.isOpenComposite ? "yellow" : undefined}
-                    icon={
+                    leftSection={
                         insertable.isOpenComposite ? (
                             <IconCircleOff size={16} />
                         ) : (
@@ -258,14 +259,14 @@ export function InsertableAdminContextMenu(
                     {insertable.isOpenComposite
                         ? "No open composites"
                         : "Has open composite"}
-                </AppMenuItem>
+                </Menu.Item>
             )}
-            <AppMenuItem
+            <Menu.Item
                 onClick={() =>
                     setSupportsFastenMutation.mutate(!insertable.supportsFasten)
                 }
                 color={insertable.supportsFasten ? "red" : "blue"}
-                icon={
+                leftSection={
                     insertable.supportsFasten ? (
                         <IconCircleOff size={16} />
                     ) : (
@@ -276,7 +277,7 @@ export function InsertableAdminContextMenu(
                 {insertable.supportsFasten
                     ? "Disable insert and fasten"
                     : "Enable Insert and fasten"}
-            </AppMenuItem>
+            </Menu.Item>
         </>
     );
 }

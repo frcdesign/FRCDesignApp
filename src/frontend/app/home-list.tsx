@@ -53,10 +53,7 @@ export function HomeList(): ReactNode {
             <ListContainer
                 key="search"
                 icon={
-                    <IconSearch
-                        size={18}
-                        color="var(--mantine-color-blue-6)"
-                    />
+                    <IconSearch size={18} color="var(--mantine-color-blue-6)" />
                 }
                 title="Search Results"
                 isOpen={isSearchOpen}
@@ -160,7 +157,7 @@ function ListContainer(props: ListContainerProps): ReactNode {
                     )}
                 </Group>
             </UnstyledButton>
-            <Collapse in={isOpen}>
+            <Collapse expanded={isOpen}>
                 <Stack gap={0}>{children}</Stack>
             </Collapse>
         </Card>

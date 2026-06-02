@@ -1,4 +1,4 @@
-import { Card } from "@mantine/core";
+import { Card, Menu } from "@mantine/core";
 import {
     IconArrowRight,
     IconEye,
@@ -7,7 +7,6 @@ import {
     IconSortAZ,
     IconTrash
 } from "@tabler/icons-react";
-import { useContextMenu } from "mantine-contextmenu";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentOut, LibraryOut } from "../../shared/api-models";
@@ -24,7 +23,6 @@ import {
     ReloadThumbnailMenuItem
 } from "./card-components";
 import { AddDocumentItem } from "../app/add-document-menu";
-import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -44,41 +42,46 @@ interface DocumentCardProps extends PropsWithChildren {
 export function DocumentCard(props: DocumentCardProps): ReactNode {
     const { document } = props;
     const navigate = useNavigate();
-    const { showContextMenu } = useContextMenu();
 
     return (
-        <Card
-            withBorder
-            padding="sm"
-            radius="md"
-            className="item-card"
-            style={{ cursor: "pointer" }}
-            onContextMenu={showContextMenu((close) => (
-                <DocumentMenu document={document} close={close} />
-            ))}
-            onClick={() => {
-                void navigate({
-                    to: "/app/documents/$documentId",
-                    params: { documentId: document.id }
-                });
-            }}
-        >
-            <CardTitle
-                title={document.name}
-                thumbnailUrls={document.thumbnailUrls}
-            />
-            <IconArrowRight size={16} color="var(--mantine-color-dimmed)" />
-        </Card>
+        <Menu shadow="md" width={220} withinPortal>
+            <Menu.ContextMenu>
+                <Card
+                    withBorder
+                    padding="sm"
+                    radius="md"
+                    className="item-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                        void navigate({
+                            to: "/app/documents/$documentId",
+                            params: { documentId: document.id }
+                        });
+                    }}
+                >
+                    <CardTitle
+                        title={document.name}
+                        thumbnailUrls={document.thumbnailUrls}
+                    />
+                    <IconArrowRight
+                        size={16}
+                        color="var(--mantine-color-dimmed)"
+                    />
+                </Card>
+            </Menu.ContextMenu>
+            <Menu.Dropdown>
+                <DocumentMenuItems document={document} />
+            </Menu.Dropdown>
+        </Menu>
     );
 }
 
-interface DocumentMenuProps {
+interface DocumentMenuItemsProps {
     document: DocumentOut;
-    close: () => void;
 }
 
-export function DocumentMenu(props: DocumentMenuProps): ReactNode {
-    const { document, close } = props;
+export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
+    const { document } = props;
 
     const isHome = useIsHome();
     const library = useLibrary();
@@ -120,52 +123,52 @@ export function DocumentMenu(props: DocumentMenuProps): ReactNode {
                 }
             />
             {/* Only show second divider when we have more than one document since otherwise there's no reorder items */}
-            {documentOrder.length > 1 && <AppMenuDivider />}
+            {documentOrder.length > 1 && <Menu.Divider />}
         </>
     );
 
     const modifyDocumentItems = isHome && (
         <>
-            <AppMenuDivider />
-            <AppMenuItem
-                icon={<IconTrash size={16} />}
+            <Menu.Divider />
+            <Menu.Item
+                leftSection={<IconTrash size={16} />}
                 color="red"
                 onClick={() => {
                     deleteDocumentMutation.mutate();
                 }}
             >
                 Delete
-            </AppMenuItem>
+            </Menu.Item>
             <AddDocumentItem />
         </>
     );
 
     return (
-        <AppMenu close={close}>
+        <>
             <OpenDocumentItems path={document.path} />
             <AdminSubmenu>
                 {orderItems}
-                <AppMenuItem
-                    icon={<IconEye size={16} />}
+                <Menu.Item
+                    leftSection={<IconEye size={16} />}
                     onClick={() => {
                         showAllMutation.mutate();
                     }}
                 >
                     Show all elements
-                </AppMenuItem>
-                <AppMenuItem
-                    icon={<IconEyeOff size={16} />}
+                </Menu.Item>
+                <Menu.Item
+                    leftSection={<IconEyeOff size={16} />}
                     onClick={() => {
                         hideAllMutation.mutate();
                     }}
                 >
                     Hide all elements
-                </AppMenuItem>
+                </Menu.Item>
                 <DocumentDataItems document={document} />
                 <ReloadThumbnailMenuItem id={document.id} isDocumentId={true} />
                 {modifyDocumentItems}
             </AdminSubmenu>
-        </AppMenu>
+        </>
     );
 }
 
@@ -246,8 +249,8 @@ interface DocumentDataItemsProps {
 function DocumentDataItems({ document }: DocumentDataItemsProps) {
     const toggleSortOrderMutation = useToggleSortOrderMutation(document);
     return (
-        <AppMenuItem
-            icon={
+        <Menu.Item
+            leftSection={
                 document.sortAlphabetically ? (
                     <IconList size={16} />
                 ) : (
@@ -261,6 +264,6 @@ function DocumentDataItems({ document }: DocumentDataItemsProps) {
             {document.sortAlphabetically
                 ? "Use tab order"
                 : "Sort alphabetically"}
-        </AppMenuItem>
+        </Menu.Item>
     );
 }

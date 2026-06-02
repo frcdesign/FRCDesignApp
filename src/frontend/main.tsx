@@ -10,7 +10,6 @@ import "vite/modulepreload-polyfill";
 // Mantine css (layered so our custom styles in main.scss win the cascade)
 import "@mantine/core/styles.layer.css";
 import "@mantine/notifications/styles.layer.css";
-import "mantine-contextmenu/styles.layer.css";
 
 // Custom css
 import "./main.scss";

@@ -1,3 +1,4 @@
+import { Menu } from "@mantine/core";
 import {
     IconChevronDown,
     IconChevronsDown,
@@ -5,7 +6,6 @@ import {
     IconChevronUp
 } from "@tabler/icons-react";
 import { type ReactNode } from "react";
-import { AppMenuItem } from "../common/app-menu";
 
 enum MoveOperation {
     MOVE_UP,
@@ -112,8 +112,8 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     return (
         <>
             {operations.includes(MoveOperation.MOVE_UP) && (
-                <AppMenuItem
-                    icon={<IconChevronUp size={16} />}
+                <Menu.Item
+                    leftSection={<IconChevronUp size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(id, order, MoveOperation.MOVE_UP)
@@ -121,11 +121,11 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     }}
                 >
                     Move up
-                </AppMenuItem>
+                </Menu.Item>
             )}
             {operations.includes(MoveOperation.MOVE_DOWN) && (
-                <AppMenuItem
-                    icon={<IconChevronDown size={16} />}
+                <Menu.Item
+                    leftSection={<IconChevronDown size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -137,11 +137,11 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     }}
                 >
                     Move down
-                </AppMenuItem>
+                </Menu.Item>
             )}
             {operations.includes(MoveOperation.MOVE_TO_TOP) && (
-                <AppMenuItem
-                    icon={<IconChevronsUp size={16} />}
+                <Menu.Item
+                    leftSection={<IconChevronsUp size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -153,11 +153,11 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     }}
                 >
                     Move to top
-                </AppMenuItem>
+                </Menu.Item>
             )}
             {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
-                <AppMenuItem
-                    icon={<IconChevronsDown size={16} />}
+                <Menu.Item
+                    leftSection={<IconChevronsDown size={16} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -169,7 +169,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     }}
                 >
                     Move to bottom
-                </AppMenuItem>
+                </Menu.Item>
             )}
         </>
     );

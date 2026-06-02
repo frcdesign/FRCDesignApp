@@ -56,7 +56,7 @@ export function AppNavbar(): ReactNode {
                     paddingRight: "var(--mantine-spacing-sm)"
                 }}
             >
-                <Collapse in={showFilters}>
+                <Collapse expanded={showFilters}>
                     <VendorFilters />
                 </Collapse>
             </div>

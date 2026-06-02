@@ -11,7 +11,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
-import { ContextMenuProvider } from "mantine-contextmenu";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
 import {
@@ -112,30 +111,27 @@ function App() {
                 getRootElement={() => portalContainer}
                 cssVariablesSelector="#root"
             >
-                <ContextMenuProvider>
-                    <ModalsProvider
-                        labels={{ confirm: "Confirm", cancel: "Cancel" }}
-                    >
-                        <Notifications
-                            position="bottom-center"
-                            limit={3}
-                            portalProps={{ target: portalContainer }}
-                        />
-                        <div className="app-background">
-                            <AppNavbar />
-                            <div
-                                className={
-                                    getBackgroundClass(colorTheme) +
-                                    " app-content"
-                                }
-                            >
-                                <Outlet />
-                                <AppMenus />
-                                <TanStackRouterDevtools />
-                            </div>
+                <ModalsProvider
+                    labels={{ confirm: "Confirm", cancel: "Cancel" }}
+                >
+                    <Notifications
+                        position="bottom-center"
+                        limit={3}
+                        portalProps={{ target: portalContainer }}
+                    />
+                    <div className="app-background">
+                        <AppNavbar />
+                        <div
+                            className={
+                                getBackgroundClass(colorTheme) + " app-content"
+                            }
+                        >
+                            <Outlet />
+                            <AppMenus />
+                            <TanStackRouterDevtools />
                         </div>
-                    </ModalsProvider>
-                </ContextMenuProvider>
+                    </div>
+                </ModalsProvider>
             </MantineProvider>
         </QueryClientProvider>
     );

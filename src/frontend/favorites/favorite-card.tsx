@@ -3,9 +3,8 @@ import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { Card } from "@mantine/core";
+import { Card, Menu } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
-import { useContextMenu } from "mantine-contextmenu";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
@@ -29,7 +28,6 @@ import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
-import { AppMenu, AppMenuDivider, AppMenuItem } from "../common/app-menu";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;
@@ -45,7 +43,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
 
     const navigate = useNavigate();
-    const { showContextMenu } = useContextMenu();
 
     const isHidden = useIsInsertableHidden(insertable);
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
@@ -56,59 +53,62 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    const menuContent = (close: () => void) => (
-        <FavoriteMenu
-            insertable={insertable}
-            favorite={favorite}
-            close={close}
-        />
+    const menuItems = (
+        <FavoriteMenuItems insertable={insertable} favorite={favorite} />
     );
 
     return (
-        <Card
-            withBorder
-            padding="sm"
-            radius="md"
-            className="item-card"
-            style={{ cursor: "pointer" }}
-            onContextMenu={showContextMenu(menuContent)}
-            onClick={() => {
-                if (isAssemblyInPartStudio) {
-                    openCannotDeriveAssemblyAlert();
-                    return;
-                }
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.INSERT_MENU,
-                        activeInsertableId: insertable.id,
-                        defaultConfiguration: favorite.defaultConfiguration
-                    }
-                });
-            }}
-        >
-            <CardTitle
-                disabled={isAssemblyInPartStudio}
-                title={insertable.name}
-                thumbnailUrls={insertable.thumbnailUrls}
-                searchHit={searchHit}
-            />
-            <div className="item-card-right-content">
-                <FavoriteButton favorite={favorite} insertable={insertable} />
-                <ContextMenuButton onClick={showContextMenu(menuContent)} />
-            </div>
-        </Card>
+        <Menu shadow="md" width={220} withinPortal>
+            <Menu.ContextMenu>
+                <Card
+                    withBorder
+                    padding="sm"
+                    radius="md"
+                    className="item-card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                        if (isAssemblyInPartStudio) {
+                            openCannotDeriveAssemblyAlert();
+                            return;
+                        }
+                        void navigate({
+                            to: ".",
+                            search: {
+                                activeMenu: MenuType.INSERT_MENU,
+                                activeInsertableId: insertable.id,
+                                defaultConfiguration:
+                                    favorite.defaultConfiguration
+                            }
+                        });
+                    }}
+                >
+                    <CardTitle
+                        disabled={isAssemblyInPartStudio}
+                        title={insertable.name}
+                        thumbnailUrls={insertable.thumbnailUrls}
+                        searchHit={searchHit}
+                    />
+                    <div className="item-card-right-content">
+                        <FavoriteButton
+                            favorite={favorite}
+                            insertable={insertable}
+                        />
+                        <ContextMenuButton>{menuItems}</ContextMenuButton>
+                    </div>
+                </Card>
+            </Menu.ContextMenu>
+            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
+        </Menu>
     );
 }
 
-interface FavoriteMenuProps {
+interface FavoriteMenuItemsProps {
     insertable: InsertableOut;
     favorite: Favorite;
-    close: () => void;
 }
 
-function FavoriteMenu(props: FavoriteMenuProps): ReactNode {
-    const { insertable, favorite, close } = props;
+function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
+    const { insertable, favorite } = props;
 
     const uiState = useUiState()[0];
     const navigate = useNavigate();
@@ -117,15 +117,15 @@ function FavoriteMenu(props: FavoriteMenuProps): ReactNode {
     const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
 
     return (
-        <AppMenu close={close}>
+        <>
             <QuickInsertItems
                 insertable={insertable}
                 configuration={favorite.defaultConfiguration}
                 isFavorite
             />
-            <AppMenuDivider />
-            <AppMenuItem
-                icon={<IconPencil size={16} />}
+            <Menu.Divider />
+            <Menu.Item
+                leftSection={<IconPencil size={16} />}
                 color="blue"
                 onClick={() => {
                     if (insertable.configurationId === undefined) {
@@ -143,8 +143,8 @@ function FavoriteMenu(props: FavoriteMenuProps): ReactNode {
                 }}
             >
                 Edit default configuration
-            </AppMenuItem>
-            <AppMenuDivider />
+            </Menu.Item>
+            <Menu.Divider />
             <ChangeOrderItems
                 id={favorite.id}
                 order={favoriteOrder}
@@ -157,14 +157,14 @@ function FavoriteMenu(props: FavoriteMenuProps): ReactNode {
                 }}
             />
             {/* Only show second divider when we have more than one favorite since otherwise there's no reorder items */}
-            {favoriteOrder.length > 1 && <AppMenuDivider />}
+            {favoriteOrder.length > 1 && <Menu.Divider />}
             <OpenDocumentItems path={insertable.path} />
-            <AppMenuDivider />
+            <Menu.Divider />
             <FavoriteInsertableItem
                 favorite={favorite}
                 insertable={insertable}
             />
-        </AppMenu>
+        </>
     );
 }
 

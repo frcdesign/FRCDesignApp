@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Group, Text } from "@mantine/core";
+import { ActionIcon, Badge, Group, Menu, Text } from "@mantine/core";
 import {
     IconDots,
     IconEyeOff,
@@ -9,12 +9,7 @@ import {
     IconShare
 } from "@tabler/icons-react";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import {
-    MouseEventHandler,
-    PropsWithChildren,
-    ReactNode,
-    useCallback
-} from "react";
+import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
@@ -31,7 +26,6 @@ import { Configuration } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
-import { AppMenuItem, AppMenuDivider, AppSubmenu } from "../common/app-menu";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
@@ -44,20 +38,20 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
         <>
-            <AppMenuItem
-                icon={<IconShare size={16} />}
+            <Menu.Item
+                leftSection={<IconShare size={16} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
-            </AppMenuItem>
-            <AppMenuItem
-                icon={<IconLink size={16} />}
+            </Menu.Item>
+            <Menu.Item
+                leftSection={<IconLink size={16} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
             >
                 Copy link
-            </AppMenuItem>
+            </Menu.Item>
         </>
     );
 }
@@ -101,19 +95,19 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     return (
         <>
             {supportsFasten && (
-                <AppMenuItem
-                    icon={<IconPlus size={16} />}
+                <Menu.Item
+                    leftSection={<IconPlus size={16} />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
-                </AppMenuItem>
+                </Menu.Item>
             )}
-            <AppMenuItem
-                icon={<IconPlus size={16} />}
+            <Menu.Item
+                leftSection={<IconPlus size={16} />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert
-            </AppMenuItem>
+            </Menu.Item>
         </>
     );
 }
@@ -171,29 +165,25 @@ export function CardTitle(props: CardTitleProps) {
     );
 }
 
-interface ContextMenuButtonProps {
-    /**
-     * Function which is invoked when clicked.
-     */
-    onClick: MouseEventHandler<HTMLElement>;
-}
-
 /**
- * A button which can be used to explicitly launch a context menu.
+ * An explicit button which opens a menu with the given items. Used alongside
+ * the right-click context menu so the menu is reachable without a right-click.
  */
-export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
+export function ContextMenuButton(props: PropsWithChildren): ReactNode {
     return (
-        <ActionIcon
-            variant="subtle"
-            color="gray"
-            title="View options"
-            onClick={(event) => {
-                event.stopPropagation();
-                props.onClick(event);
-            }}
-        >
-            <IconDots size={18} />
-        </ActionIcon>
+        <Menu shadow="md" width={220} withinPortal position="bottom-end">
+            <Menu.Target>
+                <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    title="View options"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    <IconDots size={18} />
+                </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>{props.children}</Menu.Dropdown>
+        </Menu>
     );
 }
 
@@ -203,18 +193,22 @@ export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
 export function AdminSubmenu(props: PropsWithChildren): ReactNode {
     return (
         <RequireAccessLevel>
-            <AppMenuDivider />
-            <AppSubmenu
-                title="Admin options"
-                icon={
-                    <IconSettings
-                        size={16}
-                        color="var(--mantine-color-blue-6)"
-                    />
-                }
-            >
-                {props.children}
-            </AppSubmenu>
+            <Menu.Divider />
+            <Menu.Sub>
+                <Menu.Sub.Target>
+                    <Menu.Sub.Item
+                        leftSection={
+                            <IconSettings
+                                size={16}
+                                color="var(--mantine-color-blue-6)"
+                            />
+                        }
+                    >
+                        Admin options
+                    </Menu.Sub.Item>
+                </Menu.Sub.Target>
+                <Menu.Sub.Dropdown>{props.children}</Menu.Sub.Dropdown>
+            </Menu.Sub>
         </RequireAccessLevel>
     );
 }
@@ -232,13 +226,13 @@ export function ReloadThumbnailMenuItem(
         props.isDocumentId
     );
     return (
-        <AppMenuItem
-            icon={<IconRefresh size={16} />}
+        <Menu.Item
+            leftSection={<IconRefresh size={16} />}
             onClick={() => {
                 reloadThumbnailMutation.mutate();
             }}
         >
             Reload thumbnail
-        </AppMenuItem>
+        </Menu.Item>
     );
 }

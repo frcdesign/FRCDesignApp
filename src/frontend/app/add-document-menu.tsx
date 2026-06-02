@@ -1,4 +1,4 @@
-import { Button, Group, Modal, TextInput } from "@mantine/core";
+import { Button, Group, Menu, Modal, TextInput } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { ReactNode, useState } from "react";
 import {
@@ -15,7 +15,6 @@ import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
-import { AppMenuItem } from "../common/app-menu";
 
 export function AddDocumentMenu(): ReactNode {
     const search = useSearch({ from: "/app" });
@@ -117,8 +116,8 @@ interface AddDocumentItemProps {
 export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
     const navigate = useNavigate();
     return (
-        <AppMenuItem
-            icon={<IconPlus size={16} />}
+        <Menu.Item
+            leftSection={<IconPlus size={16} />}
             color="blue"
             onClick={() => {
                 void navigate({
@@ -131,6 +130,6 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
             }}
         >
             Add document
-        </AppMenuItem>
+        </Menu.Item>
     );
 }
