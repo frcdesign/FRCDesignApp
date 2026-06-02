@@ -4,8 +4,8 @@ This repo hosts the code for the FRCDesign Onshape App.
 
 ## Overview
 
-The app itself lives in the `frontend` and `backend` folders. The app uses Python and flask for the backend and Vite and React for the frontend.
-The app is deployed using Google Cloud App Engine, with Google Cloud Firestore as the database.
+The app code lives under `src/`. The app is written entirely in TypeScript and uses Hono for the backend and Vite and React for the frontend.
+The app is deployed using Cloudflare Workers and uses the various Cloudflare products for the database and other aspects of the app.
 
 This repo is intended to be run with VSCode on Linux using WSL Ubuntu.
 While it should be possible to use other technologies, they aren't tested and may require additional work to get running.
@@ -16,8 +16,6 @@ First, create a new file in the root of this project named `.env` and add the fo
 
 ```
 # Server config
-API_BASE_PATH=https://cad.onshape.com
-
 VERBOSE_LOGGING=true # Set to false to reduce logging output
 
 # Onshape API Keys (Optional)
@@ -27,37 +25,13 @@ API_SECRET_KEY=<Your API Secret Key>
 # OAuth
 OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
-SESSION_SECRET=literallyAnythingWillDo
+SESSION_SECRET=gNSzdRbs4dJYz0obHfeRwaD+u5QbZgJx+V8/rgUH6AiOdoppP3wjeaM97nZmxeJa
 
 # One of admin, editor, or user, depending on desired access to the app. Does nothing in production.
 ACCESS_LEVEL_OVERRIDE=admin
 
 NODE_ENV=development
-FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-STORAGE_EMULATOR_HOST=http://127.0.0.1:9199
 ```
-
-Warning: Unlike practically all other files, the Python development server will not automatically reload in response to changes to environment variables.
-You can manually retrigger an update by saving any .py file or by killing and restarting the flask server.
-
-## Python Setup
-
-This project uses [uv](https://github.com/astral-sh/uv) to manage Python.
-
-Install `uv`:
-
-```
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Then use `uv` to install Python 3.12 and all of the project's dependencies:
-
-```
-uv python install 3.12
-uv sync
-```
-
-Note that Python version 3.12 or greater is a hard requirement.
 
 ## Onshape OAuth App Setup
 
@@ -135,52 +109,21 @@ If it doesn't, you'll need to add the Certificate Authority manually. In Firefox
 
 ## Frontend Setup
 
-First, install npm in your WSL container:
+First, install npm in your WSL container and add the dependencies:
 
 ```
 sudo apt install npm
-```
-
-Next, use npm to install the dependencies in `frontend`:
-
-```
-cd frontend
 npm install
 ```
 
-## Google Cloud Dev Setup
-
-Although this project uses Google Cloud Firestore, which is technically a distinct product from Google Firebase's Firestore, Google Cloud Firestore is still just Firebase's Firestore in a trenchcoat.
-
-In order to emulate the google cloud database locally, you'll need to install the [Firebase CLI](https://firebase.google.com/docs/cli). In Linux, this can be done using:
-
-```
-curl -sL https://firebase.tools | bash
-```
-
-You may also need to install the Java JRE:
-
-```
-sudo apt install openjdk-21-jdk
-```
-
-You can then set up the Firebase emulator by running:
-
-```
-firebase init emulators
-```
-
-Select **Don't set up a default project**, then select the Firestore Emulator and the Storage Emulator with **space** and press **enter** to submit.
-
 ## Development Servers
 
-You should now be able to run the `Launch servers` VSCode task to launch the dev servers necessary to view and test the app.
-If everything is setup properly, you should see all three servers start successfully.
-You should also be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
+You should now be able to run the `Launch servers` VSCode task to launch Vite.
+You should then be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
 To see documents, add one or more documents and push a new app version to rebuild the search database.
 
-Finally, you should also be able to launch the Firebase UI using the link in the VSCode Launch db window to see the current database state directly.
+To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare UI instance.
 
 # Troubleshooting
 
