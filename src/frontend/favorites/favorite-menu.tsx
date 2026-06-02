@@ -17,7 +17,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
 import { PreviewImageCard } from "../insert/thumbnail";
-import { ConfigurationWrapper } from "../configurations/configurations";
+import { ConfigurationWrapper } from "../app/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
@@ -77,7 +77,7 @@ function FavoriteMenuDialog(
                     return data;
                 })
             );
-            router.invalidate();
+            void router.invalidate();
         },
         onError: () => {
             showErrorToast(
@@ -91,7 +91,7 @@ function FavoriteMenuDialog(
             await queryClient.invalidateQueries({
                 queryKey: favoritesQueryKey(library)
             });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 

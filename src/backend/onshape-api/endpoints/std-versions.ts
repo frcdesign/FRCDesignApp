@@ -26,6 +26,6 @@ export async function getStdVersions(client: OnshapeApi): Promise<string[]> {
 }
 
 function extractVersionNumber(versionName: string): string | null {
-    const match = versionName.match(/^(\d+)\.0$/);
+    const match = /^(\d+)\.0$/.exec(versionName);
     return match ? match[1] : null;
 }

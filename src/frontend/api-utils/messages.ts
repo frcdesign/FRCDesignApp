@@ -16,7 +16,7 @@ export function useMessageListener() {
 
     useEffect(() => {
         sendInitMessage(search);
-    }, []);
+    }, [search]);
 
     useEffect(() => {
         const handlePostMessage = (event: MessageEvent) => {

@@ -35,3 +35,13 @@ export function libraryRoute(): string {
 export function getLibraryParam(c: AppContext): Library {
     return c.req.param("library") as Library;
 }
+
+export function insertableRoute(): string {
+    return "/insertable/:insertableId";
+}
+
+export function getInsertableParam(c: AppContext): string {
+    const id = c.req.param("insertableId");
+    if (!id) throw new Error("Missing insertableId route param");
+    return id;
+}

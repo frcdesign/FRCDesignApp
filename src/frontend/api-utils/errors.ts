@@ -7,7 +7,7 @@ import { showErrorToast, showInfoToast } from "../common/toaster";
 export class HandledError extends Error {
     public isError: boolean;
 
-    constructor(message: string, isError: boolean = true) {
+    constructor(message: string, isError = true) {
         super(message);
         Object.setPrototypeOf(this, new.target.prototype);
         this.isError = isError;

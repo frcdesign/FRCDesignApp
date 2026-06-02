@@ -33,8 +33,8 @@ function parseList(values: unknown[]): string {
 
 function parseQueryValue(key: string, value: unknown): string {
     if (key === "operationId") return parseId(value as string[]);
-    if (key === "entityType") return `EntityType.${value}`;
+    if (key === "entityType") return `EntityType.${String(value)}`;
     if (Array.isArray(value)) return `[${parseList(value)}]`;
-    if (value === "true" || value === "false") return value as string;
+    if (value === "true" || value === "false") return value;
     return quote(value as string);
 }

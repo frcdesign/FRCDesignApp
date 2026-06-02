@@ -11,12 +11,12 @@ export enum AppPopup {
     RELOAD_DOCUMENTS = "reload-documents"
 }
 
-export type PopupParamsMap = {
+export interface PopupParamsMap {
     [AppPopup.CANNOT_DERIVE_ASSEMBLY]: void;
     [AppPopup.CANNOT_REORDER]: void;
     [AppPopup.CANNOT_EDIT_DEFAULT_CONFIGURATION]: void;
     [AppPopup.RELOAD_DOCUMENTS]: { reloadAll: boolean };
-};
+}
 
 export type PopupParams = {
     [K in AppPopup]: { activePopup: K } & PopupParamsMap[K];
@@ -27,7 +27,7 @@ export function useOpenPopup() {
 
     return useCallback(
         <T extends AppPopup>(popup: T, props?: PopupParamsMap[T]) => {
-            navigate({
+            void navigate({
                 to: ".",
                 search: { activePopup: popup, ...props }
             });

@@ -354,7 +354,7 @@ export function ReloadDocumentsButton(
             });
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
-        onSuccess: async (result) => {
+        onSuccess: (result) => {
             const savedElements = result.savedElements;
             if (savedElements === 0) {
                 showSuccessToast("All documents are already up to date.");

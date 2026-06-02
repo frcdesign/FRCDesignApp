@@ -1,10 +1,5 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
-import {
-    apiGet,
-    apiGetImage,
-    apiGetRawImage,
-    useCacheOptions
-} from "../api-utils/api";
+import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
 import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
 
 interface HeightAndWidth {
@@ -34,7 +29,7 @@ import {
 
 import { ReactNode } from "react";
 import { Configuration } from "../../shared/configuration-models";
-import { encodeConfigurationForQuery } from "../configurations/configuration-utils";
+import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../common/app-zero-state";
 
@@ -152,7 +147,6 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     const thumbnailId = thumbnailIdQuery.data;
 
-    const cacheOptions = useCacheOptions();
     const thumbnailQuery = useQuery({
         queryKey: ["thumbnail", thumbnailId],
         queryFn: async ({ signal }) => {
@@ -165,8 +159,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                     size,
                     thumbnailId
                 },
-                signal,
-                cacheOptions
+                signal
             });
         },
         placeholderData: (previousData) => previousData,

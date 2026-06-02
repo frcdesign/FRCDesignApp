@@ -220,12 +220,12 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         );
 
         const existingByElementId = new Map(
-            existingInsertables.map((e) => [
-                e.elementId,
+            existingInsertables.map((insertable) => [
+                insertable.elementId,
                 {
-                    id: e.id,
-                    microversionId: e.microversionId,
-                    hasFastenInfo: !!e.hasFastenInfo
+                    id: insertable.id,
+                    microversionId: insertable.microversionId,
+                    hasFastenInfo: !!insertable.hasFastenInfo
                 }
             ])
         );
@@ -239,11 +239,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     this.env.KV,
                     sessionId
                 );
-                return (await uploadDocumentThumbnails(
+                return await uploadDocumentThumbnails(
                     this.env.THUMBNAILS,
                     onshapeApi,
                     instancePath
-                )) as ThumbnailUrls;
+                );
             }
         );
 
@@ -487,9 +487,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 }
 
                 return {
-                    fastenInfo: fastenInfo
-                        ? (JSON.stringify(fastenInfo) as string)
-                        : null,
+                    fastenInfo: fastenInfo ? JSON.stringify(fastenInfo) : null,
                     supportsFasten
                 };
             }
@@ -535,7 +533,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     elementPath,
                     element.microversionId
                 );
-                return urls as ThumbnailUrls;
+                return urls;
             }
         );
 

@@ -122,9 +122,7 @@ export function parseOnshapeConfiguration(
             parameters.push({
                 ...base,
                 type,
-                default: String(parameter.defaultValue).toLowerCase() as
-                    | "true"
-                    | "false"
+                default: String(parameter.defaultValue).toLowerCase()
             });
         } else if (type === ConfigurationParameterType.STRING) {
             parameters.push({

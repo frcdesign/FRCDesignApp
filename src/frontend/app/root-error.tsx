@@ -45,7 +45,9 @@ export function NotFoundError(): ReactNode {
             intent="primary"
             text="Go home"
             icon="home"
-            onClick={() => navigate({ to: "/app" })}
+            onClick={() => {
+                void navigate({ to: "/app" });
+            }}
         />
     );
 

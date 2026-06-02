@@ -43,7 +43,7 @@ export async function evaluateFeatureScript(
 }
 
 /** Adds a feature to a part studio. */
-export function addFeature(
+export function addPartStudioFeature(
     client: OnshapeApi,
     partStudioPath: ElementPath,
     feature: object

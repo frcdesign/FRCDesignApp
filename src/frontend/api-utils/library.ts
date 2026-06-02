@@ -8,6 +8,10 @@ export function useLibrary() {
 export function toLibraryPath(library: Library): string {
     return `/library/${library}`;
 }
+
+export function toInsertablePath(insertableId: string): string {
+    return `/insertable/${insertableId}`;
+}
 export function getLibraryName(library: string): string {
     switch (library) {
         case Library.FRC_DESIGN_LIB:

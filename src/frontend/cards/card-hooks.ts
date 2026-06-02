@@ -6,16 +6,13 @@ import { hasUserAccess } from "../../shared/types";
 import { useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import {
+    toInsertablePath,
+    toLibraryPath,
+    useLibrary
+} from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { libraryQueryMatchKey } from "../queries";
-import {
-    ElementPath,
-    InstancePath,
-    isElementPath,
-    toElementApiPath,
-    toInstanceApiPath
-} from "../../shared/path";
 
 export function useSetVisibilityMutation(
     insertableIds: string[],
@@ -47,8 +44,10 @@ export function useSetVisibilityMutation(
             "Unexpectedly failed to modify visibility."
         ),
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
-            router.invalidate();
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
+            void router.invalidate();
         }
     });
 }
@@ -67,32 +66,27 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     }, [insertable.isVisible, loaderData.currentAccessLevel]);
 }
 
-export function useReloadThumbnailMutation(path: InstancePath | ElementPath) {
-    const library = useLibrary();
+export function useReloadThumbnailMutation(id: string, isDocumentId: boolean) {
     const router = useRouter();
 
-    const apiPath = isElementPath(path)
-        ? toElementApiPath(path)
-        : toInstanceApiPath(path);
+    const endpoint = isDocumentId
+        ? `/reload-document-thumbnail/document/${id}`
+        : "/reload-insertable-thumbnail" + toInsertablePath(id);
 
     return useMutation({
-        mutationKey: ["thumbnail", "reload", apiPath],
+        mutationKey: ["thumbnail", "reload", id],
         mutationFn: async () => {
-            // Every element path is an instance path, but instance paths are not element paths
-            return apiPost(
-                "/reload-thumbnail" + toLibraryPath(library) + apiPath
-            );
+            return apiPost(endpoint);
         },
         onError: getAppErrorHandler("Unexpectedly failed to reload thumbnail."),
         onSuccess: () => {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
         onSettled: async () => {
-            // Reload the library so we get up to date urls
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 }

@@ -28,10 +28,12 @@ const iconModules: Record<string, { default: IconPaths }> = import.meta.glob(
 );
 
 Icons.setLoaderOptions({
-    loader: async (name, size) =>
-        iconModules[
-            `../../node_modules/@blueprintjs/icons/lib/esm/generated/${size}px/paths/${name}.js`
-        ].default
+    loader: (name, size) =>
+        Promise.resolve(
+            iconModules[
+                `../../node_modules/@blueprintjs/icons/lib/esm/generated/${size}px/paths/${name}.js`
+            ].default
+        )
 });
 
 FocusStyleManager.onlyShowFocusOnTabs();

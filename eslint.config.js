@@ -8,7 +8,7 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-    globalIgnores(["dist"]),
+    globalIgnores(["dist", "worker-configuration.d.ts"]),
     {
         files: ["**/*.{ts,tsx}"],
         extends: [
@@ -20,6 +20,29 @@ export default defineConfig([
             reactX.configs["recommended-typescript"],
             reactDom.configs.recommended
         ],
+        rules: {
+            // any-cascade rules — Onshape API responses are untyped; fixing requires
+            // full API type definitions which don't exist
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-unsafe-assignment": "off",
+            "@typescript-eslint/no-unsafe-member-access": "off",
+            "@typescript-eslint/no-unsafe-return": "off",
+            "@typescript-eslint/no-unsafe-argument": "off",
+            "@typescript-eslint/no-unsafe-call": "off",
+            "@typescript-eslint/no-unsafe-enum-comparison": "off",
+
+            // TanStack Router files must export both component and route config object
+            "react-refresh/only-export-components": "off",
+
+            // `!x || x.y` is the preferred style in this codebase over optional chaining
+            "@typescript-eslint/prefer-optional-chain": "off",
+
+            // throw redirect() is idiomatic TanStack Router — not an Error, but intentional
+            "@typescript-eslint/only-throw-error": "off",
+
+            // prefer `if (!x)` over `??=` — style preference
+            "@typescript-eslint/prefer-nullish-coalescing": "off"
+        },
         languageOptions: {
             globals: globals.browser,
             parserOptions: {

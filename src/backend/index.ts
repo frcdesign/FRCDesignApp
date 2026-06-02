@@ -4,6 +4,7 @@ import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
 import { favoriteRoutes } from "./routes/favorites";
 import { thumbnailRoutes } from "./routes/thumbnails";
+import { insertableRoutes } from "./routes/insertables";
 import { documentRoutes } from "./routes/documents";
 import { configurationRoutes } from "./routes/configurations";
 import { getApp } from "./app";
@@ -16,6 +17,7 @@ app.route("/api", libraryRoutes);
 app.route("/api", favoriteRoutes);
 app.route("/api", thumbnailRoutes);
 app.route("/api", documentRoutes);
+app.route("/api", insertableRoutes);
 app.route("/api", configurationRoutes);
 // Admin prefix bypasses Cloudflare CDN cache for editor/admin users
 app.route("/api/admin", libraryRoutes);

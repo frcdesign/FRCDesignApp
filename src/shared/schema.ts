@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { ElementType, FastenInfo, Library, Theme } from "./types";
+import { ElementType, FastenInfo, Library, Theme, Vendor } from "./types";
 import { ThumbnailUrls } from "./types";
 import { Configuration, ParameterObj } from "./configuration-models";
 
@@ -54,7 +54,7 @@ export const insertables = sqliteTable(
         instanceId: text("instance_id").notNull(),
         sortOrder: integer("sort_order").notNull().default(0),
         vendors: text("vendors", { mode: "json" })
-            .$type<string[]>()
+            .$type<Vendor[]>()
             .notNull()
             .default([]),
         thumbnailUrls: text("thumbnail_urls", {

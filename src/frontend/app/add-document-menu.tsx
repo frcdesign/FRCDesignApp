@@ -63,7 +63,7 @@ function AddDocumentMenuDialog(
             "add-document"
         ),
         onSuccess: async (result) => {
-            queryClient.invalidateQueries({ queryKey: ["library"] });
+            await queryClient.invalidateQueries({ queryKey: ["library"] });
             showSuccessToast(
                 `Successfully added ${result.name}.`,
                 "add-document"
@@ -112,7 +112,7 @@ export function AddDocumentButton(): ReactNode {
             text="Add document"
             intent="primary"
             onClick={() => {
-                navigate({
+                void navigate({
                     to: ".",
                     search: {
                         activeMenu: MenuType.ADD_DOCUMENT_MENU
@@ -136,7 +136,7 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
             labelElement={<Icon icon="share" />}
             intent="primary"
             onClick={() => {
-                navigate({
+                void navigate({
                     to: ".",
                     search: {
                         activeMenu: MenuType.ADD_DOCUMENT_MENU,

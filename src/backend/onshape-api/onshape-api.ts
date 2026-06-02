@@ -6,10 +6,9 @@ import {
 } from "../../shared/url-params";
 
 export function getBaseUrl(): string {
-    const rawUrl = env.API_BASE_PATH ?? "https://cad.onshape.com";
-    const rawVersion = env.API_VERSION;
-    const version = rawVersion !== undefined ? parseInt(rawVersion) : 8;
-    return `${rawUrl}/api/v${version}`;
+    const url = env.ONSHAPE_API_BASE_PATH ?? "https://cad.onshape.com";
+    const version = env.ONSHAPE_API_VERSION ?? 16;
+    return `${url}/api/v${version}`;
 }
 
 export class OnshapeApiError extends Error {
@@ -73,7 +72,7 @@ export abstract class OnshapeApi {
         body?: unknown
     ): Promise<Response> {
         const params = createSearchParams(options?.query);
-        const url = `${this._baseUrl}${path}?${params}`;
+        const url = `${this._baseUrl}${path}?${params.toString()}`;
         const headers = options?.accept
             ? new Headers({ Accept: options.accept })
             : undefined;

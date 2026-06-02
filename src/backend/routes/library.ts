@@ -8,7 +8,7 @@ import {
     insertables,
     configurations
 } from "../../shared/schema";
-import { Library, ThumbnailUrls, Vendor } from "../../shared/types";
+import { Library } from "../../shared/types";
 import {
     InsertableOut,
     LibraryOut,
@@ -63,7 +63,7 @@ async function getLibraryOut(
             },
             name: doc.name,
             sortAlphabetically: doc.sortAlphabetically,
-            thumbnailUrls: doc.thumbnailUrls as ThumbnailUrls,
+            thumbnailUrls: doc.thumbnailUrls!,
             insertableOrder
         };
     }
@@ -89,9 +89,9 @@ async function getLibraryOut(
             isOpenComposite: ins.isOpenComposite,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
-            thumbnailUrls: ins.thumbnailUrls as ThumbnailUrls,
+            thumbnailUrls: ins.thumbnailUrls!,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
-            vendors: ins.vendors as Vendor[]
+            vendors: ins.vendors
         } satisfies InsertableOut;
     }
 

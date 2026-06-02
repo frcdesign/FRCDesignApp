@@ -50,7 +50,7 @@ export function useInteractiveSection(
         }
         const child = section.children[0];
         child.className += " " + Classes.INTERACTIVE;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
     }, [sectionRef, ...dependencies]);
 }
 

@@ -6,7 +6,6 @@ import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
 import {
     type ConfigurationResult,
-    type ParameterObj,
     type UnitInfo,
     QuantityType,
     type Unit
@@ -39,7 +38,7 @@ configurationRoutes.get("/configuration", async (c) => {
     }
 
     const result: ConfigurationResult = {
-        parameters: config.parameters as ParameterObj[]
+        parameters: config.parameters
     };
     return c.json(result);
 });
@@ -78,5 +77,5 @@ function getDefaultUnit(
     units: OnshapeUnit[],
     quantityType: QuantityType
 ): Unit {
-    return units.find((u) => u.key === quantityType)?.value as Unit;
+    return units.find((u) => u.key === quantityType)!.value;
 }

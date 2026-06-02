@@ -27,7 +27,7 @@ import {
 import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
 import { showToast } from "../common/toaster";
-import { ConfigurationWrapper } from "../configurations/configurations";
+import { ConfigurationWrapper } from "../app/configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "../../shared/configuration-models";
 import { useFavoritesQuery, useLibraryQuery } from "../queries";
@@ -180,7 +180,7 @@ function showRestoreToast(
             action: {
                 text: "Restore",
                 onClick: () => {
-                    navigate({
+                    void navigate({
                         to: ".",
                         search: {
                             activeMenu: MenuType.INSERT_MENU,

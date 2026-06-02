@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
-import { getApp, libraryRoute } from "../app";
+import { getApp, getInsertableParam, insertableRoute } from "../app";
+import { getInsertableElementPath } from "../db-helpers";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
-import { requireEditorAccess } from "../access-level-utils";
+import { requireAdminMiddleware } from "../access-level-utils";
 import {
     getElementThumbnail,
     getThumbnailFromId,
@@ -10,11 +11,7 @@ import {
     ThumbnailSize
 } from "../onshape-api/endpoints/thumbnails";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
-import {
-    isElementPath,
-    type ElementPath,
-    type InstancePath
-} from "../../shared/path";
+import { type ElementPath, type InstancePath } from "../../shared/path";
 import { documents, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
@@ -149,7 +146,10 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
 
     const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
     return new Response(buffer, {
-        headers: { "Content-Type": "image/gif" }
+        headers: {
+            "Content-Type": "image/gif",
+            "Cache-Control": `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+        }
     });
 });
 
@@ -174,18 +174,67 @@ thumbnailRoutes.get(
     }
 );
 
-/** POST /api/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId — reload document thumbnail */
-thumbnailRoutes.post(
-    "/reload-thumbnail" +
-        libraryRoute() +
-        "/d/:documentId/:instanceType/:instanceId",
+const reloadThumbnailRoutes = getApp();
+reloadThumbnailRoutes.use(requireAdminMiddleware);
+
+/** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
+reloadThumbnailRoutes.post(
+    "/reload-insertable-thumbnail" + insertableRoute(),
     async (c) => {
-        await requireEditorAccess(c);
         const onshapeApi = await getOnshapeApi(c);
+        const insertableId = getInsertableParam(c);
+        const db = getDb(c.env.DB);
+
+        const elementPath = await getInsertableElementPath(db, insertableId);
+
+        const row = await db
+            .select({ microversionId: insertables.microversionId })
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+
+        if (!row) {
+            throw new HTTPException(404, { message: "Insertable not found" });
+        }
+
+        const thumbnails = await uploadThumbnails(
+            c.env.THUMBNAILS,
+            onshapeApi,
+            elementPath,
+            row.microversionId
+        );
+
+        await db
+            .update(insertables)
+            .set({ thumbnailUrls: thumbnails })
+            .where(eq(insertables.id, insertableId));
+
+        return c.json({ success: true });
+    }
+);
+
+/** POST /api/reload-document-thumbnail/document/:documentId */
+reloadThumbnailRoutes.post(
+    "/reload-document-thumbnail/document/:documentId",
+    async (c) => {
+        const onshapeApi = await getOnshapeApi(c);
+        const documentId = c.req.param("documentId");
+        const db = getDb(c.env.DB);
+
+        const row = await db
+            .select({ instanceId: documents.instanceId })
+            .from(documents)
+            .where(eq(documents.id, documentId))
+            .get();
+
+        if (!row) {
+            throw new HTTPException(404, { message: "Document not found" });
+        }
+
         const instancePath: InstancePath = {
-            documentId: c.req.param("documentId") as string,
-            instanceId: c.req.param("instanceId") as string,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m"
+            documentId,
+            instanceId: row.instanceId,
+            instanceType: "v"
         };
 
         const thumbnails = await uploadDocumentThumbnails(
@@ -194,66 +243,13 @@ thumbnailRoutes.post(
             instancePath
         );
 
-        const db = getDb(c.env.DB);
         await db
             .update(documents)
             .set({ thumbnailUrls: thumbnails })
-            .where(eq(documents.id, instancePath.documentId));
+            .where(eq(documents.id, documentId));
 
         return c.json({ success: true });
     }
 );
 
-/** POST /api/reload-thumbnail/:library/d/:docId/:instanceType/:instanceId/e/:elementId — reload element thumbnail */
-thumbnailRoutes.post(
-    "/reload-thumbnail" +
-        libraryRoute() +
-        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
-    async (c) => {
-        await requireEditorAccess(c);
-        const onshapeApi = await getOnshapeApi(c);
-        const elementPath: ElementPath = {
-            documentId: c.req.param("documentId") as string,
-            instanceId: c.req.param("instanceId") as string,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId") as string
-        };
-
-        if (!isElementPath(elementPath)) {
-            throw new HTTPException(400, {
-                message: "Invalid elementPath received"
-            });
-        }
-
-        const db = getDb(c.env.DB);
-        const insertable = await db
-            .select({
-                id: insertables.id,
-                microversionId: insertables.microversionId,
-                documentId: insertables.documentId
-            })
-            .from(insertables)
-            .where(eq(insertables.elementId, elementPath.elementId))
-            .get();
-
-        if (!insertable) {
-            throw new HTTPException(404, {
-                message: "Failed to find element"
-            });
-        }
-
-        const thumbnails = await uploadThumbnails(
-            c.env.THUMBNAILS,
-            onshapeApi,
-            elementPath,
-            insertable.microversionId
-        );
-
-        await db
-            .update(insertables)
-            .set({ thumbnailUrls: thumbnails })
-            .where(eq(insertables.id, insertable.id));
-
-        return c.json({ success: true });
-    }
-);
+thumbnailRoutes.route("/", reloadThumbnailRoutes);

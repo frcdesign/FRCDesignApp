@@ -84,7 +84,7 @@ function useUpdateFavoritesMutation() {
                     updateFavorites(data, args, library)
                 )
             );
-            router.invalidate();
+            void router.invalidate();
         },
         onError: (error, args) => {
             const action =
@@ -96,7 +96,7 @@ function useUpdateFavoritesMutation() {
         },
         onSettled: async () => {
             await queryClient.invalidateQueries({ queryKey });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 }

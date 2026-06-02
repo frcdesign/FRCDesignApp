@@ -64,7 +64,9 @@
      */
     "vars": {
         // Onshape team ID used to determine editor/admin access level in production
-        "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+        "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
+        "ONSHAPE_API_VERSION": 16,
+        "ONSHAPE_API_BASE_PATH": "https://cad.onshape.com"
     }
     /**
      * Service Bindings (communicate between multiple Workers)

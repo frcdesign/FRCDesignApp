@@ -175,7 +175,7 @@ export function transformInstance(
  *
  * @param featureId If specified, the existing feature with this ID is updated rather than creating a new one.
  */
-export function addFeature(
+export function addAssemblyFeature(
     client: OnshapeApi,
     assemblyPath: ElementPath,
     feature: object,

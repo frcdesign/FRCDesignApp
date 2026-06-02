@@ -17,7 +17,6 @@ First, create a new file in the root of this project named `.env` and add the fo
 ```
 # Server config
 API_BASE_PATH=https://cad.onshape.com
-API_VERSION=12 # Control which version of the Onshape API the app uses
 
 VERBOSE_LOGGING=true # Set to false to reduce logging output
 

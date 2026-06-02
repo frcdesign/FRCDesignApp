@@ -148,7 +148,7 @@ export async function getDocumentElements(
 export async function getDocumentElement(
     client: OnshapeApi,
     elementPath: ElementPath
-): Promise<any | null> {
+): Promise<any> {
     const query = {
         withThumbnails: false,
         elementId: elementPath.elementId

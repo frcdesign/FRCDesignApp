@@ -100,6 +100,8 @@ function App() {
     );
     const themeClass = getThemeClass(colorTheme);
     void loaderData; // consumed by child components via useLoaderData
+    // eslint-disable-next-line react-x/purity
+    const portalContainer = document.getElementById("root")!;
 
     useMessageListener();
 
@@ -108,7 +110,7 @@ function App() {
             <BlueprintProvider
                 portalClassName={themeClass}
                 // Very important, context menus do not work with the default container :(
-                portalContainer={document.getElementById("root")!}
+                portalContainer={portalContainer}
             >
                 <div className={themeClass + " app-background"}>
                     <AppNavbar />

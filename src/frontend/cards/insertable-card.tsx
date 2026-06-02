@@ -40,9 +40,8 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { toElementApiPath } from "../../shared/path";
 import { showSuccessToast } from "../common/toaster";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toInsertablePath, useLibrary } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 
@@ -93,7 +92,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                                 return;
                             }
 
-                            navigate({
+                            void navigate({
                                 to: ".",
                                 search: {
                                     activeMenu: MenuType.INSERT_MENU,
@@ -176,18 +175,20 @@ export function InsertableAdminContextMenu(
     );
 
     const setOpenCompositeMutation = useMutation({
-        mutationKey: ["is-open-composite"],
+        mutationKey: ["toggle-open-composite"],
         mutationFn: () => {
-            return apiPost("/is-open-composite" + toLibraryPath(library), {
-                body: {
-                    isOpenComposite: !insertable.isOpenComposite,
-                    documentId: insertable.documentId,
-                    insertableId: insertable.id
+            return apiPost(
+                "/toggle-open-composite" + toInsertablePath(insertable.id),
+                {
+                    body: { isOpenComposite: !insertable.isOpenComposite }
                 }
-            });
+            );
         },
+        onError: getAppErrorHandler("Failed to update open composite setting."),
         onMutate: () => {
-            queryClient.cancelQueries({ queryKey: libraryQueryMatchKey() });
+            void queryClient.cancelQueries({
+                queryKey: libraryQueryMatchKey()
+            });
             queryClient.setQueryData(
                 libraryQueryKey(library, loaderData),
                 getQueryUpdater((data: LibraryOut) => {
@@ -203,20 +204,16 @@ export function InsertableAdminContextMenu(
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
-            router.invalidate();
+            void router.invalidate();
         }
     });
 
     const setSupportsFastenMutation = useMutation({
-        mutationKey: ["supports-fasten"],
+        mutationKey: ["toggle-insert-and-fasten"],
         mutationFn: (supportsFasten: boolean) => {
             return apiPost(
-                "/supports-fasten" +
-                    toLibraryPath(library) +
-                    toElementApiPath(insertable.path),
-                {
-                    body: { supportsFasten }
-                }
+                "/toggle-insert-and-fasten" + toInsertablePath(insertable.id),
+                { body: { supportsFasten } }
             );
         },
         onSuccess: (_result, supportsFasten: boolean) => {
@@ -226,7 +223,9 @@ export function InsertableAdminContextMenu(
         },
         onError: getAppErrorHandler("Failed to enable Insert and fasten."),
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
         }
     });
 
@@ -238,7 +237,7 @@ export function InsertableAdminContextMenu(
                 icon={insertable.isVisible ? "eye-off" : "eye-open"}
                 text={insertable.isVisible ? "Hide element" : "Show element"}
             />
-            <ReloadThumbnailMenuItem path={insertable.path} />
+            <ReloadThumbnailMenuItem id={insertable.id} isDocumentId={false} />
             {insertable.elementType === ElementType.PART_STUDIO && (
                 <MenuItem
                     onClick={() => setOpenCompositeMutation.mutate()}

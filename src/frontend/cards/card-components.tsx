@@ -17,7 +17,7 @@ import {
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath, ElementPath, InstancePath } from "../../shared/path";
+import { DocumentPath } from "../../shared/path";
 import { AppPopup, useOpenPopup } from "../overlays/popup-params";
 import {
     useInsertMutation,
@@ -50,7 +50,9 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
             <MenuItem
                 text="Copy link"
                 icon="link"
-                onClick={() => copyUrlToClipboard(url)}
+                onClick={() => {
+                    void copyUrlToClipboard(url);
+                }}
             />
         </>
     );
@@ -205,13 +207,17 @@ export function AdminSubmenu(props: PropsWithChildren): ReactNode {
 }
 
 interface ReloadThumbnailMenuItemProps {
-    path: InstancePath | ElementPath;
+    id: string;
+    isDocumentId: boolean;
 }
 
 export function ReloadThumbnailMenuItem(
     props: ReloadThumbnailMenuItemProps
 ): ReactNode {
-    const reloadThumbnailMutation = useReloadThumbnailMutation(props.path);
+    const reloadThumbnailMutation = useReloadThumbnailMutation(
+        props.id,
+        props.isDocumentId
+    );
     return (
         <MenuItem
             onClick={() => {

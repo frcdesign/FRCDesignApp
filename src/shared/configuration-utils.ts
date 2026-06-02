@@ -1,4 +1,5 @@
 import {
+    Configuration,
     ConfigurationParameterType,
     LogicalOp,
     ParameterObj,
@@ -45,4 +46,14 @@ export function evaluateCondition(
             .includes(configuration[condition.id]);
     }
     return true;
+}
+export function encodeConfigurationForQuery(
+    configuration?: Configuration
+): string {
+    if (!configuration) {
+        return "";
+    }
+    return Object.entries(configuration)
+        .map(([id, value]) => `${id}=${value}`)
+        .join(";");
 }

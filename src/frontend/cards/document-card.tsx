@@ -53,7 +53,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                         ref={ctxMenuProps.ref}
                         interactive
                         onClick={() => {
-                            navigate({
+                            void navigate({
                                 to: "/app/documents/$documentId",
                                 params: { documentId: document.id }
                             });
@@ -95,7 +95,9 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
             });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
         }
     });
 
@@ -161,7 +163,7 @@ export function DocumentContextMenu(props: DocumentContextMenuProps) {
                     }}
                 />
                 <DocumentDataItems document={document} />
-                <ReloadThumbnailMenuItem path={document.path} />
+                <ReloadThumbnailMenuItem id={document.id} isDocumentId={true} />
                 {modifyDocumentItems}
             </AdminSubmenu>
         </Menu>
@@ -191,7 +193,9 @@ function useSetDocumentOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder document.");
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
         }
         // Don't need an onSettled handler since document-order doesn't expire
     });
@@ -231,7 +235,9 @@ function useToggleSortOrderMutation(document: DocumentOut) {
             `Failed to update document ${document.name}.`
         ),
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: libraryQueryMatchKey() });
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
         }
     });
 }

@@ -6,7 +6,7 @@ import {
     isElementPath,
     InstanceType
 } from "../../shared/path";
-import { encodeConfigurationForQuery } from "../configurations/configuration-utils";
+import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { showToast } from "./toaster";
 
 export function makeUrl(path: DocumentPath): string;

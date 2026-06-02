@@ -7,7 +7,7 @@ export async function getSetting(
     clientId: string,
     userPath: UserPath,
     key: string
-): Promise<any | null> {
+): Promise<any> {
     const result = await getSettings(client, clientId, userPath, [key]);
     if (result.length === 0) return null;
     return result[0]?.value ?? null;

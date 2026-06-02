@@ -29,7 +29,7 @@ function AppAlert(props: AppAlertProps): ReactNode {
             canOutsideClickCancel
             isOpen
             onClose={() => {
-                void navigate({ to: ".", search: { activeAlert: undefined } });
+                void navigate({ to: ".", search: { activePopup: undefined } });
             }}
             confirmButtonText="Close"
             icon={icon}
