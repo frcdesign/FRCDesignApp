@@ -5,7 +5,9 @@ import { Configuration, ParameterObj } from "./configuration-models";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
-    cacheVersion: integer("cache_version").notNull().default(0)
+    cacheVersion: integer("cache_version").notNull().default(0),
+    // Serialized MiniSearch index, rebuilt by the backend when a document loads.
+    searchDb: text("search_db")
 });
 
 export const documents = sqliteTable("documents", {

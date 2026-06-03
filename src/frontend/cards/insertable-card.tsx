@@ -24,7 +24,7 @@ import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
     AdminSubmenu,
     CardTitle,
-    ItemCard,
+    ItemRow,
     OpenDocumentItems,
     QuickInsertItems,
     ReloadThumbnailMenuItem
@@ -73,7 +73,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
     return (
-        <ItemCard
+        <ItemRow
             onClick={() => {
                 if (props.onClick) {
                     props.onClick();

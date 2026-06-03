@@ -9,6 +9,7 @@ import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
+import { ItemTable } from "../cards/card-components";
 import {
     useFavoritesQuery,
     useLibraryQuery,
@@ -143,7 +144,7 @@ export function FavoritesList(): ReactNode {
     return (
         <>
             {callout}
-            {cards}
+            <ItemTable>{cards}</ItemTable>
         </>
     );
 }

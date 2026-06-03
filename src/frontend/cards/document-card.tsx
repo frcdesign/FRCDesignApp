@@ -19,7 +19,7 @@ import { useSetVisibilityMutation } from "./card-hooks";
 import {
     AdminSubmenu,
     CardTitle,
-    ItemCard,
+    ItemRow,
     OpenDocumentItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
@@ -45,7 +45,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     const navigate = useNavigate();
 
     return (
-        <ItemCard
+        <ItemRow
             onClick={() => {
                 void navigate({
                     to: "/app/documents/$documentId",
@@ -140,6 +140,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
             <AdminSubmenu>
                 {orderItems}
                 <Menu.Item
+                    color="blue"
                     leftSection={<IconEye size={16} />}
                     onClick={() => {
                         showAllMutation.mutate();
@@ -148,6 +149,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
                     Show all elements
                 </Menu.Item>
                 <Menu.Item
+                    color="red"
                     leftSection={<IconEyeOff size={16} />}
                     onClick={() => {
                         hideAllMutation.mutate();

@@ -5,15 +5,7 @@ import {
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import {
-    Button,
-    Card,
-    Group,
-    Menu,
-    Stack,
-    Text,
-    UnstyledButton
-} from "@mantine/core";
+import { Button, Group, Menu, Stack } from "@mantine/core";
 import {
     IconAlertTriangle,
     IconArrowBackUp,
@@ -26,7 +18,7 @@ import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
 import { DocumentMenuItems } from "../../../cards/document-card";
 import { InsertableCard } from "../../../cards/insertable-card";
-import { ContextMenuButton } from "../../../cards/card-components";
+import { ContextMenuButton, ItemTable } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
 import {
     PageError,
@@ -111,25 +103,28 @@ function DocumentList(): ReactNode {
         <>
             <Menu shadow="md" width={220} withinPortal>
                 <Menu.ContextMenu>
-                    <Card withBorder radius="md" padding="sm" mb="md">
-                        <Group justify="space-between" wrap="nowrap">
-                            <UnstyledButton
-                                flex={1}
-                                miw={0}
-                                onClick={() => {
-                                    void navigate({ to: "/app/documents" });
-                                }}
-                            >
-                                <Group gap="sm" wrap="nowrap">
-                                    <IconArrowLeft size={18} />
-                                    <Text fw={600} truncate>
-                                        {document.name}
-                                    </Text>
-                                </Group>
-                            </UnstyledButton>
-                            <ContextMenuButton>{menuItems}</ContextMenuButton>
-                        </Group>
-                    </Card>
+                    <Group
+                        justify="space-between"
+                        wrap="nowrap"
+                        gap="xs"
+                        mb="md"
+                    >
+                        <Button
+                            variant="subtle"
+                            color="gray"
+                            justify="flex-start"
+                            flex={1}
+                            miw={0}
+                            fw={600}
+                            leftSection={<IconArrowLeft size={18} />}
+                            onClick={() => {
+                                void navigate({ to: "/app/documents" });
+                            }}
+                        >
+                            {document.name}
+                        </Button>
+                        <ContextMenuButton>{menuItems}</ContextMenuButton>
+                    </Group>
                 </Menu.ContextMenu>
                 <Menu.Dropdown>{menuItems}</Menu.Dropdown>
             </Menu>
@@ -194,7 +189,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
     return (
         <>
             {callout}
-            <Stack gap={0}>{insertableCards}</Stack>
+            <ItemTable>{insertableCards}</ItemTable>
         </>
     );
 }

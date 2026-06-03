@@ -24,10 +24,11 @@ import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { parseFastenInfo } from "./insert-and-fasten";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
-import type { ConfigurationResult } from "../../shared/configuration-models";
+import type { ParameterObj } from "../../shared/configuration-models";
 import {
     type FastenInfo,
     ElementType,
+    type Library,
     type ThumbnailUrls,
     type Vendor
 } from "../../shared/types";
@@ -37,6 +38,7 @@ import {
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
+import { rebuildSearchDb } from "../library-data";
 
 export interface LoadDocumentParams {
     documentId: string;
@@ -111,7 +113,7 @@ interface ElementLoadResult {
     fastenInfo: FastenInfo | null;
     supportsFasten: boolean;
     vendors: Vendor[];
-    configuration: ConfigurationResult | null;
+    configuration: ParameterObj[] | null;
     thumbnailUrls: ThumbnailUrls | null;
 }
 
@@ -393,7 +395,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         .insert(configurations)
                         .values({
                             id: insertableIdMap.get(r.elementId)!,
-                            parameters: r.configuration!.parameters
+                            parameters: r.configuration!
                         })
                         .onConflictDoUpdate({
                             target: configurations.id,
@@ -444,6 +446,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 ...configUpserts,
                 deleteStaleInsertables
             ]);
+        });
+
+        // Step 8: Rebuild the library's search index from its now-updated contents
+        await step.do("rebuild-search-db", async () => {
+            await rebuildSearchDb(getDb(this.env.DB), libraryId as Library);
         });
     }
 
@@ -509,11 +516,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     return null;
                 }
                 const configuration = parseOnshapeConfiguration(rawConfig);
+                // The `configurations.parameters` column is json-mode, so Drizzle
+                // (and the workflow step boundary) handle serialization for us.
                 return {
-                    parameters: JSON.stringify(configuration.parameters),
-                    vendors: JSON.stringify(
-                        parseVendors(element.name, configuration)
-                    )
+                    parameters: configuration.parameters,
+                    vendors: parseVendors(element.name, configuration)
                 };
             }
         );
@@ -537,11 +544,9 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             }
         );
 
-        const configuration = configData
-            ? (JSON.parse(configData.parameters) as ConfigurationResult)
-            : null;
+        const configuration = configData ? configData.parameters : null;
         const vendors = configData
-            ? (JSON.parse(configData.vendors) as Vendor[])
+            ? configData.vendors
             : parseVendors(element.name);
 
         return {

@@ -1,20 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import {
-    Card,
-    Collapse,
-    Group,
-    Stack,
-    Text,
-    UnstyledButton
-} from "@mantine/core";
-import {
-    IconBook,
-    IconChevronDown,
-    IconChevronUp,
-    IconSearch
-} from "@tabler/icons-react";
-import { PropsWithChildren, ReactNode, useState } from "react";
+import { Accordion } from "@mantine/core";
+import { IconBook, IconSearch } from "@tabler/icons-react";
+import { ReactNode, useState } from "react";
 import { DocumentCard } from "../../../cards/document-card";
+import { ItemTable } from "../../../cards/card-components";
 import { HeartIcon } from "../../../favorites/favorite-button";
 import { SearchResults } from "../../../search/search-results";
 import { SectionError, SectionLoading } from "../../../common/app-zero-state";
@@ -32,67 +21,81 @@ export const Route = createFileRoute("/app/documents/")({
     }
 });
 
+const FAVORITES_VALUE = "favorites";
+
 function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const library = useLibrary();
 
-    const favoritesList = (
-        <ListContainer
-            icon={<HeartIcon />}
-            title="Favorites"
-            isOpen={uiState.isFavoritesOpen}
-            onClick={(isOpen) => setUiState({ isFavoritesOpen: isOpen })}
-        >
-            <FavoritesList />
-        </ListContainer>
-    );
+    const isSearch = !!uiState.searchQuery;
+    // Use a distinct value (and key) for search so toggling it doesn't share
+    // open state with the library section.
+    const documentValue = isSearch ? "search" : "library";
 
-    let documentList: ReactNode;
-    if (uiState.searchQuery) {
-        // Key is needed to differentiate between Favorites
-        // Otherwise the useState in ListContainer can get confused
-        documentList = (
-            <ListContainer
-                key="search"
-                icon={
-                    <IconSearch
-                        size={18}
-                        color="var(--mantine-primary-color-filled)"
-                    />
-                }
-                title="Search Results"
-                isOpen={isSearchOpen}
-                onClick={setIsSearchOpen}
-            >
-                <SearchResults
-                    query={uiState.searchQuery}
-                    filters={{ vendors: uiState.vendorFilters }}
-                />
-            </ListContainer>
-        );
-    } else {
-        documentList = (
-            <ListContainer
-                icon={
-                    <IconBook
-                        size={18}
-                        color="var(--mantine-primary-color-filled)"
-                    />
-                }
-                title={getLibraryName(library)}
-                isOpen={uiState.isLibraryOpen}
-                onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
-            >
-                <LibraryList />
-            </ListContainer>
-        );
+    const value: string[] = [];
+    if (uiState.isFavoritesOpen) {
+        value.push(FAVORITES_VALUE);
     }
+    if (isSearch ? isSearchOpen : uiState.isLibraryOpen) {
+        value.push(documentValue);
+    }
+
+    const handleChange = (newValue: string[]) => {
+        setUiState({ isFavoritesOpen: newValue.includes(FAVORITES_VALUE) });
+        if (isSearch) {
+            setIsSearchOpen(newValue.includes(documentValue));
+        } else {
+            setUiState({ isLibraryOpen: newValue.includes(documentValue) });
+        }
+    };
 
     return (
         <>
-            {favoritesList}
-            {documentList}
+            <Accordion
+                multiple
+                variant="separated"
+                value={value}
+                onChange={handleChange}
+            >
+                <Accordion.Item value={FAVORITES_VALUE}>
+                    <Accordion.Control icon={<HeartIcon />}>
+                        Favorites
+                    </Accordion.Control>
+                    <Accordion.Panel>
+                        <FavoritesList />
+                    </Accordion.Panel>
+                </Accordion.Item>
+                <Accordion.Item key={documentValue} value={documentValue}>
+                    <Accordion.Control
+                        icon={
+                            isSearch ? (
+                                <IconSearch
+                                    size={18}
+                                    color="var(--mantine-primary-color-filled)"
+                                />
+                            ) : (
+                                <IconBook
+                                    size={18}
+                                    color="var(--mantine-primary-color-filled)"
+                                />
+                            )
+                        }
+                    >
+                        {isSearch ? "Search Results" : getLibraryName(library)}
+                    </Accordion.Control>
+                    <Accordion.Panel>
+                        {isSearch ? (
+                            <SearchResults
+                                query={uiState.searchQuery!}
+                                filters={{ vendors: uiState.vendorFilters }}
+                            />
+                        ) : (
+                            <LibraryList />
+                        )}
+                    </Accordion.Panel>
+                </Accordion.Item>
+            </Accordion>
             <Outlet />
         </>
     );
@@ -125,52 +128,15 @@ function LibraryList() {
         );
     }
 
-    return documentOrder.map((documentId) => {
-        const document = documents[documentId];
-        if (!document) {
-            return null;
-        }
-        return <DocumentCard key={document.id} document={document} />;
-    });
-}
-
-interface ListContainerProps extends PropsWithChildren {
-    isOpen: boolean;
-    onClick?: (isOpen: boolean) => void;
-    icon: ReactNode;
-    title: string;
-}
-
-function ListContainer(props: ListContainerProps): ReactNode {
-    const { icon, title, children, isOpen, onClick } = props;
-
     return (
-        <Card withBorder radius="md" padding={0} mb="sm">
-            <UnstyledButton
-                onClick={() => onClick && onClick(!isOpen)}
-                w="100%"
-            >
-                <Group justify="space-between" px="sm" py="xs" wrap="nowrap">
-                    <Group gap="sm" wrap="nowrap">
-                        {icon}
-                        <Text fw={600}>{title}</Text>
-                    </Group>
-                    {isOpen ? (
-                        <IconChevronUp
-                            size={16}
-                            color="var(--mantine-color-dimmed)"
-                        />
-                    ) : (
-                        <IconChevronDown
-                            size={16}
-                            color="var(--mantine-color-dimmed)"
-                        />
-                    )}
-                </Group>
-            </UnstyledButton>
-            <Collapse expanded={isOpen}>
-                <Stack gap={0}>{children}</Stack>
-            </Collapse>
-        </Card>
+        <ItemTable>
+            {documentOrder.map((documentId) => {
+                const document = documents[documentId];
+                if (!document) {
+                    return null;
+                }
+                return <DocumentCard key={document.id} document={document} />;
+            })}
+        </ItemTable>
     );
 }

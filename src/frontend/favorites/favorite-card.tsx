@@ -10,7 +10,7 @@ import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
-    ItemCard,
+    ItemRow,
     OpenDocumentItems,
     QuickInsertItems
 } from "../cards/card-components";
@@ -54,7 +54,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     }
 
     return (
-        <ItemCard
+        <ItemRow
             onClick={() => {
                 if (isAssemblyInPartStudio) {
                     openCannotDeriveAssemblyAlert();

@@ -1,4 +1,4 @@
-import { Checkbox, Loader, Select, TextInput } from "@mantine/core";
+import { Center, Checkbox, Loader, Select, TextInput } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -87,7 +87,11 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     if (query.isPending || unitInfoQuery.isPending || !configuration) {
-        return <Loader />;
+        return (
+            <Center my="md">
+                <Loader />
+            </Center>
+        );
     } else if (query.isError || unitInfoQuery.isError) {
         return <SectionError title="Failed to load configuration" />;
     }

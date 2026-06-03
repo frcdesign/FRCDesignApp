@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Card, Group, Menu, Text } from "@mantine/core";
+import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
 import {
     IconDots,
     IconEyeOff,
@@ -166,7 +166,7 @@ export function CardTitle(props: CardTitleProps) {
     );
 }
 
-interface ItemCardProps {
+interface ItemRowProps {
     /** Left content, e.g. a `CardTitle`. */
     left: ReactNode;
     /** Menu items shown on right-click and (when shown) via the "more" button. */
@@ -182,18 +182,27 @@ interface ItemCardProps {
 }
 
 /**
- * A clickable list row with a hover state and a right-click context menu.
- * Used for documents, insertables, and favorites.
+ * Groups `ItemRow`s into a single dense, hoverable table. Loading/empty/error
+ * states should be rendered outside of this.
  */
-export function ItemCard(props: ItemCardProps): ReactNode {
+export function ItemTable(props: PropsWithChildren): ReactNode {
+    return (
+        <Table highlightOnHover verticalSpacing="xs" layout="fixed" w="100%">
+            <Table.Tbody>{props.children}</Table.Tbody>
+        </Table>
+    );
+}
+
+/**
+ * A clickable table row with a hover state and a right-click context menu.
+ * Used for documents, insertables, and favorites. Render inside an `ItemTable`.
+ */
+export function ItemRow(props: ItemRowProps): ReactNode {
     const { left, menu, onClick, rightSection, moreButton = true } = props;
     return (
         <Menu shadow="md" width={220} withinPortal>
             <Menu.ContextMenu>
-                <Card
-                    withBorder
-                    radius="md"
-                    padding="sm"
+                <Table.Tr
                     role="button"
                     tabIndex={0}
                     className={`${interactiveClasses.interactive} mantine-active mantine-focus-auto`}
@@ -208,16 +217,16 @@ export function ItemCard(props: ItemCardProps): ReactNode {
                         }
                     }}
                 >
-                    <Group justify="space-between" wrap="nowrap" gap="sm">
-                        {left}
-                        <Group gap={4} wrap="nowrap">
+                    <Table.Td>{left}</Table.Td>
+                    <Table.Td w={moreButton ? 92 : 48}>
+                        <Group gap={4} wrap="nowrap" justify="flex-end">
                             {rightSection}
                             {moreButton && (
                                 <ContextMenuButton>{menu}</ContextMenuButton>
                             )}
                         </Group>
-                    </Group>
-                </Card>
+                    </Table.Td>
+                </Table.Tr>
             </Menu.ContextMenu>
             <Menu.Dropdown>{menu}</Menu.Dropdown>
         </Menu>
@@ -256,12 +265,8 @@ export function AdminSubmenu(props: PropsWithChildren): ReactNode {
             <Menu.Sub>
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
-                        leftSection={
-                            <IconSettings
-                                size={16}
-                                color="var(--mantine-primary-color-filled)"
-                            />
-                        }
+                        color="blue"
+                        leftSection={<IconSettings size={16} />}
                     >
                         Admin options
                     </Menu.Sub.Item>

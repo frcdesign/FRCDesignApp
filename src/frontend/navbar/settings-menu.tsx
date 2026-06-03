@@ -8,21 +8,18 @@ import { showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { LibraryOut } from "../../shared/api-models";
 import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { useSaveSettings } from "../api-utils/settings";
 import { capitalize, getQueryUpdater } from "../common/utils";
-import { buildSearchDb } from "../search/search";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { getAppErrorHandler, HandledError } from "../api-utils/errors";
+import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 import {
     contextDataQueryKey,
-    libraryQueryKey,
     libraryQueryMatchKey,
     searchDbQueryMatchKey
 } from "../queries";
@@ -75,7 +72,11 @@ function SettingsMenuDialog(): ReactNode {
             <UserSettings />
             {adminSettings}
             <Group justify="flex-end" mt="md">
-                <Button leftSection={<IconX size={16} />} onClick={closeDialog}>
+                <Button
+                    variant="default"
+                    leftSection={<IconX size={16} />}
+                    onClick={closeDialog}
+                >
                     Close
                 </Button>
             </Group>
@@ -143,22 +144,14 @@ function AdminSettings(): ReactNode {
  */
 function PushVersionButton(): ReactNode {
     const library = useLibrary();
-    const loaderData = useLoaderData({ from: "/app" });
     const router = useRouter();
 
     const pushVersionMutation = useMutation({
         mutationKey: ["library-version", library],
+        // The backend rebuilds the search index itself, so this just bumps the
+        // cache version (invalidating CDN caches).
         mutationFn: async () => {
-            const libraryData = await queryClient.fetchQuery<LibraryOut>({
-                queryKey: libraryQueryKey(library, loaderData)
-            });
-            if (!libraryData) {
-                throw new HandledError("Failed to fetch library data.");
-            }
-            const searchDb = JSON.stringify(buildSearchDb(libraryData));
-            return apiPost("/library-version" + toLibraryPath(library), {
-                body: { searchDb }
-            });
+            return apiPost("/library-version" + toLibraryPath(library));
         },
         onError: getAppErrorHandler("Unexpectedly failed to push new version."),
         onSuccess: () => {
@@ -178,6 +171,7 @@ function PushVersionButton(): ReactNode {
     return (
         <SettingRow label="Push new app version">
             <Button
+                variant="default"
                 leftSection={<IconCloudUpload size={16} />}
                 onClick={() => {
                     pushVersionMutation.mutate();
@@ -275,13 +269,17 @@ export function ReloadDocumentsButton(
                 "Are you sure you want to reload" +
                 (reloadAll ? " all documents?" : " outdated documents?"),
             labels: { confirm: "Reload", cancel: "Cancel" },
-            confirmProps: { color: reloadAll ? "red" : "blue" },
+            confirmProps: {
+                variant: "light",
+                color: reloadAll ? "red" : "blue"
+            },
             onConfirm: () => mutation.mutate()
         });
     };
 
     const button = (
         <Button
+            variant="light"
             color={reloadAll ? "red" : "blue"}
             leftSection={<IconRefresh size={16} />}
             onClick={handleClick}
