@@ -1,61 +1,39 @@
-import {
-    ActionIcon,
-    Button,
-    Collapse,
-    Group,
-    Menu,
-    Stack,
-    TextInput
-} from "@mantine/core";
+import { ActionIcon, Button, Group, Menu, TextInput } from "@mantine/core";
 import {
     IconChevronDown,
     IconCircleX,
-    IconFilter,
     IconSearch,
     IconSettings
 } from "@tabler/icons-react";
-import { ReactNode, RefObject, useRef, useState } from "react";
+import { ReactNode, RefObject, useRef } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
-import { VendorFilters } from "./vendor-filters";
+import { VendorMenu } from "./vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibrary } from "../api-utils/library";
 import { useSaveSettings } from "../api-utils/settings";
 import { Library } from "../../shared/types";
 
+/** Foreground color for controls on the colored header. */
+const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
+
 /**
- * Provides top-level navigation for the app. A single control row holds the
- * brand, library menu, search, and a filter toggle that reveals the vendor
- * filter row.
+ * Provides top-level navigation for the app. A single colored control row holds
+ * the brand, library menu, search, vendor filter menu, and settings.
  */
 export function AppNavbar(): ReactNode {
-    const [showFilters, setShowFilters] = useState(false);
-    const [uiState] = useUiState();
-
     return (
-        <Stack gap="xs" p="sm">
-            <Group justify="space-between" wrap="nowrap" gap="xs">
-                <Group gap="xs" wrap="nowrap" style={{ flex: 1 }} miw={0}>
-                    <BrandIcon />
-                    <LibraryMenu />
-                    <SearchBar />
-                    <ActionIcon
-                        variant={showFilters ? "light" : "subtle"}
-                        color={uiState.vendorFilters ? "blue" : "gray"}
-                        title="Filters"
-                        onClick={() => setShowFilters((show) => !show)}
-                    >
-                        <IconFilter size={18} />
-                    </ActionIcon>
-                </Group>
-                <SettingsButton />
+        <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
+            <Group gap="xs" wrap="nowrap" style={{ flex: 1 }} miw={0}>
+                <BrandIcon />
+                <LibraryMenu />
+                <SearchBar />
+                <VendorMenu />
             </Group>
-            <Collapse expanded={showFilters}>
-                <VendorFilters />
-            </Collapse>
-        </Stack>
+            <SettingsButton />
+        </Group>
     );
 }
 
@@ -66,7 +44,9 @@ function BrandIcon(): ReactNode {
                 src={frcDesignBook}
                 alt="FRCDesign.org"
                 width={24}
-                style={{ display: "block" }}
+                // Render the book in the header's contrast color (white on the
+                // colored header) instead of its native gray.
+                style={{ display: "block", filter: "brightness(0) invert(1)" }}
             />
         </a>
     );
@@ -112,7 +92,7 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={ON_PRIMARY}
             title="Settings"
             onClick={() =>
                 void navigate({

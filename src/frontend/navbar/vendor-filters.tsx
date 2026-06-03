@@ -1,9 +1,12 @@
-import { Button, Checkbox, Group } from "@mantine/core";
-import { IconFilterOff } from "@tabler/icons-react";
+import { ActionIcon, Button, Menu } from "@mantine/core";
+import { IconFilter, IconFilterOff } from "@tabler/icons-react";
 import { ReactNode } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
 import { useUiState } from "../api-utils/ui-state";
+
+/** Foreground color for controls on the colored header. */
+const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
 
 interface ClearFiltersButtonProps {
     /**
@@ -39,35 +42,58 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
     );
 }
 
-export function VendorFilters(): ReactNode {
+/**
+ * Vendor filter control: an icon button on the header that opens a menu of
+ * vendor checkbox items. `undefined` filters mean "all vendors active".
+ */
+export function VendorMenu(): ReactNode {
     const [uiState, setUiState] = useUiState();
-
-    // `undefined` means "all vendors active" (no filtering); the checkbox group
-    // works on a plain array, so map an empty selection back to `undefined`.
-    const vendorFilters = uiState.vendorFilters ?? [];
+    const hasFilters = uiState.vendorFilters !== undefined;
 
     return (
-        <Group justify="space-between" align="flex-end" gap="xs" wrap="nowrap">
-            <Checkbox.Group
-                value={vendorFilters}
-                onChange={(value) => {
-                    setUiState({
-                        vendorFilters: value.length > 0 ? value : undefined
-                    });
-                }}
-            >
-                <Group gap="sm">
+        <Menu
+            position="bottom-end"
+            closeOnItemClick={false}
+            withinPortal
+            width={240}
+        >
+            <Menu.Target>
+                <ActionIcon
+                    variant={hasFilters ? "light" : "subtle"}
+                    color={ON_PRIMARY}
+                    title="Filter vendors"
+                >
+                    <IconFilter size={18} />
+                </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+                <Menu.Label>Vendors</Menu.Label>
+                <Menu.CheckboxGroup
+                    value={uiState.vendorFilters ?? []}
+                    onChange={(value) => {
+                        setUiState({
+                            vendorFilters:
+                                value.length > 0
+                                    ? (value as Vendor[])
+                                    : undefined
+                        });
+                    }}
+                >
                     {Object.values(Vendor).map((vendor) => (
-                        <Checkbox
-                            key={vendor}
-                            value={vendor}
-                            size="xs"
-                            label={`${getVendorName(vendor)} (${vendor})`}
-                        />
+                        <Menu.CheckboxItem key={vendor} value={vendor}>
+                            {`${getVendorName(vendor)} (${vendor})`}
+                        </Menu.CheckboxItem>
                     ))}
-                </Group>
-            </Checkbox.Group>
-            <ClearFiltersButton text="Clear" small />
-        </Group>
+                </Menu.CheckboxGroup>
+                <Menu.Divider />
+                <Menu.Item
+                    leftSection={<IconFilterOff size={16} />}
+                    disabled={!hasFilters}
+                    onClick={() => setUiState({ vendorFilters: undefined })}
+                >
+                    Clear filters
+                </Menu.Item>
+            </Menu.Dropdown>
+        </Menu>
     );
 }

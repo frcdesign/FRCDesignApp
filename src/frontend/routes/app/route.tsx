@@ -128,7 +128,10 @@ function App() {
                         header={{ height: headerHeight || 56 }}
                         padding="md"
                     >
-                        <AppShell.Header>
+                        <AppShell.Header
+                            bg="var(--mantine-primary-color-filled)"
+                            c="var(--mantine-primary-color-contrast)"
+                        >
                             <div ref={headerRef}>
                                 <AppNavbar />
                             </div>
