@@ -112,10 +112,17 @@ $frc-design-green: #4cae4f;
 // Home/document lists
 .item-card {
     display: flex;
+    // Mantine's Card root is flex-column; force a row so the title sits on the
+    // left and the action buttons on the right.
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
     gap: var(--mantine-spacing-sm);
     transition: background 0.15s;
+
+    &:not(:last-child) {
+        border-bottom: 1px solid var(--mantine-color-gray-2);
+    }
 
     &:hover {
         background: var(--mantine-color-gray-0);
@@ -130,8 +137,14 @@ $frc-design-green: #4cae4f;
     }
 }
 
-[data-mantine-color-scheme="dark"] .item-card:hover {
-    background: var(--mantine-color-dark-6);
+[data-mantine-color-scheme="dark"] .item-card {
+    &:not(:last-child) {
+        border-bottom: 1px solid var(--mantine-color-dark-4);
+    }
+
+    &:hover {
+        background: var(--mantine-color-dark-6);
+    }
 }
 
 .inline-app-loading-state {

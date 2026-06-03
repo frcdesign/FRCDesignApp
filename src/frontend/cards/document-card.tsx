@@ -47,9 +47,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
         <Menu shadow="md" width={220} withinPortal>
             <Menu.ContextMenu>
                 <Card
-                    withBorder
                     padding="sm"
-                    radius="md"
                     className="item-card"
                     style={{ cursor: "pointer" }}
                     onClick={() => {
