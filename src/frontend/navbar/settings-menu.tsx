@@ -3,22 +3,16 @@ import { modals } from "@mantine/modals";
 import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
-import {
-    useLoaderData,
-    useNavigate,
-    useRouter,
-    useSearch
-} from "@tanstack/react-router";
-import { showErrorToast, showSuccessToast } from "../common/toaster";
+import { useLoaderData, useRouter, useSearch } from "@tanstack/react-router";
+import { showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { LibraryOut } from "../../shared/api-models";
-import { Library } from "../../shared/types";
 import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
-import { getLibraryName as getLibraryName } from "../api-utils/library";
+import { useSaveSettings } from "../api-utils/settings";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { buildSearchDb } from "../search/search";
 import { OpenUrlButton } from "../common/open-url-button";
@@ -91,30 +85,10 @@ function SettingsMenuDialog(): ReactNode {
 
 function UserSettings(): ReactNode {
     const search = useSearch({ from: "/app" });
-    const navigate = useNavigate();
-
-    const saveSettings = (newSettings: {
-        theme?: Theme;
-        library?: Library;
-    }) => {
-        // Navigate immediately — this IS the optimistic update since settings live in search params
-        void navigate({
-            to: ".",
-            search: { settings: { ...search.settings, ...newSettings } }
-        });
-        apiPost("/user-data", { body: newSettings }).catch(() => {
-            showErrorToast("Unexpectedly failed to update settings.");
-        });
-    };
+    const saveSettings = useSaveSettings();
 
     return (
         <>
-            <LibrarySelect
-                library={search.settings.library}
-                onLibrarySelect={(newLibrary) =>
-                    saveSettings({ library: newLibrary })
-                }
-            />
             <ThemeSelect
                 theme={search.settings.theme}
                 onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
@@ -123,35 +97,6 @@ function UserSettings(): ReactNode {
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </SettingRow>
         </>
-    );
-}
-
-interface LibrarySelectProps {
-    library: Library;
-    onLibrarySelect: Dispatch<Library>;
-}
-
-function LibrarySelect(props: LibrarySelectProps): ReactNode {
-    const { library, onLibrarySelect } = props;
-
-    const navigate = useNavigate();
-
-    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const libraries = useSelectOptions(
-        [Library.FRC_DESIGN_LIB, Library.MKCAD],
-        getLibraryName
-    );
-
-    return (
-        <AppSelect
-            option={makeSelectOption(library, getLibraryName)}
-            options={libraries}
-            label="Library"
-            onSelect={(value: string) => {
-                void navigate({ to: "/app/documents" });
-                onLibrarySelect(value as Library);
-            }}
-        />
     );
 }
 

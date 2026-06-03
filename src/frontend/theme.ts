@@ -26,8 +26,9 @@ export function getLibraryColor(library: Library): string {
     switch (library) {
         case Library.FTC_DESIGN_LIB:
             return "orange";
-        case Library.FRC_DESIGN_LIB:
         case Library.MKCAD:
+            return "blue";
+        case Library.FRC_DESIGN_LIB:
             return "frcGreen";
     }
 }

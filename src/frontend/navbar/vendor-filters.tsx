@@ -1,12 +1,9 @@
-import { Button, Chip, Group } from "@mantine/core";
+import { Button, Checkbox, Group } from "@mantine/core";
 import { IconFilterOff } from "@tabler/icons-react";
-import { ReactNode, useCallback } from "react";
+import { ReactNode } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
-import { SetUiState, useUiState } from "../api-utils/ui-state";
-
-/** White foreground so chips read on the colored header. */
-const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
+import { useUiState } from "../api-utils/ui-state";
 
 interface ClearFiltersButtonProps {
     /**
@@ -45,72 +42,32 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
 export function VendorFilters(): ReactNode {
     const [uiState, setUiState] = useUiState();
 
-    const vendorFilters = uiState.vendorFilters;
-
-    const handleVendorSelect = useOnVendorSelect(vendorFilters, setUiState);
-
-    const filterTags = Object.values(Vendor).map((vendor) => {
-        const isActive = isVendorActive(vendor, vendorFilters);
-        return (
-            <Chip
-                key={vendor}
-                checked={isActive}
-                color={ON_PRIMARY}
-                variant="outline"
-                size="xs"
-                title={getVendorName(vendor)}
-                onClick={() => {
-                    handleVendorSelect(vendor);
-                }}
-            >
-                {vendor}
-            </Chip>
-        );
-    });
+    // `undefined` means "all vendors active" (no filtering); the checkbox group
+    // works on a plain array, so map an empty selection back to `undefined`.
+    const vendorFilters = uiState.vendorFilters ?? [];
 
     return (
-        <Group justify="space-between" gap="xs" wrap="nowrap">
-            <Group gap="xs">{filterTags}</Group>
+        <Group justify="space-between" align="flex-end" gap="xs" wrap="nowrap">
+            <Checkbox.Group
+                value={vendorFilters}
+                onChange={(value) => {
+                    setUiState({
+                        vendorFilters: value.length > 0 ? value : undefined
+                    });
+                }}
+            >
+                <Group gap="sm">
+                    {Object.values(Vendor).map((vendor) => (
+                        <Checkbox
+                            key={vendor}
+                            value={vendor}
+                            size="xs"
+                            label={`${getVendorName(vendor)} (${vendor})`}
+                        />
+                    ))}
+                </Group>
+            </Checkbox.Group>
             <ClearFiltersButton text="Clear" small />
         </Group>
-    );
-}
-
-function isVendorActive(
-    vendor: Vendor,
-    currentFilters: Vendor[] | undefined
-): boolean {
-    const areAllTagsActive = currentFilters === undefined;
-    if (areAllTagsActive) {
-        return true;
-    } else if (currentFilters.includes(vendor)) {
-        return true;
-    }
-    return false;
-}
-
-function useOnVendorSelect(
-    currentFilters: Vendor[] | undefined,
-    setUiState: SetUiState
-) {
-    return useCallback(
-        (vendor: Vendor) => {
-            let newFilters: Vendor[] | undefined;
-            if (currentFilters === undefined) {
-                // First filter selected
-                newFilters = [vendor];
-            } else if (isVendorActive(vendor, currentFilters)) {
-                // Filter is already selected
-                newFilters = currentFilters.filter((curr) => curr !== vendor);
-                // It was the last filter
-                if (newFilters.length === 0) {
-                    newFilters = undefined;
-                }
-            } else {
-                newFilters = [...currentFilters, vendor];
-            }
-            setUiState({ vendorFilters: newFilters });
-        },
-        [currentFilters, setUiState]
     );
 }

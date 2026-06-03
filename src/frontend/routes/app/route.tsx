@@ -40,8 +40,13 @@ type SearchParams = OnshapeParams & MenuParams & { settings: Settings };
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        search.systemTheme = search.theme;
-        delete search.theme;
+        // Onshape only sends `theme` on the initial load. Only remap it when it's
+        // actually present so internal navigations (e.g. switching libraries)
+        // don't wipe the retained `systemTheme` and reset light/dark mode.
+        if (search.theme !== undefined) {
+            search.systemTheme = search.theme;
+            delete search.theme;
+        }
         return search as unknown as SearchParams;
     },
     search: {
@@ -123,15 +128,15 @@ function App() {
                         header={{ height: headerHeight || 56 }}
                         padding="md"
                     >
-                        <AppShell.Header
-                            bg="var(--mantine-primary-color-filled)"
-                            c="var(--mantine-primary-color-contrast)"
-                        >
+                        <AppShell.Header>
                             <div ref={headerRef}>
                                 <AppNavbar />
                             </div>
                         </AppShell.Header>
-                        <AppShell.Main>
+                        {/* Cap the main region at one viewport so it (not the
+                            window) scrolls; the fixed header covers the top of
+                            this scrollbar, keeping it within the body. */}
+                        <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
                             <Outlet />
                             <AppMenus />
                             <TanStackRouterDevtools />
