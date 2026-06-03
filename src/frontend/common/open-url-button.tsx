@@ -10,7 +10,6 @@ interface UrlButtonProps {
 export function OpenUrlButton(props: UrlButtonProps) {
     return (
         <Button
-            color="blue"
             leftSection={<IconShare size={16} />}
             onClick={() => openUrlInNewTab(props.url)}
         >

@@ -1,4 +1,4 @@
-import { Card, Menu } from "@mantine/core";
+import { Menu } from "@mantine/core";
 import {
     IconArrowRight,
     IconEye,
@@ -19,6 +19,7 @@ import { useSetVisibilityMutation } from "./card-hooks";
 import {
     AdminSubmenu,
     CardTitle,
+    ItemCard,
     OpenDocumentItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
@@ -44,33 +45,25 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
     const navigate = useNavigate();
 
     return (
-        <Menu shadow="md" width={220} withinPortal>
-            <Menu.ContextMenu>
-                <Card
-                    padding="sm"
-                    className="item-card"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                        void navigate({
-                            to: "/app/documents/$documentId",
-                            params: { documentId: document.id }
-                        });
-                    }}
-                >
-                    <CardTitle
-                        title={document.name}
-                        thumbnailUrls={document.thumbnailUrls}
-                    />
-                    <IconArrowRight
-                        size={16}
-                        color="var(--mantine-color-dimmed)"
-                    />
-                </Card>
-            </Menu.ContextMenu>
-            <Menu.Dropdown>
-                <DocumentMenuItems document={document} />
-            </Menu.Dropdown>
-        </Menu>
+        <ItemCard
+            onClick={() => {
+                void navigate({
+                    to: "/app/documents/$documentId",
+                    params: { documentId: document.id }
+                });
+            }}
+            left={
+                <CardTitle
+                    title={document.name}
+                    thumbnailUrls={document.thumbnailUrls}
+                />
+            }
+            rightSection={
+                <IconArrowRight size={16} color="var(--mantine-color-dimmed)" />
+            }
+            moreButton={false}
+            menu={<DocumentMenuItems document={document} />}
+        />
     );
 }
 

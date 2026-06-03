@@ -56,7 +56,10 @@ function HomeList(): ReactNode {
             <ListContainer
                 key="search"
                 icon={
-                    <IconSearch size={18} color="var(--mantine-color-blue-6)" />
+                    <IconSearch
+                        size={18}
+                        color="var(--mantine-primary-color-filled)"
+                    />
                 }
                 title="Search Results"
                 isOpen={isSearchOpen}
@@ -71,7 +74,12 @@ function HomeList(): ReactNode {
     } else {
         documentList = (
             <ListContainer
-                icon={<IconBook size={18} className="frc-design-green" />}
+                icon={
+                    <IconBook
+                        size={18}
+                        color="var(--mantine-primary-color-filled)"
+                    />
+                }
                 title={getLibraryName(library)}
                 isOpen={uiState.isLibraryOpen}
                 onClick={(isOpen) => setUiState({ isLibraryOpen: isOpen })}
@@ -140,7 +148,7 @@ function ListContainer(props: ListContainerProps): ReactNode {
         <Card withBorder radius="md" padding={0} mb="sm">
             <UnstyledButton
                 onClick={() => onClick && onClick(!isOpen)}
-                style={{ width: "100%" }}
+                w="100%"
             >
                 <Group justify="space-between" px="sm" py="xs" wrap="nowrap">
                     <Group gap="sm" wrap="nowrap">

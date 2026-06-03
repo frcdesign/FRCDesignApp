@@ -1,17 +1,6 @@
-import {
-    Button,
-    Divider,
-    Group,
-    Modal,
-    Text,
-    Title
-} from "@mantine/core";
+import { Button, Divider, Group, Modal, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import {
-    IconCloudUpload,
-    IconRefresh,
-    IconX
-} from "@tabler/icons-react";
+import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import {
@@ -57,10 +46,7 @@ export function SettingsMenu(): ReactNode {
 /**
  * A labeled row holding a single setting control.
  */
-function SettingRow(props: {
-    label: string;
-    children: ReactNode;
-}): ReactNode {
+function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" my="sm">
             <Text size="sm" fw={500}>
@@ -91,21 +77,11 @@ function SettingsMenuDialog(): ReactNode {
     }
 
     return (
-        <Modal
-            className="settings-menu"
-            opened
-            onClose={closeDialog}
-            title="Settings"
-            centered
-        >
+        <Modal opened onClose={closeDialog} title="Settings" centered>
             <UserSettings />
             {adminSettings}
             <Group justify="flex-end" mt="md">
-                <Button
-                    color="blue"
-                    leftSection={<IconX size={16} />}
-                    onClick={closeDialog}
-                >
+                <Button leftSection={<IconX size={16} />} onClick={closeDialog}>
                     Close
                 </Button>
             </Group>
@@ -257,7 +233,6 @@ function PushVersionButton(): ReactNode {
     return (
         <SettingRow label="Push new app version">
             <Button
-                color="blue"
                 leftSection={<IconCloudUpload size={16} />}
                 onClick={() => {
                     pushVersionMutation.mutate();

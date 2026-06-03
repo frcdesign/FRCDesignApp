@@ -3,14 +3,14 @@ import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { Card, Menu } from "@mantine/core";
+import { Menu } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
-    ContextMenuButton,
+    ItemCard,
     OpenDocumentItems,
     QuickInsertItems
 } from "../cards/card-components";
@@ -53,50 +53,40 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    const menuItems = (
-        <FavoriteMenuItems insertable={insertable} favorite={favorite} />
-    );
-
     return (
-        <Menu shadow="md" width={220} withinPortal>
-            <Menu.ContextMenu>
-                <Card
-                    padding="sm"
-                    className="item-card"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                        if (isAssemblyInPartStudio) {
-                            openCannotDeriveAssemblyAlert();
-                            return;
-                        }
-                        void navigate({
-                            to: ".",
-                            search: {
-                                activeMenu: MenuType.INSERT_MENU,
-                                activeInsertableId: insertable.id,
-                                defaultConfiguration:
-                                    favorite.defaultConfiguration
-                            }
-                        });
-                    }}
-                >
-                    <CardTitle
-                        disabled={isAssemblyInPartStudio}
-                        title={insertable.name}
-                        thumbnailUrls={insertable.thumbnailUrls}
-                        searchHit={searchHit}
-                    />
-                    <div className="item-card-right-content">
-                        <FavoriteButton
-                            favorite={favorite}
-                            insertable={insertable}
-                        />
-                        <ContextMenuButton>{menuItems}</ContextMenuButton>
-                    </div>
-                </Card>
-            </Menu.ContextMenu>
-            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-        </Menu>
+        <ItemCard
+            onClick={() => {
+                if (isAssemblyInPartStudio) {
+                    openCannotDeriveAssemblyAlert();
+                    return;
+                }
+                void navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: MenuType.INSERT_MENU,
+                        activeInsertableId: insertable.id,
+                        defaultConfiguration: favorite.defaultConfiguration
+                    }
+                });
+            }}
+            left={
+                <CardTitle
+                    disabled={isAssemblyInPartStudio}
+                    title={insertable.name}
+                    thumbnailUrls={insertable.thumbnailUrls}
+                    searchHit={searchHit}
+                />
+            }
+            rightSection={
+                <FavoriteButton favorite={favorite} insertable={insertable} />
+            }
+            menu={
+                <FavoriteMenuItems
+                    insertable={insertable}
+                    favorite={favorite}
+                />
+            }
+        />
     );
 }
 
@@ -124,7 +114,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             <Menu.Divider />
             <Menu.Item
                 leftSection={<IconPencil size={16} />}
-                color="blue"
                 onClick={() => {
                     if (insertable.configurationId === undefined) {
                         openCannotEditDefaultConfigurationAlert();

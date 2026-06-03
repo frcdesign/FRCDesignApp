@@ -26,12 +26,6 @@ export function getColorTheme(
 /**
  * Returns the Mantine color scheme to force based on the resolved color theme.
  */
-export function getThemeClass(colorTheme: ColorTheme): "light" | "dark" {
+export function getColorScheme(colorTheme: ColorTheme): "light" | "dark" {
     return colorTheme;
-}
-
-export function getBackgroundClass(colorTheme: ColorTheme) {
-    return colorTheme === "dark"
-        ? "app-dark-background"
-        : "app-light-background";
 }

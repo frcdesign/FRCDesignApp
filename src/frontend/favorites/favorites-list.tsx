@@ -1,4 +1,3 @@
-import { Card } from "@mantine/core";
 import { IconHeartBroken } from "@tabler/icons-react";
 import { ReactNode } from "react";
 import { filterInsertables } from "../search/filter";
@@ -119,9 +118,7 @@ export function FavoritesList(): ReactNode {
     let callout: ReactNode = null;
     if (filterResult.byDocument > 0 || filterResult.byVendor > 0) {
         callout = (
-            <Card className="item-card" style={{ padding: "0px" }}>
-                <SearchCallout objectLabel="favorite" filtered={filterResult} />
-            </Card>
+            <SearchCallout objectLabel="favorite" filtered={filterResult} />
         );
     }
 

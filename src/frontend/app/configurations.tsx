@@ -87,7 +87,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     if (query.isPending || unitInfoQuery.isPending || !configuration) {
-        return <Loader color="blue" />;
+        return <Loader />;
     } else if (query.isError || unitInfoQuery.isError) {
         return <SectionError title="Failed to load configuration" />;
     }
@@ -140,7 +140,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             />
         );
     });
-    return <div style={{ width: "100%" }}>{parameters}</div>;
+    return <div>{parameters}</div>;
 }
 
 interface ParameterProps<T extends ParameterObj> {
@@ -278,7 +278,6 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
 
     return (
         <Select
-            className="full-width"
             label={parameter.name}
             id={parameter.id}
             data={visibleOptions.map((option) => ({
@@ -306,7 +305,7 @@ function BooleanParameter(
     // Add a 100% width div to eat up space to the right of the checkbox
     // Otherwise multiple checkboxes in a row can fold onto the same line
     return (
-        <div style={{ width: "100%" }}>
+        <div>
             <Checkbox
                 my="xs"
                 label={parameter.name}
@@ -324,7 +323,6 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
         <TextInput
-            className="full-width"
             label={parameter.name}
             id={parameter.id}
             value={value}
@@ -427,7 +425,6 @@ function QuantityParameter(
 
     return (
         <TextInput
-            className="full-width"
             label={parameter.name}
             id={parameter.id}
             ref={ref}

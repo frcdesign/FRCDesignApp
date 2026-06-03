@@ -1,11 +1,6 @@
-import { ActionIcon, Collapse, Divider, Group, TextInput } from "@mantine/core";
-import {
-    IconCircleX,
-    IconFilter,
-    IconSearch,
-    IconSettings
-} from "@tabler/icons-react";
-import { ReactNode, RefObject, useRef, useState } from "react";
+import { ActionIcon, Group, Stack, TextInput, ThemeIcon } from "@mantine/core";
+import { IconCircleX, IconSearch, IconSettings } from "@tabler/icons-react";
+import { ReactNode, RefObject, useRef } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,54 +8,33 @@ import { MenuType } from "../overlays/menu-params";
 import { VendorFilters } from "./vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 
+/** Foreground color for controls on the colored header. */
+const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
+
 /**
- * Provides top-level navigation for the app.
+ * Provides top-level navigation for the app. Rendered inside a colored
+ * AppShell.Header; the vendor filters are always visible.
  */
 export function AppNavbar(): ReactNode {
-    const [showFilters, setShowFilters] = useState(false);
-    const uiState = useUiState()[0];
-
-    const frcDesignIcon = (
-        <a href="https://frcdesign.org" target="_blank">
-            <img
-                src={frcDesignBook}
-                alt="FRCDesign.org"
-                className="frc-design-icon"
-                width={20}
-            />
-        </a>
-    );
-
     return (
-        <div className="app-navbar">
-            <Group justify="space-between" px="sm" py="xs" wrap="nowrap">
-                <Group gap="xs" wrap="nowrap">
-                    {frcDesignIcon}
-                    <Divider orientation="vertical" />
-                    <ActionIcon
-                        variant={showFilters ? "light" : "subtle"}
-                        color={uiState.vendorFilters ? "blue" : "gray"}
-                        onClick={() => setShowFilters(!showFilters)}
-                        title="Filters"
-                    >
-                        <IconFilter size={18} />
-                    </ActionIcon>
-                    <SearchBar />
-                </Group>
+        <Stack gap="xs" p="sm">
+            <Group justify="space-between" wrap="nowrap">
+                <BrandIcon />
+                <SearchBar />
                 <SettingsButton />
             </Group>
-            <div
-                style={{
-                    marginBottom: showFilters ? "10px" : "0px",
-                    paddingLeft: "var(--mantine-spacing-sm)",
-                    paddingRight: "var(--mantine-spacing-sm)"
-                }}
-            >
-                <Collapse expanded={showFilters}>
-                    <VendorFilters />
-                </Collapse>
-            </div>
-        </div>
+            <VendorFilters />
+        </Stack>
+    );
+}
+
+function BrandIcon(): ReactNode {
+    return (
+        <a href="https://frcdesign.org" target="_blank">
+            <ThemeIcon variant="white" size="lg" radius="sm">
+                <img src={frcDesignBook} alt="FRCDesign.org" width={20} />
+            </ThemeIcon>
+        </a>
     );
 }
 
@@ -70,7 +44,7 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={ON_PRIMARY}
             title="Settings"
             onClick={() =>
                 void navigate({
@@ -117,10 +91,10 @@ export function SearchBar() {
 
     return (
         <TextInput
+            flex={1}
             type="search"
             leftSection={<IconSearch size={16} />}
             placeholder="Search library..."
-            className="search-bar"
             ref={ref}
             value={uiState.searchQuery ?? ""}
             onFocus={() => {

@@ -1,4 +1,4 @@
-import { Card, Menu } from "@mantine/core";
+import { Menu } from "@mantine/core";
 import {
     IconCircleCheck,
     IconCircleOff,
@@ -24,7 +24,7 @@ import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
     AdminSubmenu,
     CardTitle,
-    ContextMenuButton,
+    ItemCard,
     OpenDocumentItems,
     QuickInsertItems,
     ReloadThumbnailMenuItem
@@ -72,54 +72,45 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
-    const menuItems = (
-        <InsertableMenuItems favorite={favorite} insertable={insertable} />
-    );
-
     return (
-        <Menu shadow="md" width={220} withinPortal>
-            <Menu.ContextMenu>
-                <Card
-                    padding="sm"
-                    className="item-card"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                        if (props.onClick) {
-                            props.onClick();
-                        }
+        <ItemCard
+            onClick={() => {
+                if (props.onClick) {
+                    props.onClick();
+                }
 
-                        if (isAssemblyInPartStudio) {
-                            openCannotDeriveAssemblyAlert();
-                            return;
-                        }
+                if (isAssemblyInPartStudio) {
+                    openCannotDeriveAssemblyAlert();
+                    return;
+                }
 
-                        void navigate({
-                            to: ".",
-                            search: {
-                                activeMenu: MenuType.INSERT_MENU,
-                                activeInsertableId: insertable.id
-                            }
-                        });
-                    }}
-                >
-                    <CardTitle
-                        disabled={isAssemblyInPartStudio}
-                        searchHit={searchHit}
-                        title={insertable.name}
-                        thumbnailUrls={insertable.thumbnailUrls}
-                        showHiddenTag={!insertable.isVisible}
-                    />
-                    <div className="item-card-right-content">
-                        <FavoriteButton
-                            favorite={favorite}
-                            insertable={insertable}
-                        />
-                        <ContextMenuButton>{menuItems}</ContextMenuButton>
-                    </div>
-                </Card>
-            </Menu.ContextMenu>
-            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-        </Menu>
+                void navigate({
+                    to: ".",
+                    search: {
+                        activeMenu: MenuType.INSERT_MENU,
+                        activeInsertableId: insertable.id
+                    }
+                });
+            }}
+            left={
+                <CardTitle
+                    disabled={isAssemblyInPartStudio}
+                    searchHit={searchHit}
+                    title={insertable.name}
+                    thumbnailUrls={insertable.thumbnailUrls}
+                    showHiddenTag={!insertable.isVisible}
+                />
+            }
+            rightSection={
+                <FavoriteButton favorite={favorite} insertable={insertable} />
+            }
+            menu={
+                <InsertableMenuItems
+                    favorite={favorite}
+                    insertable={insertable}
+                />
+            }
+        />
     );
 }
 

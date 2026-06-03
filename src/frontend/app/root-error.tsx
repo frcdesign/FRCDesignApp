@@ -43,7 +43,6 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            color="blue"
             leftSection={<IconHome size={16} />}
             onClick={() => {
                 void navigate({ to: "/app" });

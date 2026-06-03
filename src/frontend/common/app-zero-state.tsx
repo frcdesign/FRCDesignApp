@@ -1,4 +1,4 @@
-import { Loader, Stack, Text, Title } from "@mantine/core";
+import { Center, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconCircleX } from "@tabler/icons-react";
 import { type JSX, ReactNode } from "react";
 
@@ -19,7 +19,14 @@ interface ZeroStateProps {
 function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
     return (
-        <Stack align="center" justify="center" gap="xs" ta="center" className={className}>
+        <Stack
+            align="center"
+            justify="center"
+            gap="xs"
+            ta="center"
+            py="xl"
+            className={className}
+        >
             {icon}
             <Title order={5} fw={600}>
                 {title}
@@ -45,13 +52,7 @@ interface SectionLoadingProps {
  * Used to indicate a section of the UI is loading.
  */
 export function SectionLoading(props: SectionLoadingProps): ReactNode {
-    return (
-        <ZeroState
-            className="inline-app-loading-state"
-            title={props.title}
-            icon={<Loader color="blue" />}
-        />
-    );
+    return <ZeroState title={props.title} icon={<Loader />} />;
 }
 
 interface ErrorProps {
@@ -80,9 +81,7 @@ const DEFAULT_ERROR_ICON = (
     />
 );
 
-function resolveDescription(
-    description: ErrorProps["description"]
-): ReactNode {
+function resolveDescription(description: ErrorProps["description"]): ReactNode {
     if (description === undefined) {
         return "If the problem persists, contact the FRCDesignApp developers.";
     }
@@ -96,7 +95,7 @@ export function SectionError(props: ErrorProps): ReactNode {
     const { title, action, className } = props;
     return (
         <ZeroState
-            className={(className ?? "") + " inline-app-error-state"}
+            className={className}
             title={title}
             icon={props.icon ?? DEFAULT_ERROR_ICON}
             description={resolveDescription(props.description)}
@@ -135,11 +134,7 @@ export function PageError(props: PageErrorProps): ReactNode {
         return error;
     }
 
-    return (
-        <div style={{ height: "80vh", display: "flex", alignItems: "center" }}>
-            {error}
-        </div>
-    );
+    return <Center mih="80vh">{error}</Center>;
 }
 
 /** Standard icon size for zero-state icons, exported for call sites. */

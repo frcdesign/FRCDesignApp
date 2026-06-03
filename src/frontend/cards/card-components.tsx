@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Group, Menu, Text } from "@mantine/core";
+import { ActionIcon, Badge, Card, Group, Menu, Text } from "@mantine/core";
 import {
     IconDots,
     IconEyeOff,
@@ -8,6 +8,7 @@ import {
     IconSettings,
     IconShare
 } from "@tabler/icons-react";
+import interactiveClasses from "../common/interactive.module.css";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
@@ -145,7 +146,7 @@ export function CardTitle(props: CardTitleProps) {
     }
 
     return (
-        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+        <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
             <CardThumbnail thumbnailUrls={thumbnailUrls} />
             <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                 {cardTitle}
@@ -156,12 +157,70 @@ export function CardTitle(props: CardTitleProps) {
                     variant="light"
                     circle
                     title="Hidden"
-                    style={{ flexShrink: 0 }}
+                    flex="0 0 auto"
                 >
-                    <IconEyeOff size={12} style={{ display: "block" }} />
+                    <IconEyeOff size={12} />
                 </Badge>
             )}
         </Group>
+    );
+}
+
+interface ItemCardProps {
+    /** Left content, e.g. a `CardTitle`. */
+    left: ReactNode;
+    /** Menu items shown on right-click and (when shown) via the "more" button. */
+    menu: ReactNode;
+    onClick?: () => void;
+    /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
+    rightSection?: ReactNode;
+    /**
+     * Show the explicit "..." button that opens the same menu.
+     * @default true
+     */
+    moreButton?: boolean;
+}
+
+/**
+ * A clickable list row with a hover state and a right-click context menu.
+ * Used for documents, insertables, and favorites.
+ */
+export function ItemCard(props: ItemCardProps): ReactNode {
+    const { left, menu, onClick, rightSection, moreButton = true } = props;
+    return (
+        <Menu shadow="md" width={220} withinPortal>
+            <Menu.ContextMenu>
+                <Card
+                    withBorder
+                    radius="md"
+                    padding="sm"
+                    role="button"
+                    tabIndex={0}
+                    className={`${interactiveClasses.interactive} mantine-active mantine-focus-auto`}
+                    onClick={onClick}
+                    onKeyDown={(event) => {
+                        if (
+                            onClick &&
+                            (event.key === "Enter" || event.key === " ")
+                        ) {
+                            event.preventDefault();
+                            onClick();
+                        }
+                    }}
+                >
+                    <Group justify="space-between" wrap="nowrap" gap="sm">
+                        {left}
+                        <Group gap={4} wrap="nowrap">
+                            {rightSection}
+                            {moreButton && (
+                                <ContextMenuButton>{menu}</ContextMenuButton>
+                            )}
+                        </Group>
+                    </Group>
+                </Card>
+            </Menu.ContextMenu>
+            <Menu.Dropdown>{menu}</Menu.Dropdown>
+        </Menu>
     );
 }
 
@@ -200,7 +259,7 @@ export function AdminSubmenu(props: PropsWithChildren): ReactNode {
                         leftSection={
                             <IconSettings
                                 size={16}
-                                color="var(--mantine-color-blue-6)"
+                                color="var(--mantine-primary-color-filled)"
                             />
                         }
                     >

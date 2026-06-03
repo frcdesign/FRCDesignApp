@@ -71,7 +71,6 @@ function DocumentList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        color="blue"
                         leftSection={<IconArrowBackUp size={16} />}
                         onClick={() => {
                             void navigate({ to: "/app/documents" });
@@ -112,29 +111,14 @@ function DocumentList(): ReactNode {
         <>
             <Menu shadow="md" width={220} withinPortal>
                 <Menu.ContextMenu>
-                    <Card
-                        withBorder
-                        radius="md"
-                        padding={0}
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            flexGrow: 0,
-                            maxHeight: "100%"
-                        }}
-                    >
-                        <Group
-                            justify="space-between"
-                            px="sm"
-                            py="xs"
-                            wrap="nowrap"
-                            style={{ flexShrink: 0 }}
-                        >
+                    <Card withBorder radius="md" padding="sm" mb="md">
+                        <Group justify="space-between" wrap="nowrap">
                             <UnstyledButton
+                                flex={1}
+                                miw={0}
                                 onClick={() => {
                                     void navigate({ to: "/app/documents" });
                                 }}
-                                style={{ flex: 1, minWidth: 0 }}
                             >
                                 <Group gap="sm" wrap="nowrap">
                                     <IconArrowLeft size={18} />
@@ -145,11 +129,11 @@ function DocumentList(): ReactNode {
                             </UnstyledButton>
                             <ContextMenuButton>{menuItems}</ContextMenuButton>
                         </Group>
-                        <div style={{ overflowY: "auto" }}>{content}</div>
                     </Card>
                 </Menu.ContextMenu>
                 <Menu.Dropdown>{menuItems}</Menu.Dropdown>
             </Menu>
+            {content}
             <Outlet />
         </>
     );

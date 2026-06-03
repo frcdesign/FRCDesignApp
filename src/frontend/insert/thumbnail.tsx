@@ -18,7 +18,7 @@ function getHeightAndWidth(
     };
 }
 import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
-import { Card, HoverCard, Loader } from "@mantine/core";
+import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
 import { ReactNode } from "react";
@@ -37,7 +37,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     return (
         <HoverCard withinPortal shadow="md" openDelay={150} closeDelay={50}>
             <HoverCard.Target>
-                <div style={{ marginRight: "5px", display: "flex" }}>
+                <Center mr={5}>
                     <Thumbnail
                         url={thumbnailUrls[ThumbnailSize.TINY]}
                         heightAndWidth={getHeightAndWidth(
@@ -46,7 +46,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                         )}
                         spinnerSize={25}
                     />
-                </div>
+                </Center>
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
@@ -90,22 +90,24 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     if (url === undefined || imageQuery.isError) {
         content = <IconHelp size={spinnerSize} />;
     } else if (imageQuery.isPending) {
-        content = <Loader color="blue" size={spinnerSize} />;
+        content = <Loader size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
 
     return (
-        <div className="center" style={heightAndWidth}>
+        <Center w={heightAndWidth.width} h={heightAndWidth.height}>
             {content}
-        </div>
+        </Center>
     );
 }
 
 export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
-        <Card className="center preview-image-card">
-            <PreviewImage {...props} />
+        <Card withBorder pos="relative" m="sm" mb={0}>
+            <Center>
+                <PreviewImage {...props} />
+            </Center>
         </Card>
     );
 }
@@ -175,27 +177,23 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
-            <div className="center" style={heightAndWidth}>
-                <Loader color="blue" size={36} />
-            </div>
+            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+                <Loader size={36} />
+            </Center>
         );
     }
 
     return (
         <>
-            <div style={{ position: "relative", ...heightAndWidth }}>
+            <Box
+                pos="relative"
+                w={heightAndWidth.width}
+                h={heightAndWidth.height}
+            >
                 <img src={thumbnailQuery.data} {...heightAndWidth} />
-            </div>
+            </Box>
             {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
-                <Loader
-                    color="blue"
-                    size={18}
-                    style={{
-                        position: "absolute",
-                        bottom: "15px",
-                        right: "15px"
-                    }}
-                />
+                <Loader pos="absolute" bottom={15} right={15} size={18} />
             )}
         </>
     );

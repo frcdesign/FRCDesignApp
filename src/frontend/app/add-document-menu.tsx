@@ -68,14 +68,13 @@ function AddDocumentMenuDialog(
         <Modal opened onClose={closeDialog} title="Add document" centered>
             <Group align="flex-end" gap="sm" wrap="nowrap">
                 <TextInput
-                    style={{ flex: 1 }}
+                    flex={1}
                     placeholder="Document url..."
                     value={url}
                     onChange={(event) => setUrl(event.currentTarget.value)}
                     error={mutation.isError}
                 />
                 <Button
-                    color="blue"
                     leftSection={<IconPlus size={16} />}
                     onClick={() => {
                         mutation.mutate();
@@ -93,7 +92,6 @@ export function AddDocumentButton(): ReactNode {
     const navigate = useNavigate();
     return (
         <Button
-            color="blue"
             leftSection={<IconPlus size={16} />}
             onClick={() => {
                 void navigate({
@@ -118,7 +116,6 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
     return (
         <Menu.Item
             leftSection={<IconPlus size={16} />}
-            color="blue"
             onClick={() => {
                 void navigate({
                     to: ".",

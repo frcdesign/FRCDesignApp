@@ -1,0 +1,10 @@
+/* Standard interactive surface (e.g. a clickable Card). Uses Mantine's own
+   hover token so it adapts to light/dark with no hardcoded colors. Compose with
+   Mantine's global `mantine-active` (press) and `mantine-focus-auto` (focus). */
+.interactive {
+    cursor: pointer;
+}
+
+.interactive:hover {
+    background-color: var(--mantine-color-default-hover);
+}

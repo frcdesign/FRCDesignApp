@@ -80,7 +80,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
                 showRestoreToast(insertable, navigate, configuration);
                 closeDialog();
             }}
-            className="insert-menu"
+            size={500}
             centered
         >
             <PreviewImageCard
@@ -134,7 +134,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     }, [insertMutation, closeDialog, canFasten, uiState.fasten]);
 
     return (
-        <div className="insert-menu-actions">
+        <Group gap="sm">
             {canFasten && (
                 <Checkbox
                     label="Fasten"
@@ -143,7 +143,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                color="green"
                 leftSection={<IconPlus size={16} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
@@ -152,7 +151,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                     ? "Insert"
                     : "Derive"}
             </Button>
-        </div>
+        </Group>
     );
 }
 

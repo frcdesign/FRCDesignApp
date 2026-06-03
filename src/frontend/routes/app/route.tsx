@@ -8,10 +8,12 @@ import {
     useSearch
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { MantineProvider } from "@mantine/core";
+import { AppShell, MantineProvider } from "@mantine/core";
+import { useElementSize } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { useMemo } from "react";
 import { queryClient } from "../../query-client";
 import {
     getFavoritesQuery,
@@ -21,17 +23,17 @@ import {
 } from "../../queries";
 import { type MenuParams } from "../../overlays/menu-params";
 import {
-    getBackgroundClass,
+    getColorScheme,
     getColorTheme,
-    getThemeClass,
     OnshapeParams
 } from "../../api-utils/onshape-params";
+import { createAppTheme } from "../../theme";
 import { getUiState } from "../../api-utils/ui-state";
 import { AppNavbar } from "../../navbar/app-navbar";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
-import { type AccessData, type Settings } from "../../../shared/types";
+import { type AccessData, Library, type Settings } from "../../../shared/types";
 
 type SearchParams = OnshapeParams & MenuParams & { settings: Settings };
 
@@ -97,40 +99,44 @@ function App() {
         search.systemTheme
     );
     void loaderData; // consumed by child components via useLoaderData
-    // The app runs inside an Onshape iframe; portals (modals, context menus,
-    // notifications) must mount inside #root so they pick up Mantine styles.
-    // eslint-disable-next-line react-x/purity
-    const portalContainer = document.getElementById("root")!;
+
+    const library = search.settings?.library ?? Library.FRC_DESIGN_LIB;
+    const theme = useMemo(() => createAppTheme(library), [library]);
+
+    // The navbar (control row + always-open filters) is self-sizing, so measure
+    // it and feed its height to AppShell rather than hardcoding one.
+    const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
 
     return (
         <QueryClientProvider client={queryClient}>
             <MantineProvider
-                forceColorScheme={getThemeClass(colorTheme)}
-                getRootElement={() => portalContainer}
-                cssVariablesSelector="#root"
+                theme={theme}
+                forceColorScheme={getColorScheme(colorTheme)}
             >
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >
-                    <Notifications
-                        position="bottom-center"
-                        limit={3}
-                        portalProps={{ target: portalContainer }}
-                    />
-                    <div className="app-background">
-                        <AppNavbar />
-                        <div
-                            className={
-                                getBackgroundClass(colorTheme) + " app-content"
-                            }
+                    <Notifications position="bottom-center" limit={3} />
+                    <AppShell
+                        header={{ height: headerHeight || 56 }}
+                        padding="md"
+                    >
+                        <AppShell.Header
+                            bg="var(--mantine-primary-color-filled)"
+                            c="var(--mantine-primary-color-contrast)"
                         >
+                            <div ref={headerRef}>
+                                <AppNavbar />
+                            </div>
+                        </AppShell.Header>
+                        <AppShell.Main>
                             <Outlet />
                             <AppMenus />
                             <TanStackRouterDevtools />
-                        </div>
-                    </div>
+                        </AppShell.Main>
+                    </AppShell>
                 </ModalsProvider>
             </MantineProvider>
         </QueryClientProvider>

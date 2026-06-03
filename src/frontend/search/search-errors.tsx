@@ -1,4 +1,4 @@
-import { Alert, Button } from "@mantine/core";
+import { Alert, Button, Group } from "@mantine/core";
 import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
@@ -40,16 +40,20 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
 
     if (filtered.byDocument > 0) {
         return (
-            <Alert color="blue" className="split" p="xs">
-                {getDocumentString(filtered, objectLabel)}
-                <SearchAllButton small />
+            <Alert p="xs">
+                <Group justify="space-between" wrap="nowrap">
+                    {getDocumentString(filtered, objectLabel)}
+                    <SearchAllButton small />
+                </Group>
             </Alert>
         );
     }
     return (
-        <Alert color="blue" className="split" p="xs">
-            {getVendorString(filtered, objectLabel)}
-            <ClearFiltersButton small />
+        <Alert p="xs">
+            <Group justify="space-between" wrap="nowrap">
+                {getVendorString(filtered, objectLabel)}
+                <ClearFiltersButton small />
+            </Group>
         </Alert>
     );
 }
@@ -114,7 +118,6 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            color="blue"
             leftSection={<IconSearch size={16} />}
             size={small ? "xs" : undefined}
             onClick={() => {

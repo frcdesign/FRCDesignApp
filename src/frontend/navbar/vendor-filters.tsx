@@ -1,9 +1,12 @@
-import { Button, Chip } from "@mantine/core";
+import { Button, Chip, Group } from "@mantine/core";
 import { IconFilterOff } from "@tabler/icons-react";
 import { ReactNode, useCallback } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
 import { SetUiState, useUiState } from "../api-utils/ui-state";
+
+/** White foreground so chips read on the colored header. */
+const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
 
 interface ClearFiltersButtonProps {
     /**
@@ -52,8 +55,8 @@ export function VendorFilters(): ReactNode {
             <Chip
                 key={vendor}
                 checked={isActive}
-                color="blue"
-                variant="filled"
+                color={ON_PRIMARY}
+                variant="outline"
                 size="xs"
                 title={getVendorName(vendor)}
                 onClick={() => {
@@ -66,10 +69,10 @@ export function VendorFilters(): ReactNode {
     });
 
     return (
-        <div className="split" style={{ gap: "5x" }}>
-            <div className="vendor-filter-tags">{filterTags}</div>
+        <Group justify="space-between" gap="xs" wrap="nowrap">
+            <Group gap="xs">{filterTags}</Group>
             <ClearFiltersButton text="Clear" small />
-        </div>
+        </Group>
     );
 }
 

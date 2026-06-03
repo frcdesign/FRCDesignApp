@@ -18,7 +18,6 @@ export function AppSelect(props: AppSelectProps): ReactNode {
 
     return (
         <Select
-            className="full-width"
             label={label}
             data={options}
             value={option.value}

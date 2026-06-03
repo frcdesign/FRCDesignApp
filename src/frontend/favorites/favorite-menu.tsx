@@ -110,7 +110,7 @@ function FavoriteMenuDialog(
     return (
         <Modal
             opened
-            className="insert-menu"
+            size={500}
             title={
                 <Group gap="xs" wrap="nowrap">
                     <HeartIcon />
@@ -132,7 +132,6 @@ function FavoriteMenuDialog(
             />
             <Group justify="flex-end" mt="md">
                 <Button
-                    color="blue"
                     leftSection={<IconDeviceFloppy size={16} />}
                     onClick={() => {
                         setDefaultConfigurationMutation.mutate();
