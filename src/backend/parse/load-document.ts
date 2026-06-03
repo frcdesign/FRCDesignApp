@@ -23,7 +23,7 @@ import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { parseFastenInfo } from "./insert-and-fasten";
-import type { ElementPath, InstancePath } from "../../shared/path";
+import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 import type { ConfigurationResult } from "../../shared/configuration-models";
 import {
     type FastenInfo,

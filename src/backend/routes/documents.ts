@@ -5,7 +5,7 @@ import { getOnshapeApi, getSessionId } from "../auth";
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorAccess } from "../access-level-utils";
-import { type DocumentPath } from "../../shared/path";
+import { type DocumentPath } from "../../shared/onshape-path";
 import {
     libraries,
     documents,

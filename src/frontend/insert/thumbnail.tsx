@@ -17,7 +17,7 @@ function getHeightAndWidth(
         height: parseInt(parts[1]) * multiplier
     };
 }
-import { ElementPath, toElementApiPath } from "../../shared/path";
+import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
 import { Card, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
@@ -51,7 +51,10 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
                     url={thumbnailUrls[ThumbnailSize.STANDARD]}
-                    heightAndWidth={getHeightAndWidth(ThumbnailSize.STANDARD, 0.6)}
+                    heightAndWidth={getHeightAndWidth(
+                        ThumbnailSize.STANDARD,
+                        0.6
+                    )}
                     spinnerSize={48}
                 />
             </HoverCard.Dropdown>

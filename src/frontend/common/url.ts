@@ -5,7 +5,7 @@ import {
     isInstancePath,
     isElementPath,
     InstanceType
-} from "../../shared/path";
+} from "../../shared/onshape-path";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { showToast } from "./toaster";
 

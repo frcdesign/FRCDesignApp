@@ -1,4 +1,4 @@
-import { DocumentPath } from "../../shared/path";
+import { DocumentPath } from "../../shared/onshape-path";
 
 export interface ApiPathOptions {
     endRoute?: string;

@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
-import { getDb } from "../db";
+import { getDb, type Db } from "../db";
 import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
-import { type ElementPath } from "../../shared/path";
+import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
     type ParameterObj
@@ -20,7 +20,6 @@ import {
     PartType,
     type OnshapeElementType
 } from "../onshape-api/endpoints/documents";
-import { getInsertableElementPath } from "../db-helpers";
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
@@ -271,3 +270,34 @@ insertableRoutes.post(
         return c.json({ featureId: fastenResult.feature.featureId });
     }
 );
+/**
+ * Returns the ElementPath for an insertable looked up by its ID.
+ * Throws 404 if the insertable does not exist.
+ * Insertable elements are always version-pinned (instanceType "v").
+ */
+
+export async function getInsertableElementPath(
+    db: Db,
+    insertableId: string
+): Promise<ElementPath> {
+    const row = await db
+        .select({
+            documentId: insertables.documentId,
+            instanceId: insertables.instanceId,
+            elementId: insertables.elementId
+        })
+        .from(insertables)
+        .where(eq(insertables.id, insertableId))
+        .get();
+
+    if (!row) {
+        throw new HTTPException(404, { message: "Insertable not found" });
+    }
+
+    return {
+        documentId: row.documentId,
+        instanceId: row.instanceId,
+        instanceType: "v",
+        elementId: row.elementId
+    };
+}

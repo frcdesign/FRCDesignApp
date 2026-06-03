@@ -1,6 +1,6 @@
 import { ElementType } from "../../shared/types";
 import { Theme } from "../../shared/types";
-import { ElementPath } from "../../shared/path";
+import { ElementPath } from "../../shared/onshape-path";
 
 /**
  * Documents search parameter values received from Onshape.

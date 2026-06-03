@@ -13,7 +13,7 @@ import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath } from "../../shared/path";
+import { DocumentPath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
 import {
     useInsertMutation,

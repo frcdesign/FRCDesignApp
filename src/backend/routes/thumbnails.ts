@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
-import { getInsertableElementPath } from "../db-helpers";
+import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
@@ -11,7 +11,7 @@ import {
     ThumbnailSize
 } from "../onshape-api/endpoints/thumbnails";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
-import { type ElementPath, type InstancePath } from "../../shared/path";
+import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
 import { documents, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";

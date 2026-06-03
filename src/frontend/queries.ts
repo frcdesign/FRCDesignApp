@@ -15,7 +15,7 @@ import { useLibrary } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
-import { InstancePath } from "../shared/path";
+import { InstancePath } from "../shared/onshape-path";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];

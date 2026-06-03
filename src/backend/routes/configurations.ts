@@ -10,7 +10,7 @@ import {
     QuantityType,
     type Unit
 } from "../../shared/configuration-models";
-import { type InstancePath } from "../../shared/path";
+import { type InstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
 
 export const configurationRoutes = getApp();

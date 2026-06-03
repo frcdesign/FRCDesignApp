@@ -1,4 +1,4 @@
-import { ElementPath, InstancePath } from "./path";
+import { ElementPath, InstancePath } from "./onshape-path";
 import { Configuration } from "./configuration-models";
 import { ElementType, Library, ThumbnailUrls, Vendor } from "./types";
 
