@@ -242,6 +242,25 @@ function getVisibleOptions(
     );
 }
 
+function getFirstVisibleOption(
+    visibleOptions: EnumOption[],
+    currentOptionId: string,
+    defaultOptionId: string
+): EnumOption | undefined {
+    if (visibleOptions.length === 0) {
+        return undefined;
+    }
+    const currentOption = getOption(visibleOptions, currentOptionId);
+    if (currentOption) {
+        return currentOption;
+    }
+    const defaultOption = getOption(visibleOptions, defaultOptionId);
+    if (defaultOption) {
+        return defaultOption;
+    }
+    return visibleOptions[0];
+}
+
 function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const { parameter, value, onValueChange, configuration, parameters } =
         props;
@@ -253,31 +272,25 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     );
 
     useEffect(() => {
-        if (visibleOptions.length === 0) {
+        const option = getFirstVisibleOption(
+            visibleOptions,
+            value,
+            parameter.default
+        );
+        if (!option) {
             onValueChange(undefined);
-            return;
-        }
-        // Logic to set value to the first visible option or default when a parameter is shown
-        if (!getOption(visibleOptions, value)) {
-            if (getOption(visibleOptions, parameter.default)) {
-                onValueChange(parameter.default);
-            } else {
-                onValueChange(visibleOptions[0].id);
-            }
+        } else if (option.id !== value) {
+            onValueChange(option.id);
         }
     }, [onValueChange, parameter.default, value, visibleOptions]);
 
-    if (visibleOptions.length === 0) {
-        return null;
-    }
-
-    // Same logic as the useEffect
-    let currentOption = getOption(visibleOptions, value);
+    const currentOption = getFirstVisibleOption(
+        visibleOptions,
+        value,
+        parameter.default
+    );
     if (!currentOption) {
-        currentOption = getOption(visibleOptions, parameter.default);
-        if (!currentOption) {
-            currentOption = visibleOptions[0];
-        }
+        return null;
     }
 
     return (
@@ -290,6 +303,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
             }))}
             value={currentOption.id}
             allowDeselect={false}
+            mt="sm"
             checkIconPosition="right"
             maxDropdownHeight={250}
             comboboxProps={{ withinPortal: true }}
@@ -309,17 +323,15 @@ function BooleanParameter(
     // Add a 100% width div to eat up space to the right of the checkbox
     // Otherwise multiple checkboxes in a row can fold onto the same line
     return (
-        <div>
-            <Checkbox
-                my="xs"
-                label={parameter.name}
-                labelPosition="left"
-                checked={value === "true"}
-                onChange={handleBooleanChange((checked) =>
-                    onValueChange(checked ? "true" : "false")
-                )}
-            />
-        </div>
+        <Checkbox
+            label={parameter.name}
+            labelPosition="left"
+            checked={value === "true"}
+            mt="sm"
+            onChange={handleBooleanChange((checked) =>
+                onValueChange(checked ? "true" : "false")
+            )}
+        />
     );
 }
 
@@ -329,6 +341,7 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
         <TextInput
             label={parameter.name}
             id={parameter.id}
+            mt="sm"
             value={value}
             onChange={(event) => onValueChange(event.currentTarget.value)}
         />
@@ -434,6 +447,7 @@ function QuantityParameter(
             ref={ref}
             value={focused ? expression : display}
             error={errorMessage}
+            mt="sm"
             onFocus={(event) => {
                 setFocused(true);
                 event.currentTarget.select();

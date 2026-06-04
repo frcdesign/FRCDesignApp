@@ -1,5 +1,5 @@
 import { Button } from "@mantine/core";
-import { IconShare } from "@tabler/icons-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { openUrlInNewTab } from "./url";
 
 interface UrlButtonProps {
@@ -10,8 +10,9 @@ interface UrlButtonProps {
 export function OpenUrlButton(props: UrlButtonProps) {
     return (
         <Button
-            leftSection={<IconShare size={16} />}
+            leftSection={<IconExternalLink size={16} />}
             onClick={() => openUrlInNewTab(props.url)}
+            variant="light"
         >
             {props.text}
         </Button>

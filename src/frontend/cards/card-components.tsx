@@ -1,12 +1,12 @@
 import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
 import {
     IconDots,
+    IconExternalLink,
     IconEyeOff,
     IconLink,
     IconPlus,
     IconRefresh,
-    IconSettings,
-    IconShare
+    IconSettings
 } from "@tabler/icons-react";
 import interactiveClasses from "../common/interactive.module.css";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
@@ -40,7 +40,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     return (
         <>
             <Menu.Item
-                leftSection={<IconShare size={16} />}
+                leftSection={<IconExternalLink size={16} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
@@ -205,7 +205,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                 <Table.Tr
                     role="button"
                     tabIndex={0}
-                    className={`${interactiveClasses.interactive} mantine-active mantine-focus-auto`}
+                    className={`${interactiveClasses.interactive} mantine-focus-auto`}
                     onClick={onClick}
                     onKeyDown={(event) => {
                         if (
@@ -220,10 +220,10 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                     <Table.Td>{left}</Table.Td>
                     <Table.Td w={moreButton ? 92 : 48}>
                         <Group gap={4} wrap="nowrap" justify="flex-end">
-                            {rightSection}
                             {moreButton && (
                                 <ContextMenuButton>{menu}</ContextMenuButton>
                             )}
+                            {rightSection}
                         </Group>
                     </Table.Td>
                 </Table.Tr>

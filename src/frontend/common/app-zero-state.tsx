@@ -1,8 +1,12 @@
 import { Center, Loader, Stack, Text, Title } from "@mantine/core";
-import { IconCircleX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { type JSX, ReactNode } from "react";
 
-const ZERO_STATE_ICON_SIZE = 36;
+const ZERO_STATE_ICON_SIZE = 48;
+
+const DEFAULT_ERROR_ICON = (
+    <IconX size={ZERO_STATE_ICON_SIZE} color="var(--mantine-color-red-6)" />
+);
 
 interface ZeroStateProps {
     icon?: ReactNode;
@@ -74,13 +78,6 @@ interface ErrorProps {
     action?: JSX.Element;
 }
 
-const DEFAULT_ERROR_ICON = (
-    <IconCircleX
-        size={ZERO_STATE_ICON_SIZE}
-        color="var(--mantine-color-red-6)"
-    />
-);
-
 function resolveDescription(description: ErrorProps["description"]): ReactNode {
     if (description === undefined) {
         return "If the problem persists, contact the FRCDesignApp developers.";
@@ -136,6 +133,3 @@ export function PageError(props: PageErrorProps): ReactNode {
 
     return <Center mih="80vh">{error}</Center>;
 }
-
-/** Standard icon size for zero-state icons, exported for call sites. */
-export { ZERO_STATE_ICON_SIZE };

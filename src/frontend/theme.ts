@@ -33,11 +33,6 @@ export function getLibraryColor(library: Library): string {
     }
 }
 
-/**
- * Builds the Mantine theme for the given library. The primary color follows the
- * library; danger/warning use Mantine's built-in `red`/`yellow`, so they remain
- * correct regardless of the primary color.
- */
 export function createAppTheme(library: Library) {
     return createTheme({
         colors: { frcGreen },

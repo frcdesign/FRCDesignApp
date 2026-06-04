@@ -58,9 +58,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                     thumbnailUrls={document.thumbnailUrls}
                 />
             }
-            rightSection={
-                <IconArrowRight size={16} color="var(--mantine-color-dimmed)" />
-            }
+            rightSection={<IconArrowRight size={16} />}
             moreButton={false}
             menu={<DocumentMenuItems document={document} />}
         />

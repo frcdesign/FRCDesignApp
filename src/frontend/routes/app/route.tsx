@@ -124,10 +124,7 @@ function App() {
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >
                     <Notifications position="bottom-center" limit={3} />
-                    <AppShell
-                        header={{ height: headerHeight || 56 }}
-                        padding="md"
-                    >
+                    <AppShell header={{ height: headerHeight }} padding="md">
                         <AppShell.Header
                             bg="var(--mantine-primary-color-filled)"
                             c="var(--mantine-primary-color-contrast)"
