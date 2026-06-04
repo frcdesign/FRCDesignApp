@@ -54,9 +54,12 @@ function HomeList(): ReactNode {
         <>
             <Accordion
                 multiple
-                variant="separated"
+                variant="default"
                 value={value}
                 onChange={handleChange}
+                // Cancel the AppShell's side padding so the sections run
+                // edge-to-edge with the page; other views keep the inset.
+                mx="calc(-1 * var(--mantine-spacing-sm))"
             >
                 <Accordion.Item value={FAVORITES_VALUE}>
                     <Accordion.Control icon={<HeartIcon />}>

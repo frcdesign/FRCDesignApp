@@ -1,19 +1,12 @@
 import {
     createFileRoute,
     Outlet,
-    redirect,
     retainSearchParams,
-    type SearchSchemaInput,
-    useLoaderData,
-    useSearch
+    type SearchSchemaInput
 } from "@tanstack/react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { AppShell, MantineProvider } from "@mantine/core";
+import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
-import { ModalsProvider } from "@mantine/modals";
-import { Notifications } from "@mantine/notifications";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useMemo } from "react";
 import { queryClient } from "../../query-client";
 import {
     getFavoritesQuery,
@@ -22,18 +15,12 @@ import {
     getSearchDbQuery
 } from "../../queries";
 import { type MenuParams } from "../../overlays/menu-params";
-import {
-    getColorScheme,
-    getColorTheme,
-    OnshapeParams
-} from "../../api-utils/onshape-params";
-import { createAppTheme } from "../../theme";
-import { getUiState } from "../../api-utils/ui-state";
+import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../navbar/app-navbar";
 import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
-import { type AccessData, Library, type Settings } from "../../../shared/types";
+import { type AccessData, type Settings } from "../../../shared/types";
 
 type SearchParams = OnshapeParams & MenuParams & { settings: Settings };
 
@@ -52,30 +39,13 @@ export const Route = createFileRoute("/app")({
     search: {
         middlewares: [retainSearchParams(true)]
     },
-    beforeLoad: async ({ location }) => {
+    beforeLoad: async () => {
+        // The auth-gated entry redirect lives in the `/init` route; here we just
+        // expose the access level to child loaders/components.
         const contextData = await queryClient.ensureQueryData(
             getContextDataQuery()
         );
-        const context = { accessData: contextData.accessData };
-        if (location.pathname !== "/app") {
-            return context;
-        }
-
-        const settings = { settings: contextData.settings };
-
-        const uiState = getUiState();
-        if (uiState.openDocumentId) {
-            throw redirect({
-                to: "/app/documents/$documentId",
-                params: { documentId: uiState.openDocumentId },
-                search: settings
-            });
-        }
-        // must throw redirects here for type inference to work
-        throw redirect({
-            to: "/app/documents",
-            search: settings
-        });
+        return { accessData: contextData.accessData };
     },
     loaderDeps: ({ search }) => ({
         library: search.settings?.library
@@ -97,17 +67,6 @@ export const Route = createFileRoute("/app")({
 });
 
 function App() {
-    const search = useSearch({ from: "/app" });
-    const loaderData = useLoaderData({ from: "/app" });
-    const colorTheme = getColorTheme(
-        search.settings?.theme,
-        search.systemTheme
-    );
-    void loaderData; // consumed by child components via useLoaderData
-
-    const library = search.settings?.library ?? Library.FRC_DESIGN_LIB;
-    const theme = useMemo(() => createAppTheme(library), [library]);
-
     // The navbar (control row + always-open filters) is self-sizing, so measure
     // it and feed its height to AppShell rather than hardcoding one.
     const { ref: headerRef, height: headerHeight } = useElementSize();
@@ -115,35 +74,23 @@ function App() {
     useMessageListener();
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <MantineProvider
-                theme={theme}
-                forceColorScheme={getColorScheme(colorTheme)}
+        <AppShell header={{ height: headerHeight || 56 }} padding="sm">
+            <AppShell.Header
+                bg="var(--mantine-primary-color-filled)"
+                c="var(--mantine-primary-color-contrast)"
             >
-                <ModalsProvider
-                    labels={{ confirm: "Confirm", cancel: "Cancel" }}
-                >
-                    <Notifications position="bottom-center" limit={3} />
-                    <AppShell header={{ height: headerHeight }} padding="md">
-                        <AppShell.Header
-                            bg="var(--mantine-primary-color-filled)"
-                            c="var(--mantine-primary-color-contrast)"
-                        >
-                            <div ref={headerRef}>
-                                <AppNavbar />
-                            </div>
-                        </AppShell.Header>
-                        {/* Cap the main region at one viewport so it (not the
-                            window) scrolls; the fixed header covers the top of
-                            this scrollbar, keeping it within the body. */}
-                        <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
-                            <Outlet />
-                            <AppMenus />
-                            <TanStackRouterDevtools />
-                        </AppShell.Main>
-                    </AppShell>
-                </ModalsProvider>
-            </MantineProvider>
-        </QueryClientProvider>
+                <div ref={headerRef}>
+                    <AppNavbar />
+                </div>
+            </AppShell.Header>
+            {/* Cap the main region at one viewport so it (not the window)
+                scrolls; the fixed header covers the top of this scrollbar,
+                keeping it within the body. */}
+            <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
+                <Outlet />
+                <AppMenus />
+                <TanStackRouterDevtools />
+            </AppShell.Main>
+        </AppShell>
     );
 }
