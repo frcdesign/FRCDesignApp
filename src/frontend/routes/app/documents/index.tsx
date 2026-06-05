@@ -21,32 +21,28 @@ export const Route = createFileRoute("/app/documents/")({
     }
 });
 
-const FAVORITES_VALUE = "favorites";
-
 function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const library = useLibrary();
 
     const isSearch = !!uiState.searchQuery;
-    // Use a distinct value (and key) for search so toggling it doesn't share
-    // open state with the library section.
-    const documentValue = isSearch ? "search" : "library";
+    const listKey = isSearch ? "search" : "library";
 
     const value: string[] = [];
     if (uiState.isFavoritesOpen) {
-        value.push(FAVORITES_VALUE);
+        value.push("favorites");
     }
     if (isSearch ? isSearchOpen : uiState.isLibraryOpen) {
-        value.push(documentValue);
+        value.push(listKey);
     }
 
     const handleChange = (newValue: string[]) => {
-        setUiState({ isFavoritesOpen: newValue.includes(FAVORITES_VALUE) });
+        setUiState({ isFavoritesOpen: newValue.includes("favorites") });
         if (isSearch) {
-            setIsSearchOpen(newValue.includes(documentValue));
+            setIsSearchOpen(newValue.includes(listKey));
         } else {
-            setUiState({ isLibraryOpen: newValue.includes(documentValue) });
+            setUiState({ isLibraryOpen: newValue.includes(listKey) });
         }
     };
 
@@ -57,11 +53,9 @@ function HomeList(): ReactNode {
                 variant="default"
                 value={value}
                 onChange={handleChange}
-                // Cancel the AppShell's side padding so the sections run
-                // edge-to-edge with the page; other views keep the inset.
-                mx="calc(-1 * var(--mantine-spacing-sm))"
+                styles={{ content: { padding: 0 } }}
             >
-                <Accordion.Item value={FAVORITES_VALUE}>
+                <Accordion.Item value="favorites">
                     <Accordion.Control icon={<HeartIcon />}>
                         Favorites
                     </Accordion.Control>
@@ -69,7 +63,7 @@ function HomeList(): ReactNode {
                         <FavoritesList />
                     </Accordion.Panel>
                 </Accordion.Item>
-                <Accordion.Item key={documentValue} value={documentValue}>
+                <Accordion.Item key={listKey} value={listKey}>
                     <Accordion.Control
                         icon={
                             isSearch ? (

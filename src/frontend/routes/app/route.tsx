@@ -74,7 +74,7 @@ function App() {
     useMessageListener();
 
     return (
-        <AppShell header={{ height: headerHeight || 56 }} padding="sm">
+        <AppShell header={{ height: headerHeight || 56 }}>
             <AppShell.Header
                 bg="var(--mantine-primary-color-filled)"
                 c="var(--mantine-primary-color-contrast)"

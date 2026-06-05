@@ -18,42 +18,23 @@ export interface PartPath extends ElementPath {
     partId: string;
 }
 
-export function documentPath(documentId: string): DocumentPath {
-    return { documentId };
-}
-
-export function instancePath(
-    documentId: string,
-    instanceId: string,
-    instanceType: InstanceType = "v"
-): InstancePath {
-    return { documentId, instanceId, instanceType };
-}
-
-export function versionPath(
-    documentId: string,
-    versionId: string
-): InstancePath {
-    return instancePath(documentId, versionId);
-}
-
-export function elementPath(
-    documentId: string,
-    instanceId: string,
-    elementId: string,
-    instanceType: InstanceType = "v"
-): ElementPath {
-    return { documentId, instanceId, elementId, instanceType };
-}
-
-export function isInstancePath(path: DocumentPath): path is InstancePath {
+export function isDocumentPath(path: any): path is DocumentPath {
     return (
+        typeof path === "object" &&
+        path !== null &&
+        typeof path.documentId === "string"
+    );
+}
+
+export function isInstancePath(path: any): path is InstancePath {
+    return (
+        isDocumentPath(path) &&
         (path as InstancePath).instanceId !== undefined &&
         (path as InstancePath).instanceType !== undefined
     );
 }
 
-export function isElementPath(path: DocumentPath): path is ElementPath {
+export function isElementPath(path: any): path is ElementPath {
     return (
         isInstancePath(path) && (path as ElementPath).elementId !== undefined
     );

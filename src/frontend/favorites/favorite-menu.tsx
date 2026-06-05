@@ -128,7 +128,6 @@ function FavoriteMenuDialog(
                 configuration={configuration}
                 setConfiguration={setConfiguration}
                 configurationId={insertable.configurationId}
-                documentId={insertable.documentId}
             />
             <Group justify="flex-end" mt="md">
                 <Button

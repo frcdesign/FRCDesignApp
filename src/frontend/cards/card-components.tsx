@@ -186,8 +186,12 @@ interface ItemRowProps {
  * states should be rendered outside of this.
  */
 export function ItemTable(props: PropsWithChildren): ReactNode {
+    // Include an empty Table head+row so we get the table top border
     return (
-        <Table highlightOnHover verticalSpacing="xs" layout="fixed" w="100%">
+        <Table highlightOnHover verticalSpacing="xs" layout="fixed">
+            <Table.Thead>
+                <Table.Tr />
+            </Table.Thead>
             <Table.Tbody>{props.children}</Table.Tbody>
         </Table>
     );
@@ -220,9 +224,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                     <Table.Td>{left}</Table.Td>
                     <Table.Td w={moreButton ? 92 : 48}>
                         <Group gap={4} wrap="nowrap" justify="flex-end">
-                            {moreButton && (
-                                <ContextMenuButton>{menu}</ContextMenuButton>
-                            )}
+                            {moreButton && <MenuButton>{menu}</MenuButton>}
                             {rightSection}
                         </Group>
                     </Table.Td>
@@ -237,7 +239,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
  * An explicit button which opens a menu with the given items. Used alongside
  * the right-click context menu so the menu is reachable without a right-click.
  */
-export function ContextMenuButton(props: PropsWithChildren): ReactNode {
+export function MenuButton(props: PropsWithChildren): ReactNode {
     return (
         <Menu shadow="md" width={220} withinPortal position="bottom-end">
             <Menu.Target>

@@ -18,7 +18,7 @@ import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
 import { DocumentMenuItems } from "../../../cards/document-card";
 import { InsertableCard } from "../../../cards/insertable-card";
-import { ContextMenuButton, ItemTable } from "../../../cards/card-components";
+import { MenuButton, ItemTable } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
 import {
     PageError,
@@ -123,7 +123,7 @@ function DocumentList(): ReactNode {
                         >
                             {document.name}
                         </Button>
-                        <ContextMenuButton>{menuItems}</ContextMenuButton>
+                        <MenuButton>{menuItems}</MenuButton>
                     </Group>
                 </Menu.ContextMenu>
                 <Menu.Dropdown>{menuItems}</Menu.Dropdown>

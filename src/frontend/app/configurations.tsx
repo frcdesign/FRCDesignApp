@@ -40,26 +40,19 @@ import { useLibrary } from "../api-utils/library";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
-    documentId: string;
     configuration?: Configuration;
     setConfiguration: Dispatch<Configuration>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, documentId, configuration, setConfiguration } =
-        props;
+    const { configurationId, configuration, setConfiguration } = props;
 
     const library = useLibrary();
     const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
         queryKey: getConfigurationKey(library, configurationId, cacheOptions),
         queryFn: async () => {
-            return apiGet("/configuration", {
-                query: {
-                    library,
-                    documentId,
-                    configurationId
-                },
+            return apiGet("/configuration/" + configurationId, {
                 cacheOptions
             });
         },
