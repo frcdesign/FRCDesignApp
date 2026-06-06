@@ -186,12 +186,14 @@ interface ItemRowProps {
  * states should be rendered outside of this.
  */
 export function ItemTable(props: PropsWithChildren): ReactNode {
-    // Include an empty Table head+row so we get the table top border
     return (
-        <Table highlightOnHover verticalSpacing="xs" layout="fixed">
-            <Table.Thead>
-                <Table.Tr />
-            </Table.Thead>
+        <Table
+            highlightOnHover
+            verticalSpacing="xs"
+            layout="fixed"
+            // Always include a top border for styling
+            style={{ borderTop: "1px solid var(--table-border-color" }}
+        >
             <Table.Tbody>{props.children}</Table.Tbody>
         </Table>
     );
@@ -203,6 +205,7 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
  */
 export function ItemRow(props: ItemRowProps): ReactNode {
     const { left, menu, onClick, rightSection, moreButton = true } = props;
+
     return (
         <Menu shadow="md" width={220} withinPortal>
             <Menu.ContextMenu>
@@ -221,11 +224,13 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                         }
                     }}
                 >
-                    <Table.Td>{left}</Table.Td>
-                    <Table.Td w={moreButton ? 92 : 48}>
-                        <Group gap={4} wrap="nowrap" justify="flex-end">
-                            {moreButton && <MenuButton>{menu}</MenuButton>}
-                            {rightSection}
+                    <Table.Td>
+                        <Group wrap="nowrap">
+                            {left}
+                            <Group gap="4px" justify="flex-end">
+                                {moreButton && <MenuButton>{menu}</MenuButton>}
+                                {rightSection}
+                            </Group>
                         </Group>
                     </Table.Td>
                 </Table.Tr>

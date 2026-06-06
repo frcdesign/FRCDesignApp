@@ -1,6 +1,15 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
 import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
+import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
+import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
+import { IconHelp } from "@tabler/icons-react";
+
+import { ComponentPropsWithRef, ReactNode } from "react";
+import { Configuration } from "../../shared/configuration-models";
+import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
+import { getConfigurationMatchKey } from "../queries";
+import { SectionError } from "../common/app-zero-state";
 
 interface HeightAndWidth {
     height: number;
@@ -17,36 +26,33 @@ function getHeightAndWidth(
         height: parseInt(parts[1]) * multiplier
     };
 }
-import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
-import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
-import { IconHelp } from "@tabler/icons-react";
-
-import { ReactNode } from "react";
-import { Configuration } from "../../shared/configuration-models";
-import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
-import { getConfigurationMatchKey } from "../queries";
-import { SectionError } from "../common/app-zero-state";
 
 interface CardThumbnailProps {
     thumbnailUrls: ThumbnailUrls;
 }
 
+/**
+ * Thumbnail component used in lists.
+ */
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { thumbnailUrls } = props;
 
     return (
-        <HoverCard withinPortal shadow="md" openDelay={150} closeDelay={50}>
+        <HoverCard
+            withinPortal
+            shadow="md"
+            openDelay={150}
+            closeDelay={50}
+            position="right"
+            withArrow
+            arrowSize={20}
+        >
             <HoverCard.Target>
-                <Center mr={5}>
-                    <Thumbnail
-                        url={thumbnailUrls[ThumbnailSize.TINY]}
-                        heightAndWidth={getHeightAndWidth(
-                            ThumbnailSize.TINY,
-                            0.8
-                        )}
-                        spinnerSize={25}
-                    />
-                </Center>
+                <Thumbnail
+                    url={thumbnailUrls[ThumbnailSize.TINY]}
+                    heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
+                    spinnerSize={25}
+                />
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
@@ -62,7 +68,8 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     );
 }
 
-interface ThumbnailProps {
+// Extend with div props to support being used as a HoverCard Target
+interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     url?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
@@ -72,7 +79,7 @@ interface ThumbnailProps {
  * A generic thumbnail component.
  */
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { url, heightAndWidth, spinnerSize } = props;
+    const { url, heightAndWidth, spinnerSize, ...centerProps } = props;
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
@@ -96,7 +103,11 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     }
 
     return (
-        <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+        <Center
+            {...centerProps}
+            w={heightAndWidth.width}
+            h={heightAndWidth.height}
+        >
             {content}
         </Center>
     );
