@@ -1,5 +1,6 @@
 import { Alert, Button, Group } from "@mantine/core";
 import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../navbar/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "./search";
@@ -70,9 +71,15 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <IconSearch size={36} color="var(--mantine-color-blue-6)" />
+            <IconSearch
+                size={IconSize.LARGE}
+                color="var(--mantine-color-blue-6)"
+            />
         ) : (
-            <IconHeartBroken size={36} color="var(--mantine-color-red-6)" />
+            <IconHeartBroken
+                size={IconSize.LARGE}
+                color="var(--mantine-color-red-6)"
+            />
         );
 
     if (filtered.byDocument > 0) {
@@ -118,7 +125,7 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            leftSection={<IconSearch size={16} />}
+            leftSection={<IconSearch size={IconSize.SMALL} />}
             size={small ? "xs" : undefined}
             onClick={() => {
                 void navigate({ to: "/app/documents" });

@@ -6,6 +6,7 @@ import {
     IconEyeOff,
     IconPlus
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -224,9 +225,9 @@ export function InsertableAdminContextMenu(
                 color={insertable.isVisible ? "red" : "blue"}
                 leftSection={
                     insertable.isVisible ? (
-                        <IconEyeOff size={16} />
+                        <IconEyeOff size={IconSize.SMALL} />
                     ) : (
-                        <IconEye size={16} />
+                        <IconEye size={IconSize.SMALL} />
                     )
                 }
             >
@@ -239,9 +240,9 @@ export function InsertableAdminContextMenu(
                     color={insertable.isOpenComposite ? "yellow" : undefined}
                     leftSection={
                         insertable.isOpenComposite ? (
-                            <IconCircleOff size={16} />
+                            <IconCircleOff size={IconSize.SMALL} />
                         ) : (
-                            <IconCircleCheck size={16} />
+                            <IconCircleCheck size={IconSize.SMALL} />
                         )
                     }
                 >
@@ -257,9 +258,9 @@ export function InsertableAdminContextMenu(
                 color={insertable.supportsFasten ? "red" : "blue"}
                 leftSection={
                     insertable.supportsFasten ? (
-                        <IconCircleOff size={16} />
+                        <IconCircleOff size={IconSize.SMALL} />
                     ) : (
-                        <IconPlus size={16} />
+                        <IconPlus size={IconSize.SMALL} />
                     )
                 }
             >

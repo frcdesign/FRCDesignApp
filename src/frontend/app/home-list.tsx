@@ -12,6 +12,7 @@ import {
     IconChevronUp,
     IconSearch
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { Outlet } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { DocumentCard } from "../cards/document-card";
@@ -54,7 +55,7 @@ export function HomeList(): ReactNode {
                 key="search"
                 icon={
                     <IconSearch
-                        size={18}
+                        size={IconSize.MEDIUM}
                         color="var(--mantine-primary-color-filled)"
                     />
                 }
@@ -73,7 +74,7 @@ export function HomeList(): ReactNode {
             <ListContainer
                 icon={
                     <IconBook
-                        size={18}
+                        size={IconSize.MEDIUM}
                         color="var(--mantine-primary-color-filled)"
                     />
                 }
@@ -154,12 +155,12 @@ function ListContainer(props: ListContainerProps): ReactNode {
                     </Group>
                     {isOpen ? (
                         <IconChevronUp
-                            size={16}
+                            size={IconSize.SMALL}
                             color="var(--mantine-color-dimmed)"
                         />
                     ) : (
                         <IconChevronDown
-                            size={16}
+                            size={IconSize.SMALL}
                             color="var(--mantine-color-dimmed)"
                         />
                     )}

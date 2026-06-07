@@ -1,11 +1,10 @@
 import { Center, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
+import { IconSize } from "./style-constants";
 import { type JSX, ReactNode } from "react";
 
-const ZERO_STATE_ICON_SIZE = 48;
-
 const DEFAULT_ERROR_ICON = (
-    <IconX size={ZERO_STATE_ICON_SIZE} color="var(--mantine-color-red-6)" />
+    <IconX size={IconSize.HUGE} color="var(--mantine-color-red-6)" />
 );
 
 interface ZeroStateProps {

@@ -5,6 +5,7 @@ import {
     IconChevronsUp,
     IconChevronUp
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { type ReactNode } from "react";
 
 enum MoveOperation {
@@ -113,7 +114,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
         <>
             {operations.includes(MoveOperation.MOVE_UP) && (
                 <Menu.Item
-                    leftSection={<IconChevronUp size={16} />}
+                    leftSection={<IconChevronUp size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(id, order, MoveOperation.MOVE_UP)
@@ -125,7 +126,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_DOWN) && (
                 <Menu.Item
-                    leftSection={<IconChevronDown size={16} />}
+                    leftSection={<IconChevronDown size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -141,7 +142,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_TOP) && (
                 <Menu.Item
-                    leftSection={<IconChevronsUp size={16} />}
+                    leftSection={<IconChevronsUp size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -157,7 +158,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
                 <Menu.Item
-                    leftSection={<IconChevronsDown size={16} />}
+                    leftSection={<IconChevronsDown size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(

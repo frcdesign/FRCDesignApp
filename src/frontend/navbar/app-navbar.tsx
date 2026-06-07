@@ -5,6 +5,7 @@ import {
     IconSearch,
     IconSettings
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
@@ -61,7 +62,7 @@ function LibraryMenu(): ReactNode {
             <Menu.Target>
                 <Button
                     variant="default"
-                    rightSection={<IconChevronDown size={16} />}
+                    rightSection={<IconChevronDown size={IconSize.SMALL} />}
                 >
                     {getLibraryName(library)}
                 </Button>
@@ -103,7 +104,7 @@ export function SettingsButton() {
                 })
             }
         >
-            <IconSettings size={18} />
+            <IconSettings size={IconSize.MEDIUM} />
         </ActionIcon>
     );
 }
@@ -133,7 +134,7 @@ export function SearchBar() {
                 setUiState({ searchQuery: undefined });
             }}
         >
-            <IconCircleX size={16} />
+            <IconCircleX size={IconSize.SMALL} />
         </ActionIcon>
     ) : undefined;
 
@@ -141,7 +142,7 @@ export function SearchBar() {
         <TextInput
             flex={1}
             type="search"
-            leftSection={<IconSearch size={16} />}
+            leftSection={<IconSearch size={IconSize.SMALL} />}
             placeholder="Search library..."
             ref={ref}
             value={uiState.searchQuery ?? ""}

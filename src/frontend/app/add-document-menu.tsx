@@ -1,5 +1,6 @@
 import { Button, Group, Menu, Modal, TextInput } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
 import {
     AddDocumentMenuParams,
@@ -75,7 +76,7 @@ function AddDocumentMenuDialog(
                     error={mutation.isError}
                 />
                 <Button
-                    leftSection={<IconPlus size={16} />}
+                    leftSection={<IconPlus size={IconSize.SMALL} />}
                     onClick={() => {
                         mutation.mutate();
                     }}
@@ -92,7 +93,7 @@ export function AddDocumentButton(): ReactNode {
     const navigate = useNavigate();
     return (
         <Button
-            leftSection={<IconPlus size={16} />}
+            leftSection={<IconPlus size={IconSize.SMALL} />}
             onClick={() => {
                 void navigate({
                     to: ".",
@@ -115,7 +116,7 @@ export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
     const navigate = useNavigate();
     return (
         <Menu.Item
-            leftSection={<IconPlus size={16} />}
+            leftSection={<IconPlus size={IconSize.SMALL} />}
             onClick={() => {
                 void navigate({
                     to: ".",

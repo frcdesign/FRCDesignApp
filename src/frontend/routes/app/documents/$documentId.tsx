@@ -5,12 +5,13 @@ import {
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Button, Group, Menu, Stack } from "@mantine/core";
+import { Box, Button, Group, Menu, Stack, Text } from "@mantine/core";
 import {
     IconAlertTriangle,
     IconArrowBackUp,
     IconArrowLeft
 } from "@tabler/icons-react";
+import { IconSize } from "../../../common/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
 import { DocumentOut, Insertables } from "../../../../shared/api-models";
@@ -63,7 +64,7 @@ function DocumentList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        leftSection={<IconArrowBackUp size={16} />}
+                        leftSection={<IconArrowBackUp size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({ to: "/app/documents" });
                         }}
@@ -99,33 +100,28 @@ function DocumentList(): ReactNode {
 
     const menuItems = <DocumentMenuItems document={document} />;
 
+    const headerRow = (
+        <Box
+            className="interactive mantine-auto-focus"
+            onClick={() => void navigate({ to: "/app/documents" })}
+            p="sm"
+        >
+            <Group wrap="nowrap" gap={0}>
+                <Group wrap="nowrap" gap="sm">
+                    <IconArrowLeft size={IconSize.MEDIUM} />
+                    <Text size="md" fw={600} truncate>
+                        {document.name}
+                    </Text>
+                </Group>
+                <MenuButton>{menuItems}</MenuButton>
+            </Group>
+        </Box>
+    );
+
     return (
         <>
             <Menu shadow="md" width={220} withinPortal>
-                <Menu.ContextMenu>
-                    <Group
-                        justify="space-between"
-                        wrap="nowrap"
-                        gap="xs"
-                        mb="md"
-                    >
-                        <Button
-                            variant="subtle"
-                            color="gray"
-                            justify="flex-start"
-                            flex={1}
-                            miw={0}
-                            fw={600}
-                            leftSection={<IconArrowLeft size={18} />}
-                            onClick={() => {
-                                void navigate({ to: "/app/documents" });
-                            }}
-                        >
-                            {document.name}
-                        </Button>
-                        <MenuButton>{menuItems}</MenuButton>
-                    </Group>
-                </Menu.ContextMenu>
+                <Menu.ContextMenu>{headerRow}</Menu.ContextMenu>
                 <Menu.Dropdown>{menuItems}</Menu.Dropdown>
             </Menu>
             {content}
@@ -168,7 +164,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
             <SectionError
                 icon={
                     <IconAlertTriangle
-                        size={36}
+                        size={IconSize.LARGE}
                         color="var(--mantine-color-yellow-6)"
                     />
                 }

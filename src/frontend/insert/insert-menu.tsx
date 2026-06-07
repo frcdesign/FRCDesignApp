@@ -11,6 +11,7 @@ import {
 import { ElementType } from "../../shared/types";
 import { Button, Checkbox, Group, Modal } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { useIsFetching } from "@tanstack/react-query";
 import {
     MenuType,
@@ -142,7 +143,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                leftSection={<IconPlus size={16} />}
+                leftSection={<IconPlus size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >

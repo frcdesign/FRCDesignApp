@@ -7,6 +7,7 @@ import {
     IconRefresh,
     IconLink
 } from "@tabler/icons-react";
+import { IconSize } from "./style-constants";
 import { type ReactNode } from "react";
 
 type ToastIntent = "none" | "primary" | "success" | "warning" | "danger";
@@ -31,15 +32,15 @@ function intentColor(intent?: ToastIntent): string | undefined {
 function toastIcon(name?: string): ReactNode {
     switch (name) {
         case "info-sign":
-            return <IconInfoCircle size={18} />;
+            return <IconInfoCircle size={IconSize.MEDIUM} />;
         case "tick-circle":
-            return <IconCircleCheck size={18} />;
+            return <IconCircleCheck size={IconSize.MEDIUM} />;
         case "error":
-            return <IconCircleX size={18} />;
+            return <IconCircleX size={IconSize.MEDIUM} />;
         case "repeat":
-            return <IconRefresh size={18} />;
+            return <IconRefresh size={IconSize.MEDIUM} />;
         case "link":
-            return <IconLink size={18} />;
+            return <IconLink size={IconSize.MEDIUM} />;
         default:
             return undefined;
     }
@@ -75,7 +76,11 @@ function autoCloseFrom(timeout?: number): number | false {
     return timeout <= 0 ? false : timeout;
 }
 
-function renderMessage(message: ReactNode, action: ToastAction | undefined, id: string) {
+function renderMessage(
+    message: ReactNode,
+    action: ToastAction | undefined,
+    id: string
+) {
     if (!action) {
         return message;
     }
@@ -120,7 +125,7 @@ export function closeToast(key: string): void {
 export function showInfoToast(message: string, key?: string): string {
     return transitionOrShow(key, {
         color: "blue",
-        icon: <IconInfoCircle size={18} />,
+        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
         message,
         autoClose: 4000
     });
@@ -143,7 +148,7 @@ export function showSuccessToast(message: string, key?: string): string {
     return transitionOrShow(key, {
         color: "green",
         loading: false,
-        icon: <IconCircleCheck size={18} />,
+        icon: <IconCircleCheck size={IconSize.MEDIUM} />,
         message,
         autoClose: 3000,
         withCloseButton: true
@@ -154,7 +159,7 @@ export function showErrorToast(message: string, key?: string): string {
     return transitionOrShow(key, {
         color: "red",
         loading: false,
-        icon: <IconCircleX size={18} />,
+        icon: <IconCircleX size={IconSize.MEDIUM} />,
         message,
         autoClose: 4000,
         withCloseButton: true
@@ -167,7 +172,10 @@ type ToastData = Parameters<typeof notifications.show>[0];
  * Updates an existing keyed toast in place (e.g. a loading toast transitioning
  * to success/error), or shows a new toast when there is nothing to update.
  */
-function transitionOrShow(key: string | undefined, data: Omit<ToastData, "id">): string {
+function transitionOrShow(
+    key: string | undefined,
+    data: Omit<ToastData, "id">
+): string {
     if (key && activeKeys.has(key)) {
         activeKeys.delete(key);
         notifications.update({ id: key, ...data });

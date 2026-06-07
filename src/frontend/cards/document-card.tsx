@@ -7,6 +7,7 @@ import {
     IconSortAZ,
     IconTrash
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { DocumentOut, LibraryOut } from "../../shared/api-models";
@@ -58,7 +59,7 @@ export function DocumentCard(props: DocumentCardProps): ReactNode {
                     thumbnailUrls={document.thumbnailUrls}
                 />
             }
-            rightSection={<IconArrowRight size={16} />}
+            rightSection={<IconArrowRight size={IconSize.SMALL} />}
             moreButton={false}
             menu={<DocumentMenuItems document={document} />}
         />
@@ -120,7 +121,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
         <>
             <Menu.Divider />
             <Menu.Item
-                leftSection={<IconTrash size={16} />}
+                leftSection={<IconTrash size={IconSize.SMALL} />}
                 color="red"
                 onClick={() => {
                     deleteDocumentMutation.mutate();
@@ -139,7 +140,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
                 {orderItems}
                 <Menu.Item
                     color="blue"
-                    leftSection={<IconEye size={16} />}
+                    leftSection={<IconEye size={IconSize.SMALL} />}
                     onClick={() => {
                         showAllMutation.mutate();
                     }}
@@ -148,7 +149,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
                 </Menu.Item>
                 <Menu.Item
                     color="red"
-                    leftSection={<IconEyeOff size={16} />}
+                    leftSection={<IconEyeOff size={IconSize.SMALL} />}
                     onClick={() => {
                         hideAllMutation.mutate();
                     }}
@@ -243,9 +244,9 @@ function DocumentDataItems({ document }: DocumentDataItemsProps) {
         <Menu.Item
             leftSection={
                 document.sortAlphabetically ? (
-                    <IconList size={16} />
+                    <IconList size={IconSize.SMALL} />
                 ) : (
-                    <IconSortAZ size={16} />
+                    <IconSortAZ size={IconSize.SMALL} />
                 )
             }
             onClick={() => {

@@ -1,4 +1,5 @@
 import { IconHeartBroken } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../search/filter";
 import {
@@ -44,7 +45,7 @@ export function FavoritesList(): ReactNode {
                 title="Failed to load favorites."
                 icon={
                     <IconHeartBroken
-                        size={36}
+                        size={IconSize.LARGE}
                         color="var(--mantine-color-red-6)"
                     />
                 }

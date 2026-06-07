@@ -5,6 +5,7 @@ import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { Menu } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { MenuType } from "../overlays/menu-params";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
@@ -113,7 +114,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             />
             <Menu.Divider />
             <Menu.Item
-                leftSection={<IconPencil size={16} />}
+                leftSection={<IconPencil size={IconSize.SMALL} />}
                 onClick={() => {
                     if (insertable.configurationId === undefined) {
                         openCannotEditDefaultConfigurationAlert();

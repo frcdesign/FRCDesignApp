@@ -8,7 +8,7 @@ import {
     IconRefresh,
     IconSettings
 } from "@tabler/icons-react";
-import interactiveClasses from "../common/interactive.module.css";
+import { IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { SearchHit } from "../search/search";
@@ -40,13 +40,13 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     return (
         <>
             <Menu.Item
-                leftSection={<IconExternalLink size={16} />}
+                leftSection={<IconExternalLink size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
-                leftSection={<IconLink size={16} />}
+                leftSection={<IconLink size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
@@ -97,14 +97,14 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
         <>
             {supportsFasten && (
                 <Menu.Item
-                    leftSection={<IconPlus size={16} />}
+                    leftSection={<IconPlus size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
                 </Menu.Item>
             )}
             <Menu.Item
-                leftSection={<IconPlus size={16} />}
+                leftSection={<IconPlus size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert
@@ -159,7 +159,7 @@ export function CardTitle(props: CardTitleProps) {
                     title="Hidden"
                     flex="0 0 auto"
                 >
-                    <IconEyeOff size={12} />
+                    <IconEyeOff size={IconSize.TINY} />
                 </Badge>
             )}
         </Group>
@@ -191,8 +191,11 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
             highlightOnHover
             verticalSpacing="xs"
             layout="fixed"
-            // Always include a top border for styling
-            style={{ borderTop: "1px solid var(--table-border-color" }}
+            // Always include a top border
+            style={{
+                borderTop: "1px solid var(--table-border-color",
+                cursor: "pointer"
+            }}
         >
             <Table.Tbody>{props.children}</Table.Tbody>
         </Table>
@@ -209,21 +212,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
     return (
         <Menu shadow="md" width={220} withinPortal>
             <Menu.ContextMenu>
-                <Table.Tr
-                    role="button"
-                    tabIndex={0}
-                    className={`${interactiveClasses.interactive} mantine-focus-auto`}
-                    onClick={onClick}
-                    onKeyDown={(event) => {
-                        if (
-                            onClick &&
-                            (event.key === "Enter" || event.key === " ")
-                        ) {
-                            event.preventDefault();
-                            onClick();
-                        }
-                    }}
-                >
+                <Table.Tr onClick={onClick}>
                     <Table.Td>
                         <Group wrap="nowrap">
                             {left}
@@ -254,7 +243,7 @@ export function MenuButton(props: PropsWithChildren): ReactNode {
                     title="View options"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <IconDots size={18} />
+                    <IconDots size={IconSize.MEDIUM} />
                 </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>{props.children}</Menu.Dropdown>
@@ -273,7 +262,7 @@ export function AdminSubmenu(props: PropsWithChildren): ReactNode {
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
                         color="blue"
-                        leftSection={<IconSettings size={16} />}
+                        leftSection={<IconSettings size={IconSize.SMALL} />}
                     >
                         Admin options
                     </Menu.Sub.Item>
@@ -298,7 +287,7 @@ export function ReloadThumbnailMenuItem(
     );
     return (
         <Menu.Item
-            leftSection={<IconRefresh size={16} />}
+            leftSection={<IconRefresh size={IconSize.SMALL} />}
             onClick={() => {
                 reloadThumbnailMutation.mutate();
             }}

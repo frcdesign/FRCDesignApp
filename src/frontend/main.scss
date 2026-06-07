@@ -10,3 +10,14 @@
     -khtml-user-select: none;
     -webkit-user-select: none;
 }
+
+/* 
+Compose with Mantine's global `mantine-focus-auto` (focus). 
+*/
+.interactive {
+    cursor: pointer;
+}
+
+.interactive:hover {
+    background-color: var(--mantine-color-default-hover);
+}

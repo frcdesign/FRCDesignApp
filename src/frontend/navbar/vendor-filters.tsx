@@ -1,5 +1,6 @@
 import { ActionIcon, Button, Menu } from "@mantine/core";
 import { IconFilter, IconFilterOff } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
@@ -32,7 +33,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
             disabled={areAllTagsActive}
             variant="default"
             size={small ? "xs" : undefined}
-            leftSection={<IconFilterOff size={16} />}
+            leftSection={<IconFilterOff size={IconSize.SMALL} />}
             onClick={() => {
                 setUiState({ vendorFilters: undefined });
             }}
@@ -63,7 +64,7 @@ export function VendorMenu(): ReactNode {
                     color={ON_PRIMARY}
                     title="Filter vendors"
                 >
-                    <IconFilter size={18} />
+                    <IconFilter size={IconSize.MEDIUM} />
                 </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
@@ -87,7 +88,7 @@ export function VendorMenu(): ReactNode {
                 </Menu.CheckboxGroup>
                 <Menu.Divider />
                 <Menu.Item
-                    leftSection={<IconFilterOff size={16} />}
+                    leftSection={<IconFilterOff size={IconSize.SMALL} />}
                     disabled={!hasFilters}
                     onClick={() => setUiState({ vendorFilters: undefined })}
                 >

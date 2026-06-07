@@ -1,5 +1,6 @@
 import { Button, Group, Modal } from "@mantine/core";
 import { IconDeviceFloppy } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
 import {
     MenuType,
@@ -131,7 +132,7 @@ function FavoriteMenuDialog(
             />
             <Group justify="flex-end" mt="md">
                 <Button
-                    leftSection={<IconDeviceFloppy size={16} />}
+                    leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
                     onClick={() => {
                         setDefaultConfigurationMutation.mutate();
                         closeDialog();

@@ -1,6 +1,7 @@
 import { Button, Divider, Group, Modal, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import { useLoaderData, useRouter, useSearch } from "@tanstack/react-router";
@@ -74,7 +75,7 @@ function SettingsMenuDialog(): ReactNode {
             <Group justify="flex-end" mt="md">
                 <Button
                     variant="default"
-                    leftSection={<IconX size={16} />}
+                    leftSection={<IconX size={IconSize.SMALL} />}
                     onClick={closeDialog}
                 >
                     Close
@@ -172,7 +173,7 @@ function PushVersionButton(): ReactNode {
         <SettingRow label="Push new app version">
             <Button
                 variant="default"
-                leftSection={<IconCloudUpload size={16} />}
+                leftSection={<IconCloudUpload size={IconSize.SMALL} />}
                 onClick={() => {
                     pushVersionMutation.mutate();
                 }}
@@ -281,7 +282,7 @@ export function ReloadDocumentsButton(
         <Button
             variant="light"
             color={reloadAll ? "red" : "blue"}
-            leftSection={<IconRefresh size={16} />}
+            leftSection={<IconRefresh size={IconSize.SMALL} />}
             onClick={handleClick}
             loading={mutation.isPending}
         >

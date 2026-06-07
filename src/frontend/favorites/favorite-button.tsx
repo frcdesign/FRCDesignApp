@@ -4,6 +4,7 @@ import {
     IconHeartBroken,
     IconHeartFilled
 } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
@@ -183,12 +184,20 @@ interface HeartIconProps {
 export function HeartIcon(props: HeartIconProps): ReactNode {
     const full = props.full ?? true;
     return full ? (
-        <IconHeartFilled size={16} color="var(--mantine-color-red-6)" />
+        <IconHeartFilled
+            size={IconSize.SMALL}
+            color="var(--mantine-color-red-6)"
+        />
     ) : (
-        <IconHeart size={16} />
+        <IconHeart size={IconSize.SMALL} />
     );
 }
 
 export function HeartBrokenIcon(): ReactNode {
-    return <IconHeartBroken size={16} color="var(--mantine-color-red-6)" />;
+    return (
+        <IconHeartBroken
+            size={IconSize.SMALL}
+            color="var(--mantine-color-red-6)"
+        />
+    );
 }

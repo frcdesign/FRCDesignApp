@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 
 /**
  * Catch-all error state for when a route below the root fails to load. Rendered by
@@ -53,7 +54,7 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            leftSection={<IconHome size={16} />}
+            leftSection={<IconHome size={IconSize.SMALL} />}
             onClick={() => {
                 void navigate({ to: "/app" });
             }}
