@@ -11,7 +11,7 @@ import {
     IconArrowBackUp,
     IconArrowLeft
 } from "@tabler/icons-react";
-import { IconSize } from "../../../common/style-constants";
+import { BORDER, FontWeight, IconSize } from "../../../common/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
 import { DocumentOut, Insertables } from "../../../../shared/api-models";
@@ -98,18 +98,36 @@ function DocumentList(): ReactNode {
         );
     }
 
+    return (
+        <>
+            <DocumentHeaderRow document={document} />
+            <Box
+                style={{
+                    borderBottom: BORDER,
+                    borderTop: BORDER
+                }}
+            >
+                {content}
+                <Outlet />
+            </Box>
+        </>
+    );
+}
+
+function DocumentHeaderRow({ document }: { document: DocumentOut }): ReactNode {
+    const navigate = useNavigate();
     const menuItems = <DocumentMenuItems document={document} />;
 
-    const headerRow = (
+    const header = (
         <Box
             className="interactive mantine-auto-focus"
             onClick={() => void navigate({ to: "/app/documents" })}
             p="sm"
         >
-            <Group wrap="nowrap" gap={0}>
-                <Group wrap="nowrap" gap="sm">
+            <Group wrap="nowrap" justify="space-between">
+                <Group gap="sm">
                     <IconArrowLeft size={IconSize.MEDIUM} />
-                    <Text size="md" fw={600} truncate>
+                    <Text size="md" fw={FontWeight.SEMI_BOLD} truncate>
                         {document.name}
                     </Text>
                 </Group>
@@ -119,14 +137,10 @@ function DocumentList(): ReactNode {
     );
 
     return (
-        <>
-            <Menu shadow="md" width={220} withinPortal>
-                <Menu.ContextMenu>{headerRow}</Menu.ContextMenu>
-                <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-            </Menu>
-            {content}
-            <Outlet />
-        </>
+        <Menu shadow="md" width={220} withinPortal>
+            <Menu.ContextMenu>{header}</Menu.ContextMenu>
+            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
+        </Menu>
     );
 }
 

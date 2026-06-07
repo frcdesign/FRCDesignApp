@@ -26,7 +26,7 @@ app.route("/auth", authRoutes);
 
 // `/init` is the auth-gated entry point; the SPA forwards from there to the
 // document list. `/app` stays gated too so its routes can't be hit unauthed.
-app.on("GET", ["/init", "/app"], async (c) => {
+app.on("GET", "/init", async (c) => {
     if (!(await isAuthenticated(c))) {
         return c.redirect(
             `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`

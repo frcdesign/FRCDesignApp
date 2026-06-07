@@ -1,6 +1,6 @@
 import { Center, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { IconSize } from "./style-constants";
+import { FontWeight, IconSize } from "./style-constants";
 import { type JSX, ReactNode } from "react";
 
 const DEFAULT_ERROR_ICON = (
@@ -31,7 +31,7 @@ function ZeroState(props: ZeroStateProps): ReactNode {
             className={className}
         >
             {icon}
-            <Title order={5} fw={600}>
+            <Title order={5} fw={FontWeight.SEMI_BOLD}>
                 {title}
             </Title>
             {description != null && (

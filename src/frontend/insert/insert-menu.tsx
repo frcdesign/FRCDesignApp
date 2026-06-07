@@ -1,65 +1,74 @@
-import {
-    useNavigate,
-    UseNavigateResult,
-    useSearch
-} from "@tanstack/react-router";
+import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useState } from "react";
 import {
     getFavoriteForInsertable,
     InsertableOut
 } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import { Button, Checkbox, Group, Modal } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { Button, Checkbox, Group } from "@mantine/core";
+import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
+import { modals } from "@mantine/modals";
 import { useIsFetching } from "@tanstack/react-query";
-import {
-    MenuType,
-    InsertMenuParams,
-    MenuDialogProps,
-    useHandleCloseDialog
-} from "../overlays/menu-params";
 import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
-import { showToast } from "../common/toaster";
+import { NotificationAction, renderNotification } from "../common/toaster";
 import { ConfigurationWrapper } from "../app/configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "../../shared/configuration-models";
-import { useFavoritesQuery, useLibraryQuery } from "../queries";
+import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
+import { notifications } from "@mantine/notifications";
 
-export function InsertMenu(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== MenuType.INSERT_MENU) {
-        return null;
-    }
-    return (
-        <InsertMenuDialog
-            activeInsertableId={search.activeInsertableId}
-            defaultConfiguration={search.defaultConfiguration}
-        />
-    );
+interface OpenInsertMenuProps {
+    insertable: InsertableOut;
+    defaultConfiguration?: Configuration;
 }
-function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
-    const insertableId = props.activeInsertableId;
+
+export function openInsertMenu(props: OpenInsertMenuProps) {
+    const { insertable, defaultConfiguration } = props;
+    let didInsert = false;
+    const id = modals.open({
+        title: insertable.name,
+        size: 500,
+        centered: true,
+        onClose: () => {
+            if (!didInsert) {
+                showRestoreToast(insertable, defaultConfiguration);
+            }
+        },
+        children: (
+            <InsertMenuContent
+                insertable={insertable}
+                defaultConfiguration={defaultConfiguration}
+                onInsert={() => {
+                    didInsert = true;
+                    modals.close(id);
+                }}
+            />
+        )
+    });
+}
+
+interface InsertMenuContentProps {
+    insertable: InsertableOut;
+    defaultConfiguration?: Configuration;
+    onInsert: () => void;
+}
+
+function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
+    const { insertable, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
-
-    const insertables = useLibraryQuery().data?.insertables;
-
-    const navigate = useNavigate();
-    const closeDialog = useHandleCloseDialog();
 
     const [configuration, setConfiguration] = useState<
         Configuration | undefined
     >(props.defaultConfiguration);
 
-    const insertable = insertables ? insertables[insertableId] : undefined;
-
-    if (!insertable || !favorites) {
+    if (!favorites) {
         return null;
     }
 
-    const favorite = getFavoriteForInsertable(favorites, insertableId);
+    const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
     let parameters: ReactNode = null;
     if (insertable.configurationId) {
@@ -73,16 +82,7 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
     }
 
     return (
-        <Modal
-            opened
-            title={insertable.name}
-            onClose={() => {
-                showRestoreToast(insertable, navigate, configuration);
-                closeDialog();
-            }}
-            size={500}
-            centered
-        >
+        <>
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
@@ -94,9 +94,10 @@ function InsertMenuDialog(props: MenuDialogProps<InsertMenuParams>): ReactNode {
                     insertable={insertable}
                     configuration={configuration}
                     isFavorite={favorite !== undefined}
+                    onInsert={onInsert}
                 />
             </Group>
-        </Modal>
+        </>
     );
 }
 
@@ -104,19 +105,16 @@ interface InsertButtonsProps {
     insertable: InsertableOut;
     configuration?: Configuration;
     isFavorite: boolean;
+    onInsert: () => void;
 }
 
-/**
- * The Insert and Insert and fasten buttons in the insert menu.
- */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const { insertable, configuration, isFavorite } = props;
+    const { insertable, configuration, isFavorite, onInsert } = props;
 
     const search = useSearch({ from: "/app" });
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
-    const closeDialog = useHandleCloseDialog();
     const [uiState, setUiState] = useUiState();
 
     const isLoadingConfiguration =
@@ -130,8 +128,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
-        closeDialog();
-    }, [insertMutation, closeDialog, canFasten, uiState.fasten]);
+        onInsert();
+    }, [insertMutation, onInsert, canFasten, uiState.fasten]);
 
     return (
         <Group gap="sm">
@@ -157,29 +155,21 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
 function showRestoreToast(
     insertable: InsertableOut,
-    navigate: UseNavigateResult<string>,
     configuration?: Configuration
 ) {
-    showToast(
-        {
-            message: `Cancelled ${insertable.name}.`,
-            intent: "primary",
-            icon: "info-sign",
-            timeout: 3000,
-            action: {
-                text: "Restore",
-                onClick: () => {
-                    void navigate({
-                        to: ".",
-                        search: {
-                            activeMenu: MenuType.INSERT_MENU,
-                            activeInsertableId: insertable.id,
-                            defaultConfiguration: configuration
-                        }
-                    });
-                }
-            }
-        },
-        `cancel-insert ${insertable.id}`
-    );
+    const restoreButton: NotificationAction = {
+        text: "Restore",
+        onClick: () =>
+            openInsertMenu({ insertable, defaultConfiguration: configuration })
+    };
+
+    notifications.show({
+        message: renderNotification(
+            `Cancelled ${insertable.name}.`,
+            restoreButton
+        ),
+        color: "blue",
+        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
+        autoClose: 3000
+    });
 }

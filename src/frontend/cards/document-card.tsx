@@ -18,7 +18,7 @@ import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
 import { useSetVisibilityMutation } from "./card-hooks";
 import {
-    AdminSubmenu,
+    AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
     OpenDocumentItems,
@@ -136,7 +136,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
     return (
         <>
             <OpenDocumentItems path={document.path} />
-            <AdminSubmenu>
+            <AdminOptionsSubmenu>
                 {orderItems}
                 <Menu.Item
                     color="blue"
@@ -159,7 +159,7 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
                 <DocumentDataItems document={document} />
                 <ReloadThumbnailMenuItem id={document.id} isDocumentId={true} />
                 {modifyDocumentItems}
-            </AdminSubmenu>
+            </AdminOptionsSubmenu>
         </>
     );
 }

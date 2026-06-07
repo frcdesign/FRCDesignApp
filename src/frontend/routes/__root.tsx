@@ -62,7 +62,11 @@ function RootComponent(): ReactNode {
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >
-                    <Notifications position="bottom-center" limit={3} />
+                    <Notifications
+                        position="bottom-center"
+                        limit={3}
+                        autoClose={4000}
+                    />
                     <Outlet />
                 </ModalsProvider>
             </MantineProvider>

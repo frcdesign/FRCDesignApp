@@ -9,8 +9,7 @@ import { IconSize } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { useNavigate } from "@tanstack/react-router";
-import { MenuType } from "../overlays/menu-params";
+import { openSettingsMenu } from "./settings-menu";
 import { VendorMenu } from "./vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibrary } from "../api-utils/library";
@@ -71,7 +70,6 @@ function LibraryMenu(): ReactNode {
                 {Object.values(Library).map((lib) => (
                     <Menu.Item
                         key={lib}
-                        fw={lib === library ? 700 : undefined}
                         onClick={() =>
                             saveSettings(
                                 { library: lib },
@@ -88,21 +86,12 @@ function LibraryMenu(): ReactNode {
 }
 
 export function SettingsButton() {
-    const navigate = useNavigate();
-
     return (
         <ActionIcon
             variant="subtle"
             color={ON_PRIMARY}
             title="Settings"
-            onClick={() =>
-                void navigate({
-                    to: ".",
-                    search: () => ({
-                        activeMenu: MenuType.SETTINGS_MENU
-                    })
-                })
-            }
+            onClick={() => openSettingsMenu()}
         >
             <IconSettings size={IconSize.MEDIUM} />
         </ActionIcon>

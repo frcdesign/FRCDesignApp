@@ -191,9 +191,7 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
             highlightOnHover
             verticalSpacing="xs"
             layout="fixed"
-            // Always include a top border
             style={{
-                borderTop: "1px solid var(--table-border-color",
                 cursor: "pointer"
             }}
         >
@@ -254,7 +252,7 @@ export function MenuButton(props: PropsWithChildren): ReactNode {
 /**
  * Wraps one or more admin-only menu items into an Admin submenu.
  */
-export function AdminSubmenu(props: PropsWithChildren): ReactNode {
+export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
     return (
         <RequireAccessLevel>
             <Menu.Divider />

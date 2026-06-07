@@ -7,7 +7,7 @@ import {
     IconPlus
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
+import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import {
     Favorite,
@@ -23,7 +23,7 @@ import {
 } from "../favorites/favorite-button";
 import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
-    AdminSubmenu,
+    AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
     OpenDocumentItems,
@@ -32,7 +32,7 @@ import {
 } from "./card-components";
 import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
-import { MenuType } from "../overlays/menu-params";
+import { openInsertMenu } from "../insert/insert-menu";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -57,7 +57,6 @@ interface InsertableCardProps extends PropsWithChildren {
  */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, searchHit } = props;
-    const navigate = useNavigate();
 
     const favorites = useFavoritesQuery().data?.favorites;
 
@@ -85,13 +84,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     return;
                 }
 
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.INSERT_MENU,
-                        activeInsertableId: insertable.id
-                    }
-                });
+                openInsertMenu({ insertable });
             }}
             left={
                 <CardTitle
@@ -138,9 +131,9 @@ export function InsertableMenuItems(
             />
             <Menu.Divider />
             <OpenDocumentItems path={insertable.path} />
-            <AdminSubmenu>
+            <AdminOptionsSubmenu>
                 <InsertableAdminContextMenu insertable={insertable} />
-            </AdminSubmenu>
+            </AdminOptionsSubmenu>
         </>
     );
 }

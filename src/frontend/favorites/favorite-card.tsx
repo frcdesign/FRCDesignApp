@@ -6,8 +6,9 @@ import { queryClient } from "../query-client";
 import { Menu } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useNavigate, useRouter } from "@tanstack/react-router";
-import { MenuType } from "../overlays/menu-params";
+import { useRouter } from "@tanstack/react-router";
+import { openInsertMenu } from "../insert/insert-menu";
+import { openFavoriteMenu } from "./favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
@@ -43,8 +44,6 @@ interface FavoriteCardProps {
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
 
-    const navigate = useNavigate();
-
     const isHidden = useIsInsertableHidden(insertable);
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
@@ -61,13 +60,9 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     openCannotDeriveAssemblyAlert();
                     return;
                 }
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.INSERT_MENU,
-                        activeInsertableId: insertable.id,
-                        defaultConfiguration: favorite.defaultConfiguration
-                    }
+                openInsertMenu({
+                    insertable,
+                    defaultConfiguration: favorite.defaultConfiguration
                 });
             }}
             left={
@@ -100,7 +95,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
     const uiState = useUiState()[0];
-    const navigate = useNavigate();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
@@ -120,13 +114,10 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                         openCannotEditDefaultConfigurationAlert();
                         return;
                     }
-                    void navigate({
-                        to: ".",
-                        search: {
-                            activeMenu: MenuType.FAVORITE_MENU,
-                            favoriteId: favorite.id,
-                            defaultConfiguration: favorite.defaultConfiguration
-                        }
+                    openFavoriteMenu({
+                        favoriteId: favorite.id,
+                        insertableName: insertable.name,
+                        defaultConfiguration: favorite.defaultConfiguration
                     });
                 }}
             >

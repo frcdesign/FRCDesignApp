@@ -14,15 +14,13 @@ import {
     getLibraryQuery,
     getSearchDbQuery
 } from "../../queries";
-import { type MenuParams } from "../../overlays/menu-params";
 import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../navbar/app-navbar";
-import { AppMenus } from "../../overlays/app-menus";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
 import { type AccessData, type Settings } from "../../../shared/types";
 
-type SearchParams = OnshapeParams & MenuParams & { settings: Settings };
+type SearchParams = OnshapeParams & { settings: Settings };
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -88,7 +86,6 @@ function App() {
                 keeping it within the body. */}
             <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
                 <Outlet />
-                <AppMenus />
                 <TanStackRouterDevtools />
             </AppShell.Main>
         </AppShell>

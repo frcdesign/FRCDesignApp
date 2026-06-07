@@ -55,7 +55,8 @@
         "**/node_modules": true,
         "**/dist": true,
         "**/package-lock.json": true,
-        "worker-configuration.d.ts": true
+        "worker-configuration.d.ts": true,
+        "**/license.tsx": true
     },
     "jest.runMode": "on-demand",
     "jest.outputConfig": {

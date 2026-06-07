@@ -1,85 +1,24 @@
 import { notifications } from "@mantine/notifications";
-import { Button, Group } from "@mantine/core";
 import {
     IconInfoCircle,
     IconCircleCheck,
     IconCircleX,
-    IconRefresh,
-    IconLink
+    ReactNode
 } from "@tabler/icons-react";
 import { IconSize } from "./style-constants";
-import { type ReactNode } from "react";
+import { Group, Button } from "@mantine/core";
 
-type ToastIntent = "none" | "primary" | "success" | "warning" | "danger";
-
-/** Maps a Blueprint-style intent to a Mantine color. */
-function intentColor(intent?: ToastIntent): string | undefined {
-    switch (intent) {
-        case "primary":
-            return "blue";
-        case "success":
-            return "green";
-        case "warning":
-            return "yellow";
-        case "danger":
-            return "red";
-        default:
-            return undefined;
-    }
-}
-
-/** Maps the (Blueprint) icon names still passed by callers to Tabler icons. */
-function toastIcon(name?: string): ReactNode {
-    switch (name) {
-        case "info-sign":
-            return <IconInfoCircle size={IconSize.MEDIUM} />;
-        case "tick-circle":
-            return <IconCircleCheck size={IconSize.MEDIUM} />;
-        case "error":
-            return <IconCircleX size={IconSize.MEDIUM} />;
-        case "repeat":
-            return <IconRefresh size={IconSize.MEDIUM} />;
-        case "link":
-            return <IconLink size={IconSize.MEDIUM} />;
-        default:
-            return undefined;
-    }
-}
-
-interface ToastAction {
+export interface NotificationAction {
     text: string;
     onClick: () => void;
 }
 
-interface ToastOptions {
-    message: ReactNode;
-    intent?: ToastIntent;
-    icon?: string;
-    /** Timeout in ms. Use a value <= 0 to disable auto-dismiss. */
-    timeout?: number;
-    action?: ToastAction;
-}
-
-/** Tracks keyed toasts that are currently shown so we can update them in place. */
-const activeKeys = new Set<string>();
-
-let counter = 0;
-function nextId(): string {
-    counter += 1;
-    return `toast-${Date.now()}-${counter}`;
-}
-
-function autoCloseFrom(timeout?: number): number | false {
-    if (timeout === undefined) {
-        return 4000;
-    }
-    return timeout <= 0 ? false : timeout;
-}
-
-function renderMessage(
+/**
+ * Renders a Notification with an added Action button.
+ */
+export function renderNotification(
     message: ReactNode,
-    action: ToastAction | undefined,
-    id: string
+    action: NotificationAction | undefined
 ) {
     if (!action) {
         return message;
@@ -87,101 +26,47 @@ function renderMessage(
     return (
         <Group justify="space-between" wrap="nowrap" gap="sm">
             <span>{message}</span>
-            <Button
-                size="compact-sm"
-                variant="subtle"
-                onClick={() => {
-                    action.onClick();
-                    notifications.hide(id);
-                }}
-            >
+            <Button size="compact-sm" variant="subtle">
                 {action.text}
             </Button>
         </Group>
     );
 }
 
-/**
- * Shows a toast. Accepts the same option shape callers previously passed to the
- * Blueprint toaster. Returns the toast's key/id.
- */
-export function showToast(options: ToastOptions, key?: string): string {
-    const id = key ?? nextId();
-    notifications.show({
+export function showInfoToast(message: string, id?: string): string {
+    return notifications.show({
         id,
-        color: intentColor(options.intent),
-        icon: toastIcon(options.icon),
-        message: renderMessage(options.message, options.action, id),
-        autoClose: autoCloseFrom(options.timeout)
-    });
-    return id;
-}
-
-export function closeToast(key: string): void {
-    activeKeys.delete(key);
-    notifications.hide(key);
-}
-
-export function showInfoToast(message: string, key?: string): string {
-    return transitionOrShow(key, {
         color: "blue",
         icon: <IconInfoCircle size={IconSize.MEDIUM} />,
-        message,
-        autoClose: 4000
+        message
     });
 }
 
-export function showLoadingToast(message: string, key: string): string {
-    activeKeys.add(key);
-    notifications.show({
-        id: key,
+export function showLoadingToast(message: string, id: string): string {
+    return notifications.show({
+        id,
         color: "blue",
         loading: true,
         message,
-        autoClose: false,
-        withCloseButton: false
+        allowClose: false,
+        autoClose: false
     });
-    return key;
 }
 
-export function showSuccessToast(message: string, key?: string): string {
-    return transitionOrShow(key, {
+export function showSuccessToast(message: string, id?: string): string {
+    return notifications.show({
+        id,
         color: "green",
-        loading: false,
         icon: <IconCircleCheck size={IconSize.MEDIUM} />,
-        message,
-        autoClose: 3000,
-        withCloseButton: true
+        message
     });
 }
 
-export function showErrorToast(message: string, key?: string): string {
-    return transitionOrShow(key, {
+export function showErrorToast(message: string, id?: string): string {
+    return notifications.show({
+        id,
         color: "red",
-        loading: false,
         icon: <IconCircleX size={IconSize.MEDIUM} />,
-        message,
-        autoClose: 4000,
-        withCloseButton: true
+        message
     });
-}
-
-type ToastData = Parameters<typeof notifications.show>[0];
-
-/**
- * Updates an existing keyed toast in place (e.g. a loading toast transitioning
- * to success/error), or shows a new toast when there is nothing to update.
- */
-function transitionOrShow(
-    key: string | undefined,
-    data: Omit<ToastData, "id">
-): string {
-    if (key && activeKeys.has(key)) {
-        activeKeys.delete(key);
-        notifications.update({ id: key, ...data });
-        return key;
-    }
-    const id = key ?? nextId();
-    notifications.show({ id, ...data });
-    return id;
 }

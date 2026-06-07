@@ -1,14 +1,9 @@
-import { Button, Group, Modal } from "@mantine/core";
+import { Button, Group } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
-import {
-    MenuType,
-    FavoriteMenuParams,
-    MenuDialogProps,
-    useHandleCloseDialog
-} from "../overlays/menu-params";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/toaster";
@@ -27,22 +22,38 @@ import { getQueryUpdater } from "../common/utils";
 import { useLibrary } from "../api-utils/library";
 import { PageError } from "../common/app-zero-state";
 
-export function FavoriteMenu(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== MenuType.FAVORITE_MENU) {
-        return null;
-    }
-    return (
-        <FavoriteMenuDialog
-            favoriteId={search.favoriteId}
-            defaultConfiguration={search.defaultConfiguration}
-        />
-    );
+interface OpenFavoriteMenuProps {
+    favoriteId: string;
+    insertableName: string;
+    defaultConfiguration?: Configuration;
 }
 
-function FavoriteMenuDialog(
-    props: MenuDialogProps<FavoriteMenuParams>
-): ReactNode {
+export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
+    const { favoriteId, insertableName, defaultConfiguration } = props;
+    modals.open({
+        title: (
+            <Group gap="xs" wrap="nowrap">
+                <HeartIcon />
+                {insertableName}
+            </Group>
+        ),
+        size: 500,
+        centered: true,
+        children: (
+            <FavoriteMenuContent
+                favoriteId={favoriteId}
+                defaultConfiguration={defaultConfiguration}
+            />
+        )
+    });
+}
+
+interface FavoriteMenuContentProps {
+    favoriteId: string;
+    defaultConfiguration?: Configuration;
+}
+
+function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const { favoriteId, defaultConfiguration } = props;
 
     const router = useRouter();
@@ -54,7 +65,6 @@ function FavoriteMenuDialog(
         Configuration | undefined
     >(defaultConfiguration);
 
-    const closeDialog = useHandleCloseDialog();
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
@@ -109,18 +119,7 @@ function FavoriteMenuDialog(
     }
 
     return (
-        <Modal
-            opened
-            size={500}
-            title={
-                <Group gap="xs" wrap="nowrap">
-                    <HeartIcon />
-                    {insertable.name}
-                </Group>
-            }
-            onClose={closeDialog}
-            centered
-        >
+        <>
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
@@ -135,12 +134,12 @@ function FavoriteMenuDialog(
                     leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
                     onClick={() => {
                         setDefaultConfigurationMutation.mutate();
-                        closeDialog();
+                        modals.closeAll();
                     }}
                 >
                     Save
                 </Button>
             </Group>
-        </Modal>
+        </>
     );
 }

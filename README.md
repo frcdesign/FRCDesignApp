@@ -38,7 +38,7 @@ NODE_ENV=development
 To test Onshape app changes, you will need to create an OAuth application in the [Onshape Developer Portal](https://cad.onshape.com/appstore/dev-portal/oauthApps). Fill out the following information:
 
 - Name: (Arbitrary) FRC Design App Test
-- Primary format: (Arbitrary) com.frc-design-app-test
+- Primary format: (Arbitrary) com.frc-design-app.dev
 - Summary: (Arbitrary) Test for the FRC Design App.
 - Redirect URLs: `https://localhost:3000/auth/callback`
 - OAuth URL: `https://localhost:3000/auth/sign-in`
@@ -55,8 +55,8 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Assembly: `https://localhost:3000/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Part Studio: `https://localhost:3000/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
     - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.

@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Accordion } from "@mantine/core";
 import { IconBook, IconSearch } from "@tabler/icons-react";
-import { IconSize } from "../../../common/style-constants";
+import { BORDER, IconSize } from "../../../common/style-constants";
 import { ReactNode, useState } from "react";
 import { DocumentCard } from "../../../cards/document-card";
 import { ItemTable } from "../../../cards/card-components";
@@ -47,52 +47,76 @@ function HomeList(): ReactNode {
         }
     };
 
+    const favoritesAccordian = (
+        <Accordion.Item value="favorites">
+            <Accordion.Control icon={<HeartIcon />}>
+                Favorites
+            </Accordion.Control>
+            <Accordion.Panel>
+                <FavoritesList />
+            </Accordion.Panel>
+        </Accordion.Item>
+    );
+
+    let childAccordian: ReactNode;
+    if (isSearch) {
+        childAccordian = (
+            <Accordion.Item key={listKey} value={listKey}>
+                <Accordion.Control
+                    icon={
+                        <IconSearch
+                            size={IconSize.MEDIUM}
+                            color="var(--mantine-primary-color-filled)"
+                        />
+                    }
+                >
+                    Search Results
+                </Accordion.Control>
+                <Accordion.Panel>
+                    <SearchResults
+                        query={uiState.searchQuery!}
+                        filters={{ vendors: uiState.vendorFilters }}
+                    />
+                </Accordion.Panel>
+            </Accordion.Item>
+        );
+    } else {
+        childAccordian = (
+            <Accordion.Item key={listKey} value={listKey}>
+                <Accordion.Control
+                    icon={
+                        <IconBook
+                            size={IconSize.MEDIUM}
+                            color="var(--mantine-primary-color-filled)"
+                        />
+                    }
+                >
+                    {getLibraryName(library)}
+                </Accordion.Control>
+                <Accordion.Panel>
+                    <LibraryList />
+                </Accordion.Panel>
+            </Accordion.Item>
+        );
+    }
+
     return (
         <>
             <Accordion
                 multiple
-                variant="default"
+                variant="unstyled"
                 value={value}
                 onChange={handleChange}
-                styles={{ content: { padding: 0 } }}
+                styles={{
+                    content: {
+                        padding: 0,
+                        borderTop: BORDER,
+                        borderBottom: BORDER
+                    }
+                }}
             >
-                <Accordion.Item value="favorites">
-                    <Accordion.Control icon={<HeartIcon />}>
-                        Favorites
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                        <FavoritesList />
-                    </Accordion.Panel>
-                </Accordion.Item>
-                <Accordion.Item key={listKey} value={listKey}>
-                    <Accordion.Control
-                        icon={
-                            isSearch ? (
-                                <IconSearch
-                                    size={IconSize.MEDIUM}
-                                    color="var(--mantine-primary-color-filled)"
-                                />
-                            ) : (
-                                <IconBook
-                                    size={IconSize.MEDIUM}
-                                    color="var(--mantine-primary-color-filled)"
-                                />
-                            )
-                        }
-                    >
-                        {isSearch ? "Search Results" : getLibraryName(library)}
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                        {isSearch ? (
-                            <SearchResults
-                                query={uiState.searchQuery!}
-                                filters={{ vendors: uiState.vendorFilters }}
-                            />
-                        ) : (
-                            <LibraryList />
-                        )}
-                    </Accordion.Panel>
-                </Accordion.Item>
+                {favoritesAccordian}
+                {childAccordian}
             </Accordion>
             <Outlet />
         </>

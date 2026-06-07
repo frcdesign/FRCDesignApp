@@ -2,14 +2,27 @@
  * Standard icon sizes to pass to Tabler icons.
  */
 export enum IconSize {
-    /** Things like icons on badges */
+    /** Icons on badges */
     TINY = 12,
-    /** Things like menu options */
+    /** Menu options */
     SMALL = 16,
-    /** Things like buttons */
+    /** Buttons */
     MEDIUM = 18,
     /** In-line error states */
     LARGE = 36,
     /** Full-page error states */
     HUGE = 48
 }
+
+/**
+ * Standard Mantine FontWeights.
+ */
+export enum FontWeight {
+    SEMI_BOLD = 500,
+    BOLD = 700
+}
+
+/**
+ * Creates a Mantine-style border.
+ */
+export const BORDER = "1px solid var(--mantine-color-default-border";

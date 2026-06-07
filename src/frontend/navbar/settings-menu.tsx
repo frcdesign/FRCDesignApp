@@ -1,9 +1,8 @@
-import { Button, Divider, Group, Modal, Text, Title } from "@mantine/core";
+import { Button, Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { FontWeight, IconSize } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { MenuType, useHandleCloseDialog } from "../overlays/menu-params";
 import { useLoaderData, useRouter, useSearch } from "@tanstack/react-router";
 import { showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
@@ -27,12 +26,12 @@ import {
 import { AppSelect } from "../common/app-select";
 import { makeSelectOption, useSelectOptions } from "../common/select-utils";
 
-export function SettingsMenu(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== MenuType.SETTINGS_MENU) {
-        return null;
-    }
-    return <SettingsMenuDialog />;
+export function openSettingsMenu() {
+    modals.open({
+        title: "Settings",
+        centered: true,
+        children: <SettingsMenuContent />
+    });
 }
 
 /**
@@ -41,7 +40,7 @@ export function SettingsMenu(): ReactNode {
 function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" my="sm">
-            <Text size="sm" fw={500}>
+            <Text size="sm" fw={FontWeight.SEMI_BOLD}>
                 {props.label}
             </Text>
             {props.children}
@@ -49,9 +48,7 @@ function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
     );
 }
 
-function SettingsMenuDialog(): ReactNode {
-    const closeDialog = useHandleCloseDialog();
-
+function SettingsMenuContent(): ReactNode {
     const loaderData = useLoaderData({ from: "/app" });
 
     let adminSettings: ReactNode = null;
@@ -69,19 +66,19 @@ function SettingsMenuDialog(): ReactNode {
     }
 
     return (
-        <Modal opened onClose={closeDialog} title="Settings" centered>
+        <>
             <UserSettings />
             {adminSettings}
             <Group justify="flex-end" mt="md">
                 <Button
                     variant="default"
                     leftSection={<IconX size={IconSize.SMALL} />}
-                    onClick={closeDialog}
+                    onClick={() => modals.closeAll()}
                 >
                     Close
                 </Button>
             </Group>
-        </Modal>
+        </>
     );
 }
 

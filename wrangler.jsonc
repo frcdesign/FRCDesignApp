@@ -11,7 +11,7 @@
         "not_found_handling": "single-page-application",
         "binding": "ASSETS",
         // Route app + API paths through the Worker; static assets bypass it
-        "run_worker_first": ["/app", "/api/*", "/auth/*"]
+        "run_worker_first": ["/init", "/api/*", "/auth/*"]
     },
     "observability": {
         "enabled": true

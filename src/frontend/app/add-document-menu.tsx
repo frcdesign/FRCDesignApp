@@ -1,14 +1,8 @@
-import { Button, Group, Menu, Modal, TextInput } from "@mantine/core";
+import { Button, Group, Menu, TextInput } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { IconPlus } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
-import {
-    AddDocumentMenuParams,
-    MenuType,
-    MenuDialogProps,
-    useHandleCloseDialog
-} from "../overlays/menu-params";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
@@ -17,23 +11,23 @@ import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibrary } from "../api-utils/library";
 
-export function AddDocumentMenu(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== MenuType.ADD_DOCUMENT_MENU) {
-        return null;
-    }
-    return (
-        <AddDocumentMenuDialog selectedDocumentId={search.selectedDocumentId} />
-    );
+function openAddDocumentMenu(selectedDocumentId?: string) {
+    modals.open({
+        title: "Add document",
+        centered: true,
+        children: (
+            <AddDocumentMenuContent selectedDocumentId={selectedDocumentId} />
+        )
+    });
 }
 
-function AddDocumentMenuDialog(
-    props: MenuDialogProps<AddDocumentMenuParams>
-): ReactNode {
-    const { selectedDocumentId } = props;
-    const closeDialog = useHandleCloseDialog();
-    const library = useLibrary();
+interface AddDocumentMenuContentProps {
+    selectedDocumentId?: string;
+}
 
+function AddDocumentMenuContent(props: AddDocumentMenuContentProps): ReactNode {
+    const { selectedDocumentId } = props;
+    const library = useLibrary();
     const [url, setUrl] = useState("");
 
     const mutation = useMutation({
@@ -44,12 +38,9 @@ function AddDocumentMenuDialog(
                 throw new HandledError("Failed to parse url.");
             }
             showLoadingToast("Adding document...", "add-document");
-            closeDialog();
+            modals.closeAll();
             return apiPost("/document" + toLibraryPath(library), {
-                body: {
-                    newDocumentId,
-                    selectedDocumentId
-                }
+                body: { newDocumentId, selectedDocumentId }
             });
         },
         onError: getAppErrorHandler(
@@ -66,42 +57,30 @@ function AddDocumentMenuDialog(
     });
 
     return (
-        <Modal opened onClose={closeDialog} title="Add document" centered>
-            <Group align="flex-end" gap="sm" wrap="nowrap">
-                <TextInput
-                    flex={1}
-                    placeholder="Document url..."
-                    value={url}
-                    onChange={(event) => setUrl(event.currentTarget.value)}
-                    error={mutation.isError}
-                />
-                <Button
-                    leftSection={<IconPlus size={IconSize.SMALL} />}
-                    onClick={() => {
-                        mutation.mutate();
-                    }}
-                    loading={mutation.isPending}
-                >
-                    Add
-                </Button>
-            </Group>
-        </Modal>
+        <Group align="flex-end" gap="sm" wrap="nowrap">
+            <TextInput
+                flex={1}
+                placeholder="Document url..."
+                value={url}
+                onChange={(event) => setUrl(event.currentTarget.value)}
+                error={mutation.isError}
+            />
+            <Button
+                leftSection={<IconPlus size={IconSize.SMALL} />}
+                onClick={() => mutation.mutate()}
+                loading={mutation.isPending}
+            >
+                Add
+            </Button>
+        </Group>
     );
 }
 
 export function AddDocumentButton(): ReactNode {
-    const navigate = useNavigate();
     return (
         <Button
             leftSection={<IconPlus size={IconSize.SMALL} />}
-            onClick={() => {
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.ADD_DOCUMENT_MENU
-                    }
-                });
-            }}
+            onClick={() => openAddDocumentMenu()}
         >
             Add document
         </Button>
@@ -113,19 +92,10 @@ interface AddDocumentItemProps {
 }
 
 export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
-    const navigate = useNavigate();
     return (
         <Menu.Item
             leftSection={<IconPlus size={IconSize.SMALL} />}
-            onClick={() => {
-                void navigate({
-                    to: ".",
-                    search: {
-                        activeMenu: MenuType.ADD_DOCUMENT_MENU,
-                        selectedDocumentId: props.selectedDocumentId
-                    }
-                });
-            }}
+            onClick={() => openAddDocumentMenu(props.selectedDocumentId)}
         >
             Add document
         </Menu.Item>
