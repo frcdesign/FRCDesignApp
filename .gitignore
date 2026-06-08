@@ -33,6 +33,4 @@ dist-ssr
 .env*
 !.env.example
 
-
-drizzle/*
 *.pem

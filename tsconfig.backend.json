@@ -1,7 +1,7 @@
 {
     "extends": "./tsconfig.node.json",
     "compilerOptions": {
-        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.backend.tsbuildinfo",
         "types": ["./worker-configuration.d.ts", "vite/client"]
     },
     "include": ["src/backend", "src/shared"],

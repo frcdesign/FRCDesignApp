@@ -10,12 +10,12 @@
     },
     "scripts": {
         "dev": "wrangler d1 migrations apply db --local && vite dev",
-        "tsc": "tsc -b",
-        "build": "tsc -b && vite build",
+        "tsc": "tsc",
+        "build": "vite build",
         "lint": "eslint .",
         "preview": "npm run build && vite preview",
         "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",
-        "cf-typegen": "wrangler types",
+        "typegen": "wrangler types",
         "prepare": "husky"
     },
     "dependencies": {
