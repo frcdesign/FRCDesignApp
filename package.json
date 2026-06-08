@@ -10,8 +10,8 @@
     },
     "scripts": {
         "dev": "wrangler d1 migrations apply db --local && vite dev",
-        "tsc": "tsc",
-        "build": "vite build",
+        "tsc": "tsc -b",
+        "build": "tsc -b && vite build",
         "lint": "eslint .",
         "preview": "npm run build && vite preview",
         "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",

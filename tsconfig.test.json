@@ -8,7 +8,7 @@
         "allowImportingTsExtensions": true,
         "moduleDetection": "force",
         "noEmit": true,
-        "types": ["jest", "node"],
+        "types": ["jest", "node", "./worker-configuration.d.ts"],
         "skipLibCheck": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true
