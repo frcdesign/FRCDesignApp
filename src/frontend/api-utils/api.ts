@@ -58,8 +58,8 @@ export function toCacheOptions(cacheOptions: CacheOptions): CacheOptions {
 export function useCacheOptions(): CacheOptions {
     const loaderData = useLoaderData({ from: "/app" });
     return {
-        currentAccessLevel: loaderData.currentAccessLevel,
-        cacheVersion: loaderData.cacheVersion
+        currentAccessLevel: loaderData.accessData.currentAccessLevel,
+        cacheVersion: loaderData.accessData.cacheVersion
     };
 }
 

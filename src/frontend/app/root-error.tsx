@@ -45,7 +45,7 @@ export function RootCrash(): ReactNode {
             }}
         >
             The app has crashed due to an unexpected error. Please reload the
-            page.
+            page. If the problem persists, contact the FRCDesignApp developers.
         </div>
     );
 }
@@ -54,7 +54,7 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            leftSection={<IconHome size={IconSize.SMALL} />}
+            leftSection={<IconHome size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({ to: "/app" });
             }}

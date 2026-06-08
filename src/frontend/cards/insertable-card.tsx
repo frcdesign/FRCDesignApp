@@ -172,7 +172,7 @@ export function InsertableAdminContextMenu(
                 queryKey: libraryQueryMatchKey()
             });
             queryClient.setQueryData(
-                libraryQueryKey(library, loaderData),
+                libraryQueryKey(library, loaderData.accessData),
                 getQueryUpdater((data: LibraryOut) => {
                     const current = data.insertables[insertable.id];
                     if (current) {

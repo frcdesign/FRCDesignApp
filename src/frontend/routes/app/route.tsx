@@ -18,21 +18,12 @@ import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../navbar/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
-import { type AccessData, type Settings } from "../../../shared/types";
-
-type SearchParams = OnshapeParams & { settings: Settings };
+import { type ContextData } from "../../../shared/types";
 
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        // Onshape only sends `theme` on the initial load. Only remap it when it's
-        // actually present so internal navigations (e.g. switching libraries)
-        // don't wipe the retained `systemTheme` and reset light/dark mode.
-        if (search.theme !== undefined) {
-            search.systemTheme = search.theme;
-            delete search.theme;
-        }
-        return search as unknown as SearchParams;
+        return search as unknown as OnshapeParams;
     },
     search: {
         middlewares: [retainSearchParams(true)]
@@ -43,23 +34,17 @@ export const Route = createFileRoute("/app")({
         const contextData = await queryClient.ensureQueryData(
             getContextDataQuery()
         );
-        return { accessData: contextData.accessData };
+        return contextData;
     },
-    loaderDeps: ({ search }) => ({
-        library: search.settings?.library
-    }),
-    loader: async ({ context, deps }): Promise<AccessData> => {
+    loader: async ({ context }): Promise<ContextData> => {
         const accessData = context.accessData;
+        const library = context.settings.library;
         await Promise.all([
-            queryClient.prefetchQuery(
-                getLibraryQuery(deps.library, accessData)
-            ),
-            queryClient.prefetchQuery(
-                getSearchDbQuery(deps.library, accessData)
-            ),
-            queryClient.prefetchQuery(getFavoritesQuery(deps.library))
+            queryClient.prefetchQuery(getLibraryQuery(library, accessData)),
+            queryClient.prefetchQuery(getSearchDbQuery(library, accessData)),
+            queryClient.prefetchQuery(getFavoritesQuery(library))
         ]);
-        return accessData;
+        return context;
     },
     errorComponent: RootAppError
 });

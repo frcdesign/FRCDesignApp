@@ -74,9 +74,9 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     return useMemo(() => {
         return (
             !insertable.isVisible &&
-            hasUserAccess(loaderData.currentAccessLevel)
+            hasUserAccess(loaderData.accessData.currentAccessLevel)
         );
-    }, [insertable.isVisible, loaderData.currentAccessLevel]);
+    }, [insertable.isVisible, loaderData.accessData.currentAccessLevel]);
 }
 
 export function useReloadThumbnailMutation(id: string, isDocumentId: boolean) {

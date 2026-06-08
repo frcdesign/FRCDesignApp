@@ -1,8 +1,8 @@
+import { useLoaderData } from "@tanstack/react-router";
 import { Library } from "../../shared/types";
-import { useSearch } from "@tanstack/react-router";
 
 export function useLibrary() {
-    return useSearch({ from: "/app" }).settings.library;
+    return useLoaderData({ from: "/app" }).settings.library;
 }
 
 export function toLibraryPath(library: Library): string {

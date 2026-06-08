@@ -1,14 +1,13 @@
 import { OAuthApi } from "../onshape-api";
-import { UserPath, toUserApiPath } from "../../../shared/path";
 
 /** Gets a setting with a specific key. Returns `null` if the key is not set. */
 export async function getSetting(
     client: OAuthApi,
     clientId: string,
-    userPath: UserPath,
+    userId: string,
     key: string
 ): Promise<any> {
-    const result = await getSettings(client, clientId, userPath, [key]);
+    const result = await getSettings(client, clientId, userId, [key]);
     if (result.length === 0) return null;
     return result[0]?.value ?? null;
 }
@@ -23,12 +22,12 @@ export async function getSetting(
 export async function getSettings(
     client: OAuthApi,
     clientId: string,
-    userPath: UserPath,
+    userId: string,
     keys?: string[]
 ): Promise<any[]> {
     const query = new URLSearchParams((keys ?? []).map((key) => ["key", key]));
     const result = await client.get(
-        `/applications/clients/${clientId}/settings` + toUserApiPath(userPath),
+        `/applications/clients/${clientId}/settings/users/${userId}`,
         { query }
     );
     return result.settings;
@@ -53,11 +52,11 @@ export interface Update {
 export function updateSettings(
     client: OAuthApi,
     clientId: string,
-    userPath: UserPath,
+    userId: string,
     updates: Update[]
 ): Promise<void> {
     return client.postNone(
-        `/applications/clients/${clientId}/settings` + toUserApiPath(userPath),
+        `/applications/clients/${clientId}/settings/users/${userId}`,
         { body: { settings: updates } }
     );
 }
@@ -66,19 +65,19 @@ export function updateSettings(
 export function updateSetting(
     client: OAuthApi,
     clientId: string,
-    userPath: UserPath,
+    userId: string,
     update: Update
 ): Promise<void> {
-    return updateSettings(client, clientId, userPath, [update]);
+    return updateSettings(client, clientId, userId, [update]);
 }
 
 /** Sets the value of a given key. */
 export function setSetting(
     client: OAuthApi,
     clientId: string,
-    userPath: UserPath,
+    userId: string,
     key: string,
     value: unknown
 ): Promise<void> {
-    return updateSetting(client, clientId, userPath, { key, value });
+    return updateSetting(client, clientId, userId, { key, value });
 }

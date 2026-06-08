@@ -3,7 +3,7 @@ import { modals } from "@mantine/modals";
 import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
 import { FontWeight, IconSize } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { useLoaderData, useRouter, useSearch } from "@tanstack/react-router";
+import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showSuccessToast } from "../common/toaster";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
@@ -53,7 +53,7 @@ function SettingsMenuContent(): ReactNode {
 
     let adminSettings: ReactNode = null;
     // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
-    if (hasEditorAccess(loaderData.maxAccessLevel)) {
+    if (hasEditorAccess(loaderData.accessData.maxAccessLevel)) {
         adminSettings = (
             <>
                 <Title order={6} mt="md">
@@ -83,13 +83,13 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const search = useSearch({ from: "/app" });
+    const loaderData = useLoaderData({ from: "/app" });
     const saveSettings = useSaveSettings();
 
     return (
         <>
             <ThemeSelect
-                theme={search.settings.theme}
+                theme={loaderData.settings.theme}
                 onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
             />
             <SettingRow label="Submit feedback">
@@ -185,7 +185,7 @@ function AccessLevelSelect(): ReactNode {
     const loaderData = useLoaderData({ from: "/app" });
     const router = useRouter();
 
-    const { maxAccessLevel, currentAccessLevel } = loaderData;
+    const { maxAccessLevel, currentAccessLevel } = loaderData.accessData;
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
     const accessLevels = useSelectOptions(
         useMemo(

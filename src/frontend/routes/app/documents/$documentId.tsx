@@ -5,7 +5,7 @@ import {
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Box, Button, Group, Menu, Stack, Text } from "@mantine/core";
+import { Box, Button, Group, Menu, Text } from "@mantine/core";
 import {
     IconAlertTriangle,
     IconArrowBackUp,
@@ -79,15 +79,13 @@ function DocumentList(): ReactNode {
     let content: ReactNode;
     if (uiState.searchQuery) {
         content = (
-            <Stack gap={0}>
-                <SearchResults
-                    query={uiState.searchQuery}
-                    filters={{
-                        vendors: uiState.vendorFilters,
-                        documentId: document.id
-                    }}
-                />
-            </Stack>
+            <SearchResults
+                query={uiState.searchQuery}
+                filters={{
+                    vendors: uiState.vendorFilters,
+                    documentId: document.id
+                }}
+            />
         );
     } else {
         content = (
@@ -170,7 +168,7 @@ export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
 
     const filterResult = filterInsertables(documentInsertables, {
         vendors: uiState.vendorFilters,
-        isVisible: !hasEditorAccess(loaderData.currentAccessLevel)
+        isVisible: !hasEditorAccess(loaderData.accessData.currentAccessLevel)
     });
 
     if (filterResult.insertables.length === 0) {

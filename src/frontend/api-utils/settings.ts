@@ -1,42 +1,33 @@
-import { useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
-import { Library, Theme } from "../../shared/types";
+import { useRouter } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { Library, Theme, type ContextData } from "../../shared/types";
 import { showErrorToast } from "../common/toaster";
 import { apiPost } from "./api";
+import { queryClient } from "../query-client";
+import { contextDataQueryKey } from "../queries";
+import { getQueryUpdater } from "../common/utils";
 
-interface SaveSettingsOptions {
-    /**
-     * Where to navigate after applying the settings.
-     * @default "." (stay on the current route)
-     */
-    to?: string;
-}
-
-/**
- * Returns a function that optimistically applies user settings (theme/library)
- * by writing them into the `settings` search param and persisting them to the
- * backend. Settings live in search params, so the navigation IS the optimistic
- * update; the functional updater keeps it correct across rapid changes.
- */
 export function useSaveSettings() {
-    const navigate = useNavigate();
+    const router = useRouter();
 
-    return useCallback(
-        (
-            newSettings: { theme?: Theme; library?: Library },
-            opts?: SaveSettingsOptions
-        ) => {
-            void navigate({
-                to: opts?.to ?? ".",
-                search: (prev) => ({
-                    ...prev,
-                    settings: { ...prev.settings, ...newSettings }
+    const { mutate } = useMutation({
+        mutationKey: ["user-data"],
+        mutationFn: (newSettings: { theme?: Theme; library?: Library }) =>
+            apiPost("/user-data", { body: newSettings }),
+        onMutate: (newSettings) => {
+            queryClient.setQueryData(
+                contextDataQueryKey(),
+                getQueryUpdater((data: ContextData) => {
+                    data.settings = { ...data.settings, ...newSettings };
+                    return data;
                 })
-            });
-            apiPost("/user-data", { body: newSettings }).catch(() => {
-                showErrorToast("Unexpectedly failed to update settings.");
-            });
+            );
+            void router.invalidate();
         },
-        [navigate]
-    );
+        onError: () => {
+            showErrorToast("Unexpectedly failed to update settings.");
+        }
+    });
+
+    return mutate;
 }

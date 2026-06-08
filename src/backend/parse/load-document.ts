@@ -1,5 +1,8 @@
-import { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
-import type { WorkflowStep } from "cloudflare:workers";
+import {
+    WorkflowEntrypoint,
+    WorkflowEvent,
+    WorkflowStep
+} from "cloudflare:workers";
 import {
     and,
     asc,

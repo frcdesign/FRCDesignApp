@@ -24,8 +24,8 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
     const loaderData = useLoaderData({ from: "/app" });
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
     const currentAccessLevel = props.useMaxAccessLevel
-        ? loaderData.maxAccessLevel
-        : loaderData.currentAccessLevel;
+        ? loaderData.accessData.maxAccessLevel
+        : loaderData.accessData.currentAccessLevel;
 
     if (
         requiredAccessLevel === AccessLevel.ADMIN &&

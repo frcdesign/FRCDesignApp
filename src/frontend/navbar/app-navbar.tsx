@@ -7,6 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "./settings-menu";
@@ -55,6 +56,7 @@ function BrandIcon(): ReactNode {
 function LibraryMenu(): ReactNode {
     const library = useLibrary();
     const saveSettings = useSaveSettings();
+    const navigate = useNavigate();
 
     return (
         <Menu position="bottom-start" withinPortal>
@@ -70,12 +72,10 @@ function LibraryMenu(): ReactNode {
                 {Object.values(Library).map((lib) => (
                     <Menu.Item
                         key={lib}
-                        onClick={() =>
-                            saveSettings(
-                                { library: lib },
-                                { to: "/app/documents" }
-                            )
-                        }
+                        onClick={() => {
+                            saveSettings({ library: lib });
+                            void navigate({ to: "/app/documents" });
+                        }}
                     >
                         {getLibraryName(lib)}
                     </Menu.Item>

@@ -114,3 +114,7 @@ export enum MateLocation {
     Part = "Part",
     Subassembly = "Subassembly"
 }
+export const DEFAULT_SETTINGS: Settings = {
+    theme: Theme.SYSTEM,
+    library: Library.FRC_DESIGN_LIB
+};

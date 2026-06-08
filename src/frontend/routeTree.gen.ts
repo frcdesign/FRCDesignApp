@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as InitRouteImport } from './routes/init'
 import { Route as AppRouteRouteImport } from './routes/app/route'
-import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
@@ -29,11 +28,6 @@ const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRouteRoute,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -79,18 +73,17 @@ export interface FileRoutesByFullPath {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
-  '/app/': typeof AppIndexRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
 export interface FileRoutesByTo {
+  '/app': typeof AppRouteRouteWithChildren
   '/init': typeof InitRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
-  '/app': typeof AppIndexRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents': typeof AppDocumentsIndexRoute
 }
@@ -103,7 +96,6 @@ export interface FileRoutesById {
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
-  '/app/': typeof AppIndexRoute
   '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
@@ -117,18 +109,17 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
-    | '/app/'
     | '/app/documents/$documentId'
     | '/app/documents/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/app'
     | '/init'
     | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
     | '/license'
     | '/safari-error'
-    | '/app'
     | '/app/documents/$documentId'
     | '/app/documents'
   id:
@@ -140,7 +131,6 @@ export interface FileRouteTypes {
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
-    | '/app/'
     | '/app/documents/$documentId'
     | '/app/documents/'
   fileRoutesById: FileRoutesById
@@ -170,13 +160,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRouteRoute
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -231,13 +214,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteRouteChildren {
-  AppIndexRoute: typeof AppIndexRoute
   AppDocumentsDocumentIdRoute: typeof AppDocumentsDocumentIdRoute
   AppDocumentsIndexRoute: typeof AppDocumentsIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppIndexRoute: AppIndexRoute,
   AppDocumentsDocumentIdRoute: AppDocumentsDocumentIdRoute,
   AppDocumentsIndexRoute: AppDocumentsIndexRoute,
 }
