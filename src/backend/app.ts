@@ -1,6 +1,6 @@
 import { type Context, Hono } from "hono";
 import type { LoadDocumentParams } from "./parse/load-document";
-import { type Library } from "../shared/types";
+import { type LibraryId } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 
 export interface AppBindings {
@@ -29,11 +29,11 @@ export function getApp() {
 }
 
 export function libraryRoute(): string {
-    return "/library/:library";
+    return "/library/:libraryId";
 }
 
-export function getLibraryParam(c: AppContext): Library {
-    return c.req.param("library") as Library;
+export function getLibraryParam(c: AppContext): LibraryId {
+    return c.req.param("libraryId") as LibraryId;
 }
 
 export function insertableRoute(): string {
@@ -43,5 +43,15 @@ export function insertableRoute(): string {
 export function getInsertableParam(c: AppContext): string {
     const id = c.req.param("insertableId");
     if (!id) throw new Error("Missing insertableId route param");
+    return id;
+}
+
+export function groupRoute(): string {
+    return "/group/:groupId";
+}
+
+export function getGroupParam(c: AppContext): string {
+    const id = c.req.param("groupId");
+    if (!id) throw new Error("Missing groupId route param");
     return id;
 }

@@ -9,50 +9,45 @@ import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showLoadingToast, showSuccessToast } from "../common/toaster";
 import { queryClient } from "../query-client";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 
-function openAddDocumentMenu(selectedDocumentId?: string) {
+function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({
-        title: "Add document",
+        title: "Add group",
         centered: true,
-        children: (
-            <AddDocumentMenuContent selectedDocumentId={selectedDocumentId} />
-        )
+        children: <AddGroupMenuContent selectedGroupId={selectedGroupId} />
     });
 }
 
-interface AddDocumentMenuContentProps {
-    selectedDocumentId?: string;
+interface AddGroupMenuContentProps {
+    selectedGroupId?: string;
 }
 
-function AddDocumentMenuContent(props: AddDocumentMenuContentProps): ReactNode {
-    const { selectedDocumentId } = props;
-    const library = useLibrary();
+function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
+    const { selectedGroupId } = props;
+    const libraryId = useLibraryId();
     const [url, setUrl] = useState("");
 
     const mutation = useMutation({
-        mutationKey: ["add-document"],
+        mutationKey: ["add-group"],
         mutationFn: async () => {
             const newDocumentId = parseUrl(url)?.documentId;
             if (!newDocumentId) {
                 throw new HandledError("Failed to parse url.");
             }
-            showLoadingToast("Adding document...", "add-document");
+            showLoadingToast("Adding group...", "add-group");
             modals.closeAll();
-            return apiPost("/document" + toLibraryPath(library), {
-                body: { newDocumentId, selectedDocumentId }
+            return apiPost("/group" + toLibraryPath(libraryId), {
+                body: { newDocumentId, selectedGroupId }
             });
         },
         onError: getAppErrorHandler(
-            "Failed to add document. Make sure it's valid.",
-            "add-document"
+            "Failed to add group. Make sure the document is valid.",
+            "add-group"
         ),
         onSuccess: async (result) => {
             await queryClient.invalidateQueries({ queryKey: ["library"] });
-            showSuccessToast(
-                `Successfully added ${result.name}.`,
-                "add-document"
-            );
+            showSuccessToast(`Successfully added ${result.name}.`, "add-group");
         }
     });
 
@@ -76,28 +71,28 @@ function AddDocumentMenuContent(props: AddDocumentMenuContentProps): ReactNode {
     );
 }
 
-export function AddDocumentButton(): ReactNode {
+export function AddGroupButton(): ReactNode {
     return (
         <Button
             leftSection={<IconPlus size={IconSize.SMALL} />}
-            onClick={() => openAddDocumentMenu()}
+            onClick={() => openAddGroupMenu()}
         >
-            Add document
+            Add group
         </Button>
     );
 }
 
-interface AddDocumentItemProps {
-    selectedDocumentId?: string;
+interface AddGroupItemProps {
+    selectedGroupId?: string;
 }
 
-export function AddDocumentItem(props: AddDocumentItemProps): ReactNode {
+export function AddGroupItem(props: AddGroupItemProps): ReactNode {
     return (
         <Menu.Item
             leftSection={<IconPlus size={IconSize.SMALL} />}
-            onClick={() => openAddDocumentMenu(props.selectedDocumentId)}
+            onClick={() => openAddGroupMenu(props.selectedGroupId)}
         >
-            Add document
+            Add group
         </Menu.Item>
     );
 }

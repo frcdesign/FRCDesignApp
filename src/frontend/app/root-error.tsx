@@ -1,4 +1,4 @@
-import { ReloadDocumentsButton } from "../navbar/settings-menu";
+import { ReloadGroupsButton } from "../navbar/settings-menu";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { PageError } from "../common/app-zero-state";
 import { ReactNode } from "react";
@@ -19,7 +19,7 @@ export function RootAppError(): ReactNode {
             title="The app has crashed due to an unexpected error."
             action={
                 <RequireAccessLevel useMaxAccessLevel>
-                    <ReloadDocumentsButton reloadAll hideFormGroup />
+                    <ReloadGroupsButton reloadAll hideFormGroup />
                 </RequireAccessLevel>
             }
         />

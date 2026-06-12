@@ -1,5 +1,5 @@
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
-import { Library } from "../shared/types";
+import { LibraryId } from "../shared/types";
 
 /**
  * FRCDesign brand green ramp (index 6 = #4cae4f, the brand color).
@@ -22,21 +22,21 @@ const frcGreen: MantineColorsTuple = [
  * Maps a library to its primary Mantine color. This is the single source of
  * truth for the per-library color scheme — add new libraries here.
  */
-export function getLibraryColor(library: Library): string {
-    switch (library) {
-        case Library.FTC_DESIGN_LIB:
+export function getLibraryColor(libraryId: LibraryId): string {
+    switch (libraryId) {
+        case LibraryId.FTC_DESIGN_LIB:
             return "orange";
-        case Library.MKCAD:
+        case LibraryId.MKCAD:
             return "blue";
-        case Library.FRC_DESIGN_LIB:
+        case LibraryId.FRC_DESIGN_LIB:
             return "frcGreen";
     }
 }
 
-export function createAppTheme(library: Library) {
+export function createAppTheme(libraryId: LibraryId) {
     return createTheme({
         colors: { frcGreen },
-        primaryColor: getLibraryColor(library),
+        primaryColor: getLibraryColor(libraryId),
         autoContrast: true
     });
 }

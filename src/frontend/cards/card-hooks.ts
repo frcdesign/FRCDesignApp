@@ -10,7 +10,7 @@ import { showErrorToast, showSuccessToast } from "../common/toaster";
 import {
     toInsertablePath,
     toLibraryPath,
-    useLibrary
+    useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { libraryQueryMatchKey } from "../queries";
@@ -19,18 +19,21 @@ export function useSetVisibilityMutation(
     insertableIds: string[],
     isVisible: boolean
 ) {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
 
     const mutation = useMutation({
         mutationKey: ["set-element-visibility"],
         mutationFn: async () => {
-            return apiPost("/set-element-visibility" + toLibraryPath(library), {
-                body: {
-                    insertableIds,
-                    isVisible
+            return apiPost(
+                "/set-element-visibility" + toLibraryPath(libraryId),
+                {
+                    body: {
+                        insertableIds,
+                        isVisible
+                    }
                 }
-            });
+            );
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to modify visibility."
@@ -79,11 +82,11 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     }, [insertable.isVisible, loaderData.accessData.currentAccessLevel]);
 }
 
-export function useReloadThumbnailMutation(id: string, isDocumentId: boolean) {
+export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
     const router = useRouter();
 
-    const endpoint = isDocumentId
-        ? `/reload-document-thumbnail/document/${id}`
+    const endpoint = isGroup
+        ? `/reload-group-thumbnail/group/${id}`
         : "/reload-insertable-thumbnail" + toInsertablePath(id);
 
     return useMutation({

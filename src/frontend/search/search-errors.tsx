@@ -7,13 +7,13 @@ import { FilterResult, ObjectLabel, plural } from "./search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../common/app-zero-state";
 
-function getDocumentString(filtered: FilterResult, objectLabel: ObjectLabel) {
-    if (filtered.byDocument > 1) {
-        return `${filtered.byDocument} ${plural(
+function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
+    if (filtered.byGroup > 1) {
+        return `${filtered.byGroup} ${plural(
             objectLabel
-        )} are in other documents.`;
+        )} are in other groups.`;
     }
-    return `1 ${objectLabel} is in another document.`;
+    return `1 ${objectLabel} is in another group.`;
 }
 
 function getVendorString(filtered: FilterResult, objectLabel: ObjectLabel) {
@@ -35,15 +35,15 @@ interface FilterCalloutProps {
  */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
     const { filtered, objectLabel } = props;
-    if (filtered.byDocument === 0 && filtered.byVendor === 0) {
+    if (filtered.byGroup === 0 && filtered.byVendor === 0) {
         return null;
     }
 
-    if (filtered.byDocument > 0) {
+    if (filtered.byGroup > 0) {
         return (
             <Alert p="xs">
                 <Group justify="space-between" wrap="nowrap">
-                    {getDocumentString(filtered, objectLabel)}
+                    {getGroupString(filtered, objectLabel)}
                     <SearchAllButton small />
                 </Group>
             </Alert>
@@ -82,13 +82,13 @@ export function NoSearchResultError(
             />
         );
 
-    if (filtered.byDocument > 0) {
-        // User is in a subdocument
+    if (filtered.byGroup > 0) {
+        // User is in a subgroup
         return (
             <SectionError
                 icon={icon}
                 title={`No ${plural(objectLabel)}.`}
-                description={getDocumentString(filtered, objectLabel)}
+                description={getGroupString(filtered, objectLabel)}
                 action={<SearchAllButton />}
             />
         );
@@ -128,7 +128,7 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
             leftSection={<IconSearch size={IconSize.SMALL} />}
             size={small ? "xs" : undefined}
             onClick={() => {
-                void navigate({ to: "/app/documents" });
+                void navigate({ to: "/app/groups" });
             }}
         >
             Search all documents

@@ -6,39 +6,35 @@ import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorAccess } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
-import {
-    libraries,
-    documents,
-    insertables,
-    favorites
-} from "../../shared/schema";
+import { libraries, groups, insertables, favorites } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
 
-export const documentRoutes = getApp();
+export const groupRoutes = getApp();
 
-/** POST /api/reload-documents/library/:library?forceReload=true */
-documentRoutes.post("/reload-documents" + libraryRoute(), async (c) => {
+/** POST /api/reload-groups/library/:libraryId?forceReload=true */
+groupRoutes.post("/reload-groups" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const forceReload = c.req.query("forceReload") === "true";
 
     const sessionId = getSessionId(c);
 
     const db = getDb(c.env.DB);
-    await db.insert(libraries).values({ id: library }).onConflictDoNothing();
+    await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
 
-    const docs = await db
-        .select({ id: documents.id })
-        .from(documents)
-        .where(eq(documents.libraryId, library))
-        .orderBy(asc(documents.sortOrder))
+    // Each group re-syncs from its Onshape document.
+    const groupRows = await db
+        .select({ documentId: groups.documentId })
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
     const instances = await Promise.all(
-        docs.map(({ id: documentId }) => {
+        groupRows.map(({ documentId }) => {
             const params: LoadDocumentParams = {
                 documentId,
-                libraryId: library,
+                libraryId,
                 sessionId,
                 forceReload
             };
@@ -49,10 +45,10 @@ documentRoutes.post("/reload-documents" + libraryRoute(), async (c) => {
     return c.json({ status: "triggered", count: instances.length });
 });
 
-/** POST /api/set-element-visibility/library/:library */
-documentRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
+/** POST /api/set-element-visibility/library/:libraryId */
+groupRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const body = await c.req.json<{
         insertableIds: string[];
         isVisible: boolean;
@@ -65,7 +61,7 @@ documentRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
             .delete(favorites)
             .where(
                 and(
-                    eq(favorites.libraryId, library),
+                    eq(favorites.libraryId, libraryId),
                     inArray(favorites.insertableId, body.insertableIds)
                 )
             );
@@ -76,7 +72,7 @@ documentRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
         .set({ isVisible: body.isVisible })
         .where(
             and(
-                eq(insertables.libraryId, library),
+                eq(insertables.libraryId, libraryId),
                 inArray(insertables.id, body.insertableIds)
             )
         );
@@ -84,61 +80,53 @@ documentRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** POST /api/sort-document-alphabetically/library/:library */
-documentRoutes.post(
-    "/sort-document-alphabetically" + libraryRoute(),
-    async (c) => {
-        await requireEditorAccess(c);
-        const library = getLibraryParam(c);
-        const body = await c.req.json<{
-            documentId: string;
-            sortAlphabetically: boolean;
-        }>();
-
-        const db = getDb(c.env.DB);
-        await db
-            .update(documents)
-            .set({ sortAlphabetically: body.sortAlphabetically })
-            .where(
-                and(
-                    eq(documents.id, body.documentId),
-                    eq(documents.libraryId, library)
-                )
-            );
-
-        return c.json({ success: true });
-    }
-);
-
-/** POST /api/document-order/library/:library */
-documentRoutes.post("/document-order" + libraryRoute(), async (c) => {
+/** POST /api/sort-group-alphabetically/library/:libraryId */
+groupRoutes.post("/sort-group-alphabetically" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const library = getLibraryParam(c);
-    const body = await c.req.json<{ documentOrder: string[] }>();
+    const libraryId = getLibraryParam(c);
+    const body = await c.req.json<{
+        groupId: string;
+        sortAlphabetically: boolean;
+    }>();
+
+    const db = getDb(c.env.DB);
+    await db
+        .update(groups)
+        .set({ sortAlphabetically: body.sortAlphabetically })
+        .where(
+            and(eq(groups.id, body.groupId), eq(groups.libraryId, libraryId))
+        );
+
+    return c.json({ success: true });
+});
+
+/** POST /api/group-order/library/:libraryId */
+groupRoutes.post("/group-order" + libraryRoute(), async (c) => {
+    await requireEditorAccess(c);
+    const libraryId = getLibraryParam(c);
+    const body = await c.req.json<{ groupOrder: string[] }>();
 
     const db = getDb(c.env.DB);
     await Promise.all(
-        body.documentOrder.map((id, i) =>
+        body.groupOrder.map((id, i) =>
             db
-                .update(documents)
+                .update(groups)
                 .set({ sortOrder: i })
-                .where(
-                    and(eq(documents.id, id), eq(documents.libraryId, library))
-                )
+                .where(and(eq(groups.id, id), eq(groups.libraryId, libraryId)))
         )
     );
 
     return c.json({ success: true });
 });
 
-/** POST /api/document/library/:library — add a new document */
-documentRoutes.post("/document" + libraryRoute(), async (c) => {
+/** POST /api/group/library/:libraryId — add a new group from an Onshape document */
+groupRoutes.post("/group" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
     const onshapeApi = await getOnshapeApi(c);
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const body = await c.req.json<{
         newDocumentId: string;
-        selectedDocumentId?: string;
+        selectedGroupId?: string;
     }>();
     const sessionId = getSessionId(c);
 
@@ -174,20 +162,20 @@ documentRoutes.post("/document" + libraryRoute(), async (c) => {
 
     const db = getDb(c.env.DB);
 
-    await db.insert(libraries).values({ id: library }).onConflictDoNothing();
+    await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
 
-    const existingDoc = await db
-        .select({ id: documents.id })
-        .from(documents)
+    const existingGroup = await db
+        .select({ id: groups.id })
+        .from(groups)
         .where(
             and(
-                eq(documents.id, body.newDocumentId),
-                eq(documents.libraryId, library)
+                eq(groups.documentId, body.newDocumentId),
+                eq(groups.libraryId, libraryId)
             )
         )
         .get();
 
-    if (existingDoc) {
+    if (existingGroup) {
         return c.json(
             {
                 type: "handled",
@@ -200,30 +188,28 @@ documentRoutes.post("/document" + libraryRoute(), async (c) => {
 
     const params: LoadDocumentParams = {
         documentId: body.newDocumentId,
-        libraryId: library,
+        libraryId,
         sessionId,
-        selectedDocumentId: body.selectedDocumentId
+        selectedGroupId: body.selectedGroupId
     };
     await c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
 
     return c.json({ name: documentName });
 });
 
-/** DELETE /api/document/library/:library?documentId=X */
-documentRoutes.delete("/document" + libraryRoute(), async (c) => {
+/** DELETE /api/group/library/:libraryId?groupId=X */
+groupRoutes.delete("/group" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const library = getLibraryParam(c);
-    const documentId = c.req.query("documentId");
-    if (!documentId) return c.json({ error: "documentId required" }, 400);
+    const libraryId = getLibraryParam(c);
+    const groupId = c.req.query("groupId");
+    if (!groupId) return c.json({ error: "groupId required" }, 400);
 
     const db = getDb(c.env.DB);
 
     // Cascade deletes insertables → favorites, and configurations automatically
     await db
-        .delete(documents)
-        .where(
-            and(eq(documents.id, documentId), eq(documents.libraryId, library))
-        );
+        .delete(groups)
+        .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)));
 
     return c.json({ success: true });
 });

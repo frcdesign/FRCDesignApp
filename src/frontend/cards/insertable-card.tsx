@@ -42,7 +42,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { showSuccessToast } from "../common/toaster";
-import { toInsertablePath, useLibrary } from "../api-utils/library";
+import { toInsertablePath, useLibraryId } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 
@@ -147,7 +147,7 @@ export function InsertableAdminContextMenu(
 ) {
     const { insertable } = props;
 
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const loaderData = useLoaderData({ from: "/app" });
     const router = useRouter();
 
@@ -172,7 +172,7 @@ export function InsertableAdminContextMenu(
                 queryKey: libraryQueryMatchKey()
             });
             queryClient.setQueryData(
-                libraryQueryKey(library, loaderData.accessData),
+                libraryQueryKey(libraryId, loaderData.accessData),
                 getQueryUpdater((data: LibraryOut) => {
                     const current = data.insertables[insertable.id];
                     if (current) {
@@ -226,7 +226,7 @@ export function InsertableAdminContextMenu(
             >
                 {insertable.isVisible ? "Hide element" : "Show element"}
             </Menu.Item>
-            <ReloadThumbnailMenuItem id={insertable.id} isDocumentId={false} />
+            <ReloadThumbnailMenuItem id={insertable.id} isGroup={false} />
             {insertable.elementType === ElementType.PART_STUDIO && (
                 <Menu.Item
                     onClick={() => setOpenCompositeMutation.mutate()}

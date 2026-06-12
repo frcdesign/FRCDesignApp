@@ -13,9 +13,9 @@ import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "./settings-menu";
 import { VendorMenu } from "./vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
-import { getLibraryName, useLibrary } from "../api-utils/library";
+import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { useSaveSettings } from "../api-utils/settings";
-import { Library } from "../../shared/types";
+import { LibraryId } from "../../shared/types";
 
 /** Foreground color for controls on the colored header. */
 const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
@@ -54,7 +54,7 @@ function BrandIcon(): ReactNode {
 }
 
 function LibraryMenu(): ReactNode {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
@@ -65,16 +65,16 @@ function LibraryMenu(): ReactNode {
                     variant="default"
                     rightSection={<IconChevronDown size={IconSize.SMALL} />}
                 >
-                    {getLibraryName(library)}
+                    {getLibraryName(libraryId)}
                 </Button>
             </Menu.Target>
             <Menu.Dropdown>
-                {Object.values(Library).map((lib) => (
+                {Object.values(LibraryId).map((lib) => (
                     <Menu.Item
                         key={lib}
                         onClick={() => {
-                            saveSettings({ library: lib });
-                            void navigate({ to: "/app/documents" });
+                            saveSettings({ libraryId: lib });
+                            void navigate({ to: "/app/groups" });
                         }}
                     >
                         {getLibraryName(lib)}

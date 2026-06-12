@@ -16,13 +16,13 @@ export const Route = createFileRoute("/init")({
     },
     beforeLoad: () => {
         const uiState = getUiState();
-        if (uiState.openDocumentId) {
+        if (uiState.openGroupId) {
             throw redirect({
-                to: "/app/documents/$documentId",
-                params: { documentId: uiState.openDocumentId }
+                to: "/app/groups/$groupId",
+                params: { groupId: uiState.openGroupId }
             });
         }
-        throw redirect({ to: "/app/documents" });
+        throw redirect({ to: "/app/groups" });
     },
     errorComponent: RootAppError
 });

@@ -13,12 +13,12 @@ import {
     type FavoritesData,
     type InsertableOut
 } from "../../shared/api-models";
-import { Library } from "../../shared/types";
+import { LibraryId } from "../../shared/types";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { favoritesQueryKey } from "../queries";
 
 enum Operation {
@@ -35,12 +35,12 @@ interface UpdateFavoritesArgs {
 function updateFavorites(
     data: FavoritesData,
     args: UpdateFavoritesArgs,
-    library: Library
+    libraryId: LibraryId
 ): FavoritesData | undefined {
     const { favoriteId } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
-        const fav: Favorite = { id: favoriteId, insertableId, library };
+        const fav: Favorite = { id: favoriteId, insertableId, libraryId };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
     } else {
@@ -53,9 +53,9 @@ function updateFavorites(
 }
 
 function useUpdateFavoritesMutation() {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
-    const queryKey = favoritesQueryKey(library);
+    const queryKey = favoritesQueryKey(libraryId);
 
     return useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorite"],
@@ -66,7 +66,7 @@ function useUpdateFavoritesMutation() {
                         `Cannot favorite hidden element ${args.insertable.name}.`
                     );
                 }
-                return apiPost("/favorites" + toLibraryPath(library), {
+                return apiPost("/favorites" + toLibraryPath(libraryId), {
                     query: {
                         insertableId: args.insertable.id,
                         id: args.favoriteId
@@ -81,7 +81,7 @@ function useUpdateFavoritesMutation() {
             queryClient.setQueryData(
                 queryKey,
                 getQueryUpdater((data: FavoritesData) =>
-                    updateFavorites(data, args, library)
+                    updateFavorites(data, args, libraryId)
                 )
             );
             void router.invalidate();

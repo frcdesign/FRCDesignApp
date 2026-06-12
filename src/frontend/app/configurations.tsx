@@ -36,7 +36,7 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
 import { SectionError } from "../common/app-zero-state";
-import { useLibrary } from "../api-utils/library";
+import { useLibraryId } from "../api-utils/library";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -47,10 +47,10 @@ interface ConfigurationWrapperProps {
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const { configurationId, configuration, setConfiguration } = props;
 
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
-        queryKey: getConfigurationKey(library, configurationId, cacheOptions),
+        queryKey: getConfigurationKey(libraryId, configurationId, cacheOptions),
         queryFn: async () => {
             return apiGet("/configuration/" + configurationId, {
                 cacheOptions

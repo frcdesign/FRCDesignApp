@@ -118,7 +118,7 @@ export function FavoritesList(): ReactNode {
     }
 
     let callout: ReactNode = null;
-    if (filterResult.byDocument > 0 || filterResult.byVendor > 0) {
+    if (filterResult.byGroup > 0 || filterResult.byVendor > 0) {
         callout = (
             <SearchCallout objectLabel="favorite" filtered={filterResult} />
         );

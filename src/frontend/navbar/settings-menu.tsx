@@ -17,7 +17,7 @@ import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import {
     contextDataQueryKey,
     libraryQueryMatchKey,
@@ -129,8 +129,8 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <ReloadDocumentsButton />
-                <ReloadDocumentsButton reloadAll />
+                <ReloadGroupsButton />
+                <ReloadGroupsButton reloadAll />
                 <PushVersionButton />
             </RequireAccessLevel>
         </>
@@ -141,15 +141,15 @@ function AdminSettings(): ReactNode {
  * Pushes a new version of the app which invalidates all existing CDN caches.
  */
 function PushVersionButton(): ReactNode {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
 
     const pushVersionMutation = useMutation({
-        mutationKey: ["library-version", library],
+        mutationKey: ["library-version", libraryId],
         // The backend rebuilds the search index itself, so this just bumps the
         // cache version (invalidating CDN caches).
         mutationFn: async () => {
-            return apiPost("/library-version" + toLibraryPath(library));
+            return apiPost("/library-version" + toLibraryPath(libraryId));
         },
         onError: getAppErrorHandler("Unexpectedly failed to push new version."),
         onSuccess: () => {
@@ -218,32 +218,30 @@ function AccessLevelSelect(): ReactNode {
     );
 }
 
-interface ReloadDocumentsButtonProps {
+interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
     hideFormGroup?: boolean;
 }
 
-export function ReloadDocumentsButton(
-    props: ReloadDocumentsButtonProps
-): ReactNode {
+export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     const reloadAll = props.reloadAll ?? false;
     const hideFormGroup = props.hideFormGroup ?? false;
 
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
 
     const mutation = useMutation({
-        mutationKey: ["reload-documents"],
+        mutationKey: ["reload-groups"],
         mutationFn: async () => {
-            return apiPost("/reload-documents" + toLibraryPath(library), {
+            return apiPost("/reload-groups" + toLibraryPath(libraryId), {
                 query: { reloadAll }
             });
         },
-        onError: getAppErrorHandler("Failed to reload documents!"),
+        onError: getAppErrorHandler("Failed to reload groups!"),
         onSuccess: (result) => {
             const savedElements = result.savedElements;
             if (savedElements === 0) {
-                showSuccessToast("All documents are already up to date.");
+                showSuccessToast("All groups are already up to date.");
             } else {
                 showSuccessToast(
                     "Successfully reloaded " + savedElements + " elements."
@@ -260,12 +258,10 @@ export function ReloadDocumentsButton(
 
     const handleClick = () => {
         modals.openConfirmModal({
-            title: reloadAll
-                ? "Reload all documents"
-                : "Reload outdated documents",
+            title: reloadAll ? "Reload all groups" : "Reload outdated groups",
             children:
                 "Are you sure you want to reload" +
-                (reloadAll ? " all documents?" : " outdated documents?"),
+                (reloadAll ? " all groups?" : " outdated groups?"),
             labels: { confirm: "Reload", cancel: "Cancel" },
             confirmProps: {
                 variant: "light",

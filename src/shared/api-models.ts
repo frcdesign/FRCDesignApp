@@ -1,10 +1,11 @@
 import { ElementPath, InstancePath } from "./onshape-path";
 import { Configuration } from "./configuration-models";
-import { ElementType, Library, ThumbnailUrls, Vendor } from "./types";
+import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
 
 export interface InsertableOut {
     id: string;
     elementId: string;
+    groupId: string;
     documentId: string;
     instanceId: string;
     path: ElementPath;
@@ -21,8 +22,9 @@ export interface InsertableOut {
     vendors: Vendor[];
 }
 
-export interface DocumentOut {
+export interface GroupOut {
     id: string;
+    documentId: string;
     path: InstancePath;
     name: string;
     sortAlphabetically: boolean;
@@ -31,18 +33,18 @@ export interface DocumentOut {
 }
 
 export type Insertables = Record<string, InsertableOut>;
-export type Documents = Record<string, DocumentOut>;
+export type Groups = Record<string, GroupOut>;
 
 export interface LibraryOut {
-    documentOrder: string[];
-    documents: Documents;
+    groupOrder: string[];
+    groups: Groups;
     insertables: Insertables;
 }
 
 export interface Favorite {
     id: string;
     insertableId: string;
-    library: Library;
+    libraryId: LibraryId;
     defaultConfiguration?: Configuration;
 }
 

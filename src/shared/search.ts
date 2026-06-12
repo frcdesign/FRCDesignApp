@@ -41,25 +41,18 @@ export function tokenize(text: string): string[] {
 
 export interface SearchDocument {
     id: string;
-    documentId: string;
+    groupId: string;
     isVisible: boolean;
     vendors: Vendor[];
     name: string;
-    documentName: string;
+    groupName: string;
 }
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "documentName"],
-    storeFields: [
-        "id",
-        "documentId",
-        "isVisible",
-        "vendors",
-        "name",
-        "documentName"
-    ],
+    fields: ["name", "groupName"],
+    storeFields: ["id", "groupId", "isVisible", "vendors", "name", "groupName"],
     searchOptions: {
-        boost: { documentName: 0.5 },
+        boost: { groupName: 0.5 },
         prefix: true
     },
     // Custom tokenizer to split on special characters
@@ -77,14 +70,14 @@ export function buildSearchDb(
     )
         .filter((element) => !!element)
         .map((element) => {
-            const parentDocument = libraryData.documents[element.documentId];
+            const parentGroup = libraryData.groups[element.groupId];
             return {
                 id: element.id,
-                documentId: element.documentId,
+                groupId: element.groupId,
                 isVisible: element.isVisible,
                 vendors: element.vendors,
                 name: element.name,
-                documentName: parentDocument?.name ?? ""
+                groupName: parentGroup?.name ?? ""
             };
         });
 

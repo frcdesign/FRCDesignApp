@@ -24,7 +24,7 @@ export function plural(objectLabel: ObjectLabel): string {
 }
 
 export interface SearchFilters {
-    documentId?: string;
+    groupId?: string;
     vendors?: Vendor[];
     isFavorite?: boolean;
 }
@@ -46,10 +46,10 @@ export interface FilterResult {
      */
     byVendor: number;
     /**
-     * The number of items filtered out by being in a sub-document.
+     * The number of items filtered out by being in a different group.
      * Does not include results that would have been filtered out by vendors.
      */
-    byDocument: number;
+    byGroup: number;
 }
 
 export interface SearchResult {
@@ -63,7 +63,7 @@ export function doSearch(
     filters?: SearchFilters,
     favoritedInsertableIds?: Set<string>
 ): SearchResult {
-    const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
+    const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     if (!query || query.trim() === "") {
         return { hits: [], filtered };
@@ -81,13 +81,10 @@ export function doSearch(
                 }
             }
 
-            let filteredByDocument = false;
+            let filteredByGroup = false;
             let filteredByVendor = false;
-            if (
-                filters?.documentId &&
-                searchResult.documentId !== filters.documentId
-            ) {
-                filteredByDocument = true;
+            if (filters?.groupId && searchResult.groupId !== filters.groupId) {
+                filteredByGroup = true;
             }
 
             if (
@@ -99,11 +96,11 @@ export function doSearch(
                 filteredByVendor = true;
             }
 
-            if (filteredByVendor && filteredByDocument) {
-                // If something is filtered by vendors and documents, don't count it since neither button would show it on its own
+            if (filteredByVendor && filteredByGroup) {
+                // If something is filtered by vendors and groups, don't count it since neither button would show it on its own
                 return false;
-            } else if (filteredByDocument) {
-                filtered.byDocument += 1;
+            } else if (filteredByGroup) {
+                filtered.byGroup += 1;
                 return false;
             } else if (filteredByVendor) {
                 filtered.byVendor += 1;

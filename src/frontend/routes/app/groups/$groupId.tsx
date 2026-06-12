@@ -14,10 +14,10 @@ import {
 import { BORDER, FontWeight, IconSize } from "../../../common/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
-import { DocumentOut, Insertables } from "../../../../shared/api-models";
+import { GroupOut, Insertables } from "../../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
-import { DocumentMenuItems } from "../../../cards/document-card";
+import { GroupMenuItems } from "../../../cards/group-card";
 import { InsertableCard } from "../../../cards/insertable-card";
 import { MenuButton, ItemTable } from "../../../cards/card-components";
 import { SearchCallout } from "../../../search/search-errors";
@@ -30,43 +30,43 @@ import { ClearFiltersButton } from "../../../navbar/vendor-filters";
 import { useLibraryQuery } from "../../../queries";
 import { useUiState, updateUiState } from "../../../api-utils/ui-state";
 
-export const Route = createFileRoute("/app/documents/$documentId")({
-    component: DocumentList,
+export const Route = createFileRoute("/app/groups/$groupId")({
+    component: GroupList,
     onEnter: (match) => {
-        updateUiState({ openDocumentId: match.params.documentId });
+        updateUiState({ openGroupId: match.params.groupId });
     }
 });
 
-function DocumentList(): ReactNode {
+function GroupList(): ReactNode {
     const navigate = useNavigate();
     const libraryQuery = useLibraryQuery();
-    const documentId = useParams({
-        from: "/app/documents/$documentId"
-    }).documentId;
+    const groupId = useParams({
+        from: "/app/groups/$groupId"
+    }).groupId;
 
     const uiState = useUiState()[0];
 
     if (libraryQuery.isPending) {
-        return <SectionLoading title="Loading documents..." />;
+        return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load document." />;
+        return <SectionError title="Failed to load group." />;
     }
-    const documents = libraryQuery.data.documents;
+    const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
 
-    const document = documents[documentId];
+    const group = groups[groupId];
 
-    if (!document) {
+    if (!group) {
         return (
             <PageError
-                title="Document not found"
+                title="Group not found"
                 description={null}
                 justifyUp
                 action={
                     <Button
                         leftSection={<IconArrowBackUp size={IconSize.SMALL} />}
                         onClick={() => {
-                            void navigate({ to: "/app/documents" });
+                            void navigate({ to: "/app/groups" });
                         }}
                     >
                         Go back
@@ -83,22 +83,17 @@ function DocumentList(): ReactNode {
                 query={uiState.searchQuery}
                 filters={{
                     vendors: uiState.vendorFilters,
-                    documentId: document.id
+                    groupId: group.id
                 }}
             />
         );
     } else {
-        content = (
-            <DocumentListContent
-                document={document}
-                insertables={insertables}
-            />
-        );
+        content = <GroupListContent group={group} insertables={insertables} />;
     }
 
     return (
         <>
-            <DocumentHeaderRow document={document} />
+            <GroupHeaderRow group={group} />
             <Box
                 style={{
                     borderBottom: BORDER,
@@ -112,21 +107,21 @@ function DocumentList(): ReactNode {
     );
 }
 
-function DocumentHeaderRow({ document }: { document: DocumentOut }): ReactNode {
+function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
     const navigate = useNavigate();
-    const menuItems = <DocumentMenuItems document={document} />;
+    const menuItems = <GroupMenuItems group={group} />;
 
     const header = (
         <Box
             className="interactive mantine-auto-focus"
-            onClick={() => void navigate({ to: "/app/documents" })}
+            onClick={() => void navigate({ to: "/app/groups" })}
             p="sm"
         >
             <Group wrap="nowrap" justify="space-between">
                 <Group gap="sm">
                     <IconArrowLeft size={IconSize.MEDIUM} />
                     <Text size="md" fw={FontWeight.SEMI_BOLD} truncate>
-                        {document.name}
+                        {group.name}
                     </Text>
                 </Group>
                 <MenuButton>{menuItems}</MenuButton>
@@ -142,31 +137,31 @@ function DocumentHeaderRow({ document }: { document: DocumentOut }): ReactNode {
     );
 }
 
-interface DocumentListCardsProps {
-    document: DocumentOut;
+interface GroupListCardsProps {
+    group: GroupOut;
     insertables: Insertables;
 }
 
-export function DocumentListContent(props: DocumentListCardsProps): ReactNode {
-    const { document, insertables } = props;
+export function GroupListContent(props: GroupListCardsProps): ReactNode {
+    const { group, insertables } = props;
 
     const loaderData = useLoaderData({ from: "/app" });
     const uiState = useUiState()[0];
 
-    const documentInsertables = document.insertableOrder
+    const groupInsertables = group.insertableOrder
         .map((insertableId) => insertables[insertableId])
         .filter((insertable) => !!insertable);
 
-    if (documentInsertables.length === 0) {
+    if (groupInsertables.length === 0) {
         return (
             <SectionError
-                title="This document has no visible elements"
+                title="This group has no visible elements"
                 description={null}
             />
         );
     }
 
-    const filterResult = filterInsertables(documentInsertables, {
+    const filterResult = filterInsertables(groupInsertables, {
         vendors: uiState.vendorFilters,
         isVisible: !hasEditorAccess(loaderData.accessData.currentAccessLevel)
     });

@@ -36,8 +36,8 @@ function RootComponent(): ReactNode {
     const { settings } = Route.useLoaderData();
     const search = useSearch({ strict: false });
 
-    const library = settings.library;
-    const theme = useMemo(() => createAppTheme(library), [library]);
+    const libraryId = settings.libraryId;
+    const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
     const colorTheme = getColorTheme(
         settings.theme,
         search.systemTheme ?? "light"

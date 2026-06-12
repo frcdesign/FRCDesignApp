@@ -5,7 +5,7 @@ import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
-import { type Library } from "../../shared/types";
+import { type LibraryId } from "../../shared/types";
 import { type Configuration } from "../../shared/configuration-models";
 
 export const favoriteRoutes = getApp();
@@ -13,13 +13,16 @@ export const favoriteRoutes = getApp();
 async function getFavorites(
     db: ReturnType<typeof getDb>,
     userId: string,
-    library: Library
+    libraryId: LibraryId
 ): Promise<FavoritesData> {
     const rows = await db
         .select()
         .from(favorites)
         .where(
-            and(eq(favorites.userId, userId), eq(favorites.libraryId, library))
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, libraryId)
+            )
         )
         .orderBy(asc(favorites.sortOrder))
         .all();
@@ -30,7 +33,7 @@ async function getFavorites(
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
-            library,
+            libraryId,
             defaultConfiguration: row.defaultConfiguration ?? undefined
         };
         favoritesOut[row.id] = fav;
@@ -39,18 +42,18 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
-/** GET /api/favorites/library/:library */
+/** GET /api/favorites/library/:libraryId */
 favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
-    return c.json(await getFavorites(db, userId, library));
+    return c.json(await getFavorites(db, userId, libraryId));
 });
 
-/** POST /api/favorites/library/:library */
+/** POST /api/favorites/library/:libraryId */
 favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
@@ -66,7 +69,10 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
         .select({ sortOrder: favorites.sortOrder })
         .from(favorites)
         .where(
-            and(eq(favorites.userId, userId), eq(favorites.libraryId, library))
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, libraryId)
+            )
         )
         .all();
 
@@ -75,7 +81,7 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
         .values({
             id,
             userId,
-            libraryId: library,
+            libraryId,
             insertableId,
             sortOrder: existingCount.length
         })
@@ -92,7 +98,7 @@ favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
     return c.json({ success: true });
 });
 
-/** POST /api/favorite-order/library/:library */
+/** POST /api/favorite-order/library/:libraryId */
 favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
     const body = await c.req.json<{ favoriteOrder: string[] }>();
 

@@ -12,7 +12,7 @@ import {
 } from "../onshape-api/endpoints/thumbnails";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
-import { documents, insertables } from "../../shared/schema";
+import { groups, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
@@ -213,26 +213,29 @@ reloadThumbnailRoutes.post(
     }
 );
 
-/** POST /api/reload-document-thumbnail/document/:documentId */
+/** POST /api/reload-group-thumbnail/group/:groupId */
 reloadThumbnailRoutes.post(
-    "/reload-document-thumbnail/document/:documentId",
+    "/reload-group-thumbnail/group/:groupId",
     async (c) => {
         const onshapeApi = await getOnshapeApi(c);
-        const documentId = c.req.param("documentId");
+        const groupId = c.req.param("groupId");
         const db = getDb(c.env.DB);
 
         const row = await db
-            .select({ instanceId: documents.instanceId })
-            .from(documents)
-            .where(eq(documents.id, documentId))
+            .select({
+                documentId: groups.documentId,
+                instanceId: groups.instanceId
+            })
+            .from(groups)
+            .where(eq(groups.id, groupId))
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Document not found" });
+            throw new HTTPException(404, { message: "Group not found" });
         }
 
         const instancePath: InstancePath = {
-            documentId,
+            documentId: row.documentId,
             instanceId: row.instanceId,
             instanceType: "v"
         };
@@ -244,9 +247,9 @@ reloadThumbnailRoutes.post(
         );
 
         await db
-            .update(documents)
+            .update(groups)
             .set({ thumbnailUrls: thumbnails })
-            .where(eq(documents.id, documentId));
+            .where(eq(groups.id, groupId));
 
         return c.json({ success: true });
     }

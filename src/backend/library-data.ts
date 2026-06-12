@@ -2,45 +2,45 @@ import { asc, eq } from "drizzle-orm";
 import { getDb } from "./db";
 import {
     libraries,
-    documents,
+    groups,
     insertables,
     configurations
 } from "../shared/schema";
-import { Library } from "../shared/types";
+import { LibraryId } from "../shared/types";
 import {
     InsertableOut,
     LibraryOut,
     Insertables,
-    Documents
+    Groups
 } from "../shared/api-models";
 import { buildSearchDb } from "../shared/search";
 
 /**
- * Assembles the full `LibraryOut` (documents + insertables, in sort order) for a
+ * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a
  * library from D1.
  */
 export async function getLibraryOut(
     db: ReturnType<typeof getDb>,
-    library: Library
+    libraryId: LibraryId
 ): Promise<LibraryOut> {
-    const allDocuments = await db
+    const allGroups = await db
         .select()
-        .from(documents)
-        .where(eq(documents.libraryId, library))
-        .orderBy(asc(documents.sortOrder))
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
-    if (allDocuments.length === 0) {
-        return { documentOrder: [], documents: {}, insertables: {} };
+    if (allGroups.length === 0) {
+        return { groupOrder: [], groups: {}, insertables: {} };
     }
 
-    const documentOrder = allDocuments.map((d) => d.id);
+    const groupOrder = allGroups.map((g) => g.id);
 
     const [allInsertables, allConfigurations] = await Promise.all([
         db
             .select()
             .from(insertables)
-            .where(eq(insertables.libraryId, library))
+            .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
         db.select({ id: configurations.id }).from(configurations).all()
@@ -48,25 +48,26 @@ export async function getLibraryOut(
 
     const configSet = new Set(allConfigurations.map((c) => c.id));
 
-    const documentsOut: Documents = {};
-    for (const doc of allDocuments) {
-        const docInsertables = allInsertables.filter(
-            (ins) => ins.documentId === doc.id
+    const groupsOut: Groups = {};
+    for (const group of allGroups) {
+        const groupInsertables = allInsertables.filter(
+            (ins) => ins.groupId === group.id
         );
-        if (doc.sortAlphabetically) {
-            docInsertables.sort((a, b) => a.name.localeCompare(b.name));
+        if (group.sortAlphabetically) {
+            groupInsertables.sort((a, b) => a.name.localeCompare(b.name));
         }
-        const insertableOrder = docInsertables.map((ins) => ins.id);
-        documentsOut[doc.id] = {
-            id: doc.id,
+        const insertableOrder = groupInsertables.map((ins) => ins.id);
+        groupsOut[group.id] = {
+            id: group.id,
+            documentId: group.documentId,
             path: {
-                documentId: doc.id,
-                instanceId: doc.instanceId,
+                documentId: group.documentId,
+                instanceId: group.instanceId,
                 instanceType: "v"
             },
-            name: doc.name,
-            sortAlphabetically: doc.sortAlphabetically,
-            thumbnailUrls: doc.thumbnailUrls!,
+            name: group.name,
+            sortAlphabetically: group.sortAlphabetically,
+            thumbnailUrls: group.thumbnailUrls!,
             insertableOrder
         };
     }
@@ -76,6 +77,7 @@ export async function getLibraryOut(
         insertablesOut[ins.id] = {
             id: ins.id,
             elementId: ins.elementId,
+            groupId: ins.groupId,
             documentId: ins.documentId,
             instanceId: ins.instanceId,
             path: {
@@ -99,25 +101,25 @@ export async function getLibraryOut(
     }
 
     return {
-        documentOrder,
-        documents: documentsOut,
+        groupOrder,
+        groups: groupsOut,
         insertables: insertablesOut
     };
 }
 
 /**
  * Rebuilds the serialized MiniSearch index for a library from its current
- * documents/insertables and stores it on the `libraries` row in D1.
+ * groups/insertables and stores it on the `libraries` row in D1.
  */
 export async function rebuildSearchDb(
     db: ReturnType<typeof getDb>,
-    library: Library
+    libraryId: LibraryId
 ): Promise<string> {
-    const libraryData = await getLibraryOut(db, library);
+    const libraryData = await getLibraryOut(db, libraryId);
     const searchDb = JSON.stringify(buildSearchDb(libraryData));
     await db
         .insert(libraries)
-        .values({ id: library, searchDb })
+        .values({ id: libraryId, searchDb })
         .onConflictDoUpdate({ target: libraries.id, set: { searchDb } });
     return searchDb;
 }

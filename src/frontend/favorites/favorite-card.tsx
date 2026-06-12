@@ -29,7 +29,7 @@ import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;
@@ -148,15 +148,15 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
 }
 
 function useSetFavoriteOrderMutation() {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
 
-    const queryKey = favoritesQueryKey(library);
+    const queryKey = favoritesQueryKey(libraryId);
 
     return useMutation({
         mutationKey: ["set-favorite-order"],
         mutationFn: async (favoriteOrder: string[]) => {
-            return apiPost("/favorite-order" + toLibraryPath(library), {
+            return apiPost("/favorite-order" + toLibraryPath(libraryId), {
                 body: { favoriteOrder }
             });
         },

@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { Library, Theme, type ContextData } from "../../shared/types";
+import { LibraryId, Theme, type ContextData } from "../../shared/types";
 import { showErrorToast } from "../common/toaster";
 import { apiPost } from "./api";
 import { queryClient } from "../query-client";
@@ -12,7 +12,7 @@ export function useSaveSettings() {
 
     const { mutate } = useMutation({
         mutationKey: ["user-data"],
-        mutationFn: (newSettings: { theme?: Theme; library?: Library }) =>
+        mutationFn: (newSettings: { theme?: Theme; libraryId?: LibraryId }) =>
             apiPost("/user-data", { body: newSettings }),
         onMutate: (newSettings) => {
             queryClient.setQueryData(

@@ -19,7 +19,7 @@ import {
     useLibraryQuery
 } from "../queries";
 import { getQueryUpdater } from "../common/utils";
-import { useLibrary } from "../api-utils/library";
+import { useLibraryId } from "../api-utils/library";
 import { PageError } from "../common/app-zero-state";
 
 interface OpenFavoriteMenuProps {
@@ -57,7 +57,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const { favoriteId, defaultConfiguration } = props;
 
     const router = useRouter();
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
 
@@ -73,7 +73,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
             });
         },
         onMutate: async () => {
-            const queryKey = favoritesQueryKey(library);
+            const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
             queryClient.setQueryData(
                 queryKey,
@@ -95,7 +95,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         },
         onSettled: async () => {
             await queryClient.invalidateQueries({
-                queryKey: favoritesQueryKey(library)
+                queryKey: favoritesQueryKey(libraryId)
             });
             void router.invalidate();
         }

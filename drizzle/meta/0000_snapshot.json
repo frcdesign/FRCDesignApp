@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "a4001f26-86c0-466d-a41c-5b1524e357c7",
+    "id": "0b4892ae-775f-4c38-8175-ec7f48cbc81c",
     "prevId": "00000000-0000-0000-0000-000000000000",
     "tables": {
         "configurations": {
@@ -32,77 +32,6 @@
                     "columnsFrom": ["id"],
                     "columnsTo": ["id"],
                     "onDelete": "cascade",
-                    "onUpdate": "no action"
-                }
-            },
-            "compositePrimaryKeys": {},
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
-        "documents": {
-            "name": "documents",
-            "columns": {
-                "id": {
-                    "name": "id",
-                    "type": "text",
-                    "primaryKey": true,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "library_id": {
-                    "name": "library_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "name": {
-                    "name": "name",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "instance_id": {
-                    "name": "instance_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "sort_alphabetically": {
-                    "name": "sort_alphabetically",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": false
-                },
-                "sort_order": {
-                    "name": "sort_order",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "thumbnail_urls": {
-                    "name": "thumbnail_urls",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {
-                "documents_library_id_libraries_id_fk": {
-                    "name": "documents_library_id_libraries_id_fk",
-                    "tableFrom": "documents",
-                    "tableTo": "libraries",
-                    "columnsFrom": ["library_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "no action",
                     "onUpdate": "no action"
                 }
             },
@@ -197,6 +126,90 @@
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
+        "groups": {
+            "name": "groups",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "document_id": {
+                    "name": "document_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "instance_id": {
+                    "name": "instance_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "sort_alphabetically": {
+                    "name": "sort_alphabetically",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
+                },
+                "sort_order": {
+                    "name": "sort_order",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "thumbnail_urls": {
+                    "name": "thumbnail_urls",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {
+                "groups_document_id_library_id_unique": {
+                    "name": "groups_document_id_library_id_unique",
+                    "columns": ["document_id", "library_id"],
+                    "isUnique": true
+                }
+            },
+            "foreignKeys": {
+                "groups_library_id_libraries_id_fk": {
+                    "name": "groups_library_id_libraries_id_fk",
+                    "tableFrom": "groups",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
         "insertables": {
             "name": "insertables",
             "columns": {
@@ -209,6 +222,13 @@
                 },
                 "element_id": {
                     "name": "element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "group_id": {
+                    "name": "group_id",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true,
@@ -326,18 +346,18 @@
                 }
             },
             "indexes": {
-                "insertables_element_id_document_id_unique": {
-                    "name": "insertables_element_id_document_id_unique",
-                    "columns": ["element_id", "document_id"],
+                "insertables_element_id_group_id_unique": {
+                    "name": "insertables_element_id_group_id_unique",
+                    "columns": ["element_id", "group_id"],
                     "isUnique": true
                 }
             },
             "foreignKeys": {
-                "insertables_document_id_documents_id_fk": {
-                    "name": "insertables_document_id_documents_id_fk",
+                "insertables_group_id_groups_id_fk": {
+                    "name": "insertables_group_id_groups_id_fk",
                     "tableFrom": "insertables",
-                    "tableTo": "documents",
-                    "columnsFrom": ["document_id"],
+                    "tableTo": "groups",
+                    "columnsFrom": ["group_id"],
                     "columnsTo": ["id"],
                     "onDelete": "cascade",
                     "onUpdate": "no action"
@@ -406,8 +426,8 @@
                     "autoincrement": false,
                     "default": "'system'"
                 },
-                "library": {
-                    "name": "library",
+                "library_id": {
+                    "name": "library_id",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true,

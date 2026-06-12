@@ -1,26 +1,30 @@
 import { useLoaderData } from "@tanstack/react-router";
-import { Library } from "../../shared/types";
+import { LibraryId } from "../../shared/types";
 
-export function useLibrary() {
-    return useLoaderData({ from: "/app" }).settings.library;
+export function useLibraryId() {
+    return useLoaderData({ from: "/app" }).settings.libraryId;
 }
 
-export function toLibraryPath(library: Library): string {
-    return `/library/${library}`;
+export function toLibraryPath(libraryId: LibraryId): string {
+    return `/library/${libraryId}`;
 }
 
 export function toInsertablePath(insertableId: string): string {
     return `/insertable/${insertableId}`;
 }
 
-export function getLibraryName(library: string): string {
-    switch (library) {
-        case Library.FRC_DESIGN_LIB:
+export function toGroupPath(groupId: string): string {
+    return `/group/${groupId}`;
+}
+
+export function getLibraryName(libraryId: string): string {
+    switch (libraryId) {
+        case LibraryId.FRC_DESIGN_LIB:
             return "FRCDesignLib";
-        case Library.FTC_DESIGN_LIB:
+        case LibraryId.FTC_DESIGN_LIB:
             return "FTCDesignLib";
-        case Library.MKCAD:
+        case LibraryId.MKCAD:
             return "MKCAD (Deprecated)";
     }
-    throw new Error("Unknown library: " + library);
+    throw new Error("Unknown library: " + libraryId);
 }

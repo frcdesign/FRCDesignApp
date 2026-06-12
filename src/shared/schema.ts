@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { ElementType, FastenInfo, Library, Theme, Vendor } from "./types";
+import { ElementType, FastenInfo, LibraryId, Theme, Vendor } from "./types";
 import { ThumbnailUrls } from "./types";
 import { Configuration, ParameterObj } from "./configuration-models";
 
@@ -10,21 +10,30 @@ export const libraries = sqliteTable("libraries", {
     searchDb: text("search_db")
 });
 
-export const documents = sqliteTable("documents", {
-    id: text("id").primaryKey(),
-    libraryId: text("library_id")
-        .notNull()
-        .references(() => libraries.id),
-    name: text("name").notNull(),
-    instanceId: text("instance_id").notNull(),
-    sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
-        .notNull()
-        .default(false),
-    sortOrder: integer("sort_order").notNull().default(0),
-    thumbnailUrls: text("thumbnail_urls", {
-        mode: "json"
-    }).$type<ThumbnailUrls>()
-});
+export const groups = sqliteTable(
+    "groups",
+    {
+        // Surrogate UUID primary key (the "groupId").
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        // The Onshape document this group was added from (was the old PK).
+        documentId: text("document_id").notNull(),
+        libraryId: text("library_id")
+            .notNull()
+            .references(() => libraries.id),
+        name: text("name").notNull(),
+        instanceId: text("instance_id").notNull(),
+        sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
+            .notNull()
+            .default(false),
+        sortOrder: integer("sort_order").notNull().default(0),
+        thumbnailUrls: text("thumbnail_urls", {
+            mode: "json"
+        }).$type<ThumbnailUrls>()
+    },
+    (t) => [unique().on(t.documentId, t.libraryId)]
+);
 
 export const insertables = sqliteTable(
     "insertables",
@@ -33,9 +42,12 @@ export const insertables = sqliteTable(
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
         elementId: text("element_id").notNull(),
-        documentId: text("document_id")
+        // The group this insertable belongs to (its primary parent).
+        groupId: text("group_id")
             .notNull()
-            .references(() => documents.id, { onDelete: "cascade" }),
+            .references(() => groups.id, { onDelete: "cascade" }),
+        // The Onshape document the element lives in (kept for Onshape API calls).
+        documentId: text("document_id").notNull(),
         libraryId: text("library_id")
             .notNull()
             .references(() => libraries.id),
@@ -66,7 +78,7 @@ export const insertables = sqliteTable(
             mode: "json"
         }).$type<FastenInfo | null>()
     },
-    (t) => [unique().on(t.elementId, t.documentId)]
+    (t) => [unique().on(t.elementId, t.groupId)]
 );
 
 export const configurations = sqliteTable("configurations", {
@@ -83,10 +95,10 @@ export const configurations = sqliteTable("configurations", {
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
     theme: text("theme").$type<Theme>().notNull().default(Theme.SYSTEM),
-    library: text("library")
-        .$type<Library>()
+    libraryId: text("library_id")
+        .$type<LibraryId>()
         .notNull()
-        .default(Library.FRC_DESIGN_LIB)
+        .default(LibraryId.FRC_DESIGN_LIB)
 });
 
 export const favorites = sqliteTable(

@@ -3,29 +3,29 @@ import { Accordion } from "@mantine/core";
 import { IconBook, IconSearch } from "@tabler/icons-react";
 import { BORDER, IconSize } from "../../../common/style-constants";
 import { ReactNode, useState } from "react";
-import { DocumentCard } from "../../../cards/document-card";
+import { GroupCard } from "../../../cards/group-card";
 import { ItemTable } from "../../../cards/card-components";
 import { HeartIcon } from "../../../favorites/favorite-button";
 import { SearchResults } from "../../../search/search-results";
 import { SectionError, SectionLoading } from "../../../common/app-zero-state";
 import { RequireAccessLevel } from "../../../api-utils/access-level";
-import { AddDocumentButton } from "../../../app/add-document-menu";
+import { AddGroupButton } from "../../../app/add-group-menu";
 import { FavoritesList } from "../../../favorites/favorites-list";
 import { useLibraryQuery } from "../../../queries";
-import { getLibraryName, useLibrary } from "../../../api-utils/library";
+import { getLibraryName, useLibraryId } from "../../../api-utils/library";
 import { updateUiState, useUiState } from "../../../api-utils/ui-state";
 
-export const Route = createFileRoute("/app/documents/")({
+export const Route = createFileRoute("/app/groups/")({
     component: HomeList,
     onEnter: () => {
-        updateUiState({ openDocumentId: undefined });
+        updateUiState({ openGroupId: undefined });
     }
 });
 
 function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
     const [isSearchOpen, setIsSearchOpen] = useState(true);
-    const library = useLibrary();
+    const libraryId = useLibraryId();
 
     const isSearch = !!uiState.searchQuery;
     const listKey = isSearch ? "search" : "library";
@@ -91,7 +91,7 @@ function HomeList(): ReactNode {
                         />
                     }
                 >
-                    {getLibraryName(library)}
+                    {getLibraryName(libraryId)}
                 </Accordion.Control>
                 <Accordion.Panel>
                     <LibraryList />
@@ -127,23 +127,23 @@ function LibraryList() {
     const libraryQuery = useLibraryQuery();
 
     if (libraryQuery.isPending) {
-        return <SectionLoading title="Loading documents..." />;
+        return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load documents." />;
+        return <SectionError title="Failed to load groups." />;
     }
 
-    const documents = libraryQuery.data.documents;
-    const documentOrder = libraryQuery.data.documentOrder;
+    const groups = libraryQuery.data.groups;
+    const groupOrder = libraryQuery.data.groupOrder;
 
-    if (documentOrder.length <= 0) {
-        // Add an escape hatch for when no documents are in the database
+    if (groupOrder.length <= 0) {
+        // Add an escape hatch for when no groups are in the database
         return (
             <SectionError
-                title="No documents found"
+                title="No groups found"
                 description={null}
                 action={
                     <RequireAccessLevel>
-                        <AddDocumentButton />
+                        <AddGroupButton />
                     </RequireAccessLevel>
                 }
             />
@@ -152,12 +152,12 @@ function LibraryList() {
 
     return (
         <ItemTable>
-            {documentOrder.map((documentId) => {
-                const document = documents[documentId];
-                if (!document) {
+            {groupOrder.map((groupId) => {
+                const group = groups[groupId];
+                if (!group) {
                     return null;
                 }
-                return <DocumentCard key={document.id} document={document} />;
+                return <GroupCard key={group.id} group={group} />;
             })}
         </ItemTable>
     );

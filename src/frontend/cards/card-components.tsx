@@ -273,7 +273,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
 
 interface ReloadThumbnailMenuItemProps {
     id: string;
-    isDocumentId: boolean;
+    isGroup: boolean;
 }
 
 export function ReloadThumbnailMenuItem(
@@ -281,7 +281,7 @@ export function ReloadThumbnailMenuItem(
 ): ReactNode {
     const reloadThumbnailMutation = useReloadThumbnailMutation(
         props.id,
-        props.isDocumentId
+        props.isGroup
     );
     return (
         <Menu.Item

@@ -123,7 +123,7 @@ export async function apiDelete(
 }
 
 async function handleResponse(response: Response) {
-    const json = (await response.json()) as any;
+    const json = await response.json();
     if (!response.ok) {
         if (json.type === "handled") {
             throw new HandledError(json.message, json.isError);

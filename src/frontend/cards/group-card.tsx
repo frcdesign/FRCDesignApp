@@ -10,7 +10,7 @@ import {
 import { IconSize } from "../common/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { DocumentOut, LibraryOut } from "../../shared/api-models";
+import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, apiDelete, useCacheOptions } from "../api-utils/api";
 import { showErrorToast } from "../common/toaster";
@@ -24,63 +24,63 @@ import {
     OpenDocumentItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
-import { AddDocumentItem } from "../app/add-document-menu";
+import { AddGroupItem } from "../app/add-group-menu";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
     useLibraryQuery
 } from "../queries";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
 import { getAppErrorHandler } from "../api-utils/errors";
 
-interface DocumentCardProps extends PropsWithChildren {
-    document: DocumentOut;
+interface GroupCardProps extends PropsWithChildren {
+    group: GroupOut;
 }
 
 /**
- * A card representing a single document.
+ * A card representing a single group.
  */
-export function DocumentCard(props: DocumentCardProps): ReactNode {
-    const { document } = props;
+export function GroupCard(props: GroupCardProps): ReactNode {
+    const { group } = props;
     const navigate = useNavigate();
 
     return (
         <ItemRow
             onClick={() => {
                 void navigate({
-                    to: "/app/documents/$documentId",
-                    params: { documentId: document.id }
+                    to: "/app/groups/$groupId",
+                    params: { groupId: group.id }
                 });
             }}
             left={
                 <CardTitle
-                    title={document.name}
-                    thumbnailUrls={document.thumbnailUrls}
+                    title={group.name}
+                    thumbnailUrls={group.thumbnailUrls}
                 />
             }
             rightSection={<IconArrowRight size={IconSize.SMALL} />}
             moreButton={false}
-            menu={<DocumentMenuItems document={document} />}
+            menu={<GroupMenuItems group={group} />}
         />
     );
 }
 
-interface DocumentMenuItemsProps {
-    document: DocumentOut;
+interface GroupMenuItemsProps {
+    group: GroupOut;
 }
 
-export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
-    const { document } = props;
+export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
+    const { group } = props;
 
     const isHome = useIsHome();
-    const library = useLibrary();
+    const libraryId = useLibraryId();
 
-    const deleteDocumentMutation = useMutation({
-        mutationKey: ["delete-document"],
+    const deleteGroupMutation = useMutation({
+        mutationKey: ["delete-group"],
         mutationFn: async () => {
-            return apiDelete("/document" + toLibraryPath(library), {
-                query: { documentId: document.id }
+            return apiDelete("/group" + toLibraryPath(libraryId), {
+                query: { groupId: group.id }
             });
         },
         onSuccess: () => {
@@ -90,52 +90,52 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
         }
     });
 
-    const setDocumentOrderMutation = useSetDocumentOrderMutation();
-    const documentOrder = useLibraryQuery().data?.documentOrder ?? [];
+    const setGroupOrderMutation = useSetGroupOrderMutation();
+    const groupOrder = useLibraryQuery().data?.groupOrder ?? [];
 
     const showAllMutation = useSetVisibilityMutation(
-        document.insertableOrder,
+        group.insertableOrder,
         true
     );
 
     const hideAllMutation = useSetVisibilityMutation(
-        document.insertableOrder,
+        group.insertableOrder,
         false
     );
 
     const orderItems = isHome && (
         <>
             <ChangeOrderItems
-                id={document.id}
-                order={documentOrder}
+                id={group.id}
+                order={groupOrder}
                 onOrderChange={(newOrder) =>
-                    setDocumentOrderMutation.mutate(newOrder)
+                    setGroupOrderMutation.mutate(newOrder)
                 }
             />
-            {/* Only show second divider when we have more than one document since otherwise there's no reorder items */}
-            {documentOrder.length > 1 && <Menu.Divider />}
+            {/* Only show second divider when we have more than one group since otherwise there's no reorder items */}
+            {groupOrder.length > 1 && <Menu.Divider />}
         </>
     );
 
-    const modifyDocumentItems = isHome && (
+    const modifyGroupItems = isHome && (
         <>
             <Menu.Divider />
             <Menu.Item
                 leftSection={<IconTrash size={IconSize.SMALL} />}
                 color="red"
                 onClick={() => {
-                    deleteDocumentMutation.mutate();
+                    deleteGroupMutation.mutate();
                 }}
             >
                 Delete
             </Menu.Item>
-            <AddDocumentItem />
+            <AddGroupItem />
         </>
     );
 
     return (
         <>
-            <OpenDocumentItems path={document.path} />
+            <OpenDocumentItems path={group.path} />
             <AdminOptionsSubmenu>
                 {orderItems}
                 <Menu.Item
@@ -156,76 +156,73 @@ export function DocumentMenuItems(props: DocumentMenuItemsProps): ReactNode {
                 >
                     Hide all elements
                 </Menu.Item>
-                <DocumentDataItems document={document} />
-                <ReloadThumbnailMenuItem id={document.id} isDocumentId={true} />
-                {modifyDocumentItems}
+                <GroupDataItems group={group} />
+                <ReloadThumbnailMenuItem id={group.id} isGroup={true} />
+                {modifyGroupItems}
             </AdminOptionsSubmenu>
         </>
     );
 }
 
-function useSetDocumentOrderMutation() {
-    const library = useLibrary();
+function useSetGroupOrderMutation() {
+    const libraryId = useLibraryId();
     const cacheOptions = useCacheOptions();
     return useMutation({
-        mutationKey: ["document-order"],
-        mutationFn: async (documentOrder: string[]) => {
-            return apiPost("/document-order" + toLibraryPath(library), {
-                body: { documentOrder }
+        mutationKey: ["group-order"],
+        mutationFn: async (groupOrder: string[]) => {
+            return apiPost("/group-order" + toLibraryPath(libraryId), {
+                body: { groupOrder }
             });
         },
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
-                libraryQueryKey(library, cacheOptions),
+                libraryQueryKey(libraryId, cacheOptions),
                 getQueryUpdater((data: LibraryOut) => {
-                    data.documentOrder = newOrder;
+                    data.groupOrder = newOrder;
                     return data;
                 })
             );
         },
         onError: () => {
-            showErrorToast("Unexpectedly failed to reorder document.");
+            showErrorToast("Unexpectedly failed to reorder group.");
             void queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
         }
-        // Don't need an onSettled handler since document-order doesn't expire
+        // Don't need an onSettled handler since group-order doesn't expire
     });
 }
 
-function useToggleSortOrderMutation(document: DocumentOut) {
-    const library = useLibrary();
+function useToggleSortOrderMutation(group: GroupOut) {
+    const libraryId = useLibraryId();
     const cacheOptions = useCacheOptions();
 
     return useMutation({
-        mutationKey: ["sort-document-alphabetically"],
+        mutationKey: ["sort-group-alphabetically"],
         mutationFn: async () => {
             return apiPost(
-                "/sort-document-alphabetically" + toLibraryPath(library),
+                "/sort-group-alphabetically" + toLibraryPath(libraryId),
                 {
                     body: {
-                        documentId: document.id,
-                        sortAlphabetically: !document.sortAlphabetically
+                        groupId: group.id,
+                        sortAlphabetically: !group.sortAlphabetically
                     }
                 }
             );
         },
         onMutate: () => {
             queryClient.setQueryData(
-                libraryQueryKey(library, cacheOptions),
+                libraryQueryKey(libraryId, cacheOptions),
                 getQueryUpdater((data: LibraryOut) => {
-                    const oldDocument = data.documents[document.id];
-                    if (oldDocument) {
-                        oldDocument.sortAlphabetically =
-                            !document.sortAlphabetically;
+                    const oldGroup = data.groups[group.id];
+                    if (oldGroup) {
+                        oldGroup.sortAlphabetically = !group.sortAlphabetically;
                     }
                     return data;
                 })
             );
         },
-        onError: getAppErrorHandler(
-            `Failed to update document ${document.name}.`
-        ),
+        onError: getAppErrorHandler(`Failed to update group ${group.name}.`),
         onSettled: () => {
             void queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
@@ -234,16 +231,16 @@ function useToggleSortOrderMutation(document: DocumentOut) {
     });
 }
 
-interface DocumentDataItemsProps {
-    document: DocumentOut;
+interface GroupDataItemsProps {
+    group: GroupOut;
 }
 
-function DocumentDataItems({ document }: DocumentDataItemsProps) {
-    const toggleSortOrderMutation = useToggleSortOrderMutation(document);
+function GroupDataItems({ group }: GroupDataItemsProps) {
+    const toggleSortOrderMutation = useToggleSortOrderMutation(group);
     return (
         <Menu.Item
             leftSection={
-                document.sortAlphabetically ? (
+                group.sortAlphabetically ? (
                     <IconList size={IconSize.SMALL} />
                 ) : (
                     <IconSortAZ size={IconSize.SMALL} />
@@ -253,9 +250,7 @@ function DocumentDataItems({ document }: DocumentDataItemsProps) {
                 toggleSortOrderMutation.mutate();
             }}
         >
-            {document.sortAlphabetically
-                ? "Use tab order"
-                : "Sort alphabetically"}
+            {group.sortAlphabetically ? "Use tab order" : "Sort alphabetically"}
         </Menu.Item>
     );
 }
