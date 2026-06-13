@@ -1,6 +1,7 @@
 import { IconHeartBroken } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
+import { useLoaderData } from "@tanstack/react-router";
 import { filterInsertables } from "../search/filter";
 import {
     getFavoriteForInsertable,
@@ -17,6 +18,7 @@ import {
     useSearchDbQuery
 } from "../queries";
 import { doSearch, FilterResult, SearchHit } from "../search/search";
+import { hasEditorAccess } from "../../shared/types";
 
 /**
  * A list of current favorite cards.
@@ -24,6 +26,7 @@ import { doSearch, FilterResult, SearchHit } from "../search/search";
  */
 export function FavoritesList(): ReactNode {
     const uiState = useUiState()[0];
+    const loaderData = useLoaderData({ from: "/app" });
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
@@ -82,7 +85,8 @@ export function FavoritesList(): ReactNode {
                 vendors: uiState.vendorFilters,
                 isFavorite: true
             },
-            favoriteInsertableIds
+            favoriteInsertableIds,
+            hasEditorAccess(loaderData.accessData.currentAccessLevel)
         );
 
         filteredInsertables = searchResults.hits

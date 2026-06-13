@@ -75,6 +75,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         parameters = (
             <ConfigurationWrapper
                 configurationId={insertable.configurationId}
+                microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
             />

@@ -56,7 +56,9 @@
         "**/dist": true,
         "**/package-lock.json": true,
         "worker-configuration.d.ts": true,
-        "**/license.tsx": true
+        "**/license.tsx": true,
+        "drizzle/**": true,
+        "public/**": true
     },
     "jest.runMode": "on-demand",
     "jest.outputConfig": {

@@ -1,10 +1,12 @@
 import { ReactNode } from "react";
+import { useLoaderData } from "@tanstack/react-router";
 import { Position, SearchFilters, SearchHit, doSearch } from "./search";
 import { InsertableCard } from "../cards/insertable-card";
 import { ItemTable } from "../cards/card-components";
 import { SectionError, SectionLoading } from "../common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery, useSearchDbQuery } from "../queries";
+import { hasEditorAccess } from "../../shared/types";
 
 interface SearchResultsProps {
     query: string;
@@ -19,6 +21,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
+    const loaderData = useLoaderData({ from: "/app" });
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading documents..." />;
@@ -30,7 +33,13 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         return <SectionError title="Failed to load library." />;
     }
     const insertables = libraryQuery.data.insertables;
-    const searchResults = doSearch(searchDbQuery.data, query, filters);
+    const searchResults = doSearch(
+        searchDbQuery.data,
+        query,
+        filters,
+        undefined,
+        hasEditorAccess(loaderData.accessData.currentAccessLevel)
+    );
 
     if (searchResults.hits.length === 0) {
         return (

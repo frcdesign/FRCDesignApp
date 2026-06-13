@@ -9,7 +9,7 @@ import {
     useState,
     useCallback
 } from "react";
-import { useCacheOptions, apiGet } from "../api-utils/api";
+import { apiGet } from "../api-utils/api";
 import {
     Configuration,
     ConfigurationResult,
@@ -36,24 +36,23 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/toaster";
 import { SectionError } from "../common/app-zero-state";
-import { useLibraryId } from "../api-utils/library";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
+    microversionId: string;
     configuration?: Configuration;
     setConfiguration: Dispatch<Configuration>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, configuration, setConfiguration } = props;
+    const { configurationId, microversionId, configuration, setConfiguration } =
+        props;
 
-    const libraryId = useLibraryId();
-    const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
-        queryKey: getConfigurationKey(libraryId, configurationId, cacheOptions),
+        queryKey: getConfigurationKey(configurationId, microversionId),
         queryFn: async () => {
             return apiGet("/configuration/" + configurationId, {
-                cacheOptions
+                cacheId: microversionId
             });
         },
         // Don't refetch query automatically so we don't reset user inputs

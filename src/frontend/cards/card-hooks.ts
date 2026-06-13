@@ -13,7 +13,7 @@ import {
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { libraryQueryMatchKey } from "../queries";
+import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
 
 export function useSetVisibilityMutation(
     insertableIds: string[],
@@ -38,8 +38,11 @@ export function useSetVisibilityMutation(
         onError: getAppErrorHandler(
             "Unexpectedly failed to modify visibility."
         ),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
+        onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
+            await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
             void router.invalidate();
@@ -99,6 +102,9 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
         onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });

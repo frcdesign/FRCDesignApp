@@ -5,6 +5,8 @@ import { getDb, type Db } from "../db";
 import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
+import { bumpLibraryVersion } from "../library-data";
+import { LibraryId } from "../../shared/types";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
@@ -34,11 +36,20 @@ insertableRoutes
         const body = await c.req.json<{ isOpenComposite: boolean }>();
 
         const db = getDb(c.env.DB);
+        const row = await db
+            .select({ libraryId: insertables.libraryId })
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+        if (!row)
+            throw new HTTPException(404, { message: "Insertable not found" });
+
         await db
             .update(insertables)
             .set({ isOpenComposite: body.isOpenComposite })
             .where(eq(insertables.id, insertableId));
 
+        await bumpLibraryVersion(db, row.libraryId as LibraryId);
         return c.json({ success: true });
     });
 
@@ -50,6 +61,14 @@ insertableRoutes
 
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{ supportsFasten: boolean }>();
+
+        const insertableRow = await db
+            .select({ libraryId: insertables.libraryId })
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+        if (!insertableRow)
+            throw new HTTPException(404, { message: "Insertable not found" });
 
         let fastenInfo = null;
         if (body.supportsFasten) {
@@ -84,6 +103,7 @@ insertableRoutes
             .set({ supportsFasten: body.supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
+        await bumpLibraryVersion(db, insertableRow.libraryId as LibraryId);
         return c.json({ success: true });
     });
 

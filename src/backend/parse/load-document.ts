@@ -41,7 +41,7 @@ import {
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
-import { rebuildSearchDb } from "../library-data";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 
 export interface LoadDocumentParams {
     documentId: string;
@@ -468,9 +468,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             ]);
         });
 
-        // Step 8: Rebuild the library's search index from its now-updated contents
+        // Step 8: Rebuild the library's search index and bump the cache version
         await step.do("rebuild-search-db", async () => {
-            await rebuildSearchDb(getDb(this.env.DB), libraryId as LibraryId);
+            const db = getDb(this.env.DB);
+            await rebuildSearchDb(db, libraryId as LibraryId);
+            await bumpLibraryVersion(db, libraryId as LibraryId);
         });
     }
 

@@ -128,6 +128,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 configuration={configuration}
                 setConfiguration={setConfiguration}
                 configurationId={insertable.configurationId}
+                microversionId={insertable.microversionId}
             />
             <Group justify="flex-end" mt="md">
                 <Button

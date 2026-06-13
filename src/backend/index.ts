@@ -19,9 +19,6 @@ app.route("/api", thumbnailRoutes);
 app.route("/api", groupRoutes);
 app.route("/api", insertableRoutes);
 app.route("/api", configurationRoutes);
-// Admin prefix bypasses Cloudflare CDN cache for editor/admin users
-app.route("/api/admin", libraryRoutes);
-app.route("/api/admin", configurationRoutes);
 app.route("/auth", authRoutes);
 
 // `/init` is the auth-gated entry point; the SPA forwards from there to the

@@ -42,7 +42,9 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
-/** GET /api/favorites/library/:libraryId */
+/**
+ * Gets the list of a user's favorites.
+ */
 favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
@@ -51,15 +53,17 @@ favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
     return c.json(await getFavorites(db, userId, libraryId));
 });
 
-/** POST /api/favorites/library/:libraryId */
+/**
+ * Creates a new favorite.
+ */
 favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
-    const id = c.req.query("id");
+    const favoriteId = c.req.query("id");
     if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-    if (!id) return c.json({ error: "id required" }, 400);
+    if (!favoriteId) return c.json({ error: "id required" }, 400);
 
     const db = getDb(c.env.DB);
 
@@ -79,7 +83,7 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     await db
         .insert(favorites)
         .values({
-            id,
+            id: favoriteId,
             userId,
             libraryId,
             insertableId,
@@ -90,11 +94,23 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** DELETE /api/favorites/:favoriteId */
+/**
+ * Deletes  a user's favorites.
+ */
 favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
+    if (!favoriteId) {
+        return c.json({ error: "favoriteId is required" }, 400);
+    }
+    const onshapeApi = await getOnshapeApi(c);
+    const userId = await getUserId(onshapeApi);
     const db = getDb(c.env.DB);
-    await db.delete(favorites).where(eq(favorites.id, favoriteId));
+
+    // security: Require the user to also match
+    await db
+        .delete(favorites)
+        .where(and(eq(favorites.id, favoriteId), eq(favorites.userId, userId)));
+
     return c.json({ success: true });
 });
 

@@ -1,30 +1,20 @@
-import { useLoaderData } from "@tanstack/react-router";
 import {
     createSearchParams,
     type URLSearchParamsInit,
     type QueryOptions,
     type PostOptions
 } from "../common/utils";
-import { hasEditorAccess } from "../../shared/types";
-import { AccessLevel } from "../../shared/types";
 import { HandledError } from "./errors";
 
 function getUrl(
     path: string,
     query?: URLSearchParamsInit,
-    cacheOptions?: CacheOptions
+    cacheId?: string | number
 ): string {
     const searchParams = createSearchParams(query);
-    if (cacheOptions) {
-        if (hasEditorAccess(cacheOptions.currentAccessLevel)) {
-            // Makes the path /api/admin/...
-            path = "/admin" + path;
-        } else {
-            // Append the v parameter to bust the cache when the cache version changes
-            searchParams.append("v", cacheOptions.cacheVersion.toString());
-        }
+    if (cacheId !== undefined) {
+        searchParams.append("v", cacheId.toString());
     }
-
     return "/api" + path + `?${searchParams}`;
 }
 
@@ -43,28 +33,8 @@ export async function apiPost(
     }).then(handleResponse);
 }
 
-export interface CacheOptions {
-    currentAccessLevel: AccessLevel;
-    cacheVersion: number;
-}
-
-export function toCacheOptions(cacheOptions: CacheOptions): CacheOptions {
-    return {
-        currentAccessLevel: cacheOptions.currentAccessLevel,
-        cacheVersion: cacheOptions.cacheVersion
-    };
-}
-
-export function useCacheOptions(): CacheOptions {
-    const loaderData = useLoaderData({ from: "/app" });
-    return {
-        currentAccessLevel: loaderData.accessData.currentAccessLevel,
-        cacheVersion: loaderData.accessData.cacheVersion
-    };
-}
-
-interface QueryOptionsWithCache extends QueryOptions {
-    cacheOptions?: CacheOptions;
+interface QueryOptionsWithCacheId extends QueryOptions {
+    cacheId?: string | number;
 }
 
 /**
@@ -72,9 +42,9 @@ interface QueryOptionsWithCache extends QueryOptions {
  */
 export async function apiGet(
     path: string,
-    options?: QueryOptionsWithCache
+    options?: QueryOptionsWithCacheId
 ): Promise<any> {
-    return fetch(getUrl(path, options?.query, options?.cacheOptions), {
+    return fetch(getUrl(path, options?.query, options?.cacheId), {
         signal: options?.signal
     }).then(handleResponse);
 }
@@ -94,9 +64,9 @@ export async function apiGetRawImage(
  */
 export async function apiGetImage(
     path: string,
-    options?: QueryOptionsWithCache
+    options?: QueryOptionsWithCacheId
 ): Promise<string> {
-    return fetch(getUrl(path, options?.query, options?.cacheOptions), {
+    return fetch(getUrl(path, options?.query, options?.cacheId), {
         signal: options?.signal
     }).then(handleImageResponse);
 }

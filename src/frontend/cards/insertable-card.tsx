@@ -34,6 +34,7 @@ import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import {
+    contextDataQueryKey,
     libraryQueryKey,
     libraryQueryMatchKey,
     useFavoritesQuery
@@ -172,7 +173,7 @@ export function InsertableAdminContextMenu(
                 queryKey: libraryQueryMatchKey()
             });
             queryClient.setQueryData(
-                libraryQueryKey(libraryId, loaderData.accessData),
+                libraryQueryKey(libraryId, loaderData.accessData.cacheVersion),
                 getQueryUpdater((data: LibraryOut) => {
                     const current = data.insertables[insertable.id];
                     if (current) {
@@ -183,6 +184,9 @@ export function InsertableAdminContextMenu(
             );
         },
         onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
@@ -204,10 +208,14 @@ export function InsertableAdminContextMenu(
             }
         },
         onError: getAppErrorHandler("Failed to enable Insert and fasten."),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
+        onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
+            await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
+            void router.invalidate();
         }
     });
 

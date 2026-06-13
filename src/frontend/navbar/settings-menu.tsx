@@ -1,6 +1,6 @@
 import { Button, Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconCloudUpload, IconRefresh, IconX } from "@tabler/icons-react";
+import { IconRefresh, IconX } from "@tabler/icons-react";
 import { FontWeight, IconSize } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
@@ -18,11 +18,7 @@ import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import {
-    contextDataQueryKey,
-    libraryQueryMatchKey,
-    searchDbQueryMatchKey
-} from "../queries";
+import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
 import { AppSelect } from "../common/app-select";
 import { makeSelectOption, useSelectOptions } from "../common/select-utils";
 
@@ -131,53 +127,8 @@ function AdminSettings(): ReactNode {
             <RequireAccessLevel>
                 <ReloadGroupsButton />
                 <ReloadGroupsButton reloadAll />
-                <PushVersionButton />
             </RequireAccessLevel>
         </>
-    );
-}
-
-/**
- * Pushes a new version of the app which invalidates all existing CDN caches.
- */
-function PushVersionButton(): ReactNode {
-    const libraryId = useLibraryId();
-    const router = useRouter();
-
-    const pushVersionMutation = useMutation({
-        mutationKey: ["library-version", libraryId],
-        // The backend rebuilds the search index itself, so this just bumps the
-        // cache version (invalidating CDN caches).
-        mutationFn: async () => {
-            return apiPost("/library-version" + toLibraryPath(libraryId));
-        },
-        onError: getAppErrorHandler("Unexpectedly failed to push new version."),
-        onSuccess: () => {
-            showSuccessToast("Successfully updated the FRCDesignApp version.");
-        },
-        onSettled: async () => {
-            await Promise.all([
-                queryClient.invalidateQueries({
-                    queryKey: searchDbQueryMatchKey()
-                }),
-                queryClient.refetchQueries({ queryKey: contextDataQueryKey() })
-            ]);
-            void router.invalidate();
-        }
-    });
-
-    return (
-        <SettingRow label="Push new app version">
-            <Button
-                variant="default"
-                leftSection={<IconCloudUpload size={IconSize.SMALL} />}
-                onClick={() => {
-                    pushVersionMutation.mutate();
-                }}
-            >
-                Push version
-            </Button>
-        </SettingRow>
     );
 }
 
@@ -249,6 +200,9 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             }
         },
         onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });

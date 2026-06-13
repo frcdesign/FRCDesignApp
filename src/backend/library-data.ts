@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import {
     libraries,
@@ -105,6 +105,19 @@ export async function getLibraryOut(
         groups: groupsOut,
         insertables: insertablesOut
     };
+}
+
+export async function bumpLibraryVersion(
+    db: ReturnType<typeof getDb>,
+    libraryId: LibraryId
+): Promise<void> {
+    await db
+        .insert(libraries)
+        .values({ id: libraryId, cacheVersion: 1 })
+        .onConflictDoUpdate({
+            target: libraries.id,
+            set: { cacheVersion: sql`cache_version + 1` }
+        });
 }
 
 /**

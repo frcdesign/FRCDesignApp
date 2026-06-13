@@ -4,6 +4,8 @@ import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
+import { bumpLibraryVersion } from "../library-data";
+import { LibraryId } from "../../shared/types";
 import {
     getElementThumbnail,
     getThumbnailFromId,
@@ -188,7 +190,10 @@ reloadThumbnailRoutes.post(
         const elementPath = await getInsertableElementPath(db, insertableId);
 
         const row = await db
-            .select({ microversionId: insertables.microversionId })
+            .select({
+                microversionId: insertables.microversionId,
+                libraryId: insertables.libraryId
+            })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
@@ -209,6 +214,7 @@ reloadThumbnailRoutes.post(
             .set({ thumbnailUrls: thumbnails })
             .where(eq(insertables.id, insertableId));
 
+        await bumpLibraryVersion(db, row.libraryId as LibraryId);
         return c.json({ success: true });
     }
 );
@@ -224,7 +230,8 @@ reloadThumbnailRoutes.post(
         const row = await db
             .select({
                 documentId: groups.documentId,
-                instanceId: groups.instanceId
+                instanceId: groups.instanceId,
+                libraryId: groups.libraryId
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -251,6 +258,7 @@ reloadThumbnailRoutes.post(
             .set({ thumbnailUrls: thumbnails })
             .where(eq(groups.id, groupId));
 
+        await bumpLibraryVersion(db, row.libraryId as LibraryId);
         return c.json({ success: true });
     }
 );

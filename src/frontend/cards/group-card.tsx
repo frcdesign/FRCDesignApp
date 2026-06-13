@@ -8,11 +8,11 @@ import {
     IconTrash
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useNavigate } from "@tanstack/react-router";
+import { useLoaderData, useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
-import { apiPost, apiDelete, useCacheOptions } from "../api-utils/api";
+import { apiPost, apiDelete } from "../api-utils/api";
 import { showErrorToast } from "../common/toaster";
 import { queryClient } from "../query-client";
 import { ChangeOrderItems } from "./change-order";
@@ -166,7 +166,8 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
 
 function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
-    const cacheOptions = useCacheOptions();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
     return useMutation({
         mutationKey: ["group-order"],
         mutationFn: async (groupOrder: string[]) => {
@@ -176,7 +177,7 @@ function useSetGroupOrderMutation() {
         },
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
-                libraryQueryKey(libraryId, cacheOptions),
+                libraryQueryKey(libraryId, cacheVersion),
                 getQueryUpdater((data: LibraryOut) => {
                     data.groupOrder = newOrder;
                     return data;
@@ -195,7 +196,8 @@ function useSetGroupOrderMutation() {
 
 function useToggleSortOrderMutation(group: GroupOut) {
     const libraryId = useLibraryId();
-    const cacheOptions = useCacheOptions();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
 
     return useMutation({
         mutationKey: ["sort-group-alphabetically"],
@@ -212,7 +214,7 @@ function useToggleSortOrderMutation(group: GroupOut) {
         },
         onMutate: () => {
             queryClient.setQueryData(
-                libraryQueryKey(libraryId, cacheOptions),
+                libraryQueryKey(libraryId, cacheVersion),
                 getQueryUpdater((data: LibraryOut) => {
                     const oldGroup = data.groups[group.id];
                     if (oldGroup) {

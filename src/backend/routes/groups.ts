@@ -8,6 +8,7 @@ import { requireEditorAccess } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { libraries, groups, insertables, favorites } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 
 export const groupRoutes = getApp();
 
@@ -77,6 +78,7 @@ groupRoutes.post("/set-element-visibility" + libraryRoute(), async (c) => {
             )
         );
 
+    await bumpLibraryVersion(db, libraryId);
     return c.json({ success: true });
 });
 
@@ -97,6 +99,7 @@ groupRoutes.post("/sort-group-alphabetically" + libraryRoute(), async (c) => {
             and(eq(groups.id, body.groupId), eq(groups.libraryId, libraryId))
         );
 
+    await bumpLibraryVersion(db, libraryId);
     return c.json({ success: true });
 });
 
@@ -116,6 +119,7 @@ groupRoutes.post("/group-order" + libraryRoute(), async (c) => {
         )
     );
 
+    await bumpLibraryVersion(db, libraryId);
     return c.json({ success: true });
 });
 
@@ -211,5 +215,7 @@ groupRoutes.delete("/group" + libraryRoute(), async (c) => {
         .delete(groups)
         .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)));
 
+    await bumpLibraryVersion(db, libraryId);
+    await rebuildSearchDb(db, libraryId);
     return c.json({ success: true });
 });

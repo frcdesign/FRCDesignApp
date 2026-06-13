@@ -40,8 +40,12 @@ export const Route = createFileRoute("/app")({
         const accessData = context.accessData;
         const libraryId = context.settings.libraryId;
         await Promise.all([
-            queryClient.prefetchQuery(getLibraryQuery(libraryId, accessData)),
-            queryClient.prefetchQuery(getSearchDbQuery(libraryId, accessData)),
+            queryClient.prefetchQuery(
+                getLibraryQuery(libraryId, accessData.cacheVersion)
+            ),
+            queryClient.prefetchQuery(
+                getSearchDbQuery(libraryId, accessData.cacheVersion)
+            ),
             queryClient.prefetchQuery(getFavoritesQuery(libraryId))
         ]);
         return context;

@@ -1,12 +1,11 @@
-import MiniSearch, { Options } from "minisearch";
-import { LibraryOut } from "./api-models";
-import { Vendor } from "./types";
-
 /**
  * Shared search-index definitions used by both the backend (which builds the
  * index when a document is loaded) and the frontend (which deserializes it with
  * the same options to run queries).
  */
+import MiniSearch, { Options } from "minisearch";
+import { LibraryOut } from "./api-models";
+import { Vendor } from "./types";
 
 const deliminator = "^";
 
@@ -19,7 +18,7 @@ export function processTerm(term: string): string[] {
         .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
         .split(deliminator);
 
-    // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
+    // Insert spaces to handle MAXTube->MAX Tube, VEXpro->VEX pro
     const pascalSplit = term
         .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
         .split(deliminator);
@@ -77,7 +76,7 @@ export function buildSearchDb(
                 isVisible: element.isVisible,
                 vendors: element.vendors,
                 name: element.name,
-                groupName: parentGroup?.name ?? ""
+                groupName: parentGroup.name
             };
         });
 

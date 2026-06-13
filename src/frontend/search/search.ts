@@ -61,7 +61,8 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters,
-    favoritedInsertableIds?: Set<string>
+    favoritedInsertableIds?: Set<string>,
+    showHidden?: boolean
 ): SearchResult {
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
@@ -71,7 +72,7 @@ export function doSearch(
 
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
         filter: (searchResult) => {
-            if (!searchResult.isVisible) {
+            if (!showHidden && !searchResult.isVisible) {
                 return false;
             }
 
