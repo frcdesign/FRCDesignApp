@@ -132,8 +132,3 @@ To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare
 Occasionally, a process will fail to fully shut down, causing problems when you next attempt to `Launch servers` since the port is already taken.
 If a process fails to start because a port is already taken, you can kill the process squatting on the port by running `lsof -i :<port number>`, e.g., `lsof -i :8080`, to get the PID of the process.
 You can then kill the process using `kill <PID>` (or, possibly, `kill -9 <PID>`).
-
-# Deploying To Production
-
-To allow the App to connect to Firestore, the default compute service account must be given the Cloud Datastore User role in IAM.
-You will need to add relevant environment variables in the google cloud console after you deploy. This includes the Onshape OAuth client and secret as well as the admin team.
