@@ -25,7 +25,7 @@ export enum FontWeight {
 /**
  * Creates a Mantine-style border.
  */
-export const BORDER = "1px solid";
+export const BORDER = "1px solid var(--mantine-color-default-border)";
 
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
