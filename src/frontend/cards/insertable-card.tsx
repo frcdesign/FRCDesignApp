@@ -30,7 +30,7 @@ import {
     QuickInsertItems,
     ReloadThumbnailMenuItem
 } from "./card-components";
-import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
+import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import {
@@ -42,7 +42,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { showSuccessToast } from "../common/toaster";
+import { showSuccessToast } from "../common/notifications";
 import { toInsertablePath, useLibraryId } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
@@ -99,7 +99,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             rightSection={
                 <FavoriteButton favorite={favorite} insertable={insertable} />
             }
-            menu={
+            menuItems={
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
@@ -145,7 +145,7 @@ interface InsertableAdminContextMenuProps {
 
 export function InsertableAdminContextMenu(
     props: InsertableAdminContextMenuProps
-) {
+): ReactNode {
     const { insertable } = props;
 
     const libraryId = useLibraryId();

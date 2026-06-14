@@ -3,7 +3,9 @@ import {
     QuantityType,
     Unit,
     VisibilityConditionType,
-    LogicalOp
+    LogicalOp,
+    VisibilityCondition,
+    ParameterObj
 } from "../../../shared/configuration-models";
 import { evaluateCondition } from "../../../shared/configuration-utils";
 import { parseOnshapeConfiguration } from "../parse-configuration";
@@ -29,6 +31,7 @@ describe("parseOnshapeConfiguration", () => {
             ]
         };
         const result = parseOnshapeConfiguration(raw);
+
         expect(result.parameters).toHaveLength(1);
         const param = result.parameters[0];
         expect(param.type).toBe(ConfigurationParameterType.ENUM);
@@ -136,18 +139,25 @@ describe("parseOnshapeConfiguration", () => {
 });
 
 describe("evaluateCondition", () => {
-    const makeEnumParam = (id: string, options: string[]) => ({
-        type: ConfigurationParameterType.ENUM as const,
+    const makeEnumParam = (id: string, options: string[]): ParameterObj => ({
+        type: ConfigurationParameterType.ENUM,
         id,
         name: id,
         default: options[0],
         condition: undefined,
         optionConditions: [],
-        options: options.map((o) => ({ id: o, name: o }))
+        options: options.map((option) => ({ id: option, name: option }))
     });
 
     it("returns true when condition is undefined", () => {
         expect(evaluateCondition(undefined, {}, [])).toBe(true);
+    });
+
+    it("ALWAYS_SHOWN: returns true", () => {
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.ALWAYS_SHOWN
+        };
+        expect(evaluateCondition(condition, {}, [])).toBe(true);
     });
 
     it("EQUAL: returns true when value matches", () => {
@@ -170,8 +180,8 @@ describe("evaluateCondition", () => {
 
     it("RANGE: returns true when value is in range", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition = {
-            type: VisibilityConditionType.RANGE as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -183,8 +193,8 @@ describe("evaluateCondition", () => {
 
     it("RANGE: returns false when value is below start", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition = {
-            type: VisibilityConditionType.RANGE as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -196,8 +206,8 @@ describe("evaluateCondition", () => {
 
     it("RANGE: returns false when value is above end", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition = {
-            type: VisibilityConditionType.RANGE as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -208,17 +218,17 @@ describe("evaluateCondition", () => {
     });
 
     it("LOGICAL AND: true when all children match", () => {
-        const condition = {
-            type: VisibilityConditionType.LOGICAL as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.LOGICAL,
             operation: LogicalOp.AND,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -228,17 +238,17 @@ describe("evaluateCondition", () => {
     });
 
     it("LOGICAL AND: false when one child does not match", () => {
-        const condition = {
-            type: VisibilityConditionType.LOGICAL as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.LOGICAL,
             operation: LogicalOp.AND,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -250,17 +260,17 @@ describe("evaluateCondition", () => {
     });
 
     it("LOGICAL OR: true when one child matches", () => {
-        const condition = {
-            type: VisibilityConditionType.LOGICAL as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.LOGICAL,
             operation: LogicalOp.OR,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -270,17 +280,17 @@ describe("evaluateCondition", () => {
     });
 
     it("LOGICAL OR: false when no children match", () => {
-        const condition = {
-            type: VisibilityConditionType.LOGICAL as const,
+        const condition: VisibilityCondition = {
+            type: VisibilityConditionType.LOGICAL,
             operation: LogicalOp.OR,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL as const,
+                    type: VisibilityConditionType.EQUAL,
                     id: "b",
                     value: "2"
                 }

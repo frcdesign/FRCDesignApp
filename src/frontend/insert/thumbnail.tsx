@@ -9,7 +9,7 @@ import { ComponentPropsWithRef, ReactNode } from "react";
 import { Configuration } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
-import { SectionError } from "../common/app-zero-state";
+import { SectionError } from "../app-common/app-zero-state";
 
 interface HeightAndWidth {
     height: number;
@@ -172,8 +172,16 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 15 seconds with exponential backoff
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
-        retry: 15,
+        retryDelay: (attempt) => {
+            // Try again after 3 seconds, 5 seconds, and then 15 seconds
+            if (attempt === 1) {
+                return 3000;
+            } else if (attempt === 2) {
+                return 5000;
+            }
+            return 15000;
+        },
+        retry: 5,
         enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 

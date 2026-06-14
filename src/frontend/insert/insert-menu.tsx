@@ -12,8 +12,11 @@ import { modals } from "@mantine/modals";
 import { useIsFetching } from "@tanstack/react-query";
 import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
-import { NotificationAction, renderNotification } from "../common/toaster";
-import { ConfigurationWrapper } from "../app/configurations";
+import {
+    NotificationAction,
+    renderNotification
+} from "../common/notifications";
+import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";

@@ -13,18 +13,18 @@ import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, apiDelete } from "../api-utils/api";
-import { showErrorToast } from "../common/toaster";
+import { showErrorToast } from "../common/notifications";
 import { queryClient } from "../query-client";
-import { ChangeOrderItems } from "./change-order";
-import { useSetVisibilityMutation } from "./card-hooks";
+import { ChangeOrderItems } from "../common/change-order";
+import { useSetVisibilityMutation } from "../cards/card-hooks";
 import {
     AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
     OpenDocumentItems,
     ReloadThumbnailMenuItem
-} from "./card-components";
-import { AddGroupItem } from "../app/add-group-menu";
+} from "../cards/card-components";
+import { AddGroupItem } from "./add-group-menu";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -61,7 +61,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
             }
             rightSection={<IconArrowRight size={IconSize.SMALL} />}
             moreButton={false}
-            menu={<GroupMenuItems group={group} />}
+            menuItems={<GroupMenuItems group={group} />}
         />
     );
 }

@@ -6,7 +6,7 @@ import { InsertableOut } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { showErrorToast, showSuccessToast } from "../common/toaster";
+import { showErrorToast, showSuccessToast } from "../common/notifications";
 import {
     toInsertablePath,
     toLibraryPath,

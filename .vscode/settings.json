@@ -42,7 +42,7 @@
         "updateversions",
         "vite"
     ],
-    "cSpell.flagWords": ["coincentric", "expresion"],
+    "cSpell.flagWords": ["coincentric", "expresion", "accordian", "favorties"],
     "npm.packageManager": "npm",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[jsonc]": {

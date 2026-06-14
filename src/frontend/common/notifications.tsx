@@ -26,7 +26,7 @@ export function renderNotification(
     return (
         <Group justify="space-between" wrap="nowrap" gap="sm">
             <span>{message}</span>
-            <Button size="compact-sm" variant="subtle">
+            <Button size="compact-sm" variant="subtle" onClick={action.onClick}>
                 {action.text}
             </Button>
         </Group>

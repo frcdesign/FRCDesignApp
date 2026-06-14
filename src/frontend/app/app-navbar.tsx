@@ -1,24 +1,21 @@
 import { ActionIcon, Button, Group, Menu, TextInput } from "@mantine/core";
 import {
     IconChevronDown,
-    IconCircleX,
     IconSearch,
-    IconSettings
+    IconSettings,
+    IconX
 } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { IconSize, PRIMARY_COLOR } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import frcDesignBook from "/frc-design-book.svg";
-import { openSettingsMenu } from "./settings-menu";
-import { VendorMenu } from "./vendor-filters";
+import { openSettingsMenu } from "../settings/settings-menu";
+import { VendorMenu } from "../settings/vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
-import { useSaveSettings } from "../api-utils/settings";
+import { useSaveSettings } from "../settings/settings";
 import { LibraryId } from "../../shared/types";
-
-/** Foreground color for controls on the colored header. */
-const ON_PRIMARY = "var(--mantine-primary-color-contrast)";
 
 /**
  * Provides top-level navigation for the app. A single colored control row holds
@@ -89,7 +86,7 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color={ON_PRIMARY}
+            color={PRIMARY_COLOR}
             title="Settings"
             onClick={() => openSettingsMenu()}
         >
@@ -114,7 +111,6 @@ export function SearchBar() {
     const clearButton = uiState.searchQuery ? (
         <ActionIcon
             variant="subtle"
-            color="gray"
             size="sm"
             onClick={() => {
                 if (ref.current) {
@@ -123,7 +119,7 @@ export function SearchBar() {
                 setUiState({ searchQuery: undefined });
             }}
         >
-            <IconCircleX size={IconSize.SMALL} />
+            <IconX size={IconSize.SMALL} />
         </ActionIcon>
     ) : undefined;
 

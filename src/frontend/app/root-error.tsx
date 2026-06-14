@@ -1,17 +1,14 @@
-import { ReloadGroupsButton } from "../navbar/settings-menu";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { PageError } from "../common/app-zero-state";
+import { PageError } from "../app-common/app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
+import { ReloadGroupsButton } from "../settings/reload-groups-button";
 
 /**
- * Catch-all error state for when a route below the root fails to load. Rendered by
- * the `/app` and `/init` route `errorComponent`s, which render inside the root
- * Outlet — so the app-wide MantineProvider is available and no wrapper is needed.
- * Includes an escape hatch for admins to reload documents.
+ * Catch-all error state for when a route below the root fails to load.
  */
 export function RootAppError(): ReactNode {
     return (
@@ -19,7 +16,7 @@ export function RootAppError(): ReactNode {
             title="The app has crashed due to an unexpected error."
             action={
                 <RequireAccessLevel useMaxAccessLevel>
-                    <ReloadGroupsButton reloadAll hideFormGroup />
+                    <ReloadGroupsButton reloadAll />
                 </RequireAccessLevel>
             }
         />
@@ -27,9 +24,7 @@ export function RootAppError(): ReactNode {
 }
 
 /**
- * Last-resort fallback for the ROOT route's errorComponent. It replaces the root
- * component (which mounts the providers), so it renders only if the providers
- * themselves are unavailable — it must not use Mantine.
+ * Last-resort fallback for the ROOT route's errorComponent.
  */
 export function RootCrash(): ReactNode {
     return (
@@ -44,8 +39,8 @@ export function RootCrash(): ReactNode {
                 font: "16px system-ui, sans-serif"
             }}
         >
-            The app has crashed due to an unexpected error. Please reload the
-            page. If the problem persists, contact the FRCDesignApp developers.
+            The app has crashed due to an unexpected error. If the problem
+            persists, contact the FRCDesignApp developers.
         </div>
     );
 }

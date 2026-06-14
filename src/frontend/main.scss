@@ -1,9 +1,6 @@
-// Declare layer order so our unlayered custom styles win the cascade over
-// Mantine's layered styles. (Currently we have almost none — prefer Mantine
-// theme tokens, component props, and CSS modules over global rules here.)
 @layer mantine;
 
-// Disable drag text highlighting across the app.
+// Disable click-and-drag text highlighting across the app
 * {
     user-select: none;
     -moz-user-select: none;
@@ -11,9 +8,7 @@
     -webkit-user-select: none;
 }
 
-/* 
-Compose with Mantine's global `mantine-focus-auto` (focus). 
-*/
+// Compose with Mantine's global `mantine-focus-auto` (focus).
 .interactive {
     cursor: pointer;
 }

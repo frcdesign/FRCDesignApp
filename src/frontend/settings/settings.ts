@@ -1,8 +1,8 @@
 import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { LibraryId, Theme, type ContextData } from "../../shared/types";
-import { showErrorToast } from "../common/toaster";
-import { apiPost } from "./api";
+import { showErrorToast } from "../common/notifications";
+import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { contextDataQueryKey } from "../queries";
 import { getQueryUpdater } from "../common/utils";

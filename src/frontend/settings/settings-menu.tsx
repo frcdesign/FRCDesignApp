@@ -1,26 +1,21 @@
-import { Button, Divider, Group, Text, Title } from "@mantine/core";
+import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconRefresh, IconX } from "@tabler/icons-react";
-import { FontWeight, IconSize } from "../common/style-constants";
+import { FontWeight } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { showSuccessToast } from "../common/toaster";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api-utils/api";
-import { queryClient } from "../query-client";
 import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
-import { useSaveSettings } from "../api-utils/settings";
+import { useSaveSettings } from "./settings";
 import { capitalize, getQueryUpdater } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { getAppErrorHandler } from "../api-utils/errors";
-import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
-import { AppSelect } from "../common/app-select";
-import { makeSelectOption, useSelectOptions } from "../common/select-utils";
+import { contextDataQueryKey } from "../queries";
+import { AppSelect } from "../app-common/app-select";
+import { makeSelectOption, useSelectOptions } from "./select-utils";
+import { queryClient } from "../query-client";
+import { ReloadGroupsButton } from "./reload-groups-button";
 
 export function openSettingsMenu() {
     modals.open({
@@ -65,15 +60,6 @@ function SettingsMenuContent(): ReactNode {
         <>
             <UserSettings />
             {adminSettings}
-            <Group justify="flex-end" mt="md">
-                <Button
-                    variant="default"
-                    leftSection={<IconX size={IconSize.SMALL} />}
-                    onClick={() => modals.closeAll()}
-                >
-                    Close
-                </Button>
-            </Group>
         </>
     );
 }
@@ -125,8 +111,12 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <ReloadGroupsButton />
-                <ReloadGroupsButton reloadAll />
+                <SettingRow label="Reload outdated documents">
+                    <ReloadGroupsButton />
+                </SettingRow>
+                <SettingRow label="Reload all documents">
+                    <ReloadGroupsButton reloadAll />
+                </SettingRow>
             </RequireAccessLevel>
         </>
     );
@@ -167,82 +157,4 @@ function AccessLevelSelect(): ReactNode {
             }}
         />
     );
-}
-
-interface ReloadGroupsButtonProps {
-    reloadAll?: boolean;
-    hideFormGroup?: boolean;
-}
-
-export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
-    const reloadAll = props.reloadAll ?? false;
-    const hideFormGroup = props.hideFormGroup ?? false;
-
-    const libraryId = useLibraryId();
-    const router = useRouter();
-
-    const mutation = useMutation({
-        mutationKey: ["reload-groups"],
-        mutationFn: async () => {
-            return apiPost("/reload-groups" + toLibraryPath(libraryId), {
-                query: { reloadAll }
-            });
-        },
-        onError: getAppErrorHandler("Failed to reload groups!"),
-        onSuccess: (result) => {
-            const savedElements = result.savedElements;
-            if (savedElements === 0) {
-                showSuccessToast("All groups are already up to date.");
-            } else {
-                showSuccessToast(
-                    "Successfully reloaded " + savedElements + " elements."
-                );
-            }
-        },
-        onSettled: async () => {
-            await queryClient.refetchQueries({
-                queryKey: contextDataQueryKey()
-            });
-            await queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            void router.invalidate();
-        }
-    });
-
-    const handleClick = () => {
-        modals.openConfirmModal({
-            title: reloadAll ? "Reload all groups" : "Reload outdated groups",
-            children:
-                "Are you sure you want to reload" +
-                (reloadAll ? " all groups?" : " outdated groups?"),
-            labels: { confirm: "Reload", cancel: "Cancel" },
-            confirmProps: {
-                variant: "light",
-                color: reloadAll ? "red" : "blue"
-            },
-            onConfirm: () => mutation.mutate()
-        });
-    };
-
-    const button = (
-        <Button
-            variant="light"
-            color={reloadAll ? "red" : "blue"}
-            leftSection={<IconRefresh size={IconSize.SMALL} />}
-            onClick={handleClick}
-            loading={mutation.isPending}
-        >
-            Reload
-        </Button>
-    );
-
-    if (hideFormGroup) {
-        return button;
-    }
-
-    const label = reloadAll
-        ? "Reload all documents"
-        : "Reload outdated documents";
-    return <SettingRow label={label}>{button}</SettingRow>;
 }

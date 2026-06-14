@@ -18,13 +18,13 @@ import {
 } from "../cards/card-components";
 import { useIsInsertableHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
-import { ChangeOrderItems } from "../cards/change-order";
+import { ChangeOrderItems } from "../common/change-order";
 import { useUiState } from "../api-utils/ui-state";
 import {
     openCannotDeriveAssemblyAlert,
     openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
-} from "../overlays/alerts";
+} from "../app/alerts";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
@@ -76,7 +76,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
             rightSection={
                 <FavoriteButton favorite={favorite} insertable={insertable} />
             }
-            menu={
+            menuItems={
                 <FavoriteMenuItems
                     insertable={insertable}
                     favorite={favorite}

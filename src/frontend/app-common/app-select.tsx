@@ -1,6 +1,6 @@
 import { Select } from "@mantine/core";
 import { Dispatch, ReactNode } from "react";
-import { SelectOption } from "./select-utils";
+import { SelectOption } from "../settings/select-utils";
 
 interface AppSelectProps {
     option: SelectOption;

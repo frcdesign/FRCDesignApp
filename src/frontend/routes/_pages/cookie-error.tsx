@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageError } from "../../common/app-zero-state";
+import { PageError } from "../../app-common/app-zero-state";
 
 export const Route = createFileRoute("/_pages/cookie-error")({
     component: CookieError

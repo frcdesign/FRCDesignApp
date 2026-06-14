@@ -7,7 +7,7 @@ import { ReactNode, useMemo } from "react";
 import { queryClient } from "../query-client";
 import { getContextDataQuery } from "../queries";
 import { createAppTheme } from "../theme";
-import { getColorScheme, getColorTheme } from "../api-utils/onshape-params";
+import { getColorTheme } from "../api-utils/onshape-params";
 import { DEFAULT_SETTINGS, type Settings } from "../../shared/types";
 import { NotFoundError, RootCrash } from "../app/root-error";
 
@@ -38,17 +38,11 @@ function RootComponent(): ReactNode {
 
     const libraryId = settings.libraryId;
     const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
-    const colorTheme = getColorTheme(
-        settings.theme,
-        search.systemTheme ?? "light"
-    );
+    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
 
     return (
         <QueryClientProvider client={queryClient}>
-            <MantineProvider
-                theme={theme}
-                forceColorScheme={getColorScheme(colorTheme)}
-            >
+            <MantineProvider theme={theme} forceColorScheme={colorTheme}>
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >

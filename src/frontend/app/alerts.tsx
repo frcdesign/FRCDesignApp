@@ -26,7 +26,7 @@ export function openCannotDeriveAssemblyAlert(): void {
 
 export function openCannotReorderAlert(): void {
     openWarningAlert({
-        title: "Cannot reorder favorties",
+        title: "Cannot reorder favorites",
         text: "To prevent confusion, favorites cannot be reordered while filters are active."
     });
 }

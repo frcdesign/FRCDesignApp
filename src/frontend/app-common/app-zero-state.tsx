@@ -1,6 +1,6 @@
 import { Center, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { FontWeight, IconSize } from "./style-constants";
+import { FontWeight, IconSize } from "../common/style-constants";
 import { type JSX, ReactNode } from "react";
 
 const DEFAULT_ERROR_ICON = (

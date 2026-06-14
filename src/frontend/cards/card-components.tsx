@@ -11,11 +11,12 @@ import {
 import { IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
+import { AppContextMenu } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
 import { DocumentPath } from "../../shared/onshape-path";
-import { openCannotDeriveAssemblyAlert } from "../overlays/alerts";
+import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
@@ -152,33 +153,12 @@ export function CardTitle(props: CardTitleProps) {
                 {cardTitle}
             </Text>
             {isHidden && (
-                <Badge
-                    color="yellow"
-                    variant="light"
-                    circle
-                    title="Hidden"
-                    flex="0 0 auto"
-                >
+                <Badge color="yellow" variant="light" circle title="Hidden">
                     <IconEyeOff size={IconSize.TINY} />
                 </Badge>
             )}
         </Group>
     );
-}
-
-interface ItemRowProps {
-    /** Left content, e.g. a `CardTitle`. */
-    left: ReactNode;
-    /** Menu items shown on right-click and (when shown) via the "more" button. */
-    menu: ReactNode;
-    onClick?: () => void;
-    /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
-    rightSection?: ReactNode;
-    /**
-     * Show the explicit "..." button that opens the same menu.
-     * @default true
-     */
-    moreButton?: boolean;
 }
 
 /**
@@ -200,30 +180,42 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
     );
 }
 
+interface ItemRowProps {
+    /** Left content, e.g. a `CardTitle`. */
+    left: ReactNode;
+    /** Menu items shown on right-click and (when shown) via the "more" button. */
+    menuItems: ReactNode;
+    onClick?: () => void;
+    /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
+    rightSection?: ReactNode;
+    /**
+     * Show the explicit "..." button that opens the same menu.
+     * @default true
+     */
+    moreButton?: boolean;
+}
+
 /**
  * A clickable table row with a hover state and a right-click context menu.
  * Used for documents, insertables, and favorites. Render inside an `ItemTable`.
  */
 export function ItemRow(props: ItemRowProps): ReactNode {
-    const { left, menu, onClick, rightSection, moreButton = true } = props;
+    const { left, menuItems, onClick, rightSection, moreButton = true } = props;
 
     return (
-        <Menu shadow="md" width={220} withinPortal>
-            <Menu.ContextMenu>
-                <Table.Tr onClick={onClick}>
-                    <Table.Td>
-                        <Group wrap="nowrap">
-                            {left}
-                            <Group gap="4px" justify="flex-end">
-                                {moreButton && <MenuButton>{menu}</MenuButton>}
-                                {rightSection}
-                            </Group>
+        <AppContextMenu menuItems={menuItems}>
+            <Table.Tr onClick={onClick}>
+                <Table.Td>
+                    <Group wrap="nowrap">
+                        {left}
+                        <Group gap="4px" justify="flex-end">
+                            {moreButton && <MenuButton>{menuItems}</MenuButton>}
+                            {rightSection}
                         </Group>
-                    </Table.Td>
-                </Table.Tr>
-            </Menu.ContextMenu>
-            <Menu.Dropdown>{menu}</Menu.Dropdown>
-        </Menu>
+                    </Group>
+                </Table.Td>
+            </Table.Tr>
+        </AppContextMenu>
     );
 }
 
@@ -233,19 +225,16 @@ export function ItemRow(props: ItemRowProps): ReactNode {
  */
 export function MenuButton(props: PropsWithChildren): ReactNode {
     return (
-        <Menu shadow="md" width={220} withinPortal position="bottom-end">
-            <Menu.Target>
-                <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    title="View options"
-                    onClick={(event) => event.stopPropagation()}
-                >
-                    <IconDots size={IconSize.MEDIUM} />
-                </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>{props.children}</Menu.Dropdown>
-        </Menu>
+        <AppContextMenu controlledByButton menuItems={props.children}>
+            <ActionIcon
+                variant="subtle"
+                color="gray"
+                title="View options"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <IconDots size={IconSize.MEDIUM} />
+            </ActionIcon>
+        </AppContextMenu>
     );
 }
 

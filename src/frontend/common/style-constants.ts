@@ -26,3 +26,10 @@ export enum FontWeight {
  * Creates a Mantine-style border.
  */
 export const BORDER = "1px solid var(--mantine-color-default-border";
+
+/**
+ * The current primary color, typically white.
+ *
+ * Used to color the buttons that go over the colored app header.
+ */
+export const PRIMARY_COLOR = "var(--mantine-primary-color)";

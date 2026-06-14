@@ -44,6 +44,8 @@ export function evaluateCondition(
         return optionIds
             .slice(startIndex, endIndex + 1)
             .includes(configuration[condition.id]);
+    } else if (condition.type === VisibilityConditionType.ALWAYS_SHOWN) {
+        return true;
     }
     return true;
 }

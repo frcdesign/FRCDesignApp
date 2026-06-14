@@ -22,7 +22,7 @@ export function getLibraryName(libraryId: string): string {
         case LibraryId.FRC_DESIGN_LIB:
             return "FRCDesignLib";
         case LibraryId.FTC_DESIGN_LIB:
-            return "FTCDesignLib";
+            return "FTCDesignLib (Beta)";
         case LibraryId.MKCAD:
             return "MKCAD (Deprecated)";
     }

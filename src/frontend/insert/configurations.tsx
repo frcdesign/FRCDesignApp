@@ -32,10 +32,10 @@ import {
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "../insert/input-parser";
+} from "./input-parser";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
-import { showErrorToast } from "../common/toaster";
-import { SectionError } from "../common/app-zero-state";
+import { showErrorToast } from "../common/notifications";
+import { SectionError } from "../app-common/app-zero-state";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -111,17 +111,18 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
     const parameters = configurationResult.parameters.map((parameter) => {
         const handleValueChange = (newValue: string | undefined) => {
-            let newConfiguration;
-            if (newValue == undefined) {
-                newConfiguration = { ...configuration };
-                delete newConfiguration[parameter.id];
+            if (newValue === undefined) {
+                if (!(parameter.id in configuration)) return;
+                const next = { ...configuration };
+                delete next[parameter.id];
+                setConfiguration(next);
             } else {
-                newConfiguration = {
+                if (configuration[parameter.id] === newValue) return;
+                setConfiguration({
                     ...configuration,
                     [parameter.id]: newValue
-                };
+                });
             }
-            setConfiguration(newConfiguration);
         };
 
         return (
@@ -312,14 +313,16 @@ function BooleanParameter(
     props: ParameterProps<BooleanParameterObj>
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
-    // Add a 100% width div to eat up space to the right of the checkbox
-    // Otherwise multiple checkboxes in a row can fold onto the same line
     return (
         <Checkbox
             label={parameter.name}
             labelPosition="left"
             checked={value === "true"}
             mt="sm"
+            styles={{
+                input: { cursor: "pointer" },
+                label: { cursor: "pointer" }
+            }}
             onChange={handleBooleanChange((checked) =>
                 onValueChange(checked ? "true" : "false")
             )}

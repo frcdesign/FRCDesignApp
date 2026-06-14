@@ -11,21 +11,19 @@ export interface OnshapeParams extends ElementPath {
     server: string;
 }
 
+/**
+ * An actual color theme, as provided by Onshape.
+ *
+ * See also Theme, which is a superset of ColorTheme that also includes "system".
+ */
 export type ColorTheme = "light" | "dark";
 
 export function getColorTheme(
     theme: Theme,
-    systemTheme: ColorTheme
+    systemTheme: ColorTheme = "light"
 ): ColorTheme {
     if (theme === Theme.SYSTEM) {
         return systemTheme;
     }
     return theme;
-}
-
-/**
- * Returns the Mantine color scheme to force based on the resolved color theme.
- */
-export function getColorScheme(colorTheme: ColorTheme): "light" | "dark" {
-    return colorTheme;
 }

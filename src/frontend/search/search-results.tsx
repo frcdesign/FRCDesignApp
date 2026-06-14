@@ -3,7 +3,7 @@ import { useLoaderData } from "@tanstack/react-router";
 import { Position, SearchFilters, SearchHit, doSearch } from "./search";
 import { InsertableCard } from "../cards/insertable-card";
 import { ItemTable } from "../cards/card-components";
-import { SectionError, SectionLoading } from "../common/app-zero-state";
+import { SectionError, SectionLoading } from "../app-common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery, useSearchDbQuery } from "../queries";
 import { hasEditorAccess } from "../../shared/types";

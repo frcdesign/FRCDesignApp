@@ -49,6 +49,8 @@ function parseVisibilityCondition(
             start: optionRange.start,
             end: optionRange.end
         };
+    } else if (conditionType === VisibilityConditionType.ALWAYS_SHOWN) {
+        return { type: VisibilityConditionType.ALWAYS_SHOWN };
     }
 
     return undefined;

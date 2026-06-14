@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
-import { showLoadingToast, showSuccessToast } from "../common/toaster";
+import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 
@@ -35,19 +35,22 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             if (!newDocumentId) {
                 throw new HandledError("Failed to parse url.");
             }
-            showLoadingToast("Adding group...", "add-group");
+            showLoadingToast("Adding document...", "add-group");
             modals.closeAll();
             return apiPost("/group" + toLibraryPath(libraryId), {
                 body: { newDocumentId, selectedGroupId }
             });
         },
         onError: getAppErrorHandler(
-            "Failed to add group. Make sure the document is valid.",
+            "Failed to add document. Make sure the document is valid.",
             "add-group"
         ),
-        onSuccess: async (result) => {
+        onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["library"] });
-            showSuccessToast(`Successfully added ${result.name}.`, "add-group");
+            showInfoToast(
+                "Initiated workflow, which can take up to 30 minutes.",
+                "add-group"
+            );
         }
     });
 

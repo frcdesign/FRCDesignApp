@@ -2,10 +2,10 @@ import { Alert, Button, Group } from "@mantine/core";
 import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { ClearFiltersButton } from "../navbar/vendor-filters";
+import { ClearFiltersButton } from "../settings/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "./search";
 import { useNavigate } from "@tanstack/react-router";
-import { SectionError } from "../common/app-zero-state";
+import { SectionError } from "../app-common/app-zero-state";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {

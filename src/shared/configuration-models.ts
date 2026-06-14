@@ -72,13 +72,15 @@ export interface RangeOptionVisibilityCondition {
 export enum VisibilityConditionType {
     LOGICAL = "BTParameterVisibilityLogical-178",
     EQUAL = "BTParameterVisibilityOnEqual-180",
-    RANGE = "BTParameterVisibilityInRange-2980"
+    RANGE = "BTParameterVisibilityInRange-2980",
+    ALWAYS_SHOWN = "BTParameterVisibilityAlwaysShown-5487"
 }
 
 export type VisibilityCondition =
     | LogicalVisibilityCondition
     | EqualVisibilityCondition
-    | RangeVisibilityCondition;
+    | RangeVisibilityCondition
+    | AlwaysShownVisibilityCondition;
 
 interface LogicalVisibilityCondition {
     type: VisibilityConditionType.LOGICAL;
@@ -102,6 +104,10 @@ interface RangeVisibilityCondition {
     id: string;
     start: string;
     end: string;
+}
+
+interface AlwaysShownVisibilityCondition {
+    type: VisibilityConditionType.ALWAYS_SHOWN;
 }
 
 export interface ConfigurationResult {

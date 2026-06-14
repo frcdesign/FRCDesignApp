@@ -15,7 +15,7 @@ import {
     getSearchDbQuery
 } from "../../queries";
 import { OnshapeParams } from "../../api-utils/onshape-params";
-import { AppNavbar } from "../../navbar/app-navbar";
+import { AppNavbar } from "../../app/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
 import { type ContextData } from "../../../shared/types";

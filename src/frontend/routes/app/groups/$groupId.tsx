@@ -5,7 +5,7 @@ import {
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Box, Button, Group, Menu, Text } from "@mantine/core";
+import { Box, Button, Group, Text } from "@mantine/core";
 import {
     IconAlertTriangle,
     IconArrowBackUp,
@@ -17,16 +17,17 @@ import { SearchResults } from "../../../search/search-results";
 import { GroupOut, Insertables } from "../../../../shared/api-models";
 import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
-import { GroupMenuItems } from "../../../cards/group-card";
+import { GroupMenuItems } from "../../../groups/group-card";
 import { InsertableCard } from "../../../cards/insertable-card";
 import { MenuButton, ItemTable } from "../../../cards/card-components";
+import { AppContextMenu } from "../../../app-common/app-menu";
 import { SearchCallout } from "../../../search/search-errors";
 import {
     PageError,
     SectionError,
     SectionLoading
-} from "../../../common/app-zero-state";
-import { ClearFiltersButton } from "../../../navbar/vendor-filters";
+} from "../../../app-common/app-zero-state";
+import { ClearFiltersButton } from "../../../settings/vendor-filters";
 import { useLibraryQuery } from "../../../queries";
 import { useUiState, updateUiState } from "../../../api-utils/ui-state";
 
@@ -113,7 +114,7 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
 
     const header = (
         <Box
-            className="interactive mantine-auto-focus"
+            className="interactive"
             onClick={() => void navigate({ to: "/app/groups" })}
             p="sm"
         >
@@ -129,12 +130,7 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
         </Box>
     );
 
-    return (
-        <Menu shadow="md" width={220} withinPortal>
-            <Menu.ContextMenu>{header}</Menu.ContextMenu>
-            <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-        </Menu>
-    );
+    return <AppContextMenu menuItems={menuItems}>{header}</AppContextMenu>;
 }
 
 interface GroupListCardsProps {

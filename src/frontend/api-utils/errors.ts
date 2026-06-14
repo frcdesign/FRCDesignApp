@@ -1,4 +1,4 @@
-import { showErrorToast, showInfoToast } from "../common/toaster";
+import { showErrorToast, showInfoToast } from "../common/notifications";
 
 /**
  * Errors which are generated and thrown on the client.
@@ -17,8 +17,8 @@ export class HandledError extends Error {
 /**
  * Returns a function that handles app errors.
  */
-export function getAppErrorHandler(defaultMessage: string, toastKey?: string) {
-    return (error: Error) => handleAppError(error, defaultMessage, toastKey);
+export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
+    return (error: Error) => handleAppError(error, defaultMessage, toastId);
 }
 
 export function handleAppError(
