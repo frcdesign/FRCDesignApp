@@ -4,7 +4,8 @@
             "Bash(npx wrangler *)",
             "mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation",
             "Bash(npx jest *)",
-            "Bash(npm run *)"
+            "Bash(npm run *)",
+            "mcp__mantine__get_item_doc"
         ]
     },
     "enabledPlugins": {

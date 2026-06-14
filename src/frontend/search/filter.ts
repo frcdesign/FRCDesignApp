@@ -14,7 +14,7 @@ export interface FilterArgs {
 }
 
 interface VendorFilterResult extends FilterResult {
-    byDocument: 0;
+    byGroup: 0;
 }
 
 /**
@@ -53,6 +53,6 @@ export function filterInsertables(
 
     return {
         insertables: filtered,
-        filtered: { byDocument: 0, byVendor: filteredByVendor }
+        filtered: { byGroup: 0, byVendor: filteredByVendor }
     };
 }

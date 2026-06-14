@@ -5,9 +5,11 @@ import {
     isInstancePath,
     isElementPath,
     InstanceType
-} from "../../shared/path";
+} from "../../shared/onshape-path";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
-import { showToast } from "./toaster";
+import { notifications } from "@mantine/notifications";
+import { IconLink } from "@tabler/icons-react";
+import { IconSize } from "./style-constants";
 
 export function makeUrl(path: DocumentPath): string;
 export function makeUrl(path: InstancePath): string;
@@ -69,13 +71,13 @@ export function openUrlInNewTab(url: string) {
     window.open(url, "_blank");
 }
 
-export async function copyUrlToClipboard(url: string) {
+export async function copyUrlToClipboard(url: string): Promise<void> {
     await navigator.clipboard.writeText(url);
-    showToast({
+    notifications.show({
         message: "Link copied to clipboard.",
-        intent: "primary",
-        icon: "link",
-        timeout: 3000
+        icon: <IconLink size={IconSize.MEDIUM} />,
+        color: "blue",
+        autoClose: 3000
     });
 }
 

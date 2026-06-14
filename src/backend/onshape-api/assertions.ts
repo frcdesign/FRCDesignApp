@@ -1,4 +1,4 @@
-import { InstancePath, InstanceType } from "../../shared/path";
+import { InstancePath, InstanceType } from "../../shared/onshape-path";
 
 export function assertInstanceType(
     path: InstancePath,

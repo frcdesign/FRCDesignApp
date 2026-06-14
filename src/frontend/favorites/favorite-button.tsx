@@ -1,10 +1,10 @@
+import { ActionIcon, Menu } from "@mantine/core";
 import {
-    Button,
-    ButtonVariant,
-    Colors,
-    Icon,
-    MenuItem
-} from "@blueprintjs/core";
+    IconHeart,
+    IconHeartBroken,
+    IconHeartFilled
+} from "@tabler/icons-react";
+import { HeartIconColor, IconSize } from "../common/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
@@ -13,12 +13,12 @@ import {
     type FavoritesData,
     type InsertableOut
 } from "../../shared/api-models";
-import { Library } from "../../shared/types";
+import { LibraryId } from "../../shared/types";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
-import { toLibraryPath, useLibrary } from "../api-utils/library";
+import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { favoritesQueryKey } from "../queries";
 
 enum Operation {
@@ -35,12 +35,12 @@ interface UpdateFavoritesArgs {
 function updateFavorites(
     data: FavoritesData,
     args: UpdateFavoritesArgs,
-    library: Library
+    libraryId: LibraryId
 ): FavoritesData | undefined {
     const { favoriteId } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
-        const fav: Favorite = { id: favoriteId, insertableId, library };
+        const fav: Favorite = { id: favoriteId, insertableId, libraryId };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
     } else {
@@ -53,9 +53,9 @@ function updateFavorites(
 }
 
 function useUpdateFavoritesMutation() {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
-    const queryKey = favoritesQueryKey(library);
+    const queryKey = favoritesQueryKey(libraryId);
 
     return useMutation<null, Error, UpdateFavoritesArgs>({
         mutationKey: ["update-favorite"],
@@ -66,7 +66,7 @@ function useUpdateFavoritesMutation() {
                         `Cannot favorite hidden element ${args.insertable.name}.`
                     );
                 }
-                return apiPost("/favorites" + toLibraryPath(library), {
+                return apiPost("/favorites" + toLibraryPath(libraryId), {
                     query: {
                         insertableId: args.insertable.id,
                         id: args.favoriteId
@@ -81,7 +81,7 @@ function useUpdateFavoritesMutation() {
             queryClient.setQueryData(
                 queryKey,
                 getQueryUpdater((data: FavoritesData) =>
-                    updateFavorites(data, args, library)
+                    updateFavorites(data, args, libraryId)
                 )
             );
             void router.invalidate();
@@ -123,8 +123,9 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
 
     return (
-        <Button
-            icon={favoriteIcon}
+        <ActionIcon
+            variant="subtle"
+            color="gray"
             onClick={(event) => {
                 event.stopPropagation();
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
@@ -133,8 +134,9 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            variant={ButtonVariant.MINIMAL}
-        />
+        >
+            {favoriteIcon}
+        </ActionIcon>
     );
 }
 
@@ -153,21 +155,22 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     const mutation = useUpdateFavoritesMutation();
 
     return (
-        <MenuItem
-            text={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
-            icon={
+        <Menu.Item
+            leftSection={
                 operation === Operation.ADD ? (
                     <HeartIcon />
                 ) : (
                     <HeartBrokenIcon />
                 )
             }
+            color={operation === Operation.ADD ? undefined : "red"}
             onClick={() => {
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
                 mutation.mutate({ operation, insertable, favoriteId });
             }}
-            intent={operation === Operation.ADD ? "none" : "danger"}
-        />
+        >
+            {operation === Operation.ADD ? "Favorite" : "Unfavorite"}
+        </Menu.Item>
     );
 }
 
@@ -180,9 +183,13 @@ interface HeartIconProps {
 
 export function HeartIcon(props: HeartIconProps): ReactNode {
     const full = props.full ?? true;
-    return <Icon icon="heart" color={full ? Colors.RED3 : undefined} />;
+    return full ? (
+        <IconHeartFilled size={IconSize.SMALL} color={HeartIconColor} />
+    ) : (
+        <IconHeart size={IconSize.SMALL} />
+    );
 }
 
 export function HeartBrokenIcon(): ReactNode {
-    return <Icon icon="heart-broken" color={Colors.RED3} />;
+    return <IconHeartBroken size={IconSize.SMALL} color={HeartIconColor} />;
 }

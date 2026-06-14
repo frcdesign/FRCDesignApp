@@ -1,24 +1,19 @@
-import {
-    Button,
-    Callout,
-    Colors,
-    IconName,
-    Intent,
-    Size
-} from "@blueprintjs/core";
-import { ClearFiltersButton } from "../navbar/vendor-filters";
-import { FilterResult, ObjectLabel, plural } from "./search";
+import { Alert, Button, Group } from "@mantine/core";
+import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
+import { HeartIconColor, IconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
+import { ClearFiltersButton } from "../settings/vendor-filters";
+import { FilterResult, ObjectLabel, plural } from "./search";
 import { useNavigate } from "@tanstack/react-router";
-import { SectionError } from "../common/app-zero-state";
+import { SectionError } from "../app-common/app-zero-state";
 
-function getDocumentString(filtered: FilterResult, objectLabel: ObjectLabel) {
-    if (filtered.byDocument > 1) {
-        return `${filtered.byDocument} ${plural(
+function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
+    if (filtered.byGroup > 1) {
+        return `${filtered.byGroup} ${plural(
             objectLabel
-        )} are in other documents.`;
+        )} are in other groups.`;
     }
-    return `1 ${objectLabel} is in another document.`;
+    return `1 ${objectLabel} is in another group.`;
 }
 
 function getVendorString(filtered: FilterResult, objectLabel: ObjectLabel) {
@@ -40,23 +35,27 @@ interface FilterCalloutProps {
  */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
     const { filtered, objectLabel } = props;
-    if (filtered.byDocument === 0 && filtered.byVendor === 0) {
+    if (filtered.byGroup === 0 && filtered.byVendor === 0) {
         return null;
     }
 
-    if (filtered.byDocument > 0) {
+    if (filtered.byGroup > 0) {
         return (
-            <Callout intent="primary" className="split">
-                {getDocumentString(filtered, objectLabel)}
-                <SearchAllButton small />
-            </Callout>
+            <Alert p="xs">
+                <Group justify="space-between" wrap="nowrap">
+                    {getGroupString(filtered, objectLabel)}
+                    <SearchAllButton small />
+                </Group>
+            </Alert>
         );
     }
     return (
-        <Callout intent="primary" className="split">
-            {getVendorString(filtered, objectLabel)}
-            <ClearFiltersButton small />
-        </Callout>
+        <Alert p="xs">
+            <Group justify="space-between" wrap="nowrap">
+                {getVendorString(filtered, objectLabel)}
+                <ClearFiltersButton small />
+            </Group>
+        </Alert>
     );
 }
 
@@ -70,27 +69,20 @@ export function NoSearchResultError(
 ): ReactNode {
     const { objectLabel, filtered } = props;
 
-    let icon: IconName;
-    let iconIntent: Intent | undefined = undefined;
-    let iconColor: string | undefined = undefined;
+    const icon =
+        objectLabel === "search result" ? (
+            <IconSearch size={IconSize.LARGE} color={IconColor.YELLOW} />
+        ) : (
+            <IconHeartBroken size={IconSize.LARGE} color={HeartIconColor} />
+        );
 
-    if (objectLabel === "search result") {
-        icon = "search";
-        iconIntent = Intent.PRIMARY;
-    } else {
-        icon = "heart-broken";
-        iconColor = Colors.RED3;
-    }
-
-    if (filtered.byDocument > 0) {
-        // User is in a subdocument
+    if (filtered.byGroup > 0) {
+        // User is in a subgroup
         return (
             <SectionError
                 icon={icon}
-                iconIntent={iconIntent}
-                iconColor={iconColor}
                 title={`No ${plural(objectLabel)}.`}
-                description={getDocumentString(filtered, objectLabel)}
+                description={getGroupString(filtered, objectLabel)}
                 action={<SearchAllButton />}
             />
         );
@@ -99,8 +91,6 @@ export function NoSearchResultError(
         return (
             <SectionError
                 icon={icon}
-                iconIntent={iconIntent}
-                iconColor={iconColor}
                 title={`No ${plural(objectLabel)}.`}
                 description={getVendorString(filtered, objectLabel)}
                 action={<ClearFiltersButton />}
@@ -111,8 +101,6 @@ export function NoSearchResultError(
     return (
         <SectionError
             icon={icon}
-            iconIntent={iconIntent}
-            iconColor={iconColor}
             title={`No ${plural(objectLabel)}`}
             description={null}
         />
@@ -131,13 +119,13 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            intent="primary"
-            text="Search all documents"
-            icon="search"
-            size={small ? Size.SMALL : Size.MEDIUM}
+            leftSection={<IconSearch size={IconSize.SMALL} />}
+            size={small ? "xs" : undefined}
             onClick={() => {
-                void navigate({ to: "/app/documents" });
+                void navigate({ to: "/app/groups" });
             }}
-        />
+        >
+            Search all documents
+        </Button>
     );
 }

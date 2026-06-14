@@ -1,5 +1,5 @@
 import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
-import { type ElementPath } from "../../shared/path";
+import { type ElementPath } from "../../shared/onshape-path";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";
 import {
@@ -7,6 +7,23 @@ import {
     partStudioMateConnectorQuery
 } from "../onshape-api/objects/assembly-features";
 import { OnshapeApi } from "../onshape-api/onshape-api";
+
+export async function parseFastenInfo(
+    onshapeApi: OnshapeApi,
+    elementPath: ElementPath,
+    elementType: ElementType
+): Promise<FastenInfo> {
+    if (elementType === ElementType.PART_STUDIO) {
+        const rawFeatureList = await getFeatures(onshapeApi, elementPath);
+        return parseFastenInfoFromPartStudio(rawFeatureList);
+    } else {
+        const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
+            includeMateConnectors: true,
+            includeMateFeatures: true
+        });
+        return parseFastenInfoFromAssembly(rawAssemblyInfo);
+    }
+}
 
 function searchFeatures(
     features: any[],
@@ -26,7 +43,7 @@ function searchFeatures(
     return undefined;
 }
 
-function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
+export function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
     for (const feature of rawFeatureList.features) {
         if (feature.featureType === "mateConnector") {
             return {
@@ -39,7 +56,7 @@ function parseFastenInfoFromPartStudio(rawFeatureList: any): FastenInfo {
     throw new Error("Failed to find a valid Mate connector feature.");
 }
 
-function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
+export function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
     const rootAssembly = rawAssemblyInfo.rootAssembly;
     const fromFeatures = searchFeatures(
         rootAssembly.features,
@@ -77,23 +94,6 @@ function parseFastenInfoFromAssembly(rawAssemblyInfo: any): FastenInfo {
     throw new Error(
         "Failed to find a valid Mate connector feature or instance."
     );
-}
-
-export async function parseFastenInfo(
-    onshapeApi: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType
-): Promise<FastenInfo> {
-    if (elementType === ElementType.PART_STUDIO) {
-        const rawFeatureList = await getFeatures(onshapeApi, elementPath);
-        return parseFastenInfoFromPartStudio(rawFeatureList);
-    } else {
-        const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
-            includeMateConnectors: true,
-            includeMateFeatures: true
-        });
-        return parseFastenInfoFromAssembly(rawAssemblyInfo);
-    }
 }
 
 export function getFastenQuery(

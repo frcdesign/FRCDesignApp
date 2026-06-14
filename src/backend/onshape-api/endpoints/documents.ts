@@ -9,7 +9,7 @@ import {
     toElementApiPath,
     toInstanceApiPath,
     toInstanceTypeKey
-} from "../../../shared/path";
+} from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 import { OAuthApi } from "../onshape-api";
 import { getLatestVersion } from "./versions";

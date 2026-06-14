@@ -5,7 +5,7 @@ import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
 import { getAppAccessLevel } from "../access-level-utils";
 import { users, libraries } from "../../shared/schema";
-import { Library, ContextData, Theme } from "../../shared/types";
+import { LibraryId, ContextData, Theme } from "../../shared/types";
 
 export const userRoutes = getApp();
 
@@ -24,14 +24,14 @@ userRoutes.get("/context-data", async (c) => {
         user = {
             id: userId,
             theme: Theme.SYSTEM,
-            library: Library.FRC_DESIGN_LIB
+            libraryId: LibraryId.FRC_DESIGN_LIB
         };
     }
 
     const lib = await db
         .select({ cacheVersion: libraries.cacheVersion })
         .from(libraries)
-        .where(eq(libraries.id, user.library))
+        .where(eq(libraries.id, user.libraryId))
         .get();
 
     return c.json({
@@ -42,7 +42,7 @@ userRoutes.get("/context-data", async (c) => {
         },
         settings: {
             theme: user.theme,
-            library: user.library
+            libraryId: user.libraryId
         }
     } satisfies ContextData);
 });
@@ -52,7 +52,7 @@ userRoutes.post("/user-data", async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
 
-    const body = await c.req.json<{ theme?: Theme; library?: Library }>();
+    const body = await c.req.json<{ theme?: Theme; libraryId?: LibraryId }>();
 
     const db = getDb(c.env.DB);
 

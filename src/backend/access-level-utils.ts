@@ -20,7 +20,9 @@ export async function requireEditorAccess(c: AppContext): Promise<void> {
         ? (override as AccessLevel)
         : await getAccessLevel(onshapeApi, c.env.ADMIN_TEAM);
     if (!hasEditorAccess(level)) {
-        throw new HTTPException(403, { message: "Insufficient permissions" });
+        throw new HTTPException(403, {
+            message: "You must be on the admin team to use this functionality"
+        });
     }
 }
 

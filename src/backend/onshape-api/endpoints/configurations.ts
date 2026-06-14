@@ -1,5 +1,5 @@
 import { OnshapeApi } from "../onshape-api";
-import { ElementPath, toElementApiPath } from "../../../shared/path";
+import { ElementPath, toElementApiPath } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 
 export function getConfiguration(

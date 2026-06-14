@@ -1,6 +1,7 @@
+import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Icon, NonIdealState, NonIdealStateIconSize } from "@blueprintjs/core";
 import { OpenUrlButton } from "../../common/open-url-button";
+import { PageError } from "../../app-common/app-zero-state";
 
 export const Route = createFileRoute("/_pages/grant-denied")({
     component: GrantDenied
@@ -14,19 +15,10 @@ function GrantDenied(): JSX.Element {
     );
 
     return (
-        <div style={{ height: "80vh" }}>
-            <NonIdealState
-                icon={
-                    <Icon
-                        icon="cross"
-                        intent="danger"
-                        size={NonIdealStateIconSize.STANDARD}
-                    />
-                }
-                title="Grant Denied"
-                description="You denied the FRCDesignApp access to your documents."
-                action={applicationAccessButton}
-            />
-        </div>
+        <PageError
+            title="Grant Denied"
+            description="You denied the FRCDesignApp access to your documents."
+            action={applicationAccessButton}
+        />
     );
 }

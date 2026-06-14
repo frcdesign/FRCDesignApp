@@ -10,14 +10,14 @@ import {
     QuantityType,
     type Unit
 } from "../../shared/configuration-models";
-import { type InstancePath } from "../../shared/path";
+import { isInstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
 
 export const configurationRoutes = getApp();
 
-/** GET /api/configuration?library=X&documentId=Y&configurationId=Z */
-configurationRoutes.get("/configuration", async (c) => {
-    const configurationId = c.req.query("configurationId");
+/** GET /api/configuration/:configurationId */
+configurationRoutes.get("/configuration/:configurationId", async (c) => {
+    const configurationId = c.req.param("configurationId");
     if (!configurationId) {
         throw new HTTPException(400, {
             message: "configurationId is required"
@@ -46,11 +46,16 @@ configurationRoutes.get("/configuration", async (c) => {
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
 configurationRoutes.get("/unit-info", async (c) => {
     const onshapeApi = await getOnshapeApi(c);
-    const instancePath: InstancePath = {
-        documentId: c.req.query("documentId") ?? "",
-        instanceId: c.req.query("instanceId") ?? "",
-        instanceType: (c.req.query("instanceType") ?? "v") as "w" | "v" | "m"
+    const instancePath = {
+        documentId: c.req.query("documentId"),
+        instanceId: c.req.query("instanceId"),
+        instanceType: c.req.query("instanceType")
     };
+    if (!isInstancePath(instancePath)) {
+        throw new HTTPException(400, {
+            message: "instancePath is required"
+        });
+    }
 
     const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
     const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;

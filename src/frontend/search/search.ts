@@ -1,9 +1,15 @@
-import MiniSearch, {
-    Options,
-    SearchResult as MiniSearchResult
-} from "minisearch";
-import { LibraryOut } from "../../shared/api-models";
+import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
+import { SearchDocument } from "../../shared/search";
+
+// Re-export the shared index definitions so existing frontend imports keep working.
+export type { SearchDocument } from "../../shared/search";
+export {
+    SEARCH_OPTIONS,
+    buildSearchDb,
+    processTerm,
+    tokenize
+} from "../../shared/search";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -17,92 +23,8 @@ export function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
 }
 
-const deliminator = "^";
-
-/**
- * Adds spaces to a given string so prefix matching is more efficient.
- */
-export function processTerm(term: string): string[] {
-    // Split between lowercase-to-uppercase (camelCase -> camel case)
-    const camelSplit = term
-        .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
-        .split(deliminator);
-
-    // Insert space between sequences like "ABCDef" (PascalCase or acronyms)
-    const pascalSplit = term
-        .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
-        .split(deliminator);
-
-    const base = term.toLowerCase();
-
-    const terms = [...camelSplit, ...pascalSplit, base].map((t) =>
-        t.toLowerCase()
-    );
-    // Deduplicate
-    return Array.from(new Set(terms));
-}
-
-export function tokenize(text: string): string[] {
-    // Don't lowercase so we can use casing for term splitting
-    // Remove -, (, ), ", ', #, &, /, and whitespace
-    return text.split(/[-()"'#&\s^/]+/).filter(Boolean);
-}
-
-export interface SearchDocument {
-    id: string;
-    documentId: string;
-    isVisible: boolean;
-    vendors: Vendor[];
-    name: string;
-    documentName: string;
-}
-
-export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "documentName"],
-    storeFields: [
-        "id",
-        "documentId",
-        "isVisible",
-        "vendors",
-        "name",
-        "documentName"
-    ],
-    searchOptions: {
-        boost: { documentName: 0.5 },
-        prefix: true
-    },
-    // Custom tokenizer to split on special characters
-    tokenize,
-    processTerm
-};
-
-export function buildSearchDb(
-    libraryData: LibraryOut
-): MiniSearch<SearchDocument> {
-    const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
-
-    const searchDocuments: SearchDocument[] = Object.values(
-        libraryData.insertables
-    )
-        .filter((element) => !!element)
-        .map((element) => {
-            const parentDocument = libraryData.documents[element.documentId];
-            return {
-                id: element.id,
-                documentId: element.documentId,
-                isVisible: element.isVisible,
-                vendors: element.vendors,
-                name: element.name,
-                documentName: parentDocument?.name ?? ""
-            };
-        });
-
-    searchDb.addAll(searchDocuments);
-    return searchDb;
-}
-
 export interface SearchFilters {
-    documentId?: string;
+    groupId?: string;
     vendors?: Vendor[];
     isFavorite?: boolean;
 }
@@ -124,10 +46,10 @@ export interface FilterResult {
      */
     byVendor: number;
     /**
-     * The number of items filtered out by being in a sub-document.
+     * The number of items filtered out by being in a different group.
      * Does not include results that would have been filtered out by vendors.
      */
-    byDocument: number;
+    byGroup: number;
 }
 
 export interface SearchResult {
@@ -139,9 +61,10 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters,
-    favoritedInsertableIds?: Set<string>
+    favoritedInsertableIds?: Set<string>,
+    showHidden?: boolean
 ): SearchResult {
-    const filtered: FilterResult = { byVendor: 0, byDocument: 0 };
+    const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     if (!query || query.trim() === "") {
         return { hits: [], filtered };
@@ -149,7 +72,7 @@ export function doSearch(
 
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
         filter: (searchResult) => {
-            if (!searchResult.isVisible) {
+            if (!showHidden && !searchResult.isVisible) {
                 return false;
             }
 
@@ -159,13 +82,10 @@ export function doSearch(
                 }
             }
 
-            let filteredByDocument = false;
+            let filteredByGroup = false;
             let filteredByVendor = false;
-            if (
-                filters?.documentId &&
-                searchResult.documentId !== filters.documentId
-            ) {
-                filteredByDocument = true;
+            if (filters?.groupId && searchResult.groupId !== filters.groupId) {
+                filteredByGroup = true;
             }
 
             if (
@@ -177,11 +97,11 @@ export function doSearch(
                 filteredByVendor = true;
             }
 
-            if (filteredByVendor && filteredByDocument) {
-                // If something is filtered by vendors and documents, don't count it since neither button would show it on its own
+            if (filteredByVendor && filteredByGroup) {
+                // If something is filtered by vendors and groups, don't count it since neither button would show it on its own
                 return false;
-            } else if (filteredByDocument) {
-                filtered.byDocument += 1;
+            } else if (filteredByGroup) {
+                filtered.byGroup += 1;
                 return false;
             } else if (filteredByVendor) {
                 filtered.byVendor += 1;

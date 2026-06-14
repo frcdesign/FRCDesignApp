@@ -1,40 +1,47 @@
-import { ReloadDocumentsButton } from "../navbar/settings-menu";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { PageError } from "../common/app-zero-state";
+import { PageError } from "../app-common/app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@blueprintjs/core";
-
-interface RootAppErrorProps {
-    /**
-     * True if this is the root error boundary.
-     * Used to determine if the error state has enough information to try to show a reload button.
-     *
-     * @default false
-     */
-    isRoot?: boolean;
-}
+import { Button } from "@mantine/core";
+import { IconHome } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
+import { ReloadGroupsButton } from "../settings/reload-groups-button";
 
 /**
- * Catch-all error state for when the app fails to load.
- * Includes an escape hatch for admins to reload documents.
+ * Catch-all error state for when a route below the root fails to load.
  */
-export function RootAppError(props: RootAppErrorProps): ReactNode {
-    const isRoot = props.isRoot ?? false;
-    if (isRoot) {
-        return (
-            <PageError title="The app has crashed due to an unexpected error." />
-        );
-    }
+export function RootAppError(): ReactNode {
     return (
         <PageError
             title="The app has crashed due to an unexpected error."
             action={
                 <RequireAccessLevel useMaxAccessLevel>
-                    <ReloadDocumentsButton reloadAll hideFormGroup />
+                    <ReloadGroupsButton reloadAll />
                 </RequireAccessLevel>
             }
         />
+    );
+}
+
+/**
+ * Last-resort fallback for the ROOT route's errorComponent.
+ */
+export function RootCrash(): ReactNode {
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100dvh",
+                padding: 24,
+                textAlign: "center",
+                font: "16px system-ui, sans-serif"
+            }}
+        >
+            The app has crashed due to an unexpected error. If the problem
+            persists, contact the FRCDesignApp developers.
+        </div>
     );
 }
 
@@ -42,13 +49,13 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            intent="primary"
-            text="Go home"
-            icon="home"
+            leftSection={<IconHome size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({ to: "/app" });
             }}
-        />
+        >
+            Go home
+        </Button>
     );
 
     return (

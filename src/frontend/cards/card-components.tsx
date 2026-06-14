@@ -1,24 +1,22 @@
+import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
 import {
-    Button,
-    ButtonVariant,
-    Classes,
-    EntityTitle,
-    MenuDivider,
-    MenuItem,
-    Tag
-} from "@blueprintjs/core";
+    IconDots,
+    IconExternalLink,
+    IconEyeOff,
+    IconLink,
+    IconPlus,
+    IconRefresh,
+    IconSettings
+} from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import {
-    MouseEventHandler,
-    PropsWithChildren,
-    ReactNode,
-    useCallback
-} from "react";
+import { PropsWithChildren, ReactNode, useCallback } from "react";
+import { AppContextMenu } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath } from "../../shared/path";
-import { AppPopup, useOpenPopup } from "../overlays/popup-params";
+import { DocumentPath } from "../../shared/onshape-path";
+import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
@@ -36,24 +34,26 @@ interface OpenDocumentItemsProps {
 }
 
 /**
- * MenuItems which can be used to open or copy a link to a document.
+ * Menu items which can be used to open or copy a link to a document.
  */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
         <>
-            <MenuItem
-                text="Open document"
-                icon="share"
+            <Menu.Item
+                leftSection={<IconExternalLink size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
-            />
-            <MenuItem
-                text="Copy link"
-                icon="link"
+            >
+                Open document
+            </Menu.Item>
+            <Menu.Item
+                leftSection={<IconLink size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
-            />
+            >
+                Copy link
+            </Menu.Item>
         </>
     );
 }
@@ -65,7 +65,7 @@ interface QuickInsertItemProps {
 }
 
 /**
- * MenuItems which can be used to quick insert a document.
+ * Menu items which can be used to quick insert a document.
  */
 export function QuickInsertItems(props: QuickInsertItemProps) {
     const { insertable, configuration, isFavorite } = props;
@@ -78,17 +78,16 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
-    const openAlert = useOpenPopup();
 
     const handleClick = useCallback(
         (fasten: boolean) => {
             if (isAssemblyInPartStudio) {
-                openAlert(AppPopup.CANNOT_DERIVE_ASSEMBLY);
+                openCannotDeriveAssemblyAlert();
                 return;
             }
             insertMutation.mutate(fasten);
         },
-        [isAssemblyInPartStudio, insertMutation, openAlert]
+        [isAssemblyInPartStudio, insertMutation]
     );
 
     const supportsFasten =
@@ -98,17 +97,19 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     return (
         <>
             {supportsFasten && (
-                <MenuItem
-                    text="Quick insert and fasten"
-                    icon="add"
+                <Menu.Item
+                    leftSection={<IconPlus size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
-                />
+                >
+                    Quick insert and fasten
+                </Menu.Item>
             )}
-            <MenuItem
-                text="Quick insert"
-                icon="add"
+            <Menu.Item
+                leftSection={<IconPlus size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
-            />
+            >
+                Quick insert
+            </Menu.Item>
         </>
     );
 }
@@ -138,14 +139,7 @@ export function CardTitle(props: CardTitleProps) {
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
-    let hiddenTag: ReactNode = null;
-    if (isHidden) {
-        hiddenTag = (
-            <Tag round intent="warning" icon="eye-off" title="Hidden" />
-        );
-    }
-
-    let cardTitle;
+    let cardTitle: ReactNode;
     if (searchHit) {
         cardTitle = <SearchHitTitle title={title} searchHit={searchHit} />;
     } else {
@@ -153,62 +147,122 @@ export function CardTitle(props: CardTitleProps) {
     }
 
     return (
-        <EntityTitle
-            className={disabled ? Classes.TEXT_MUTED : undefined}
-            ellipsize
-            title={cardTitle}
-            icon={<CardThumbnail thumbnailUrls={thumbnailUrls} />}
-            tags={hiddenTag}
-        />
+        <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
+            <CardThumbnail thumbnailUrls={thumbnailUrls} />
+            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                {cardTitle}
+            </Text>
+            {isHidden && (
+                <Badge color="yellow" variant="light" circle title="Hidden">
+                    <IconEyeOff size={IconSize.TINY} />
+                </Badge>
+            )}
+        </Group>
     );
 }
 
-interface ContextMenuButtonProps {
+/**
+ * Groups `ItemRow`s into a single dense, hoverable table. Loading/empty/error
+ * states should be rendered outside of this.
+ */
+export function ItemTable(props: PropsWithChildren): ReactNode {
+    return (
+        <Table
+            highlightOnHover
+            verticalSpacing="xs"
+            layout="fixed"
+            style={{
+                cursor: "pointer"
+            }}
+        >
+            <Table.Tbody>{props.children}</Table.Tbody>
+        </Table>
+    );
+}
+
+interface ItemRowProps {
+    /** Left content, e.g. a `CardTitle`. */
+    left: ReactNode;
+    /** Menu items shown on right-click and (when shown) via the "more" button. */
+    menuItems: ReactNode;
+    onClick?: () => void;
+    /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
+    rightSection?: ReactNode;
     /**
-     * Function which is invoked when clicked.
+     * Show the explicit "..." button that opens the same menu.
+     * @default true
      */
-    onClick: MouseEventHandler<HTMLElement>;
+    moreButton?: boolean;
 }
 
 /**
- * A button which can be used to explicitly launch a context menu.
+ * A clickable table row with a hover state and a right-click context menu.
+ * Used for documents, insertables, and favorites. Render inside an `ItemTable`.
  */
-export function ContextMenuButton(props: ContextMenuButtonProps): ReactNode {
+export function ItemRow(props: ItemRowProps): ReactNode {
+    const { left, menuItems, onClick, rightSection, moreButton = true } = props;
+
     return (
-        <>
-            <Button
-                icon="more"
-                onClick={(event) => {
-                    event.stopPropagation();
-                    props.onClick(event);
-                }}
+        <AppContextMenu menuItems={menuItems}>
+            <Table.Tr onClick={onClick}>
+                <Table.Td>
+                    <Group wrap="nowrap">
+                        {left}
+                        <Group gap="4px" justify="flex-end">
+                            {moreButton && <MenuButton>{menuItems}</MenuButton>}
+                            {rightSection}
+                        </Group>
+                    </Group>
+                </Table.Td>
+            </Table.Tr>
+        </AppContextMenu>
+    );
+}
+
+/**
+ * An explicit button which opens a menu with the given items. Used alongside
+ * the right-click context menu so the menu is reachable without a right-click.
+ */
+export function MenuButton(props: PropsWithChildren): ReactNode {
+    return (
+        <AppContextMenu controlledByButton menuItems={props.children}>
+            <ActionIcon
+                variant="subtle"
+                color="gray"
                 title="View options"
-                variant={ButtonVariant.MINIMAL}
-            />
-        </>
+                onClick={(e) => e.stopPropagation()}
+            >
+                <IconDots size={IconSize.MEDIUM} />
+            </ActionIcon>
+        </AppContextMenu>
     );
 }
 
 /**
  * Wraps one or more admin-only menu items into an Admin submenu.
  */
-export function AdminSubmenu(props: PropsWithChildren): ReactNode {
+export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
     return (
         <RequireAccessLevel>
-            <MenuDivider />
-            <MenuItem
-                text="Admin options"
-                icon="cog"
-                intent="primary"
-                children={props.children}
-            />
+            <Menu.Divider />
+            <Menu.Sub>
+                <Menu.Sub.Target>
+                    <Menu.Sub.Item
+                        color="blue"
+                        leftSection={<IconSettings size={IconSize.SMALL} />}
+                    >
+                        Admin options
+                    </Menu.Sub.Item>
+                </Menu.Sub.Target>
+                <Menu.Sub.Dropdown>{props.children}</Menu.Sub.Dropdown>
+            </Menu.Sub>
         </RequireAccessLevel>
     );
 }
 
 interface ReloadThumbnailMenuItemProps {
     id: string;
-    isDocumentId: boolean;
+    isGroup: boolean;
 }
 
 export function ReloadThumbnailMenuItem(
@@ -216,15 +270,16 @@ export function ReloadThumbnailMenuItem(
 ): ReactNode {
     const reloadThumbnailMutation = useReloadThumbnailMutation(
         props.id,
-        props.isDocumentId
+        props.isGroup
     );
     return (
-        <MenuItem
+        <Menu.Item
+            leftSection={<IconRefresh size={IconSize.SMALL} />}
             onClick={() => {
                 reloadThumbnailMutation.mutate();
             }}
-            icon="refresh"
-            text="Reload thumbnail"
-        />
+        >
+            Reload thumbnail
+        </Menu.Item>
     );
 }

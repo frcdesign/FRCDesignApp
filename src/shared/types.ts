@@ -72,7 +72,7 @@ export enum Theme {
 
 export interface Settings {
     theme: Theme;
-    library: Library;
+    libraryId: LibraryId;
 }
 
 export interface AccessData {
@@ -89,7 +89,7 @@ export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;
     [ThumbnailSize.STANDARD]: string;
 }
-export enum Library {
+export enum LibraryId {
     FRC_DESIGN_LIB = "frc-design-lib",
     FTC_DESIGN_LIB = "ftc-design-lib",
     MKCAD = "mkcad"
@@ -114,3 +114,8 @@ export enum MateLocation {
     Part = "Part",
     Subassembly = "Subassembly"
 }
+
+export const DEFAULT_SETTINGS: Settings = {
+    theme: Theme.SYSTEM,
+    libraryId: LibraryId.FRC_DESIGN_LIB
+};

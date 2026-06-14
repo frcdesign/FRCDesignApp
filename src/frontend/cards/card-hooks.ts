@@ -1,55 +1,71 @@
 import { useMutation } from "@tanstack/react-query";
+import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { InsertableOut } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { showErrorToast, showSuccessToast } from "../common/toaster";
+import { showErrorToast, showSuccessToast } from "../common/notifications";
 import {
     toInsertablePath,
     toLibraryPath,
-    useLibrary
+    useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { libraryQueryMatchKey } from "../queries";
+import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
 
 export function useSetVisibilityMutation(
     insertableIds: string[],
     isVisible: boolean
 ) {
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const router = useRouter();
 
-    return useMutation({
+    const mutation = useMutation({
         mutationKey: ["set-element-visibility"],
         mutationFn: async () => {
-            if (!isVisible) {
-                const result = window.confirm(
-                    "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?"
-                );
-                if (!result) {
-                    showErrorToast("Cancelled hide operation.");
-                    return;
+            return apiPost(
+                "/set-element-visibility" + toLibraryPath(libraryId),
+                {
+                    body: {
+                        insertableIds,
+                        isVisible
+                    }
                 }
-            }
-            return apiPost("/set-element-visibility" + toLibraryPath(library), {
-                body: {
-                    insertableIds,
-                    isVisible
-                }
-            });
+            );
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to modify visibility."
         ),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
+        onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
+            await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
             void router.invalidate();
         }
     });
+
+    const mutate = useCallback(() => {
+        if (isVisible) {
+            mutation.mutate();
+            return;
+        }
+        modals.openConfirmModal({
+            title: "Hide elements",
+            children:
+                "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
+            labels: { confirm: "Hide", cancel: "Cancel" },
+            confirmProps: { color: "red" },
+            onConfirm: () => mutation.mutate(),
+            onCancel: () => showErrorToast("Cancelled hide operation.")
+        });
+    }, [isVisible, mutation]);
+
+    return { mutate };
 }
 
 /**
@@ -61,16 +77,16 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     return useMemo(() => {
         return (
             !insertable.isVisible &&
-            hasUserAccess(loaderData.currentAccessLevel)
+            hasUserAccess(loaderData.accessData.currentAccessLevel)
         );
-    }, [insertable.isVisible, loaderData.currentAccessLevel]);
+    }, [insertable.isVisible, loaderData.accessData.currentAccessLevel]);
 }
 
-export function useReloadThumbnailMutation(id: string, isDocumentId: boolean) {
+export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
     const router = useRouter();
 
-    const endpoint = isDocumentId
-        ? `/reload-document-thumbnail/document/${id}`
+    const endpoint = isGroup
+        ? `/reload-group-thumbnail/group/${id}`
         : "/reload-insertable-thumbnail" + toInsertablePath(id);
 
     return useMutation({
@@ -83,6 +99,9 @@ export function useReloadThumbnailMutation(id: string, isDocumentId: boolean) {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
         onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
             await queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });

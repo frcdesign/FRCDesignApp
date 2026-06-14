@@ -6,7 +6,7 @@ import {
     toElementApiObject,
     toElementApiPath,
     toInstanceApiPath
-} from "../../../shared/path";
+} from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 import { encodeConfiguration } from "./configurations";
 import { OnshapeElementType, PartType } from "./documents";

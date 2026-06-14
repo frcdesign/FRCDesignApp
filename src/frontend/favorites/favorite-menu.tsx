@@ -1,23 +1,14 @@
-import {
-    Button,
-    Dialog,
-    DialogBody,
-    DialogFooter,
-    Intent
-} from "@blueprintjs/core";
+import { Button, Group } from "@mantine/core";
+import { modals } from "@mantine/modals";
+import { IconDeviceFloppy } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
-import {
-    MenuType,
-    FavoriteMenuParams,
-    MenuDialogProps,
-    useHandleCloseDialog
-} from "../overlays/menu-params";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
-import { showErrorToast, showSuccessToast } from "../common/toaster";
+import { showErrorToast, showSuccessToast } from "../common/notifications";
 import { PreviewImageCard } from "../insert/thumbnail";
-import { ConfigurationWrapper } from "../app/configurations";
+import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
@@ -28,29 +19,45 @@ import {
     useLibraryQuery
 } from "../queries";
 import { getQueryUpdater } from "../common/utils";
-import { useLibrary } from "../api-utils/library";
-import { PageError } from "../common/app-zero-state";
+import { useLibraryId } from "../api-utils/library";
+import { PageError } from "../app-common/app-zero-state";
 
-export function FavoriteMenu(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    if (search.activeMenu !== MenuType.FAVORITE_MENU) {
-        return null;
-    }
-    return (
-        <FavoriteMenuDialog
-            favoriteId={search.favoriteId}
-            defaultConfiguration={search.defaultConfiguration}
-        />
-    );
+interface OpenFavoriteMenuProps {
+    favoriteId: string;
+    insertableName: string;
+    defaultConfiguration?: Configuration;
 }
 
-function FavoriteMenuDialog(
-    props: MenuDialogProps<FavoriteMenuParams>
-): ReactNode {
+export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
+    const { favoriteId, insertableName, defaultConfiguration } = props;
+    modals.open({
+        title: (
+            <Group gap="xs" wrap="nowrap">
+                <HeartIcon />
+                {insertableName}
+            </Group>
+        ),
+        size: 500,
+        centered: true,
+        children: (
+            <FavoriteMenuContent
+                favoriteId={favoriteId}
+                defaultConfiguration={defaultConfiguration}
+            />
+        )
+    });
+}
+
+interface FavoriteMenuContentProps {
+    favoriteId: string;
+    defaultConfiguration?: Configuration;
+}
+
+function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const { favoriteId, defaultConfiguration } = props;
 
     const router = useRouter();
-    const library = useLibrary();
+    const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
 
@@ -58,7 +65,6 @@ function FavoriteMenuDialog(
         Configuration | undefined
     >(defaultConfiguration);
 
-    const closeDialog = useHandleCloseDialog();
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
@@ -67,7 +73,7 @@ function FavoriteMenuDialog(
             });
         },
         onMutate: async () => {
-            const queryKey = favoritesQueryKey(library);
+            const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
             queryClient.setQueryData(
                 queryKey,
@@ -89,7 +95,7 @@ function FavoriteMenuDialog(
         },
         onSettled: async () => {
             await queryClient.invalidateQueries({
-                queryKey: favoritesQueryKey(library)
+                queryKey: favoritesQueryKey(libraryId)
             });
             void router.invalidate();
         }
@@ -112,39 +118,29 @@ function FavoriteMenuDialog(
         );
     }
 
-    const closeButton = (
-        <Button
-            text="Save"
-            icon="floppy-disk"
-            intent={Intent.PRIMARY}
-            onClick={() => {
-                setDefaultConfigurationMutation.mutate();
-                closeDialog();
-            }}
-        />
-    );
-
     return (
-        <Dialog
-            isOpen
-            icon={<HeartIcon />}
-            className="insert-menu"
-            title={insertable.name}
-            onClose={closeDialog}
-        >
+        <>
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
             />
-            <DialogBody>
-                <ConfigurationWrapper
-                    configuration={configuration}
-                    setConfiguration={setConfiguration}
-                    configurationId={insertable.configurationId}
-                    documentId={insertable.documentId}
-                />
-            </DialogBody>
-            <DialogFooter minimal actions={closeButton} />
-        </Dialog>
+            <ConfigurationWrapper
+                configuration={configuration}
+                setConfiguration={setConfiguration}
+                configurationId={insertable.configurationId}
+                microversionId={insertable.microversionId}
+            />
+            <Group justify="flex-end" mt="md">
+                <Button
+                    leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
+                    onClick={() => {
+                        setDefaultConfigurationMutation.mutate();
+                        modals.closeAll();
+                    }}
+                >
+                    Save
+                </Button>
+            </Group>
+        </>
     );
 }

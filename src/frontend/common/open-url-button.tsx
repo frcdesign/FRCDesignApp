@@ -1,4 +1,6 @@
-import { Button } from "@blueprintjs/core";
+import { Button } from "@mantine/core";
+import { IconExternalLink } from "@tabler/icons-react";
+import { IconSize } from "./style-constants";
 import { openUrlInNewTab } from "./url";
 
 interface UrlButtonProps {
@@ -9,10 +11,11 @@ interface UrlButtonProps {
 export function OpenUrlButton(props: UrlButtonProps) {
     return (
         <Button
-            text={props.text}
-            intent="primary"
-            icon="share"
+            leftSection={<IconExternalLink size={IconSize.SMALL} />}
             onClick={() => openUrlInNewTab(props.url)}
-        />
+            variant="light"
+        >
+            {props.text}
+        </Button>
     );
 }

@@ -1,25 +1,28 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
-import { getDb } from "../db";
+import { type Db, getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
-import { type Library } from "../../shared/types";
+import { type LibraryId } from "../../shared/types";
 import { type Configuration } from "../../shared/configuration-models";
 
 export const favoriteRoutes = getApp();
 
 async function getFavorites(
-    db: ReturnType<typeof getDb>,
+    db: Db,
     userId: string,
-    library: Library
+    libraryId: LibraryId
 ): Promise<FavoritesData> {
     const rows = await db
         .select()
         .from(favorites)
         .where(
-            and(eq(favorites.userId, userId), eq(favorites.libraryId, library))
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, libraryId)
+            )
         )
         .orderBy(asc(favorites.sortOrder))
         .all();
@@ -30,7 +33,7 @@ async function getFavorites(
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
-            library,
+            libraryId,
             defaultConfiguration: row.defaultConfiguration ?? undefined
         };
         favoritesOut[row.id] = fav;
@@ -39,24 +42,28 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
-/** GET /api/favorites/library/:library */
+/**
+ * Gets the list of a user's favorites.
+ */
 favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
-    return c.json(await getFavorites(db, userId, library));
+    return c.json(await getFavorites(db, userId, libraryId));
 });
 
-/** POST /api/favorites/library/:library */
+/**
+ * Creates a new favorite.
+ */
 favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
-    const library = getLibraryParam(c);
+    const libraryId = getLibraryParam(c);
     const onshapeApi = await getOnshapeApi(c);
     const userId = await getUserId(onshapeApi);
     const insertableId = c.req.query("insertableId");
-    const id = c.req.query("id");
+    const favoriteId = c.req.query("id");
     if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-    if (!id) return c.json({ error: "id required" }, 400);
+    if (!favoriteId) return c.json({ error: "id required" }, 400);
 
     const db = getDb(c.env.DB);
 
@@ -66,16 +73,19 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
         .select({ sortOrder: favorites.sortOrder })
         .from(favorites)
         .where(
-            and(eq(favorites.userId, userId), eq(favorites.libraryId, library))
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, libraryId)
+            )
         )
         .all();
 
     await db
         .insert(favorites)
         .values({
-            id,
+            id: favoriteId,
             userId,
-            libraryId: library,
+            libraryId,
             insertableId,
             sortOrder: existingCount.length
         })
@@ -84,15 +94,27 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** DELETE /api/favorites/:favoriteId */
+/**
+ * Deletes  a user's favorites.
+ */
 favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
+    if (!favoriteId) {
+        return c.json({ error: "favoriteId is required" }, 400);
+    }
+    const onshapeApi = await getOnshapeApi(c);
+    const userId = await getUserId(onshapeApi);
     const db = getDb(c.env.DB);
-    await db.delete(favorites).where(eq(favorites.id, favoriteId));
+
+    // security: Require the user to also match
+    await db
+        .delete(favorites)
+        .where(and(eq(favorites.id, favoriteId), eq(favorites.userId, userId)));
+
     return c.json({ success: true });
 });
 
-/** POST /api/favorite-order/library/:library */
+/** POST /api/favorite-order/library/:libraryId */
 favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
     const body = await c.req.json<{ favoriteOrder: string[] }>();
 

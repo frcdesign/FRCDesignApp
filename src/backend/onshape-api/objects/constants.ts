@@ -1,4 +1,4 @@
-import { InstancePath } from "../../../shared/path";
+import { InstancePath } from "../../../shared/onshape-path";
 
 /** The path to the Onshape standard library. */
 export const STD_PATH: InstancePath = {

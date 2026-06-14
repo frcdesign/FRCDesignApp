@@ -12,8 +12,8 @@ const UiStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
-    searchQuery: z.string().optional(),
-    openDocumentId: z.string().optional(),
+    searchQuery: z.string().default(""),
+    openGroupId: z.string().optional(),
     fasten: z.boolean().default(true)
 });
 

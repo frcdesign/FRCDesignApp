@@ -1,6 +1,15 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
 import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
+import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
+import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
+import { IconHelp } from "@tabler/icons-react";
+
+import { ComponentPropsWithRef, ReactNode } from "react";
+import { Configuration } from "../../shared/configuration-models";
+import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
+import { getConfigurationMatchKey } from "../queries";
+import { SectionError } from "../app-common/app-zero-state";
 
 interface HeightAndWidth {
     height: number;
@@ -17,59 +26,52 @@ function getHeightAndWidth(
         height: parseInt(parts[1]) * multiplier
     };
 }
-import { ElementPath, toElementApiPath } from "../../shared/path";
-import {
-    Card,
-    Icon,
-    Intent,
-    Popover,
-    Spinner,
-    SpinnerSize
-} from "@blueprintjs/core";
-
-import { ReactNode } from "react";
-import { Configuration } from "../../shared/configuration-models";
-import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
-import { getConfigurationMatchKey } from "../queries";
-import { SectionError } from "../common/app-zero-state";
 
 interface CardThumbnailProps {
     thumbnailUrls: ThumbnailUrls;
 }
 
+/**
+ * Thumbnail component used in lists.
+ */
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { thumbnailUrls } = props;
 
     return (
-        <Popover
-            content={
-                <Card>
-                    <Thumbnail
-                        url={thumbnailUrls[ThumbnailSize.STANDARD]}
-                        heightAndWidth={getHeightAndWidth(
-                            ThumbnailSize.STANDARD,
-                            0.6
-                        )}
-                        spinnerSize={SpinnerSize.LARGE}
-                    />
-                </Card>
-            }
-            interactionKind="hover"
+        <HoverCard
+            withinPortal
+            shadow="md"
+            openDelay={150}
+            closeDelay={50}
+            position="right"
+            withArrow
+            arrowSize={20}
         >
-            <div style={{ marginRight: "5px" }}>
+            <HoverCard.Target>
                 <Thumbnail
                     url={thumbnailUrls[ThumbnailSize.TINY]}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
                     spinnerSize={25}
                 />
-            </div>
-        </Popover>
+            </HoverCard.Target>
+            <HoverCard.Dropdown p="xs">
+                <Thumbnail
+                    url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                    heightAndWidth={getHeightAndWidth(
+                        ThumbnailSize.STANDARD,
+                        0.6
+                    )}
+                    spinnerSize={48}
+                />
+            </HoverCard.Dropdown>
+        </HoverCard>
     );
 }
 
-interface ThumbnailProps {
+// Extend with div props to support being used as a HoverCard Target
+interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     url?: string;
-    spinnerSize: SpinnerSize | number;
+    spinnerSize: number;
     heightAndWidth: HeightAndWidth;
 }
 
@@ -77,7 +79,7 @@ interface ThumbnailProps {
  * A generic thumbnail component.
  */
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { url, heightAndWidth, spinnerSize } = props;
+    const { url, heightAndWidth, spinnerSize, ...centerProps } = props;
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
@@ -93,24 +95,30 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     let content;
     if (url === undefined || imageQuery.isError) {
-        content = <Icon icon="help" size={spinnerSize} />;
+        content = <IconHelp size={spinnerSize} />;
     } else if (imageQuery.isPending) {
-        content = <Spinner intent={Intent.PRIMARY} size={spinnerSize} />;
+        content = <Loader size={spinnerSize} />;
     } else {
         content = <img src={imageQuery.data} {...heightAndWidth} />;
     }
 
     return (
-        <div className="center" style={heightAndWidth}>
+        <Center
+            {...centerProps}
+            w={heightAndWidth.width}
+            h={heightAndWidth.height}
+        >
             {content}
-        </div>
+        </Center>
     );
 }
 
 export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
-        <Card className="center preview-image-card">
-            <PreviewImage {...props} />
+        <Card withBorder pos="relative" m="sm" mb={0}>
+            <Center>
+                <PreviewImage {...props} />
+            </Center>
         </Card>
     );
 }
@@ -164,8 +172,16 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         placeholderData: (previousData) => previousData,
         // Cap max time between retries at 15 seconds with exponential backoff
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000),
-        retry: 15,
+        retryDelay: (attempt) => {
+            // Try again after 3 seconds, 5 seconds, and then 15 seconds
+            if (attempt === 1) {
+                return 3000;
+            } else if (attempt === 2) {
+                return 5000;
+            }
+            return 15000;
+        },
+        retry: 5,
         enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 
@@ -180,27 +196,23 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
-            <div className="center" style={heightAndWidth}>
-                <Spinner intent={Intent.PRIMARY} size={SpinnerSize.STANDARD} />
-            </div>
+            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+                <Loader size={36} />
+            </Center>
         );
     }
 
     return (
         <>
-            <div style={{ position: "relative", ...heightAndWidth }}>
+            <Box
+                pos="relative"
+                w={heightAndWidth.width}
+                h={heightAndWidth.height}
+            >
                 <img src={thumbnailQuery.data} {...heightAndWidth} />
-            </div>
+            </Box>
             {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
-                <Spinner
-                    size={SpinnerSize.SMALL}
-                    intent={Intent.PRIMARY}
-                    style={{
-                        position: "absolute",
-                        bottom: "15px",
-                        right: "15px"
-                    }}
-                />
+                <Loader pos="absolute" bottom={15} right={15} size={18} />
             )}
         </>
     );

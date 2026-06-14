@@ -1,3 +1,4 @@
+import { Text, Title } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_pages/license")({
@@ -7,8 +8,10 @@ export const Route = createFileRoute("/_pages/license")({
 function License() {
     return (
         <>
-            <h3 style={{ textAlign: "center" }}>GNU GENERAL PUBLIC LICENSE</h3>
-            <p style={{ textAlign: "center" }}>Version 3, 29 June 2007</p>
+            <Title order={3} ta="center">
+                GNU GENERAL PUBLIC LICENSE
+            </Title>
+            <Text ta="center">Version 3, 29 June 2007</Text>
 
             <p>
                 Copyright &copy; 2007 Free Software Foundation, Inc. &lt;

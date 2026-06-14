@@ -3,7 +3,7 @@ import {
     type Configuration,
     type ParameterObj
 } from "../../../shared/configuration-models";
-import { type ElementPath } from "../../../shared/path";
+import { type ElementPath } from "../../../shared/onshape-path";
 
 const PART_STUDIO_QUERY =
     "query=qUnion(qAllModifiableSolidBodies(), qAllModifiableSolidBodies()->qOwnedByBody(EntityType.BODY)->qBodyType(BodyType.MATE_CONNECTOR), qAllModifiableSolidBodies()->qCompositePartsContaining());";

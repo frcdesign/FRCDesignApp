@@ -1,20 +1,24 @@
-import { Colors, Card } from "@blueprintjs/core";
+import { IconHeartBroken } from "@tabler/icons-react";
+import { HeartIconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
+import { useLoaderData } from "@tanstack/react-router";
 import { filterInsertables } from "../search/filter";
 import {
     getFavoriteForInsertable,
     InsertableOut
 } from "../../shared/api-models";
 import { useUiState } from "../api-utils/ui-state";
-import { SectionError, SectionLoading } from "../common/app-zero-state";
+import { SectionError, SectionLoading } from "../app-common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
+import { ItemTable } from "../cards/card-components";
 import {
     useFavoritesQuery,
     useLibraryQuery,
     useSearchDbQuery
 } from "../queries";
 import { doSearch, FilterResult, SearchHit } from "../search/search";
+import { hasEditorAccess } from "../../shared/types";
 
 /**
  * A list of current favorite cards.
@@ -22,6 +26,7 @@ import { doSearch, FilterResult, SearchHit } from "../search/search";
  */
 export function FavoritesList(): ReactNode {
     const uiState = useUiState()[0];
+    const loaderData = useLoaderData({ from: "/app" });
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
@@ -41,8 +46,12 @@ export function FavoritesList(): ReactNode {
         return (
             <SectionError
                 title="Failed to load favorites."
-                icon="heart-broken"
-                iconColor={Colors.RED3}
+                icon={
+                    <IconHeartBroken
+                        size={IconSize.LARGE}
+                        color={HeartIconColor}
+                    />
+                }
             />
         );
     }
@@ -76,7 +85,8 @@ export function FavoritesList(): ReactNode {
                 vendors: uiState.vendorFilters,
                 isFavorite: true
             },
-            favoriteInsertableIds
+            favoriteInsertableIds,
+            hasEditorAccess(loaderData.accessData.currentAccessLevel)
         );
 
         filteredInsertables = searchResults.hits
@@ -112,11 +122,9 @@ export function FavoritesList(): ReactNode {
     }
 
     let callout: ReactNode = null;
-    if (filterResult.byDocument > 0 || filterResult.byVendor > 0) {
+    if (filterResult.byGroup > 0 || filterResult.byVendor > 0) {
         callout = (
-            <Card className="item-card" style={{ padding: "0px" }}>
-                <SearchCallout objectLabel="favorite" filtered={filterResult} />
-            </Card>
+            <SearchCallout objectLabel="favorite" filtered={filterResult} />
         );
     }
 
@@ -141,7 +149,7 @@ export function FavoritesList(): ReactNode {
     return (
         <>
             {callout}
-            {cards}
+            <ItemTable>{cards}</ItemTable>
         </>
     );
 }

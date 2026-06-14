@@ -194,7 +194,7 @@ async function initSession(
     setCookie(c, SESSION_COOKIE, sessionId, {
         httpOnly: true,
         secure: true,
-        sameSite: "Strict",
+        sameSite: "None",
         path: "/",
         maxAge: SESSION_TTL
     });

@@ -1,5 +1,5 @@
 import { OnshapeApi, OnshapeApiError } from "../onshape-api";
-import { DocumentPath, toDocumentApiPath } from "../../../shared/path";
+import { DocumentPath, toDocumentApiPath } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 
 export enum Permission {

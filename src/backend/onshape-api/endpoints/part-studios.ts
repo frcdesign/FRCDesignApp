@@ -5,7 +5,7 @@ import {
     InstancePath,
     toElementApiPath,
     toInstanceApiPath
-} from "../../../shared/path";
+} from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 
 /** Creates a part studio in a document. */

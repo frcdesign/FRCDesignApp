@@ -18,18 +18,23 @@ export interface PartPath extends ElementPath {
     partId: string;
 }
 
-export interface UserPath {
-    userId: string;
+export function isDocumentPath(path: any): path is DocumentPath {
+    return (
+        typeof path === "object" &&
+        path !== null &&
+        typeof path.documentId === "string"
+    );
 }
 
-export function isInstancePath(path: DocumentPath): path is InstancePath {
+export function isInstancePath(path: any): path is InstancePath {
     return (
+        isDocumentPath(path) &&
         (path as InstancePath).instanceId !== undefined &&
         (path as InstancePath).instanceType !== undefined
     );
 }
 
-export function isElementPath(path: DocumentPath): path is ElementPath {
+export function isElementPath(path: any): path is ElementPath {
     return (
         isInstancePath(path) && (path as ElementPath).elementId !== undefined
     );
@@ -49,10 +54,6 @@ export function toInstanceApiPath(path: InstancePath): string {
 
 export function toElementApiPath(path: ElementPath): string {
     return `${toInstanceApiPath(path)}/e/${path.elementId}`;
-}
-
-export function toUserApiPath(path: UserPath): string {
-    return `/users/${path.userId}`;
 }
 
 export type InstanceTypeKey = "workspaceId" | "versionId" | "microversionId";

@@ -1,17 +1,4 @@
-import {
-    Spinner,
-    Intent,
-    NonIdealState,
-    Icon,
-    NonIdealStateIconSize,
-    FormGroup,
-    MenuItem,
-    Button,
-    Checkbox,
-    Alignment,
-    InputGroup,
-    NumericInput
-} from "@blueprintjs/core";
+import { Center, Checkbox, Loader, Select, TextInput } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -22,7 +9,7 @@ import {
     useState,
     useCallback
 } from "react";
-import { useCacheOptions, apiGet } from "../api-utils/api";
+import { apiGet } from "../api-utils/api";
 import {
     Configuration,
     ConfigurationResult,
@@ -45,35 +32,27 @@ import {
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "../insert/input-parser";
-import { Select } from "@blueprintjs/select";
+} from "./input-parser";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
-import { showErrorToast } from "../common/toaster";
-import { useLibrary } from "../api-utils/library";
+import { showErrorToast } from "../common/notifications";
+import { SectionError } from "../app-common/app-zero-state";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
-    documentId: string;
+    microversionId: string;
     configuration?: Configuration;
     setConfiguration: Dispatch<Configuration>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, documentId, configuration, setConfiguration } =
+    const { configurationId, microversionId, configuration, setConfiguration } =
         props;
 
-    const library = useLibrary();
-    const cacheOptions = useCacheOptions();
     const query = useQuery<ConfigurationResult>({
-        queryKey: getConfigurationKey(library, configurationId, cacheOptions),
+        queryKey: getConfigurationKey(configurationId, microversionId),
         queryFn: async () => {
-            return apiGet("/configuration", {
-                query: {
-                    library,
-                    documentId,
-                    configurationId
-                },
-                cacheOptions
+            return apiGet("/configuration/" + configurationId, {
+                cacheId: microversionId
             });
         },
         // Don't refetch query automatically so we don't reset user inputs
@@ -100,21 +79,13 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     if (query.isPending || unitInfoQuery.isPending || !configuration) {
-        return <Spinner intent={Intent.PRIMARY} />;
-    } else if (query.isError || unitInfoQuery.isError) {
         return (
-            <NonIdealState
-                icon={
-                    <Icon
-                        intent="danger"
-                        icon="cross"
-                        size={NonIdealStateIconSize.STANDARD}
-                    />
-                }
-                title="Failed to load configuration"
-                description="If the problem persists, contact the FRCDesignApp developers."
-            />
+            <Center my="md">
+                <Loader />
+            </Center>
         );
+    } else if (query.isError || unitInfoQuery.isError) {
+        return <SectionError title="Failed to load configuration" />;
     }
 
     return (
@@ -140,17 +111,18 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
     const parameters = configurationResult.parameters.map((parameter) => {
         const handleValueChange = (newValue: string | undefined) => {
-            let newConfiguration;
-            if (newValue == undefined) {
-                newConfiguration = { ...configuration };
-                delete newConfiguration[parameter.id];
+            if (newValue === undefined) {
+                if (!(parameter.id in configuration)) return;
+                const next = { ...configuration };
+                delete next[parameter.id];
+                setConfiguration(next);
             } else {
-                newConfiguration = {
+                if (configuration[parameter.id] === newValue) return;
+                setConfiguration({
                     ...configuration,
                     [parameter.id]: newValue
-                };
+                });
             }
-            setConfiguration(newConfiguration);
         };
 
         return (
@@ -165,7 +137,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             />
         );
     });
-    return <div style={{ width: "100%" }}>{parameters}</div>;
+    return <div>{parameters}</div>;
 }
 
 interface ParameterProps<T extends ParameterObj> {
@@ -263,12 +235,28 @@ function getVisibleOptions(
     );
 }
 
+function getFirstVisibleOption(
+    visibleOptions: EnumOption[],
+    currentOptionId: string,
+    defaultOptionId: string
+): EnumOption | undefined {
+    if (visibleOptions.length === 0) {
+        return undefined;
+    }
+    const currentOption = getOption(visibleOptions, currentOptionId);
+    if (currentOption) {
+        return currentOption;
+    }
+    const defaultOption = getOption(visibleOptions, defaultOptionId);
+    if (defaultOption) {
+        return defaultOption;
+    }
+    return visibleOptions[0];
+}
+
 function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     const { parameter, value, onValueChange, configuration, parameters } =
         props;
-
-    // The active option is the option currently focused by the user
-    // const [activeOption, setActiveOption] = useState<EnumOption | null>(null);
 
     const visibleOptions = getVisibleOptions(
         parameter,
@@ -276,89 +264,48 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
         parameters
     );
 
-    // useMemo to stabilize options across re-renders so, e.g., active item changes work
-    // const visibleOptions = useMemo(
-    //     () => getVisibleOptions(parameter, configuration, parameters),
-    //     [configuration, parameter, parameters]
-    // );
-
     useEffect(() => {
-        if (visibleOptions.length === 0) {
+        const option = getFirstVisibleOption(
+            visibleOptions,
+            value,
+            parameter.default
+        );
+        if (!option) {
             onValueChange(undefined);
-            return;
-        }
-        // Logic to set value to the first visible option or default when a parameter is shown
-        if (!getOption(visibleOptions, value)) {
-            if (getOption(visibleOptions, parameter.default)) {
-                onValueChange(parameter.default);
-            } else {
-                onValueChange(visibleOptions[0].id);
-            }
+        } else if (option.id !== value) {
+            onValueChange(option.id);
         }
     }, [onValueChange, parameter.default, value, visibleOptions]);
 
-    if (visibleOptions.length === 0) {
+    const currentOption = getFirstVisibleOption(
+        visibleOptions,
+        value,
+        parameter.default
+    );
+    if (!currentOption) {
         return null;
     }
 
-    // Same logic as the useEffect
-    let currentOption = getOption(visibleOptions, value);
-    if (!currentOption) {
-        currentOption = getOption(visibleOptions, parameter.default);
-        if (!currentOption) {
-            currentOption = visibleOptions[0];
-        }
-    }
-
     return (
-        <FormGroup
+        <Select
             label={parameter.name}
-            labelFor={parameter.id}
-            inline
-            className="full-width"
-        >
-            <Select<EnumOption>
-                items={visibleOptions}
-                activeItem={currentOption}
-                onItemSelect={(option) => {
-                    onValueChange(option.id);
-                }}
-                itemsEqual="id"
-                fill
-                popoverProps={{
-                    minimal: true,
-                    popoverClassName: "enum-menu"
-                }}
-                filterable={false}
-                itemRenderer={(
-                    currentOption,
-                    { handleClick, handleFocus, modifiers, ref }
-                ) => {
-                    const selected = value === currentOption.id;
-                    return (
-                        <MenuItem
-                            key={currentOption.id}
-                            ref={ref}
-                            onClick={handleClick}
-                            onFocus={handleFocus}
-                            active={modifiers.active}
-                            text={currentOption.name}
-                            roleStructure="listoption"
-                            selected={selected}
-                            intent={selected ? Intent.PRIMARY : Intent.NONE}
-                        />
-                    );
-                }}
-            >
-                <Button
-                    id={parameter.id}
-                    alignText="start"
-                    endIcon="caret-down"
-                    text={currentOption.name}
-                    fill
-                />
-            </Select>
-        </FormGroup>
+            id={parameter.id}
+            data={visibleOptions.map((option) => ({
+                value: option.id,
+                label: option.name
+            }))}
+            value={currentOption.id}
+            allowDeselect={false}
+            mt="sm"
+            checkIconPosition="right"
+            maxDropdownHeight={250}
+            comboboxProps={{ withinPortal: true }}
+            onChange={(newValue) => {
+                if (newValue !== null) {
+                    onValueChange(newValue);
+                }
+            }}
+        />
     );
 }
 
@@ -366,38 +313,33 @@ function BooleanParameter(
     props: ParameterProps<BooleanParameterObj>
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
-    // Add a 100% width div to eat up space to the right of the checkbox
-    // Otherwise multiple checkboxes in a row can fold onto the same line
     return (
-        <div style={{ width: "100%" }}>
-            <Checkbox
-                label={parameter.name}
-                alignIndicator={Alignment.END}
-                inline
-                checked={value === "true"}
-                onChange={handleBooleanChange((checked) =>
-                    onValueChange(checked ? "true" : "false")
-                )}
-            />
-        </div>
+        <Checkbox
+            label={parameter.name}
+            labelPosition="left"
+            checked={value === "true"}
+            mt="sm"
+            styles={{
+                input: { cursor: "pointer" },
+                label: { cursor: "pointer" }
+            }}
+            onChange={handleBooleanChange((checked) =>
+                onValueChange(checked ? "true" : "false")
+            )}
+        />
     );
 }
 
 function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <FormGroup
+        <TextInput
             label={parameter.name}
-            inline
-            labelFor={parameter.id}
-            className="full-width"
-        >
-            <InputGroup
-                id={parameter.id}
-                value={value}
-                onValueChange={onValueChange}
-            />
-        </FormGroup>
+            id={parameter.id}
+            mt="sm"
+            value={value}
+            onChange={(event) => onValueChange(event.currentTarget.value)}
+        />
     );
 }
 
@@ -493,40 +435,28 @@ function QuantityParameter(
         }
     }, [evaluateOptions, expression, onValueChange]);
 
-    const intent = errorMessage ? "danger" : undefined;
-
     return (
-        <FormGroup
+        <TextInput
             label={parameter.name}
-            inline
-            labelFor={parameter.id}
-            className="full-width"
-            helperText={errorMessage}
-            intent={intent}
-        >
-            <NumericInput
-                id={parameter.id}
-                value={focused ? expression : display}
-                fill
-                intent={intent}
-                inputRef={ref}
-                selectAllOnFocus
-                onFocus={() => {
-                    setFocused(true);
-                }}
-                onBlur={handleSubmit}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                        ref.current?.blur();
-                        handleSubmit();
-                    }
-                }}
-                allowNumericCharactersOnly={false}
-                onValueChange={(_, expression) => {
-                    setExpression(expression);
-                }}
-                buttonPosition="none"
-            />
-        </FormGroup>
+            id={parameter.id}
+            ref={ref}
+            value={focused ? expression : display}
+            error={errorMessage}
+            mt="sm"
+            onFocus={(event) => {
+                setFocused(true);
+                event.currentTarget.select();
+            }}
+            onBlur={handleSubmit}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                    ref.current?.blur();
+                    handleSubmit();
+                }
+            }}
+            onChange={(event) => {
+                setExpression(event.currentTarget.value);
+            }}
+        />
     );
 }

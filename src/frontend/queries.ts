@@ -2,55 +2,53 @@
  * Queries for getting data from various endpoints on the backend.
  */
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import {
-    apiGet,
-    CacheOptions,
-    toCacheOptions,
-    useCacheOptions
-} from "./api-utils/api";
+import { useLoaderData } from "@tanstack/react-router";
+import { apiGet } from "./api-utils/api";
 import { type FavoritesData, type LibraryOut } from "../shared/api-models";
-import { Library } from "../shared/types";
+import { LibraryId } from "../shared/types";
 import { ContextData } from "../shared/types";
-import { useLibrary } from "./api-utils/library";
+import { useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "./search/search";
-import { InstancePath } from "../shared/path";
+import { InstancePath } from "../shared/onshape-path";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];
 }
 
 export function getConfigurationKey(
-    library: Library,
     configurationId?: string,
-    cacheOptions?: CacheOptions
+    microversionId?: string
 ) {
-    return ["configuration", library, configurationId, cacheOptions];
+    return ["configuration", configurationId, microversionId];
 }
 
-export function useLibraryQuery() {
-    const cacheOptions = useCacheOptions();
-    const library = useLibrary();
-    return useQuery(getLibraryQuery(library, cacheOptions));
-}
-
-export function libraryQueryKey(library: Library, cacheOptions: CacheOptions) {
-    return ["library", library, toCacheOptions(cacheOptions)];
+export function libraryQueryKey(libraryId: LibraryId, cacheVersion: number) {
+    return ["library", libraryId, cacheVersion];
 }
 
 export function libraryQueryMatchKey() {
     return ["library"];
 }
 
-export function getLibraryQuery(library: Library, cacheOptions: CacheOptions) {
+export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryOut>({
-        queryKey: libraryQueryKey(library, cacheOptions),
+        queryKey: libraryQueryKey(libraryId, cacheVersion),
         queryFn: async () =>
-            apiGet("/library-data/library/" + library, { cacheOptions }),
+            apiGet("/library-data/library/" + libraryId, {
+                cacheId: cacheVersion
+            }),
         staleTime: Infinity,
         gcTime: Infinity
     });
+}
+
+export function useLibraryQuery() {
+    const libraryId = useLibraryId();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
+    return useQuery(getLibraryQuery(libraryId, cacheVersion));
 }
 
 export function contextDataQueryKey() {
@@ -84,43 +82,44 @@ export function searchDbQueryMatchKey() {
     return ["search-db"];
 }
 
-export function searchDbQueryKey(library: Library, cacheOptions: CacheOptions) {
-    return ["search-db", library, cacheOptions];
+export function searchDbQueryKey(libraryId: LibraryId, cacheVersion: number) {
+    return ["search-db", libraryId, cacheVersion];
 }
 
-export function getSearchDbQuery(library: Library, cacheOptions: CacheOptions) {
+export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<MiniSearch | null>({
-        queryKey: searchDbQueryKey(library, cacheOptions),
+        queryKey: searchDbQueryKey(libraryId, cacheVersion),
         queryFn: async () =>
-            apiGet("/search-db/library/" + library, { cacheOptions }).then(
-                (result: { searchDb: string | null }) => {
-                    if (!result.searchDb) return null;
-                    return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
-                }
-            ),
+            apiGet("/search-db/library/" + libraryId, {
+                cacheId: cacheVersion
+            }).then((result: { searchDb: string | null }) => {
+                if (!result.searchDb) return null;
+                return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
+            }),
         staleTime: Infinity,
         gcTime: Infinity
     });
 }
 
 export function useSearchDbQuery() {
-    const cacheOptions = useCacheOptions();
-    const library = useLibrary();
-    return useQuery(getSearchDbQuery(library, cacheOptions));
+    const libraryId = useLibraryId();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
+    return useQuery(getSearchDbQuery(libraryId, cacheVersion));
 }
 
-export function favoritesQueryKey(library: Library) {
-    return ["favorites", library];
+export function favoritesQueryKey(libraryId: LibraryId) {
+    return ["favorites", libraryId];
 }
 
-export function getFavoritesQuery(library: Library) {
+export function getFavoritesQuery(libraryId: LibraryId) {
     return queryOptions<FavoritesData>({
-        queryKey: favoritesQueryKey(library),
-        queryFn: () => apiGet("/favorites/library/" + library)
+        queryKey: favoritesQueryKey(libraryId),
+        queryFn: () => apiGet("/favorites/library/" + libraryId)
     });
 }
 
 export function useFavoritesQuery() {
-    const library = useLibrary();
-    return useQuery(getFavoritesQuery(library));
+    const libraryId = useLibraryId();
+    return useQuery(getFavoritesQuery(libraryId));
 }

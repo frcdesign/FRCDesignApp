@@ -1,7 +1,6 @@
-import { Classes } from "@blueprintjs/core";
 import { useMatch } from "@tanstack/react-router";
 import { produce } from "immer";
-import { Dispatch, FormEvent, RefObject, useLayoutEffect } from "react";
+import { Dispatch, SyntheticEvent } from "react";
 
 export { createSearchParams } from "../../shared/url-params";
 export type {
@@ -20,38 +19,8 @@ export function capitalize(val: string) {
 
 /** Event handler that exposes the target element's value as a boolean. */
 export function handleBooleanChange(handler: Dispatch<boolean>) {
-    return (event: FormEvent<HTMLElement>) =>
+    return (event: SyntheticEvent<HTMLElement>) =>
         handler((event.target as HTMLInputElement).checked);
-}
-
-/** Event handler that exposes the target element's value as a string. */
-export function handleStringChange(handler: Dispatch<string>) {
-    return (event: FormEvent<HTMLElement>) =>
-        handler((event.target as HTMLInputElement).value);
-}
-
-/** Generic event handler that exposes the target element's value. */
-export function handleValueChange<T>(handler: Dispatch<T>) {
-    return (event: FormEvent<HTMLElement>) =>
-        handler((event.target as HTMLInputElement).value as T);
-}
-
-/**
- * Adds the Interactive class to a Blueprint Section.
- */
-export function useInteractiveSection(
-    sectionRef: RefObject<HTMLDivElement>,
-    dependencies: any[] = []
-) {
-    useLayoutEffect(() => {
-        const section = sectionRef.current;
-        if (!section) {
-            return;
-        }
-        const child = section.children[0];
-        child.className += " " + Classes.INTERACTIVE;
-        // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
-    }, [sectionRef, ...dependencies]);
 }
 
 type Updater<T> = (value: T | undefined) => T | undefined;
@@ -71,7 +40,5 @@ export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
  * Returns true if the current route is the home route, and false if it is a document route.
  */
 export function useIsHome(): boolean {
-    return (
-        useMatch({ from: "/app/documents/", shouldThrow: false }) !== undefined
-    );
+    return useMatch({ from: "/app/groups/", shouldThrow: false }) !== undefined;
 }

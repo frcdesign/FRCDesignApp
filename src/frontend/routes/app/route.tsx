@@ -1,14 +1,11 @@
 import {
     createFileRoute,
     Outlet,
-    redirect,
     retainSearchParams,
-    type SearchSchemaInput,
-    useLoaderData,
-    useSearch
+    type SearchSchemaInput
 } from "@tanstack/react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { BlueprintProvider } from "@blueprintjs/core";
+import { AppShell } from "@mantine/core";
+import { useElementSize } from "@mantine/hooks";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
 import {
@@ -17,115 +14,67 @@ import {
     getLibraryQuery,
     getSearchDbQuery
 } from "../../queries";
-import { type MenuParams } from "../../overlays/menu-params";
-import {
-    getBackgroundClass,
-    getColorTheme,
-    getThemeClass,
-    OnshapeParams
-} from "../../api-utils/onshape-params";
-import { getUiState } from "../../api-utils/ui-state";
-import { type PopupParams } from "../../overlays/popup-params";
-import { AppNavbar } from "../../navbar/app-navbar";
-import { AppPopups } from "../../overlays/app-popups";
-import { AppMenus } from "../../overlays/app-menus";
+import { OnshapeParams } from "../../api-utils/onshape-params";
+import { AppNavbar } from "../../app/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
-import { type AccessData, type Settings } from "../../../shared/types";
-
-type SearchParams = OnshapeParams &
-    MenuParams &
-    PopupParams & { settings: Settings };
+import { PrimaryColor } from "../../common/style-constants";
+import { type ContextData } from "../../../shared/types";
 
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        search.systemTheme = search.theme;
-        delete search.theme;
-        return search as unknown as SearchParams;
+        return search as unknown as OnshapeParams;
     },
     search: {
         middlewares: [retainSearchParams(true)]
     },
-    beforeLoad: async ({ location }) => {
+    beforeLoad: async () => {
+        // The auth-gated entry redirect lives in the `/init` route; here we just
+        // expose the access level to child loaders/components.
         const contextData = await queryClient.ensureQueryData(
             getContextDataQuery()
         );
-        const context = { accessData: contextData.accessData };
-        if (location.pathname !== "/app") {
-            return context;
-        }
-
-        const settings = { settings: contextData.settings };
-
-        const uiState = getUiState();
-        if (uiState.openDocumentId) {
-            throw redirect({
-                to: "/app/documents/$documentId",
-                params: { documentId: uiState.openDocumentId },
-                search: settings
-            });
-        }
-        // must throw redirects here for type inference to work
-        throw redirect({
-            to: "/app/documents",
-            search: settings
-        });
+        return contextData;
     },
-    loaderDeps: ({ search }) => ({
-        library: search.settings?.library
-    }),
-    loader: async ({ context, deps }): Promise<AccessData> => {
+    loader: async ({ context }): Promise<ContextData> => {
         const accessData = context.accessData;
+        const libraryId = context.settings.libraryId;
         await Promise.all([
             queryClient.prefetchQuery(
-                getLibraryQuery(deps.library, accessData)
+                getLibraryQuery(libraryId, accessData.cacheVersion)
             ),
             queryClient.prefetchQuery(
-                getSearchDbQuery(deps.library, accessData)
+                getSearchDbQuery(libraryId, accessData.cacheVersion)
             ),
-            queryClient.prefetchQuery(getFavoritesQuery(deps.library))
+            queryClient.prefetchQuery(getFavoritesQuery(libraryId))
         ]);
-        return accessData;
+        return context;
     },
     errorComponent: RootAppError
 });
 
 function App() {
-    const search = useSearch({ from: "/app" });
-    const loaderData = useLoaderData({ from: "/app" });
-    const colorTheme = getColorTheme(
-        search.settings?.theme,
-        search.systemTheme
-    );
-    const themeClass = getThemeClass(colorTheme);
-    void loaderData; // consumed by child components via useLoaderData
-    // eslint-disable-next-line react-x/purity
-    const portalContainer = document.getElementById("root")!;
+    // The navbar (control row + always-open filters) is self-sizing, so measure
+    // it and feed its height to AppShell rather than hardcoding one.
+    const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <BlueprintProvider
-                portalClassName={themeClass}
-                // Very important, context menus do not work with the default container :(
-                portalContainer={portalContainer}
-            >
-                <div className={themeClass + " app-background"}>
+        <AppShell header={{ height: headerHeight || 56 }}>
+            <AppShell.Header bg={PrimaryColor.FILLED} c={PrimaryColor.CONTRAST}>
+                <div ref={headerRef}>
                     <AppNavbar />
-                    <div
-                        className={
-                            getBackgroundClass(colorTheme) + " app-content"
-                        }
-                    >
-                        <Outlet />
-                        <AppPopups />
-                        <AppMenus />
-                        <TanStackRouterDevtools />
-                    </div>
                 </div>
-            </BlueprintProvider>
-        </QueryClientProvider>
+            </AppShell.Header>
+            {/* Cap the main region at one viewport so it (not the window)
+                scrolls; the fixed header covers the top of this scrollbar,
+                keeping it within the body. */}
+            <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
+                <Outlet />
+                <TanStackRouterDevtools />
+            </AppShell.Main>
+        </AppShell>
     );
 }

@@ -1,9 +1,9 @@
-import { env } from "cloudflare:workers";
 import {
     createSearchParams,
     type QueryOptions,
     type PostOptions
 } from "../../shared/url-params";
+import { env } from "cloudflare:workers";
 
 export function getBaseUrl(): string {
     const url = env.ONSHAPE_API_BASE_PATH ?? "https://cad.onshape.com";

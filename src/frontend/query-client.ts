@@ -5,7 +5,8 @@ export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             retry: (count, error) => {
-                if (count >= 3) {
+                // Only retry once
+                if (count >= 2) {
                     return false;
                 } else if (error instanceof HandledError) {
                     return false;

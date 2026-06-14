@@ -1,5 +1,8 @@
-import { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
-import type { WorkflowStep } from "cloudflare:workers";
+import {
+    WorkflowEntrypoint,
+    WorkflowEvent,
+    WorkflowStep
+} from "cloudflare:workers";
 import {
     and,
     asc,
@@ -14,7 +17,7 @@ import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
 import { getDb } from "../db";
 import {
-    documents,
+    groups,
     insertables,
     configurations,
     libraries
@@ -23,11 +26,12 @@ import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { parseFastenInfo } from "./insert-and-fasten";
-import type { ElementPath, InstancePath } from "../../shared/path";
-import type { ConfigurationResult } from "../../shared/configuration-models";
+import type { ElementPath, InstancePath } from "../../shared/onshape-path";
+import type { ParameterObj } from "../../shared/configuration-models";
 import {
     type FastenInfo,
     ElementType,
+    type LibraryId,
     type ThumbnailUrls,
     type Vendor
 } from "../../shared/types";
@@ -37,11 +41,12 @@ import {
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 
 export interface LoadDocumentParams {
     documentId: string;
     libraryId: string;
-    selectedDocumentId?: string;
+    selectedGroupId?: string;
     sessionId: string;
     forceReload?: boolean;
 }
@@ -111,7 +116,7 @@ interface ElementLoadResult {
     fastenInfo: FastenInfo | null;
     supportsFasten: boolean;
     vendors: Vendor[];
-    configuration: ConfigurationResult | null;
+    configuration: ParameterObj[] | null;
     thumbnailUrls: ThumbnailUrls | null;
 }
 
@@ -127,7 +132,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             documentId,
             libraryId,
             sessionId,
-            selectedDocumentId,
+            selectedGroupId,
             forceReload = false
         } = event.payload;
 
@@ -147,18 +152,31 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             };
         });
 
-        // Step 2: Check if reload is needed
-        const needsReload = await step.do("check-needs-reload", async () => {
-            if (forceReload) return true;
+        // Step 2: Resolve the group's surrogate UUID (reused if the Onshape
+        // document is already a group in this library, otherwise generated here
+        // — the step memoizes the value so retries stay stable).
+        const group = await step.do("resolve-group", async () => {
             const db = getDb(this.env.DB);
             const existing = await db
-                .select({ instanceId: documents.instanceId })
-                .from(documents)
-                .where(eq(documents.id, documentId))
+                .select({ id: groups.id, instanceId: groups.instanceId })
+                .from(groups)
+                .where(
+                    and(
+                        eq(groups.documentId, documentId),
+                        eq(groups.libraryId, libraryId)
+                    )
+                )
                 .get();
-            return !existing || existing.instanceId !== versionInfo.instanceId;
+            return {
+                groupId: existing?.id ?? crypto.randomUUID(),
+                instanceId: existing?.instanceId ?? null
+            };
         });
+        const groupId = group.groupId;
 
+        // Reload when forced, the group is new, or its pinned version changed.
+        const needsReload =
+            forceReload || group.instanceId !== versionInfo.instanceId;
         if (!needsReload) return;
 
         // Step 3: Fetch document contents
@@ -214,7 +232,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         hasFastenInfo: sql<number>`(${insertables.fastenInfo} IS NOT NULL)`
                     })
                     .from(insertables)
-                    .where(eq(insertables.documentId, documentId))
+                    .where(eq(insertables.groupId, groupId))
                     .all();
             }
         );
@@ -280,29 +298,29 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 .values({ id: libraryId })
                 .onConflictDoNothing();
 
-            // Update document sort order (insert after selectedDocumentId, or at end)
-            const orderedDocs = await db
-                .select({ id: documents.id })
-                .from(documents)
-                .where(eq(documents.libraryId, libraryId))
-                .orderBy(asc(documents.sortOrder))
+            // Update group sort order (insert after selectedGroupId, or at end)
+            const orderedGroups = await db
+                .select({ id: groups.id })
+                .from(groups)
+                .where(eq(groups.libraryId, libraryId))
+                .orderBy(asc(groups.sortOrder))
                 .all();
-            const currentOrder = orderedDocs.map((d) => d.id);
-            if (!currentOrder.includes(documentId)) {
-                const insertAfter = selectedDocumentId
-                    ? currentOrder.indexOf(selectedDocumentId)
+            const currentOrder = orderedGroups.map((g) => g.id);
+            if (!currentOrder.includes(groupId)) {
+                const insertAfter = selectedGroupId
+                    ? currentOrder.indexOf(selectedGroupId)
                     : -1;
                 currentOrder.splice(
                     insertAfter !== -1 ? insertAfter + 1 : currentOrder.length,
                     0,
-                    documentId
+                    groupId
                 );
                 await Promise.all(
                     currentOrder.map((id, i) =>
                         db
-                            .update(documents)
+                            .update(groups)
                             .set({ sortOrder: i })
-                            .where(eq(documents.id, id))
+                            .where(eq(groups.id, id))
                     )
                 );
             }
@@ -322,7 +340,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                           .from(insertables)
                           .where(
                               and(
-                                  eq(insertables.documentId, documentId),
+                                  eq(insertables.groupId, groupId),
                                   inArray(
                                       insertables.elementId,
                                       validElementIds
@@ -358,6 +376,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     .values({
                         id: insertableIdMap.get(r.elementId)!,
                         elementId: r.elementId,
+                        groupId,
                         documentId,
                         libraryId,
                         name: ve.name,
@@ -373,10 +392,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         supportsFasten: r.supportsFasten
                     })
                     .onConflictDoUpdate({
-                        target: [insertables.elementId, insertables.documentId],
+                        target: [insertables.elementId, insertables.groupId],
                         set: conflictUpdateSet(insertables, [
                             "id",
                             "elementId",
+                            "groupId",
                             "documentId",
                             "libraryId",
                             "isVisible",
@@ -393,7 +413,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         .insert(configurations)
                         .values({
                             id: insertableIdMap.get(r.elementId)!,
-                            parameters: r.configuration!.parameters
+                            parameters: r.configuration!
                         })
                         .onConflictDoUpdate({
                             target: configurations.id,
@@ -401,19 +421,21 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         })
                 );
 
-            const documentUpsert = db
-                .insert(documents)
+            const groupUpsert = db
+                .insert(groups)
                 .values({
-                    id: documentId,
+                    id: groupId,
+                    documentId,
                     libraryId,
                     name: contentsInfo.docName,
                     instanceId: versionInfo.instanceId,
                     thumbnailUrls: docThumbnailUrls
                 })
                 .onConflictDoUpdate({
-                    target: documents.id,
-                    set: conflictUpdateSet(documents, [
+                    target: [groups.documentId, groups.libraryId],
+                    set: conflictUpdateSet(groups, [
                         "id",
+                        "documentId",
                         "libraryId",
                         "sortAlphabetically",
                         "sortOrder"
@@ -426,7 +448,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                           .delete(insertables)
                           .where(
                               and(
-                                  eq(insertables.documentId, documentId),
+                                  eq(insertables.groupId, groupId),
                                   notInArray(
                                       insertables.elementId,
                                       validElementIds
@@ -435,15 +457,22 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                           )
                     : db
                           .delete(insertables)
-                          .where(eq(insertables.documentId, documentId));
+                          .where(eq(insertables.groupId, groupId));
 
             // Stale configurations are cascade-deleted when their insertable is deleted
             await db.batch([
-                documentUpsert,
+                groupUpsert,
                 ...insertableUpserts,
                 ...configUpserts,
                 deleteStaleInsertables
             ]);
+        });
+
+        // Step 8: Rebuild the library's search index and bump the cache version
+        await step.do("rebuild-search-db", async () => {
+            const db = getDb(this.env.DB);
+            await rebuildSearchDb(db, libraryId as LibraryId);
+            await bumpLibraryVersion(db, libraryId as LibraryId);
         });
     }
 
@@ -509,11 +538,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     return null;
                 }
                 const configuration = parseOnshapeConfiguration(rawConfig);
+                // The `configurations.parameters` column is json-mode, so Drizzle
+                // (and the workflow step boundary) handle serialization for us.
                 return {
-                    parameters: JSON.stringify(configuration.parameters),
-                    vendors: JSON.stringify(
-                        parseVendors(element.name, configuration)
-                    )
+                    parameters: configuration.parameters,
+                    vendors: parseVendors(element.name, configuration)
                 };
             }
         );
@@ -537,11 +566,9 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             }
         );
 
-        const configuration = configData
-            ? (JSON.parse(configData.parameters) as ConfigurationResult)
-            : null;
+        const configuration = configData ? configData.parameters : null;
         const vendors = configData
-            ? (JSON.parse(configData.vendors) as Vendor[])
+            ? configData.vendors
             : parseVendors(element.name);
 
         return {
