@@ -104,17 +104,11 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
     );
 
     const orderItems = isHome && (
-        <>
-            <ChangeOrderItems
-                id={group.id}
-                order={groupOrder}
-                onOrderChange={(newOrder) =>
-                    setGroupOrderMutation.mutate(newOrder)
-                }
-            />
-            {/* Only show second divider when we have more than one group since otherwise there's no reorder items */}
-            {groupOrder.length > 1 && <Menu.Divider />}
-        </>
+        <ChangeOrderItems
+            id={group.id}
+            order={groupOrder}
+            onOrderChange={(newOrder) => setGroupOrderMutation.mutate(newOrder)}
+        />
     );
 
     const modifyGroupItems = isHome && (

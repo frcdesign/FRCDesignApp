@@ -21,14 +21,14 @@ app.route("/api", insertableRoutes);
 app.route("/api", configurationRoutes);
 app.route("/auth", authRoutes);
 
-// `/init` is the auth-gated entry point; the SPA forwards from there to the
-// document list. `/app` stays gated too so its routes can't be hit unauthed.
+// `/init` is the auth-gated entry point
 app.on("GET", "/init", async (c) => {
     if (!(await isAuthenticated(c))) {
         return c.redirect(
             `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`
         );
     }
+    // Forward to normal Cloudflare
     return c.env.ASSETS.fetch(c.req.raw);
 });
 

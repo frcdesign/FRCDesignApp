@@ -1,5 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { getDb } from "./db";
+import { type Db } from "./db";
 import {
     libraries,
     groups,
@@ -20,7 +20,7 @@ import { buildSearchDb } from "../shared/search";
  * library from D1.
  */
 export async function getLibraryOut(
-    db: ReturnType<typeof getDb>,
+    db: Db,
     libraryId: LibraryId
 ): Promise<LibraryOut> {
     const allGroups = await db
@@ -108,7 +108,7 @@ export async function getLibraryOut(
 }
 
 export async function bumpLibraryVersion(
-    db: ReturnType<typeof getDb>,
+    db: Db,
     libraryId: LibraryId
 ): Promise<void> {
     await db
@@ -125,7 +125,7 @@ export async function bumpLibraryVersion(
  * groups/insertables and stores it on the `libraries` row in D1.
  */
 export async function rebuildSearchDb(
-    db: ReturnType<typeof getDb>,
+    db: Db,
     libraryId: LibraryId
 ): Promise<string> {
     const libraryData = await getLibraryOut(db, libraryId);

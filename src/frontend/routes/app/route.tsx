@@ -18,6 +18,7 @@ import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
+import { PrimaryColor } from "../../common/style-constants";
 import { type ContextData } from "../../../shared/types";
 
 export const Route = createFileRoute("/app")({
@@ -62,10 +63,7 @@ function App() {
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
-            <AppShell.Header
-                bg="var(--mantine-primary-color-filled)"
-                c="var(--mantine-primary-color-contrast)"
-            >
+            <AppShell.Header bg={PrimaryColor.FILLED} c={PrimaryColor.CONTRAST}>
                 <div ref={headerRef}>
                     <AppNavbar />
                 </div>

@@ -1,10 +1,14 @@
 import { Center, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { FontWeight, IconSize } from "../common/style-constants";
+import {
+    FontWeight,
+    HeartIconColor,
+    IconSize
+} from "../common/style-constants";
 import { type JSX, ReactNode } from "react";
 
 const DEFAULT_ERROR_ICON = (
-    <IconX size={IconSize.HUGE} color="var(--mantine-color-red-6)" />
+    <IconX size={IconSize.HUGE} color={HeartIconColor} />
 );
 
 interface ZeroStateProps {

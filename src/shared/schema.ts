@@ -1,5 +1,12 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import { ElementType, FastenInfo, LibraryId, Theme, Vendor } from "./types";
+import {
+    DEFAULT_SETTINGS,
+    ElementType,
+    FastenInfo,
+    LibraryId,
+    Theme,
+    Vendor
+} from "./types";
 import { ThumbnailUrls } from "./types";
 import { Configuration, ParameterObj } from "./configuration-models";
 
@@ -13,16 +20,15 @@ export const libraries = sqliteTable("libraries", {
 export const groups = sqliteTable(
     "groups",
     {
-        // Surrogate UUID primary key (the "groupId").
         id: text("id")
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
-        // The Onshape document this group was added from (was the old PK).
-        documentId: text("document_id").notNull(),
         libraryId: text("library_id")
             .notNull()
             .references(() => libraries.id),
         name: text("name").notNull(),
+        // The Onshape document this group was added from
+        documentId: text("document_id").notNull(),
         instanceId: text("instance_id").notNull(),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
@@ -94,11 +100,14 @@ export const configurations = sqliteTable("configurations", {
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
-    theme: text("theme").$type<Theme>().notNull().default(Theme.SYSTEM),
+    theme: text("theme")
+        .$type<Theme>()
+        .notNull()
+        .default(DEFAULT_SETTINGS.theme),
     libraryId: text("library_id")
         .$type<LibraryId>()
         .notNull()
-        .default(LibraryId.FRC_DESIGN_LIB)
+        .default(DEFAULT_SETTINGS.libraryId)
 });
 
 export const favorites = sqliteTable(

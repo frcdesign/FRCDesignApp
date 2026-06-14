@@ -11,7 +11,12 @@ import {
     IconArrowBackUp,
     IconArrowLeft
 } from "@tabler/icons-react";
-import { BORDER, FontWeight, IconSize } from "../../../common/style-constants";
+import {
+    BORDER,
+    FontWeight,
+    IconColor,
+    IconSize
+} from "../../../common/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../search/search-results";
 import { GroupOut, Insertables } from "../../../../shared/api-models";
@@ -168,7 +173,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
                 icon={
                     <IconAlertTriangle
                         size={IconSize.LARGE}
-                        color="var(--mantine-color-yellow-6)"
+                        color={IconColor.YELLOW}
                     />
                 }
                 title="All elements are hidden by filters"

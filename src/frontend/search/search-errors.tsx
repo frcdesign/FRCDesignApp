@@ -1,6 +1,6 @@
 import { Alert, Button, Group } from "@mantine/core";
 import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { HeartIconColor, IconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../settings/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "./search";
@@ -71,15 +71,9 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <IconSearch
-                size={IconSize.LARGE}
-                color="var(--mantine-color-blue-6)"
-            />
+            <IconSearch size={IconSize.LARGE} color={IconColor.YELLOW} />
         ) : (
-            <IconHeartBroken
-                size={IconSize.LARGE}
-                color="var(--mantine-color-red-6)"
-            />
+            <IconHeartBroken size={IconSize.LARGE} color={HeartIconColor} />
         );
 
     if (filtered.byGroup > 0) {

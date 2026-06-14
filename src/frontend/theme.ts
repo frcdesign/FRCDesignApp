@@ -19,8 +19,7 @@ const frcGreen: MantineColorsTuple = [
 ];
 
 /**
- * Maps a library to its primary Mantine color. This is the single source of
- * truth for the per-library color scheme — add new libraries here.
+ * Maps a library to its primary Mantine color.
  */
 export function getLibraryColor(libraryId: LibraryId): string {
     switch (libraryId) {

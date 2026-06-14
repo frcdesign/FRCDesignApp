@@ -135,8 +135,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     setFavoriteOrderMutation.mutate(newOrder);
                 }}
             />
-            {/* Only show second divider when we have more than one favorite since otherwise there's no reorder items */}
-            {favoriteOrder.length > 1 && <Menu.Divider />}
             <OpenDocumentItems path={insertable.path} />
             <Menu.Divider />
             <FavoriteInsertableItem

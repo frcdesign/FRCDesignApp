@@ -16,13 +16,17 @@ interface ChangeOrderMenuProps {
 
 /**
  * MenuItems that allow users to move a given item in a list up or down.
+ *
+ * Includes a trailing divider (when any options are actually shown).
  */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
 
-    // const documentOrder = useDocumentOrderQuery().data ?? [];
-
     const operations = getValidOperations(id, order);
+
+    if (operations.length === 0) {
+        return null;
+    }
 
     return (
         <>
@@ -86,6 +90,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     Move to bottom
                 </Menu.Item>
             )}
+            <Menu.Divider />
         </>
     );
 }

@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
-import { getDb } from "../db";
+import { type Db, getDb } from "../db";
 import { getOnshapeApi } from "../auth";
 import { getUserId } from "../onshape-api/endpoints/users";
 import { users, favorites } from "../../shared/schema";
@@ -11,7 +11,7 @@ import { type Configuration } from "../../shared/configuration-models";
 export const favoriteRoutes = getApp();
 
 async function getFavorites(
-    db: ReturnType<typeof getDb>,
+    db: Db,
     userId: string,
     libraryId: LibraryId
 ): Promise<FavoritesData> {

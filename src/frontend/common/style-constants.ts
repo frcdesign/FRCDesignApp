@@ -25,11 +25,35 @@ export enum FontWeight {
 /**
  * Creates a Mantine-style border.
  */
-export const BORDER = "1px solid var(--mantine-color-default-border";
+export const BORDER = "1px solid";
+
+/** The app's primary color as a filled background. */
+export enum PrimaryColor {
+    /**
+     * The current primary color, typically white.
+     *
+     * Used to color the buttons that go over the colored app header.
+     */
+    PRIMARY = "var(--mantine-primary-color)",
+    /**
+     * The current library color, e.g., green for FRCDesign.
+     */
+    FILLED = "var(--mantine-primary-color-filled)",
+    /**
+     * The current library contrast color, typically white.
+     */
+    CONTRAST = "var(--mantine-primary-color-contrast)"
+}
+
+/** Red used for heart/favorite icons. */
+export const HeartIconColor = "var(--mantine-color-red-6)";
 
 /**
- * The current primary color, typically white.
- *
- * Used to color the buttons that go over the colored app header.
+ * Icon color intents for use with Tabler icons.
+ * For native mantine components, just use yellow, red, blue, etc. directly.
  */
-export const PRIMARY_COLOR = "var(--mantine-primary-color)";
+export enum IconColor {
+    YELLOW = "var(--mantine-color-yellow-6)",
+    BLUE = "var(--mantine-color-blue-6)",
+    RED = HeartIconColor
+}

@@ -1,6 +1,6 @@
 import { useMatch } from "@tanstack/react-router";
 import { produce } from "immer";
-import { Dispatch, FormEvent } from "react";
+import { Dispatch, SyntheticEvent } from "react";
 
 export { createSearchParams } from "../../shared/url-params";
 export type {
@@ -19,20 +19,8 @@ export function capitalize(val: string) {
 
 /** Event handler that exposes the target element's value as a boolean. */
 export function handleBooleanChange(handler: Dispatch<boolean>) {
-    return (event: FormEvent<HTMLElement>) =>
+    return (event: SyntheticEvent<HTMLElement>) =>
         handler((event.target as HTMLInputElement).checked);
-}
-
-/** Event handler that exposes the target element's value as a string. */
-export function handleStringChange(handler: Dispatch<string>) {
-    return (event: FormEvent<HTMLElement>) =>
-        handler((event.target as HTMLInputElement).value);
-}
-
-/** Generic event handler that exposes the target element's value. */
-export function handleValueChange<T>(handler: Dispatch<T>) {
-    return (event: FormEvent<HTMLElement>) =>
-        handler((event.target as HTMLInputElement).value as T);
 }
 
 type Updater<T> = (value: T | undefined) => T | undefined;

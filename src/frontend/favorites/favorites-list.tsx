@@ -1,5 +1,5 @@
 import { IconHeartBroken } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { HeartIconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { useLoaderData } from "@tanstack/react-router";
 import { filterInsertables } from "../search/filter";
@@ -49,7 +49,7 @@ export function FavoritesList(): ReactNode {
                 icon={
                     <IconHeartBroken
                         size={IconSize.LARGE}
-                        color="var(--mantine-color-red-6)"
+                        color={HeartIconColor}
                     />
                 }
             />

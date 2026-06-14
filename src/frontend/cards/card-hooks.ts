@@ -49,9 +49,6 @@ export function useSetVisibilityMutation(
         }
     });
 
-    // Hiding elements is destructive (it removes them from all users'
-    // favorites), so confirm before mutating. Showing elements proceeds
-    // immediately.
     const mutate = useCallback(() => {
         if (isVisible) {
             mutation.mutate();

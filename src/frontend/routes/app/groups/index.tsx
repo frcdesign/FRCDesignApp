@@ -1,7 +1,11 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Accordion } from "@mantine/core";
 import { IconBook, IconSearch } from "@tabler/icons-react";
-import { BORDER, IconSize } from "../../../common/style-constants";
+import {
+    BORDER,
+    IconSize,
+    PrimaryColor
+} from "../../../common/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../groups/group-card";
 import { ItemTable } from "../../../cards/card-components";
@@ -70,7 +74,7 @@ function HomeList(): ReactNode {
                     icon={
                         <IconSearch
                             size={IconSize.MEDIUM}
-                            color="var(--mantine-primary-color-filled)"
+                            color={PrimaryColor.FILLED}
                         />
                     }
                 >
@@ -92,7 +96,7 @@ function HomeList(): ReactNode {
                     icon={
                         <IconBook
                             size={IconSize.MEDIUM}
-                            color="var(--mantine-primary-color-filled)"
+                            color={PrimaryColor.FILLED}
                         />
                     }
                 >

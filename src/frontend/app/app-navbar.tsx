@@ -5,7 +5,7 @@ import {
     IconSettings,
     IconX
 } from "@tabler/icons-react";
-import { IconSize, PRIMARY_COLOR } from "../common/style-constants";
+import { IconSize, PrimaryColor } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -22,20 +22,25 @@ import { LibraryId } from "../../shared/types";
  * the brand, library menu, search, vendor filter menu, and settings.
  */
 export function AppNavbar(): ReactNode {
+    // Create a subgroup that won't wrap and flexes to take up the entire space
+    const leftGroup = (
+        <Group wrap="nowrap" flex={1} miw={0}>
+            <FrcDesignBookIcon />
+            <LibraryMenu />
+            <SearchBar />
+            <VendorMenu />
+        </Group>
+    );
+
     return (
         <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
-            <Group gap="xs" wrap="nowrap" style={{ flex: 1 }} miw={0}>
-                <BrandIcon />
-                <LibraryMenu />
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {leftGroup}
             <SettingsButton />
         </Group>
     );
 }
 
-function BrandIcon(): ReactNode {
+function FrcDesignBookIcon(): ReactNode {
     return (
         <a href="https://frcdesign.org" target="_blank">
             <img
@@ -86,7 +91,7 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color={PRIMARY_COLOR}
+            color={PrimaryColor.PRIMARY}
             title="Settings"
             onClick={() => openSettingsMenu()}
         >
