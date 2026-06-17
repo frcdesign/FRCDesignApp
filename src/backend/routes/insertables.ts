@@ -28,9 +28,10 @@ import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
 export const insertableRoutes = getApp();
 
 /** POST /api/toggle-open-composite/insertable/:insertableId */
-insertableRoutes
-    .use(requireAdminMiddleware)
-    .post("/toggle-open-composite" + insertableRoute(), async (c) => {
+insertableRoutes.post(
+    "/toggle-open-composite" + insertableRoute(),
+    requireAdminMiddleware,
+    async (c) => {
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{ isOpenComposite: boolean }>();
 
@@ -50,12 +51,14 @@ insertableRoutes
 
         await bumpLibraryVersion(db, row.libraryId as LibraryId);
         return c.json({ success: true });
-    });
+    }
+);
 
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
-insertableRoutes
-    .use(requireAdminMiddleware)
-    .post("/toggle-insert-and-fasten" + insertableRoute(), async (c) => {
+insertableRoutes.post(
+    "/toggle-insert-and-fasten" + insertableRoute(),
+    requireAdminMiddleware,
+    async (c) => {
         const db = getDb(c.env.DB);
 
         const insertableId = getInsertableParam(c);
@@ -104,7 +107,8 @@ insertableRoutes
 
         await bumpLibraryVersion(db, insertableRow.libraryId as LibraryId);
         return c.json({ success: true });
-    });
+    }
+);
 
 /** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
 insertableRoutes.post(

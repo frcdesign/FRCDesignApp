@@ -7,12 +7,30 @@ import {
     libraries,
     users
 } from "../shared/schema";
+import { type ParameterObj } from "../shared/configuration-models";
+import { type ElementPath, type InstancePath } from "../shared/onshape-path";
 import { ElementType, LibraryId } from "../shared/types";
 
-/** Default library used by every seed helper unless overridden. */
-const LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
-/** Fixed version timestamp — tests don't care about the actual value. */
-const VERSION_CREATED_AT = new Date(0).toISOString();
+export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
+export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId
+export const TEST_GROUP_ID = "test-group";
+export const TEST_PART_STUDIO_ID = "test-part-studio";
+export const TEST_ASSEMBLY_ID = "test-assembly";
+
+/** Onshape paths backing the seeded insertables — also useful for API mocking. */
+export const testInstancePath: InstancePath = {
+    documentId: "doc-test",
+    instanceId: "v-test",
+    instanceType: "v"
+};
+export const testPartStudioPath: ElementPath = {
+    ...testInstancePath,
+    elementId: "e-part-studio"
+};
+export const testAssemblyPath: ElementPath = {
+    ...testInstancePath,
+    elementId: "e-assembly"
+};
 
 /**
  * Truncates every table these helpers touch, in FK-safe order.
@@ -33,113 +51,127 @@ export async function resetDb(db: Db): Promise<void> {
 
 export async function seedLibrary(
     db: Db,
-    id: LibraryId = LIBRARY_ID
+    id: LibraryId = TEST_LIBRARY_ID
 ): Promise<string> {
     await db.insert(libraries).values({ id }).onConflictDoNothing();
     return id;
 }
 
-export async function seedUser(db: Db, id: string): Promise<string> {
+export async function seedUser(
+    db: Db,
+    id: string = TEST_USER_ID
+): Promise<string> {
     await db.insert(users).values({ id }).onConflictDoNothing();
     return id;
 }
 
 export async function seedGroup(
     db: Db,
-    overrides: Partial<typeof groups.$inferInsert> = {}
+    id: string = TEST_GROUP_ID,
+    libraryId: LibraryId = TEST_LIBRARY_ID
 ): Promise<string> {
-    const id = overrides.id ?? crypto.randomUUID();
+    await seedLibrary(db, libraryId);
     await db
         .insert(groups)
         .values({
-            libraryId: LIBRARY_ID,
+            id,
+            libraryId,
             name: "Test Group",
-            // Unique per group so repeated fixtures don't collide on the
-            // (document_id, library_id) unique index.
             documentId: `doc-${id}`,
-            instanceId: "inst-1",
-            ...overrides,
-            id
+            instanceId: "inst-1"
         })
         .onConflictDoNothing();
     return id;
 }
 
-export async function seedInsertable(
+async function seedInsertable(
     db: Db,
-    overrides: Partial<typeof insertables.$inferInsert> & { groupId: string }
+    id: string,
+    path: ElementPath,
+    elementType: ElementType
 ): Promise<string> {
-    const id = overrides.id ?? crypto.randomUUID();
     await db
         .insert(insertables)
         .values({
-            libraryId: LIBRARY_ID,
-            elementId: `el-${id}`,
-            documentId: "doc-1",
-            name: "Test Insertable",
-            elementType: ElementType.PART_STUDIO,
+            id,
+            groupId: TEST_GROUP_ID,
+            libraryId: TEST_LIBRARY_ID,
+            elementId: path.elementId,
+            documentId: path.documentId,
+            instanceId: path.instanceId,
+            elementType,
+            name: `Test ${elementType}`,
             microversionId: "mv-1",
             versionName: "v1",
-            versionCreatedAt: VERSION_CREATED_AT,
-            instanceId: "inst-1",
-            ...overrides,
-            id
+            versionCreatedAt: new Date(0).toISOString()
         })
         .onConflictDoNothing();
     return id;
+}
+
+/** Seeds the standard part-studio insertable (ensures library + group). */
+export async function seedPartStudio(db: Db): Promise<string> {
+    await seedGroup(db);
+    return seedInsertable(
+        db,
+        TEST_PART_STUDIO_ID,
+        testPartStudioPath,
+        ElementType.PART_STUDIO
+    );
+}
+
+/** Seeds the standard assembly insertable (ensures library + group). */
+export async function seedAssembly(db: Db): Promise<string> {
+    await seedGroup(db);
+    return seedInsertable(
+        db,
+        TEST_ASSEMBLY_ID,
+        testAssemblyPath,
+        ElementType.ASSEMBLY
+    );
 }
 
 export async function seedFavorite(
     db: Db,
-    overrides: Partial<typeof favorites.$inferInsert> & {
-        userId: string;
-        insertableId: string;
-    }
+    insertableId: string,
+    userId: string = TEST_USER_ID,
+    sortOrder = 0
 ): Promise<string> {
-    const id = overrides.id ?? crypto.randomUUID();
+    const id = crypto.randomUUID();
+    await seedUser(db, userId);
     await db
         .insert(favorites)
-        .values({ libraryId: LIBRARY_ID, ...overrides, id })
+        .values({
+            id,
+            userId,
+            libraryId: TEST_LIBRARY_ID,
+            insertableId,
+            sortOrder
+        })
         .onConflictDoNothing();
     return id;
 }
 
-export interface FavoriteFixture {
-    userId: string;
-    libraryId?: LibraryId;
-    favoriteId?: string;
-    insertableId?: string;
-    sortOrder?: number;
+export async function seedConfiguration(
+    db: Db,
+    insertableId: string = TEST_PART_STUDIO_ID,
+    parameters: ParameterObj[] = []
+): Promise<void> {
+    await db
+        .insert(configurations)
+        .values({ id: insertableId, parameters })
+        .onConflictDoNothing();
 }
 
 /**
- * Seeds the full foreign-key chain (library → group → insertable → user →
- * favorite) and returns the created ids.
+ * Seeds the canonical dataset: a library, a user, a group, a part studio, an
+ * assembly, and two favorites (the user's, on the part studio and the assembly).
  */
-export async function seedFavoriteFixture(
-    db: Db,
-    fixture: FavoriteFixture
-): Promise<{
-    favoriteId: string;
-    insertableId: string;
-    libraryId: LibraryId;
-    groupId: string;
-}> {
-    const { userId, libraryId = LIBRARY_ID, sortOrder } = fixture;
-    await seedLibrary(db, libraryId);
-    const groupId = await seedGroup(db, { libraryId });
-    const insertableId = await seedInsertable(db, {
-        id: fixture.insertableId,
-        groupId,
-        libraryId
-    });
-    await seedUser(db, userId);
-    const favoriteId = await seedFavorite(db, {
-        id: fixture.favoriteId,
-        userId,
-        insertableId,
-        libraryId,
-        sortOrder
-    });
-    return { favoriteId, insertableId, libraryId, groupId };
+export async function seedTestData(db: Db): Promise<void> {
+    await seedLibrary(db);
+    await seedGroup(db);
+    await seedPartStudio(db);
+    await seedAssembly(db);
+    await seedFavorite(db, TEST_PART_STUDIO_ID, TEST_USER_ID, 0);
+    await seedFavorite(db, TEST_ASSEMBLY_ID, TEST_USER_ID, 1);
 }

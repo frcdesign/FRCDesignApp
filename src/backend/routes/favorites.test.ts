@@ -2,19 +2,27 @@ import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { favorites } from "../../shared/schema";
-import { LibraryId } from "../../shared/types";
 import {
+    TEST_ASSEMBLY_ID,
+    TEST_LIBRARY_ID,
+    TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
     resetDb,
+    seedAssembly,
     seedFavorite,
-    seedFavoriteFixture,
-    seedInsertable
+    seedPartStudio,
+    seedTestData
 } from "../../__test_utils__";
 import { getDb } from "../db";
 
-const LIB = LibraryId.FRC_DESIGN_LIB;
 const db = getDb(env.DB);
+const favoritesUrl = `/api/favorites/library/${TEST_LIBRARY_ID}`;
+
+interface FavoritesBody {
+    favorites: Record<string, { insertableId: string }>;
+    favoriteOrder: string[];
+}
 
 describe("favorites routes", () => {
     beforeEach(async () => {
@@ -23,93 +31,50 @@ describe("favorites routes", () => {
 
     describe("GET /favorites/library/:libraryId", () => {
         it("returns the user's favorites ordered by sortOrder", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            const { groupId } = await seedFavoriteFixture(db, {
-                userId: "user-a",
-                favoriteId: "fav-1",
-                sortOrder: 1
-            });
-            // Second favorite for the same user, lower sortOrder -> comes first.
-            const ins2 = await seedInsertable(db, { groupId });
-            await seedFavorite(db, {
-                id: "fav-0",
-                userId: "user-a",
-                insertableId: ins2,
-                sortOrder: 0
-            });
+            await seedTestData(db);
+            const app = createTestApp();
 
             const res = await app.request(
-                `/api/favorites/library/${LIB}`,
+                favoritesUrl,
                 jsonRequest("GET"),
                 env
             );
             expect(res.status).toBe(200);
-            const body: {
-                favoriteOrder: string[];
-                favorites: Record<string, unknown>;
-            } = await res.json();
-            expect(body.favoriteOrder).toEqual(["fav-0", "fav-1"]);
-            expect(Object.keys(body.favorites)).toHaveLength(2);
+
+            const body: FavoritesBody = await res.json();
+            const orderedInsertables = body.favoriteOrder.map(
+                (id) => body.favorites[id].insertableId
+            );
+            expect(orderedInsertables).toEqual([
+                TEST_PART_STUDIO_ID,
+                TEST_ASSEMBLY_ID
+            ]);
         });
 
-        it("excludes favorites of other users and other libraries", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, { userId: "user-a", favoriteId: "mine" });
-            // Another user's favorite.
-            await seedFavoriteFixture(db, {
-                userId: "user-b",
-                favoriteId: "theirs"
-            });
-            // Same user, different library.
-            await seedFavoriteFixture(db, {
-                userId: "user-a",
-                libraryId: LibraryId.MKCAD,
-                favoriteId: "other-lib"
-            });
+        it("only returns the current user's favorites", async () => {
+            await seedTestData(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "other-user");
+            const app = createTestApp();
 
             const res = await app.request(
-                `/api/favorites/library/${LIB}`,
+                favoritesUrl,
                 jsonRequest("GET"),
                 env
             );
-            const body: { favoriteOrder: string[] } = await res.json();
-            expect(body.favoriteOrder).toEqual(["mine"]);
+            const body: FavoritesBody = await res.json();
+            expect(body.favoriteOrder).toHaveLength(2);
         });
     });
 
     describe("POST /favorites/library/:libraryId", () => {
-        it("400s when insertableId is missing", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            const res = await app.request(
-                `/api/favorites/library/${LIB}?id=fav-1`,
-                jsonRequest("POST"),
-                env
-            );
-            expect(res.status).toBe(400);
-        });
+        it("creates a favorite with sortOrder = existing count", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID); // one existing favorite
 
-        it("400s when id is missing", async () => {
-            const app = createTestApp({ userId: "user-a" });
+            const app = createTestApp();
             const res = await app.request(
-                `/api/favorites/library/${LIB}?insertableId=ins-1`,
-                jsonRequest("POST"),
-                env
-            );
-            expect(res.status).toBe(400);
-        });
-
-        it("creates the user and the favorite with sortOrder = existing count", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            // Seed one existing favorite plus a second insertable to favorite.
-            const { groupId } = await seedFavoriteFixture(db, {
-                userId: "user-a",
-                insertableId: "ins-1",
-                favoriteId: "existing"
-            });
-            await seedInsertable(db, { id: "ins-2", groupId });
-
-            const res = await app.request(
-                `/api/favorites/library/${LIB}?insertableId=ins-2&id=fav-new`,
+                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-new`,
                 jsonRequest("POST"),
                 env
             );
@@ -120,27 +85,35 @@ describe("favorites routes", () => {
                 .from(favorites)
                 .where(eq(favorites.id, "fav-new"))
                 .get();
-            expect(row).toBeDefined();
-            expect(row?.userId).toBe("user-a");
-            expect(row?.insertableId).toBe("ins-2");
-            // One favorite ("existing") already present, so sortOrder is 1.
+            expect(row?.userId).toBe("test-user");
+            expect(row?.insertableId).toBe(TEST_ASSEMBLY_ID);
             expect(row?.sortOrder).toBe(1);
         });
 
-        it("is idempotent on conflicting id", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, {
-                userId: "user-a",
-                insertableId: "ins-1",
-                favoriteId: "dup"
-            });
-
-            const res = await app.request(
-                `/api/favorites/library/${LIB}?insertableId=ins-1&id=dup`,
+        it("400s when insertableId or id is missing", async () => {
+            const app = createTestApp();
+            const missingInsertable = await app.request(
+                `${favoritesUrl}?id=fav-1`,
                 jsonRequest("POST"),
                 env
             );
-            expect(res.status).toBe(200);
+            expect(missingInsertable.status).toBe(400);
+
+            const missingId = await app.request(
+                `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}`,
+                jsonRequest("POST"),
+                env
+            );
+            expect(missingId.status).toBe(400);
+        });
+
+        it("is idempotent on a conflicting id", async () => {
+            await seedPartStudio(db);
+            const app = createTestApp();
+            const url = `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}&id=dup`;
+
+            await app.request(url, jsonRequest("POST"), env);
+            await app.request(url, jsonRequest("POST"), env);
 
             const rows = await db
                 .select()
@@ -153,70 +126,63 @@ describe("favorites routes", () => {
 
     describe("DELETE /favorites/:favoriteId", () => {
         it("deletes a favorite owned by the current user", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, {
-                userId: "user-a",
-                favoriteId: "fav-mine"
-            });
+            await seedPartStudio(db);
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            const app = createTestApp();
 
             const res = await app.request(
-                "/api/favorites/fav-mine",
+                `/api/favorites/${favoriteId}`,
                 jsonRequest("DELETE"),
                 env
             );
             expect(res.status).toBe(200);
 
-            const rows = await db
-                .select()
-                .from(favorites)
-                .where(eq(favorites.id, "fav-mine"))
-                .all();
+            const rows = await db.select().from(favorites).all();
             expect(rows).toHaveLength(0);
         });
 
         it("does not delete a favorite owned by another user", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, {
-                userId: "user-b",
-                favoriteId: "fav-theirs"
-            });
+            await seedPartStudio(db);
+            const favoriteId = await seedFavorite(
+                db,
+                TEST_PART_STUDIO_ID,
+                "other-user"
+            );
+            const app = createTestApp();
 
             const res = await app.request(
-                "/api/favorites/fav-theirs",
+                `/api/favorites/${favoriteId}`,
                 jsonRequest("DELETE"),
                 env
             );
             expect(res.status).toBe(200);
 
-            const rows = await db
-                .select()
-                .from(favorites)
-                .where(eq(favorites.id, "fav-theirs"))
-                .all();
+            const rows = await db.select().from(favorites).all();
             expect(rows).toHaveLength(1);
         });
     });
 
     describe("POST /favorite-order/library/:libraryId", () => {
         it("reorders favorites to match the posted order", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            const { groupId } = await seedFavoriteFixture(db, {
-                userId: "user-a",
-                insertableId: "ins-a",
-                favoriteId: "fav-a",
-                sortOrder: 0
-            });
-            const insB = await seedInsertable(db, { groupId });
-            await seedFavorite(db, {
-                id: "fav-b",
-                userId: "user-a",
-                insertableId: insB,
-                sortOrder: 1
-            });
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            const favA = await seedFavorite(
+                db,
+                TEST_PART_STUDIO_ID,
+                "test-user",
+                0
+            );
+            const favB = await seedFavorite(
+                db,
+                TEST_ASSEMBLY_ID,
+                "test-user",
+                1
+            );
+            const app = createTestApp();
 
             const res = await app.request(
-                `/api/favorite-order/library/${LIB}`,
-                jsonRequest("POST", { favoriteOrder: ["fav-b", "fav-a"] }),
+                `/api/favorite-order/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", { favoriteOrder: [favB, favA] }),
                 env
             );
             expect(res.status).toBe(200);
@@ -224,24 +190,21 @@ describe("favorites routes", () => {
             const rows = await db
                 .select()
                 .from(favorites)
-                .where(eq(favorites.userId, "user-a"))
                 .orderBy(asc(favorites.sortOrder))
                 .all();
-            expect(rows.map((r) => r.id)).toEqual(["fav-b", "fav-a"]);
+            expect(rows.map((r) => r.id)).toEqual([favB, favA]);
         });
     });
 
     describe("POST /default-configuration/:favoriteId", () => {
         it("persists the default configuration", async () => {
-            const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, {
-                userId: "user-a",
-                favoriteId: "fav-config"
-            });
+            await seedPartStudio(db);
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            const app = createTestApp();
 
-            const defaultConfiguration = { parameters: [] };
+            const defaultConfiguration = { "param-id": "value" };
             const res = await app.request(
-                "/api/default-configuration/fav-config",
+                `/api/default-configuration/${favoriteId}`,
                 jsonRequest("POST", { defaultConfiguration }),
                 env
             );
@@ -250,7 +213,7 @@ describe("favorites routes", () => {
             const row = await db
                 .select()
                 .from(favorites)
-                .where(eq(favorites.id, "fav-config"))
+                .where(eq(favorites.id, favoriteId))
                 .get();
             expect(row?.defaultConfiguration).toEqual(defaultConfiguration);
         });

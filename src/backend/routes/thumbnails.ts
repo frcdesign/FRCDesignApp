@@ -175,12 +175,10 @@ thumbnailRoutes.get(
     }
 );
 
-const reloadThumbnailRoutes = getApp();
-reloadThumbnailRoutes.use(requireAdminMiddleware);
-
 /** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
-reloadThumbnailRoutes.post(
+thumbnailRoutes.post(
     "/reload-insertable-thumbnail" + insertableRoute(),
+    requireAdminMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -219,8 +217,9 @@ reloadThumbnailRoutes.post(
 );
 
 /** POST /api/reload-group-thumbnail/group/:groupId */
-reloadThumbnailRoutes.post(
+thumbnailRoutes.post(
     "/reload-group-thumbnail/group/:groupId",
+    requireAdminMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const groupId = c.req.param("groupId");
@@ -261,5 +260,3 @@ reloadThumbnailRoutes.post(
         return c.json({ success: true });
     }
 );
-
-thumbnailRoutes.route("/", reloadThumbnailRoutes);
