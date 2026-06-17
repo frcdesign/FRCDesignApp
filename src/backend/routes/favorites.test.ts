@@ -9,8 +9,7 @@ import {
     resetDb,
     seedFavorite,
     seedFavoriteFixture,
-    seedInsertable,
-    seedLibrary
+    seedInsertable
 } from "../../__test_utils__";
 import { getDb } from "../db";
 
@@ -25,23 +24,16 @@ describe("favorites routes", () => {
     describe("GET /favorites/library/:libraryId", () => {
         it("returns the user's favorites ordered by sortOrder", async () => {
             const app = createTestApp({ userId: "user-a" });
-            await seedLibrary(db, LIB);
             const { groupId } = await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 favoriteId: "fav-1",
                 sortOrder: 1
             });
             // Second favorite for the same user, lower sortOrder -> comes first.
-            const ins2 = await seedInsertable(db, {
-                groupId,
-                libraryId: LIB,
-                elementId: "el-2"
-            });
+            const ins2 = await seedInsertable(db, { groupId });
             await seedFavorite(db, {
-                favoriteId: "fav-0",
+                id: "fav-0",
                 userId: "user-a",
-                libraryId: LIB,
                 insertableId: ins2,
                 sortOrder: 0
             });
@@ -62,15 +54,10 @@ describe("favorites routes", () => {
 
         it("excludes favorites of other users and other libraries", async () => {
             const app = createTestApp({ userId: "user-a" });
-            await seedFavoriteFixture(db, {
-                userId: "user-a",
-                libraryId: LIB,
-                favoriteId: "mine"
-            });
+            await seedFavoriteFixture(db, { userId: "user-a", favoriteId: "mine" });
             // Another user's favorite.
             await seedFavoriteFixture(db, {
                 userId: "user-b",
-                libraryId: LIB,
                 favoriteId: "theirs"
             });
             // Same user, different library.
@@ -113,20 +100,13 @@ describe("favorites routes", () => {
 
         it("creates the user and the favorite with sortOrder = existing count", async () => {
             const app = createTestApp({ userId: "user-a" });
-            // Seed parents (library + insertables) plus one existing favorite.
-            await seedLibrary(db, LIB);
+            // Seed one existing favorite plus a second insertable to favorite.
             const { groupId } = await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 insertableId: "ins-1",
                 favoriteId: "existing"
             });
-            await seedInsertable(db, {
-                id: "ins-2",
-                groupId,
-                libraryId: LIB,
-                elementId: "el-ins-2"
-            });
+            await seedInsertable(db, { id: "ins-2", groupId });
 
             const res = await app.request(
                 `/api/favorites/library/${LIB}?insertableId=ins-2&id=fav-new`,
@@ -151,7 +131,6 @@ describe("favorites routes", () => {
             const app = createTestApp({ userId: "user-a" });
             await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 insertableId: "ins-1",
                 favoriteId: "dup"
             });
@@ -177,7 +156,6 @@ describe("favorites routes", () => {
             const app = createTestApp({ userId: "user-a" });
             await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 favoriteId: "fav-mine"
             });
 
@@ -200,7 +178,6 @@ describe("favorites routes", () => {
             const app = createTestApp({ userId: "user-a" });
             await seedFavoriteFixture(db, {
                 userId: "user-b",
-                libraryId: LIB,
                 favoriteId: "fav-theirs"
             });
 
@@ -225,20 +202,14 @@ describe("favorites routes", () => {
             const app = createTestApp({ userId: "user-a" });
             const { groupId } = await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 insertableId: "ins-a",
                 favoriteId: "fav-a",
                 sortOrder: 0
             });
-            const insB = await seedInsertable(db, {
-                groupId,
-                libraryId: LIB,
-                elementId: "el-b"
-            });
+            const insB = await seedInsertable(db, { groupId });
             await seedFavorite(db, {
-                favoriteId: "fav-b",
+                id: "fav-b",
                 userId: "user-a",
-                libraryId: LIB,
                 insertableId: insB,
                 sortOrder: 1
             });
@@ -265,7 +236,6 @@ describe("favorites routes", () => {
             const app = createTestApp({ userId: "user-a" });
             await seedFavoriteFixture(db, {
                 userId: "user-a",
-                libraryId: LIB,
                 favoriteId: "fav-config"
             });
 

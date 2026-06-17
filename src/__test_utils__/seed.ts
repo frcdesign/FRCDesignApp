@@ -9,6 +9,11 @@ import {
 } from "../shared/schema";
 import { ElementType, LibraryId } from "../shared/types";
 
+/** Default library used by every seed helper unless overridden. */
+const LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
+/** Fixed version timestamp — tests don't care about the actual value. */
+const VERSION_CREATED_AT = new Date(0).toISOString();
+
 /**
  * Truncates every table these helpers touch, in FK-safe order.
  *
@@ -28,7 +33,7 @@ export async function resetDb(db: Db): Promise<void> {
 
 export async function seedLibrary(
     db: Db,
-    id: LibraryId | string = LibraryId.FRC_DESIGN_LIB
+    id: LibraryId = LIBRARY_ID
 ): Promise<string> {
     await db.insert(libraries).values({ id }).onConflictDoNothing();
     return id;
@@ -39,104 +44,71 @@ export async function seedUser(db: Db, id: string): Promise<string> {
     return id;
 }
 
-export interface SeedGroupOptions {
-    id?: string;
-    libraryId?: LibraryId | string;
-    name?: string;
-    documentId?: string;
-    instanceId?: string;
-}
-
 export async function seedGroup(
     db: Db,
-    options: SeedGroupOptions = {}
+    overrides: Partial<typeof groups.$inferInsert> = {}
 ): Promise<string> {
-    const id = options.id ?? crypto.randomUUID();
+    const id = overrides.id ?? crypto.randomUUID();
     await db
         .insert(groups)
         .values({
-            id,
-            libraryId: options.libraryId ?? LibraryId.FRC_DESIGN_LIB,
-            name: options.name ?? "Test Group",
+            libraryId: LIBRARY_ID,
+            name: "Test Group",
             // Unique per group so repeated fixtures don't collide on the
             // (document_id, library_id) unique index.
-            documentId: options.documentId ?? `doc-${id}`,
-            instanceId: options.instanceId ?? "inst-1"
+            documentId: `doc-${id}`,
+            instanceId: "inst-1",
+            ...overrides,
+            id
         })
         .onConflictDoNothing();
     return id;
-}
-
-export interface SeedInsertableOptions {
-    id?: string;
-    groupId: string;
-    libraryId?: LibraryId | string;
-    elementId?: string;
-    documentId?: string;
-    name?: string;
-    elementType?: ElementType;
-    microversionId?: string;
-    versionName?: string;
-    versionCreatedAt?: string;
-    instanceId?: string;
 }
 
 export async function seedInsertable(
     db: Db,
-    options: SeedInsertableOptions
+    overrides: Partial<typeof insertables.$inferInsert> & { groupId: string }
 ): Promise<string> {
-    const id = options.id ?? crypto.randomUUID();
+    const id = overrides.id ?? crypto.randomUUID();
     await db
         .insert(insertables)
         .values({
-            id,
-            groupId: options.groupId,
-            libraryId: options.libraryId ?? LibraryId.FRC_DESIGN_LIB,
-            elementId: options.elementId ?? `el-${id}`,
-            documentId: options.documentId ?? "doc-1",
-            name: options.name ?? "Test Insertable",
-            elementType: options.elementType ?? ElementType.PART_STUDIO,
-            microversionId: options.microversionId ?? "mv-1",
-            versionName: options.versionName ?? "v1",
-            versionCreatedAt:
-                options.versionCreatedAt ?? new Date(0).toISOString(),
-            instanceId: options.instanceId ?? "inst-1"
+            libraryId: LIBRARY_ID,
+            elementId: `el-${id}`,
+            documentId: "doc-1",
+            name: "Test Insertable",
+            elementType: ElementType.PART_STUDIO,
+            microversionId: "mv-1",
+            versionName: "v1",
+            versionCreatedAt: VERSION_CREATED_AT,
+            instanceId: "inst-1",
+            ...overrides,
+            id
         })
         .onConflictDoNothing();
     return id;
-}
-
-export interface SeedFavoriteOptions {
-    favoriteId?: string;
-    userId: string;
-    libraryId?: LibraryId | string;
-    insertableId: string;
-    sortOrder?: number;
 }
 
 export async function seedFavorite(
     db: Db,
-    options: SeedFavoriteOptions
+    overrides: Partial<typeof favorites.$inferInsert> & {
+        userId: string;
+        insertableId: string;
+    }
 ): Promise<string> {
-    const id = options.favoriteId ?? crypto.randomUUID();
+    const id = overrides.id ?? crypto.randomUUID();
     await db
         .insert(favorites)
-        .values({
-            id,
-            userId: options.userId,
-            libraryId: options.libraryId ?? LibraryId.FRC_DESIGN_LIB,
-            insertableId: options.insertableId,
-            sortOrder: options.sortOrder ?? 0
-        })
+        .values({ libraryId: LIBRARY_ID, ...overrides, id })
         .onConflictDoNothing();
     return id;
 }
 
-export interface SeedFavoriteFixtureOptions {
+export interface FavoriteFixture {
     userId: string;
-    libraryId?: LibraryId | string;
-    insertableId?: string;
+    libraryId?: LibraryId;
     favoriteId?: string;
+    insertableId?: string;
     sortOrder?: number;
 }
 
@@ -146,31 +118,28 @@ export interface SeedFavoriteFixtureOptions {
  */
 export async function seedFavoriteFixture(
     db: Db,
-    options: SeedFavoriteFixtureOptions
+    fixture: FavoriteFixture
 ): Promise<{
     favoriteId: string;
     insertableId: string;
-    libraryId: string;
+    libraryId: LibraryId;
     groupId: string;
 }> {
-    const libraryId = options.libraryId ?? LibraryId.FRC_DESIGN_LIB;
+    const { userId, libraryId = LIBRARY_ID, sortOrder } = fixture;
     await seedLibrary(db, libraryId);
     const groupId = await seedGroup(db, { libraryId });
-
-    let insertableId = options.insertableId;
-    if (insertableId) {
-        await seedInsertable(db, { id: insertableId, groupId, libraryId });
-    } else {
-        insertableId = await seedInsertable(db, { groupId, libraryId });
-    }
-
-    await seedUser(db, options.userId);
+    const insertableId = await seedInsertable(db, {
+        id: fixture.insertableId,
+        groupId,
+        libraryId
+    });
+    await seedUser(db, userId);
     const favoriteId = await seedFavorite(db, {
-        favoriteId: options.favoriteId,
-        userId: options.userId,
-        libraryId,
+        id: fixture.favoriteId,
+        userId,
         insertableId,
-        sortOrder: options.sortOrder
+        libraryId,
+        sortOrder
     });
     return { favoriteId, insertableId, libraryId, groupId };
 }
