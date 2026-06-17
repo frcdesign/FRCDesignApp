@@ -1,65 +1,37 @@
-import { type OAuthApi } from "../backend/onshape-api/onshape-api";
-
-export type OnshapeResponse = unknown;
+import { OAuthApi } from "../backend/onshape-api/onshape-api";
 
 /**
- * A test double for the Onshape API, used when a route under test calls
- * `c.var.getOnshapeApi()` and issues requests. Stub endpoints by path prefix with
- * {@link on}; any unstubbed call throws so missing stubs are obvious.
+ * A test double for the Onshape API. It extends {@link OAuthApi} (so it is a real
+ * `OAuthApi` with no casts) but intercepts every request in {@link _request}
+ * instead of hitting the network.
  *
- * Identity (userId) and access level are injected directly by `createTestApp`, so
- * they do not go through this mock.
+ * Used when a route under test calls `c.var.getOnshapeApi()` and issues requests:
+ * stub endpoints by URL fragment with {@link on}; any unstubbed request rejects so
+ * missing stubs are obvious. Identity (userId) and access level are injected
+ * directly by `createTestApp`, so they do not go through this mock.
  */
-export class MockOnshapeApi {
-    private readonly responses = new Map<string, OnshapeResponse>();
+export class MockOnshapeApi extends OAuthApi {
+    private readonly responses = new Map<string, unknown>();
 
-    /** Stubs the response returned for any request whose path starts with `path`. */
-    on(path: string, response: OnshapeResponse): this {
-        this.responses.set(path, response);
+    constructor() {
+        // The token/refresh callback are unused — requests never reach the network.
+        super("mock-access-token", () => Promise.resolve("mock-access-token"));
+    }
+
+    /** Stubs the JSON response for any request whose URL contains `urlFragment`. */
+    on(urlFragment: string, response: unknown): this {
+        this.responses.set(urlFragment, response);
         return this;
     }
 
-    private resolve(path: string): unknown {
-        for (const [key, value] of this.responses) {
-            if (path.startsWith(key)) {
-                return typeof value === "function"
-                    ? (value as (p: string) => unknown)(path)
-                    : value;
+    protected _request(_method: string, url: string): Promise<Response> {
+        for (const [fragment, value] of this.responses) {
+            if (url.includes(fragment)) {
+                return Promise.resolve(Response.json(value));
             }
         }
-        throw new Error(`MockOnshapeApi: unexpected request to "${path}"`);
-    }
-
-    get(path: string): Promise<any> {
-        return Promise.resolve(this.resolve(path));
-    }
-
-    getRaw(path: string): Promise<Response> {
-        return Promise.resolve(Response.json(this.resolve(path)));
-    }
-
-    getImage(): Promise<ArrayBuffer> {
-        return Promise.resolve(new ArrayBuffer(0));
-    }
-
-    post(path: string): Promise<any> {
-        return Promise.resolve(this.resolve(path));
-    }
-
-    postNone(): Promise<void> {
-        return Promise.resolve();
-    }
-
-    delete(path: string): Promise<any> {
-        return Promise.resolve(this.resolve(path));
-    }
-
-    deleteNone(): Promise<void> {
-        return Promise.resolve();
-    }
-
-    /** Casts this mock to the {@link OAuthApi} type expected by the Hono context. */
-    asOAuthApi(): OAuthApi {
-        return this as unknown as OAuthApi;
+        return Promise.reject(
+            new Error(`MockOnshapeApi: unexpected request to "${url}"`)
+        );
     }
 }

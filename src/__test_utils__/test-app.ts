@@ -19,7 +19,7 @@ export interface TestAppOptions {
 export function createTestApp(options: TestAppOptions = {}) {
     const onshapeApi = options.onshapeApi ?? new MockOnshapeApi();
     return createApp(() => ({
-        getOnshapeApi: () => Promise.resolve(onshapeApi.asOAuthApi()),
+        getOnshapeApi: () => Promise.resolve(onshapeApi),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
             Promise.resolve(options.accessLevel ?? AccessLevel.USER)
