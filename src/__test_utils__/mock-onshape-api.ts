@@ -2,26 +2,16 @@ import { type OAuthApi } from "../backend/onshape-api/onshape-api";
 
 export type OnshapeResponse = unknown;
 
-export interface MockOnshapeApiOptions {
-    /** The id returned from `users/sessioninfo` (i.e. the current user). */
-    userId?: string;
-}
-
 /**
- * A test double for the Onshape API.
+ * A test double for the Onshape API, used when a route under test calls
+ * `c.var.getOnshapeApi()` and issues requests. Stub endpoints by path prefix with
+ * {@link on}; any unstubbed call throws so missing stubs are obvious.
  *
- * The auth middleware resolves the current user via `getUserId()`, which calls
- * `users/sessioninfo` — this mock answers that with {@link userId}. Stub any
- * other endpoint a route calls with {@link on}; unstubbed calls throw.
+ * Identity (userId) and access level are injected directly by `createTestApp`, so
+ * they do not go through this mock.
  */
 export class MockOnshapeApi {
-    /** Id returned from `users/sessioninfo`. */
-    userId: string;
     private readonly responses = new Map<string, OnshapeResponse>();
-
-    constructor(options: MockOnshapeApiOptions = {}) {
-        this.userId = options.userId ?? "test-user";
-    }
 
     /** Stubs the response returned for any request whose path starts with `path`. */
     on(path: string, response: OnshapeResponse): this {
@@ -30,9 +20,6 @@ export class MockOnshapeApi {
     }
 
     private resolve(path: string): unknown {
-        if (path.includes("sessioninfo")) {
-            return { id: this.userId };
-        }
         for (const [key, value] of this.responses) {
             if (path.startsWith(key)) {
                 return typeof value === "function"

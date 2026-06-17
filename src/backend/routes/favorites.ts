@@ -1,17 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { type Db, getDb } from "../db";
-import { onshapeApiMiddleware, userIdMiddleware } from "../middleware";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
 import { type LibraryId } from "../../shared/types";
 import { type Configuration } from "../../shared/configuration-models";
 
 export const favoriteRoutes = getApp();
-
-// Routes under `/favorites/*` operate on the current user's favorites and need
-// an authenticated userId injected into the context.
-favoriteRoutes.use("/favorites/*", onshapeApiMiddleware, userIdMiddleware);
 
 async function getFavorites(
     db: Db,
@@ -49,7 +44,7 @@ async function getFavorites(
  * Gets the list of a user's favorites.
  */
 favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
-    const userId = c.var.userId;
+    const userId = await c.var.getUserId();
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
     return c.json(await getFavorites(db, userId, libraryId));
@@ -60,7 +55,7 @@ favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
  */
 favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
-    const userId = c.var.userId;
+    const userId = await c.var.getUserId();
     const insertableId = c.req.query("insertableId");
     const favoriteId = c.req.query("id");
     if (!insertableId) return c.json({ error: "insertableId required" }, 400);
@@ -103,7 +98,7 @@ favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
     if (!favoriteId) {
         return c.json({ error: "favoriteId is required" }, 400);
     }
-    const userId = c.var.userId;
+    const userId = await c.var.getUserId();
     const db = getDb(c.env.DB);
 
     // security: Require the user to also match

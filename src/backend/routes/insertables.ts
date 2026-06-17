@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
-import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion } from "../library-data";
@@ -72,7 +71,7 @@ insertableRoutes
 
         let fastenInfo = null;
         if (body.supportsFasten) {
-            const onshapeApi = await getOnshapeApi(c);
+            const onshapeApi = await c.var.getOnshapeApi();
             const elementPath = await getInsertableElementPath(
                 db,
                 insertableId
@@ -113,7 +112,7 @@ insertableRoutes.post(
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
             configuration: Configuration | undefined;
@@ -183,7 +182,7 @@ insertableRoutes.post(
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
             configuration: Configuration | undefined;

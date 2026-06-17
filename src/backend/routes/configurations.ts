@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getApp } from "../app";
 import { getDb } from "../db";
-import { getOnshapeApi } from "../auth";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
 import {
@@ -45,7 +44,7 @@ configurationRoutes.get("/configuration/:configurationId", async (c) => {
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
 configurationRoutes.get("/unit-info", async (c) => {
-    const onshapeApi = await getOnshapeApi(c);
+    const onshapeApi = await c.var.getOnshapeApi();
     const instancePath = {
         documentId: c.req.query("documentId"),
         instanceId: c.req.query("instanceId"),

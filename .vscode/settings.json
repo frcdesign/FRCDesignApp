@@ -40,7 +40,8 @@
         "Unopenable",
         "updateversion",
         "updateversions",
-        "vite"
+        "vite",
+        "vitest"
     ],
     "cSpell.flagWords": ["coincentric", "expresion", "accordian", "favorties"],
     "npm.packageManager": "npm",
@@ -59,16 +60,6 @@
         "**/license.tsx": true,
         "drizzle/**": true,
         "public/**": true
-    },
-    "jest.runMode": "on-demand",
-    "jest.outputConfig": {
-        "revealWithFocus": "test-results",
-        "revealOn": "error",
-        "clearOnRun": "none"
-    },
-    "jest.jestCommandLine": "npx jest",
-    "jest.nodeEnv": {
-        "NODE_OPTIONS": "--experimental-vm-modules"
     },
     "testing.automaticallyOpenTestResults": "openOnTestFailure",
     "eslint.format.enable": true

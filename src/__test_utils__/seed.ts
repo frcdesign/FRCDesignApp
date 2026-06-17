@@ -1,5 +1,6 @@
 import { type Db } from "../backend/db";
 import {
+    configurations,
     favorites,
     groups,
     insertables,
@@ -9,11 +10,16 @@ import {
 import { ElementType, LibraryId } from "../shared/types";
 
 /**
- * Removes all rows from the tables touched by these helpers, in FK-safe order.
- * Call in `beforeEach` to isolate tests that share the same D1 database.
+ * Truncates every table these helpers touch, in FK-safe order.
+ *
+ * `@cloudflare/vitest-pool-workers` isolates D1 storage per test *file*, not per
+ * test, and there is no built-in per-test reset (`reset()` from `cloudflare:test`
+ * only clears Durable Objects). Call this in `beforeEach` to isolate tests that
+ * share a database.
  */
-export async function clearAll(db: Db): Promise<void> {
+export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);
+    await db.delete(configurations);
     await db.delete(insertables);
     await db.delete(groups);
     await db.delete(users);

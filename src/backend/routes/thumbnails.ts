@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
-import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { bumpLibraryVersion } from "../library-data";
 import { LibraryId } from "../../shared/types";
@@ -140,7 +139,7 @@ thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
 
 /** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
 thumbnailRoutes.get("/thumbnail", async (c) => {
-    const onshapeApi = await getOnshapeApi(c);
+    const onshapeApi = await c.var.getOnshapeApi();
     const size =
         (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
     const thumbnailId = c.req.query("thumbnailId");
@@ -159,7 +158,7 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {
             documentId: c.req.param("docId"),
             instanceId: c.req.param("instanceId"),
@@ -183,7 +182,7 @@ reloadThumbnailRoutes.use(requireAdminMiddleware);
 reloadThumbnailRoutes.post(
     "/reload-insertable-thumbnail" + insertableRoute(),
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const db = getDb(c.env.DB);
 
@@ -223,7 +222,7 @@ reloadThumbnailRoutes.post(
 reloadThumbnailRoutes.post(
     "/reload-group-thumbnail/group/:groupId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const groupId = c.req.param("groupId");
         const db = getDb(c.env.DB);
 
