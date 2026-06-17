@@ -15,6 +15,7 @@ export interface AppBindings {
 
 interface AppVariables {
     onshapeApi: OAuthApi;
+    userId: string;
 }
 
 export interface AppContextEnv {

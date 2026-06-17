@@ -16,6 +16,8 @@
         "preview": "npm run build && vite preview",
         "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",
         "typegen": "wrangler types",
+        "test": "vitest run",
+        "test:watch": "vitest",
         "prepare": "husky"
     },
     "dependencies": {
@@ -40,9 +42,9 @@
     },
     "devDependencies": {
         "@cloudflare/vite-plugin": "^1.36.4",
+        "@cloudflare/vitest-pool-workers": "^0.16.16",
         "@eslint/js": "^10.0.1",
         "@tanstack/router-plugin": "^1.168.2",
-        "@types/jest": "^30.0.0",
         "@types/node": "^24.12.4",
         "@types/react": "^19.2.16",
         "@types/react-dom": "^19.2.3",
@@ -54,17 +56,15 @@
         "eslint-plugin-react-x": "^5.7.8",
         "globals": "^17.5.0",
         "husky": "^9.1.7",
-        "jest": "^30.4.2",
-        "jest-environment-jsdom": "^30.4.1",
         "lint-staged": "^17.0.5",
         "postcss": "^8.5.15",
         "postcss-preset-mantine": "^1.18.0",
         "postcss-simple-vars": "^7.0.1",
         "sass": "^1.99.0",
-        "ts-jest": "^29.4.9",
         "typescript": "~6.0.2",
         "typescript-eslint": "^8.58.2",
         "vite": "^8.0.10",
+        "vitest": "^4.1.9",
         "wrangler": "^4.93.0"
     }
 }

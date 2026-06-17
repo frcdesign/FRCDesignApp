@@ -1,10 +1,11 @@
-import { Vendor } from "../../../shared/types";
+import { describe, expect, it } from "vitest";
+import { Vendor } from "../../shared/types";
 import {
     ConfigurationParameterType,
     QuantityType,
     Unit
-} from "../../../shared/configuration-models";
-import { parseNameVendor, parseVendors } from "../parse-vendors";
+} from "../../shared/configuration-models";
+import { parseNameVendor, parseVendors } from "./parse-vendors";
 
 describe("parseNameVendor", () => {
     it("detects vendor token in element name", () => {

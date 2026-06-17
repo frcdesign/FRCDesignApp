@@ -1,10 +1,11 @@
-import { QuantityType, Unit } from "../../../shared/configuration-models";
+import { describe, expect, it } from "vitest";
+import { QuantityType, Unit } from "../../shared/configuration-models";
 import {
     evaluateExpression,
     EvaluateOptions,
     Result,
     valueWithUnits
-} from "../input-parser";
+} from "./input-parser";
 
 const defaultOptions = (
     quantityType: QuantityType = QuantityType.LENGTH,

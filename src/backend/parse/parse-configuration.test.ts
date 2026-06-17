@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import {
     ConfigurationParameterType,
     QuantityType,
@@ -6,9 +7,9 @@ import {
     LogicalOp,
     VisibilityCondition,
     ParameterObj
-} from "../../../shared/configuration-models";
-import { evaluateCondition } from "../../../shared/configuration-utils";
-import { parseOnshapeConfiguration } from "../parse-configuration";
+} from "../../shared/configuration-models";
+import { evaluateCondition } from "../../shared/configuration-utils";
+import { parseOnshapeConfiguration } from "./parse-configuration";
 
 const NONE_CONDITION = { btType: "BTParameterVisibilityCondition-177" };
 
