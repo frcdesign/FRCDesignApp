@@ -4,7 +4,6 @@ import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { bumpLibraryVersion } from "../library-data";
-import { LibraryId } from "../../shared/types";
 import {
     getElementThumbnail,
     getThumbnailFromId,
@@ -211,7 +210,7 @@ thumbnailRoutes.post(
             .set({ thumbnailUrls: thumbnails })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
@@ -256,7 +255,7 @@ thumbnailRoutes.post(
             .set({ thumbnailUrls: thumbnails })
             .where(eq(groups.id, groupId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
