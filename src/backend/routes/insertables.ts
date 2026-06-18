@@ -5,7 +5,6 @@ import { getDb, type Db } from "../db";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion } from "../library-data";
-import { LibraryId } from "../../shared/types";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
@@ -49,7 +48,7 @@ insertableRoutes.post(
             .set({ isOpenComposite: body.isOpenComposite })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
@@ -105,7 +104,7 @@ insertableRoutes.post(
             .set({ supportsFasten: body.supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, insertableRow.libraryId as LibraryId);
+        await bumpLibraryVersion(db, insertableRow.libraryId);
         return c.json({ success: true });
     }
 );

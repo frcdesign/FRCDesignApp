@@ -7,7 +7,10 @@ import {
     libraries,
     users
 } from "../shared/schema";
-import { type ParameterObj } from "../shared/configuration-models";
+import {
+    ConfigurationParameterType,
+    type ParameterObj
+} from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
 import { ElementType, LibraryId } from "../shared/types";
 
@@ -18,19 +21,28 @@ export const TEST_PART_STUDIO_ID = "test-part-studio";
 export const TEST_ASSEMBLY_ID = "test-assembly";
 
 /** Onshape paths backing the seeded insertables — also useful for API mocking. */
-export const testInstancePath: InstancePath = {
+export const TEST_INSTANCE_PATH: InstancePath = {
     documentId: "doc-test",
     instanceId: "v-test",
     instanceType: "v"
 };
-export const testPartStudioPath: ElementPath = {
-    ...testInstancePath,
+export const TEST_PART_STUDIO_PATH: ElementPath = {
+    ...TEST_INSTANCE_PATH,
     elementId: "e-part-studio"
 };
-export const testAssemblyPath: ElementPath = {
-    ...testInstancePath,
+export const TEST_ASSEMBLY_PATH: ElementPath = {
+    ...TEST_INSTANCE_PATH,
     elementId: "e-assembly"
 };
+
+export const TEST_PARAMETERS: ParameterObj[] = [
+    {
+        type: ConfigurationParameterType.BOOLEAN,
+        id: "boolean",
+        name: "Test boolean",
+        default: "true"
+    }
+];
 
 /**
  * Truncates every table these helpers touch, in FK-safe order.
@@ -53,7 +65,10 @@ export async function seedLibrary(
     db: Db,
     id: LibraryId = TEST_LIBRARY_ID
 ): Promise<string> {
-    await db.insert(libraries).values({ id }).onConflictDoNothing();
+    await db
+        .insert(libraries)
+        .values({ id, searchDb: "{ fake-search-db: true }" })
+        .onConflictDoNothing();
     return id;
 }
 
@@ -115,7 +130,7 @@ export async function seedPartStudio(db: Db): Promise<string> {
     return seedInsertable(
         db,
         TEST_PART_STUDIO_ID,
-        testPartStudioPath,
+        TEST_PART_STUDIO_PATH,
         ElementType.PART_STUDIO
     );
 }
@@ -126,7 +141,7 @@ export async function seedAssembly(db: Db): Promise<string> {
     return seedInsertable(
         db,
         TEST_ASSEMBLY_ID,
-        testAssemblyPath,
+        TEST_ASSEMBLY_PATH,
         ElementType.ASSEMBLY
     );
 }
@@ -152,14 +167,20 @@ export async function seedFavorite(
     return id;
 }
 
+/**
+ * Seeds a configuration for a given insertable.
+ * Note configurations are always 1:1 with insertables so the configuration id is also the insertable id.
+ */
 export async function seedConfiguration(
     db: Db,
-    insertableId: string = TEST_PART_STUDIO_ID,
-    parameters: ParameterObj[] = []
+    insertableId: string = TEST_PART_STUDIO_ID
 ): Promise<void> {
     await db
         .insert(configurations)
-        .values({ id: insertableId, parameters })
+        .values({
+            id: insertableId,
+            parameters: TEST_PARAMETERS
+        })
         .onConflictDoNothing();
 }
 

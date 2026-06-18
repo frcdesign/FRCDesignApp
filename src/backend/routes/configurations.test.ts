@@ -9,7 +9,8 @@ import {
     resetDb,
     seedConfiguration,
     seedPartStudio,
-    testInstancePath
+    TEST_INSTANCE_PATH,
+    TEST_PARAMETERS
 } from "../../__test_utils__";
 import { getDb } from "../db";
 
@@ -32,8 +33,8 @@ describe("configuration routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const body: { parameters: unknown[] } = await res.json();
-        expect(body.parameters).toEqual([]);
+        const body = await res.json();
+        expect(body).toEqual({ parameters: TEST_PARAMETERS });
     });
 
     it("GET /configuration/:id 404s for an unknown id", async () => {
@@ -61,7 +62,7 @@ describe("configuration routes", () => {
         });
         const app = createTestApp({ onshapeApi });
 
-        const { documentId, instanceId, instanceType } = testInstancePath;
+        const { documentId, instanceId, instanceType } = TEST_INSTANCE_PATH;
         const res = await app.request(
             `/api/unit-info?documentId=${documentId}&instanceId=${instanceId}&instanceType=${instanceType}`,
             jsonRequest("GET"),

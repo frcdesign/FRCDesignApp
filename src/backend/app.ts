@@ -30,9 +30,7 @@ export interface AppContextEnv {
 export type AppContext = Context<AppContextEnv>;
 
 /**
- * The per-request dependencies injected into the app. Production wiring lives in
- * `services.ts`; tests provide mocks via `createTestApp`. `createApp` binds these
- * onto the context so handlers can call `c.var.getUserId()` etc. directly.
+ * Per-request dependencies injected into the app.
  */
 export interface AppServices {
     getOnshapeApi: () => Promise<OAuthApi>;

@@ -7,10 +7,12 @@ import {
     createTestApp,
     jsonRequest,
     resetDb,
+    seedTestData,
     seedConfiguration,
-    seedTestData
+    seedLibrary
 } from "../../__test_utils__";
 import { getDb } from "../db";
+import { LibraryOut } from "../../shared/api-models";
 
 const db = getDb(env.DB);
 
@@ -21,7 +23,7 @@ describe("library routes", () => {
 
     it("GET /library-data returns groups and insertables", async () => {
         await seedTestData(db);
-        await seedConfiguration(db); // configuration on the part studio
+        await seedConfiguration(db, TEST_PART_STUDIO_ID);
         const app = createTestApp();
 
         const res = await app.request(
@@ -31,10 +33,8 @@ describe("library routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const body: {
-            groupOrder: string[];
-            insertables: Record<string, { configurationId?: string }>;
-        } = await res.json();
+        const body: LibraryOut = await res.json();
+
         expect(body.groupOrder).toContain(TEST_GROUP_ID);
         expect(Object.keys(body.insertables)).toContain(TEST_PART_STUDIO_ID);
         expect(body.insertables[TEST_PART_STUDIO_ID].configurationId).toBe(
@@ -43,7 +43,7 @@ describe("library routes", () => {
     });
 
     it("GET /search-db returns a serialized search index", async () => {
-        await seedTestData(db);
+        await seedLibrary(db);
         const app = createTestApp();
 
         const res = await app.request(

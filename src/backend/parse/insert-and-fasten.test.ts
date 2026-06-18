@@ -9,8 +9,8 @@ describe("parseFastenInfoFromPartStudio", () => {
     it("returns Feature location with empty path when mate connector is found", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "mateConnector", featureId: "mate-id-1" },
-                { featureType: "other", featureId: "other-id" }
+                { featureType: "other", featureId: "other-id" },
+                { featureType: "mateConnector", featureId: "mate-id-1" }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);
