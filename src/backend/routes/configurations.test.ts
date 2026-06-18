@@ -1,9 +1,8 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuantityType, Unit } from "../../shared/configuration-models";
 import {
     TEST_PART_STUDIO_ID,
-    MockOnshapeApi,
     createTestApp,
     jsonRequest,
     resetDb,
@@ -13,6 +12,7 @@ import {
     TEST_PARAMETERS
 } from "../../__test_utils__";
 import { getDb } from "../db";
+import * as DocumentEndpoints from "../onshape-api/endpoints/documents";
 
 const db = getDb(env.DB);
 
@@ -20,6 +20,8 @@ describe("configuration routes", () => {
     beforeEach(async () => {
         await resetDb(db);
     });
+
+    afterEach(() => vi.restoreAllMocks());
 
     it("GET /configuration/:id returns the stored parameters", async () => {
         await seedPartStudio(db);
@@ -48,7 +50,7 @@ describe("configuration routes", () => {
     });
 
     it("GET /unit-info parses Onshape unit info", async () => {
-        const onshapeApi = new MockOnshapeApi().on("/unitinfo", {
+        vi.spyOn(DocumentEndpoints, "getUnitInfo").mockResolvedValue({
             defaultUnits: {
                 units: [
                     { key: QuantityType.ANGLE, value: Unit.DEGREE },
@@ -60,7 +62,7 @@ describe("configuration routes", () => {
                 [Unit.MILLIMETER]: 4
             }
         });
-        const app = createTestApp({ onshapeApi });
+        const app = createTestApp();
 
         const { documentId, instanceId, instanceType } = TEST_INSTANCE_PATH;
         const res = await app.request(

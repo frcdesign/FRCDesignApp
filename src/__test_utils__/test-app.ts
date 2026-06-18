@@ -1,6 +1,6 @@
 import { createApp } from "../backend/create-app";
 import { AccessLevel } from "../shared/types";
-import { MockOnshapeApi } from "./mock-onshape-api";
+import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 
 export interface TestAppOptions {
     /** Current user id, returned by `c.var.getUserId()` (default `"test-user"`). */
@@ -17,9 +17,8 @@ export interface TestAppOptions {
  * `app.request(path, init, env)` (pass `env` from `cloudflare:workers`).
  */
 export function createTestApp(options: TestAppOptions = {}) {
-    const onshapeApi = options.onshapeApi ?? new MockOnshapeApi();
     return createApp(() => ({
-        getOnshapeApi: () => Promise.resolve(onshapeApi),
+        getOnshapeApi: () => Promise.resolve(MOCK_ONSHAPE_API),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
             Promise.resolve(options.accessLevel ?? AccessLevel.USER)
