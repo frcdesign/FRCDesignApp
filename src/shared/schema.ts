@@ -25,6 +25,7 @@ export const groups = sqliteTable(
             .$defaultFn(() => crypto.randomUUID()),
         libraryId: text("library_id")
             .notNull()
+            .$type<LibraryId>()
             .references(() => libraries.id),
         name: text("name").notNull(),
         // The Onshape document this group was added from
@@ -56,6 +57,7 @@ export const insertables = sqliteTable(
         documentId: text("document_id").notNull(),
         libraryId: text("library_id")
             .notNull()
+            .$type<LibraryId>()
             .references(() => libraries.id),
         name: text("name").notNull(),
         elementType: text("element_type").notNull().$type<ElementType>(),
@@ -121,6 +123,7 @@ export const favorites = sqliteTable(
             .references(() => users.id),
         libraryId: text("library_id")
             .notNull()
+            .$type<LibraryId>()
             .references(() => libraries.id),
         insertableId: text("insertable_id")
             .notNull()

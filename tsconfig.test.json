@@ -8,16 +8,20 @@
         "allowImportingTsExtensions": true,
         "moduleDetection": "force",
         "noEmit": true,
-        "types": ["jest", "node", "./worker-configuration.d.ts"],
+        "types": [
+            "vitest/globals",
+            "node",
+            "@cloudflare/vitest-pool-workers/types",
+            "./worker-configuration.d.ts"
+        ],
         "skipLibCheck": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true
     },
     "include": [
-        "src/**/__tests__/**/*.ts",
-        "src/**/__tests__/**/*.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        "src/__test_utils__",
         "src/shared"
     ]
 }

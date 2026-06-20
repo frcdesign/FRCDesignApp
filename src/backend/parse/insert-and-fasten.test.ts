@@ -1,15 +1,16 @@
-import { MateLocation } from "../../../shared/types";
+import { describe, expect, it } from "vitest";
+import { MateLocation } from "../../shared/types";
 import {
     parseFastenInfoFromPartStudio,
     parseFastenInfoFromAssembly
-} from "../insert-and-fasten";
+} from "./insert-and-fasten";
 
 describe("parseFastenInfoFromPartStudio", () => {
     it("returns Feature location with empty path when mate connector is found", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "mateConnector", featureId: "mate-id-1" },
-                { featureType: "other", featureId: "other-id" }
+                { featureType: "other", featureId: "other-id" },
+                { featureType: "mateConnector", featureId: "mate-id-1" }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);

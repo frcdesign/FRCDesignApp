@@ -1,6 +1,6 @@
 import { type Context, Hono } from "hono";
 import type { LoadDocumentParams } from "./parse/load-document";
-import { type LibraryId } from "../shared/types";
+import { type AccessLevel, type LibraryId } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 
 export interface AppBindings {
@@ -14,7 +14,12 @@ export interface AppBindings {
 }
 
 interface AppVariables {
-    onshapeApi: OAuthApi;
+    /** Internal cache for {@link getOnshapeApi} in auth.ts. */
+    onshapeApi?: OAuthApi;
+    /** Injected getters — see {@link AppServices} / `createApp`. */
+    getOnshapeApi: () => Promise<OAuthApi>;
+    getUserId: () => Promise<string>;
+    getAccessLevel: () => Promise<AccessLevel>;
 }
 
 export interface AppContextEnv {
@@ -23,6 +28,17 @@ export interface AppContextEnv {
 }
 
 export type AppContext = Context<AppContextEnv>;
+
+/**
+ * Per-request dependencies injected into the app.
+ */
+export interface AppServices {
+    getOnshapeApi: () => Promise<OAuthApi>;
+    getUserId: () => Promise<string>;
+    getAccessLevel: () => Promise<AccessLevel>;
+}
+
+export type AppServicesFactory = (c: AppContext) => AppServices;
 
 export function getApp() {
     return new Hono<AppContextEnv>();

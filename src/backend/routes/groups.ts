@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
-import { getOnshapeApi, getSessionId } from "../auth";
+import { getSessionId } from "../auth";
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorAccess } from "../access-level-utils";
@@ -126,7 +126,7 @@ groupRoutes.post("/group-order" + libraryRoute(), async (c) => {
 /** POST /api/group/library/:libraryId — add a new group from an Onshape document */
 groupRoutes.post("/group" + libraryRoute(), async (c) => {
     await requireEditorAccess(c);
-    const onshapeApi = await getOnshapeApi(c);
+    const onshapeApi = await c.var.getOnshapeApi();
     const libraryId = getLibraryParam(c);
     const body = await c.req.json<{
         newDocumentId: string;

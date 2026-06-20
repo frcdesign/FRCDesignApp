@@ -2,11 +2,9 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
-import { getOnshapeApi } from "../auth";
 import { requireAdminMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion } from "../library-data";
-import { LibraryId } from "../../shared/types";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
@@ -29,9 +27,10 @@ import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
 export const insertableRoutes = getApp();
 
 /** POST /api/toggle-open-composite/insertable/:insertableId */
-insertableRoutes
-    .use(requireAdminMiddleware)
-    .post("/toggle-open-composite" + insertableRoute(), async (c) => {
+insertableRoutes.post(
+    "/toggle-open-composite" + insertableRoute(),
+    requireAdminMiddleware,
+    async (c) => {
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{ isOpenComposite: boolean }>();
 
@@ -49,14 +48,16 @@ insertableRoutes
             .set({ isOpenComposite: body.isOpenComposite })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
-    });
+    }
+);
 
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
-insertableRoutes
-    .use(requireAdminMiddleware)
-    .post("/toggle-insert-and-fasten" + insertableRoute(), async (c) => {
+insertableRoutes.post(
+    "/toggle-insert-and-fasten" + insertableRoute(),
+    requireAdminMiddleware,
+    async (c) => {
         const db = getDb(c.env.DB);
 
         const insertableId = getInsertableParam(c);
@@ -72,7 +73,7 @@ insertableRoutes
 
         let fastenInfo = null;
         if (body.supportsFasten) {
-            const onshapeApi = await getOnshapeApi(c);
+            const onshapeApi = await c.var.getOnshapeApi();
             const elementPath = await getInsertableElementPath(
                 db,
                 insertableId
@@ -103,9 +104,10 @@ insertableRoutes
             .set({ supportsFasten: body.supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, insertableRow.libraryId as LibraryId);
+        await bumpLibraryVersion(db, insertableRow.libraryId);
         return c.json({ success: true });
-    });
+    }
+);
 
 /** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
 insertableRoutes.post(
@@ -113,7 +115,7 @@ insertableRoutes.post(
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
             configuration: Configuration | undefined;
@@ -183,7 +185,7 @@ insertableRoutes.post(
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
             configuration: Configuration | undefined;
