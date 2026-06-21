@@ -8,8 +8,12 @@ import {
 } from "@tabler/icons-react";
 import { ComponentType, ReactNode, useMemo } from "react";
 import {
+    addBuildIssue,
     BuildIssue,
+    BuildIssueCode,
     BuildIssueSeverity,
+    getIssueMessage,
+    getIssueSeverity,
     getMaxSeverity
 } from "../../shared/build-checker";
 import { GroupOut, InsertableOut } from "../../shared/api-models";
@@ -144,7 +148,7 @@ function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
                 Build checks
             </Text>
             {issues.map((issue) => {
-                const visual = getSeverityVisual(issue.severity);
+                const visual = getSeverityVisual(getIssueSeverity(issue));
                 const IssueIcon = visual.icon;
                 return (
                     <Group
@@ -158,7 +162,7 @@ function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
                             color={`var(--mantine-color-${visual.color}-6)`}
                             style={{ flexShrink: 0, marginTop: 2 }}
                         />
-                        <Text size="sm">{issue.message}</Text>
+                        <Text size="sm">{getIssueMessage(issue)}</Text>
                     </Group>
                 );
             })}
@@ -221,17 +225,14 @@ export function getInsertableBuildIssues(
 export function useGroupBuildIssues(group: GroupOut): BuildIssue[] {
     const insertables = useLibraryQuery().data?.insertables;
     return useMemo(() => {
-        const issues = [...group.buildIssues];
         const hasUnhidden = group.insertableOrder.some(
             (id) => insertables?.[id]?.isVisible
         );
-        if (!hasUnhidden) {
-            issues.push({
-                severity: BuildIssueSeverity.ERROR,
-                code: "no-unhidden-insertables",
-                message: "This group has no unhidden insertables."
-            });
+        if (hasUnhidden) {
+            return group.buildIssues;
         }
-        return issues;
+        return addBuildIssue(group.buildIssues, {
+            code: BuildIssueCode.NoUnhiddenInsertables
+        });
     }, [group.buildIssues, group.insertableOrder, insertables]);
 }

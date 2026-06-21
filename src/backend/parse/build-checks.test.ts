@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
-import { BuildIssueSeverity } from "../../shared/build-checker";
+import {
+    BuildIssueCode,
+    BuildIssueSeverity,
+    getIssueSeverity
+} from "../../shared/build-checker";
 import { checkGroup, checkInsertable } from "./build-checks";
 
 const THUMBNAILS: ThumbnailUrls = {
@@ -21,8 +25,8 @@ describe("checkGroup", () => {
             thumbnailUrls: THUMBNAILS
         });
         expect(issues).toHaveLength(1);
-        expect(issues[0].severity).toBe(BuildIssueSeverity.WARNING);
-        expect(issues[0].code).toBe("no-thumbnail-tab");
+        expect(getIssueSeverity(issues[0])).toBe(BuildIssueSeverity.WARNING);
+        expect(issues[0].code).toBe(BuildIssueCode.NoThumbnailTab);
     });
 
     it("errors when the thumbnail failed to generate", () => {
@@ -31,8 +35,8 @@ describe("checkGroup", () => {
             thumbnailUrls: null
         });
         expect(issues).toHaveLength(1);
-        expect(issues[0].severity).toBe(BuildIssueSeverity.ERROR);
-        expect(issues[0].code).toBe("thumbnail-failed");
+        expect(getIssueSeverity(issues[0])).toBe(BuildIssueSeverity.ERROR);
+        expect(issues[0].code).toBe(BuildIssueCode.ThumbnailFailed);
     });
 
     it("prefers the thumbnail error over the missing-tab warning", () => {
@@ -41,7 +45,7 @@ describe("checkGroup", () => {
             thumbnailUrls: null
         });
         expect(issues).toHaveLength(1);
-        expect(issues[0].code).toBe("thumbnail-failed");
+        expect(issues[0].code).toBe(BuildIssueCode.ThumbnailFailed);
     });
 });
 
@@ -61,8 +65,8 @@ describe("checkInsertable", () => {
             thumbnailUrls: THUMBNAILS
         });
         expect(issues).toHaveLength(1);
-        expect(issues[0].severity).toBe(BuildIssueSeverity.INFO);
-        expect(issues[0].code).toBe("no-vendors");
+        expect(getIssueSeverity(issues[0])).toBe(BuildIssueSeverity.INFO);
+        expect(issues[0].code).toBe(BuildIssueCode.NoVendors);
     });
 
     it("errors when the thumbnail failed to generate", () => {
@@ -71,15 +75,15 @@ describe("checkInsertable", () => {
             thumbnailUrls: null
         });
         expect(issues).toHaveLength(1);
-        expect(issues[0].severity).toBe(BuildIssueSeverity.ERROR);
-        expect(issues[0].code).toBe("thumbnail-failed");
+        expect(getIssueSeverity(issues[0])).toBe(BuildIssueSeverity.ERROR);
+        expect(issues[0].code).toBe(BuildIssueCode.ThumbnailFailed);
     });
 
     it("reports both the thumbnail error and the no-vendors info", () => {
         const issues = checkInsertable({ vendors: [], thumbnailUrls: null });
         expect(issues.map((i) => i.code)).toEqual([
-            "thumbnail-failed",
-            "no-vendors"
+            BuildIssueCode.ThumbnailFailed,
+            BuildIssueCode.NoVendors
         ]);
     });
 });

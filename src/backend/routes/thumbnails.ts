@@ -16,6 +16,7 @@ import { groups, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
+import { BuildIssueCode, clearBuildIssue } from "../../shared/build-checker";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
@@ -188,7 +189,8 @@ thumbnailRoutes.post(
         const row = await db
             .select({
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId
+                libraryId: insertables.libraryId,
+                buildIssues: insertables.buildIssues
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -207,7 +209,13 @@ thumbnailRoutes.post(
 
         await db
             .update(insertables)
-            .set({ thumbnailUrls: thumbnails })
+            .set({
+                thumbnailUrls: thumbnails,
+                buildIssues: clearBuildIssue(
+                    row.buildIssues,
+                    BuildIssueCode.ThumbnailFailed
+                )
+            })
             .where(eq(insertables.id, insertableId));
 
         await bumpLibraryVersion(db, row.libraryId);
@@ -228,7 +236,8 @@ thumbnailRoutes.post(
             .select({
                 documentId: groups.documentId,
                 instanceId: groups.instanceId,
-                libraryId: groups.libraryId
+                libraryId: groups.libraryId,
+                buildIssues: groups.buildIssues
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -252,7 +261,13 @@ thumbnailRoutes.post(
 
         await db
             .update(groups)
-            .set({ thumbnailUrls: thumbnails })
+            .set({
+                thumbnailUrls: thumbnails,
+                buildIssues: clearBuildIssue(
+                    row.buildIssues,
+                    BuildIssueCode.ThumbnailFailed
+                )
+            })
             .where(eq(groups.id, groupId));
 
         await bumpLibraryVersion(db, row.libraryId);

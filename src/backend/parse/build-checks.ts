@@ -1,5 +1,9 @@
 import { ThumbnailUrls, Vendor } from "../../shared/types";
-import { BuildIssue, BuildIssueSeverity } from "../../shared/build-checker";
+import {
+    addBuildIssue,
+    BuildIssue,
+    BuildIssueCode
+} from "../../shared/build-checker";
 
 interface GroupCheckInput {
     /** Whether the Onshape document has a designated thumbnail tab/element. */
@@ -13,20 +17,15 @@ interface GroupCheckInput {
  * from the load-document workflow rather than fetching anything itself.
  */
 export function checkGroup(input: GroupCheckInput): BuildIssue[] {
-    const issues: BuildIssue[] = [];
+    let issues: BuildIssue[] = [];
 
     if (input.thumbnailUrls === null) {
-        issues.push({
-            severity: BuildIssueSeverity.ERROR,
-            code: "thumbnail-failed",
-            message: "The group thumbnail failed to generate."
+        issues = addBuildIssue(issues, {
+            code: BuildIssueCode.ThumbnailFailed
         });
     } else if (!input.hasThumbnailTab) {
-        issues.push({
-            severity: BuildIssueSeverity.WARNING,
-            code: "no-thumbnail-tab",
-            message:
-                "No thumbnail tab is set, so the first tab is used as a fallback."
+        issues = addBuildIssue(issues, {
+            code: BuildIssueCode.NoThumbnailTab
         });
     }
 
@@ -44,22 +43,16 @@ interface InsertableCheckInput {
  * signals from the load-document workflow rather than fetching anything itself.
  */
 export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
-    const issues: BuildIssue[] = [];
+    let issues: BuildIssue[] = [];
 
     if (input.thumbnailUrls === null) {
-        issues.push({
-            severity: BuildIssueSeverity.ERROR,
-            code: "thumbnail-failed",
-            message: "The thumbnail failed to generate."
+        issues = addBuildIssue(issues, {
+            code: BuildIssueCode.ThumbnailFailed
         });
     }
 
     if (input.vendors.length === 0) {
-        issues.push({
-            severity: BuildIssueSeverity.INFO,
-            code: "no-vendors",
-            message: "No vendors were parsed for this element."
-        });
+        issues = addBuildIssue(issues, { code: BuildIssueCode.NoVendors });
     }
 
     return issues;
