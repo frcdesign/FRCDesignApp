@@ -2,7 +2,7 @@ import { ThumbnailUrls, Vendor } from "../../shared/types";
 import {
     addBuildIssue,
     BuildIssue,
-    BuildIssueCode
+    BuildIssueType
 } from "../../shared/build-checker";
 
 interface GroupCheckInput {
@@ -21,11 +21,11 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
 
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            code: BuildIssueCode.ThumbnailFailed
+            type: BuildIssueType.ThumbnailFailed
         });
     } else if (!input.hasThumbnailTab) {
         issues = addBuildIssue(issues, {
-            code: BuildIssueCode.NoThumbnailTab
+            type: BuildIssueType.NoThumbnailTab
         });
     }
 
@@ -47,12 +47,12 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
 
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            code: BuildIssueCode.ThumbnailFailed
+            type: BuildIssueType.ThumbnailFailed
         });
     }
 
     if (input.vendors.length === 0) {
-        issues = addBuildIssue(issues, { code: BuildIssueCode.NoVendors });
+        issues = addBuildIssue(issues, { type: BuildIssueType.NoVendors });
     }
 
     return issues;

@@ -2,21 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
     addBuildIssue,
     BuildIssue,
-    BuildIssueCode,
     BuildIssueSeverity,
+    BuildIssueType,
     clearBuildIssue,
     getMaxSeverity
 } from "./build-checker";
 
-/** A representative issue code for each severity. */
-const CODE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueCode> = {
-    [BuildIssueSeverity.INFO]: BuildIssueCode.NoVendors,
-    [BuildIssueSeverity.WARNING]: BuildIssueCode.NoThumbnailTab,
-    [BuildIssueSeverity.ERROR]: BuildIssueCode.ThumbnailFailed
+/** A representative issue type for each severity. */
+const TYPE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueType> = {
+    [BuildIssueSeverity.INFO]: BuildIssueType.NoVendors,
+    [BuildIssueSeverity.WARNING]: BuildIssueType.NoThumbnailTab,
+    [BuildIssueSeverity.ERROR]: BuildIssueType.ThumbnailFailed
 };
 
 const issue = (severity: BuildIssueSeverity): BuildIssue => ({
-    code: CODE_BY_SEVERITY[severity]
+    type: TYPE_BY_SEVERITY[severity]
 });
 
 describe("getMaxSeverity", () => {
@@ -53,37 +53,37 @@ describe("getMaxSeverity", () => {
 describe("addBuildIssue", () => {
     it("appends a new issue", () => {
         const result = addBuildIssue([], {
-            code: BuildIssueCode.NoVendors
+            type: BuildIssueType.NoVendors
         });
-        expect(result).toEqual([{ code: BuildIssueCode.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
     });
 
-    it("does not duplicate an issue with the same code", () => {
-        const existing: BuildIssue[] = [{ code: BuildIssueCode.NoVendors }];
+    it("does not duplicate an issue with the same type", () => {
+        const existing: BuildIssue[] = [{ type: BuildIssueType.NoVendors }];
         const result = addBuildIssue(existing, {
-            code: BuildIssueCode.NoVendors
+            type: BuildIssueType.NoVendors
         });
         expect(result).toBe(existing);
     });
 });
 
 describe("clearBuildIssue", () => {
-    it("removes issues with the given code", () => {
+    it("removes issues with the given type", () => {
         const result = clearBuildIssue(
             [
-                { code: BuildIssueCode.ThumbnailFailed },
-                { code: BuildIssueCode.NoVendors }
+                { type: BuildIssueType.ThumbnailFailed },
+                { type: BuildIssueType.NoVendors }
             ],
-            BuildIssueCode.ThumbnailFailed
+            BuildIssueType.ThumbnailFailed
         );
-        expect(result).toEqual([{ code: BuildIssueCode.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
     });
 
-    it("returns an equivalent array when the code is absent", () => {
+    it("returns an equivalent array when the type is absent", () => {
         const result = clearBuildIssue(
-            [{ code: BuildIssueCode.NoVendors }],
-            BuildIssueCode.ThumbnailFailed
+            [{ type: BuildIssueType.NoVendors }],
+            BuildIssueType.ThumbnailFailed
         );
-        expect(result).toEqual([{ code: BuildIssueCode.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
     });
 });

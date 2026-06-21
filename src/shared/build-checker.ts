@@ -3,6 +3,12 @@
  * and insertables. Most checks run at build time (during the load-document
  * workflow) and are stored on the group/insertable; a few are computed live in
  * the frontend when they depend on per-user state (e.g. access level).
+ *
+ * Issues are stored as a plain array of {@link BuildIssue}. Each issue is a
+ * member of a discriminated union keyed by its `type`, so specific issue types
+ * can carry extra data in the future without affecting the others. Severity is
+ * derived from the type here; the human-readable message is rendered on the
+ * frontend (see `getIssueMessage` in build-status.tsx).
  */
 
 export enum BuildIssueSeverity {
@@ -14,8 +20,8 @@ export enum BuildIssueSeverity {
     ERROR = "error"
 }
 
-/** Stable machine-readable identifier for each build check. */
-export enum BuildIssueCode {
+/** Discriminates the {@link BuildIssue} union. */
+export enum BuildIssueType {
     ThumbnailFailed = "thumbnail-failed",
     NoThumbnailTab = "no-thumbnail-tab",
     NoVendors = "no-vendors",
@@ -23,81 +29,59 @@ export enum BuildIssueCode {
 }
 
 /**
- * Base shape for a build issue. Issues are a discriminated union keyed by
- * `code`, so individual variants can carry extra data alongside the code in the
- * future (e.g. `{ code: BuildIssueCode.X; count: number }`). Severity and the
- * human-readable message are derived from {@link BUILD_ISSUE_META} rather than
- * stored, so they stay consistent and can change without a data migration.
+ * Base shape for a build issue. Variants discriminate on `type`. To attach
+ * data to a specific issue type, intersect the base with the extra fields, e.g.
+ * `BuildIssueOf<BuildIssueType.X> & { count: number }`, and add it to the
+ * {@link BuildIssue} union below.
  */
-interface BuildIssueBase<C extends BuildIssueCode> {
-    code: C;
+interface BuildIssueOf<T extends BuildIssueType> {
+    type: T;
 }
 
 export type BuildIssue =
-    | BuildIssueBase<BuildIssueCode.ThumbnailFailed>
-    | BuildIssueBase<BuildIssueCode.NoThumbnailTab>
-    | BuildIssueBase<BuildIssueCode.NoVendors>
-    | BuildIssueBase<BuildIssueCode.NoUnhiddenInsertables>;
+    | BuildIssueOf<BuildIssueType.ThumbnailFailed>
+    | BuildIssueOf<BuildIssueType.NoThumbnailTab>
+    | BuildIssueOf<BuildIssueType.NoVendors>
+    | BuildIssueOf<BuildIssueType.NoUnhiddenInsertables>;
 
-interface BuildIssueMeta {
-    severity: BuildIssueSeverity;
-    message: string;
-}
-
-/** Static severity + message for each issue code. */
-export const BUILD_ISSUE_META: Record<BuildIssueCode, BuildIssueMeta> = {
-    [BuildIssueCode.ThumbnailFailed]: {
-        severity: BuildIssueSeverity.ERROR,
-        message: "The thumbnail failed to generate."
-    },
-    [BuildIssueCode.NoThumbnailTab]: {
-        severity: BuildIssueSeverity.WARNING,
-        message:
-            "No thumbnail tab is set, so the first tab is used as a fallback."
-    },
-    [BuildIssueCode.NoVendors]: {
-        severity: BuildIssueSeverity.INFO,
-        message: "No vendors were parsed for this element."
-    },
-    [BuildIssueCode.NoUnhiddenInsertables]: {
-        severity: BuildIssueSeverity.ERROR,
-        message: "This group has no unhidden insertables."
-    }
-};
-
+/** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
-    return BUILD_ISSUE_META[issue.code].severity;
-}
-
-export function getIssueMessage(issue: BuildIssue): string {
-    return BUILD_ISSUE_META[issue.code].message;
+    switch (issue.type) {
+        case BuildIssueType.ThumbnailFailed:
+        case BuildIssueType.NoUnhiddenInsertables:
+            return BuildIssueSeverity.ERROR;
+        case BuildIssueType.NoThumbnailTab:
+            return BuildIssueSeverity.WARNING;
+        case BuildIssueType.NoVendors:
+            return BuildIssueSeverity.INFO;
+    }
 }
 
 /**
  * Adds `issue` to `issues`, returning a new array. No-op (returns the original
- * array) if an issue with the same code is already present, so the same check
+ * array) if an issue with the same type is already present, so the same check
  * can be applied repeatedly without duplicating issues.
  */
 export function addBuildIssue(
     issues: BuildIssue[],
     issue: BuildIssue
 ): BuildIssue[] {
-    if (issues.some((existing) => existing.code === issue.code)) {
+    if (issues.some((existing) => existing.type === issue.type)) {
         return issues;
     }
     return [...issues, issue];
 }
 
 /**
- * Removes any issue with the given `code`, returning a new array. Used e.g. when
- * a thumbnail is successfully reloaded to clear a stale `thumbnail-failed`
+ * Removes any issue with the given `type`, returning a new array. Used e.g.
+ * when a thumbnail is successfully reloaded to clear a stale `thumbnail-failed`
  * issue.
  */
 export function clearBuildIssue(
     issues: BuildIssue[],
-    code: BuildIssueCode
+    type: BuildIssueType
 ): BuildIssue[] {
-    return issues.filter((issue) => issue.code !== code);
+    return issues.filter((issue) => issue.type !== type);
 }
 
 /** Worst-to-best ordering. Higher index = more severe. */

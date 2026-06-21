@@ -16,7 +16,7 @@ import { groups, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
-import { BuildIssueCode, clearBuildIssue } from "../../shared/build-checker";
+import { BuildIssueType, clearBuildIssue } from "../../shared/build-checker";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
@@ -213,7 +213,7 @@ thumbnailRoutes.post(
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
                     row.buildIssues,
-                    BuildIssueCode.ThumbnailFailed
+                    BuildIssueType.ThumbnailFailed
                 )
             })
             .where(eq(insertables.id, insertableId));
@@ -265,7 +265,7 @@ thumbnailRoutes.post(
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
                     row.buildIssues,
-                    BuildIssueCode.ThumbnailFailed
+                    BuildIssueType.ThumbnailFailed
                 )
             })
             .where(eq(groups.id, groupId));

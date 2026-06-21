@@ -10,9 +10,8 @@ import { ComponentType, ReactNode, useMemo } from "react";
 import {
     addBuildIssue,
     BuildIssue,
-    BuildIssueCode,
     BuildIssueSeverity,
-    getIssueMessage,
+    BuildIssueType,
     getIssueSeverity,
     getMaxSeverity
 } from "../../shared/build-checker";
@@ -127,6 +126,20 @@ function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
     );
 }
 
+/** The human-readable message for a build issue, rendered at display time. */
+function getIssueMessage(issue: BuildIssue): string {
+    switch (issue.type) {
+        case BuildIssueType.ThumbnailFailed:
+            return "The thumbnail failed to generate.";
+        case BuildIssueType.NoThumbnailTab:
+            return "No thumbnail tab is set, so the first tab is used as a fallback.";
+        case BuildIssueType.NoVendors:
+            return "No vendors were parsed for this element.";
+        case BuildIssueType.NoUnhiddenInsertables:
+            return "This group has no unhidden insertables.";
+    }
+}
+
 function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
     if (issues.length === 0) {
         const visual = getSeverityVisual(null);
@@ -152,7 +165,7 @@ function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
                 const IssueIcon = visual.icon;
                 return (
                     <Group
-                        key={issue.code}
+                        key={issue.type}
                         gap="xs"
                         wrap="nowrap"
                         align="start"
@@ -232,7 +245,7 @@ export function useGroupBuildIssues(group: GroupOut): BuildIssue[] {
             return group.buildIssues;
         }
         return addBuildIssue(group.buildIssues, {
-            code: BuildIssueCode.NoUnhiddenInsertables
+            type: BuildIssueType.NoUnhiddenInsertables
         });
     }, [group.buildIssues, group.insertableOrder, insertables]);
 }
