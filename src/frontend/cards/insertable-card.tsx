@@ -23,6 +23,10 @@ import {
 } from "../favorites/favorite-button";
 import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import {
+    getInsertableBuildIssues,
+    getInsertableStateRows
+} from "./build-status";
+import {
     AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
@@ -62,6 +66,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const favorites = useFavoritesQuery().data?.favorites;
 
     const isHidden = useIsInsertableHidden(insertable);
+    const buildIssues = getInsertableBuildIssues(insertable);
 
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
@@ -94,6 +99,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     title={insertable.name}
                     thumbnailUrls={insertable.thumbnailUrls}
                     showHiddenTag={!insertable.isVisible}
+                    buildIssues={buildIssues}
+                    buildStateRows={getInsertableStateRows(insertable)}
                 />
             }
             rightSection={

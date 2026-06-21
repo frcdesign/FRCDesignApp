@@ -9,6 +9,7 @@ import {
 } from "./types";
 import { ThumbnailUrls } from "./types";
 import { Configuration, ParameterObj } from "./configuration-models";
+import { BuildIssue } from "./build-checker";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -37,7 +38,12 @@ export const groups = sqliteTable(
         sortOrder: integer("sort_order").notNull().default(0),
         thumbnailUrls: text("thumbnail_urls", {
             mode: "json"
-        }).$type<ThumbnailUrls>()
+        }).$type<ThumbnailUrls>(),
+        // Build-time issues flagged by the build checker, recomputed on reload.
+        buildIssues: text("build_issues", { mode: "json" })
+            .$type<BuildIssue[]>()
+            .notNull()
+            .default([])
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
@@ -84,7 +90,12 @@ export const insertables = sqliteTable(
         }).$type<ThumbnailUrls | null>(),
         fastenInfo: text("fasten_info", {
             mode: "json"
-        }).$type<FastenInfo | null>()
+        }).$type<FastenInfo | null>(),
+        // Build-time issues flagged by the build checker, recomputed on reload.
+        buildIssues: text("build_issues", { mode: "json" })
+            .$type<BuildIssue[]>()
+            .notNull()
+            .default([])
     },
     (t) => [unique().on(t.elementId, t.groupId)]
 );

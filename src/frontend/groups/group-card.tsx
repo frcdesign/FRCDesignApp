@@ -25,6 +25,7 @@ import {
     ReloadThumbnailMenuItem
 } from "../cards/card-components";
 import { AddGroupItem } from "./add-group-menu";
+import { getGroupStateRows, useGroupBuildIssues } from "../cards/build-status";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -44,6 +45,7 @@ interface GroupCardProps extends PropsWithChildren {
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();
+    const buildIssues = useGroupBuildIssues(group);
 
     return (
         <ItemRow
@@ -57,6 +59,8 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                 <CardTitle
                     title={group.name}
                     thumbnailUrls={group.thumbnailUrls}
+                    buildIssues={buildIssues}
+                    buildStateRows={getGroupStateRows(group)}
                 />
             }
             rightSection={<IconArrowRight size={IconSize.SMALL} />}
