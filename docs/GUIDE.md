@@ -8,15 +8,9 @@ Step-by-step recipes for common development tasks. This guide assumes you've rea
 
 Before writing any code that talks to Onshape, start with **Glassworks** — Onshape's interactive API browser. It lets you explore every available endpoint, understand what parameters it accepts, send live requests, and inspect real responses. Think of it as a Postman-style tool built into Onshape.
 
+You can use Glassworks to see the list of publicly available APIs and test them against Onshape documents.
+
 **URL:** `https://cad.onshape.com/glassworks/explorer`
-
-### How to use it
-
-1. **Open Glassworks** in your browser. You'll see a list of API categories on the left (Documents, Assemblies, PartStudios, etc.).
-2. **Authenticate:** Click the green **Authorize** button at the top of the page. Log in with your Onshape account. This lets Glassworks make real API calls on your behalf.
-3. **Find your endpoint:** Browse the categories or use the search bar. Each endpoint shows its HTTP method (GET, POST, DELETE), path, and a description.
-4. **Try it out:** Click on an endpoint, then click **Try it out**. Fill in any required parameters (you can get document/workspace/element IDs from the URL of an Onshape document), then click **Execute**.
-5. **Inspect the response:** Glassworks shows the full JSON response, the HTTP status code, and the request URL. This is the ground truth for what you'll get when you call the same endpoint from code.
 
 **Tip:** The response shape you see in Glassworks is exactly what you'll get from `client.get(...)` in the backend. Use it to figure out what fields exist so you can type them correctly.
 
@@ -31,10 +25,13 @@ This is the most important concept to understand before adding any Onshape API i
 Everything in Onshape is nested: a **Document** contains one or more **Workspaces** (or Versions, or Microversions), and each Workspace contains **Elements** (tabs — Part Studios, Assemblies, Feature Studios, etc.).
 
 Each level has a unique string ID:
+
 - `documentId` — identifies the document
 - `instanceId` — identifies the workspace (or version, or microversion) within that document
 - `instanceType` — `"w"` for workspace, `"v"` for version, `"m"` for microversion
 - `elementId` — identifies a specific tab within the instance
+
+In the database, Groups correspond to Documents (or more specifically Versions of a Document) and Insertables correspond to Elements (tabs).
 
 ### Path types in the codebase
 
@@ -76,13 +73,16 @@ The `apiPath()` function in `src/backend/onshape-api/api-path.ts` assembles thes
 
 ```ts
 import { apiPath } from "../api-path";
-import { toInstanceApiPath, toElementApiPath } from "../../../shared/onshape-path";
+import {
+    toInstanceApiPath,
+    toElementApiPath
+} from "../../../shared/onshape-path";
 
 // Produces: /assemblies/d/{did}/w/{wid}/e/{eid}/features
-apiPath("assemblies", elementPath, toElementApiPath, { endRoute: "features" })
+apiPath("assemblies", elementPath, toElementApiPath, { endRoute: "features" });
 
 // Produces: /documents/d/{did}/w/{wid}/elements
-apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" })
+apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" });
 ```
 
 The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`) are all defined in `src/shared/onshape-path.ts` and convert a path object into its URL segment string.
@@ -91,21 +91,13 @@ The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementAp
 
 ## Calling the Onshape API
 
-All Onshape API calls go through one of two classes defined in `src/backend/onshape-api/onshape-api.ts`:
-
-**`OAuthApi`** — Use this for requests made on behalf of a logged-in user. It adds the user's OAuth access token as a `Bearer` header. If the token has expired, it automatically refreshes it and retries. This is the class you'll almost always use.
-
-**`KeyApi`** — Use this for server-to-server requests that don't need a user session (e.g., background jobs that use a static API key). It signs requests with HMAC-SHA256.
-
-Both expose the same methods: `.get()`, `.post()`, `.delete()`, `.getImage()`, etc.
-
-In a route handler, you get an `OAuthApi` instance like this:
+All Onshape API calls go through the `OAuthApi` class, which is a wrapper around the Onshape API which handles authentication. For security reasons, the Onshape API is only available in the backend. The OAuthApi class can be retrieved inside any Hono route handler like this:
 
 ```ts
 const onshapeApi = await c.var.getOnshapeApi();
 ```
 
-Then pass it to any function in `src/backend/onshape-api/endpoints/`:
+You can then pass it to any function in `src/backend/onshape-api/endpoints/`:
 
 ```ts
 import { getDocumentElements } from "../onshape-api/endpoints/documents";
@@ -113,64 +105,7 @@ import { getDocumentElements } from "../onshape-api/endpoints/documents";
 const elements = await getDocumentElements(onshapeApi, instancePath);
 ```
 
-**Before writing a new wrapper function, check if it already exists** in one of the files under `src/backend/onshape-api/endpoints/`:
-
-| File | Wraps |
-|---|---|
-| `documents.ts` | Document metadata, workspaces, elements, references |
-| `assemblies.ts` | Assembly structure, adding elements, adding features, transforms |
-| `part-studios.ts` | Part Studio features |
-| `feature-studios.ts` | Feature Studio code (pull/push) |
-| `configurations.ts` | Configuration definitions and encoding |
-| `thumbnails.ts` | Element thumbnail images |
-| `users.ts` | User info, session ping |
-| `permissions.ts` | Permission checks |
-| `metadata.ts` | Element/part metadata |
-| `versions.ts` | Version listing |
-| `settings.ts` | Document settings |
-
----
-
-## Adding a New Onshape API Wrapper
-
-Use this when you need to call an Onshape endpoint that doesn't have a wrapper yet.
-
-### 1. Find the endpoint in Glassworks
-
-Go to `https://cad.onshape.com/glassworks/explorer`, find the endpoint, try it with a real document, and note the path structure and response shape.
-
-### 2. Add a wrapper function
-
-Find the right file in `src/backend/onshape-api/endpoints/` (or create a new one if the category is new). Add a typed function:
-
-```ts
-import { OnshapeApi } from "../onshape-api";
-import { ElementPath, toElementApiPath } from "../../../shared/onshape-path";
-import { apiPath } from "../api-path";
-
-/** Fetches the BOM for an assembly element. */
-export function getAssemblyBom(
-    client: OnshapeApi,
-    elementPath: ElementPath
-): Promise<any> {
-    return client.get(
-        apiPath("assemblies", elementPath, toElementApiPath, {
-            endRoute: "bom"
-        })
-    );
-}
-```
-
-A few notes:
-- Return type `Promise<any>` is fine to start. Once you know the response shape, define an interface and use that instead.
-- Use `apiPath()` to build the URL rather than constructing strings manually — it handles encoding and prefix logic for you.
-- For POST calls, pass `{ body: { ... } }` as the second argument to `client.post()`.
-
-### 3. Call it from a backend route
-
-Import your new function in the appropriate route file and call it inside a handler (see the next section).
-
----
+Before writing a new wrapper function, check if it already exists in one of the files under `src/backend/onshape-api/endpoints/`.
 
 ## Adding a New Backend Route
 
@@ -200,6 +135,7 @@ myRoutes.get("/my-thing" + libraryRoute(), async (c) => {
 ```
 
 **Route param helpers** (defined in `src/backend/app.ts`):
+
 - `libraryRoute()` — returns `"/library/:libraryId"`. Use `getLibraryParam(c)` to read it.
 - `insertableRoute()` — returns `"/insertable/:insertableId"`. Use `getInsertableParam(c)`.
 - `groupRoute()` — returns `"/group/:groupId"`. Use `getGroupParam(c)`.
@@ -228,8 +164,6 @@ app.route("/api", myRoutes);
 ### 3. Define the response type in shared
 
 If the frontend needs to consume this endpoint, define a TypeScript interface for the response in `src/shared/api-models.ts` so both sides agree on the shape.
-
----
 
 ## Modifying the Database Schema
 
@@ -270,8 +204,6 @@ This runs all pending migrations against your local D1 database (used by `npx wr
 ### 4. Update API response types if needed
 
 If the new data needs to be returned to the frontend, update the relevant interface in `src/shared/api-models.ts` and modify the query in `src/backend/library-data.ts` (if it's part of the main library response) or in the appropriate route handler.
-
----
 
 ## Adding a Frontend Route
 
@@ -346,7 +278,7 @@ Use TanStack Router's `<Link>` component for navigation:
 ```tsx
 import { Link } from "@tanstack/react-router";
 
-<Link to="/app/settings">Go to settings</Link>
+<Link to="/app/settings">Go to settings</Link>;
 ```
 
 ---
@@ -414,11 +346,10 @@ function MyButton({ id }: { id: string }) {
 }
 ```
 
----
-
 ## The `apiGet` / `apiPost` / `apiDelete` Helpers
 
 These are thin wrappers around `fetch` defined in `src/frontend/api-utils/api.ts`. They:
+
 - Automatically prepend `/api` to the path (so you write `"/context-data"` not `"/api/context-data"`)
 - Serialize query parameters via `URLSearchParams`
 - Append a `?v=` cache-busting parameter when `cacheId` is provided
