@@ -346,6 +346,183 @@ function MyButton({ id }: { id: string }) {
 }
 ```
 
+---
+
+## Working with Frontend TypeScript, TSX, and SCSS
+
+### `.ts` vs `.tsx` — what's the difference?
+
+TypeScript comes in two flavors in this project:
+
+- **`.ts`** — plain TypeScript. Logic, utilities, hooks, types. No JSX allowed.
+- **`.tsx`** — TypeScript with JSX support. Required any time you write angle-bracket syntax like `<Button />` or `<div>`.
+
+The rule of thumb: if a file contains any UI markup, it must be `.tsx`. Everything else should be `.ts`.
+
+> **Vite / Fast Refresh constraint:** Vite's React plugin uses React Fast Refresh for hot-module replacement during development. Fast Refresh works best when each `.tsx` file exports *only* React components (functions whose names start with a capital letter and return JSX). If you mix component exports with non-component exports (plain functions, constants, classes) in the same `.tsx` file, you'll see a warning and HMR may fall back to a full page reload. To avoid this, put utility functions and hooks in a sibling `.ts` file and import them into your `.tsx` component file.
+
+---
+
+### What is a JSX component?
+
+A React component is just a TypeScript function that:
+
+1. Takes a single `props` object as its argument (documented with an `interface`)
+2. Returns something React can render — in this codebase that return type is always `ReactNode`
+
+```tsx
+import { ReactNode } from "react";
+
+interface GreetingProps {
+    name: string;
+    /** Optional subtitle text shown below the name */
+    subtitle?: string;
+}
+
+export function Greeting({ name, subtitle }: GreetingProps): ReactNode {
+    return (
+        <div>
+            <h1>Hello, {name}!</h1>
+            {subtitle && <p>{subtitle}</p>}
+        </div>
+    );
+}
+```
+
+The angle-bracket syntax inside the `return` is JSX — it looks like HTML but it's actually TypeScript. `{name}` escapes back into TypeScript to embed a value. `{subtitle && <p>...</p>}` is a common pattern for conditional rendering: if `subtitle` is falsy, nothing renders.
+
+The function name must start with a **capital letter** — that's how React distinguishes components (`<Greeting />`) from HTML elements (`<div>`).
+
+---
+
+### Factoring out components — keeping things composable
+
+When a component gets long or has a distinct piece of UI that appears in multiple places, extract it into its own function. The goal is that each component does one clear thing and composes well with others.
+
+```tsx
+// Before: one big component
+function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
+    return (
+        <div>
+            <img src={item.thumbnailUrls.tiny} />
+            <span>{item.name}</span>
+            <button onClick={...}>Insert</button>
+            <button onClick={...}>Favorite</button>
+        </div>
+    );
+}
+
+// After: factored into focused sub-components
+function CardThumbnail({ url }: { url: string }): ReactNode {
+    return <img src={url} />;
+}
+
+function CardActions({ item }: { item: InsertableOut }): ReactNode {
+    return (
+        <>
+            <button onClick={...}>Insert</button>
+            <button onClick={...}>Favorite</button>
+        </>
+    );
+}
+
+function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
+    return (
+        <div>
+            <CardThumbnail url={item.thumbnailUrls.tiny} />
+            <span>{item.name}</span>
+            <CardActions item={item} />
+        </div>
+    );
+}
+```
+
+A few guidelines:
+- If you find yourself passing the same prop through multiple layers just so a deeply-nested component can use it, consider splitting the file or restructuring so the data is closer to where it's used.
+- Sub-components that are only used inside one parent file don't need to be exported — keep them unexported (no `export` keyword) so it's clear they're internal.
+- Sub-components that appear in more than one file belong in a shared file in the relevant feature directory.
+
+---
+
+### What is a hook?
+
+A **hook** is a special function whose name starts with `use`. Hooks let you "hook into" React features — state, side effects, context — from inside a function component. You can only call hooks at the **top level** of a component or another hook (never inside loops, conditions, or nested functions).
+
+React's built-in hooks you'll encounter in this codebase:
+
+| Hook | What it does |
+|------|-------------|
+| `useState` | Stores a piece of state; re-renders the component when it changes |
+| `useRef` | Holds a mutable value that does **not** trigger a re-render |
+| `useEffect` | Runs a side effect (e.g. set up a listener) after render |
+| `useSyncExternalStore` | Subscribes a component to an external store (used for `localStorage` state in `ui-state.ts`) |
+
+For the full rules and explanation see the [official React docs on hooks](https://react.dev/reference/rules/rules-of-hooks).
+
+**The rules of hooks (never break these):**
+
+1. Only call hooks at the top level of a function — not inside `if`, `for`, or nested callbacks.
+2. Only call hooks from React components or other hooks — never from plain utility functions.
+
+---
+
+### Custom hooks
+
+A custom hook is just a regular TypeScript function that starts with `use` and calls other hooks inside. You write them to extract repeated stateful logic out of components so it can be shared and tested independently.
+
+Example from this codebase — `useUiState()` in `src/frontend/api-utils/ui-state.ts`:
+
+```ts
+// In ui-state.ts (a .ts file — no JSX, so no .tsx needed)
+export function useUiState(): [UiState, SetUiState] {
+    const reactUiState = useSyncExternalStore(subscribeToUiState, getUiState);
+    return [reactUiState, updateUiState];
+}
+
+// In a component:
+function SearchBar(): ReactNode {
+    const [uiState, setUiState] = useUiState();
+    return (
+        <input
+            value={uiState.searchQuery}
+            onChange={(e) => setUiState({ searchQuery: e.target.value })}
+        />
+    );
+}
+```
+
+The hook hides the `useSyncExternalStore` complexity so every component that needs UI state just calls `useUiState()`.
+
+When to write a custom hook vs. a plain function:
+- If your logic calls any React hook (`useState`, `useEffect`, etc.), it **must** be a hook (name starts with `use`, only called from components/hooks).
+- If your logic is pure computation with no hooks inside, make it a plain function.
+
+---
+
+### SCSS in this project
+
+SCSS (Sassy CSS) is a superset of CSS that adds variables, nesting, and other features. In this project it's used very sparingly — almost all styling comes from **Mantine's component system** and its CSS custom properties.
+
+The only SCSS file is `src/frontend/main.scss`, imported once in `main.tsx`. It contains:
+
+- `@layer mantine;` — declares the Mantine cascade layer. This is required at the top so that any global CSS you write outside of a layer wins over Mantine's defaults. Don't remove it.
+- Global resets (like disabling text selection across the app)
+- The `.interactive` utility class, which applies a pointer cursor and the standard Mantine hover background
+
+**Mantine CSS variables** are the right way to match the app's visual style in custom CSS:
+
+```scss
+.my-element {
+    background-color: var(--mantine-color-default-hover);
+    color: var(--mantine-color-text);
+    border-radius: var(--mantine-radius-sm);
+}
+```
+
+Prefer Mantine component props (`c=`, `bg=`, `p=`, `radius=`) over adding new SCSS when possible — Mantine props are theme-aware and respond to light/dark mode automatically. Add to `main.scss` only for truly global styles or utility classes that Mantine doesn't cover.
+
+---
+
 ## The `apiGet` / `apiPost` / `apiDelete` Helpers
 
 These are thin wrappers around `fetch` defined in `src/frontend/api-utils/api.ts`. They:
