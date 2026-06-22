@@ -27,8 +27,8 @@ export interface StateRow {
 export function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
     const rows: StateRow[] = [
         {
-            label: "Hidden",
-            value: { kind: "bool", value: !insertable.isVisible }
+            label: "Visible to users",
+            value: { kind: "bool", value: insertable.isVisible }
         }
     ];
     if (insertable.elementType === ElementType.PART_STUDIO) {

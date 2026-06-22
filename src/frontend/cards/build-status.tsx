@@ -4,10 +4,9 @@ import {
     IconAlertTriangle,
     IconCheck,
     IconInfoCircle,
-    IconProps,
     IconX
 } from "@tabler/icons-react";
-import { ComponentType, createElement, ReactNode } from "react";
+import { ComponentPropsWithRef, ReactNode } from "react";
 import {
     BuildIssue,
     BuildIssueSeverity,
@@ -17,7 +16,7 @@ import {
 } from "../../shared/build-checker";
 import { GroupOut, InsertableOut } from "../../shared/api-models";
 import { getVendorName } from "../../shared/types";
-import { IconSize } from "../common/style-constants";
+import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import {
     getGroupStateRows,
@@ -28,54 +27,58 @@ import {
     useGroupBuildIssues
 } from "./build-status-hooks";
 
-export type { StateRow };
-
-interface SeverityMeta {
-    icon: ComponentType<IconProps>;
-    /** Mantine color name. */
-    color: string;
-    label: string;
-}
-
-/** Icon, color, and label for a severity (or `null` = all checks pass). */
-function getSeverityMeta(severity: BuildIssueSeverity | null): SeverityMeta {
-    switch (severity) {
-        case BuildIssueSeverity.ERROR:
-            return { icon: IconAlertOctagon, color: "red", label: "Error" };
-        case BuildIssueSeverity.WARNING:
-            return {
-                icon: IconAlertTriangle,
-                color: "yellow",
-                label: "Warning"
-            };
-        case BuildIssueSeverity.INFO:
-            return { icon: IconInfoCircle, color: "blue", label: "Info" };
-        case null:
-            return {
-                icon: IconCheck,
-                color: "green",
-                label: "All checks pass"
-            };
-    }
-}
-
-interface IssueIconProps {
-    /** The severity to render, or `null` for the "all checks pass" check. */
+interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
+    /** The severity to render, or null if all checks pass. */
     severity: BuildIssueSeverity | null;
     /** @default IconSize.SMALL */
     size?: number;
+    // ref?: Ref<SVGSVGElement>;
 }
 
 /** Renders the icon for a build-issue severity in its severity color. */
 export function IssueIcon({
     severity,
-    size = IconSize.SMALL
+    ref,
+    ...others
 }: IssueIconProps): ReactNode {
-    const meta = getSeverityMeta(severity);
-    return createElement(meta.icon, {
-        size,
-        color: `var(--mantine-color-${meta.color}-6)`
-    });
+    switch (severity) {
+        case BuildIssueSeverity.ERROR:
+            return (
+                <IconAlertOctagon
+                    ref={ref}
+                    size={IconSize.SMALL}
+                    color={IconColor.RED}
+                    {...others}
+                />
+            );
+        case BuildIssueSeverity.WARNING:
+            return (
+                <IconAlertTriangle
+                    ref={ref}
+                    size={IconSize.SMALL}
+                    color={IconColor.YELLOW}
+                    {...others}
+                />
+            );
+        case BuildIssueSeverity.INFO:
+            return (
+                <IconInfoCircle
+                    ref={ref}
+                    size={IconSize.SMALL}
+                    color={IconColor.BLUE}
+                    {...others}
+                />
+            );
+        case null:
+            return (
+                <IconCheck
+                    ref={ref}
+                    size={IconSize.SMALL}
+                    color={IconColor.GREEN}
+                    {...others}
+                />
+            );
+    }
 }
 
 interface BuildStatusCardProps {
@@ -111,7 +114,6 @@ interface BuildStatusBadgeProps {
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     const { issues, stateRows } = props;
     const maxSeverity = getMaxSeverity(issues);
-    const { color, label } = getSeverityMeta(maxSeverity);
 
     return (
         <RequireAccessLevel>
@@ -125,20 +127,7 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 arrowSize={20}
             >
                 <HoverCard.Target>
-                    {/* flexShrink: 0 keeps the badge at its natural size inside
-                        the flex CardTitle row instead of being squished/stretched. */}
-                    <Badge
-                        color={color}
-                        variant="light"
-                        circle
-                        title={label}
-                        style={{ flexShrink: 0 }}
-                    >
-                        <IssueIcon
-                            severity={maxSeverity}
-                            size={IconSize.TINY}
-                        />
-                    </Badge>
+                    <IssueIcon severity={maxSeverity} />
                 </HoverCard.Target>
                 <HoverCard.Dropdown p="sm">
                     <BuildStatusCard issues={issues} stateRows={stateRows} />
@@ -176,7 +165,7 @@ export function GroupStatusBadge({ group }: { group: GroupOut }): ReactNode {
 function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
     return (
         <Stack gap={4}>
-            <Text size="xs" fw={500} c="dimmed">
+            <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
                 Current state
             </Text>
             {rows.map((row) => (
@@ -198,12 +187,9 @@ function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
-            <IconCheck
-                size={IconSize.SMALL}
-                color="var(--mantine-color-green-6)"
-            />
+            <IconCheck size={IconSize.SMALL} color={IconColor.GREEN} />
         ) : (
-            <IconX size={IconSize.SMALL} color="var(--mantine-color-gray-5)" />
+            <IconX size={IconSize.SMALL} color={IconColor.RED} />
         );
     }
 
@@ -248,10 +234,16 @@ function getIssueMessage(issue: BuildIssue): string {
 function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
     if (issues.length === 0) {
         return (
-            <Group gap="xs" wrap="nowrap">
-                <IssueIcon severity={null} />
-                <Text size="sm">{getSeverityMeta(null).label}</Text>
-            </Group>
+            <Stack gap={4}>
+                <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+                    Build checks
+                </Text>
+
+                <Group gap="xs" wrap="nowrap">
+                    <IssueIcon severity={null} />
+                    <Text size="sm">All checks pass</Text>
+                </Group>
+            </Stack>
         );
     }
 

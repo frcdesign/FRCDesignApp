@@ -55,5 +55,6 @@ export const HeartIconColor = "var(--mantine-color-red-6)";
 export enum IconColor {
     YELLOW = "var(--mantine-color-yellow-6)",
     BLUE = "var(--mantine-color-blue-6)",
-    RED = HeartIconColor
+    RED = HeartIconColor,
+    GREEN = "var(--mantine-color-green-6)"
 }
