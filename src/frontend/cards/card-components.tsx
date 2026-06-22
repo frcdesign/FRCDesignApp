@@ -24,12 +24,10 @@ import {
 import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { ThumbnailUrls } from "../../shared/types";
-import { BuildIssue } from "../../shared/build-checker";
 import { Configuration } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
-import { BuildStatusBadge, StateRow } from "./build-status";
 
 interface OpenDocumentItemsProps {
     path: DocumentPath;
@@ -134,18 +132,12 @@ interface CardTitleProps {
     title: string;
     searchHit?: SearchHit;
     thumbnailUrls: ThumbnailUrls;
-    /**
-     * Build-checker issues for this group/insertable. When provided, an
-     * editor/admin-only build-status tag is shown.
-     */
-    buildIssues?: BuildIssue[];
-    /** Read-only "current state" rows shown in the build-status hover card. */
-    buildStateRows?: StateRow[];
+    /** Optional build-status badge rendered after the title. */
+    buildStatusBadge?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, thumbnailUrls, buildIssues, buildStateRows } =
-        props;
+    const { searchHit, title, thumbnailUrls, buildStatusBadge } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
@@ -167,12 +159,7 @@ export function CardTitle(props: CardTitleProps) {
                     <IconEyeOff size={IconSize.TINY} />
                 </Badge>
             )}
-            {buildIssues && (
-                <BuildStatusBadge
-                    issues={buildIssues}
-                    stateRows={buildStateRows ?? []}
-                />
-            )}
+            {buildStatusBadge}
         </Group>
     );
 }

@@ -2,13 +2,12 @@ import { Badge, Divider, Group, HoverCard, Stack, Text } from "@mantine/core";
 import {
     IconAlertOctagon,
     IconAlertTriangle,
-    IconCircleCheck,
+    IconCheck,
     IconInfoCircle,
     IconProps
 } from "@tabler/icons-react";
-import { ComponentType, ReactNode, useMemo } from "react";
+import { ComponentType, ReactNode } from "react";
 import {
-    addBuildIssue,
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
@@ -16,16 +15,17 @@ import {
     getMaxSeverity
 } from "../../shared/build-checker";
 import { GroupOut, InsertableOut } from "../../shared/api-models";
-import { ElementType, getVendorName } from "../../shared/types";
 import { IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useLibraryQuery } from "../queries";
+import {
+    getGroupStateRows,
+    getInsertableBuildIssues,
+    getInsertableStateRows,
+    StateRow,
+    useGroupBuildIssues
+} from "./build-status-hooks";
 
-/** A single label/value row shown in the "current state" section. */
-export interface StateRow {
-    label: string;
-    value: ReactNode;
-}
+export type { StateRow };
 
 interface SeverityVisual {
     icon: ComponentType<IconProps>;
@@ -51,11 +51,29 @@ function getSeverityVisual(
             return { icon: IconInfoCircle, color: "blue", label: "Info" };
         case null:
             return {
-                icon: IconCircleCheck,
+                icon: IconCheck,
                 color: "green",
                 label: "All checks pass"
             };
     }
+}
+
+interface BuildStatusCardProps {
+    issues: BuildIssue[];
+    /** Read-only "current state" rows shown above the build issues. */
+    stateRows: StateRow[];
+}
+
+/** The hover-card dropdown content: state rows + divider + build issues. */
+export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
+    const { issues, stateRows } = props;
+    return (
+        <Stack gap="xs" maw={280}>
+            <CurrentStateSection rows={stateRows} />
+            <Divider />
+            <BuildIssuesSection issues={issues} />
+        </Stack>
+    );
 }
 
 interface BuildStatusBadgeProps {
@@ -89,22 +107,43 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 <HoverCard.Target>
                     <Badge
                         color={visual.color}
-                        variant="light"
                         circle
-                        title={visual.label}
+                        leftSection={<BadgeIcon size={IconSize.TINY} />}
+                        size="md"
                     >
-                        <BadgeIcon size={IconSize.TINY} />
+                        Build status
                     </Badge>
                 </HoverCard.Target>
                 <HoverCard.Dropdown p="sm">
-                    <Stack gap="xs" maw={280}>
-                        <CurrentStateSection rows={stateRows} />
-                        <Divider />
-                        <BuildIssuesSection issues={issues} />
-                    </Stack>
+                    <BuildStatusCard issues={issues} stateRows={stateRows} />
                 </HoverCard.Dropdown>
             </HoverCard>
         </RequireAccessLevel>
+    );
+}
+
+/** Build-status badge pre-wired for an insertable. */
+export function InsertableStatusBadge({
+    insertable
+}: {
+    insertable: InsertableOut;
+}): ReactNode {
+    return (
+        <BuildStatusBadge
+            issues={getInsertableBuildIssues(insertable)}
+            stateRows={getInsertableStateRows(insertable)}
+        />
+    );
+}
+
+/** Build-status badge pre-wired for a group (includes live visibility check). */
+export function GroupStatusBadge({ group }: { group: GroupOut }): ReactNode {
+    const issues = useGroupBuildIssues(group);
+    return (
+        <BuildStatusBadge
+            issues={issues}
+            stateRows={getGroupStateRows(group)}
+        />
     );
 }
 
@@ -132,9 +171,9 @@ function getIssueMessage(issue: BuildIssue): string {
         case BuildIssueType.ThumbnailFailed:
             return "The thumbnail failed to generate.";
         case BuildIssueType.NoThumbnailTab:
-            return "No thumbnail tab is set, so the first tab is used as a fallback.";
+            return "No thumbnail tab is set.";
         case BuildIssueType.NoVendors:
-            return "No vendors were parsed for this element.";
+            return "No vendors could be parsed.";
         case BuildIssueType.NoUnhiddenInsertables:
             return "This group has no unhidden insertables.";
     }
@@ -181,71 +220,4 @@ function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
             })}
         </Stack>
     );
-}
-
-const yesNo = (value: boolean): string => (value ? "Yes" : "No");
-
-/** Builds the read-only "current state" rows shown for an insertable. */
-export function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
-    const rows: StateRow[] = [
-        { label: "Hidden", value: yesNo(!insertable.isVisible) }
-    ];
-    if (insertable.elementType === ElementType.PART_STUDIO) {
-        rows.push({
-            label: "Open composite",
-            value: yesNo(insertable.isOpenComposite)
-        });
-    }
-    rows.push({
-        label: "Insert and fasten",
-        value: yesNo(insertable.supportsFasten)
-    });
-    rows.push({
-        label: "Vendors",
-        value:
-            insertable.vendors.length > 0
-                ? insertable.vendors.map(getVendorName).join(", ")
-                : "None"
-    });
-    return rows;
-}
-
-/** Builds the read-only "current state" rows shown for a group. */
-export function getGroupStateRows(group: GroupOut): StateRow[] {
-    return [
-        {
-            label: "Sort",
-            value: group.sortAlphabetically ? "Alphabetical" : "Tab order"
-        }
-    ];
-}
-
-/**
- * Returns the build issues for an insertable. Currently just the stored
- * build-time issues; a thin accessor so live checks can be added later.
- */
-export function getInsertableBuildIssues(
-    insertable: InsertableOut
-): BuildIssue[] {
-    return insertable.buildIssues;
-}
-
-/**
- * Returns the build issues for a group, combining stored build-time issues with
- * the live "no unhidden insertables" check (computed here since visibility is
- * user-dependent).
- */
-export function useGroupBuildIssues(group: GroupOut): BuildIssue[] {
-    const insertables = useLibraryQuery().data?.insertables;
-    return useMemo(() => {
-        const hasUnhidden = group.insertableOrder.some(
-            (id) => insertables?.[id]?.isVisible
-        );
-        if (hasUnhidden) {
-            return group.buildIssues;
-        }
-        return addBuildIssue(group.buildIssues, {
-            type: BuildIssueType.NoUnhiddenInsertables
-        });
-    }, [group.buildIssues, group.insertableOrder, insertables]);
 }

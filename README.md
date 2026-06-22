@@ -76,7 +76,7 @@ Note that Onshape has an annual limit of 2,500 API calls per Onshape account. Th
 
 In particular, avoid loading large documents into your local environment and only force reload the database when necessary.
 
-## Flask Credentials Setup
+## HTTPS Setup
 
 Onshape requires all apps, even temporary test apps, to use https. This creates a big headache for local development.
 
@@ -118,7 +118,7 @@ npm install
 
 ## Development Servers
 
-You should now be able to run the `Launch servers` VSCode task to launch Vite.
+You should now be able to run the `Launch dev` VSCode task to launch Vite.
 You should then be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
 To see documents, add one or more documents and push a new app version to rebuild the search database.
