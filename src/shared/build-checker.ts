@@ -3,12 +3,6 @@
  * and insertables. Most checks run at build time (during the load-document
  * workflow) and are stored on the group/insertable; a few are computed live in
  * the frontend when they depend on per-user state (e.g. access level).
- *
- * Issues are stored as a plain array of {@link BuildIssue}. Each issue is a
- * member of a discriminated union keyed by its `type`, so specific issue types
- * can carry extra data in the future without affecting the others. Severity is
- * derived from the type here; the human-readable message is rendered on the
- * frontend (see `getIssueMessage` in build-status.tsx).
  */
 
 export enum BuildIssueSeverity {
@@ -29,10 +23,7 @@ export enum BuildIssueType {
 }
 
 /**
- * Base shape for a build issue. Variants discriminate on `type`. To attach
- * data to a specific issue type, intersect the base with the extra fields, e.g.
- * `BuildIssueOf<BuildIssueType.X> & { count: number }`, and add it to the
- * {@link BuildIssue} union below.
+ * Base shape for a build issue discrimanated on type.
  */
 interface BuildIssueOf<T extends BuildIssueType> {
     type: T;

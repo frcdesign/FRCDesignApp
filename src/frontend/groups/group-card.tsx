@@ -163,6 +163,7 @@ function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
     const cacheVersion = useLoaderData({ from: "/app" }).accessData
         .cacheVersion;
+
     return useMutation({
         mutationKey: ["group-order"],
         mutationFn: async (groupOrder: string[]) => {
