@@ -1,43 +1,49 @@
 import { useMemo } from "react";
-import { ReactNode } from "react";
 import {
     addBuildIssue,
     BuildIssue,
     BuildIssueType
 } from "../../shared/build-checker";
 import { GroupOut, InsertableOut } from "../../shared/api-models";
-import { ElementType, getVendorName } from "../../shared/types";
+import { ElementType, Vendor } from "../../shared/types";
 import { useLibraryQuery } from "../queries";
+
+/**
+ * The value of a "current state" row. A discriminated union so the build-status
+ * component can render each kind appropriately (a check/cross for booleans, a
+ * set of badges for vendors) while this file stays free of JSX.
+ */
+export type StateRowValue =
+    | { kind: "bool"; value: boolean }
+    | { kind: "vendors"; vendors: Vendor[] };
 
 /** A single label/value row shown in the "current state" section. */
 export interface StateRow {
     label: string;
-    value: ReactNode;
+    value: StateRowValue;
 }
-
-const yesNo = (value: boolean): string => (value ? "Yes" : "No");
 
 /** Builds the read-only "current state" rows shown for an insertable. */
 export function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
     const rows: StateRow[] = [
-        { label: "Hidden", value: yesNo(!insertable.isVisible) }
+        {
+            label: "Hidden",
+            value: { kind: "bool", value: !insertable.isVisible }
+        }
     ];
     if (insertable.elementType === ElementType.PART_STUDIO) {
         rows.push({
             label: "Open composite",
-            value: yesNo(insertable.isOpenComposite)
+            value: { kind: "bool", value: insertable.isOpenComposite }
         });
     }
     rows.push({
         label: "Insert and fasten",
-        value: yesNo(insertable.supportsFasten)
+        value: { kind: "bool", value: insertable.supportsFasten }
     });
     rows.push({
         label: "Vendors",
-        value:
-            insertable.vendors.length > 0
-                ? insertable.vendors.map(getVendorName).join(", ")
-                : "None"
+        value: { kind: "vendors", vendors: insertable.vendors }
     });
     return rows;
 }
@@ -46,8 +52,8 @@ export function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
 export function getGroupStateRows(group: GroupOut): StateRow[] {
     return [
         {
-            label: "Sort",
-            value: group.sortAlphabetically ? "Alphabetical" : "Tab order"
+            label: "Sort alphabetically",
+            value: { kind: "bool", value: group.sortAlphabetically }
         }
     ];
 }
