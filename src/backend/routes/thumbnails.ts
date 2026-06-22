@@ -213,7 +213,7 @@ thumbnailRoutes.post(
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
                     row.buildIssues,
-                    BuildIssueType.ThumbnailFailed
+                    BuildIssueType.THUMBNAIL_FAILED
                 )
             })
             .where(eq(insertables.id, insertableId));
@@ -265,7 +265,7 @@ thumbnailRoutes.post(
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
                     row.buildIssues,
-                    BuildIssueType.ThumbnailFailed
+                    BuildIssueType.THUMBNAIL_FAILED
                 )
             })
             .where(eq(groups.id, groupId));

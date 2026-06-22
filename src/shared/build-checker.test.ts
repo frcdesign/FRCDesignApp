@@ -10,9 +10,9 @@ import {
 
 /** A representative issue type for each severity. */
 const TYPE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueType> = {
-    [BuildIssueSeverity.INFO]: BuildIssueType.NoVendors,
-    [BuildIssueSeverity.WARNING]: BuildIssueType.NoThumbnailTab,
-    [BuildIssueSeverity.ERROR]: BuildIssueType.ThumbnailFailed
+    [BuildIssueSeverity.INFO]: BuildIssueType.NO_VENDORS,
+    [BuildIssueSeverity.WARNING]: BuildIssueType.NO_THUMBNAIL_TAB,
+    [BuildIssueSeverity.ERROR]: BuildIssueType.THUMBNAIL_FAILED
 };
 
 const issue = (severity: BuildIssueSeverity): BuildIssue => ({
@@ -53,15 +53,15 @@ describe("getMaxSeverity", () => {
 describe("addBuildIssue", () => {
     it("appends a new issue", () => {
         const result = addBuildIssue([], {
-            type: BuildIssueType.NoVendors
+            type: BuildIssueType.NO_VENDORS
         });
-        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 
     it("does not duplicate an issue with the same type", () => {
-        const existing: BuildIssue[] = [{ type: BuildIssueType.NoVendors }];
+        const existing: BuildIssue[] = [{ type: BuildIssueType.NO_VENDORS }];
         const result = addBuildIssue(existing, {
-            type: BuildIssueType.NoVendors
+            type: BuildIssueType.NO_VENDORS
         });
         expect(result).toBe(existing);
     });
@@ -71,19 +71,19 @@ describe("clearBuildIssue", () => {
     it("removes issues with the given type", () => {
         const result = clearBuildIssue(
             [
-                { type: BuildIssueType.ThumbnailFailed },
-                { type: BuildIssueType.NoVendors }
+                { type: BuildIssueType.THUMBNAIL_FAILED },
+                { type: BuildIssueType.NO_VENDORS }
             ],
-            BuildIssueType.ThumbnailFailed
+            BuildIssueType.THUMBNAIL_FAILED
         );
-        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 
     it("returns an equivalent array when the type is absent", () => {
         const result = clearBuildIssue(
-            [{ type: BuildIssueType.NoVendors }],
-            BuildIssueType.ThumbnailFailed
+            [{ type: BuildIssueType.NO_VENDORS }],
+            BuildIssueType.THUMBNAIL_FAILED
         );
-        expect(result).toEqual([{ type: BuildIssueType.NoVendors }]);
+        expect(result).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 });

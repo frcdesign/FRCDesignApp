@@ -21,11 +21,11 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
 
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            type: BuildIssueType.ThumbnailFailed
+            type: BuildIssueType.THUMBNAIL_FAILED
         });
     } else if (!input.hasThumbnailTab) {
         issues = addBuildIssue(issues, {
-            type: BuildIssueType.NoThumbnailTab
+            type: BuildIssueType.NO_THUMBNAIL_TAB
         });
     }
 
@@ -47,12 +47,12 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
 
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            type: BuildIssueType.ThumbnailFailed
+            type: BuildIssueType.THUMBNAIL_FAILED
         });
     }
 
     if (input.vendors.length === 0) {
-        issues = addBuildIssue(issues, { type: BuildIssueType.NoVendors });
+        issues = addBuildIssue(issues, { type: BuildIssueType.NO_VENDORS });
     }
 
     return issues;

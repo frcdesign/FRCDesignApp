@@ -6,8 +6,9 @@ import {
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
-import { ComponentPropsWithRef, ReactNode } from "react";
+import { ComponentPropsWithRef, ReactNode, useMemo } from "react";
 import {
+    addBuildIssue,
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
@@ -15,17 +16,92 @@ import {
     getMaxSeverity
 } from "../../shared/build-checker";
 import { GroupOut, InsertableOut } from "../../shared/api-models";
-import { getVendorName } from "../../shared/types";
+import { ElementType, getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import {
-    getGroupStateRows,
-    getInsertableBuildIssues,
-    getInsertableStateRows,
-    StateRow,
-    StateRowValue,
-    useGroupBuildIssues
-} from "./build-status-hooks";
+import { useLibraryQuery } from "../queries";
+
+/**
+ * The value of a "current state" row. A discriminated union so `StateValue` can
+ * render each kind appropriately (a check/cross for booleans, badges for
+ * vendors, plain text otherwise).
+ */
+export type StateRowValue =
+    | { kind: "bool"; value: boolean }
+    | { kind: "vendors"; vendors: Vendor[] }
+    | { kind: "text"; text: string };
+
+/** A single label/value row shown in the "current state" section. */
+export interface StateRow {
+    label: string;
+    value: StateRowValue;
+}
+
+/** Builds the read-only "current state" rows shown for an insertable. */
+function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
+    const rows: StateRow[] = [
+        {
+            label: "Visible to users",
+            value: { kind: "bool", value: insertable.isVisible }
+        }
+    ];
+    if (insertable.elementType === ElementType.PART_STUDIO) {
+        rows.push({
+            label: "Open composite",
+            value: { kind: "bool", value: insertable.isOpenComposite }
+        });
+    }
+    rows.push({
+        label: "Insert and fasten",
+        value: { kind: "bool", value: insertable.supportsFasten }
+    });
+    rows.push({
+        label: "Vendors",
+        value: { kind: "vendors", vendors: insertable.vendors }
+    });
+    return rows;
+}
+
+/** Builds the read-only "current state" rows shown for a group. */
+function getGroupStateRows(group: GroupOut): StateRow[] {
+    return [
+        {
+            label: "Default sort order",
+            value: {
+                kind: "text",
+                text: group.sortAlphabetically ? "Alphabetical" : "Standard"
+            }
+        }
+    ];
+}
+
+/**
+ * Returns the build issues for an insertable. Currently just the stored
+ * build-time issues; a thin accessor so live checks can be added later.
+ */
+function getInsertableBuildIssues(insertable: InsertableOut): BuildIssue[] {
+    return insertable.buildIssues;
+}
+
+/**
+ * Returns the build issues for a group, combining stored build-time issues with
+ * the live "no unhidden insertables" check (computed here since visibility is
+ * user-dependent).
+ */
+function useGroupBuildIssues(group: GroupOut): BuildIssue[] {
+    const insertables = useLibraryQuery().data?.insertables;
+    return useMemo(() => {
+        const hasUnhidden = group.insertableOrder.some(
+            (id) => insertables?.[id]?.isVisible
+        );
+        if (hasUnhidden) {
+            return group.buildIssues;
+        }
+        return addBuildIssue(group.buildIssues, {
+            type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
+        });
+    }, [group.buildIssues, group.insertableOrder, insertables]);
+}
 
 interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
     /** The severity to render, or null if all checks pass. */
@@ -193,6 +269,10 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
         );
     }
 
+    if (value.kind === "text") {
+        return <Text size="sm">{value.text}</Text>;
+    }
+
     if (value.vendors.length === 0) {
         return (
             <Text size="sm" c="dimmed">
@@ -220,13 +300,13 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
 /** The human-readable message for a build issue, rendered at display time. */
 function getIssueMessage(issue: BuildIssue): string {
     switch (issue.type) {
-        case BuildIssueType.ThumbnailFailed:
+        case BuildIssueType.THUMBNAIL_FAILED:
             return "The thumbnail failed to generate.";
-        case BuildIssueType.NoThumbnailTab:
+        case BuildIssueType.NO_THUMBNAIL_TAB:
             return "No thumbnail tab is set.";
-        case BuildIssueType.NoVendors:
+        case BuildIssueType.NO_VENDORS:
             return "No vendors could be parsed.";
-        case BuildIssueType.NoUnhiddenInsertables:
+        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "This group has no unhidden insertables.";
     }
 }

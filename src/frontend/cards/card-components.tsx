@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
+import { ActionIcon, Group, Menu, Table, Text } from "@mantine/core";
 import {
     IconDots,
     IconExternalLink,
@@ -8,7 +8,7 @@ import {
     IconRefresh,
     IconSettings
 } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { IconColor, IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu } from "../app-common/app-menu";
@@ -155,9 +155,11 @@ export function CardTitle(props: CardTitleProps) {
                 {cardTitle}
             </Text>
             {isHidden && (
-                <Badge color="yellow" variant="light" circle title="Hidden">
-                    <IconEyeOff size={IconSize.TINY} />
-                </Badge>
+                <IconEyeOff
+                    size={IconSize.SMALL}
+                    color={IconColor.YELLOW}
+                    title="Hidden"
+                />
             )}
             {buildStatusBadge}
         </Group>

@@ -16,34 +16,34 @@ export enum BuildIssueSeverity {
 
 /** Discriminates the {@link BuildIssue} union. */
 export enum BuildIssueType {
-    ThumbnailFailed = "thumbnail-failed",
-    NoThumbnailTab = "no-thumbnail-tab",
-    NoVendors = "no-vendors",
-    NoUnhiddenInsertables = "no-unhidden-insertables"
+    THUMBNAIL_FAILED,
+    NO_THUMBNAIL_TAB,
+    NO_VENDORS,
+    NO_UNHIDDEN_INSERTABLES
 }
 
 /**
- * Base shape for a build issue discrimanated on type.
+ * Base shape for a build issue, discriminated on type.
  */
 interface BuildIssueOf<T extends BuildIssueType> {
     type: T;
 }
 
 export type BuildIssue =
-    | BuildIssueOf<BuildIssueType.ThumbnailFailed>
-    | BuildIssueOf<BuildIssueType.NoThumbnailTab>
-    | BuildIssueOf<BuildIssueType.NoVendors>
-    | BuildIssueOf<BuildIssueType.NoUnhiddenInsertables>;
+    | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
+    | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
+    | BuildIssueOf<BuildIssueType.NO_VENDORS>
+    | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>;
 
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     switch (issue.type) {
-        case BuildIssueType.ThumbnailFailed:
-        case BuildIssueType.NoUnhiddenInsertables:
+        case BuildIssueType.THUMBNAIL_FAILED:
+        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return BuildIssueSeverity.ERROR;
-        case BuildIssueType.NoThumbnailTab:
+        case BuildIssueType.NO_THUMBNAIL_TAB:
             return BuildIssueSeverity.WARNING;
-        case BuildIssueType.NoVendors:
+        case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;
     }
 }
