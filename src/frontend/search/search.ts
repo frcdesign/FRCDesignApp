@@ -4,12 +4,6 @@ import { SearchDocument } from "../../shared/search";
 
 // Re-export the shared index definitions so existing frontend imports keep working.
 export type { SearchDocument } from "../../shared/search";
-export {
-    SEARCH_OPTIONS,
-    buildSearchDb,
-    processTerm,
-    tokenize
-} from "../../shared/search";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.

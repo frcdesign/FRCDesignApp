@@ -16,10 +16,10 @@ export enum BuildIssueSeverity {
 
 /** Discriminates the {@link BuildIssue} union. */
 export enum BuildIssueType {
-    THUMBNAIL_FAILED,
-    NO_THUMBNAIL_TAB,
-    NO_VENDORS,
-    NO_UNHIDDEN_INSERTABLES
+    THUMBNAIL_FAILED = "thumbnail-failed",
+    NO_THUMBNAIL_TAB = "no-thumbnail-tab",
+    NO_VENDORS = "no-vendors",
+    NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables"
 }
 
 /**
