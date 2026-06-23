@@ -672,7 +672,7 @@ function formatExpression(
         return {
             hasError: true,
             expression,
-            errorMessage: `Value must be greater than ${formatValueWithUnits(
+            errorMessage: `Value must be greater than or equal to ${formatValueWithUnits(
                 options.min,
                 options.displayUnit,
                 options.displayPrecision
@@ -682,7 +682,7 @@ function formatExpression(
         return {
             hasError: true,
             expression,
-            errorMessage: `Value must be less than ${formatValueWithUnits(
+            errorMessage: `Value must be less than or equal to ${formatValueWithUnits(
                 options.max,
                 options.displayUnit,
                 options.displayPrecision
