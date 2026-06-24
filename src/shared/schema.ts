@@ -125,6 +125,9 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
+
+        favoriteName: text("favorite_name"),
+
         defaultConfiguration: text("default_configuration", {
             mode: "json"
         }).$type<Configuration | null>(),

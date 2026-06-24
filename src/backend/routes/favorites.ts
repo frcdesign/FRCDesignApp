@@ -34,6 +34,7 @@ async function getFavorites(
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
+            favoriteName: row.favoriteName ?? undefined,
             defaultConfiguration: row.defaultConfiguration ?? undefined
         };
         favoritesOut[row.id] = fav;
@@ -131,18 +132,29 @@ favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** POST /api/default-configuration/:favoriteId */
-favoriteRoutes.post("/default-configuration/:favoriteId", async (c) => {
-    const favoriteId = c.req.param("favoriteId");
-    const body = await c.req.json<{
-        defaultConfiguration: Configuration;
-    }>();
+/** POST /api/favorite-configuration/:favoriteId */
+favoriteRoutes.post(
+    "/favorite-config/:favoriteId/:favoriteName?",
+    async (c) => {
+        const favoriteId = c.req.param("favoriteId");
+        const favoriteName = c.req.param("favoriteName");
+        const body = await c.req.json<{
+            defaultConfiguration: Configuration;
+        }>();
 
-    const db = getDb(c.env.DB);
-    await db
-        .update(favorites)
-        .set({ defaultConfiguration: body.defaultConfiguration })
-        .where(eq(favorites.id, favoriteId));
-
-    return c.json({ success: true });
-});
+        const db = getDb(c.env.DB);
+        if (body.defaultConfiguration) {
+            await db
+                .update(favorites)
+                .set({ defaultConfiguration: body.defaultConfiguration })
+                .where(eq(favorites.id, favoriteId));
+        }
+        if (favoriteName) {
+            await db
+                .update(favorites)
+                .set({ favoriteName: favoriteName })
+                .where(eq(favorites.id, favoriteId));
+        }
+        return c.json({ success: true });
+    }
+);

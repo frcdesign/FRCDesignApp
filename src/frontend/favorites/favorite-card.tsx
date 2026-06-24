@@ -8,7 +8,10 @@ import { IconPencil } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { useRouter } from "@tanstack/react-router";
 import { openInsertMenu } from "../insert/insert-menu";
-import { openFavoriteMenu } from "./favorite-menu";
+import {
+    openDefaultConfigurationMenu,
+    openFavoriteNameMenu
+} from "./favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
@@ -68,7 +71,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
-                    title={insertable.name}
+                    title={(favorite.favoriteName ??= insertable.name)}
                     thumbnailUrls={insertable.thumbnailUrls}
                     searchHit={searchHit}
                 />
@@ -114,7 +117,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                         openCannotEditDefaultConfigurationAlert();
                         return;
                     }
-                    openFavoriteMenu({
+                    openDefaultConfigurationMenu({
                         favoriteId: favorite.id,
                         insertableName: insertable.name,
                         defaultConfiguration: favorite.defaultConfiguration
@@ -123,6 +126,19 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             >
                 Edit default configuration
             </Menu.Item>
+            <Menu.Item
+                leftSection={<IconPencil size={IconSize.SMALL} />}
+                onClick={() => {
+                    openFavoriteNameMenu({
+                        favoriteId: favorite.id,
+                        insertableName: insertable.name,
+                        favoriteName: favorite.favoriteName
+                    });
+                }}
+            >
+                Edit favorite name
+            </Menu.Item>
+
             <Menu.Divider />
             <ChangeOrderItems
                 id={favorite.id}

@@ -45,6 +45,7 @@ export interface Favorite {
     id: string;
     insertableId: string;
     libraryId: LibraryId;
+    favoriteName?: string;
     defaultConfiguration?: Configuration;
 }
 

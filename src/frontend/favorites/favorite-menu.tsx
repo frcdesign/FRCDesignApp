@@ -1,4 +1,4 @@
-import { Button, Group } from "@mantine/core";
+import { Button, Group, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
@@ -26,9 +26,10 @@ interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
     defaultConfiguration?: Configuration;
+    favoriteName?: string;
 }
 
-export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
+export function openDefaultConfigurationMenu(props: OpenFavoriteMenuProps) {
     const { favoriteId, insertableName, defaultConfiguration } = props;
     modals.open({
         title: (
@@ -40,7 +41,7 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
         size: 500,
         centered: true,
         children: (
-            <FavoriteMenuContent
+            <DefualtConfigurationMenuContent
                 favoriteId={favoriteId}
                 defaultConfiguration={defaultConfiguration}
             />
@@ -48,12 +49,14 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
     });
 }
 
-interface FavoriteMenuContentProps {
+interface defualtConfigurationMenuContentProps {
     favoriteId: string;
     defaultConfiguration?: Configuration;
 }
 
-function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
+function DefualtConfigurationMenuContent(
+    props: defualtConfigurationMenuContentProps
+): ReactNode {
     const { favoriteId, defaultConfiguration } = props;
 
     const router = useRouter();
@@ -68,7 +71,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            return apiPost("/default-configuration/" + favoriteId, {
+            return apiPost("/favorite-config/" + favoriteId, {
                 body: { defaultConfiguration: configuration }
             });
         },
@@ -137,6 +140,104 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                         setDefaultConfigurationMutation.mutate();
                         modals.closeAll();
                     }}
+                >
+                    Save
+                </Button>
+            </Group>
+        </>
+    );
+}
+
+export function openFavoriteNameMenu(props: OpenFavoriteMenuProps) {
+    const { favoriteId, insertableName, favoriteName } = props;
+    modals.open({
+        title: (
+            <Group gap="xs" wrap="nowrap">
+                <HeartIcon />
+                {insertableName}
+            </Group>
+        ),
+        size: 500,
+        centered: true,
+        children: (
+            <FavoriteNameMenuContent
+                favoriteId={favoriteId}
+                favoriteName={favoriteName}
+            />
+        )
+    });
+}
+interface favoriteNameMenuContentProps {
+    favoriteId: string;
+    favoriteName?: string;
+}
+function FavoriteNameMenuContent(
+    props: favoriteNameMenuContentProps
+): ReactNode {
+    const { favoriteId, favoriteName } = props;
+
+    const router = useRouter();
+    const libraryId = useLibraryId();
+
+    const [name, setName] = useState(favoriteName ?? "");
+
+    const setFavoriteNameMutation = useMutation({
+        mutationKey: ["set-favorite-name", favoriteId],
+        mutationFn: async () => {
+            return apiPost(
+                "/favorite-config/" +
+                    favoriteId +
+                    "/" +
+                    encodeURIComponent(name),
+                {
+                    body: {}
+                }
+            );
+        },
+        onMutate: async () => {
+            const queryKey = favoritesQueryKey(libraryId);
+            await queryClient.cancelQueries({ queryKey });
+            queryClient.setQueryData(
+                queryKey,
+                getQueryUpdater((data: FavoritesData) => {
+                    const fav = data.favorites[favoriteId];
+                    if (fav) fav.favoriteName = name;
+                    return data;
+                })
+            );
+            void router.invalidate();
+        },
+        onError: () => {
+            showErrorToast("Unexpectedly failed to update favorite name.");
+        },
+        onSuccess: () => {
+            showSuccessToast("Successfully updated favorite name.");
+        },
+        onSettled: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: favoritesQueryKey(libraryId)
+            });
+            void router.invalidate();
+        }
+    });
+
+    return (
+        <>
+            <TextInput
+                label="Favorite name"
+                value={name}
+                onChange={(event) => setName(event.currentTarget.value)}
+                placeholder="Enter a custom favorite name"
+                mb="md"
+            />
+            <Group justify="flex-end">
+                <Button
+                    leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
+                    onClick={() => {
+                        setFavoriteNameMutation.mutate();
+                        modals.closeAll();
+                    }}
+                    disabled={name.trim().length === 0}
                 >
                     Save
                 </Button>
