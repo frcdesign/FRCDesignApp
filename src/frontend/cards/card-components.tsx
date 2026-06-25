@@ -14,7 +14,7 @@ import { AppContextMenu, MenuButton } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { ElementPath } from "../../shared/onshape-path";
+import { DocumentPath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
     useInsertMutation,
@@ -29,7 +29,7 @@ import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {
-    path: ElementPath;
+    path: DocumentPath;
     configuration?: Configuration;
 }
 

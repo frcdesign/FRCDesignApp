@@ -11,6 +11,10 @@ import { notifications } from "@mantine/notifications";
 import { IconLink } from "@tabler/icons-react";
 import { IconSize } from "./style-constants";
 
+export function makeUrl(
+    path: DocumentPath,
+    configuration?: Record<string, string>
+): string;
 export function makeUrl(path: DocumentPath): string;
 export function makeUrl(path: InstancePath): string;
 export function makeUrl(path: ElementPath): string;
