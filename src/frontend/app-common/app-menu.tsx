@@ -1,5 +1,7 @@
-import { ReactNode } from "react";
-import { FloatingPosition, Menu } from "@mantine/core";
+import { PropsWithChildren, ReactNode } from "react";
+import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
+import { IconDots } from "@tabler/icons-react";
+import { IconSize } from "../common/style-constants";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
@@ -54,5 +56,24 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
                 {menuItems}
             </Menu.Dropdown>
         </Menu>
+    );
+}
+
+/**
+ * An explicit button which opens a menu with the given items. Used alongside
+ * the right-click context menu so the menu is reachable without a right-click.
+ */
+export function MenuButton(props: PropsWithChildren): ReactNode {
+    return (
+        <AppContextMenu controlledByButton menuItems={props.children}>
+            <ActionIcon
+                variant="subtle"
+                color="gray"
+                title="View options"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <IconDots size={IconSize.MEDIUM} />
+            </ActionIcon>
+        </AppContextMenu>
     );
 }

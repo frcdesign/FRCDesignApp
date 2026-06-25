@@ -1,6 +1,5 @@
-import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
+import { Badge, Group, Menu, Table, Text } from "@mantine/core";
 import {
-    IconDots,
     IconExternalLink,
     IconEyeOff,
     IconLink,
@@ -11,11 +10,11 @@ import {
 import { IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
-import { AppContextMenu } from "../app-common/app-menu";
+import { AppContextMenu, MenuButton } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { DocumentPath } from "../../shared/onshape-path";
+import { ElementPath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
     useInsertMutation,
@@ -30,14 +29,15 @@ import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {
-    path: DocumentPath;
+    path: ElementPath;
+    configuration?: Configuration;
 }
 
 /**
  * Menu items which can be used to open or copy a link to a document.
  */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
-    const url = makeUrl(props.path);
+    const url = makeUrl(props.path, props.configuration);
     return (
         <>
             <Menu.Item
@@ -215,25 +215,6 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                     </Group>
                 </Table.Td>
             </Table.Tr>
-        </AppContextMenu>
-    );
-}
-
-/**
- * An explicit button which opens a menu with the given items. Used alongside
- * the right-click context menu so the menu is reachable without a right-click.
- */
-export function MenuButton(props: PropsWithChildren): ReactNode {
-    return (
-        <AppContextMenu controlledByButton menuItems={props.children}>
-            <ActionIcon
-                variant="subtle"
-                color="gray"
-                title="View options"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <IconDots size={IconSize.MEDIUM} />
-            </ActionIcon>
         </AppContextMenu>
     );
 }
