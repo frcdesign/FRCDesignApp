@@ -107,6 +107,8 @@ const elements = await getDocumentElements(onshapeApi, instancePath);
 
 Before writing a new wrapper function, check if it already exists in one of the files under `src/backend/onshape-api/endpoints/`.
 
+---
+
 ## Adding a New Backend Route
 
 Use this when you need to expose new functionality to the frontend via a new API endpoint.
@@ -165,6 +167,65 @@ app.route("/api", myRoutes);
 
 If the frontend needs to consume this endpoint, define a TypeScript interface for the response in `src/shared/api-models.ts` so both sides agree on the shape.
 
+---
+
+## Path Params, Query Params, and Request Bodies
+
+HTTP gives you three places to put data in a request. Choosing the right one makes APIs easier to understand and use correctly.
+
+### When to use each
+
+| Type | Where it lives | Use for |
+|------|---------------|---------|
+| **Path param** | Embedded in the URL path: `/api/group/:groupId` | Identifying a specific resource. If removing it would make the URL ambiguous, it's a path param. |
+| **Query param** | After the `?`: `/api/favorites?insertableId=abc` | Options, filters, or secondary identifiers on GET requests. |
+| **Request body** | JSON payload sent with POST/DELETE | Structured data for mutations — things that create or update resources. |
+
+### Frontend: sending params
+
+```ts
+// Path param — embed directly in the URL string
+apiGet("/library-data" + toLibraryPath(libraryId));
+// → GET /api/library-data/library/my-library
+
+// Query param — pass as options.query
+apiPost("/favorites" + toLibraryPath(libraryId), {
+    query: { insertableId: "abc123", id: favoriteId }
+});
+// → POST /api/favorites/library/my-library?insertableId=abc123&id=...
+
+// Request body — pass as options.body
+apiPost("/add-group", {
+    body: { documentId, name }
+});
+// → POST /api/add-group  (JSON body: { "documentId": "...", "name": "..." })
+```
+
+`apiGet`, `apiPost`, and `apiDelete` all accept `options.query` for query params. Only `apiPost` accepts `options.body` — GET and DELETE requests don't carry a body.
+
+### Backend: reading params
+
+```ts
+// Path param — use a helper or c.req.param() directly
+const libraryId = getLibraryParam(c);          // helper from app.ts
+const groupId   = c.req.param("groupId");      // raw Hono API
+
+// Query param
+const insertableId = c.req.query("insertableId");
+
+// Request body
+const { documentId, name } = await c.req.json<{ documentId: string; name: string }>();
+```
+
+### Onshape API: sending params
+
+When calling the Onshape API from the backend, the same concept applies:
+
+- **Path params** are handled by `apiPath()` — the `ElementPath` / `InstancePath` fields become the path segments automatically.
+- **Query params** for Onshape endpoints can be passed through the endpoint wrapper functions in `src/backend/onshape-api/endpoints/`, which append them to the URL returned by `apiPath()`.
+
+---
+
 ## Modifying the Database Schema
 
 The schema is the source of truth for what's stored in D1. Drizzle ORM reads it to generate both TypeScript types and SQL migrations.
@@ -185,13 +246,17 @@ export const myTable = sqliteTable("my_table", {
 
 Every column you add here becomes available in TypeScript automatically — Drizzle infers the types.
 
-### 2. Generate the migration
+### 2. Generate and commit the migration
 
 ```bash
 npx drizzle-kit generate
 ```
 
-This creates a new `.sql` file in `drizzle/`. Commit this file — it's how the schema gets applied to production D1.
+This creates a new `.sql` file in `drizzle/`. A **migration** is a versioned SQL script that describes exactly what changed in the schema (e.g. "add column X to table Y"). Drizzle Kit generates it by comparing your current `schema.ts` against the previously generated state.
+
+Always commit the generated migration file alongside your schema change. The migration is what actually updates the production database on deploy — the TypeScript schema in `schema.ts` drives Drizzle's type inference, but the SQL migration is what Cloudflare D1 applies.
+
+> **Note:** While the app is under active development, migrations may be periodically squashed (merged into a single file) to keep the `drizzle/` directory manageable. If this happens, the local D1 database will need to be reset and re-migrated from scratch.
 
 ### 3. Apply it locally
 
@@ -204,6 +269,8 @@ This runs all pending migrations against your local D1 database (used by `npx wr
 ### 4. Update API response types if needed
 
 If the new data needs to be returned to the frontend, update the relevant interface in `src/shared/api-models.ts` and modify the query in `src/backend/library-data.ts` (if it's part of the main library response) or in the appropriate route handler.
+
+---
 
 ## Adding a Frontend Route
 
@@ -271,14 +338,15 @@ function SettingsPage() {
 
 Use the `loader` approach when you want the data to be ready before the page renders (avoids a loading flash). Use React Query when you want to re-fetch in the background or share the data with other components.
 
-### 4. Navigate to the new route
-
-Use TanStack Router's `<Link>` component for navigation:
+To read URL path parameters (e.g. `$groupId` in `/app/groups/$groupId`) inside a component, use `useParams`:
 
 ```tsx
-import { Link } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 
-<Link to="/app/settings">Go to settings</Link>;
+function GroupPage() {
+    const { groupId } = useParams({ from: "/app/groups/$groupId" });
+    // ...
+}
 ```
 
 ---
@@ -322,29 +390,67 @@ function MyComponent({ id }: { id: string }) {
 
 ### Posting data (mutations)
 
-For actions that change data (POST, DELETE), use React Query's `useMutation`:
+For actions that change data (POST, DELETE), use React Query's `useMutation`. Mutations in this codebase follow a consistent pattern with three lifecycle callbacks:
 
 ```tsx
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
+import { queryClient } from "../query-client";
+import { getQueryUpdater } from "../common/utils";
+import { showSuccessToast } from "../common/notifications";
+import { getAppErrorHandler } from "../api-utils/errors";
+import { useRouter } from "@tanstack/react-router";
 
-function MyButton({ id }: { id: string }) {
-    const queryClient = useQueryClient();
-    const mutation = useMutation({
-        mutationFn: () => apiPost("/do-thing", { body: { id } }),
+function useMyMutation(someId: string) {
+    const router = useRouter();
+    const queryKey = ["my-data", someId];
+
+    return useMutation({
+        mutationFn: () => apiPost("/do-thing", { body: { id: someId } }),
+
+        // onMutate: optimistic update — runs BEFORE the request is sent.
+        // Update the cache immediately so the UI reflects the change instantly.
+        onMutate: async () => {
+            // Cancel any in-flight fetches for this data so they don't land
+            // and overwrite our optimistic update.
+            await queryClient.cancelQueries({ queryKey });
+
+            // Update the cache using Immer's produce() via getQueryUpdater.
+            // Immer lets you mutate the draft directly — no spreading needed.
+            queryClient.setQueryData(
+                queryKey,
+                getQueryUpdater((data: MyData) => {
+                    data.someField = "new value";
+                })
+            );
+
+            // Tell TanStack Router that route loader data may be stale.
+            void router.invalidate();
+        },
+
+        // onError: show a toast if the request fails.
+        onError: getAppErrorHandler("Unexpectedly failed to do thing."),
+
+        // onSuccess: show a success toast if the request succeeds.
         onSuccess: () => {
-            // Invalidate any queries whose data may have changed
-            queryClient.invalidateQueries({ queryKey: ["my-data"] });
+            showSuccessToast("Done!");
+        },
+
+        // onSettled: runs regardless of success or failure.
+        // Invalidate queries to re-sync with the real server state.
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey });
+            void router.invalidate();
         }
     });
-
-    return (
-        <button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Do Thing"}
-        </button>
-    );
 }
 ```
+
+**`getQueryUpdater` and Immer:** `getQueryUpdater` (from `src/frontend/common/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer lets you write direct mutations on a `draft` copy (e.g. `draft.items.push(x)`) instead of building a new object with spread syntax — this is much cleaner for nested data. The original cache value is never mutated; Immer produces a new immutable result.
+
+**Why cancel queries in `onMutate`?** If a background refetch lands after the optimistic update, it will overwrite the cache with stale data. Canceling outstanding queries for that key prevents this race condition.
+
+**Why invalidate in `onSettled`?** `onSettled` always runs, even on failure. Invalidating triggers a fresh server fetch to confirm the real state — if the optimistic update was wrong (e.g. the server rejected the change), this corrects it.
 
 ---
 
@@ -392,6 +498,34 @@ export function Greeting({ name, subtitle }: GreetingProps): ReactNode {
 The angle-bracket syntax inside the `return` is JSX — it looks like HTML but it's actually TypeScript. `{name}` escapes back into TypeScript to embed a value. `{subtitle && <p>...</p>}` is a common pattern for conditional rendering: if `subtitle` is falsy, nothing renders.
 
 The function name must start with a **capital letter** — that's how React distinguishes components (`<Greeting />`) from HTML elements (`<div>`).
+
+**React components are pure functions.** Their only inputs are props (passed in from the parent) and hooks (called at the top level of the component). React tracks these inputs and skips re-running a component when none of its inputs have changed — this is how React stays fast even with large UIs.
+
+```tsx
+interface CardProps {
+    title: string;
+    onClick: () => void;
+}
+
+function Card({ title, onClick }: CardProps): ReactNode {
+    // Props come from the parent. Hooks are the other input source.
+    const [isHighlighted, setIsHighlighted] = useState(false);
+    const { data } = useQuery(getCardDataQuery(title));
+
+    return (
+        <div
+            onClick={onClick}
+            style={{ background: isHighlighted ? "yellow" : undefined }}
+            onMouseEnter={() => setIsHighlighted(true)}
+            onMouseLeave={() => setIsHighlighted(false)}
+        >
+            {title} — {data?.subtitle}
+        </div>
+    );
+}
+```
+
+Passing `onClick` as a prop (rather than defining behavior inside the component) is the key to composability: the parent decides what happens, the child decides how it looks.
 
 ---
 
@@ -455,7 +589,8 @@ React's built-in hooks you'll encounter in this codebase:
 | `useState` | Stores a piece of state; re-renders the component when it changes |
 | `useRef` | Holds a mutable value that does **not** trigger a re-render |
 | `useEffect` | Runs a side effect (e.g. set up a listener) after render |
-| `useSyncExternalStore` | Subscribes a component to an external store (used for `localStorage` state in `ui-state.ts`) |
+| `useLoaderData` | Reads the data returned by the current route's `loader` or `beforeLoad` function |
+| `useParams` | Reads path parameters from the current URL (e.g. `groupId` in `/app/groups/$groupId`) |
 
 For the full rules and explanation see the [official React docs on hooks](https://react.dev/reference/rules/rules-of-hooks).
 
@@ -463,6 +598,10 @@ For the full rules and explanation see the [official React docs on hooks](https:
 
 1. Only call hooks at the top level of a function — not inside `if`, `for`, or nested callbacks.
 2. Only call hooks from React components or other hooks — never from plain utility functions.
+
+If rule 1 tempts you to call a hook conditionally, the fix is to extract a sub-component and render it conditionally instead — the hook then lives at the top level of the sub-component, which only mounts when needed.
+
+If rule 2 tempts you to call a hook from a utility function, make the utility function itself a hook (prefix it with `use`), and only call it from components or other hooks.
 
 ---
 

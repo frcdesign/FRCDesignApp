@@ -6,9 +6,11 @@ This document explains what FRCDesignApp is, how its pieces fit together, and wh
 
 ## What Is This App?
 
-FRCDesignApp is a part-library browser that runs **inside Onshape** as an embedded tab (technically an iframe). When a user opens an Onshape assembly document, they can open this app in a side panel, browse a curated library of FRC robot parts organized into groups, and click a part to insert it directly into their assembly.
+FRCDesignApp is a part-library browser that runs **inside Onshape** as an embedded tab (technically an iframe). When a user opens an Onshape part studio or assembly document, they can open this app in a side panel, browse a curated library of FRC robot parts organized into groups, and click a part to insert it into an assembly or derive it into their part studio.
 
-The app is hosted on **Cloudflare's edge network**, so there is no traditional server — instead, all backend logic runs as a Cloudflare Worker (a serverless function that runs close to the user). The frontend is a React single-page application served as static files from the same Cloudflare deployment.
+The app reflects underlying Onshape documents that are owned and maintained by the FRCDesignLib team. Parts reflect the underlying Onshape documents — for example, part names come from the names of the underlying tabs, and configurations reflect the settings defined in Onshape.
+
+The app is hosted on Cloudflare. The frontend is served by Cloudflare as a Single Page Application (SPA) to the user's browser, meaning the frontend code loads and executes directly in the user's browser. The backend runs on Cloudflare, exposes endpoints for the frontend to call, and handles access to resources like the database and Onshape. For security, all communication with the Onshape API is routed through the backend.
 
 ---
 
@@ -37,8 +39,6 @@ D1 is Cloudflare's managed SQLite database. It is the app's primary persistent s
 
 Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. The schema is defined in `src/shared/schema.ts`. SQL migration files live in `drizzle/` and are applied automatically on deploy.
 
-**Tables:** `libraries`, `groups`, `insertables`, `configurations`, `users`, `favorites`
-
 ### KV — Session & Token Storage (`c.env.KV`)
 
 KV is a key-value store (like a global dictionary). The app uses it exclusively for **authentication**:
@@ -46,11 +46,11 @@ KV is a key-value store (like a global dictionary). The app uses it exclusively 
 - During the OAuth login flow, it briefly stores the OAuth `state` and the URL to redirect back to after login.
 - After login succeeds, it stores the user's access token and refresh token, keyed to their session cookie.
 
-KV is the right tool here because Cloudflare Workers are stateless — there is no in-memory session that persists between requests. KV gives us a fast, durable place to stash tokens between requests.
+KV serves as a cheap, lightweight way to persist user data across multiple Cloudflare Workers (which Cloudflare automatically scales and provisions based on the app's current traffic). Because Workers are stateless — there is no in-memory session that persists between requests — KV is the right place to stash tokens between requests.
 
 ### R2 — Thumbnail Storage (`c.env.THUMBNAILS`)
 
-R2 is Cloudflare's object storage (similar to Amazon S3). The app uses it as a **thumbnail image cache**.
+R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. The app uses it to store and cache thumbnails in order to improve reliability.
 
 Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits. Instead, we fetch a thumbnail from Onshape the first time it's needed, store it in R2, and serve it from R2 on all subsequent requests. Thumbnails are served via `/api/thumbnail/:size/:elementId`.
 
@@ -93,13 +93,15 @@ This app runs inside an Onshape iframe, which adds some authentication complexit
 7. The tokens are saved to KV under the session ID. The temporary login-session entry is deleted.
 8. The user is redirected back to the original `/init` URL, which now succeeds because the session cookie and tokens are in place.
 
-### Token refresh
+### What happens on the client after auth
 
-Access tokens expire. When any Onshape API call returns a `401 Unauthorized`, `OAuthApi` automatically calls Onshape's token endpoint with the stored refresh token to get a new access token, saves it to KV, and retries the original request — all transparently.
+Once the backend confirms authentication and serves the React app, the frontend takes over:
 
-### Why `SameSite=None` on the cookie?
-
-The app runs inside an Onshape iframe. Browsers block cookies from being sent in cross-site iframes unless the cookie has `SameSite=None; Secure`. Without this, the session cookie would never be sent and the user would be stuck in an auth loop.
+1. The `/init` route normalizes the Onshape URL parameters (document ID, workspace ID, element ID, theme, etc.) and stores them in the URL query string. TanStack Router carries these parameters forward automatically via `retainSearchParams`, so child routes can always read them.
+2. `/init`'s `beforeLoad` immediately redirects to `/app/groups` (or to the last-opened group if one is saved in `localStorage`).
+3. The `/app` route's `beforeLoad` calls `getContextDataQuery()` — a blocking fetch that retrieves user settings (including the `libraryId` and `cacheVersion`) and access level before any child route renders.
+4. The `/app` route's `loader` uses the `cacheVersion` to kick off three prefetches in parallel: the full library data, the search index, and the user's favorites.
+5. With all data already in the React Query cache, the groups page renders immediately with no loading spinners.
 
 ---
 
@@ -117,104 +119,52 @@ The app runs inside an Onshape iframe. Browsers block cookies from being sent in
 
 ## Codebase Map
 
-```
-FRCDesignApp/
-├── src/
-│   ├── backend/              # Cloudflare Worker — all server-side code
-│   │   ├── index.ts          # Worker entry point; exports the Hono app and the Workflow class
-│   │   ├── app.ts            # Hono app factory, AppBindings/AppContext types, route-param helpers
-│   │   ├── create-app.ts     # Composition root: mounts all route groups onto the Hono app
-│   │   ├── auth.ts           # OAuth flow, session cookie management, token storage/retrieval
-│   │   ├── db.ts             # Drizzle ORM client factory (wraps c.env.DB)
-│   │   ├── services.ts       # Dependency injection: getOnshapeApi(), getUserId(), getAccessLevel()
-│   │   ├── library-data.ts   # Assembles full library response (groups + insertables + configs)
-│   │   ├── access-level-utils.ts  # requireEditorMiddleware, requireAdminMiddleware
-│   │   ├── routes/           # One file per logical area; each exports a Hono sub-app
-│   │   │   ├── user.ts       # GET /api/context-data, GET /api/unit-info
-│   │   │   ├── library.ts    # GET /api/library-data/library/:libraryId, GET /api/search-db/...
-│   │   │   ├── groups.ts     # POST /api/add-group, POST /api/rename-group, DELETE /api/group/:id
-│   │   │   ├── insertables.ts  # POST /api/toggle-open-composite, POST /api/toggle-insert-and-fasten
-│   │   │   ├── favorites.ts  # CRUD for user favorites
-│   │   │   ├── thumbnails.ts # GET /api/thumbnail/:size/:elementId (serves from R2)
-│   │   │   └── configurations.ts  # POST /api/save-configuration
-│   │   ├── onshape-api/      # All code that talks to Onshape's REST API
-│   │   │   ├── onshape-api.ts   # OnshapeApi base class, OAuthApi, KeyApi
-│   │   │   ├── api-path.ts      # apiPath() — builds Onshape REST URL paths
-│   │   │   └── endpoints/    # One file per Onshape API category
-│   │   │       ├── documents.ts
-│   │   │       ├── assemblies.ts
-│   │   │       ├── part-studios.ts
-│   │   │       ├── feature-studios.ts
-│   │   │       ├── configurations.ts
-│   │   │       ├── thumbnails.ts
-│   │   │       ├── users.ts
-│   │   │       ├── permissions.ts
-│   │   │       ├── metadata.ts
-│   │   │       ├── versions.ts
-│   │   │       └── settings.ts
-│   │   └── parse/            # Document sync logic
-│   │       ├── load-document.ts     # LoadDocumentWorkflow — syncs an Onshape document into D1
-│   │       ├── parse-configuration.ts  # Parses Onshape feature configs into app model
-│   │       └── insert-and-fasten.ts  # Derives fasten/mate info for assemblies
-│   │
-│   ├── frontend/             # React SPA
-│   │   ├── main.tsx          # React root — wraps the app in providers (QueryClient, Mantine)
-│   │   ├── router.ts         # Creates TanStack Router instance from the generated route tree
-│   │   ├── routeTree.gen.ts  # Auto-generated by TanStack Router; do not edit by hand
-│   │   ├── queries.ts        # React Query query definitions (getLibraryQuery, getFavoritesQuery, etc.)
-│   │   ├── query-client.ts   # Configured React Query client
-│   │   ├── theme.ts          # Mantine theme configuration
-│   │   ├── routes/           # File-based routes — each file = one URL
-│   │   │   ├── __root.tsx    # Root layout: providers, loads context-data
-│   │   │   ├── init.tsx      # Entry point from Onshape; auth guard
-│   │   │   ├── app/
-│   │   │   │   ├── route.tsx      # App shell (header, sidebar); prefetches library + favorites
-│   │   │   │   └── groups/
-│   │   │   │       ├── index.tsx  # Groups list view
-│   │   │   │       └── $groupId.tsx  # Individual group view
-│   │   │   └── _pages/       # Standalone error pages (safari-error, cookie-error, etc.)
-│   │   ├── api-utils/        # Frontend helpers for talking to the backend
-│   │   │   ├── api.ts        # apiGet(), apiPost(), apiDelete() — thin fetch wrappers
-│   │   │   ├── ui-state.ts   # localStorage-backed UI state with React hook
-│   │   │   ├── library.ts    # useLibraryId(), toLibraryPath() helpers
-│   │   │   ├── access-level.tsx  # RequireAccessLevel guard component
-│   │   │   └── onshape-params.ts  # Reads theme/document params passed in from Onshape
-│   │   ├── cards/            # Insertable card components
-│   │   ├── insert/           # Insert dialog and configuration selector
-│   │   ├── favorites/        # Favorites sidebar and management UI
-│   │   ├── groups/           # Group card and add-group menu
-│   │   ├── search/           # Full-text search (backed by MiniSearch)
-│   │   └── settings/         # Theme and vendor-filter settings
-│   │
-│   └── shared/               # Code used by both frontend and backend
-│       ├── schema.ts         # Drizzle table definitions (the database schema)
-│       ├── types.ts          # Shared enums (AccessLevel, Vendor, Theme) and core interfaces
-│       ├── api-models.ts     # TypeScript types for API request/response shapes
-│       ├── configuration-models.ts  # Types for Onshape configuration parameters
-│       ├── onshape-path.ts   # ElementPath, InstancePath types + serialization helpers
-│       └── search.ts         # MiniSearch index configuration
-│
-├── drizzle/                  # SQL migration files (generated by Drizzle Kit, committed to repo)
-├── public/                   # Static assets (favicon, icons)
-├── wrangler.jsonc            # Cloudflare Workers config: bindings, routes, env vars
-├── vite.config.ts            # Vite build config
-└── vitest.config.ts          # Vitest test config
-```
+The source code lives in three directories under `src/`:
+
+### `src/shared/`
+
+Code used by both the frontend and backend. Key files:
+
+- `schema.ts` — Drizzle table definitions (the database schema)
+- `types.ts` — shared enums (`AccessLevel`, `Vendor`, `Theme`) and core interfaces
+- `api-models.ts` — TypeScript types for API request/response shapes
+- `onshape-path.ts` — `ElementPath`, `InstancePath` types and the serialization helpers used to build Onshape REST URLs
+
+### `src/backend/`
+
+The Cloudflare Worker. Key files and folders:
+
+- `index.ts` — Worker entry point; exports the Hono app and the Workflow class
+- `create-app.ts` — mounts all route groups and injects services into the Hono context
+- `auth.ts` — OAuth flow, session cookie management, token storage/retrieval
+- `services.ts` — provides `getOnshapeApi()`, `getUserId()`, `getAccessLevel()` to route handlers
+- `library-data.ts` — assembles the full library response (groups + insertables + configurations)
+- `routes/` — one file per logical area (`user.ts`, `library.ts`, `groups.ts`, `insertables.ts`, `favorites.ts`, `thumbnails.ts`, `configurations.ts`)
+- `onshape-api/` — all code that communicates with Onshape's REST API (`onshape-api.ts` for the client class, `api-path.ts` for URL construction, `endpoints/` for per-category wrappers)
+- `parse/` — `load-document.ts` runs the Cloudflare Workflow that syncs an Onshape document into D1
+
+### `src/frontend/`
+
+The React SPA. Key files and folders:
+
+- `main.tsx` — React root; wraps the app in `QueryClientProvider` and `MantineProvider`
+- `queries.ts` — React Query query definitions shared across the app
+- `routes/` — file-based routes (`__root.tsx`, `init.tsx`, `app/route.tsx`, `app/groups/index.tsx`, `app/groups/$groupId.tsx`)
+- `api-utils/` — helpers for talking to the backend (`api.ts` for fetch wrappers, `ui-state.ts` for localStorage state, `library.ts` for library ID helpers)
+
+Everything else under `src/frontend/` is organized by feature: `cards/`, `insert/`, `favorites/`, `groups/`, `search/`, `settings/`.
+
+Other top-level files:
+
+- `drizzle/` — SQL migration files generated by Drizzle Kit
+- `wrangler.jsonc` — Cloudflare Workers config (bindings, routes, env vars)
 
 ---
 
 ## Access Levels
 
-The app has three access levels, checked on every protected API call:
+The app has three access levels, checked on every protected API call: **ADMIN**, **EDITOR**, and **USER**. Admin and editor access currently grant the same permissions (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
 
-| Level | Who | What they can do |
-|---|---|---|
-| **ADMIN** | Members of the Onshape team specified by the `ADMIN_TEAM` binding | Everything: add/remove/rename groups, toggle insertable visibility, manage the library |
-| **EDITOR** | (Currently same check as admin, but the concept is separate) | Add and rename groups |
-| **USER** | Anyone who successfully logs in via OAuth | Browse the library, insert parts, manage their own favorites |
-
-The Worker determines a user's access level in `src/backend/services.ts` by calling the Onshape API to check team membership. The result is cached per-request via the Hono context.
-
-Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/access-level-utils.ts`.
+The Worker determines a user's access level in `src/backend/services.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/access-level-utils.ts`.
 
 During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.
