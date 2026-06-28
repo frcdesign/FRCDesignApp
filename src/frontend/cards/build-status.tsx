@@ -70,13 +70,15 @@ function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
 }
 
 /** Builds the read-only "current state" rows shown for a group. */
-function getGroupStateRows(group: GroupBuildStatus): StateRow[] {
+function getGroupStateRows(groupStatus: GroupBuildStatus): StateRow[] {
     return [
         {
             label: "Default sort order",
             value: {
                 kind: "text",
-                text: group.sortAlphabetically ? "Alphabetical" : "Standard"
+                text: groupStatus.sortAlphabetically
+                    ? "Alphabetical"
+                    : "Standard"
             }
         }
     ];
@@ -100,12 +102,12 @@ function getInsertableBuildIssues(
  */
 function useGroupBuildIssues(
     groupStatus: GroupBuildStatus | undefined,
-    buildStatusInsertables: Record<string, InsertableBuildStatus> | undefined
+    insertableStatuses: Record<string, InsertableBuildStatus> | undefined
 ): BuildIssue[] {
     return useMemo(() => {
         if (!groupStatus) return [];
         const hasUnhidden = groupStatus.insertableOrder.some(
-            (id) => buildStatusInsertables?.[id]?.isVisible
+            (id) => insertableStatuses?.[id]?.isVisible
         );
         if (hasUnhidden) {
             return groupStatus.buildIssues;
@@ -113,7 +115,7 @@ function useGroupBuildIssues(
         return addBuildIssue(groupStatus.buildIssues, {
             type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
         });
-    }, [groupStatus, buildStatusInsertables]);
+    }, [groupStatus, insertableStatuses]);
 }
 
 interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
@@ -121,7 +123,6 @@ interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
     severity: BuildIssueSeverity | null;
     /** @default IconSize.SMALL */
     size?: number;
-    // ref?: Ref<SVGSVGElement>;
 }
 
 /** Renders the icon for a build-issue severity in its severity color. */

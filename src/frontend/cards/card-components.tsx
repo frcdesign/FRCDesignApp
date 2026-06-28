@@ -253,7 +253,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
             <Menu.Sub>
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
-                        color="blue"
+                        color="yellow"
                         leftSection={<IconSettings size={IconSize.SMALL} />}
                     >
                         Admin options

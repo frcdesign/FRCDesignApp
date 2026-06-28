@@ -12,10 +12,7 @@ export interface InsertableOut {
     path: ElementPath;
     name: string;
     microversionId: string;
-    versionName: string;
-    versionCreatedAt: string;
     isVisible: boolean;
-    isOpenComposite: boolean;
     supportsFasten: boolean;
     elementType: ElementType;
     thumbnailUrls: ThumbnailUrls;
@@ -28,7 +25,6 @@ export interface GroupOut {
     documentId: string;
     path: InstancePath;
     name: string;
-    sortAlphabetically: boolean;
     thumbnailUrls: ThumbnailUrls;
     insertableOrder: string[];
 }

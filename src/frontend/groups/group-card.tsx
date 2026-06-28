@@ -29,6 +29,7 @@ import { GroupStatusBadge } from "../cards/build-status";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
+    useBuildStatusQuery,
     useLibraryQuery
 } from "../queries";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
@@ -73,17 +74,155 @@ interface GroupMenuItemsProps {
 
 export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
     const { group } = props;
+    return (
+        <>
+            <OpenDocumentItems path={group.path} />
+            <AdminOptionsSubmenu>
+                <GroupAdminContextMenu
+                    groupId={group.id}
+                    groupName={group.name}
+                />
+            </AdminOptionsSubmenu>
+        </>
+    );
+}
 
+interface GroupAdminContextMenuProps {
+    groupId: string;
+    groupName: string;
+}
+
+export function GroupAdminContextMenu({
+    groupId,
+    groupName
+}: GroupAdminContextMenuProps): ReactNode {
     const isHome = useIsHome();
+    const groupStatus = useBuildStatusQuery().data?.groups[groupId];
+    const groupOrder = useLibraryQuery().data?.groupOrder ?? [];
+    const setGroupOrderMutation = useSetGroupOrderMutation();
+
+    if (!groupStatus) return null;
+
+    return (
+        <>
+            {isHome && (
+                <ChangeOrderItems
+                    id={groupId}
+                    order={groupOrder}
+                    onOrderChange={(newOrder) =>
+                        setGroupOrderMutation.mutate(newOrder)
+                    }
+                />
+            )}
+            <ShowAllElementsMenuItem
+                insertableOrder={groupStatus.insertableOrder}
+            />
+            <HideAllElementsMenuItem
+                insertableOrder={groupStatus.insertableOrder}
+            />
+            <ToggleSortOrderMenuItem
+                groupId={groupId}
+                groupName={groupName}
+                sortAlphabetically={groupStatus.sortAlphabetically}
+            />
+            <ReloadThumbnailMenuItem id={groupId} isGroup={true} />
+            {isHome && (
+                <>
+                    <Menu.Divider />
+                    <DeleteGroupMenuItem groupId={groupId} />
+                    <AddGroupItem />
+                </>
+            )}
+        </>
+    );
+}
+
+function ShowAllElementsMenuItem({
+    insertableOrder
+}: {
+    insertableOrder: string[];
+}): ReactNode {
+    const mutation = useSetVisibilityMutation(insertableOrder, true);
+    return (
+        <Menu.Item
+            color="blue"
+            leftSection={<IconEye size={IconSize.SMALL} />}
+            onClick={() => mutation.mutate()}
+        >
+            Show all elements
+        </Menu.Item>
+    );
+}
+
+function HideAllElementsMenuItem({
+    insertableOrder
+}: {
+    insertableOrder: string[];
+}): ReactNode {
+    const mutation = useSetVisibilityMutation(insertableOrder, false);
+    return (
+        <Menu.Item
+            color="red"
+            leftSection={<IconEyeOff size={IconSize.SMALL} />}
+            onClick={() => mutation.mutate()}
+        >
+            Hide all elements
+        </Menu.Item>
+    );
+}
+
+interface ToggleSortOrderMenuItemProps {
+    groupId: string;
+    groupName: string;
+    sortAlphabetically: boolean;
+}
+
+function ToggleSortOrderMenuItem({
+    groupId,
+    groupName,
+    sortAlphabetically
+}: ToggleSortOrderMenuItemProps): ReactNode {
     const libraryId = useLibraryId();
 
-    const deleteGroupMutation = useMutation({
-        mutationKey: ["delete-group"],
-        mutationFn: async () => {
-            return apiDelete("/group" + toLibraryPath(libraryId), {
-                query: { groupId: group.id }
+    const mutation = useMutation({
+        mutationKey: ["sort-group-alphabetically"],
+        mutationFn: async () =>
+            apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
+                body: { groupId, sortAlphabetically: !sortAlphabetically }
+            }),
+        onError: getAppErrorHandler(`Failed to update group ${groupName}.`),
+        onSettled: () => {
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
             });
-        },
+        }
+    });
+
+    return (
+        <Menu.Item
+            leftSection={
+                sortAlphabetically ? (
+                    <IconList size={IconSize.SMALL} />
+                ) : (
+                    <IconSortAZ size={IconSize.SMALL} />
+                )
+            }
+            onClick={() => mutation.mutate()}
+        >
+            {sortAlphabetically ? "Use tab order" : "Sort alphabetically"}
+        </Menu.Item>
+    );
+}
+
+function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
+    const libraryId = useLibraryId();
+
+    const mutation = useMutation({
+        mutationKey: ["delete-group"],
+        mutationFn: async () =>
+            apiDelete("/group" + toLibraryPath(libraryId), {
+                query: { groupId }
+            }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
@@ -91,71 +230,14 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
         }
     });
 
-    const setGroupOrderMutation = useSetGroupOrderMutation();
-    const groupOrder = useLibraryQuery().data?.groupOrder ?? [];
-
-    const showAllMutation = useSetVisibilityMutation(
-        group.insertableOrder,
-        true
-    );
-
-    const hideAllMutation = useSetVisibilityMutation(
-        group.insertableOrder,
-        false
-    );
-
-    const orderItems = isHome && (
-        <ChangeOrderItems
-            id={group.id}
-            order={groupOrder}
-            onOrderChange={(newOrder) => setGroupOrderMutation.mutate(newOrder)}
-        />
-    );
-
-    const modifyGroupItems = isHome && (
-        <>
-            <Menu.Divider />
-            <Menu.Item
-                leftSection={<IconTrash size={IconSize.SMALL} />}
-                color="red"
-                onClick={() => {
-                    deleteGroupMutation.mutate();
-                }}
-            >
-                Delete
-            </Menu.Item>
-            <AddGroupItem />
-        </>
-    );
-
     return (
-        <>
-            <OpenDocumentItems path={group.path} />
-            <AdminOptionsSubmenu>
-                {orderItems}
-                <Menu.Item
-                    color="blue"
-                    leftSection={<IconEye size={IconSize.SMALL} />}
-                    onClick={() => {
-                        showAllMutation.mutate();
-                    }}
-                >
-                    Show all elements
-                </Menu.Item>
-                <Menu.Item
-                    color="red"
-                    leftSection={<IconEyeOff size={IconSize.SMALL} />}
-                    onClick={() => {
-                        hideAllMutation.mutate();
-                    }}
-                >
-                    Hide all elements
-                </Menu.Item>
-                <GroupDataItems group={group} />
-                <ReloadThumbnailMenuItem id={group.id} isGroup={true} />
-                {modifyGroupItems}
-            </AdminOptionsSubmenu>
-        </>
+        <Menu.Item
+            leftSection={<IconTrash size={IconSize.SMALL} />}
+            color="red"
+            onClick={() => mutation.mutate()}
+        >
+            Delete
+        </Menu.Item>
     );
 }
 
@@ -166,11 +248,10 @@ function useSetGroupOrderMutation() {
 
     return useMutation({
         mutationKey: ["group-order"],
-        mutationFn: async (groupOrder: string[]) => {
-            return apiPost("/group-order" + toLibraryPath(libraryId), {
+        mutationFn: async (groupOrder: string[]) =>
+            apiPost("/group-order" + toLibraryPath(libraryId), {
                 body: { groupOrder }
-            });
-        },
+            }),
         onMutate: (newOrder: string[]) => {
             queryClient.setQueryData(
                 libraryQueryKey(libraryId, cacheVersion),
@@ -186,69 +267,5 @@ function useSetGroupOrderMutation() {
                 queryKey: libraryQueryMatchKey()
             });
         }
-        // Don't need an onSettled handler since group-order doesn't expire
     });
-}
-
-function useToggleSortOrderMutation(group: GroupOut) {
-    const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
-
-    return useMutation({
-        mutationKey: ["sort-group-alphabetically"],
-        mutationFn: async () => {
-            return apiPost(
-                "/sort-group-alphabetically" + toLibraryPath(libraryId),
-                {
-                    body: {
-                        groupId: group.id,
-                        sortAlphabetically: !group.sortAlphabetically
-                    }
-                }
-            );
-        },
-        onMutate: () => {
-            queryClient.setQueryData(
-                libraryQueryKey(libraryId, cacheVersion),
-                getQueryUpdater((data: LibraryOut) => {
-                    const oldGroup = data.groups[group.id];
-                    if (oldGroup) {
-                        oldGroup.sortAlphabetically = !group.sortAlphabetically;
-                    }
-                    return data;
-                })
-            );
-        },
-        onError: getAppErrorHandler(`Failed to update group ${group.name}.`),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
-    });
-}
-
-interface GroupDataItemsProps {
-    group: GroupOut;
-}
-
-function GroupDataItems({ group }: GroupDataItemsProps) {
-    const toggleSortOrderMutation = useToggleSortOrderMutation(group);
-    return (
-        <Menu.Item
-            leftSection={
-                group.sortAlphabetically ? (
-                    <IconList size={IconSize.SMALL} />
-                ) : (
-                    <IconSortAZ size={IconSize.SMALL} />
-                )
-            }
-            onClick={() => {
-                toggleSortOrderMutation.mutate();
-            }}
-        >
-            {group.sortAlphabetically ? "Use tab order" : "Sort alphabetically"}
-        </Menu.Item>
-    );
 }

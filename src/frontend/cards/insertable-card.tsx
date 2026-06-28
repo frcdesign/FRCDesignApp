@@ -7,13 +7,12 @@ import {
     IconPlus
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import {
     Favorite,
     getFavoriteForInsertable,
-    InsertableOut,
-    LibraryOut
+    InsertableOut
 } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
@@ -36,17 +35,16 @@ import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import {
     contextDataQueryKey,
-    libraryQueryKey,
     libraryQueryMatchKey,
+    useBuildStatusQuery,
     useFavoritesQuery
 } from "../queries";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { showSuccessToast } from "../common/notifications";
-import { toInsertablePath, useLibraryId } from "../api-utils/library";
+import { toInsertablePath } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { getQueryUpdater } from "../common/utils";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
@@ -137,56 +135,95 @@ export function InsertableMenuItems(
             <Menu.Divider />
             <OpenDocumentItems path={insertable.path} />
             <AdminOptionsSubmenu>
-                <InsertableAdminContextMenu insertable={insertable} />
+                <InsertableAdminContextMenu
+                    insertableId={insertable.id}
+                    elementType={insertable.elementType}
+                />
             </AdminOptionsSubmenu>
         </>
     );
 }
 
 interface InsertableAdminContextMenuProps {
-    insertable: InsertableOut;
+    insertableId: string;
+    elementType: ElementType;
 }
 
 export function InsertableAdminContextMenu(
     props: InsertableAdminContextMenuProps
 ): ReactNode {
-    const { insertable } = props;
+    const { insertableId, elementType } = props;
+    const insertableBuild =
+        useBuildStatusQuery().data?.insertables[insertableId];
 
-    const libraryId = useLibraryId();
-    const loaderData = useLoaderData({ from: "/app" });
+    if (!insertableBuild) return null;
+
+    return (
+        <>
+            <ToggleVisibilityMenuItem
+                insertableId={insertableId}
+                isVisible={insertableBuild.isVisible}
+            />
+            <ReloadThumbnailMenuItem id={insertableId} isGroup={false} />
+            {elementType === ElementType.PART_STUDIO && (
+                <ToggleOpenCompositeMenuItem
+                    insertableId={insertableId}
+                    isOpenComposite={insertableBuild.isOpenComposite}
+                />
+            )}
+            <ToggleInsertAndFastenMenuItem
+                insertableId={insertableId}
+                supportsFasten={insertableBuild.supportsFasten}
+            />
+        </>
+    );
+}
+
+interface ToggleVisibilityMenuItemProps {
+    insertableId: string;
+    isVisible: boolean;
+}
+
+function ToggleVisibilityMenuItem({
+    insertableId,
+    isVisible
+}: ToggleVisibilityMenuItemProps): ReactNode {
+    const mutation = useSetVisibilityMutation([insertableId], !isVisible);
+    return (
+        <Menu.Item
+            onClick={() => mutation.mutate()}
+            color={isVisible ? "red" : "blue"}
+            leftSection={
+                isVisible ? (
+                    <IconEyeOff size={IconSize.SMALL} />
+                ) : (
+                    <IconEye size={IconSize.SMALL} />
+                )
+            }
+        >
+            {isVisible ? "Hide element" : "Show element"}
+        </Menu.Item>
+    );
+}
+
+interface ToggleOpenCompositeMenuItemProps {
+    insertableId: string;
+    isOpenComposite: boolean;
+}
+
+function ToggleOpenCompositeMenuItem({
+    insertableId,
+    isOpenComposite
+}: ToggleOpenCompositeMenuItemProps): ReactNode {
     const router = useRouter();
 
-    const setVisibilityMutation = useSetVisibilityMutation(
-        [insertable.id],
-        !insertable.isVisible
-    );
-
-    const setOpenCompositeMutation = useMutation({
+    const mutation = useMutation({
         mutationKey: ["toggle-open-composite"],
-        mutationFn: () => {
-            return apiPost(
-                "/toggle-open-composite" + toInsertablePath(insertable.id),
-                {
-                    body: { isOpenComposite: !insertable.isOpenComposite }
-                }
-            );
-        },
+        mutationFn: () =>
+            apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
+                body: { isOpenComposite: !isOpenComposite }
+            }),
         onError: getAppErrorHandler("Failed to update open composite setting."),
-        onMutate: () => {
-            void queryClient.cancelQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            queryClient.setQueryData(
-                libraryQueryKey(libraryId, loaderData.accessData.cacheVersion),
-                getQueryUpdater((data: LibraryOut) => {
-                    const current = data.insertables[insertable.id];
-                    if (current) {
-                        current.isOpenComposite = !insertable.isOpenComposite;
-                    }
-                    return data;
-                })
-            );
-        },
         onSettled: async () => {
             await queryClient.refetchQueries({
                 queryKey: contextDataQueryKey()
@@ -198,16 +235,45 @@ export function InsertableAdminContextMenu(
         }
     });
 
-    const setSupportsFastenMutation = useMutation({
+    return (
+        <Menu.Item
+            onClick={() => mutation.mutate()}
+            color={isOpenComposite ? "yellow" : undefined}
+            leftSection={
+                isOpenComposite ? (
+                    <IconCircleOff size={IconSize.SMALL} />
+                ) : (
+                    <IconCircleCheck size={IconSize.SMALL} />
+                )
+            }
+        >
+            {isOpenComposite ? "No open composites" : "Has open composite"}
+        </Menu.Item>
+    );
+}
+
+interface ToggleInsertAndFastenMenuItemProps {
+    insertableId: string;
+    supportsFasten: boolean;
+}
+
+function ToggleInsertAndFastenMenuItem({
+    insertableId,
+    supportsFasten
+}: ToggleInsertAndFastenMenuItemProps): ReactNode {
+    const router = useRouter();
+
+    const mutation = useMutation({
         mutationKey: ["toggle-insert-and-fasten"],
-        mutationFn: (supportsFasten: boolean) => {
-            return apiPost(
-                "/toggle-insert-and-fasten" + toInsertablePath(insertable.id),
-                { body: { supportsFasten } }
-            );
-        },
-        onSuccess: (_result, supportsFasten: boolean) => {
-            if (supportsFasten) {
+        mutationFn: (newValue: boolean) =>
+            apiPost(
+                "/toggle-insert-and-fasten" + toInsertablePath(insertableId),
+                {
+                    body: { supportsFasten: newValue }
+                }
+            ),
+        onSuccess: (_result, newValue: boolean) => {
+            if (newValue) {
                 showSuccessToast("Successfully enabled Insert and fasten.");
             }
         },
@@ -224,55 +290,20 @@ export function InsertableAdminContextMenu(
     });
 
     return (
-        <>
-            <Menu.Item
-                onClick={() => setVisibilityMutation.mutate()}
-                color={insertable.isVisible ? "red" : "blue"}
-                leftSection={
-                    insertable.isVisible ? (
-                        <IconEyeOff size={IconSize.SMALL} />
-                    ) : (
-                        <IconEye size={IconSize.SMALL} />
-                    )
-                }
-            >
-                {insertable.isVisible ? "Hide element" : "Show element"}
-            </Menu.Item>
-            <ReloadThumbnailMenuItem id={insertable.id} isGroup={false} />
-            {insertable.elementType === ElementType.PART_STUDIO && (
-                <Menu.Item
-                    onClick={() => setOpenCompositeMutation.mutate()}
-                    color={insertable.isOpenComposite ? "yellow" : undefined}
-                    leftSection={
-                        insertable.isOpenComposite ? (
-                            <IconCircleOff size={IconSize.SMALL} />
-                        ) : (
-                            <IconCircleCheck size={IconSize.SMALL} />
-                        )
-                    }
-                >
-                    {insertable.isOpenComposite
-                        ? "No open composites"
-                        : "Has open composite"}
-                </Menu.Item>
-            )}
-            <Menu.Item
-                onClick={() =>
-                    setSupportsFastenMutation.mutate(!insertable.supportsFasten)
-                }
-                color={insertable.supportsFasten ? "red" : "blue"}
-                leftSection={
-                    insertable.supportsFasten ? (
-                        <IconCircleOff size={IconSize.SMALL} />
-                    ) : (
-                        <IconPlus size={IconSize.SMALL} />
-                    )
-                }
-            >
-                {insertable.supportsFasten
-                    ? "Disable insert and fasten"
-                    : "Enable Insert and fasten"}
-            </Menu.Item>
-        </>
+        <Menu.Item
+            onClick={() => mutation.mutate(!supportsFasten)}
+            color={supportsFasten ? "red" : "blue"}
+            leftSection={
+                supportsFasten ? (
+                    <IconCircleOff size={IconSize.SMALL} />
+                ) : (
+                    <IconPlus size={IconSize.SMALL} />
+                )
+            }
+        >
+            {supportsFasten
+                ? "Disable insert and fasten"
+                : "Enable Insert and fasten"}
+        </Menu.Item>
     );
 }
