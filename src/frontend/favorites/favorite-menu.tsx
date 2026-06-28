@@ -184,15 +184,9 @@ function FavoriteNameMenuContent(
     const setFavoriteNameMutation = useMutation({
         mutationKey: ["set-favorite-name", favoriteId],
         mutationFn: async () => {
-            return apiPost(
-                "/favorite-config/" +
-                    favoriteId +
-                    "/" +
-                    encodeURIComponent(name),
-                {
-                    body: {}
-                }
-            );
+            return apiPost("/favorite-config/" + favoriteId, {
+                body: { favoriteName: name }
+            });
         },
         onMutate: async () => {
             const queryKey = favoritesQueryKey(libraryId);

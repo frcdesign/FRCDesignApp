@@ -133,28 +133,25 @@ favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
 });
 
 /** POST /api/favorite-configuration/:favoriteId */
-favoriteRoutes.post(
-    "/favorite-config/:favoriteId/:favoriteName?",
-    async (c) => {
-        const favoriteId = c.req.param("favoriteId");
-        const favoriteName = c.req.param("favoriteName");
-        const body = await c.req.json<{
-            defaultConfiguration: Configuration;
-        }>();
+favoriteRoutes.post("/favorite-config/:favoriteId", async (c) => {
+    const favoriteId = c.req.param("favoriteId");
+    const body = await c.req.json<{
+        defaultConfiguration?: Configuration;
+        favoriteName?: string;
+    }>();
 
-        const db = getDb(c.env.DB);
-        if (body.defaultConfiguration) {
-            await db
-                .update(favorites)
-                .set({ defaultConfiguration: body.defaultConfiguration })
-                .where(eq(favorites.id, favoriteId));
-        }
-        if (favoriteName) {
-            await db
-                .update(favorites)
-                .set({ favoriteName: favoriteName })
-                .where(eq(favorites.id, favoriteId));
-        }
-        return c.json({ success: true });
+    const db = getDb(c.env.DB);
+    if (body.defaultConfiguration) {
+        await db
+            .update(favorites)
+            .set({ defaultConfiguration: body.defaultConfiguration })
+            .where(eq(favorites.id, favoriteId));
     }
-);
+    if (body.favoriteName !== undefined) {
+        await db
+            .update(favorites)
+            .set({ favoriteName: body.favoriteName || null })
+            .where(eq(favorites.id, favoriteId));
+    }
+    return c.json({ success: true });
+});
