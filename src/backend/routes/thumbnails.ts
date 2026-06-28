@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
-import { requireAdminMiddleware } from "../access-level-utils";
+import { requireEditorMiddleware } from "../access-level-utils";
 import { bumpLibraryVersion } from "../library-data";
 import {
     getElementThumbnail,
@@ -178,7 +178,7 @@ thumbnailRoutes.get(
 /** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
 thumbnailRoutes.post(
     "/reload-insertable-thumbnail" + insertableRoute(),
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -226,7 +226,7 @@ thumbnailRoutes.post(
 /** POST /api/reload-group-thumbnail/group/:groupId */
 thumbnailRoutes.post(
     "/reload-group-thumbnail/group/:groupId",
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const groupId = c.req.param("groupId");

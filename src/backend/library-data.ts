@@ -68,8 +68,7 @@ export async function getLibraryOut(
             name: group.name,
             sortAlphabetically: group.sortAlphabetically,
             thumbnailUrls: group.thumbnailUrls!,
-            insertableOrder,
-            buildIssues: group.buildIssues
+            insertableOrder
         };
     }
 
@@ -97,8 +96,7 @@ export async function getLibraryOut(
             elementType: ins.elementType,
             thumbnailUrls: ins.thumbnailUrls!,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
-            vendors: ins.vendors,
-            buildIssues: ins.buildIssues
+            vendors: ins.vendors
         } satisfies InsertableOut;
     }
 

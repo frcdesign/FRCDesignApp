@@ -40,10 +40,6 @@ describe("library routes", () => {
         expect(body.insertables[TEST_PART_STUDIO_ID].configurationId).toBe(
             TEST_PART_STUDIO_ID
         );
-
-        // Build-checker issues are surfaced (defaulting to an empty array).
-        expect(body.groups[TEST_GROUP_ID].buildIssues).toEqual([]);
-        expect(body.insertables[TEST_PART_STUDIO_ID].buildIssues).toEqual([]);
     });
 
     it("GET /search-db returns a serialized search index", async () => {

@@ -15,11 +15,14 @@ import {
     getIssueSeverity,
     getMaxSeverity
 } from "../../shared/build-checker";
-import { GroupOut, InsertableOut } from "../../shared/api-models";
-import { ElementType, getVendorName, Vendor } from "../../shared/types";
+import {
+    GroupBuildStatus,
+    InsertableBuildStatus
+} from "../../shared/api-models";
+import { getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useLibraryQuery } from "../queries";
+import { useBuildStatusQuery } from "../queries";
 
 /**
  * The value of a "current state" row. A discriminated union so `StateValue` can
@@ -38,14 +41,14 @@ export interface StateRow {
 }
 
 /** Builds the read-only "current state" rows shown for an insertable. */
-function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
+function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
     const rows: StateRow[] = [
         {
             label: "Visible to users",
             value: { kind: "bool", value: insertable.isVisible }
         }
     ];
-    if (insertable.elementType === ElementType.PART_STUDIO) {
+    if (insertable.isOpenComposite !== undefined) {
         rows.push({
             label: "Open composite",
             value: { kind: "bool", value: insertable.isOpenComposite }
@@ -59,11 +62,23 @@ function getInsertableStateRows(insertable: InsertableOut): StateRow[] {
         label: "Vendors",
         value: { kind: "vendors", vendors: insertable.vendors }
     });
+    if (insertable.configuration) {
+        rows.push({
+            label: "Parameters",
+            value: {
+                kind: "text",
+                text:
+                    insertable.configuration.parameters.length === 1
+                        ? "1 parameter"
+                        : `${insertable.configuration.parameters.length} parameters`
+            }
+        });
+    }
     return rows;
 }
 
 /** Builds the read-only "current state" rows shown for a group. */
-function getGroupStateRows(group: GroupOut): StateRow[] {
+function getGroupStateRows(group: GroupBuildStatus): StateRow[] {
     return [
         {
             label: "Default sort order",
@@ -76,31 +91,37 @@ function getGroupStateRows(group: GroupOut): StateRow[] {
 }
 
 /**
- * Returns the build issues for an insertable. Currently just the stored
- * build-time issues; a thin accessor so live checks can be added later.
+ * Returns the build issues for an insertable, merging insertable-level and
+ * configuration-level issues.
  */
-function getInsertableBuildIssues(insertable: InsertableOut): BuildIssue[] {
-    return insertable.buildIssues;
+function getInsertableBuildIssues(
+    insertable: InsertableBuildStatus
+): BuildIssue[] {
+    const configIssues = insertable.configuration?.buildIssues ?? [];
+    return [...insertable.buildIssues, ...configIssues];
 }
 
 /**
  * Returns the build issues for a group, combining stored build-time issues with
  * the live "no unhidden insertables" check (computed here since visibility is
- * user-dependent).
+ * per-insertable state in the same build-status response).
  */
-function useGroupBuildIssues(group: GroupOut): BuildIssue[] {
-    const insertables = useLibraryQuery().data?.insertables;
+function useGroupBuildIssues(
+    groupStatus: GroupBuildStatus | undefined,
+    buildStatusInsertables: Record<string, InsertableBuildStatus> | undefined
+): BuildIssue[] {
     return useMemo(() => {
-        const hasUnhidden = group.insertableOrder.some(
-            (id) => insertables?.[id]?.isVisible
+        if (!groupStatus) return [];
+        const hasUnhidden = groupStatus.insertableOrder.some(
+            (id) => buildStatusInsertables?.[id]?.isVisible
         );
         if (hasUnhidden) {
-            return group.buildIssues;
+            return groupStatus.buildIssues;
         }
-        return addBuildIssue(group.buildIssues, {
+        return addBuildIssue(groupStatus.buildIssues, {
             type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
         });
-    }, [group.buildIssues, group.insertableOrder, insertables]);
+    }, [groupStatus, buildStatusInsertables]);
 }
 
 interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
@@ -215,10 +236,13 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
 
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
-    insertable
+    insertableId
 }: {
-    insertable: InsertableOut;
+    insertableId: string;
 }): ReactNode {
+    const { data } = useBuildStatusQuery();
+    const insertable = data?.insertables[insertableId];
+    if (!insertable) return null;
     return (
         <BuildStatusBadge
             issues={getInsertableBuildIssues(insertable)}
@@ -228,12 +252,15 @@ export function InsertableStatusBadge({
 }
 
 /** Build-status badge pre-wired for a group (includes live visibility check). */
-export function GroupStatusBadge({ group }: { group: GroupOut }): ReactNode {
-    const issues = useGroupBuildIssues(group);
+export function GroupStatusBadge({ groupId }: { groupId: string }): ReactNode {
+    const { data } = useBuildStatusQuery();
+    const groupStatus = data?.groups[groupId];
+    const issues = useGroupBuildIssues(groupStatus, data?.insertables);
+    if (!groupStatus) return null;
     return (
         <BuildStatusBadge
             issues={issues}
-            stateRows={getGroupStateRows(group)}
+            stateRows={getGroupStateRows(groupStatus)}
         />
     );
 }

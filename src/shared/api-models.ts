@@ -1,5 +1,5 @@
 import { ElementPath, InstancePath } from "./onshape-path";
-import { Configuration } from "./configuration-models";
+import { Configuration, ParameterObj } from "./configuration-models";
 import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
 import { BuildIssue } from "./build-checker";
 
@@ -21,7 +21,6 @@ export interface InsertableOut {
     thumbnailUrls: ThumbnailUrls;
     configurationId?: string;
     vendors: Vendor[];
-    buildIssues: BuildIssue[];
 }
 
 export interface GroupOut {
@@ -32,7 +31,31 @@ export interface GroupOut {
     sortAlphabetically: boolean;
     thumbnailUrls: ThumbnailUrls;
     insertableOrder: string[];
+}
+
+export interface ConfigurationBuildStatus {
     buildIssues: BuildIssue[];
+    parameters: ParameterObj[];
+}
+
+export interface GroupBuildStatus {
+    buildIssues: BuildIssue[];
+    sortAlphabetically: boolean;
+    insertableOrder: string[];
+}
+
+export interface InsertableBuildStatus {
+    buildIssues: BuildIssue[];
+    isVisible: boolean;
+    isOpenComposite: boolean;
+    supportsFasten: boolean;
+    vendors: Vendor[];
+    configuration?: ConfigurationBuildStatus;
+}
+
+export interface LibraryBuildStatus {
+    groups: Record<string, GroupBuildStatus>;
+    insertables: Record<string, InsertableBuildStatus>;
 }
 
 export type Insertables = Record<string, InsertableOut>;

@@ -108,6 +108,10 @@ export const configurations = sqliteTable("configurations", {
     parameters: text("parameters", { mode: "json" })
         .$type<ParameterObj[]>()
         .notNull()
+        .default([]),
+    buildIssues: text("build_issues", { mode: "json" })
+        .$type<BuildIssue[]>()
+        .notNull()
         .default([])
 });
 

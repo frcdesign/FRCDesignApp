@@ -4,15 +4,15 @@ This repo hosts the code for the FRCDesign Onshape App.
 
 ## Overview
 
-The app code lives under `src/`. The app is written entirely in TypeScript and uses Hono for the backend and Vite and React for the frontend.
-The app is deployed using Cloudflare Workers and uses the various Cloudflare products for the database and other aspects of the app.
-
 This repo is intended to be run with VSCode on Linux using WSL Ubuntu.
-While it should be possible to use other technologies, they aren't tested and may require additional work to get running.
+
+The local dev environment typically needs either Google Chrome or Firefox to work correctly with Onshape.
+
+_Other browsers, such as Brave, can have default security policies that prevent the dev environment from working with Onshape._
 
 # Local Development Setup
 
-First, create a new file in the root of this project named `.env` and add the following contents:
+Create a new file in the root of this project named `.env` and add the following contents:
 
 ```
 # Server config
@@ -44,7 +44,7 @@ To test Onshape app changes, you will need to create an OAuth application in the
 - OAuth URL: `https://localhost:3000/auth/sign-in`
 - Check the permissions `can read your profile information`, `can read your documents`, `can write to your documents`, and `can delete your documents and workspaces`.
 
-Click Create application, then copy your OAuth app's OAuth client secret (in the popup) and OAuth client identifier into your `.env` file.
+Click Create application, then copy your OAuth app's OAuth client secret (from the popup) and OAuth client identifier into your `.env` file.
 
 Next, add the necessary Extensions to your OAuth application so you can see it in documents you open:
 
@@ -107,9 +107,9 @@ If it doesn't, you'll need to add the Certificate Authority manually. In Firefox
 1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
 1. Navigate to the `CAROOT` path and select `rootCA.pem`.
 
-## Frontend Setup
+## VSCode Setup
 
-First, install npm in your WSL container and add the dependencies:
+Install npm in your WSL container and add the dependencies:
 
 ```
 sudo apt install npm
@@ -126,6 +126,10 @@ To see documents, add one or more documents and push a new app version to rebuil
 To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare UI instance.
 
 # Troubleshooting
+
+## Onshape fails to load
+
+Double check your Action URLs configured in Onshape. You can also open Browser Dev Tools (usually F12), then open the app in Onshape and see if any errors or warnings appear in the Console or the Network tab.
 
 ## Port Taken/Not Available
 

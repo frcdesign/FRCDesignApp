@@ -4,13 +4,17 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useLoaderData } from "@tanstack/react-router";
 import { apiGet } from "./api-utils/api";
-import { type FavoritesData, type LibraryOut } from "../shared/api-models";
+import {
+    type FavoritesData,
+    type LibraryBuildStatus,
+    type LibraryOut
+} from "../shared/api-models";
 import { LibraryId } from "../shared/types";
 import { ContextData } from "../shared/types";
 import { useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
-import { SEARCH_OPTIONS } from "./search/search";
+import { SEARCH_OPTIONS } from "../shared/search";
 import { InstancePath } from "../shared/onshape-path";
 
 export function getConfigurationMatchKey() {
@@ -117,6 +121,35 @@ export function getFavoritesQuery(libraryId: LibraryId) {
         queryKey: favoritesQueryKey(libraryId),
         queryFn: () => apiGet("/favorites/library/" + libraryId)
     });
+}
+
+export function buildStatusQueryKey(
+    libraryId: LibraryId,
+    cacheVersion: number
+) {
+    return ["build-status", libraryId, cacheVersion];
+}
+
+export function getBuildStatusQuery(
+    libraryId: LibraryId,
+    cacheVersion: number
+) {
+    return queryOptions<LibraryBuildStatus>({
+        queryKey: buildStatusQueryKey(libraryId, cacheVersion),
+        queryFn: () =>
+            apiGet("/build-status/library/" + libraryId, {
+                cacheId: cacheVersion
+            }),
+        staleTime: Infinity,
+        gcTime: Infinity
+    });
+}
+
+export function useBuildStatusQuery() {
+    const libraryId = useLibraryId();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
+    return useQuery(getBuildStatusQuery(libraryId, cacheVersion));
 }
 
 export function useFavoritesQuery() {

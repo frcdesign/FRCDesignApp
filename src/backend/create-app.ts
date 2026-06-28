@@ -7,6 +7,7 @@ import { thumbnailRoutes } from "./routes/thumbnails";
 import { insertableRoutes } from "./routes/insertables";
 import { groupRoutes } from "./routes/groups";
 import { configurationRoutes } from "./routes/configurations";
+import { buildStatusRoutes } from "./routes/build-status";
 
 /**
  * Composition root for the Hono app. The injected `makeServices` factory is
@@ -32,6 +33,7 @@ export function createApp(makeServices: AppServicesFactory) {
     app.route("/api", groupRoutes);
     app.route("/api", insertableRoutes);
     app.route("/api", configurationRoutes);
+    app.route("/api", buildStatusRoutes);
     app.route("/auth", authRoutes);
 
     // `/init` is the auth-gated entry point
