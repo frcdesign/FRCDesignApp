@@ -62,18 +62,10 @@ function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
         label: "Vendors",
         value: { kind: "vendors", vendors: insertable.vendors }
     });
-    if (insertable.configuration) {
-        rows.push({
-            label: "Parameters",
-            value: {
-                kind: "text",
-                text:
-                    insertable.configuration.parameters.length === 1
-                        ? "1 parameter"
-                        : `${insertable.configuration.parameters.length} parameters`
-            }
-        });
-    }
+    rows.push({
+        label: "Configurable",
+        value: { kind: "bool", value: !!insertable.configuration }
+    });
     return rows;
 }
 
@@ -189,7 +181,7 @@ export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
     const { issues, stateRows } = props;
     // Size to content (capped) so short rows/messages don't wrap.
     return (
-        <Stack gap="xs" w="max-content" maw={360}>
+        <Stack gap="xs" w="max-content" maw={300}>
             <CurrentStateSection rows={stateRows} />
             <Divider />
             <BuildIssuesSection issues={issues} />
@@ -314,7 +306,7 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
                     key={vendor}
                     size="sm"
                     variant="light"
-                    color="gray"
+                    color="blue"
                     title={getVendorName(vendor)}
                 >
                     {vendor}
