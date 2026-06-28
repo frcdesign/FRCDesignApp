@@ -109,11 +109,12 @@ If it doesn't, you'll need to add the Certificate Authority manually. In Firefox
 
 ## VSCode Setup
 
-Install npm in your WSL container and add the dependencies:
+Install nvm (node version manager) in your WSL container, install npm, and then install the dependencies:
 
 ```
-sudo apt install npm
-npm install
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
+nvm i node
+npm i
 ```
 
 ## Development Servers
