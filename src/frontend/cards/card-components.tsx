@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
+import { ActionIcon, Group, Menu, Table, Text } from "@mantine/core";
 import {
     IconDots,
     IconExternalLink,
@@ -8,7 +8,7 @@ import {
     IconRefresh,
     IconSettings
 } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { IconColor, IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu } from "../app-common/app-menu";
@@ -132,10 +132,12 @@ interface CardTitleProps {
     title: string;
     searchHit?: SearchHit;
     thumbnailUrls: ThumbnailUrls;
+    /** Optional build-status badge rendered after the title. */
+    buildStatusBadge?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, thumbnailUrls } = props;
+    const { searchHit, title, thumbnailUrls, buildStatusBadge } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
@@ -153,10 +155,13 @@ export function CardTitle(props: CardTitleProps) {
                 {cardTitle}
             </Text>
             {isHidden && (
-                <Badge color="yellow" variant="light" circle title="Hidden">
-                    <IconEyeOff size={IconSize.TINY} />
-                </Badge>
+                <IconEyeOff
+                    size={IconSize.SMALL}
+                    color={IconColor.YELLOW}
+                    title="Hidden"
+                />
             )}
+            {buildStatusBadge}
         </Group>
     );
 }
@@ -248,7 +253,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
             <Menu.Sub>
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
-                        color="blue"
+                        color="yellow"
                         leftSection={<IconSettings size={IconSize.SMALL} />}
                     >
                         Admin options

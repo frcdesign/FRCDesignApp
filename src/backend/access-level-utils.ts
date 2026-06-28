@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { type AppContext, type AppContextEnv } from "./app";
 import { hasEditorAccess } from "../shared/types";
 
-export async function requireEditorAccess(c: AppContext): Promise<void> {
+async function requireEditorAccess(c: AppContext): Promise<void> {
     const level = await c.var.getAccessLevel();
     if (!hasEditorAccess(level)) {
         throw new HTTPException(403, {
@@ -12,7 +12,10 @@ export async function requireEditorAccess(c: AppContext): Promise<void> {
     }
 }
 
-export const requireAdminMiddleware: MiddlewareHandler<AppContextEnv> = async (
+/**
+ * Middleware which requires users to be an editor or an admin.
+ */
+export const requireEditorMiddleware: MiddlewareHandler<AppContextEnv> = async (
     c,
     next
 ) => {

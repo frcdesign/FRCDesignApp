@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
-import { requireAdminMiddleware } from "../access-level-utils";
+import { requireEditorMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
@@ -29,7 +29,7 @@ export const insertableRoutes = getApp();
 /** POST /api/toggle-open-composite/insertable/:insertableId */
 insertableRoutes.post(
     "/toggle-open-composite" + insertableRoute(),
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     async (c) => {
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{ isOpenComposite: boolean }>();
@@ -56,7 +56,7 @@ insertableRoutes.post(
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     async (c) => {
         const db = getDb(c.env.DB);
 

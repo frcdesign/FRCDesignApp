@@ -41,6 +41,7 @@ import {
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
+import { checkGroup, checkInsertable } from "./build-checks";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 
 export interface LoadDocumentParams {
@@ -389,7 +390,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         vendors: r.vendors,
                         thumbnailUrls: r.thumbnailUrls,
                         fastenInfo: r.fastenInfo,
-                        supportsFasten: r.supportsFasten
+                        supportsFasten: r.supportsFasten,
+                        buildIssues: checkInsertable({
+                            vendors: r.vendors,
+                            thumbnailUrls: r.thumbnailUrls
+                        })
                     })
                     .onConflictDoUpdate({
                         target: [insertables.elementId, insertables.groupId],
@@ -429,7 +434,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     libraryId,
                     name: contentsInfo.docName,
                     instanceId: versionInfo.instanceId,
-                    thumbnailUrls: docThumbnailUrls
+                    thumbnailUrls: docThumbnailUrls,
+                    buildIssues: checkGroup({
+                        hasThumbnailTab: !!contentsInfo.thumbnailElementId,
+                        thumbnailUrls: docThumbnailUrls
+                    })
                 })
                 .onConflictDoUpdate({
                     target: [groups.documentId, groups.libraryId],

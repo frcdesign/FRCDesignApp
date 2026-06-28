@@ -66,7 +66,6 @@ export async function getLibraryOut(
                 instanceType: "v"
             },
             name: group.name,
-            sortAlphabetically: group.sortAlphabetically,
             thumbnailUrls: group.thumbnailUrls!,
             insertableOrder
         };
@@ -88,10 +87,7 @@ export async function getLibraryOut(
             },
             name: ins.name,
             microversionId: ins.microversionId,
-            versionName: ins.versionName,
-            versionCreatedAt: ins.versionCreatedAt,
             isVisible: ins.isVisible,
-            isOpenComposite: ins.isOpenComposite,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
             thumbnailUrls: ins.thumbnailUrls!,
