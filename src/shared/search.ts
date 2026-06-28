@@ -45,11 +45,22 @@ export interface SearchDocument {
     vendors: Vendor[];
     name: string;
     groupName: string;
+    favoriteName?: string;
+    favoriteId?: string;
 }
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "groupName"],
-    storeFields: ["id", "groupId", "isVisible", "vendors", "name", "groupName"],
+    fields: ["name", "groupName", "favoriteName"],
+    storeFields: [
+        "id",
+        "groupId",
+        "isVisible",
+        "vendors",
+        "name",
+        "groupName",
+        "favoriteName",
+        "FavoriteId"
+    ],
     searchOptions: {
         boost: { groupName: 0.5 },
         prefix: true

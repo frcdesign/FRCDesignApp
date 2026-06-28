@@ -17,7 +17,7 @@ import {
     useLibraryQuery,
     useSearchDbQuery
 } from "../queries";
-import { doSearch, FilterResult, SearchHit } from "../search/search";
+import { doFavoriteSearch, FilterResult, SearchHit } from "../search/search";
 import { hasEditorAccess } from "../../shared/types";
 
 /**
@@ -78,7 +78,7 @@ export function FavoritesList(): ReactNode {
                 (f) => f.insertableId
             )
         );
-        const searchResults = doSearch(
+        const searchResults = doFavoriteSearch(
             searchDbQuery.data,
             uiState.searchQuery,
             {
@@ -86,7 +86,9 @@ export function FavoritesList(): ReactNode {
                 isFavorite: true
             },
             favoriteInsertableIds,
-            hasEditorAccess(loaderData.accessData.currentAccessLevel)
+            hasEditorAccess(loaderData.accessData.currentAccessLevel),
+            favoritesQuery.data.favorites,
+            insertables
         );
 
         filteredInsertables = searchResults.hits

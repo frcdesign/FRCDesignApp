@@ -1,4 +1,5 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
+import { Favorite, InsertableOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
 import { SearchDocument } from "../../shared/search";
 
@@ -133,7 +134,125 @@ export function doSearch(
 
     return { hits, filtered };
 }
+export function doFavoriteSearch(
+    searchDb: MiniSearch<SearchDocument>,
+    query?: string,
+    filters?: SearchFilters,
+    favoritedInsertableIds?: Set<string>,
+    showHidden?: boolean,
+    favorites?: Record<string, Favorite>,
+    insertables?: Record<string, InsertableOut>
+): SearchResult {
+    const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
+    if (!query || query.trim() === "") {
+        return { hits: [], filtered };
+    }
+
+    const tokenizedQuery = query.trim().toLowerCase();
+
+    const baseSearchResult = doSearch(
+        searchDb,
+        query,
+        filters,
+        favoritedInsertableIds,
+        showHidden
+    );
+
+    const hitsById = new Map<string, SearchHit>(
+        baseSearchResult.hits.map((hit) => [hit.id, hit])
+    );
+
+    if (favorites && insertables) {
+        for (const favorite of Object.values(favorites)) {
+            const insertable = insertables[favorite.insertableId];
+            if (!insertable) {
+                continue;
+            }
+
+            if (!showHidden && !insertable.isVisible) {
+                continue;
+            }
+
+            if (
+                favoritedInsertableIds &&
+                !favoritedInsertableIds.has(insertable.id)
+            ) {
+                continue;
+            }
+
+            let filteredByGroup = false;
+            let filteredByVendor = false;
+            if (filters?.groupId && insertable.groupId !== filters.groupId) {
+                filteredByGroup = true;
+            }
+
+            if (
+                filters?.vendors &&
+                !filters.vendors.some((vendor) =>
+                    insertable.vendors.includes(vendor)
+                )
+            ) {
+                filteredByVendor = true;
+            }
+
+            if (filteredByVendor && filteredByGroup) {
+                continue;
+            } else if (filteredByGroup) {
+                filtered.byGroup += 1;
+                continue;
+            } else if (filteredByVendor) {
+                filtered.byVendor += 1;
+                continue;
+            }
+
+            const displayName = favorite.favoriteName ?? insertable.name;
+            if (!matchesQuery(displayName, tokenizedQuery)) {
+                continue;
+            }
+
+            if (!hitsById.has(insertable.id)) {
+                hitsById.set(insertable.id, {
+                    id: insertable.id,
+                    positions: generateHighlightPositionsFromText(
+                        displayName,
+                        tokenizedQuery
+                    )
+                });
+            }
+        }
+    }
+
+    return {
+        hits: Array.from(hitsById.values()).slice(0, 50),
+        filtered: {
+            byVendor: filtered.byVendor + baseSearchResult.filtered.byVendor,
+            byGroup: filtered.byGroup + baseSearchResult.filtered.byGroup
+        }
+    };
+}
+
+function matchesQuery(text: string, query: string): boolean {
+    return text.toLowerCase().includes(query);
+}
+
+function generateHighlightPositionsFromText(
+    text: string,
+    query: string
+): Position[] {
+    if (!query) {
+        return [];
+    }
+
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
+    const start = normalizedText.indexOf(normalizedQuery);
+    if (start === -1) {
+        return [];
+    }
+
+    return [{ start, length: normalizedQuery.length }];
+}
 /**
  * Generate highlight positions for matched terms in the document.
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
