@@ -2,23 +2,28 @@
 
 Step-by-step recipes for common development tasks. This guide assumes you've read [REFERENCE.md](./REFERENCE.md) and understand the overall system.
 
----
+## Resources
 
-## Using the Onshape API Explorer (Glassworks)
+### Cloudflare Local Explorer
 
-Before writing any code that talks to Onshape, start with **Glassworks** — Onshape's interactive API browser. It lets you explore every available endpoint, understand what parameters it accepts, send live requests, and inspect real responses. Think of it as a Postman-style tool built into Onshape.
+While running `npx wrangler dev`, press **`e`** in the terminal to open the local Cloudflare explorer in your browser. It gives you a live view of your local D1 database, KV namespaces, and R2 buckets — useful for checking that data is being written and read correctly without running manual SQL queries.
 
-You can use Glassworks to see the list of publicly available APIs and test them against Onshape documents.
+### Glassworks (Onshape API Explorer)
+
+Glassworks is Onshape's interactive API browser. Use it to browse available endpoints, read their parameter docs, and test calls before writing any code.
 
 **URL:** `https://cad.onshape.com/glassworks/explorer`
 
-**Tip:** The response shape you see in Glassworks is exactly what you'll get from `client.get(...)` in the backend. Use it to figure out what fields exist so you can type them correctly.
+### Browser Dev Tools (F12)
 
----
+Open with **F12**. Two tabs are most useful during development:
 
-## Understanding Onshape Paths
+- **Console** — shows JavaScript errors, unhandled promise rejections, and any `console.log` output from the frontend. The first place to look when something is broken or silent.
+- **Network** — shows every HTTP request the frontend makes, including requests to `/api/`. Click a request to see its URL, request headers, payload, and the full JSON response. Useful for verifying that the frontend is sending the right data and that the backend is returning what you expect.
 
-This is the most important concept to understand before adding any Onshape API integration.
+## Working with Onshape
+
+This section covers core information important for working with Onshape.
 
 ### How Onshape organizes content
 
@@ -87,9 +92,7 @@ apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" });
 
 The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`) are all defined in `src/shared/onshape-path.ts` and convert a path object into its URL segment string.
 
----
-
-## Calling the Onshape API
+### Calling the Onshape API
 
 All Onshape API calls go through the `OAuthApi` class, which is a wrapper around the Onshape API which handles authentication. For security reasons, the Onshape API is only available in the backend. The OAuthApi class can be retrieved inside any Hono route handler like this:
 
@@ -107,8 +110,6 @@ const elements = await getDocumentElements(onshapeApi, instancePath);
 
 Before writing a new wrapper function, check if it already exists in one of the files under `src/backend/onshape-api/endpoints/`.
 
----
-
 ## Adding a New Backend Route
 
 Use this when you need to expose new functionality to the frontend via a new API endpoint.
@@ -118,10 +119,6 @@ Use this when you need to expose new functionality to the frontend via a new API
 Open the relevant file in `src/backend/routes/` (or create a new one if the functionality is in a new area). Each file creates a Hono sub-app and registers handlers on it:
 
 ```ts
-import { getApp, libraryRoute, getLibraryParam } from "../app";
-import { getDb } from "../db";
-// ... other imports
-
 export const myRoutes = getApp();
 
 /** GET /api/my-thing/library/:libraryId */
@@ -175,11 +172,11 @@ HTTP gives you three places to put data in a request. Choosing the right one mak
 
 ### When to use each
 
-| Type | Where it lives | Use for |
-|------|---------------|---------|
-| **Path param** | Embedded in the URL path: `/api/group/:groupId` | Identifying a specific resource. If removing it would make the URL ambiguous, it's a path param. |
-| **Query param** | After the `?`: `/api/favorites?insertableId=abc` | Options, filters, or secondary identifiers on GET requests. |
-| **Request body** | JSON payload sent with POST/DELETE | Structured data for mutations — things that create or update resources. |
+| Type             | Where it lives                                   | Use for                                                                                          |
+| ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Path param**   | Embedded in the URL path: `/api/group/:groupId`  | Identifying a specific resource. If removing it would make the URL ambiguous, it's a path param. |
+| **Query param**  | After the `?`: `/api/favorites?insertableId=abc` | Options, filters, or secondary identifiers on GET requests.                                      |
+| **Request body** | JSON payload sent with POST/DELETE               | Structured data for mutations — things that create or update resources.                          |
 
 ### Frontend: sending params
 
@@ -207,14 +204,17 @@ apiPost("/add-group", {
 
 ```ts
 // Path param — use a helper or c.req.param() directly
-const libraryId = getLibraryParam(c);          // helper from app.ts
-const groupId   = c.req.param("groupId");      // raw Hono API
+const libraryId = getLibraryParam(c); // helper from app.ts
+const groupId = c.req.param("groupId"); // raw Hono API
 
 // Query param
 const insertableId = c.req.query("insertableId");
 
 // Request body
-const { documentId, name } = await c.req.json<{ documentId: string; name: string }>();
+const { documentId, name } = await c.req.json<{
+    documentId: string;
+    name: string;
+}>();
 ```
 
 ### Onshape API: sending params
@@ -223,8 +223,6 @@ When calling the Onshape API from the backend, the same concept applies:
 
 - **Path params** are handled by `apiPath()` — the `ElementPath` / `InstancePath` fields become the path segments automatically.
 - **Query params** for Onshape endpoints can be passed through the endpoint wrapper functions in `src/backend/onshape-api/endpoints/`, which append them to the URL returned by `apiPath()`.
-
----
 
 ## Modifying the Database Schema
 
@@ -269,8 +267,6 @@ This runs all pending migrations against your local D1 database (used by `npx wr
 ### 4. Update API response types if needed
 
 If the new data needs to be returned to the frontend, update the relevant interface in `src/shared/api-models.ts` and modify the query in `src/backend/library-data.ts` (if it's part of the main library response) or in the appropriate route handler.
-
----
 
 ## Adding a Frontend Route
 
@@ -349,8 +345,6 @@ function GroupPage() {
 }
 ```
 
----
-
 ## Adding a Frontend Data Fetch
 
 If you just need to fetch data inside an existing component (without creating a new route), follow this pattern.
@@ -360,9 +354,6 @@ If you just need to fetch data inside an existing component (without creating a 
 Open `src/frontend/queries.ts` and add a query definition:
 
 ```ts
-import { queryOptions } from "@tanstack/react-query";
-import { apiGet } from "./api-utils/api";
-
 export function getMyDataQuery(someId: string) {
     return queryOptions({
         queryKey: ["my-data", someId],
@@ -376,9 +367,6 @@ Keeping query definitions in `queries.ts` means the same query can be used in mu
 ### 2. Use it in a component
 
 ```tsx
-import { useQuery } from "@tanstack/react-query";
-import { getMyDataQuery } from "../queries";
-
 function MyComponent({ id }: { id: string }) {
     const { data, isLoading, isError } = useQuery(getMyDataQuery(id));
 
@@ -393,14 +381,6 @@ function MyComponent({ id }: { id: string }) {
 For actions that change data (POST, DELETE), use React Query's `useMutation`. Mutations in this codebase follow a consistent pattern with three lifecycle callbacks:
 
 ```tsx
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../api-utils/api";
-import { queryClient } from "../query-client";
-import { getQueryUpdater } from "../common/utils";
-import { showSuccessToast } from "../common/notifications";
-import { getAppErrorHandler } from "../api-utils/errors";
-import { useRouter } from "@tanstack/react-router";
-
 function useMyMutation(someId: string) {
     const router = useRouter();
     const queryKey = ["my-data", someId];
@@ -446,7 +426,7 @@ function useMyMutation(someId: string) {
 }
 ```
 
-**`getQueryUpdater` and Immer:** `getQueryUpdater` (from `src/frontend/common/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer lets you write direct mutations on a `draft` copy (e.g. `draft.items.push(x)`) instead of building a new object with spread syntax — this is much cleaner for nested data. The original cache value is never mutated; Immer produces a new immutable result.
+`getQueryUpdater` (from `src/frontend/common/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer allows you to mutate query results directly rather than mutating an original cache value, which is much cleaner for nested data.
 
 **Why cancel queries in `onMutate`?** If a background refetch lands after the optimistic update, it will overwrite the cache with stale data. Canceling outstanding queries for that key prevents this race condition.
 
@@ -465,7 +445,7 @@ TypeScript comes in two flavors in this project:
 
 The rule of thumb: if a file contains any UI markup, it must be `.tsx`. Everything else should be `.ts`.
 
-> **Vite / Fast Refresh constraint:** Vite's React plugin uses React Fast Refresh for hot-module replacement during development. Fast Refresh works best when each `.tsx` file exports *only* React components (functions whose names start with a capital letter and return JSX). If you mix component exports with non-component exports (plain functions, constants, classes) in the same `.tsx` file, you'll see a warning and HMR may fall back to a full page reload. To avoid this, put utility functions and hooks in a sibling `.ts` file and import them into your `.tsx` component file.
+> **Vite / Fast Refresh constraint:** Vite's React plugin uses React Fast Refresh for hot-module replacement during development. Fast Refresh works best when each `.tsx` file exports _only_ React components (functions whose names start with a capital letter and return JSX). If you mix component exports with non-component exports (plain functions, constants, classes) in the same `.tsx` file, you'll see a warning and HMR may fall back to a full page reload. To avoid this, put utility functions and hooks in a sibling `.ts` file and import them into your `.tsx` component file.
 
 ---
 
@@ -535,7 +515,11 @@ When a component gets long or has a distinct piece of UI that appears in multipl
 
 ```tsx
 // Before: one big component
-function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
+interface InsertableCardProps {
+    item: InsertableOut;
+}
+
+function InsertableCard({ item }: InsertableCardProps): ReactNode {
     return (
         <div>
             <img src={item.thumbnailUrls.tiny} />
@@ -547,11 +531,19 @@ function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
 }
 
 // After: factored into focused sub-components
-function CardThumbnail({ url }: { url: string }): ReactNode {
+interface CardThumbnailProps {
+    url: string;
+}
+
+function CardThumbnail({ url }: CardThumbnailProps): ReactNode {
     return <img src={url} />;
 }
 
-function CardActions({ item }: { item: InsertableOut }): ReactNode {
+interface CardActionsProps {
+    item: InsertableOut;
+}
+
+function CardActions({ item }: CardActionsProps): ReactNode {
     return (
         <>
             <button onClick={...}>Insert</button>
@@ -560,7 +552,7 @@ function CardActions({ item }: { item: InsertableOut }): ReactNode {
     );
 }
 
-function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
+function InsertableCard({ item }: InsertableCardProps): ReactNode {
     return (
         <div>
             <CardThumbnail url={item.thumbnailUrls.tiny} />
@@ -572,6 +564,7 @@ function InsertableCard({ item }: { item: InsertableOut }): ReactNode {
 ```
 
 A few guidelines:
+
 - If you find yourself passing the same prop through multiple layers just so a deeply-nested component can use it, consider splitting the file or restructuring so the data is closer to where it's used.
 - Sub-components that are only used inside one parent file don't need to be exported — keep them unexported (no `export` keyword) so it's clear they're internal.
 - Sub-components that appear in more than one file belong in a shared file in the relevant feature directory.
@@ -584,13 +577,13 @@ A **hook** is a special function whose name starts with `use`. Hooks let you "ho
 
 React's built-in hooks you'll encounter in this codebase:
 
-| Hook | What it does |
-|------|-------------|
-| `useState` | Stores a piece of state; re-renders the component when it changes |
-| `useRef` | Holds a mutable value that does **not** trigger a re-render |
-| `useEffect` | Runs a side effect (e.g. set up a listener) after render |
-| `useLoaderData` | Reads the data returned by the current route's `loader` or `beforeLoad` function |
-| `useParams` | Reads path parameters from the current URL (e.g. `groupId` in `/app/groups/$groupId`) |
+| Hook            | What it does                                                                          |
+| --------------- | ------------------------------------------------------------------------------------- |
+| `useState`      | Stores a piece of state; re-renders the component when it changes                     |
+| `useRef`        | Holds a mutable value that does **not** trigger a re-render                           |
+| `useEffect`     | Runs a side effect (e.g. set up a listener) after render                              |
+| `useLoaderData` | Reads the data returned by the current route's `loader` or `beforeLoad` function      |
+| `useParams`     | Reads path parameters from the current URL (e.g. `groupId` in `/app/groups/$groupId`) |
 
 For the full rules and explanation see the [official React docs on hooks](https://react.dev/reference/rules/rules-of-hooks).
 
@@ -611,7 +604,7 @@ A custom hook is just a regular TypeScript function that starts with `use` and c
 
 Example from this codebase — `useUiState()` in `src/frontend/api-utils/ui-state.ts`:
 
-```ts
+```tsx
 // In ui-state.ts (a .ts file — no JSX, so no .tsx needed)
 export function useUiState(): [UiState, SetUiState] {
     const reactUiState = useSyncExternalStore(subscribeToUiState, getUiState);
@@ -633,6 +626,7 @@ function SearchBar(): ReactNode {
 The hook hides the `useSyncExternalStore` complexity so every component that needs UI state just calls `useUiState()`.
 
 When to write a custom hook vs. a plain function:
+
 - If your logic calls any React hook (`useState`, `useEffect`, etc.), it **must** be a hook (name starts with `use`, only called from components/hooks).
 - If your logic is pure computation with no hooks inside, make it a plain function.
 
@@ -659,8 +653,6 @@ The only SCSS file is `src/frontend/main.scss`, imported once in `main.tsx`. It 
 ```
 
 Prefer Mantine component props (`c=`, `bg=`, `p=`, `radius=`) over adding new SCSS when possible — Mantine props are theme-aware and respond to light/dark mode automatically. Add to `main.scss` only for truly global styles or utility classes that Mantine doesn't cover.
-
----
 
 ## The `apiGet` / `apiPost` / `apiDelete` Helpers
 

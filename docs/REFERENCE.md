@@ -2,8 +2,6 @@
 
 This document explains what FRCDesignApp is, how its pieces fit together, and where to find things in the codebase. If you want step-by-step recipes for adding new features, see [GUIDE.md](./GUIDE.md).
 
----
-
 ## What Is This App?
 
 FRCDesignApp is a part-library browser that runs **inside Onshape** as an embedded tab (technically an iframe). When a user opens an Onshape part studio or assembly document, they can open this app in a side panel, browse a curated library of FRC robot parts organized into groups, and click a part to insert it into an assembly or derive it into their part studio.
@@ -12,12 +10,7 @@ The app reflects underlying Onshape documents that are owned and maintained by t
 
 The app is hosted on Cloudflare. The frontend is served by Cloudflare as a Single Page Application (SPA) to the user's browser, meaning the frontend code loads and executes directly in the user's browser. The backend runs on Cloudflare, exposes endpoints for the frontend to call, and handles access to resources like the database and Onshape. For security, all communication with the Onshape API is routed through the backend.
 
----
-
-## Tech Stack
-
-| Layer | Technology | Why |
-|---|---|---|
+-------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Frontend UI | React 19 + [Mantine](https://mantine.dev/) | React for component model; Mantine for a rich set of pre-built accessible UI components (modals, menus, notifications, etc.) |
 | Frontend routing | [TanStack Router](https://tanstack.com/router) | File-based routing: each `.tsx` file under `src/frontend/routes/` automatically becomes a URL route. Type-safe navigation. |
 | Server-state caching | [TanStack Query (React Query)](https://tanstack.com/query) | Handles fetching, caching, and revalidating data from the backend. Prevents redundant network requests and keeps the UI in sync. |
@@ -26,8 +19,6 @@ The app is hosted on Cloudflare. The frontend is served by Cloudflare as a Singl
 | Build tool | [Vite](https://vite.dev/) + `@cloudflare/vite-plugin` | Bundles both the React SPA and the Cloudflare Worker in one build step. |
 | Validation | [Zod](https://zod.dev/) | Runtime schema validation, used for API responses, URL params, and localStorage state. |
 | Testing | [Vitest](https://vitest.dev/) + `@cloudflare/vitest-pool-workers` | Runs tests inside a Workers runtime so tests accurately reflect the production environment. |
-
----
 
 ## Cloudflare Services
 
@@ -68,8 +59,6 @@ The compiled React app (HTML, JS, CSS) is served directly by Cloudflare's asset 
 
 The asset binding is configured with `single-page-application` mode, which means any unrecognized path serves `index.html` — necessary for client-side routing to work.
 
----
-
 ## How Users Get Into the App
 
 This app runs inside an Onshape iframe, which adds some authentication complexity. Here is the complete flow from first page load to seeing the part library.
@@ -103,19 +92,15 @@ Once the backend confirms authentication and serves the React app, the frontend 
 4. The `/app` route's `loader` uses the `cacheVersion` to kick off three prefetches in parallel: the full library data, the search index, and the user's favorites.
 5. With all data already in the React Query cache, the groups page renders immediately with no loading spinners.
 
----
-
 ## Storage at a Glance
 
-| Store | What it holds | Lifetime | Who reads/writes it |
-|---|---|---|---|
-| **D1** | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed) | Backend Worker on every API request |
-| **KV** | OAuth session state (during login) and auth tokens (after login) | Login state: 10 minutes. Tokens: 30 days. | Backend Worker in `src/backend/auth.ts` |
-| **R2** | Part and group thumbnail images | Indefinite (30-day browser cache-control) | Backend Worker in `src/backend/routes/thumbnails.ts` |
-| **localStorage** | UI state: open/closed panels, active search query, vendor filters, last-opened group | Persists across browser sessions | Frontend only, via `src/frontend/api-utils/ui-state.ts` |
-| **sessionStorage** | Not used | — | — |
-
----
+| Store              | What it holds                                                                          | Lifetime                                  | Who reads/writes it                                     |
+| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)      | Backend Worker on every API request                     |
+| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days. | Backend Worker in `src/backend/auth.ts`                 |
+| **R2**             | Part and group thumbnail images                                                        | Indefinite (30-day browser cache-control) | Backend Worker in `src/backend/routes/thumbnails.ts`    |
+| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions          | Frontend only, via `src/frontend/api-utils/ui-state.ts` |
+| **sessionStorage** | Not used                                                                               | —                                         | —                                                       |
 
 ## Codebase Map
 
@@ -135,11 +120,10 @@ Code used by both the frontend and backend. Key files:
 The Cloudflare Worker. Key files and folders:
 
 - `index.ts` — Worker entry point; exports the Hono app and the Workflow class
-- `create-app.ts` — mounts all route groups and injects services into the Hono context
 - `auth.ts` — OAuth flow, session cookie management, token storage/retrieval
 - `services.ts` — provides `getOnshapeApi()`, `getUserId()`, `getAccessLevel()` to route handlers
 - `library-data.ts` — assembles the full library response (groups + insertables + configurations)
-- `routes/` — one file per logical area (`user.ts`, `library.ts`, `groups.ts`, `insertables.ts`, `favorites.ts`, `thumbnails.ts`, `configurations.ts`)
+- `routes/` — endpoints callable by the frontend
 - `onshape-api/` — all code that communicates with Onshape's REST API (`onshape-api.ts` for the client class, `api-path.ts` for URL construction, `endpoints/` for per-category wrappers)
 - `parse/` — `load-document.ts` runs the Cloudflare Workflow that syncs an Onshape document into D1
 
@@ -158,8 +142,6 @@ Other top-level files:
 
 - `drizzle/` — SQL migration files generated by Drizzle Kit
 - `wrangler.jsonc` — Cloudflare Workers config (bindings, routes, env vars)
-
----
 
 ## Access Levels
 
