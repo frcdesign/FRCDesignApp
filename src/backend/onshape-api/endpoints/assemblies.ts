@@ -11,6 +11,11 @@ import { apiPath } from "../api-path";
 import { encodeConfiguration } from "./configurations";
 import { OnshapeElementType, PartType } from "./documents";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
+import {
+    OnshapeAssemblyDefinition,
+    OnshapeCreatedFeature,
+    OnshapeInsertInstancesResponse
+} from "../types/assemblies";
 
 /** Retrieves information about an assembly. */
 export function getAssembly(
@@ -22,7 +27,7 @@ export function getAssembly(
         includeMateConnectors?: boolean;
         excludeSuppressed?: boolean;
     } = {}
-): Promise<any> {
+): Promise<OnshapeAssemblyDefinition> {
     return client.get(apiPath("assemblies", assemblyPath, toElementApiPath), {
         query: new URLSearchParams({
             includeMateFeatures: String(options.includeMateFeatures ?? false),
@@ -89,7 +94,7 @@ export function addElementToAssembly(
         partTypes?: PartType[];
         useTransform?: boolean;
     } = {}
-): Promise<any> {
+): Promise<OnshapeInsertInstancesResponse | undefined> {
     assertWorkspace(assemblyPath);
 
     const { configuration, partTypes, useTransform = false } = options;
@@ -134,12 +139,14 @@ export function addElementToAssembly(
         );
     }
 
-    return client.postNone(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "instances"
-        }),
-        { body: instance }
-    );
+    return client
+        .postNone(
+            apiPath("assemblies", assemblyPath, toElementApiPath, {
+                endRoute: "instances"
+            }),
+            { body: instance }
+        )
+        .then(() => undefined);
 }
 
 /**
@@ -180,7 +187,7 @@ export function addAssemblyFeature(
     assemblyPath: ElementPath,
     feature: object,
     featureId?: string
-): Promise<any> {
+): Promise<OnshapeCreatedFeature> {
     assertWorkspace(assemblyPath);
     return client.post(
         apiPath("assemblies", assemblyPath, toElementApiPath, {

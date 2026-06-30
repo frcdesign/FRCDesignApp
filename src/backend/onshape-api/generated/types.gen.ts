@@ -37,6 +37,36 @@ export type BtConfigurationResponse2019 = {
     sourceMicroversion?: string;
 };
 
+export type BtDocumentContentsInfo = {
+    /**
+     * The elements (tabs) in the document. This does not include folders.
+     */
+    elements: Array<BtDocumentElementInfo>;
+    folders: BtElementGroup1458;
+};
+
+export type BtDocumentElementInfo = {
+    elementType: GbtElementType;
+    id: string;
+    microversionId: string;
+    name: string;
+};
+
+export type BtDocumentElementReference2484 = Omit<BtGroupOrElementReference2205, 'btType'> & {
+    btType: 'BTDocumentElementReference-2484';
+    elementId: string;
+} & {
+    btType?: 'BTDocumentElementReference-2484';
+};
+
+export type BtElementGroup1458 = {
+    btType: 'BTElementGroup-1458';
+    /**
+     * List of folders or elements in this group (folder).
+     */
+    groups: Array<OnshapeFolderEntry>;
+};
+
 export type BtEnumOptionRange3741 = {
     /**
      * Type of JSON object.
@@ -74,6 +104,17 @@ export type BtEnumOptionVisibilityForRange4297 = BtEnumOptionVisibilityCondition
     controlledRange: BtEnumOptionRange3741;
 } & {
     btType?: 'BTEnumOptionVisibilityForRange-4297';
+};
+
+/**
+ * List of folders or elements in this group (folder).
+ */
+export type BtGroupOrElementReference2205 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    nodeId?: string;
 };
 
 export type BtmConfigurationParameter819 = Omit<BtmNode19, 'btType'> & {
@@ -200,6 +241,18 @@ export type BtQuantityRange181 = {
     units: string;
 };
 
+export type BtVersionInfo = {
+    createdAt: string;
+    /**
+     * Id of the resource.
+     */
+    id: string;
+    /**
+     * Name of the resource.
+     */
+    name: string;
+};
+
 export type ConfigurationInfoEntry = {
     explicit?: boolean;
     isCosmetic?: boolean;
@@ -214,6 +267,8 @@ export type ConfigurationInfoEntry = {
 
 export type GbtConfigurationParameterType = 'ENUM' | 'BOOLEAN' | 'STRING' | 'QUANTITY';
 
+export type GbtElementType = 'PARTSTUDIO' | 'ASSEMBLY' | 'DRAWING' | 'FEATURESTUDIO' | 'BLOB' | 'APPLICATION' | 'TABLE' | 'BILLOFMATERIALS' | 'VARIABLESTUDIO' | 'PUBLICATIONITEM' | 'UNKNOWN';
+
 export type GbtParameterVisibilityLogicalOp = 'NOT' | 'AND' | 'OR' | 'UNKNOWN';
 
 export type GbtQuantityType = 'UNKNOWN' | 'INTEGER' | 'REAL' | 'LENGTH' | 'ANGLE' | 'MASS' | 'TIME' | 'TEMPERATURE' | 'CURRENT' | 'ANYTHING' | 'ANYTHING_WITH_UNITS' | 'FORCE' | 'PRESSURE' | 'MOMENT' | 'ACCELERATION' | 'ANGULAR_VELOCITY' | 'ENERGY' | 'AREA' | 'VOLUME' | 'BOOLEAN' | 'STRING' | 'DENSITY' | 'FREQUENCY';
@@ -227,6 +282,75 @@ export type OnshapeConfigurationParameter = BtmConfigurationParameterEnum105 | B
 export type OnshapeVisibilityCondition = BtParameterVisibilityLogical178 | BtParameterVisibilityOnEqual180 | BtParameterVisibilityInRange2980 | BtParameterVisibilityAlwaysShown5487 | OnshapeVisibilityNone;
 
 export type OnshapeEnumOptionVisibilityCondition = BtEnumOptionVisibilityForList1613 | BtEnumOptionVisibilityForRange4297;
+
+export type OnshapeFolderEntry = BtElementGroup1458 | BtDocumentElementReference2484;
+
+export type GetDocumentVersionsData = {
+    body?: never;
+    path: {
+        did: string;
+    };
+    query?: {
+        offset?: number;
+        limit?: number;
+    };
+    url: '/documents/d/{did}/versions';
+};
+
+export type GetDocumentVersionsResponses = {
+    /**
+     * default response
+     */
+    default: Array<BtVersionInfo>;
+};
+
+export type GetDocumentVersionsResponse = GetDocumentVersionsResponses[keyof GetDocumentVersionsResponses];
+
+export type GetDocumentContentsData = {
+    body?: never;
+    path: {
+        /**
+         * The id of the document in which to perform the operation.
+         */
+        did: string;
+        /**
+         * Indicates which of workspace (w), version (v), or document microversion (m) id is specified below.
+         */
+        wvm: 'w' | 'v' | 'm';
+        /**
+         * The id of the workspace, version or document microversion in which the operation should be performed.
+         */
+        wvmid: string;
+    };
+    query?: {
+        /**
+         * The id of the document through which the above document should be accessed; only applicable when accessing a version of the document. This allows a user who has access to document a to see data from document b, as long as document b has been linked to document a by a user who has permission to both.
+         */
+        linkDocumentId?: string;
+        /**
+         * If specified, information for elements of this type are returned. Note, the folder structure is not affected by this filter.
+         */
+        elementType?: GbtElementType;
+        /**
+         * If specified, only the element with this id is returned. Note, the folder structure is not affected by this filter.
+         */
+        elementId?: string;
+        /**
+         * When true, returns the names of the files inside each zip file tab. Ignored if the document contains more than 10 zip files.
+         */
+        withZipContents?: boolean;
+    };
+    url: '/documents/d/{did}/{wvm}/{wvmid}/contents';
+};
+
+export type GetDocumentContentsResponses = {
+    /**
+     * default response
+     */
+    default: BtDocumentContentsInfo;
+};
+
+export type GetDocumentContentsResponse = GetDocumentContentsResponses[keyof GetDocumentContentsResponses];
 
 export type GetConfigurationData = {
     body?: never;

@@ -5,12 +5,9 @@ import {
     OptionVisibilityCondition,
     OptionVisibilityConditionType,
     ParameterObj,
-    QuantityType,
-    Unit,
     VisibilityCondition,
     VisibilityConditionType,
-    getUnitDisplayStr,
-    LogicalOp
+    getUnitDisplayStr
 } from "../../shared/configuration-models";
 import {
     OnshapeConfigurationResponse,
@@ -35,7 +32,7 @@ function parseVisibilityCondition(
 
         return {
             type: VisibilityConditionType.LOGICAL,
-            operation: onshapeCondition.operation as LogicalOp,
+            operation: onshapeCondition.operation,
             children
         };
     } else if (onshapeCondition.btType === VisibilityConditionType.EQUAL) {
@@ -145,7 +142,7 @@ export function parseOnshapeConfiguration(
             });
         } else if (parameter.btType === ConfigurationParameterType.QUANTITY) {
             const range = parameter.rangeAndDefault;
-            const unit = range.units as Unit;
+            const unit = range.units;
             const val = range.defaultValue;
 
             const abbr = getUnitDisplayStr(unit);
@@ -154,7 +151,7 @@ export function parseOnshapeConfiguration(
             parameters.push({
                 ...base,
                 type: ConfigurationParameterType.QUANTITY,
-                quantityType: parameter.quantityType as QuantityType,
+                quantityType: parameter.quantityType,
                 default: defaultStr,
                 defaultValue: val,
                 min: range.minValue,

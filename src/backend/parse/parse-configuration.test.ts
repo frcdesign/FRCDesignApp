@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     ConfigurationParameterType,
     OptionVisibilityConditionType,
+    QuantityType,
     Unit,
     VisibilityConditionType,
     LogicalOp,
@@ -24,7 +25,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
     btType: "BTConfigurationResponse-2019",
     configurationParameters: [
         {
-            btType: "BTMConfigurationParameterBoolean-2550",
+            btType: ConfigurationParameterType.BOOLEAN,
             parameterId: "Show_list",
             parameterName: "Show list",
             isCosmetic: true,
@@ -32,7 +33,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
             visibilityCondition: NONE
         },
         {
-            btType: "BTMConfigurationParameterEnum-105",
+            btType: ConfigurationParameterType.ENUM,
             parameterId: "Vendor",
             parameterName: "Vendor",
             isCosmetic: false,
@@ -41,16 +42,13 @@ const RESPONSE: OnshapeConfigurationResponse = {
                 { option: "Default", optionName: "WCP" },
                 { option: "REV", optionName: "REV" }
             ],
-            enumOptionVisibilityConditions: {
-                btType: "BTEnumOptionVisibilityConditionList-2936",
-                visibilityConditions: []
-            },
+            enumOptionVisibilityConditions: { visibilityConditions: [] },
             visibilityCondition: {
-                btType: "BTParameterVisibilityLogical-178",
-                operation: "AND",
+                btType: VisibilityConditionType.LOGICAL,
+                operation: LogicalOp.AND,
                 children: [
                     {
-                        btType: "BTParameterVisibilityOnEqual-180",
+                        btType: VisibilityConditionType.EQUAL,
                         value: "true",
                         parameterId: "Show_vendor_options"
                     }
@@ -58,7 +56,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
             }
         },
         {
-            btType: "BTMConfigurationParameterEnum-105",
+            btType: ConfigurationParameterType.ENUM,
             parameterId: "List",
             parameterName: "List",
             isCosmetic: false,
@@ -69,26 +67,21 @@ const RESPONSE: OnshapeConfigurationResponse = {
                 { option: "REV_1", optionName: "REV 1" }
             ],
             enumOptionVisibilityConditions: {
-                btType: "BTEnumOptionVisibilityConditionList-2936",
                 visibilityConditions: [
                     {
-                        btType: "BTEnumOptionVisibilityForRange-4297",
-                        controlledRange: {
-                            btType: "BTEnumOptionRange-3741",
-                            start: "REV_1",
-                            end: "REV_2"
-                        },
+                        btType: OptionVisibilityConditionType.RANGE,
+                        controlledRange: { start: "REV_1", end: "REV_2" },
                         condition: {
-                            btType: "BTParameterVisibilityOnEqual-180",
+                            btType: VisibilityConditionType.EQUAL,
                             value: "REV",
                             parameterId: "Vendor"
                         }
                     },
                     {
-                        btType: "BTEnumOptionVisibilityForList-1613",
+                        btType: OptionVisibilityConditionType.LIST,
                         controlledOptions: ["WCP_1", "WCP_2"],
                         condition: {
-                            btType: "BTParameterVisibilityOnEqual-180",
+                            btType: VisibilityConditionType.EQUAL,
                             value: "Default",
                             parameterId: "Vendor"
                         }
@@ -98,30 +91,29 @@ const RESPONSE: OnshapeConfigurationResponse = {
             // A logical wrapper whose only child is the no-op condition, which the
             // parser drops — exercising the empty-children path.
             visibilityCondition: {
-                btType: "BTParameterVisibilityLogical-178",
-                operation: "AND",
+                btType: VisibilityConditionType.LOGICAL,
+                operation: LogicalOp.AND,
                 children: [NONE]
             }
         },
         {
-            btType: "BTMConfigurationParameterQuantity-1826",
+            btType: ConfigurationParameterType.QUANTITY,
             parameterId: "TTB_Length",
             parameterName: "TTB Length",
             isCosmetic: false,
-            quantityType: "LENGTH",
+            quantityType: QuantityType.LENGTH,
             rangeAndDefault: {
-                btType: "BTQuantityRange-181",
                 defaultValue: 1,
                 minValue: 0,
                 maxValue: 100000,
-                units: "inch"
+                units: Unit.INCH
             },
             visibilityCondition: {
-                btType: "BTParameterVisibilityLogical-178",
-                operation: "OR",
+                btType: VisibilityConditionType.LOGICAL,
+                operation: LogicalOp.OR,
                 children: [
                     {
-                        btType: "BTParameterVisibilityOnEqual-180",
+                        btType: VisibilityConditionType.EQUAL,
                         value: "TTB",
                         parameterId: "Vendor"
                     }

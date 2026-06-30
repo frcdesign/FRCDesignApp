@@ -7,6 +7,8 @@ import {
     toInstanceApiPath
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
+import { OnshapeCreatedFeature } from "../types/assemblies";
+import { OnshapeFeatureListResponse } from "../types/part-studios";
 
 /** Creates a part studio in a document. */
 export function createPartStudio(
@@ -47,7 +49,7 @@ export function addPartStudioFeature(
     client: OnshapeApi,
     partStudioPath: ElementPath,
     feature: object
-): Promise<any> {
+): Promise<OnshapeCreatedFeature> {
     assertInstanceType(partStudioPath, "w");
     return client.post(
         apiPath("partstudios", partStudioPath, toElementApiPath, {
@@ -61,7 +63,7 @@ export function addPartStudioFeature(
 export function getFeatures(
     client: OnshapeApi,
     partStudioPath: ElementPath
-): Promise<any> {
+): Promise<OnshapeFeatureListResponse> {
     return client.get(
         apiPath("partstudios", partStudioPath, toElementApiPath, {
             endRoute: "features"

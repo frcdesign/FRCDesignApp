@@ -13,6 +13,15 @@ import {
 import { apiPath } from "../api-path";
 import { OAuthApi } from "../onshape-api";
 import { getLatestVersion } from "./versions";
+import {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo,
+    OnshapeElementType
+} from "../types/documents";
+
+// `OnshapeElementType` is owned by the hand-authored types module; re-export it here so
+// existing `./documents` importers keep working.
+export { OnshapeElementType };
 
 /** Describes possible part types. */
 export enum PartType {
@@ -20,20 +29,11 @@ export enum PartType {
     COMPOSITE_PARTS = "COMPOSITE_PARTS"
 }
 
-/** Describes possible element (tab) types in a document. */
-export enum OnshapeElementType {
-    PART_STUDIO = "PARTSTUDIO",
-    ASSEMBLY = "ASSEMBLY",
-    DRAWING = "DRAWING",
-    FEATURE_STUDIO = "FEATURESTUDIO",
-    BLOB = "BLOB"
-}
-
 /** Retrieves a given document's metadata. */
 export function getDocument(
     client: OnshapeApi,
     documentPath: DocumentPath
-): Promise<any> {
+): Promise<OnshapeDocumentInfo> {
     return client.get(
         apiPath("documents", documentPath, toDocumentApiPath, {
             skipDocumentD: true
@@ -310,7 +310,7 @@ export function getContents(
     client: OnshapeApi,
     instancePath: InstancePath,
     includeThumbnails = false
-): Promise<any> {
+): Promise<OnshapeDocumentContents> {
     return client.get(
         apiPath("documents", instancePath, toInstanceApiPath, {
             endRoute: "contents"

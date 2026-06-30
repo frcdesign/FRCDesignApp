@@ -1,36 +1,31 @@
 import { defineConfig } from "@hey-api/openapi-ts";
 
 /**
- * Generates TypeScript types for the slice of the Onshape API we use.
+ * Generates a committed *reference* slice of the Onshape API we consume.
  *
- * Run with `npm run gen:onshape-types`. Output lands in
- * `src/backend/onshape-api/generated/` and is committed.
+ * Run with `npm run gen:onshape-types`; output lands in
+ * `src/backend/onshape-api/generated/`. NOTHING imports this output — the types we
+ * actually use are hand-authored in `src/backend/onshape-api/types/*` (so they can use
+ * our own enums, comments, and clean discriminated unions). This generated slice exists
+ * only as a reference: re-running codegen and diffing it surfaces upstream API drift to
+ * fold into the hand-written types.
  *
- * The upstream Onshape spec (https://cad.onshape.com/api/openapi) is OpenAPI
- * 3.0.1, marks *nothing* `required`, types every `btType` discriminator as a bare
- * `string`, and models polymorphism with `allOf` inheritance + a `discriminator` on
- * the base — which @hey-api does not expand into a union, so the concrete subtypes
- * are unreachable by `$ref` and get pruned by `orphans: false`.
- *
- * We fix the schema in @hey-api's parser layer rather than hand-editing the output:
- *  - `UNIONS` replaces each polymorphic point with an explicit `oneOf` so the
- *    subtypes are referenced (and kept) and emitted as a discriminated union.
- *  - `SCHEMAS` pins each `btType` to a literal and marks the fields we read required.
- *  - `filters` keeps only the configuration operations (+ `orphans: false`).
- *
- * Adding an endpoint is mostly adding rows to `UNIONS` / `SCHEMAS` below.
- *
- * NOTE: the spec's `parameterType` enum (`ENUM | BOOLEAN | STRING | QUANTITY`,
- * schema `GBTConfigurationParameterType`) is NOT the `btType` discriminator our
- * `ConfigurationParameterType` enum encodes — do not conflate the two.
+ * The upstream Onshape spec (https://cad.onshape.com/api/openapi) is OpenAPI 3.0.1, marks
+ * *nothing* `required`, types every `btType` discriminator as a bare `string`, and models
+ * polymorphism with `allOf` inheritance + a `discriminator` on the base — which @hey-api
+ * does not expand into a union, so subtypes are pruned by `orphans: false`. We patch the
+ * schema in @hey-api's parser layer so the reference is structured and small:
+ *  - `UNIONS` replaces each polymorphic point with an explicit `oneOf`.
+ *  - `SCHEMAS` pins `btType` literals, marks fields required, and trims (`keep`/`omit`).
+ *  - `keep` strips unread fields before filtering, so their whole dependency trees prune.
  */
 
 const NONE = "BTParameterVisibilityCondition-177";
 
-// Discriminated unions to synthesize. Keys become exported type names; values are
-// the concrete member schemas. `OnshapeVisibilityNone` is a standalone literal-btType
-// stand-in for the "no condition" sentinel (the real base can't be reused — its
-// subtypes inherit from it via `allOf`, so a literal btType there collapses to never).
+// Discriminated unions to synthesize. Keys become exported type names; values are the
+// concrete member schemas. `OnshapeVisibilityNone` is a standalone literal-btType stand-in
+// for the "no condition" sentinel (the real base can't be reused — its subtypes inherit
+// from it via `allOf`, so a literal btType there collapses to never).
 const UNIONS: Record<string, string[]> = {
     OnshapeConfigurationParameter: [
         "BTMConfigurationParameterEnum-105",
@@ -48,15 +43,22 @@ const UNIONS: Record<string, string[]> = {
     OnshapeEnumOptionVisibilityCondition: [
         "BTEnumOptionVisibilityForList-1613",
         "BTEnumOptionVisibilityForRange-4297"
+    ],
+    // Document folder tree entries (a folder group or an element reference).
+    OnshapeFolderEntry: [
+        "BTElementGroup-1458",
+        "BTDocumentElementReference-2484"
     ]
 };
 
 // Per-schema fixups. `btType` pins the discriminator to a literal; `required` marks
-// the fields our parser reads; `omit` drops fields that only drag in unused types.
+// fields we read; `keep` is an allowlist (drop all other properties); `omit` drops
+// specific fields. `keep`/`omit` also prune the dependency trees of removed fields.
 const SCHEMAS: Record<
     string,
-    { btType?: string; required?: string[]; omit?: string[] }
+    { btType?: string; required?: string[]; keep?: string[]; omit?: string[] }
 > = {
+    // --- configuration (GET /configuration) ---
     "BTConfigurationResponse-2019": {
         btType: "BTConfigurationResponse-2019",
         required: ["configurationParameters"]
@@ -120,7 +122,33 @@ const SCHEMAS: Record<
     },
     "BTEnumOptionRange-3741": { required: ["start", "end"] },
     BTConfigurationInfo: { required: ["parameters"] },
-    ConfigurationInfoEntry: { required: ["parameterId", "parameterValue"] }
+    ConfigurationInfoEntry: { required: ["parameterId", "parameterValue"] },
+
+    // --- versions (GET /documents/d/{did}/versions) ---
+    BTVersionInfo: {
+        keep: ["id", "name", "createdAt"],
+        required: ["id", "name", "createdAt"]
+    },
+
+    // --- contents (GET /documents/d/{did}/{wvm}/{wvmid}/contents) ---
+    BTDocumentContentsInfo: {
+        keep: ["folders", "elements"],
+        required: ["folders", "elements"]
+    },
+    "BTElementGroup-1458": {
+        btType: "BTElementGroup-1458",
+        keep: ["btType", "groups"],
+        required: ["btType", "groups"]
+    },
+    "BTDocumentElementReference-2484": {
+        btType: "BTDocumentElementReference-2484",
+        keep: ["btType", "elementId"],
+        required: ["btType", "elementId"]
+    },
+    BTDocumentElementInfo: {
+        keep: ["id", "name", "elementType", "microversionId"],
+        required: ["id", "name", "elementType", "microversionId"]
+    }
 };
 
 // Discriminator bases whose polymorphism we replace with the `UNIONS` above.
@@ -142,7 +170,9 @@ export default defineConfig({
             operations: {
                 include: [
                     "GET /elements/d/{did}/{wvm}/{wvmid}/e/{eid}/configuration",
-                    "GET /elements/d/{did}/{wvm}/{wvmid}/e/{eid}/configurationencodings/{cid}"
+                    "GET /elements/d/{did}/{wvm}/{wvmid}/e/{eid}/configurationencodings/{cid}",
+                    "GET /documents/d/{did}/versions",
+                    "GET /documents/d/{did}/{wvm}/{wvmid}/contents"
                 ]
             },
             orphans: false
@@ -197,6 +227,10 @@ export default defineConfig({
                 ).visibilityConditions.items = ref(
                     "OnshapeEnumOptionVisibilityCondition"
                 );
+                propsWith(
+                    schemas["BTElementGroup-1458"],
+                    "groups"
+                ).groups.items = ref("OnshapeFolderEntry");
                 for (const name of DROP_DISCRIMINATORS) {
                     delete schemas[name].discriminator;
                 }
@@ -210,10 +244,21 @@ export default defineConfig({
                     items: { type: "object", additionalProperties: true }
                 };
 
-                // 4. Pin btType literals, mark required fields, and trim unused ones.
+                // 4. Trim (keep/omit), pin btType literals, and mark required fields.
                 for (const [name, cfg] of Object.entries(SCHEMAS)) {
                     const schema = schemas[name];
                     if (!schema) continue;
+                    if (cfg.keep) {
+                        const allow = new Set(cfg.keep);
+                        for (const bag of [schema, ...(schema.allOf ?? [])]) {
+                            for (const prop of Object.keys(
+                                bag.properties ?? {}
+                            )) {
+                                if (!allow.has(prop))
+                                    delete bag.properties[prop];
+                            }
+                        }
+                    }
                     for (const field of cfg.omit ?? []) {
                         for (const bag of [schema, ...(schema.allOf ?? [])]) {
                             delete bag.properties?.[field];

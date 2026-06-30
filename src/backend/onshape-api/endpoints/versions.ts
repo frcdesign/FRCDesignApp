@@ -7,6 +7,7 @@ import {
     toInstanceApiObject
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
+import { OnshapeVersionInfo } from "../types/versions";
 
 /**
  * Fetches a list of versions of a document.
@@ -16,7 +17,7 @@ import { apiPath } from "../api-path";
 export function getVersions(
     client: OnshapeApi,
     documentPath: DocumentPath
-): Promise<any[]> {
+): Promise<OnshapeVersionInfo[]> {
     return client.get(
         apiPath("documents", documentPath, toDocumentApiPath, {
             endRoute: "versions"
@@ -52,7 +53,7 @@ export function getLatestVersionPath(
 export function getLatestVersion(
     client: OnshapeApi,
     documentPath: DocumentPath
-): Promise<any> {
+): Promise<OnshapeVersionInfo> {
     return getVersions(client, documentPath).then(
         (versions) => versions[versions.length - 1]
     );

@@ -25,6 +25,11 @@ import {
 import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
+import {
+    OnshapeDocumentContents,
+    OnshapeFolderEntry,
+    OnshapeFolderEntryType
+} from "../onshape-api/types/documents";
 import { parseFastenInfo } from "./insert-and-fasten";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 import type { ParameterObj } from "../../shared/configuration-models";
@@ -57,18 +62,18 @@ const VALID_ELEMENT_TYPES = new Set<string>([
     ElementType.PART_STUDIO
 ]);
 
-const ENTRY_TYPE_GROUP = "BTElementGroup-1458";
-const ENTRY_TYPE_ELEMENT = "BTDocumentElementReference-2484";
-
-function* traverseEntry(entry: any): Generator<string> {
-    if (entry.btType === ENTRY_TYPE_GROUP) {
+function* traverseEntry(entry: OnshapeFolderEntry): Generator<string> {
+    if (entry.btType === OnshapeFolderEntryType.GROUP) {
         for (const child of entry.groups) yield* traverseEntry(child);
-    } else if (entry.btType === ENTRY_TYPE_ELEMENT) {
+    } else if (entry.btType === OnshapeFolderEntryType.ELEMENT) {
         yield entry.elementId;
     }
 }
 
-function getOrderedElementIds(contents: any): string[] {
+/** Element ids in display (folder-tree) order. */
+export function getOrderedElementIds(
+    contents: OnshapeDocumentContents
+): string[] {
     const ids: string[] = [];
     for (const entry of contents.folders.groups) {
         ids.push(...traverseEntry(entry));
@@ -83,14 +88,18 @@ interface ValidElement {
     microversionId: string;
 }
 
-function getValidElements(contents: any): ValidElement[] {
-    return (contents.elements as any[])
+/** The part studio / assembly elements we load, with the fields we persist. */
+export function getValidElements(
+    contents: OnshapeDocumentContents
+): ValidElement[] {
+    return contents.elements
         .filter((e) => VALID_ELEMENT_TYPES.has(e.elementType))
         .map((e) => ({
-            elementId: e.id as string,
-            name: e.name as string,
-            elementType: e.elementType as ElementType,
-            microversionId: e.microversionId as string
+            elementId: e.id,
+            name: e.name,
+            // OnshapeElementType and the app ElementType share these values.
+            elementType: e.elementType as unknown as ElementType,
+            microversionId: e.microversionId
         }));
 }
 
@@ -147,8 +156,8 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 documentId
             });
             return {
-                instanceId: rawVersion.id as string,
-                versionName: rawVersion.name as string,
+                instanceId: rawVersion.id,
+                versionName: rawVersion.name,
                 versionCreatedAt: new Date(rawVersion.createdAt).toISOString()
             };
         });
@@ -205,10 +214,8 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             );
 
             return {
-                docName: rawDoc.name as string,
-                thumbnailElementId: rawDoc.documentThumbnailElementId as
-                    | string
-                    | undefined,
+                docName: rawDoc.name,
+                thumbnailElementId: rawDoc.documentThumbnailElementId,
                 validElements,
                 orderedElementIds
             };

@@ -88,19 +88,16 @@ export async function uploadDocumentThumbnails(
         getContents(onshapeApi, versionPath)
     ]);
 
-    let thumbnailElementId: string = onshapeDocument.documentThumbnailElementId;
+    let thumbnailElementId = onshapeDocument.documentThumbnailElementId;
     if (!thumbnailElementId) {
-        const els: any[] = contents.elements;
-        if (els.length < 1)
+        if (contents.elements.length < 1)
             throw new Error(
                 `Document ${onshapeDocument.name} has no elements to use as a thumbnail.`
             );
-        thumbnailElementId = els[0].id;
+        thumbnailElementId = contents.elements[0].id;
     }
 
-    const element = (contents.elements as any[]).find(
-        (e) => e.id === thumbnailElementId
-    );
+    const element = contents.elements.find((e) => e.id === thumbnailElementId);
     if (!element) {
         throw new Error("Unexpectedly failed to find the thumbnail element.");
     }
