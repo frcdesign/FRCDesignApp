@@ -10,10 +10,7 @@ export type BtConfigurationInfo = {
 };
 
 export type BtConfigurationResponse2019 = {
-    /**
-     * Type of JSON object.
-     */
-    btType?: string;
+    btType: 'BTConfigurationResponse-2019';
     configurationParameters: Array<OnshapeConfigurationParameter>;
     currentConfiguration?: Array<{
         [key: string]: unknown;
@@ -53,7 +50,7 @@ export type BtEnumOptionVisibilityCondition3455 = {
     /**
      * Type of JSON object.
      */
-    btType: string;
+    btType?: string;
     condition: OnshapeVisibilityCondition;
 };
 
@@ -66,23 +63,23 @@ export type BtEnumOptionVisibilityConditionList2936 = {
 };
 
 export type BtEnumOptionVisibilityForList1613 = BtEnumOptionVisibilityCondition3455 & {
-    btType: 'BTEnumOptionVisibilityForList-1613';
+    btType: string;
     controlledOptions: Array<string>;
 } & {
     btType?: 'BTEnumOptionVisibilityForList-1613';
 };
 
 export type BtEnumOptionVisibilityForRange4297 = BtEnumOptionVisibilityCondition3455 & {
-    btType: 'BTEnumOptionVisibilityForRange-4297';
+    btType: string;
     controlledRange: BtEnumOptionRange3741;
 } & {
     btType?: 'BTEnumOptionVisibilityForRange-4297';
 };
 
 export type BtmConfigurationParameter819 = Omit<BtmNode19, 'btType'> & {
-    btType: 'BTMConfigurationParameter-819';
+    btType?: 'BTMConfigurationParameter-819';
     enumOptionIds?: Array<string>;
-    isCosmetic?: boolean;
+    isCosmetic: boolean;
     parameterId: string;
     parameterName: string;
     parameterType?: GbtConfigurationParameterType;
@@ -154,7 +151,7 @@ export type BtmNode19 = {
 };
 
 export type BtParameterVisibilityAlwaysShown5487 = BtParameterVisibilityCondition177 & {
-    btType: 'BTParameterVisibilityAlwaysShown-5487';
+    btType: string;
 } & {
     btType?: 'BTParameterVisibilityAlwaysShown-5487';
 };
@@ -168,7 +165,7 @@ export type BtParameterVisibilityCondition177 = {
 };
 
 export type BtParameterVisibilityInRange2980 = BtParameterVisibilityCondition177 & {
-    btType: 'BTParameterVisibilityInRange-2980';
+    btType: string;
     optionRange: BtEnumOptionRange3741;
     parameterId: string;
 } & {
@@ -176,7 +173,7 @@ export type BtParameterVisibilityInRange2980 = BtParameterVisibilityCondition177
 };
 
 export type BtParameterVisibilityLogical178 = BtParameterVisibilityCondition177 & {
-    btType: 'BTParameterVisibilityLogical-178';
+    btType: string;
     children: Array<OnshapeVisibilityCondition>;
     operation: GbtParameterVisibilityLogicalOp;
 } & {
@@ -184,7 +181,7 @@ export type BtParameterVisibilityLogical178 = BtParameterVisibilityCondition177 
 };
 
 export type BtParameterVisibilityOnEqual180 = BtParameterVisibilityCondition177 & {
-    btType: 'BTParameterVisibilityOnEqual-180';
+    btType: string;
     inArray?: boolean;
     parameterId: string;
     value: string;
@@ -221,11 +218,11 @@ export type GbtParameterVisibilityLogicalOp = 'NOT' | 'AND' | 'OR' | 'UNKNOWN';
 
 export type GbtQuantityType = 'UNKNOWN' | 'INTEGER' | 'REAL' | 'LENGTH' | 'ANGLE' | 'MASS' | 'TIME' | 'TEMPERATURE' | 'CURRENT' | 'ANYTHING' | 'ANYTHING_WITH_UNITS' | 'FORCE' | 'PRESSURE' | 'MOMENT' | 'ACCELERATION' | 'ANGULAR_VELOCITY' | 'ENERGY' | 'AREA' | 'VOLUME' | 'BOOLEAN' | 'STRING' | 'DENSITY' | 'FREQUENCY';
 
-export type OnshapeConfigurationParameter = BtmConfigurationParameterEnum105 | BtmConfigurationParameterBoolean2550 | BtmConfigurationParameterString872 | BtmConfigurationParameterQuantity1826;
-
 export type OnshapeVisibilityNone = {
     btType: 'BTParameterVisibilityCondition-177';
 };
+
+export type OnshapeConfigurationParameter = BtmConfigurationParameterEnum105 | BtmConfigurationParameterBoolean2550 | BtmConfigurationParameterString872 | BtmConfigurationParameterQuantity1826;
 
 export type OnshapeVisibilityCondition = BtParameterVisibilityLogical178 | BtParameterVisibilityOnEqual180 | BtParameterVisibilityInRange2980 | BtParameterVisibilityAlwaysShown5487 | OnshapeVisibilityNone;
 

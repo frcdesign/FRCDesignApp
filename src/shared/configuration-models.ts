@@ -125,6 +125,8 @@ export interface ParameterBase {
     id: string;
     name: string;
     default: string;
+    /** Cosmetic parameters don't affect geometry (e.g. UI-only toggles). */
+    isCosmetic: boolean;
     condition?: VisibilityCondition;
 }
 export interface BooleanParameterObj extends ParameterBase {
