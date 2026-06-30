@@ -12,22 +12,25 @@ import {
     getUnitDisplayStr,
     LogicalOp
 } from "../../shared/configuration-models";
+import {
+    OnshapeConfigurationResponse,
+    OnshapeEnumOptionVisibilityConditionList,
+    OnshapeVisibilityCondition
+} from "../onshape-api/types/configuration";
 
 const VISIBILITY_CONDITION_NONE = "BTParameterVisibilityCondition-177";
 
 function parseVisibilityCondition(
-    onshapeCondition: any
+    onshapeCondition: OnshapeVisibilityCondition | undefined
 ): VisibilityCondition | undefined {
     if (!onshapeCondition) return undefined;
+    if (onshapeCondition.btType === VISIBILITY_CONDITION_NONE) return undefined;
 
-    const conditionType: string = onshapeCondition.btType;
-    if (conditionType === VISIBILITY_CONDITION_NONE) return undefined;
-
-    if (conditionType === VisibilityConditionType.LOGICAL) {
+    if (onshapeCondition.btType === VisibilityConditionType.LOGICAL) {
         const children = onshapeCondition.children
-            .map(parseVisibilityCondition)
+            .map((child) => parseVisibilityCondition(child))
             .filter(
-                (condition: VisibilityCondition | undefined) => !!condition
+                (condition): condition is VisibilityCondition => !!condition
             );
 
         return {
@@ -35,13 +38,13 @@ function parseVisibilityCondition(
             operation: onshapeCondition.operation as LogicalOp,
             children
         };
-    } else if (conditionType === VisibilityConditionType.EQUAL) {
+    } else if (onshapeCondition.btType === VisibilityConditionType.EQUAL) {
         return {
             type: VisibilityConditionType.EQUAL,
             id: onshapeCondition.parameterId,
             value: onshapeCondition.value
         };
-    } else if (conditionType === VisibilityConditionType.RANGE) {
+    } else if (onshapeCondition.btType === VisibilityConditionType.RANGE) {
         const optionRange = onshapeCondition.optionRange;
         return {
             type: VisibilityConditionType.RANGE,
@@ -49,7 +52,9 @@ function parseVisibilityCondition(
             start: optionRange.start,
             end: optionRange.end
         };
-    } else if (conditionType === VisibilityConditionType.ALWAYS_SHOWN) {
+    } else if (
+        onshapeCondition.btType === VisibilityConditionType.ALWAYS_SHOWN
+    ) {
         return { type: VisibilityConditionType.ALWAYS_SHOWN };
     }
 
@@ -57,27 +62,33 @@ function parseVisibilityCondition(
 }
 
 function parseOptionVisibilityConditions(
-    onshapeOptionConditions: any
+    onshapeOptionConditions:
+        | OnshapeEnumOptionVisibilityConditionList
+        | undefined
 ): OptionVisibilityCondition[] {
     if (!onshapeOptionConditions) return [];
 
     return onshapeOptionConditions.visibilityConditions
-        .map((onshapeOptionCondition: any) => {
+        .map((onshapeOptionCondition): OptionVisibilityCondition | null => {
             const condition = parseVisibilityCondition(
                 onshapeOptionCondition.condition
             );
 
             if (!condition) return null;
 
-            const conditionType: string = onshapeOptionCondition.btType;
-            if (conditionType === OptionVisibilityConditionType.LIST) {
+            if (
+                onshapeOptionCondition.btType ===
+                OptionVisibilityConditionType.LIST
+            ) {
                 return {
                     type: OptionVisibilityConditionType.LIST,
-                    controlledOptions:
-                        onshapeOptionCondition.controlledOptions as string[],
+                    controlledOptions: onshapeOptionCondition.controlledOptions,
                     condition
                 };
-            } else if (conditionType === OptionVisibilityConditionType.RANGE) {
+            } else if (
+                onshapeOptionCondition.btType ===
+                OptionVisibilityConditionType.RANGE
+            ) {
                 const range = onshapeOptionCondition.controlledRange;
                 return {
                     type: OptionVisibilityConditionType.RANGE,
@@ -88,66 +99,65 @@ function parseOptionVisibilityConditions(
             }
             return null;
         })
-        .filter((condition: OptionVisibilityCondition | null) => !!condition);
+        .filter(
+            (condition): condition is OptionVisibilityCondition => !!condition
+        );
 }
 
 export function parseOnshapeConfiguration(
-    onshapeConfiguration: any
+    onshapeConfiguration: OnshapeConfigurationResponse
 ): ConfigurationResult {
     const parameters: ParameterObj[] = [];
 
-    for (const parameter of onshapeConfiguration.configurationParameters as any[]) {
-        const type: ConfigurationParameterType = parameter.btType;
+    for (const parameter of onshapeConfiguration.configurationParameters) {
         const base = {
-            id: parameter.parameterId as string,
-            name: parameter.parameterName as string,
+            id: parameter.parameterId,
+            name: parameter.parameterName,
             condition: parseVisibilityCondition(parameter.visibilityCondition)
         };
 
-        if (type === ConfigurationParameterType.ENUM) {
-            const options: EnumOption[] = (parameter.options as any[]).map(
-                (opt) => ({
-                    id: opt.option as string,
-                    name: opt.optionName as string
-                })
-            );
+        if (parameter.btType === ConfigurationParameterType.ENUM) {
+            const options: EnumOption[] = parameter.options.map((opt) => ({
+                id: opt.option,
+                name: opt.optionName
+            }));
             parameters.push({
                 ...base,
-                type,
-                default: parameter.defaultValue as string,
+                type: ConfigurationParameterType.ENUM,
+                default: parameter.defaultValue,
                 options,
                 optionConditions: parseOptionVisibilityConditions(
                     parameter.enumOptionVisibilityConditions
                 )
             });
-        } else if (type === ConfigurationParameterType.BOOLEAN) {
+        } else if (parameter.btType === ConfigurationParameterType.BOOLEAN) {
             parameters.push({
                 ...base,
-                type,
+                type: ConfigurationParameterType.BOOLEAN,
                 default: String(parameter.defaultValue).toLowerCase()
             });
-        } else if (type === ConfigurationParameterType.STRING) {
+        } else if (parameter.btType === ConfigurationParameterType.STRING) {
             parameters.push({
                 ...base,
-                type,
-                default: parameter.defaultValue as string
+                type: ConfigurationParameterType.STRING,
+                default: parameter.defaultValue
             });
-        } else if (type === ConfigurationParameterType.QUANTITY) {
+        } else if (parameter.btType === ConfigurationParameterType.QUANTITY) {
             const range = parameter.rangeAndDefault;
-            const unit: Unit = range.units;
-            const val: number = range.defaultValue;
+            const unit = range.units as Unit;
+            const val = range.defaultValue;
 
             const abbr = getUnitDisplayStr(unit);
             const defaultStr = abbr ? `${val} ${abbr}` : String(val);
 
             parameters.push({
                 ...base,
-                type,
+                type: ConfigurationParameterType.QUANTITY,
                 quantityType: parameter.quantityType as QuantityType,
                 default: defaultStr,
                 defaultValue: val,
-                min: range.minValue as number,
-                max: range.maxValue as number,
+                min: range.minValue,
+                max: range.maxValue,
                 unit
             });
         }

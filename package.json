@@ -16,6 +16,7 @@
         "preview": "npm run build && vite preview",
         "deploy": "npm run build && wrangler d1 migrations apply db --remote && wrangler deploy",
         "typegen": "wrangler types",
+        "gen:onshape-types": "openapi-ts",
         "test": "vitest run",
         "test:watch": "vitest",
         "prepare": "husky"
@@ -44,6 +45,7 @@
         "@cloudflare/vite-plugin": "^1.36.4",
         "@cloudflare/vitest-pool-workers": "^0.16.16",
         "@eslint/js": "^10.0.1",
+        "@hey-api/openapi-ts": "^0.99.0",
         "@tanstack/router-plugin": "^1.168.2",
         "@types/node": "^24.12.4",
         "@types/react": "^19.2.16",

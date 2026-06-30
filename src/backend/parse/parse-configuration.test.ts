@@ -10,12 +10,15 @@ import {
 } from "../../shared/configuration-models";
 import { evaluateCondition } from "../../shared/configuration-utils";
 import { parseOnshapeConfiguration } from "./parse-configuration";
+import { OnshapeConfigurationResponse } from "../onshape-api/types/configuration";
 
-const NONE_CONDITION = { btType: "BTParameterVisibilityCondition-177" };
+const NONE_CONDITION = {
+    btType: "BTParameterVisibilityCondition-177"
+} as const;
 
 describe("parseOnshapeConfiguration", () => {
     it("parses ENUM parameter", () => {
-        const raw = {
+        const raw: OnshapeConfigurationResponse = {
             configurationParameters: [
                 {
                     btType: ConfigurationParameterType.ENUM,
@@ -26,8 +29,7 @@ describe("parseOnshapeConfiguration", () => {
                     options: [
                         { option: "small", optionName: "Small" },
                         { option: "large", optionName: "Large" }
-                    ],
-                    enumOptionVisibilityConditions: null
+                    ]
                 }
             ]
         };
@@ -50,7 +52,7 @@ describe("parseOnshapeConfiguration", () => {
     });
 
     it("parses BOOLEAN parameter", () => {
-        const raw = {
+        const raw: OnshapeConfigurationResponse = {
             configurationParameters: [
                 {
                     btType: ConfigurationParameterType.BOOLEAN,
@@ -68,7 +70,7 @@ describe("parseOnshapeConfiguration", () => {
     });
 
     it("parses STRING parameter", () => {
-        const raw = {
+        const raw: OnshapeConfigurationResponse = {
             configurationParameters: [
                 {
                     btType: ConfigurationParameterType.STRING,
@@ -86,7 +88,7 @@ describe("parseOnshapeConfiguration", () => {
     });
 
     it("parses QUANTITY parameter (length)", () => {
-        const raw = {
+        const raw: OnshapeConfigurationResponse = {
             configurationParameters: [
                 {
                     btType: ConfigurationParameterType.QUANTITY,
@@ -116,7 +118,7 @@ describe("parseOnshapeConfiguration", () => {
     });
 
     it("parses QUANTITY parameter (unitless integer)", () => {
-        const raw = {
+        const raw: OnshapeConfigurationResponse = {
             configurationParameters: [
                 {
                     btType: ConfigurationParameterType.QUANTITY,
