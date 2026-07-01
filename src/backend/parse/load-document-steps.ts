@@ -1,4 +1,4 @@
-import { and, asc, eq, getTableColumns, notInArray, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, notInArray, sql } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { getDb } from "../db";
 import {
@@ -45,7 +45,7 @@ export interface DocumentElement {
     microversionId: string;
 }
 
-/** The pinned version we sync from (output of the fetch-version step). */
+/** The document version to sync to (from `fetchVersion`, called by the caller). */
 export interface VersionInfo {
     instanceId: string;
     versionName: string;
@@ -180,6 +180,28 @@ export async function fetchContents(
         elements,
         orderedElementIds
     };
+}
+
+/** The fields of a group row the workflow needs but isn't given directly. */
+export interface GroupInfo {
+    documentId: string;
+    libraryId: LibraryId;
+}
+
+/**
+ * load-group: looks up a group's document/library. The caller (see `routes/groups.ts`)
+ * owns group identity, so this only reads a row it must have already created.
+ */
+export async function fetchGroup(db: Db, groupId: string): Promise<GroupInfo> {
+    const group = await db
+        .select({ documentId: groups.documentId, libraryId: groups.libraryId })
+        .from(groups)
+        .where(eq(groups.id, groupId))
+        .get();
+    if (!group) {
+        throw new Error(`Group ${groupId} not found`);
+    }
+    return group;
 }
 
 /** The existing insertables for a group, by the fields we match on. */
@@ -356,41 +378,12 @@ export function conflictUpdateSet(
     );
 }
 
-/** Inserts the group at the end (or after `selectedGroupId`) if it isn't ordered yet. */
-async function updateGroupOrder(
-    db: Db,
-    libraryId: LibraryId,
-    groupId: string,
-    selectedGroupId: string | undefined
-): Promise<void> {
-    const orderedGroups = await db
-        .select({ id: groups.id })
-        .from(groups)
-        .where(eq(groups.libraryId, libraryId))
-        .orderBy(asc(groups.sortOrder))
-        .all();
-    const currentOrder = orderedGroups.map((g) => g.id);
-    if (currentOrder.includes(groupId)) return;
-
-    const insertAfter = selectedGroupId
-        ? currentOrder.indexOf(selectedGroupId)
-        : -1;
-    currentOrder.splice(
-        insertAfter !== -1 ? insertAfter + 1 : currentOrder.length,
-        0,
-        groupId
-    );
-    await Promise.all(
-        currentOrder.map((id, i) =>
-            db.update(groups).set({ sortOrder: i }).where(eq(groups.id, id))
-        )
-    );
-}
-
 /**
  * save-to-db: upserts the group and the loaded insertables/configurations and
  * deletes insertables that are no longer valid. Ids come straight off each
- * `LoadedElement.matched`, so there's no id juggling here.
+ * `LoadedElement.matched`, so there's no id juggling here. The group's identity and
+ * position in the library's sort order are owned by the caller (see
+ * `createOrderedGroup` in `../library-data`) — this only updates its synced fields.
  */
 export async function saveDocument(
     db: Db,
@@ -398,7 +391,6 @@ export async function saveDocument(
         groupId: string;
         documentId: string;
         libraryId: LibraryId;
-        selectedGroupId: string | undefined;
         version: VersionInfo;
         docInfo: DocumentInfo;
         docThumbnailUrls: ThumbnailUrls | null;
@@ -409,7 +401,6 @@ export async function saveDocument(
         groupId,
         documentId,
         libraryId,
-        selectedGroupId,
         version,
         docInfo,
         docThumbnailUrls,
@@ -418,8 +409,6 @@ export async function saveDocument(
     const ctx: SaveContext = { groupId, documentId, libraryId, version };
 
     await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
-
-    await updateGroupOrder(db, libraryId, groupId, selectedGroupId);
 
     const validElementIds = docInfo.elements.map((e) => e.elementId);
 

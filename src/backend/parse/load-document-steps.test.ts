@@ -538,7 +538,6 @@ describe("saveDocument", () => {
             groupId: TEST_GROUP_ID,
             documentId: "doc-test-group",
             libraryId: TEST_LIBRARY_ID,
-            selectedGroupId: undefined,
             version: {
                 instanceId: "inst-2",
                 versionName: "v2",

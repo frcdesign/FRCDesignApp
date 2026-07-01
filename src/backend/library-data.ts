@@ -103,6 +103,66 @@ export async function getLibraryOut(
     };
 }
 
+/**
+ * Creates a new group row and places it in the library's sort order — directly after
+ * `selectedGroupId` if given, otherwise at the end. Ensures the library row exists.
+ */
+export async function createOrderedGroup(
+    db: Db,
+    args: {
+        groupId: string;
+        libraryId: LibraryId;
+        documentId: string;
+        name: string;
+        instanceId: string;
+        selectedGroupId: string | undefined;
+    }
+): Promise<void> {
+    const {
+        groupId,
+        libraryId,
+        documentId,
+        name,
+        instanceId,
+        selectedGroupId
+    } = args;
+
+    await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
+
+    const orderedGroups = await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
+        .all();
+    const currentOrder = orderedGroups.map((g) => g.id);
+    const insertAfter = selectedGroupId
+        ? currentOrder.indexOf(selectedGroupId)
+        : -1;
+    currentOrder.splice(
+        insertAfter !== -1 ? insertAfter + 1 : currentOrder.length,
+        0,
+        groupId
+    );
+
+    await db.insert(groups).values({
+        id: groupId,
+        documentId,
+        libraryId,
+        name,
+        instanceId,
+        sortOrder: currentOrder.indexOf(groupId)
+    });
+    await Promise.all(
+        currentOrder
+            .map((id, i) => [id, i] as const)
+            .filter(([id]) => id !== groupId)
+            .map(([id, i]) =>
+                db.update(groups).set({ sortOrder: i }).where(eq(groups.id, id))
+            )
+    );
+}
+
 export async function bumpLibraryVersion(
     db: Db,
     libraryId: LibraryId

@@ -1,14 +1,18 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
-import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
-import { libraries, groups, insertables, favorites } from "../../shared/schema";
+import { groups, insertables, libraries, favorites } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
-import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import { fetchVersion } from "../parse/load-document-steps";
+import {
+    bumpLibraryVersion,
+    createOrderedGroup,
+    rebuildSearchDb
+} from "../library-data";
 
 export const groupRoutes = getApp();
 
@@ -19,8 +23,8 @@ groupRoutes.post(
     async (c) => {
         const libraryId = getLibraryParam(c);
         const forceReload = c.req.query("forceReload") === "true";
-
         const sessionId = getSessionId(c);
+        const onshapeApi = await c.var.getOnshapeApi();
 
         const db = getDb(c.env.DB);
         await db
@@ -28,20 +32,47 @@ groupRoutes.post(
             .values({ id: libraryId })
             .onConflictDoNothing();
 
-        // Each group re-syncs from its Onshape document.
         const groupRows = await db
-            .select({ documentId: groups.documentId })
+            .select({
+                id: groups.id,
+                documentId: groups.documentId,
+                instanceId: groups.instanceId
+            })
             .from(groups)
             .where(eq(groups.libraryId, libraryId))
-            .orderBy(asc(groups.sortOrder))
             .all();
 
+        // Only sync groups whose latest Onshape version differs from what's stored
+        // (or all of them when forced). Skip — rather than fail the batch — a group
+        // whose document can no longer be reached.
+        const toReload = (
+            await Promise.all(
+                groupRows.map(async (group) => {
+                    try {
+                        const version = await fetchVersion(
+                            onshapeApi,
+                            group.documentId
+                        );
+                        if (
+                            !forceReload &&
+                            version.instanceId === group.instanceId
+                        ) {
+                            return null;
+                        }
+                        return { groupId: group.id, version };
+                    } catch {
+                        return null;
+                    }
+                })
+            )
+        ).filter((r) => r !== null);
+
         const instances = await Promise.all(
-            groupRows.map(({ documentId }) => {
+            toReload.map(({ groupId, version }) => {
                 const params: LoadDocumentParams = {
-                    documentId,
-                    libraryId,
+                    groupId,
                     sessionId,
+                    version,
                     forceReload
                 };
                 return c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
@@ -173,8 +204,9 @@ groupRoutes.post(
             );
         }
 
+        let version;
         try {
-            await getLatestVersion(onshapeApi, documentPath);
+            version = await fetchVersion(onshapeApi, body.newDocumentId);
         } catch {
             return c.json(
                 {
@@ -187,11 +219,6 @@ groupRoutes.post(
         }
 
         const db = getDb(c.env.DB);
-
-        await db
-            .insert(libraries)
-            .values({ id: libraryId })
-            .onConflictDoNothing();
 
         const existingGroup = await db
             .select({ id: groups.id })
@@ -215,12 +242,17 @@ groupRoutes.post(
             );
         }
 
-        const params: LoadDocumentParams = {
-            documentId: body.newDocumentId,
+        const groupId = crypto.randomUUID();
+        await createOrderedGroup(db, {
+            groupId,
             libraryId,
-            sessionId,
+            documentId: body.newDocumentId,
+            name: documentName,
+            instanceId: version.instanceId,
             selectedGroupId: body.selectedGroupId
-        };
+        });
+
+        const params: LoadDocumentParams = { groupId, sessionId, version };
         await c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
 
         return c.json({ name: documentName });

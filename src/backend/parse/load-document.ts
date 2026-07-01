@@ -3,17 +3,11 @@ import {
     WorkflowEvent,
     WorkflowStep
 } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
 import { getDb } from "../db";
-import { groups } from "../../shared/schema";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
-import {
-    type FastenInfo,
-    type LibraryId,
-    type ThumbnailUrls
-} from "../../shared/types";
+import { type FastenInfo, type ThumbnailUrls } from "../../shared/types";
 import {
     uploadThumbnails,
     uploadDocumentThumbnails
@@ -23,21 +17,23 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import {
     fetchContents,
     fetchExistingInsertables,
-    fetchVersion,
+    fetchGroup,
     loadElementConfiguration,
     loadElementFasten,
     matchElements,
     saveDocument,
     selectReloads,
     type LoadedElement,
-    type MatchedElement
+    type MatchedElement,
+    type VersionInfo
 } from "./load-document-steps";
 
 export interface LoadDocumentParams {
-    documentId: string;
-    libraryId: LibraryId;
-    selectedGroupId?: string;
+    /** The group to sync — must already exist (see `createOrderedGroup`). */
+    groupId: string;
     sessionId: string;
+    /** The document version to sync to; the caller decides this is worth syncing. */
+    version: VersionInfo;
     forceReload?: boolean;
 }
 
@@ -57,45 +53,20 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<void> {
         const {
-            documentId,
-            libraryId,
+            groupId,
             sessionId,
-            selectedGroupId,
+            version,
             forceReload = false
         } = event.payload;
 
-        // Fetch the latest version from Onshape.
-        const version = await step.do("fetch-version", async () => {
-            const api = await getOnshapeApiForSessionId(this.env.KV, sessionId);
-            return fetchVersion(api, documentId);
-        });
-
-        // Resolve the group's surrogate UUID (reused if the Onshape document is
-        // already a group in this library, otherwise generated here — the step
-        // memoizes the value so retries stay stable).
-        const group = await step.do("resolve-group", async () => {
-            const db = getDb(this.env.DB);
-            const existing = await db
-                .select({ id: groups.id, instanceId: groups.instanceId })
-                .from(groups)
-                .where(
-                    and(
-                        eq(groups.documentId, documentId),
-                        eq(groups.libraryId, libraryId)
-                    )
-                )
-                .get();
-            return {
-                groupId: existing?.id ?? crypto.randomUUID(),
-                instanceId: existing?.instanceId ?? null
-            };
-        });
-        const groupId = group.groupId;
-
-        // Reload when forced, the group is new, or its pinned version changed.
-        const needsReload =
-            forceReload || group.instanceId !== version.instanceId;
-        if (!needsReload) return;
+        // Look up the group's document/library (the caller already created the row).
+        const { documentId, libraryId } = await step.do(
+            "load-group",
+            async () => {
+                const db = getDb(this.env.DB);
+                return fetchGroup(db, groupId);
+            }
+        );
 
         const instancePath: InstancePath = {
             documentId,
@@ -148,7 +119,6 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                 groupId,
                 documentId,
                 libraryId,
-                selectedGroupId,
                 version,
                 docInfo,
                 docThumbnailUrls,
