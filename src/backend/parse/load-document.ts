@@ -41,11 +41,12 @@ import {
 } from "../routes/thumbnails";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
+import { checkGroup, checkInsertable } from "./build-checks";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 
 export interface LoadDocumentParams {
     documentId: string;
-    libraryId: string;
+    libraryId: LibraryId;
     selectedGroupId?: string;
     sessionId: string;
     forceReload?: boolean;
@@ -389,7 +390,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                         vendors: r.vendors,
                         thumbnailUrls: r.thumbnailUrls,
                         fastenInfo: r.fastenInfo,
-                        supportsFasten: r.supportsFasten
+                        supportsFasten: r.supportsFasten,
+                        buildIssues: checkInsertable({
+                            vendors: r.vendors,
+                            thumbnailUrls: r.thumbnailUrls
+                        })
                     })
                     .onConflictDoUpdate({
                         target: [insertables.elementId, insertables.groupId],
@@ -429,7 +434,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
                     libraryId,
                     name: contentsInfo.docName,
                     instanceId: versionInfo.instanceId,
-                    thumbnailUrls: docThumbnailUrls
+                    thumbnailUrls: docThumbnailUrls,
+                    buildIssues: checkGroup({
+                        hasThumbnailTab: !!contentsInfo.thumbnailElementId,
+                        thumbnailUrls: docThumbnailUrls
+                    })
                 })
                 .onConflictDoUpdate({
                     target: [groups.documentId, groups.libraryId],
@@ -471,8 +480,8 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         // Step 8: Rebuild the library's search index and bump the cache version
         await step.do("rebuild-search-db", async () => {
             const db = getDb(this.env.DB);
-            await rebuildSearchDb(db, libraryId as LibraryId);
-            await bumpLibraryVersion(db, libraryId as LibraryId);
+            await rebuildSearchDb(db, libraryId);
+            await bumpLibraryVersion(db, libraryId);
         });
     }
 

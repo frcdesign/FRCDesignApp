@@ -1,9 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getApp } from "../app";
 import { getDb } from "../db";
-import { getOnshapeApi } from "../auth";
-import { getUserId } from "../onshape-api/endpoints/users";
-import { getAppAccessLevel } from "../access-level-utils";
 import { users, libraries } from "../../shared/schema";
 import { LibraryId, ContextData, Theme } from "../../shared/types";
 
@@ -11,11 +8,10 @@ export const userRoutes = getApp();
 
 /** GET /api/context-data */
 userRoutes.get("/context-data", async (c) => {
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
+    const userId = await c.var.getUserId();
 
     const [maxAccessLevel, db] = await Promise.all([
-        getAppAccessLevel(c),
+        c.var.getAccessLevel(),
         Promise.resolve(getDb(c.env.DB))
     ]);
 
@@ -49,8 +45,7 @@ userRoutes.get("/context-data", async (c) => {
 
 /** POST /api/user-data — update settings */
 userRoutes.post("/user-data", async (c) => {
-    const onshapeApi = await getOnshapeApi(c);
-    const userId = await getUserId(onshapeApi);
+    const userId = await c.var.getUserId();
 
     const body = await c.req.json<{ theme?: Theme; libraryId?: LibraryId }>();
 

@@ -5,5 +5,5 @@
         "types": ["node", "./worker-configuration.d.ts"]
     },
     "include": ["src/backend", "src/shared"],
-    "exclude": ["src/backend/**/__tests__", "src/backend/**/*.test.ts"]
+    "exclude": ["src/backend/**/*.test.ts"]
 }

@@ -1,10 +1,12 @@
-import { ActionIcon, Button, Group, Menu, TextInput } from "@mantine/core";
 import {
-    IconChevronDown,
-    IconSearch,
-    IconSettings,
-    IconX
-} from "@tabler/icons-react";
+    ActionIcon,
+    Button,
+    Group,
+    Input,
+    Menu,
+    TextInput
+} from "@mantine/core";
+import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
 import { IconSize, PrimaryColor } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -114,24 +116,21 @@ export function SearchBar() {
     const [uiState, setUiState] = useUiState();
 
     const clearButton = uiState.searchQuery ? (
-        <ActionIcon
-            variant="subtle"
-            size="sm"
+        <Input.ClearButton
+            aria-label="Clear input"
             onClick={() => {
                 if (ref.current) {
                     ref.current.value = "";
                 }
                 setUiState({ searchQuery: undefined });
             }}
-        >
-            <IconX size={IconSize.SMALL} />
-        </ActionIcon>
+        />
     ) : undefined;
 
     return (
         <TextInput
-            flex={1}
             type="search"
+            maw={200} // Hardcode search bar width as max so close button doesn't expand
             leftSection={<IconSearch size={IconSize.SMALL} />}
             placeholder="Search library..."
             ref={ref}

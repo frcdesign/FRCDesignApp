@@ -2,10 +2,8 @@ import { eq } from "drizzle-orm";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
-import { getOnshapeApi } from "../auth";
-import { requireAdminMiddleware } from "../access-level-utils";
+import { requireEditorMiddleware } from "../access-level-utils";
 import { bumpLibraryVersion } from "../library-data";
-import { LibraryId } from "../../shared/types";
 import {
     getElementThumbnail,
     getThumbnailFromId,
@@ -18,6 +16,7 @@ import { groups, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
+import { BuildIssueType, clearBuildIssue } from "../../shared/build-checker";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
@@ -140,7 +139,7 @@ thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
 
 /** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
 thumbnailRoutes.get("/thumbnail", async (c) => {
-    const onshapeApi = await getOnshapeApi(c);
+    const onshapeApi = await c.var.getOnshapeApi();
     const size =
         (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
     const thumbnailId = c.req.query("thumbnailId");
@@ -159,7 +158,7 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {
             documentId: c.req.param("docId"),
             instanceId: c.req.param("instanceId"),
@@ -176,14 +175,12 @@ thumbnailRoutes.get(
     }
 );
 
-const reloadThumbnailRoutes = getApp();
-reloadThumbnailRoutes.use(requireAdminMiddleware);
-
 /** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
-reloadThumbnailRoutes.post(
+thumbnailRoutes.post(
     "/reload-insertable-thumbnail" + insertableRoute(),
+    requireEditorMiddleware,
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const db = getDb(c.env.DB);
 
@@ -192,7 +189,8 @@ reloadThumbnailRoutes.post(
         const row = await db
             .select({
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId
+                libraryId: insertables.libraryId,
+                buildIssues: insertables.buildIssues
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -211,19 +209,26 @@ reloadThumbnailRoutes.post(
 
         await db
             .update(insertables)
-            .set({ thumbnailUrls: thumbnails })
+            .set({
+                thumbnailUrls: thumbnails,
+                buildIssues: clearBuildIssue(
+                    row.buildIssues,
+                    BuildIssueType.THUMBNAIL_FAILED
+                )
+            })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
 
 /** POST /api/reload-group-thumbnail/group/:groupId */
-reloadThumbnailRoutes.post(
+thumbnailRoutes.post(
     "/reload-group-thumbnail/group/:groupId",
+    requireEditorMiddleware,
     async (c) => {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const groupId = c.req.param("groupId");
         const db = getDb(c.env.DB);
 
@@ -231,7 +236,8 @@ reloadThumbnailRoutes.post(
             .select({
                 documentId: groups.documentId,
                 instanceId: groups.instanceId,
-                libraryId: groups.libraryId
+                libraryId: groups.libraryId,
+                buildIssues: groups.buildIssues
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -255,12 +261,16 @@ reloadThumbnailRoutes.post(
 
         await db
             .update(groups)
-            .set({ thumbnailUrls: thumbnails })
+            .set({
+                thumbnailUrls: thumbnails,
+                buildIssues: clearBuildIssue(
+                    row.buildIssues,
+                    BuildIssueType.THUMBNAIL_FAILED
+                )
+            })
             .where(eq(groups.id, groupId));
 
-        await bumpLibraryVersion(db, row.libraryId as LibraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
-
-thumbnailRoutes.route("/", reloadThumbnailRoutes);

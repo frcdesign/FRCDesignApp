@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
-import { getLibraryOut, rebuildSearchDb } from "../library-data";
+import { getLibraryOut } from "../library-data";
+import { HTTPException } from "hono/http-exception";
 
 export const libraryRoutes = getApp();
 
@@ -18,15 +19,17 @@ libraryRoutes.get("/search-db" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
 
-    const existing = await db
+    const library = await db
         .select({ searchDb: libraries.searchDb })
         .from(libraries)
         .where(eq(libraries.id, libraryId))
         .get();
 
-    // Lazily build the index on first request so libraries work without an
-    // explicit admin push or a document reload.
-    const searchDb =
-        existing?.searchDb ?? (await rebuildSearchDb(db, libraryId));
+    const searchDb = library?.searchDb;
+
+    if (!searchDb) {
+        throw new HTTPException(404, { message: "Failed to find searchDb" });
+    }
+
     return c.json({ searchDb });
 });
