@@ -82,7 +82,6 @@ export function createAssembly(
  *
  * @param elementType The type of the element being inserted (part studio or assembly).
  * @param options.partTypes If inserting a part studio, the types of parts to include. Defaults to PARTS and COMPOSITE_PARTS.
- * @param options.useTransform If true, uses the `transformedinstances` endpoint and returns a result.
  */
 export function addElementToAssembly(
     client: OnshapeApi,
@@ -92,12 +91,11 @@ export function addElementToAssembly(
     options: {
         configuration?: Record<string, string> | string;
         partTypes?: PartType[];
-        useTransform?: boolean;
     } = {}
-): Promise<OnshapeInsertInstancesResponse | undefined> {
+): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
 
-    const { configuration, partTypes, useTransform = false } = options;
+    const { configuration, partTypes } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -124,29 +122,18 @@ export function addElementToAssembly(
         );
     }
 
-    if (useTransform) {
-        return client.post(
-            apiPath("assemblies", assemblyPath, toElementApiPath, {
-                endRoute: "transformedinstances"
-            }),
-            {
-                body: {
-                    transformGroups: [
-                        { instances: [instance], transform: IDENTITY_TRANSFORM }
-                    ]
-                }
+    return client.post(
+        apiPath("assemblies", assemblyPath, toElementApiPath, {
+            endRoute: "transformedinstances"
+        }),
+        {
+            body: {
+                transformGroups: [
+                    { instances: [instance], transform: IDENTITY_TRANSFORM }
+                ]
             }
-        );
-    }
-
-    return client
-        .postNone(
-            apiPath("assemblies", assemblyPath, toElementApiPath, {
-                endRoute: "instances"
-            }),
-            { body: instance }
-        )
-        .then(() => undefined);
+        }
+    );
 }
 
 /**

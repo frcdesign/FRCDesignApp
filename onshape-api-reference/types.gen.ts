@@ -418,6 +418,71 @@ export type BtEnumOptionVisibilityForRange4297 = Omit<BtEnumOptionVisibilityCond
     btType?: string;
 };
 
+/**
+ * List of features instantiated within the Part Studio.
+ */
+export type BtFeatureListResponse2457 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    /**
+     * List of Onshape-defined features instantiated within the Part Studio.
+     */
+    defaultFeatures?: Array<BtmFeature134>;
+    /**
+     * State of each feature, indicating if the feature is valid. Incorrectly defined features will still appear in the Feature list.
+     */
+    featureStates?: {
+        [key: string]: BtFeatureState1688;
+    };
+    /**
+     * List of user-defined features instantiated within the Part Studio.
+     */
+    features?: Array<BtmFeature134>;
+    /**
+     * Internal only. Do not modify.
+     */
+    imports?: Array<BtmImport136>;
+    /**
+     * `true` if the features represent the entire part studio or `false` for a filtered subset.
+     */
+    isComplete?: boolean;
+    /**
+     * FeatureScript version used in the Part Studio. Do not modify.
+     */
+    libraryVersion?: number;
+    /**
+     * On output, `true` indicates a microversion mismatch was encountered.
+     */
+    microversionSkew?: boolean;
+    /**
+     * If `true`, the call will refuse to make the addition if the current microversion for the document does not match the source microversion. If `false`, a best-effort attempt is made to re-interpret the feature addition in the context of a newer document microversion.
+     */
+    rejectMicroversionSkew?: boolean;
+    /**
+     * Index of the rollback bar location. `-1` indicates the bar is at the end of the Feature List.
+     */
+    rollbackIndex?: number;
+    /**
+     * Version of the structure serialization rules used to encode the output. This enables incompatibility detection during software updates.
+     */
+    serializationVersion?: string;
+    /**
+     * The document microversion from which the result was extracted. Part, face, edge, and vertex IDs are only valid for the same microversion.
+     */
+    sourceMicroversion?: string;
+};
+
+export type BtFeatureState1688 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    featureStatus?: GbtNodeStatusType;
+    inactive?: boolean;
+};
+
 export type BtGlobalTreeNodeInfo = {
     canMove?: boolean;
     connectionName?: string;
@@ -596,6 +661,83 @@ export type BtmEnumOption592 = Omit<BtmNode19, 'btType'> & {
     btType?: string;
 };
 
+export type BtmFeature134 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    /**
+     * Unique ID of the feature instance within this Part Studio.
+     */
+    featureId?: string;
+    /**
+     * The name of the feature spec that this feature instantiates.
+     */
+    featureType?: string;
+    /**
+     * Element microversion that is being imported.
+     */
+    importMicroversion?: string;
+    mateConnectorFeature?: boolean;
+    /**
+     * User-visible name of the feature.
+     */
+    name?: string;
+    /**
+     * Indicates where the feature definition lives. Features in the FeatureScript standard library have a namespace value of `""`. Custom features identify the Feature Studio that contains the definition.
+     */
+    namespace?: string;
+    /**
+     * ID for the feature node.
+     */
+    nodeId?: string;
+    parameterLibraries?: Array<BtmParameter1>;
+    /**
+     * A list of parameter values for instantiation of the feature spec. Parameters are present for all defined parameters, even if not used in a specific instantiation.
+     */
+    parameters?: Array<BtmParameter1>;
+    parentSuppressed?: boolean;
+    /**
+     * For internal use only. Should always be `false`.
+     */
+    returnAfterSubfeatures?: boolean;
+    /**
+     * List of subfeatures belonging to the feature.
+     */
+    subFeatures?: Array<BtmFeature134>;
+    /**
+     * If `true`, the feature is suppressed. It will skip regeneration, denoted by a line through the name in the Feature list.
+     */
+    suppressed?: boolean;
+    /**
+     * `true` if the suppression is configured in the Part Studio.
+     */
+    suppressionConfigured?: boolean;
+    suppressionState?: BtmSuppressionState1924;
+    /**
+     * If `true`, the feature references a Variable Studio.
+     */
+    variableStudioReference?: boolean;
+};
+
+export type BtmImport136 = Omit<BtmNode19, 'btType'> & {
+    btType?: 'BTMImport-136';
+    elementImport?: boolean;
+    /**
+     * Element microversion that is being imported.
+     */
+    importMicroversion?: string;
+    importedExternalDocumentId?: string;
+    namespace?: string;
+    path?: string;
+    version?: string;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+};
+
 export type BtmNode19 = {
     /**
      * Type of JSON object.
@@ -631,6 +773,16 @@ export type BtmParameter1 = {
     parameterId?: string;
     parameterName?: string;
     valueString?: string;
+};
+
+export type BtmSuppressionState1924 = Omit<BtmNode19, 'btType'> & {
+    btType?: 'BTMSuppressionState-1924';
+    suppressionConfigured?: boolean;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtMateConnectorCsInfo = {
@@ -1072,3 +1224,65 @@ export type DecodeConfigurationResponses = {
 };
 
 export type DecodeConfigurationResponse = DecodeConfigurationResponses[keyof DecodeConfigurationResponses];
+
+export type GetPartStudioFeaturesData = {
+    body?: never;
+    path: {
+        /**
+         * The id of the document in which to perform the operation.
+         */
+        did: string;
+        /**
+         * Indicates which of workspace (w), version (v), or document microversion (m) id is specified below.
+         */
+        wvm: 'w' | 'v' | 'm';
+        /**
+         * The id of the workspace, version or document microversion in which the operation should be performed.
+         */
+        wvmid: string;
+        /**
+         * The id of the element in which to perform the operation.
+         */
+        eid: string;
+    };
+    query?: {
+        /**
+         * The id of the document through which the above document should be accessed; only applicable when accessing a version of the document. This allows a user who has access to document a to see data from document b, as long as document b has been linked to document a by a user who has permission to both.
+         */
+        linkDocumentId?: string;
+        /**
+         * URL-encoded string of configuration values (separated by `;`). See the [Configurations API Guide](https://onshape-public.github.io/docs/api-adv/configs/) for details.
+         */
+        configuration?: string;
+        /**
+         * Index specifying the location of the rollback bar when the call is evaluated. A -1 indicates that it should be at the end of the featurelist.
+         */
+        rollbackBarIndex?: number;
+        /**
+         * A specific element microversion in which to evaluate the request.
+         */
+        elementMicroversionId?: string;
+        /**
+         * If true, include the underlying geometry IDs in the feature definition.
+         */
+        includeGeometryIds?: boolean;
+        /**
+         * ID of a feature; repeat query param to add more than one
+         */
+        featureId?: Array<string>;
+        /**
+         * Whether or not to output simple sketch info without geometry
+         */
+        noSketchGeometry?: boolean;
+    };
+    url: '/partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features';
+};
+
+export type GetPartStudioFeaturesResponses = {
+    /**
+     * default response
+     */
+    default: BtFeatureListResponse2457;
+};
+
+export type GetPartStudioFeaturesResponse = GetPartStudioFeaturesResponses[keyof GetPartStudioFeaturesResponses];

@@ -260,8 +260,7 @@ insertableRoutes.post(
             row.elementType as unknown as OnshapeElementType,
             {
                 configuration: encodedConfiguration,
-                partTypes,
-                useTransform: body.fasten
+                partTypes
             }
         );
 
@@ -277,7 +276,7 @@ insertableRoutes.post(
         }
 
         const instancePath: string[] =
-            result?.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
+            result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
         const builder = new FastenMateBuilder(row.name);
         builder.addQuery(

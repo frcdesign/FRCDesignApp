@@ -24,10 +24,16 @@ import { defineConfig } from "@hey-api/openapi-ts";
  * `allOf`-extend it directly, and replacing the base with a union that contains its own
  * subtypes creates a circular type (`A = B | C`, `B = A & {...}`).
  *
- * `UNION_BASES` is deliberately short: some Onshape discriminators (e.g. the
- * FeatureScript feature-type base behind `getFeatures`/`addAssemblyFeature`) fan out to
- * hundreds of subtypes, which is why those operations aren't in `operations.include`
- * below — not "reference" material. `OMIT` trims fields that pull in large, unrelated
+ * `UNION_BASES` is deliberately short: some Onshape discriminators fan out to hundreds
+ * of subtypes if you try to fully discriminate them (e.g. the FeatureScript feature-type
+ * base behind `addAssemblyFeature`/`addPartStudioFeature`, which needs a fully
+ * discriminated feature body to construct a request — those operations stay out of
+ * `operations.include` below, not "reference" material). `getPartStudioFeatures` *is*
+ * included despite sharing that same feature-type base (`BTMFeature-134`), because we
+ * deliberately do NOT add it to `UNION_BASES` — its own flat fields (including the
+ * recursive `subFeatures` and the plain `mateConnectorFeature` boolean) are all we need,
+ * and skipping the union keeps its subtypes unreachable/pruned by `orphans: false`, so it
+ * only costs its own small schema tree. `OMIT` trims fields that pull in large, unrelated
  * trees we don't use (thumbnail/owner/workspace chains) — note some fields are declared
  * both directly on a schema *and* re-declared on its `allOf` base(s), so both need an
  * entry to disappear.
@@ -88,7 +94,8 @@ export default defineConfig({
                     "GET /documents/d/{did}/versions",
                     "GET /documents/d/{did}/{wvm}/{wvmid}/contents",
                     "GET /documents/{did}",
-                    "GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}"
+                    "GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}",
+                    "GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features"
                 ]
             },
             orphans: false
