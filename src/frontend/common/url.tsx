@@ -4,24 +4,19 @@ import {
     ElementPath,
     isInstancePath,
     isElementPath,
-    InstanceType
+    InstanceType,
+    ConfigurablePath,
+    isConfigurablePath
 } from "../../shared/onshape-path";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { notifications } from "@mantine/notifications";
 import { IconLink } from "@tabler/icons-react";
 import { IconSize } from "./style-constants";
 
-export function makeUrl(
-    path: DocumentPath,
-    configuration?: Record<string, string>
-): string;
-export function makeUrl(path: DocumentPath): string;
-export function makeUrl(path: InstancePath): string;
+export function makeUrl(path: ConfigurablePath): string;
 export function makeUrl(path: ElementPath): string;
-export function makeUrl(
-    path: ElementPath,
-    configuration?: Record<string, string>
-): string;
+export function makeUrl(path: InstancePath): string;
+export function makeUrl(path: DocumentPath): string;
 export function makeUrl(
     path: DocumentPath,
     configuration?: Record<string, string>
@@ -33,12 +28,14 @@ export function makeUrl(
     if (isElementPath(path)) {
         url += `/e/${path.elementId}`;
     }
-    if (configuration) {
-        url += "?configuration=" + encodeConfigurationForQuery(configuration);
+    const config =
+        configuration ??
+        (isConfigurablePath(path) ? path.configuration : undefined);
+    if (config) {
+        url += "?configuration=" + encodeConfigurationForQuery(config);
     }
     return url;
 }
-
 export interface ConfigurationPath {
     configuration?: string;
 }
