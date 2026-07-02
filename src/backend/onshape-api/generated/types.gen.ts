@@ -4,17 +4,186 @@ export type ClientOptions = {
     baseUrl: 'https://cad.onshape.com/api/v16' | (string & {});
 };
 
+export type BtApplicationTargetInfo = {
+    baseHref?: string;
+    clientId?: string;
+    supportsCollaboration?: boolean;
+    tabIconHref?: string;
+};
+
+export type BtAssemblyDefinitionInfo = {
+    partStudioFeatures?: Array<BtAssemblyPsFeatureInfo>;
+    parts?: Array<BtAssemblyPartInfo>;
+    rootAssembly?: BtRootAssemblyInfo;
+    subAssemblies?: Array<BtSubAssemblyInfo>;
+};
+
+export type BtAssemblyFeatureDataInfo = {
+    name?: string;
+};
+
+/**
+ * List of Assembly features including those are created by replicates.
+ */
+export type BtAssemblyFeatureInfo = {
+    featureData?: BtAssemblyFeatureDataInfo;
+    featureType?: string;
+    id?: string;
+    status?: GbtNodeStatusType;
+    suppressed?: boolean;
+};
+
+/**
+ * List of instances including those created by patterns and replicates.
+ */
+export type BtAssemblyInstanceInfo = {
+    configuration?: string;
+    documentId?: string;
+    documentMicroversion?: string;
+    documentVersion?: string;
+    elementId?: string;
+    errorStatus?: GbtNodeStatusType;
+    featureId?: string;
+    fullConfiguration?: string;
+    id?: string;
+    isStandardContent?: boolean;
+    name?: string;
+    partId?: string;
+    partNumber?: string;
+    revision?: string;
+    status?: BtAssemblyInstanceStatus;
+    suppressed?: boolean;
+    type?: BtAssemblyInstanceType;
+};
+
+export type BtAssemblyInstanceStatus = 'DeletedElement';
+
+export type BtAssemblyInstanceType = 'Assembly' | 'Feature' | 'Part' | 'Unknown';
+
+export type BtAssemblyMateConnectorInfo = {
+    featureId?: string;
+    mateConnectorCS?: BtMateConnectorCsInfo;
+};
+
+export type BtAssemblyOccurrenceInfo = {
+    fixed?: boolean;
+    hidden?: boolean;
+    mateStatuses?: {
+        [key: string]: GbtNodeStatusType;
+    };
+    path?: Array<string>;
+    transform?: Array<number>;
+};
+
+/**
+ * Children instance description of parametric instance.
+ */
+export type BtAssemblyParametricInstanceChildInfo = {
+    /**
+     * Children instance ids.
+     */
+    instanceIds?: Array<string>;
+    /**
+     * Seed occurrence id. Unspecified if there is no seed.
+     */
+    seedOccurrence?: string;
+};
+
+/**
+ * Parametric instance description.
+ */
+export type BtAssemblyParametricInstanceInfo = {
+    /**
+     * Child instances.
+     */
+    children?: Array<BtAssemblyParametricInstanceChildInfo>;
+    /**
+     * Id of the Part Studio instance.
+     */
+    id?: string;
+    /**
+     * Name of the parametric instance.
+     */
+    name?: string;
+    status?: GbtNodeStatusType;
+    /**
+     * If the parametric is suppressed.
+     */
+    suppressed?: boolean;
+    /**
+     * Type of parametric instance.
+     */
+    type?: string;
+};
+
+export type BtAssemblyPartBodyType = 'solid' | 'sheet' | 'composite';
+
+export type BtAssemblyPartInfo = {
+    bodyType?: BtAssemblyPartBodyType;
+    configuration?: string;
+    documentId?: string;
+    documentMicroversion?: string;
+    documentVersion?: string;
+    elementId?: string;
+    fullConfiguration?: string;
+    isStandardContent?: boolean;
+    mateConnectors?: Array<BtAssemblyMateConnectorInfo>;
+    partId?: string;
+    partNumber?: string;
+    revision?: string;
+};
+
+/**
+ * Pattern description.
+ */
+export type BtAssemblyPatternInfo = {
+    /**
+     * Id of the pattern.
+     */
+    id?: string;
+    /**
+     * Name of the pattern.
+     */
+    name?: string;
+    /**
+     * Mapping of seed to pattern instance ids.
+     */
+    seedToPatternInstances?: {
+        [key: string]: Array<string>;
+    };
+    status?: GbtNodeStatusType;
+    /**
+     * If pattern is suppressed.
+     */
+    suppressed?: boolean;
+    type?: GbtPatternType;
+};
+
+export type BtAssemblyPsFeatureInfo = {
+    configuration?: string;
+    documentId?: string;
+    documentMicroversion?: string;
+    documentVersion?: string;
+    elementId?: string;
+    featureId?: string;
+    featureType?: string;
+    fullConfiguration?: string;
+    partNumber?: string;
+    revision?: string;
+};
+
 export type BtConfigurationInfo = {
     isStandardContent?: boolean;
-    parameters: Array<ConfigurationInfoEntry>;
+    parameters?: Array<ConfigurationInfoEntry>;
 };
 
 export type BtConfigurationResponse2019 = {
-    btType: 'BTConfigurationResponse-2019';
-    configurationParameters: Array<OnshapeConfigurationParameter>;
-    currentConfiguration?: Array<{
-        [key: string]: unknown;
-    }>;
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    configurationParameters?: Array<OnshapeConfigurationParameter>;
+    currentConfiguration?: Array<BtmParameter1>;
     /**
      * FeatureScript version used in the Part Studio. Do not modify.
      */
@@ -41,30 +210,147 @@ export type BtDocumentContentsInfo = {
     /**
      * The elements (tabs) in the document. This does not include folders.
      */
-    elements: Array<BtDocumentElementInfo>;
-    folders: BtElementGroup1458;
+    elements?: Array<BtDocumentElementInfo>;
+    folders?: BtElementGroup1458;
 };
 
 export type BtDocumentElementInfo = {
-    elementType: GbtElementType;
-    id: string;
-    microversionId: string;
-    name: string;
+    accelerationUnits?: string;
+    angleUnits?: string;
+    angularVelocityUnits?: string;
+    applicationTarget?: BtApplicationTargetInfo;
+    areaUnits?: string;
+    dataType?: string;
+    deleted?: boolean;
+    densityUnits?: string;
+    elementType?: GbtElementType;
+    energyUnits?: string;
+    filename?: string;
+    forceUnits?: string;
+    foreignDataId?: string;
+    frequencyUnits?: string;
+    id?: string;
+    lengthUnits?: string;
+    massUnits?: string;
+    microversionId?: string;
+    momentUnits?: string;
+    name?: string;
+    pressureUnits?: string;
+    prettyType?: string;
+    safeToShow?: boolean;
+    specifiedUnit?: string;
+    thumbnails?: string;
+    timeUnits?: string;
+    type?: string;
+    unupdatable?: boolean;
+    volumeUnits?: string;
+    zip?: BtZipFileInfo;
 };
 
 export type BtDocumentElementReference2484 = Omit<BtGroupOrElementReference2205, 'btType'> & {
-    btType: 'BTDocumentElementReference-2484';
-    elementId: string;
-} & {
     btType?: 'BTDocumentElementReference-2484';
+    elementId?: string;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+};
+
+export type BtDocumentInfo = Omit<BtGlobalTreeNodeSummaryInfo, 'jsonType'> & {
+    anonymousAccessAllowed?: boolean;
+    anonymousAllowsExport?: boolean;
+    canMove?: boolean;
+    canUnshare?: boolean;
+    connectionName?: string;
+    connectionNames?: Array<string>;
+    createdAt?: string;
+    createdWithEducationPlan?: boolean;
+    defaultElementId?: string;
+    description?: string;
+    documentThumbnailElementId?: string;
+    documentType?: number;
+    duplicateNameViolationError?: string;
+    forceExportRules?: boolean;
+    hasReleaseRevisionableObjects?: boolean;
+    hasRelevantInsertables?: boolean;
+    /**
+     * URI to fetch complete information of the resource.
+     */
+    href?: string;
+    /**
+     * Id of the resource.
+     */
+    id?: string;
+    isContainer?: boolean;
+    isEnterpriseOwned?: boolean;
+    isExternalConnectionResource?: boolean;
+    isMutable?: boolean;
+    isUpgradedToLatestVersion?: boolean;
+    isUsingManagedWorkflow?: boolean;
+    likedByCurrentUser?: boolean;
+    likes?: number;
+    modifiedAt?: string;
+    /**
+     * Name of the resource.
+     */
+    name?: string;
+    notRevisionManaged?: boolean;
+    notes?: string;
+    numberOfTimesCopied?: number;
+    numberOfTimesReferenced?: number;
+    parentId?: string;
+    permissionSet?: Array<string>;
+    projectId?: string;
+    public?: boolean;
+    publishedVersionId?: string;
+    requireApprovedDrawingTemplatesPreference?: boolean;
+    resourceType?: string;
+    sequence?: string;
+    supportTeamUserAndShared?: boolean;
+    tags?: Array<string>;
+    trash?: boolean;
+    trashedAt?: string;
+    treeHref?: string;
+    unparentHref?: string;
+    userAccountLimitsBreached?: boolean;
+    /**
+     * URI to visualize the resource in a webclient if applicable.
+     */
+    viewRef?: string;
+    jsonType: 'document';
+} & {
+    jsonType?: 'document';
+    [key: string]: unknown;
+};
+
+export type BtDocumentVersionElementIds1897 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    documentId?: string;
+    elementId?: string;
+    versionId?: string;
 };
 
 export type BtElementGroup1458 = {
-    btType: 'BTElementGroup-1458';
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    /**
+     * The name of the group (folder).
+     */
+    groupName?: string;
     /**
      * List of folders or elements in this group (folder).
      */
-    groups: Array<OnshapeFolderEntry>;
+    groups?: Array<OnshapeFolderEntry>;
+    /**
+     * A unique identifier for this folder.
+     */
+    nodeId?: string;
 };
 
 export type BtEnumOptionRange3741 = {
@@ -72,8 +358,8 @@ export type BtEnumOptionRange3741 = {
      * Type of JSON object.
      */
     btType?: string;
-    end: string;
-    start: string;
+    end?: string;
+    start?: string;
 };
 
 export type BtEnumOptionVisibilityCondition3455 = {
@@ -81,7 +367,7 @@ export type BtEnumOptionVisibilityCondition3455 = {
      * Type of JSON object.
      */
     btType?: string;
-    condition: OnshapeVisibilityCondition;
+    condition?: OnshapeVisibilityCondition;
 };
 
 export type BtEnumOptionVisibilityConditionList2936 = {
@@ -89,21 +375,94 @@ export type BtEnumOptionVisibilityConditionList2936 = {
      * Type of JSON object.
      */
     btType?: string;
-    visibilityConditions: Array<OnshapeEnumOptionVisibilityCondition>;
+    visibilityConditions?: Array<OnshapeEnumOptionVisibilityCondition>;
 };
 
-export type BtEnumOptionVisibilityForList1613 = BtEnumOptionVisibilityCondition3455 & {
-    btType: string;
-    controlledOptions: Array<string>;
-} & {
+export type BtEnumOptionVisibilityForList1613 = Omit<BtEnumOptionVisibilityCondition3455, 'btType'> & {
     btType?: 'BTEnumOptionVisibilityForList-1613';
+    controlledOptions?: Array<string>;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
-export type BtEnumOptionVisibilityForRange4297 = BtEnumOptionVisibilityCondition3455 & {
-    btType: string;
-    controlledRange: BtEnumOptionRange3741;
-} & {
+export type BtEnumOptionVisibilityForRange4297 = Omit<BtEnumOptionVisibilityCondition3455, 'btType'> & {
     btType?: 'BTEnumOptionVisibilityForRange-4297';
+    controlledRange?: BtEnumOptionRange3741;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+};
+
+export type BtGlobalTreeNodeInfo = {
+    canMove?: boolean;
+    connectionName?: string;
+    connectionNames?: Array<string>;
+    createdAt?: string;
+    description?: string;
+    /**
+     * URI to fetch complete information of the resource.
+     */
+    href?: string;
+    /**
+     * Id of the resource.
+     */
+    id?: string;
+    isContainer?: boolean;
+    isEnterpriseOwned?: boolean;
+    isExternalConnectionResource?: boolean;
+    isMutable?: boolean;
+    jsonType: string;
+    modifiedAt?: string;
+    /**
+     * Name of the resource.
+     */
+    name?: string;
+    parentId?: string;
+    projectId?: string;
+    resourceType?: string;
+    treeHref?: string;
+    unparentHref?: string;
+    /**
+     * URI to visualize the resource in a webclient if applicable.
+     */
+    viewRef?: string;
+};
+
+export type BtGlobalTreeNodeSummaryInfo = Omit<BtGlobalTreeNodeInfo, 'jsonType'> & {
+    anonymousAccessAllowed?: boolean;
+    anonymousAllowsExport?: boolean;
+    canUnshare?: boolean;
+    createdWithEducationPlan?: boolean;
+    defaultElementId?: string;
+    documentType?: number;
+    forceExportRules?: boolean;
+    hasReleaseRevisionableObjects?: boolean;
+    hasRelevantInsertables?: boolean;
+    isUsingManagedWorkflow?: boolean;
+    likedByCurrentUser?: boolean;
+    likes?: number;
+    notRevisionManaged?: boolean;
+    notes?: string;
+    numberOfTimesCopied?: number;
+    numberOfTimesReferenced?: number;
+    permissionSet?: Array<string>;
+    public?: boolean;
+    publishedVersionId?: string;
+    sequence?: string;
+    supportTeamUserAndShared?: boolean;
+    tags?: Array<string>;
+    trash?: boolean;
+    trashedAt?: string;
+    userAccountLimitsBreached?: boolean;
+    jsonType: 'document-summary';
+} & {
+    jsonType?: 'document-summary';
+    [key: string]: unknown;
 };
 
 /**
@@ -117,15 +476,40 @@ export type BtGroupOrElementReference2205 = {
     nodeId?: string;
 };
 
+export type BtLocationInfo226 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    character?: number;
+    column?: number;
+    document?: string;
+    elementMicroversion?: string;
+    endCharacter?: number;
+    endColumn?: number;
+    endLine?: number;
+    fromNode?: BtpNode7;
+    fromTemplate?: BtLocationInfo226;
+    languageVersion?: number;
+    line?: number;
+    moduleIds?: BtDocumentVersionElementIds1897;
+    nodeId?: string;
+    parseNodeId?: string;
+    parseNodeIdRaw?: BtObjectId;
+    topLevel?: string;
+    version?: string;
+};
+
 export type BtmConfigurationParameter819 = Omit<BtmNode19, 'btType'> & {
     btType?: 'BTMConfigurationParameter-819';
     enumOptionIds?: Array<string>;
-    isCosmetic: boolean;
-    parameterId: string;
-    parameterName: string;
+    generatedParameterId?: BtTreeNode20;
+    isCosmetic?: boolean;
+    parameterId?: string;
+    parameterName?: string;
     parameterType?: GbtConfigurationParameterType;
     valid?: boolean;
-    visibilityCondition: OnshapeVisibilityCondition;
+    visibilityCondition?: OnshapeVisibilityCondition;
 } & {
     /**
      * Type of JSON object.
@@ -134,44 +518,56 @@ export type BtmConfigurationParameter819 = Omit<BtmNode19, 'btType'> & {
 };
 
 export type BtmConfigurationParameterBoolean2550 = Omit<BtmConfigurationParameter819, 'btType'> & {
-    btType: 'BTMConfigurationParameterBoolean-2550';
-    defaultValue: boolean;
-} & {
     btType?: 'BTMConfigurationParameterBoolean-2550';
+    defaultValue?: boolean;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtmConfigurationParameterEnum105 = Omit<BtmConfigurationParameter819, 'btType'> & {
-    btType: 'BTMConfigurationParameterEnum-105';
-    defaultValue: string;
+    btType?: 'BTMConfigurationParameterEnum-105';
+    defaultValue?: string;
     enumName?: string;
     enumOptionVisibilityConditions?: BtEnumOptionVisibilityConditionList2936;
     namespace?: string;
     optionIds?: Array<string>;
     optionNames?: Array<string>;
-    options: Array<BtmEnumOption592>;
+    options?: Array<BtmEnumOption592>;
 } & {
-    btType?: 'BTMConfigurationParameterEnum-105';
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtmConfigurationParameterQuantity1826 = Omit<BtmConfigurationParameter819, 'btType'> & {
-    btType: 'BTMConfigurationParameterQuantity-1826';
-    quantityType: GbtQuantityType;
-    rangeAndDefault: BtQuantityRange181;
-} & {
     btType?: 'BTMConfigurationParameterQuantity-1826';
+    quantityType?: GbtQuantityType;
+    rangeAndDefault?: BtQuantityRange181;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtmConfigurationParameterString872 = Omit<BtmConfigurationParameter819, 'btType'> & {
-    btType: 'BTMConfigurationParameterString-872';
-    defaultValue: string;
-} & {
     btType?: 'BTMConfigurationParameterString-872';
+    defaultValue?: string;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtmEnumOption592 = Omit<BtmNode19, 'btType'> & {
     btType?: 'BTMEnumOption-592';
-    option: string;
-    optionName: string;
+    option?: string;
+    optionName?: string;
 } & {
     /**
      * Type of JSON object.
@@ -191,10 +587,84 @@ export type BtmNode19 = {
     nodeId?: string;
 };
 
-export type BtParameterVisibilityAlwaysShown5487 = BtParameterVisibilityCondition177 & {
-    btType: string;
+/**
+ * A list of parameter values for instantiation of the feature spec. Parameters are present for all defined parameters, even if not used in a specific instantiation.
+ */
+export type BtmParameter1 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    /**
+     * Microversion that resulted from the import.
+     */
+    importMicroversion?: string;
+    libraryRelationType?: GbtParameterLibraryRelationType;
+    /**
+     * ID of the parameter's node.
+     */
+    nodeId?: string;
+    /**
+     * Unique ID of the parameter.
+     */
+    parameterId?: string;
+    parameterName?: string;
+    valueString?: string;
+};
+
+export type BtMateConnectorCsInfo = {
+    getxAxis?: Array<number>;
+    getyAxis?: Array<number>;
+    getzAxis?: Array<number>;
+    origin?: Array<number>;
+};
+
+export type BtObjectId = {
+    empty?: boolean;
+};
+
+export type BtpNode7 = {
+    atomic?: boolean;
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    documentationType?: GbtpDefinitionType;
+    endSourceLocation?: number;
+    nodeId?: string;
+    shortDescriptor?: string;
+    spaceAfter?: BtpSpace10;
+    spaceBefore?: BtpSpace10;
+    spaceDefault?: boolean;
+    startSourceLocation?: number;
+};
+
+export type BtpSpace10 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    lines?: Array<string>;
+    nodeId?: string;
+    text?: string;
+};
+
+export type BtParameterVisibilityAlwaysHidden176 = Omit<BtParameterVisibilityCondition177, 'btType'> & {
+    btType?: 'BTParameterVisibilityAlwaysHidden-176';
 } & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+};
+
+export type BtParameterVisibilityAlwaysShown5487 = Omit<BtParameterVisibilityCondition177, 'btType'> & {
     btType?: 'BTParameterVisibilityAlwaysShown-5487';
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtParameterVisibilityCondition177 = {
@@ -205,29 +675,38 @@ export type BtParameterVisibilityCondition177 = {
     selfOrChildAlwaysVisible?: boolean;
 };
 
-export type BtParameterVisibilityInRange2980 = BtParameterVisibilityCondition177 & {
-    btType: string;
-    optionRange: BtEnumOptionRange3741;
-    parameterId: string;
-} & {
+export type BtParameterVisibilityInRange2980 = Omit<BtParameterVisibilityCondition177, 'btType'> & {
     btType?: 'BTParameterVisibilityInRange-2980';
+    optionRange?: BtEnumOptionRange3741;
+    parameterId?: string;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
-export type BtParameterVisibilityLogical178 = BtParameterVisibilityCondition177 & {
-    btType: string;
-    children: Array<OnshapeVisibilityCondition>;
-    operation: GbtParameterVisibilityLogicalOp;
-} & {
+export type BtParameterVisibilityLogical178 = Omit<BtParameterVisibilityCondition177, 'btType'> & {
     btType?: 'BTParameterVisibilityLogical-178';
+    children?: Array<OnshapeVisibilityCondition>;
+    operation?: GbtParameterVisibilityLogicalOp;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
-export type BtParameterVisibilityOnEqual180 = BtParameterVisibilityCondition177 & {
-    btType: string;
-    inArray?: boolean;
-    parameterId: string;
-    value: string;
-} & {
+export type BtParameterVisibilityOnEqual180 = Omit<BtParameterVisibilityCondition177, 'btType'> & {
     btType?: 'BTParameterVisibilityOnEqual-180';
+    inArray?: boolean;
+    parameterId?: string;
+    value?: string;
+} & {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
 };
 
 export type BtQuantityRange181 = {
@@ -235,22 +714,107 @@ export type BtQuantityRange181 = {
      * Type of JSON object.
      */
     btType?: string;
-    defaultValue: number;
-    maxValue: number;
-    minValue: number;
-    units: string;
+    defaultValue?: number;
+    location?: BtLocationInfo226;
+    maxValue?: number;
+    minValue?: number;
+    units?: string;
+};
+
+export type BtRootAssemblyInfo = {
+    configuration?: string;
+    documentId?: string;
+    documentMicroversion?: string;
+    documentVersion?: string;
+    elementId?: string;
+    /**
+     * List of Assembly features including those are created by replicates.
+     */
+    features?: Array<BtAssemblyFeatureInfo>;
+    fullConfiguration?: string;
+    /**
+     * List of instances including those created by patterns and replicates.
+     */
+    instances?: Array<BtAssemblyInstanceInfo>;
+    occurrences?: Array<BtAssemblyOccurrenceInfo>;
+    /**
+     * List of parametric instances.
+     */
+    parametricInstances?: Array<BtAssemblyParametricInstanceInfo>;
+    partNumber?: string;
+    /**
+     * List of patterns.
+     */
+    patterns?: Array<BtAssemblyPatternInfo>;
+    revision?: string;
+};
+
+export type BtSubAssemblyInfo = {
+    configuration?: string;
+    documentId?: string;
+    documentMicroversion?: string;
+    documentVersion?: string;
+    elementId?: string;
+    /**
+     * List of Assembly features including those are created by replicates.
+     */
+    features?: Array<BtAssemblyFeatureInfo>;
+    fullConfiguration?: string;
+    /**
+     * List of instances including those created by patterns and replicates.
+     */
+    instances?: Array<BtAssemblyInstanceInfo>;
+    /**
+     * List of parametric instances.
+     */
+    parametricInstances?: Array<BtAssemblyParametricInstanceInfo>;
+    partNumber?: string;
+    /**
+     * List of patterns.
+     */
+    patterns?: Array<BtAssemblyPatternInfo>;
+    revision?: string;
+};
+
+export type BtTreeNode20 = {
+    /**
+     * Type of JSON object.
+     */
+    btType?: string;
+    nodeId?: string;
 };
 
 export type BtVersionInfo = {
-    createdAt: string;
+    createdAt?: string;
+    description?: string;
+    documentId?: string;
+    /**
+     * URI to fetch complete information of the resource.
+     */
+    href?: string;
     /**
      * Id of the resource.
      */
-    id: string;
+    id?: string;
+    metadataWorkspaceId?: string;
+    microversion?: string;
+    modifiedAt?: string;
     /**
      * Name of the resource.
      */
-    name: string;
+    name?: string;
+    overrideDate?: string;
+    parent?: string;
+    purpose?: number;
+    type?: string;
+    /**
+     * URI to visualize the resource in a webclient if applicable.
+     */
+    viewRef?: string;
+};
+
+export type BtZipFileInfo = {
+    files?: Array<string>;
 };
 
 export type ConfigurationInfoEntry = {
@@ -259,31 +823,85 @@ export type ConfigurationInfoEntry = {
     isVisible?: boolean;
     parameterAbbreviatedDisplayValue?: string;
     parameterDisplayValue?: string;
-    parameterId: string;
+    parameterId?: string;
     parameterName?: string;
     parameterType?: number;
-    parameterValue: string;
+    parameterValue?: string;
 };
 
 export type GbtConfigurationParameterType = 'ENUM' | 'BOOLEAN' | 'STRING' | 'QUANTITY';
 
 export type GbtElementType = 'PARTSTUDIO' | 'ASSEMBLY' | 'DRAWING' | 'FEATURESTUDIO' | 'BLOB' | 'APPLICATION' | 'TABLE' | 'BILLOFMATERIALS' | 'VARIABLESTUDIO' | 'PUBLICATIONITEM' | 'UNKNOWN';
 
+export type GbtNodeStatusType = 'OK' | 'INFO' | 'WARNING' | 'ERROR' | 'UNKNOWN';
+
+export type GbtpDefinitionType = 'FUNCTION' | 'PREDICATE' | 'CONSTANT' | 'ENUM' | 'USER_TYPE' | 'FEATURE_DEFINITION' | 'FILE_HEADER' | 'UNDOCUMENTABLE' | 'CONST_LAMBDA' | 'UNKNOWN';
+
+export type GbtParameterLibraryRelationType = 'DEFAULT' | 'IGNORE_LIBRARY_VALUES' | 'UNKNOWN';
+
 export type GbtParameterVisibilityLogicalOp = 'NOT' | 'AND' | 'OR' | 'UNKNOWN';
+
+export type GbtPatternType = 'LINEAR' | 'CIRCULAR' | 'UNKNOWN';
 
 export type GbtQuantityType = 'UNKNOWN' | 'INTEGER' | 'REAL' | 'LENGTH' | 'ANGLE' | 'MASS' | 'TIME' | 'TEMPERATURE' | 'CURRENT' | 'ANYTHING' | 'ANYTHING_WITH_UNITS' | 'FORCE' | 'PRESSURE' | 'MOMENT' | 'ACCELERATION' | 'ANGULAR_VELOCITY' | 'ENERGY' | 'AREA' | 'VOLUME' | 'BOOLEAN' | 'STRING' | 'DENSITY' | 'FREQUENCY';
 
-export type OnshapeVisibilityNone = {
-    btType: 'BTParameterVisibilityCondition-177';
-};
+export type OnshapeConfigurationParameter = BtmConfigurationParameterBoolean2550 | BtmConfigurationParameterEnum105 | BtmConfigurationParameterQuantity1826 | BtmConfigurationParameterString872;
 
-export type OnshapeConfigurationParameter = BtmConfigurationParameterEnum105 | BtmConfigurationParameterBoolean2550 | BtmConfigurationParameterString872 | BtmConfigurationParameterQuantity1826;
-
-export type OnshapeVisibilityCondition = BtParameterVisibilityLogical178 | BtParameterVisibilityOnEqual180 | BtParameterVisibilityInRange2980 | BtParameterVisibilityAlwaysShown5487 | OnshapeVisibilityNone;
+export type OnshapeVisibilityCondition = BtParameterVisibilityAlwaysHidden176 | BtParameterVisibilityAlwaysShown5487 | BtParameterVisibilityInRange2980 | BtParameterVisibilityLogical178 | BtParameterVisibilityOnEqual180;
 
 export type OnshapeEnumOptionVisibilityCondition = BtEnumOptionVisibilityForList1613 | BtEnumOptionVisibilityForRange4297;
 
-export type OnshapeFolderEntry = BtElementGroup1458 | BtDocumentElementReference2484;
+export type OnshapeFolderEntry = BtDocumentElementReference2484 | BtElementGroup1458;
+
+export type GetAssemblyDefinitionData = {
+    body?: never;
+    path: {
+        /**
+         * The id of the document in which to perform the operation.
+         */
+        did: string;
+        /**
+         * Indicates which of workspace (w), version (v), or document microversion (m) id is specified below.
+         */
+        wvm: 'w' | 'v' | 'm';
+        /**
+         * The id of the workspace, version or document microversion in which the operation should be performed.
+         */
+        wvmid: string;
+        /**
+         * The id of the element in which to perform the operation.
+         */
+        eid: string;
+    };
+    query?: {
+        /**
+         * The id of the document through which the above document should be accessed; only applicable when accessing a version of the document. This allows a user who has access to document a to see data from document b, as long as document b has been linked to document a by a user who has permission to both.
+         */
+        linkDocumentId?: string;
+        /**
+         * URL-encoded string of configuration values (separated by `;`). See the [Configurations API Guide](https://onshape-public.github.io/docs/api-adv/configs/) for details.
+         */
+        configuration?: string;
+        explodedViewId?: string;
+        includeMateFeatures?: boolean;
+        includeNonSolids?: boolean;
+        includeMateConnectors?: boolean;
+        /**
+         * Whether or not to exclude suppressed instances/mate features in response
+         */
+        excludeSuppressed?: boolean;
+    };
+    url: '/assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}';
+};
+
+export type GetAssemblyDefinitionResponses = {
+    /**
+     * default response
+     */
+    default: BtAssemblyDefinitionInfo;
+};
+
+export type GetAssemblyDefinitionResponse = GetAssemblyDefinitionResponses[keyof GetAssemblyDefinitionResponses];
 
 export type GetDocumentVersionsData = {
     body?: never;
@@ -351,6 +969,24 @@ export type GetDocumentContentsResponses = {
 };
 
 export type GetDocumentContentsResponse = GetDocumentContentsResponses[keyof GetDocumentContentsResponses];
+
+export type GetDocumentData = {
+    body?: never;
+    path: {
+        did: string;
+    };
+    query?: never;
+    url: '/documents/{did}';
+};
+
+export type GetDocumentResponses = {
+    /**
+     * Success!
+     */
+    200: BtDocumentInfo;
+};
+
+export type GetDocumentResponse = GetDocumentResponses[keyof GetDocumentResponses];
 
 export type GetConfigurationData = {
     body?: never;
