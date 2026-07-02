@@ -25,10 +25,10 @@ import {
     type ThumbnailUrls,
     type Vendor
 } from "../../shared/types";
-import { parseFastenInfo } from "./insert-and-fasten";
-import { parseOnshapeConfiguration } from "./parse-configuration";
-import { parseVendors } from "./parse-vendors";
-import { checkGroup, checkInsertable } from "./build-checks";
+import { parseFastenInfo } from "../parse/insert-and-fasten";
+import { parseOnshapeConfiguration } from "../parse/parse-configuration";
+import { parseVendors } from "../parse/parse-vendors";
+import { checkGroup, checkInsertable } from "../parse/build-checks";
 
 type Db = ReturnType<typeof getDb>;
 

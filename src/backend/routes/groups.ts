@@ -6,8 +6,8 @@ import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { groups, insertables, libraries, favorites } from "../../shared/schema";
-import type { LoadDocumentParams } from "../parse/load-document";
-import { fetchVersionInfo } from "../parse/load-document-steps";
+import type { LoadDocumentParams } from "../load-document-workflow/load-document";
+import { fetchVersionInfo } from "../load-document-workflow/steps";
 import {
     bumpLibraryVersion,
     createOrderedGroup,

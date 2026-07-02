@@ -12,7 +12,7 @@ import {
     uploadThumbnails,
     uploadDocumentThumbnails
 } from "../routes/thumbnails";
-import { parseVendors } from "./parse-vendors";
+import { parseVendors } from "../parse/parse-vendors";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import {
     fetchContents,
@@ -26,7 +26,7 @@ import {
     type LoadedElement,
     type MatchedElement,
     type VersionInfo
-} from "./load-document-steps";
+} from "./steps";
 
 export interface LoadDocumentParams {
     /** The group to sync — must already exist (see `createOrderedGroup`). */

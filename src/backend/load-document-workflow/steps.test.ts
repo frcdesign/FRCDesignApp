@@ -28,7 +28,7 @@ import {
 import * as VersionsEndpoint from "../onshape-api/endpoints/versions";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";
 import * as ConfigurationsEndpoint from "../onshape-api/endpoints/configurations";
-import * as InsertAndFasten from "./insert-and-fasten";
+import * as InsertAndFasten from "../parse/insert-and-fasten";
 import {
     buildGroupValues,
     buildInsertableValues,
@@ -47,7 +47,7 @@ import {
     type LoadedElement,
     type MatchedElement,
     type VersionInfo
-} from "./load-document-steps";
+} from "./steps";
 
 const db = getDb(env.DB);
 

@@ -1,5 +1,5 @@
 import { type Context, Hono } from "hono";
-import type { LoadDocumentParams } from "./parse/load-document";
+import type { LoadDocumentParams } from "./load-document-workflow/load-document";
 import { type AccessLevel, type LibraryId } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 
