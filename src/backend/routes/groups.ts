@@ -7,7 +7,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { groups, insertables, libraries, favorites } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
-import { fetchVersion } from "../parse/load-document-steps";
+import { fetchVersionInfo } from "../parse/load-document-steps";
 import {
     bumpLibraryVersion,
     createOrderedGroup,
@@ -44,21 +44,27 @@ groupRoutes.post(
 
         // Only sync groups whose latest Onshape version differs from what's stored
         // (or all of them when forced). Skip — rather than fail the batch — a group
-        // whose document can no longer be reached.
+        // whose document can no longer be reached. The up-to-date check only needs
+        // the document's recentVersion id; the fuller version info (name/createdAt)
+        // is only fetched for groups that actually need reloading.
         const toReload = (
             await Promise.all(
                 groupRows.map(async (group) => {
                     try {
-                        const version = await fetchVersion(
-                            onshapeApi,
-                            group.documentId
-                        );
+                        const doc = await getDocument(onshapeApi, {
+                            documentId: group.documentId
+                        });
                         if (
                             !forceReload &&
-                            version.instanceId === group.instanceId
+                            doc.recentVersion.id === group.instanceId
                         ) {
                             return null;
                         }
+                        const version = await fetchVersionInfo(
+                            onshapeApi,
+                            group.documentId,
+                            doc.recentVersion.id
+                        );
                         return { groupId: group.id, version };
                     } catch {
                         return null;
@@ -190,9 +196,11 @@ groupRoutes.post(
         const documentPath: DocumentPath = { documentId: body.newDocumentId };
 
         let documentName: string;
+        let recentVersionId: string;
         try {
             const doc = await getDocument(onshapeApi, documentPath);
             documentName = doc.name;
+            recentVersionId = doc.recentVersion.id;
         } catch {
             return c.json(
                 {
@@ -206,7 +214,11 @@ groupRoutes.post(
 
         let version;
         try {
-            version = await fetchVersion(onshapeApi, body.newDocumentId);
+            version = await fetchVersionInfo(
+                onshapeApi,
+                body.newDocumentId,
+                recentVersionId
+            );
         } catch {
             return c.json(
                 {

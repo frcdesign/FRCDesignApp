@@ -146,14 +146,21 @@ describe("POST /reload-groups", () => {
     it("only triggers the workflow for groups whose latest version changed", async () => {
         await seedGroup(db, "unchanged"); // instanceId "inst-1" (seedGroup default)
         await seedGroup(db, "changed");
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockImplementation(
+        vi.spyOn(DocumentsEndpoint, "getDocument").mockImplementation(
             (_api, { documentId }) =>
                 Promise.resolve({
-                    id: documentId === "doc-unchanged" ? "inst-1" : "inst-2",
                     name: "v",
-                    createdAt: "2020-01-01T00:00:00Z"
+                    recentVersion: {
+                        id: documentId === "doc-unchanged" ? "inst-1" : "inst-2",
+                        name: "v"
+                    }
                 })
         );
+        vi.spyOn(VersionsEndpoint, "getVersion").mockResolvedValue({
+            id: "inst-2",
+            name: "v",
+            createdAt: "2020-01-01T00:00:00Z"
+        });
         const createSpy = vi
             .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
             .mockResolvedValue({ id: "wf" } as never);
@@ -174,14 +181,21 @@ describe("POST /reload-groups", () => {
     it("triggers every group when forceReload=true", async () => {
         await seedGroup(db, "unchanged");
         await seedGroup(db, "changed");
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockImplementation(
+        vi.spyOn(DocumentsEndpoint, "getDocument").mockImplementation(
             (_api, { documentId }) =>
                 Promise.resolve({
-                    id: documentId === "doc-unchanged" ? "inst-1" : "inst-2",
                     name: "v",
-                    createdAt: "2020-01-01T00:00:00Z"
+                    recentVersion: {
+                        id: documentId === "doc-unchanged" ? "inst-1" : "inst-2",
+                        name: "v"
+                    }
                 })
         );
+        vi.spyOn(VersionsEndpoint, "getVersion").mockResolvedValue({
+            id: "inst-2",
+            name: "v",
+            createdAt: "2020-01-01T00:00:00Z"
+        });
         const createSpy = vi
             .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
             .mockResolvedValue({ id: "wf" } as never);
@@ -198,7 +212,7 @@ describe("POST /reload-groups", () => {
 
     it("skips a group whose document can no longer be reached", async () => {
         await seedGroup(db, "broken");
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockRejectedValue(
+        vi.spyOn(DocumentsEndpoint, "getDocument").mockRejectedValue(
             new Error("not found")
         );
         const createSpy = vi
@@ -223,9 +237,10 @@ describe("POST /group", () => {
     it("creates the group, orders it, and triggers the workflow", async () => {
         await seedGroup(db, TEST_GROUP_ID);
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
-            name: "New Doc"
+            name: "New Doc",
+            recentVersion: { id: "inst-new", name: "v" }
         });
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockResolvedValue({
+        vi.spyOn(VersionsEndpoint, "getVersion").mockResolvedValue({
             id: "inst-new",
             name: "v",
             createdAt: "2020-01-01T00:00:00Z"
@@ -263,9 +278,10 @@ describe("POST /group", () => {
     it("422s when the document was already added", async () => {
         await seedGroup(db, TEST_GROUP_ID); // documentId "doc-test-group"
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
-            name: "Dup"
+            name: "Dup",
+            recentVersion: { id: "inst-1", name: "v" }
         });
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockResolvedValue({
+        vi.spyOn(VersionsEndpoint, "getVersion").mockResolvedValue({
             id: "inst-1",
             name: "v",
             createdAt: "2020-01-01T00:00:00Z"

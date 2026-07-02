@@ -59,15 +59,13 @@ const OMIT: Record<string, string[]> = {
         "modifiedBy",
         "defaultWorkspace",
         "documentLabels",
-        "permission",
-        "recentVersion"
+        "permission"
     ],
     BTGlobalTreeNodeInfo: ["owner", "createdBy", "modifiedBy"],
     BTGlobalTreeNodeSummaryInfo: [
         "defaultWorkspace",
         "documentLabels",
         "permission",
-        "recentVersion",
         "thumbnail"
     ],
     // Same thumbnail/user-chain trim on the other included operations.

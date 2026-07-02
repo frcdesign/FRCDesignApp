@@ -7,7 +7,7 @@ import {
     insertables,
     libraries
 } from "../../shared/schema";
-import { getLatestVersion } from "../onshape-api/endpoints/versions";
+import { getVersion } from "../onshape-api/endpoints/versions";
 import { getContents, getDocument } from "../onshape-api/endpoints/documents";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
 import { OnshapeApi } from "../onshape-api/onshape-api";
@@ -45,7 +45,7 @@ export interface DocumentElement {
     microversionId: string;
 }
 
-/** The document version to sync to (from `fetchVersion`, called by the caller). */
+/** The document version to sync to (from `fetchVersionInfo`, called by the caller). */
 export interface VersionInfo {
     instanceId: string;
     versionName: string;
@@ -145,12 +145,17 @@ export function getValidElements(
 // Steps — each takes its dependencies explicitly so it can be unit tested.
 // ---------------------------------------------------------------------------
 
-/** fetch-version: the latest version of the document. */
-export async function fetchVersion(
+/** fetch-version-info: full version info (name + createdAt) for a known version id. */
+export async function fetchVersionInfo(
     api: OnshapeApi,
-    documentId: string
+    documentId: string,
+    versionId: string
 ): Promise<VersionInfo> {
-    const rawVersion = await getLatestVersion(api, { documentId });
+    const rawVersion = await getVersion(api, {
+        documentId,
+        instanceId: versionId,
+        instanceType: "v"
+    });
     return {
         instanceId: rawVersion.id,
         versionName: rawVersion.name,

@@ -34,7 +34,7 @@ import {
     buildInsertableValues,
     fetchContents,
     fetchExistingInsertables,
-    fetchVersion,
+    fetchVersionInfo,
     getOrderedElementIds,
     getValidElements,
     loadElementConfiguration,
@@ -299,16 +299,18 @@ describe("buildGroupValues", () => {
 
 // --- IO: mocked Onshape -----------------------------------------------------
 
-describe("fetchVersion", () => {
+describe("fetchVersionInfo", () => {
     afterEach(() => vi.restoreAllMocks());
 
     it("maps id/name and normalizes createdAt to ISO", async () => {
-        vi.spyOn(VersionsEndpoint, "getLatestVersion").mockResolvedValue({
+        vi.spyOn(VersionsEndpoint, "getVersion").mockResolvedValue({
             id: "v-9",
             name: "Rev 9",
             createdAt: "2021-06-01T12:00:00Z"
         });
-        expect(await fetchVersion(MOCK_ONSHAPE_API, "doc")).toEqual({
+        expect(
+            await fetchVersionInfo(MOCK_ONSHAPE_API, "doc", "v-9")
+        ).toEqual({
             instanceId: "v-9",
             versionName: "Rev 9",
             versionCreatedAt: "2021-06-01T12:00:00.000Z"
@@ -322,7 +324,8 @@ describe("fetchContents", () => {
     it("returns doc metadata + valid elements in order", async () => {
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             name: "My Doc",
-            documentThumbnailElementId: "thumb"
+            documentThumbnailElementId: "thumb",
+            recentVersion: { id: "v-1", name: "Rev 1" }
         });
         vi.spyOn(DocumentsEndpoint, "getContents").mockResolvedValue({
             elements: [

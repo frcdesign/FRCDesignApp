@@ -172,6 +172,25 @@ export type BtAssemblyPsFeatureInfo = {
     revision?: string;
 };
 
+export type BtBaseInfo = {
+    /**
+     * URI to fetch complete information of the resource.
+     */
+    href?: string;
+    /**
+     * Id of the resource.
+     */
+    id?: string;
+    /**
+     * Name of the resource.
+     */
+    name?: string;
+    /**
+     * URI to visualize the resource in a webclient if applicable.
+     */
+    viewRef?: string;
+};
+
 export type BtConfigurationInfo = {
     isStandardContent?: boolean;
     parameters?: Array<ConfigurationInfoEntry>;
@@ -304,6 +323,7 @@ export type BtDocumentInfo = Omit<BtGlobalTreeNodeSummaryInfo, 'jsonType'> & {
     projectId?: string;
     public?: boolean;
     publishedVersionId?: string;
+    recentVersion?: BtBaseInfo;
     requireApprovedDrawingTemplatesPreference?: boolean;
     resourceType?: string;
     sequence?: string;
@@ -453,6 +473,7 @@ export type BtGlobalTreeNodeSummaryInfo = Omit<BtGlobalTreeNodeInfo, 'jsonType'>
     permissionSet?: Array<string>;
     public?: boolean;
     publishedVersionId?: string;
+    recentVersion?: BtBaseInfo;
     sequence?: string;
     supportTeamUserAndShared?: boolean;
     tags?: Array<string>;

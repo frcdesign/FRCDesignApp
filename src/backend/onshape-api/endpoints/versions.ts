@@ -29,7 +29,7 @@ export function getVersions(
 export function getVersion(
     client: OnshapeApi,
     versionPath: InstancePath
-): Promise<any> {
+): Promise<OnshapeVersionInfo> {
     assertVersion(versionPath);
     return client.get(
         apiPath("documents", versionPath, toDocumentApiPath, {
