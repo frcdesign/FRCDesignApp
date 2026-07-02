@@ -17,7 +17,7 @@ import {
     OnshapeDocumentContents,
     OnshapeDocumentInfo,
     OnshapeElementType
-} from "../types/documents";
+} from "../onshape-types";
 
 // `OnshapeElementType` is owned by the hand-authored types module; re-export it here so
 // existing `./documents` importers keep working.

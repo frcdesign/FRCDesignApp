@@ -15,7 +15,7 @@ import {
     OnshapeAssemblyDefinition,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
-} from "../types/assemblies";
+} from "../onshape-types";
 
 /** Retrieves information about an assembly. */
 export function getAssembly(

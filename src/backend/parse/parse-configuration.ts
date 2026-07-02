@@ -13,7 +13,7 @@ import {
     OnshapeConfigurationResponse,
     OnshapeEnumOptionVisibilityConditionList,
     OnshapeVisibilityCondition
-} from "../onshape-api/types/configuration";
+} from "../onshape-api/onshape-types";
 
 const VISIBILITY_CONDITION_NONE = "BTParameterVisibilityCondition-177";
 

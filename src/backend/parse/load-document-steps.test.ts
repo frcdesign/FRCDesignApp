@@ -16,7 +16,7 @@ import {
     OnshapeDocumentContents,
     OnshapeElementType,
     OnshapeFolderEntryType
-} from "../onshape-api/types/documents";
+} from "../onshape-api/onshape-types";
 import { MOCK_ONSHAPE_API } from "../../__test_utils__/mock-onshape-api";
 import {
     resetDb,

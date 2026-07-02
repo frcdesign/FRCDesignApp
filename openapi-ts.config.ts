@@ -1,14 +1,15 @@
 import { defineConfig } from "@hey-api/openapi-ts";
 
 /**
- * Generates a committed *reference* dump of the Onshape API operations we use.
+ * Generates a gitignored *reference* dump of the Onshape API operations we use.
  *
  * Run with `npm run gen:onshape-types`; output lands in
- * `src/backend/onshape-api/generated/`. NOTHING imports this output — the types we
- * actually use are hand-authored in `src/backend/onshape-api/types/*` (so they can use
- * our own enums, comments, and clean discriminated unions). This generated dump exists
- * only as a reference: re-running codegen and diffing it surfaces upstream API drift
- * (including fields we don't currently use) to fold into the hand-written types.
+ * `src/backend/onshape-api/onshape-types.gen/` (gitignored — see .gitignore). NOTHING
+ * imports this output — the types we actually use are hand-authored in
+ * `src/backend/onshape-api/onshape-types.ts` (so they can use our own enums, comments,
+ * and clean discriminated unions). This generated dump exists only as a reference:
+ * re-running codegen and diffing it surfaces upstream API drift (including fields we
+ * don't currently use) to fold into the hand-written types.
  *
  * The upstream Onshape spec models polymorphism with `allOf` inheritance + a
  * `discriminator` on the base, which @hey-api does not expand into a `oneOf` union on
@@ -71,7 +72,7 @@ const OMIT: Record<string, string[]> = {
 
 export default defineConfig({
     input: "https://cad.onshape.com/api/openapi",
-    output: "src/backend/onshape-api/generated",
+    output: "src/backend/onshape-api/onshape-types.gen",
     plugins: ["@hey-api/typescript"],
     parser: {
         // No request/response splitting — these are read-only response shapes.

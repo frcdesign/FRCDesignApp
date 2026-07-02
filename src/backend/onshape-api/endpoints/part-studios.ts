@@ -7,8 +7,10 @@ import {
     toInstanceApiPath
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
-import { OnshapeCreatedFeature } from "../types/assemblies";
-import { OnshapeFeatureListResponse } from "../types/part-studios";
+import {
+    OnshapeCreatedFeature,
+    OnshapeFeatureListResponse
+} from "../onshape-types";
 
 /** Creates a part studio in a document. */
 export function createPartStudio(

@@ -15,7 +15,7 @@ import {
     OnshapeDocumentContents,
     OnshapeFolderEntry,
     OnshapeFolderEntryType
-} from "../onshape-api/types/documents";
+} from "../onshape-api/onshape-types";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 import type { ParameterObj } from "../../shared/configuration-models";
 import {

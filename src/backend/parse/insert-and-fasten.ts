@@ -9,9 +9,9 @@ import {
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import {
     OnshapeAssemblyDefinition,
-    OnshapeAssemblyFeature
-} from "../onshape-api/types/assemblies";
-import { OnshapeFeatureListResponse } from "../onshape-api/types/part-studios";
+    OnshapeAssemblyFeature,
+    OnshapeFeatureListResponse
+} from "../onshape-api/onshape-types";
 
 export async function parseFastenInfo(
     onshapeApi: OnshapeApi,

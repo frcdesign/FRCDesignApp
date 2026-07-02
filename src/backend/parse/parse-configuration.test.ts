@@ -11,7 +11,7 @@ import {
 } from "../../shared/configuration-models";
 import { evaluateCondition } from "../../shared/configuration-utils";
 import { parseOnshapeConfiguration } from "./parse-configuration";
-import { OnshapeConfigurationResponse } from "../onshape-api/types/configuration";
+import { OnshapeConfigurationResponse } from "../onshape-api/onshape-types";
 
 /** No-op visibility condition Onshape attaches to always-visible parameters. */
 const NONE = { btType: "BTParameterVisibilityCondition-177" } as const;

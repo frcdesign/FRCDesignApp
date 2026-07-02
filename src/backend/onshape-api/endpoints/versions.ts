@@ -7,7 +7,7 @@ import {
     toInstanceApiObject
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
-import { OnshapeVersionInfo } from "../types/versions";
+import { OnshapeVersionInfo } from "../onshape-types";
 
 /**
  * Fetches a list of versions of a document.

@@ -5,7 +5,7 @@ import {
     OnshapeConfigurationInfo,
     OnshapeConfigurationParameter,
     OnshapeConfigurationResponse
-} from "../types/configuration";
+} from "../onshape-types";
 
 export function getConfiguration(
     client: OnshapeApi,
