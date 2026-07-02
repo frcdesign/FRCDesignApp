@@ -55,6 +55,7 @@ export function parseFastenInfoFromPartStudio(
     rawFeatureList: OnshapeFeatureListResponse
 ): FastenInfo {
     for (const feature of rawFeatureList.features) {
+        if (feature.suppressed) continue;
         if (feature.featureType === "mateConnector") {
             return {
                 mateConnectorId: feature.featureId,

@@ -2,10 +2,11 @@
  * Hand-authored types for the Onshape API endpoints we use.
  *
  * These are the types we actually import — maintained by hand (using our own enums and
- * comments) against the generated reference in `./onshape-types.gen/` (run
- * `npm run gen:onshape-types` to refresh it, then fold any upstream drift in here).
- * NOTHING imports the generated reference — it's gitignored and exists purely to diff
- * against on demand.
+ * comments) against the generated reference at the repo root in `onshape-api-reference/`
+ * (run `npm run gen:onshape-types` to refresh it, then fold any upstream drift in here).
+ * NOTHING imports the generated reference — it's committed (for review/diffing) but
+ * lives outside `src/`, so it's outside every tsconfig's scope and never surfaces in
+ * editor autocomplete/auto-import.
  */
 import {
     ConfigurationParameterType,
@@ -274,6 +275,8 @@ export interface OnshapeCreatedFeature {
 export interface OnshapePartStudioFeature {
     featureType: string;
     featureId: string;
+    name: string;
+    suppressed: boolean;
 }
 
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */

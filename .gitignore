@@ -34,7 +34,3 @@ dist-ssr
 !.env.example
 
 *.pem
-
-# Auto-generated reference dump of the Onshape API (see openapi-ts.config.ts) — nothing
-# imports it; hand-authored types live in src/backend/onshape-api/onshape-types.ts.
-src/backend/onshape-api/onshape-types.gen/

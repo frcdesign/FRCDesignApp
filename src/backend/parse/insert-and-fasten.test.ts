@@ -10,8 +10,18 @@ describe("parseFastenInfoFromPartStudio", () => {
     it("returns Feature location with empty path when mate connector is found", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "other", featureId: "other-id" },
-                { featureType: "mateConnector", featureId: "mate-id-1" }
+                {
+                    featureType: "other",
+                    featureId: "other-id",
+                    name: "Other",
+                    suppressed: false
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "mate-id-1",
+                    name: "Mate connector 1",
+                    suppressed: false
+                }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);
@@ -23,17 +33,69 @@ describe("parseFastenInfoFromPartStudio", () => {
     it("uses first mate connector when multiple are present", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "mateConnector", featureId: "first" },
-                { featureType: "mateConnector", featureId: "second" }
+                {
+                    featureType: "mateConnector",
+                    featureId: "first",
+                    name: "Mate connector 1",
+                    suppressed: false
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "second",
+                    name: "Mate connector 2",
+                    suppressed: false
+                }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);
         expect(result.mateConnectorId).toBe("first");
     });
 
+    it("skips a suppressed mate connector in favor of the next valid one", () => {
+        const rawFeatureList = {
+            features: [
+                {
+                    featureType: "mateConnector",
+                    featureId: "suppressed-mate",
+                    name: "Mate connector 1",
+                    suppressed: true
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "active-mate",
+                    name: "Mate connector 2",
+                    suppressed: false
+                }
+            ]
+        };
+        const result = parseFastenInfoFromPartStudio(rawFeatureList);
+        expect(result.mateConnectorId).toBe("active-mate");
+    });
+
+    it("throws when the only mate connector is suppressed", () => {
+        const rawFeatureList = {
+            features: [
+                {
+                    featureType: "mateConnector",
+                    featureId: "suppressed-mate",
+                    name: "Mate connector 1",
+                    suppressed: true
+                }
+            ]
+        };
+        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+    });
+
     it("throws when no mate connector is found", () => {
         const rawFeatureList = {
-            features: [{ featureType: "extrude", featureId: "ext-1" }]
+            features: [
+                {
+                    featureType: "extrude",
+                    featureId: "ext-1",
+                    name: "Extrude 1",
+                    suppressed: false
+                }
+            ]
         };
         expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
     });
