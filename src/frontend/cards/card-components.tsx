@@ -14,7 +14,7 @@ import { AppContextMenu, MenuButton } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
-import { InstancePath, isElementPath } from "../../shared/onshape-path";
+import { ConfigurablePath, InstancePath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
     useInsertMutation,
@@ -29,16 +29,13 @@ import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {
-    path: InstancePath;
-    configuration?: Configuration;
+    path: InstancePath | ConfigurablePath;
 }
 /**
  * Menu items which can be used to open or copy a link to a document.
  */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
-    const url = isElementPath(props.path)
-        ? makeUrl({ ...props.path, configuration: props.configuration })
-        : makeUrl(props.path);
+    const url = makeUrl(props.path);
     return (
         <>
             <Menu.Item

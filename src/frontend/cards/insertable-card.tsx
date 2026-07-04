@@ -140,10 +140,7 @@ export function InsertableMenuItems(
                 insertable={insertable}
             />
             <Menu.Divider />
-            <OpenDocumentItems
-                path={insertable.path}
-                configuration={configuration}
-            />
+            <OpenDocumentItems path={{ ...insertable.path, configuration }} />
             <AdminOptionsSubmenu>
                 <InsertableAdminContextMenu
                     insertableId={insertable.id}
