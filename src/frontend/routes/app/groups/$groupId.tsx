@@ -24,8 +24,8 @@ import { hasEditorAccess } from "../../../../shared/types";
 import { filterInsertables } from "../../../search/filter";
 import { GroupMenuItems } from "../../../groups/group-card";
 import { InsertableCard } from "../../../cards/insertable-card";
-import { MenuButton, ItemTable } from "../../../cards/card-components";
-import { AppContextMenu } from "../../../app-common/app-menu";
+import { ItemTable } from "../../../cards/card-components";
+import { AppContextMenu, MenuButton } from "../../../app-common/app-menu";
 import { SearchCallout } from "../../../search/search-errors";
 import {
     PageError,

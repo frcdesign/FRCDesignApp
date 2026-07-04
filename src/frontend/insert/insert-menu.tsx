@@ -16,6 +16,8 @@ import {
     NotificationAction,
     renderNotification
 } from "../common/notifications";
+import { MenuButton } from "../app-common/app-menu";
+import { InsertableMenuItems } from "../cards/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { Configuration } from "../../shared/configuration-models";
@@ -94,6 +96,14 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             {parameters}
             <Group justify="space-between" mt="md" wrap="nowrap">
                 <FavoriteButton favorite={favorite} insertable={insertable} />
+                <MenuButton>
+                    <InsertableMenuItems
+                        favorite={favorite}
+                        insertable={insertable}
+                        inInsertMenu
+                        configuration={configuration}
+                    />
+                </MenuButton>
                 <InsertButtons
                     insertable={insertable}
                     configuration={configuration}
