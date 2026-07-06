@@ -127,8 +127,8 @@ describe("POST /group", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it("creates the group, orders it, and triggers the workflow", async () => {
-        await seedGroup(db, TEST_GROUP_ID);
+    it("computes the sort position and triggers the workflow, without writing the group row itself", async () => {
+        await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             name: "New Doc",
             recentVersion: { id: "inst-new", name: "v" }
@@ -145,19 +145,20 @@ describe("POST /group", () => {
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ name: "New Doc" });
 
-        const rows = await db
-            .select()
-            .from(groups)
-            .orderBy(asc(groups.sortOrder))
-            .all();
-        expect(rows.map((r) => r.documentId)).toEqual([
-            `doc-${TEST_GROUP_ID}`,
-            "doc-new"
-        ]);
-
         expect(createSpy).toHaveBeenCalledOnce();
         const params = createSpy.mock.calls[0][0]?.params;
-        expect(params).toMatchObject({ groupId: rows[1].id });
+        expect(params).toMatchObject({
+            documentId: "doc-new",
+            libraryId: TEST_LIBRARY_ID,
+            isNew: true,
+            sortOrder: 1
+        });
+
+        // The workflow (mocked here) owns the actual insert — only the existing
+        // group exists, and its own sort order is untouched.
+        const rows = await db.select().from(groups).all();
+        expect(rows.map((r) => r.documentId)).toEqual([`doc-${TEST_GROUP_ID}`]);
+        expect(rows[0].sortOrder).toBe(0);
     });
 
     it("422s when the document was already added", async () => {

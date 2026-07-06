@@ -14,9 +14,10 @@ import { groups, insertables, libraries, favorites } from "../../shared/schema";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import {
     bumpLibraryVersion,
-    createOrderedGroup,
+    placeNewGroup,
     rebuildSearchDb
 } from "../library-data";
+import { type LibraryId } from "../../shared/types";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -26,6 +27,7 @@ export async function reloadGroup(
     api: OnshapeApi,
     workflow: AppBindings["LOAD_DOCUMENT_WORKFLOW"],
     group: { id: string; documentId: string; versionId: string },
+    libraryId: LibraryId,
     sessionId: string,
     forceReload: boolean
 ): Promise<boolean> {
@@ -35,7 +37,14 @@ export async function reloadGroup(
             return false;
         }
         await workflow.create({
-            params: { groupId: group.id, sessionId, forceReload }
+            params: {
+                groupId: group.id,
+                documentId: group.documentId,
+                libraryId,
+                sessionId,
+                isNew: false,
+                forceReload
+            }
         });
         return true;
     } catch {
@@ -80,6 +89,7 @@ groupRoutes.post(
                     onshapeApi,
                     c.env.LOAD_DOCUMENT_WORKFLOW,
                     group,
+                    libraryId,
                     sessionId,
                     forceReload
                 )
@@ -200,11 +210,8 @@ groupRoutes.post(
         const documentPath: DocumentPath = { documentId: body.newDocumentId };
 
         let documentName: string;
-        let recentVersionId: string;
         try {
-            const doc = await getDocument(onshapeApi, documentPath);
-            documentName = doc.name;
-            recentVersionId = doc.recentVersion.id;
+            documentName = (await getDocument(onshapeApi, documentPath)).name;
         } catch {
             return c.json(
                 {
@@ -241,17 +248,22 @@ groupRoutes.post(
         }
 
         const groupId = crypto.randomUUID();
-        await createOrderedGroup(db, {
-            groupId,
+        const sortOrder = await placeNewGroup(
+            db,
             libraryId,
-            documentId: body.newDocumentId,
-            name: documentName,
-            versionId: recentVersionId,
-            selectedGroupId: body.selectedGroupId
-        });
+            groupId,
+            body.selectedGroupId
+        );
 
         await c.env.LOAD_DOCUMENT_WORKFLOW.create({
-            params: { groupId, sessionId }
+            params: {
+                groupId,
+                documentId: body.newDocumentId,
+                libraryId,
+                sessionId,
+                isNew: true,
+                sortOrder
+            }
         });
 
         return c.json({ name: documentName });

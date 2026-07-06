@@ -3,17 +3,22 @@ import {
     WorkflowEvent,
     WorkflowStep
 } from "cloudflare:workers";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
-import { conflictUpdateSet, type Db, getDb } from "../db";
+import { type Db, getDb } from "../db";
 import type { InstancePath } from "../../shared/onshape-path";
 import {
     ElementType,
     type LibraryId,
     type ThumbnailUrls
 } from "../../shared/types";
-import { groups, insertables, libraries } from "../../shared/schema";
+import {
+    configurations,
+    groups,
+    insertables,
+    libraries
+} from "../../shared/schema";
 import {
     uploadDocumentThumbnails,
     uploadThumbnailsWithRetry
@@ -58,6 +63,7 @@ export interface ExistingInsertable {
     insertableId: string;
     microversionId: string;
     supportsFasten: boolean;
+    hasConfiguration: boolean;
 }
 
 /**
@@ -78,6 +84,8 @@ export interface MatchedElement {
     storedMicroversionId: string | null;
     /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
     supportsFasten: boolean;
+    /** Whether this insertable already has a `configurations` row. */
+    hasConfiguration: boolean;
 }
 
 /** The shared context every loaded insertable needs but that isn't part of the element itself. */
@@ -88,12 +96,17 @@ interface GroupContext {
     versionId: string;
 }
 
-export interface LoadGroupParams {
-    /** The group to sync — must already exist (see `createOrderedGroup`). */
+/** Whether the group row needs creating (with its sort position) or already exists. */
+type GroupCreation = { isNew: true; sortOrder: number } | { isNew: false };
+
+export type LoadGroupParams = {
+    /** The group to sync. */
     groupId: string;
+    documentId: string;
+    libraryId: LibraryId;
     sessionId: string;
     forceReload?: boolean;
-}
+} & GroupCreation;
 
 /**
  * Syncs an Onshape document into a library's group.
@@ -111,12 +124,16 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<LoadGroupParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { groupId, sessionId, forceReload = false } = event.payload;
-
-        // Look up the group's document/library (the caller already created the row).
-        const { documentId, libraryId } = await step.do("load-group", () =>
-            this.loadGroup(groupId)
-        );
+        const {
+            groupId,
+            documentId,
+            libraryId,
+            sessionId,
+            forceReload = false
+        } = event.payload;
+        const creation: GroupCreation = event.payload.isNew
+            ? { isNew: true, sortOrder: event.payload.sortOrder }
+            : { isNew: false };
 
         const versionId = await step.do("fetch-version", () =>
             this.fetchVersionId(sessionId, documentId)
@@ -172,9 +189,9 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
             )
         );
 
-        // Upsert the group row and delete insertables removed from the document.
+        // Create or update the group row, and delete insertables removed from the document.
         await step.do("save-group", () =>
-            this.saveGroup(ctx, docInfo, docThumbnailUrls)
+            this.saveGroup(ctx, docInfo, docThumbnailUrls, creation)
         );
 
         // Rebuild the library's search index and bump the cache version.
@@ -184,10 +201,6 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
     /** Resolves the Onshape client for a session (fresh per step, for replay-safety). */
     private api(sessionId: string): Promise<OnshapeApi> {
         return getOnshapeApiForSessionId(this.env.KV, sessionId);
-    }
-
-    private loadGroup(groupId: string) {
-        return fetchGroup(getDb(this.env.DB), groupId);
     }
 
     /** The id of the document's most recently created version. */
@@ -237,67 +250,68 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
     }
 
     /**
-     * Upserts the group row and deletes insertables that are no longer valid (removed
-     * from the document entirely). Per-insertable rows are written independently by
-     * each `LoadInsertable` — this only owns the group-level fields.
+     * Creates or updates the group row (depending on `creation`) and deletes
+     * insertables that are no longer valid (removed from the document entirely).
+     * Per-insertable rows are written independently by each `LoadInsertable` — this
+     * only owns the group-level fields.
      */
     private async saveGroup(
         ctx: GroupContext,
         docInfo: DocumentInfo,
-        docThumbnailUrls: ThumbnailUrls | null
+        docThumbnailUrls: ThumbnailUrls | null,
+        creation: GroupCreation
     ): Promise<void> {
-        const { groupId, documentId, libraryId, versionId } = ctx;
         const db = getDb(this.env.DB);
 
-        await db
-            .insert(libraries)
-            .values({ id: libraryId })
-            .onConflictDoNothing();
+        const buildIssues = checkGroup({
+            hasThumbnailTab: !!docInfo.thumbnailElementId,
+            thumbnailUrls: docThumbnailUrls
+        });
 
         const validElementIds = docInfo.elements.map((e) => e.elementId);
-
-        const groupRow: typeof groups.$inferInsert = {
-            id: groupId,
-            documentId,
-            libraryId,
-            name: docInfo.docName,
-            versionId,
-            thumbnailUrls: docThumbnailUrls,
-            buildIssues: checkGroup({
-                hasThumbnailTab: !!docInfo.thumbnailElementId,
-                thumbnailUrls: docThumbnailUrls
-            })
-        };
-
-        const groupUpsert = db
-            .insert(groups)
-            .values(groupRow)
-            .onConflictDoUpdate({
-                target: [groups.documentId, groups.libraryId],
-                set: conflictUpdateSet(groups, [
-                    "id",
-                    "documentId",
-                    "libraryId",
-                    "sortAlphabetically",
-                    "sortOrder"
-                ])
-            });
-
         const deleteStaleInsertables =
             validElementIds.length > 0
                 ? db
                       .delete(insertables)
                       .where(
                           and(
-                              eq(insertables.groupId, groupId),
+                              eq(insertables.groupId, ctx.groupId),
                               notInArray(insertables.elementId, validElementIds)
                           )
                       )
                 : db
                       .delete(insertables)
-                      .where(eq(insertables.groupId, groupId));
+                      .where(eq(insertables.groupId, ctx.groupId));
 
-        await db.batch([groupUpsert, deleteStaleInsertables]);
+        if (creation.isNew) {
+            await db
+                .insert(libraries)
+                .values({ id: ctx.libraryId })
+                .onConflictDoNothing();
+            const groupInsert = db.insert(groups).values({
+                id: ctx.groupId,
+                documentId: ctx.documentId,
+                libraryId: ctx.libraryId,
+                name: docInfo.docName,
+                versionId: ctx.versionId,
+                sortOrder: creation.sortOrder,
+                thumbnailUrls: docThumbnailUrls,
+                buildIssues
+            });
+            await db.batch([groupInsert, deleteStaleInsertables]);
+            return;
+        }
+
+        const groupUpdate = db
+            .update(groups)
+            .set({
+                name: docInfo.docName,
+                versionId: ctx.versionId,
+                thumbnailUrls: docThumbnailUrls,
+                buildIssues
+            })
+            .where(eq(groups.id, ctx.groupId));
+        await db.batch([groupUpdate, deleteStaleInsertables]);
     }
 
     private async rebuildSearch(libraryId: LibraryId): Promise<void> {
@@ -354,25 +368,16 @@ export function getValidElements(
 // Pure element helpers.
 // ---------------------------------------------------------------------------
 
-/** The group's document/library. Reads a row the caller must have already created. */
-async function fetchGroup(db: Db, groupId: string) {
-    const group = await db
-        .select({ documentId: groups.documentId, libraryId: groups.libraryId })
-        .from(groups)
-        .where(eq(groups.id, groupId))
-        .get();
-    if (!group) {
-        throw new Error(`Group ${groupId} not found`);
-    }
-    return group;
-}
-
-/** The existing insertables for a group, by the fields we match on. */
+/**
+ * The existing insertables for a group, by the fields we match on, including whether
+ * each already has a `configurations` row (a separate query, since configuration
+ * existence isn't tracked on the insertable row itself).
+ */
 async function fetchExistingInsertables(
     db: Db,
     groupId: string
 ): Promise<ExistingInsertable[]> {
-    return db
+    const existing = await db
         .select({
             elementId: insertables.elementId,
             insertableId: insertables.id,
@@ -382,6 +387,30 @@ async function fetchExistingInsertables(
         .from(insertables)
         .where(eq(insertables.groupId, groupId))
         .all();
+
+    if (existing.length === 0) {
+        return existing.map((e) => ({ ...e, hasConfiguration: false }));
+    }
+
+    const configuredIds = new Set(
+        (
+            await db
+                .select({ id: configurations.id })
+                .from(configurations)
+                .where(
+                    inArray(
+                        configurations.id,
+                        existing.map((e) => e.insertableId)
+                    )
+                )
+                .all()
+        ).map((c) => c.id)
+    );
+
+    return existing.map((e) => ({
+        ...e,
+        hasConfiguration: configuredIds.has(e.insertableId)
+    }));
 }
 
 /**
@@ -406,7 +435,8 @@ export function matchElements(
             sortOrder: sortOrderByElementId.get(element.elementId) ?? 0,
             isNew: !match,
             storedMicroversionId: match?.microversionId ?? null,
-            supportsFasten: match?.supportsFasten ?? false
+            supportsFasten: match?.supportsFasten ?? false,
+            hasConfiguration: match?.hasConfiguration ?? false
         };
     });
 }
@@ -447,6 +477,7 @@ function toLoadInsertableData(
         microversionId: element.microversionId,
         sortOrder: matched.sortOrder,
         isNew: matched.isNew,
-        supportsFasten: matched.supportsFasten
+        supportsFasten: matched.supportsFasten,
+        hasConfiguration: matched.hasConfiguration
     };
 }

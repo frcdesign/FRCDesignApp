@@ -1,92 +1,80 @@
 import { env } from "cloudflare:workers";
-import { asc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "./db";
-import { groups, libraries } from "../shared/schema";
+import { groups } from "../shared/schema";
 import {
     resetDb,
     seedGroup,
+    seedLibrary,
     TEST_GROUP_ID,
     TEST_LIBRARY_ID
 } from "../__test_utils__";
-import { createOrderedGroup } from "./library-data";
+import { placeNewGroup } from "./library-data";
 
 const db = getDb(env.DB);
 
-describe("createOrderedGroup", () => {
+/**
+ * Inserts a minimal group row at the given sort order — mirrors what the load-group
+ * workflow writes once `placeNewGroup` has told it where the new group belongs.
+ */
+async function insertGroupAt(id: string, sortOrder: number): Promise<void> {
+    await db.insert(groups).values({
+        id,
+        libraryId: TEST_LIBRARY_ID,
+        documentId: `doc-${id}`,
+        name: id,
+        versionId: "v1",
+        sortOrder
+    });
+}
+
+describe("placeNewGroup", () => {
     beforeEach(() => resetDb(db));
 
-    it("creates the library row and appends the group at the end by default", async () => {
+    it("returns the end position and leaves existing groups untouched by default", async () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
 
-        await createOrderedGroup(db, {
-            groupId: "new-group",
-            libraryId: TEST_LIBRARY_ID,
-            documentId: "doc-new",
-            name: "New Group",
-            versionId: "inst-1",
-            selectedGroupId: undefined
-        });
-
-        const library = await db
-            .select()
-            .from(libraries)
-            .where(eq(libraries.id, TEST_LIBRARY_ID))
-            .get();
-        expect(library).toBeDefined();
+        const sortOrder = await placeNewGroup(
+            db,
+            TEST_LIBRARY_ID,
+            "new-group",
+            undefined
+        );
+        expect(sortOrder).toBe(1);
 
         const rows = await db
             .select()
             .from(groups)
             .orderBy(asc(groups.sortOrder))
             .all();
-        expect(rows.map((r) => r.id)).toEqual([TEST_GROUP_ID, "new-group"]);
-        expect(rows.find((r) => r.id === "new-group")).toMatchObject({
-            documentId: "doc-new",
-            name: "New Group",
-            versionId: "inst-1",
-            sortOrder: 1
-        });
+        expect(rows.map((r) => r.id)).toEqual([TEST_GROUP_ID]);
+        expect(rows[0].sortOrder).toBe(0);
     });
 
-    it("inserts directly after selectedGroupId, renumbering later groups", async () => {
-        await seedGroup(db, "g1"); // sortOrder 0
-        await db
-            .update(groups)
-            .set({ sortOrder: 0 })
-            .where(eq(groups.id, "g1"));
-        await createOrderedGroup(db, {
-            groupId: "g2",
-            libraryId: TEST_LIBRARY_ID,
-            documentId: "doc-2",
-            name: "G2",
-            versionId: "inst-2",
-            selectedGroupId: undefined
-        });
-        await createOrderedGroup(db, {
-            groupId: "g3",
-            libraryId: TEST_LIBRARY_ID,
-            documentId: "doc-3",
-            name: "G3",
-            versionId: "inst-3",
-            selectedGroupId: undefined
-        });
-        // Order is now [g1, g2, g3]; insert a new group right after g1.
-        await createOrderedGroup(db, {
-            groupId: "g1.5",
-            libraryId: TEST_LIBRARY_ID,
-            documentId: "doc-1.5",
-            name: "G1.5",
-            versionId: "inst-1.5",
-            selectedGroupId: "g1"
-        });
+    it("returns a position directly after selectedGroupId, renumbering later groups", async () => {
+        await seedLibrary(db, TEST_LIBRARY_ID);
+        await insertGroupAt("g1", 0);
+        await insertGroupAt("g2", 1);
+        await insertGroupAt("g3", 2);
 
+        // Insert a new group right after g1.
+        const sortOrder = await placeNewGroup(
+            db,
+            TEST_LIBRARY_ID,
+            "g1.5",
+            "g1"
+        );
+        expect(sortOrder).toBe(1);
+
+        // g1.5 itself is never inserted by placeNewGroup — only the existing
+        // siblings get renumbered to make room for it.
         const rows = await db
             .select()
             .from(groups)
             .orderBy(asc(groups.sortOrder))
             .all();
-        expect(rows.map((r) => r.id)).toEqual(["g1", "g1.5", "g2", "g3"]);
-        expect(rows.map((r) => r.sortOrder)).toEqual([0, 1, 2, 3]);
+        expect(rows.map((r) => r.id)).toEqual(["g1", "g2", "g3"]);
+        expect(rows.map((r) => r.sortOrder)).toEqual([0, 2, 3]);
     });
 });

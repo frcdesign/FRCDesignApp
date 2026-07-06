@@ -1,7 +1,8 @@
 import type { WorkflowStep } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
-import { conflictUpdateSet, getDb } from "../db";
+import { getDb } from "../db";
 import type { ElementPath } from "../../shared/onshape-path";
 import type { ParameterObj } from "../../shared/configuration-models";
 import {
@@ -39,6 +40,8 @@ export interface LoadInsertableData {
     isNew: boolean;
     /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
     supportsFasten: boolean;
+    /** Whether this insertable already has a `configurations` row. */
+    hasConfiguration: boolean;
 }
 
 interface LoadedFields {
@@ -147,60 +150,45 @@ export class LoadInsertable {
         step: WorkflowStep,
         loaded: LoadedFields
     ): Promise<void> {
-        const row = toInsertableRow(this.data, loaded);
         const db = getDb(this.deps.env.DB);
 
         await step.do(`save-insertable-${this.data.insertableId}`, async () => {
-            const insertableUpsert = db
-                .insert(insertables)
-                .values(row)
-                .onConflictDoUpdate({
-                    target: [insertables.elementId, insertables.groupId],
-                    set: conflictUpdateSet(insertables, [
-                        "id",
-                        "elementId",
-                        "groupId",
-                        "documentId",
-                        "libraryId",
-                        "isVisible",
-                        "isOpenComposite",
-                        "sortOrder"
-                    ])
-                });
+            const insertableWrite = this.data.isNew
+                ? db
+                      .insert(insertables)
+                      .values(toNewInsertableRow(this.data, loaded))
+                : db
+                      .update(insertables)
+                      .set(toInsertableUpdate(this.data, loaded))
+                      .where(eq(insertables.id, this.data.insertableId));
 
             if (loaded.parameters === null) {
-                await db.batch([insertableUpsert]);
+                await insertableWrite;
                 return;
             }
 
-            const configUpsert = db
-                .insert(configurations)
-                .values({ id: row.id!, parameters: loaded.parameters })
-                .onConflictDoUpdate({
-                    target: configurations.id,
-                    set: conflictUpdateSet(configurations, ["id"])
-                });
-            await db.batch([insertableUpsert, configUpsert]);
+            const configWrite = this.data.hasConfiguration
+                ? db
+                      .update(configurations)
+                      .set({ parameters: loaded.parameters })
+                      .where(eq(configurations.id, this.data.insertableId))
+                : db.insert(configurations).values({
+                      id: this.data.insertableId,
+                      parameters: loaded.parameters
+                  });
+
+            await db.batch([insertableWrite, configWrite]);
         });
     }
 }
 
-/** Assembles the saved insertable row from the load-insertable data + the load results. */
-export function toInsertableRow(
-    data: LoadInsertableData,
-    loaded: LoadedFields
-): typeof insertables.$inferInsert {
+/** The fields shared by a newly-created and a reloaded insertable row. */
+function toInsertableFields(data: LoadInsertableData, loaded: LoadedFields) {
     return {
-        id: data.insertableId,
-        documentId: data.documentId,
-        versionId: data.versionId,
-        elementId: data.elementPath.elementId,
-        groupId: data.groupId,
-        libraryId: data.libraryId,
         name: data.name,
         elementType: data.elementType,
         microversionId: data.microversionId,
-        sortOrder: data.sortOrder,
+        versionId: data.versionId,
         supportsFasten: data.supportsFasten,
         vendors: loaded.vendors,
         thumbnailUrls: loaded.thumbnailUrls,
@@ -210,4 +198,35 @@ export function toInsertableRow(
             thumbnailUrls: loaded.thumbnailUrls
         })
     };
+}
+
+/**
+ * Assembles a brand-new insertable row. `isVisible`/`isOpenComposite` are omitted —
+ * they fall back to their column defaults, which are correct for a new row.
+ */
+export function toNewInsertableRow(
+    data: LoadInsertableData,
+    loaded: LoadedFields
+): typeof insertables.$inferInsert {
+    return {
+        id: data.insertableId,
+        documentId: data.documentId,
+        elementId: data.elementPath.elementId,
+        groupId: data.groupId,
+        libraryId: data.libraryId,
+        sortOrder: data.sortOrder,
+        ...toInsertableFields(data, loaded)
+    };
+}
+
+/**
+ * The fields a reload updates on an existing insertable row. Deliberately excludes
+ * id/elementId/groupId/documentId/libraryId (immutable ownership) and
+ * isVisible/isOpenComposite/sortOrder (user-controlled — must survive a reload).
+ */
+export function toInsertableUpdate(
+    data: LoadInsertableData,
+    loaded: LoadedFields
+): Partial<typeof insertables.$inferInsert> {
+    return toInsertableFields(data, loaded);
 }
