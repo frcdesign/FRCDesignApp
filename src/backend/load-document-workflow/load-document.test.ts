@@ -193,8 +193,7 @@ describe("toInsertableRow", () => {
             {
                 vendors: [],
                 thumbnailUrls: null,
-                fastenInfo: null,
-                supportsFasten: false
+                fastenInfo: null
             }
         );
         expect(row).toMatchObject({

@@ -38,10 +38,10 @@ import {
     OnshapeFolderEntryType,
     OnshapeVersionInfo
 } from "../onshape-api/onshape-types";
-import { parseFastenInfo } from "../parse/insert-and-fasten";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { checkGroup, checkInsertable } from "../parse/build-checks";
+import { parseFastenInfo } from "../parse/insert-and-fasten";
 
 // ---------------------------------------------------------------------------
 // Data-flow types — each element flows DocumentElement → MatchedElement → the
@@ -81,12 +81,12 @@ export interface ExistingInsertable {
  * rederived at load time (see `toInsertableRow`), so nothing is stored twice.
  */
 export interface MatchedElement {
+    isNew: boolean;
     element: DocumentElement;
     /** The insertable id to write: an existing row's id, or a fresh one for a new element. */
     insertableId: string;
     /** Position in the document's ordered element list. */
     sortOrder: number;
-    isNew: boolean;
     /** The microversion currently stored in the DB (null for a new element). */
     storedMicroversionId: string | null;
     /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
@@ -98,8 +98,6 @@ interface LoadedFields {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
-    /** Recomputed this run: whether fasten info parsed successfully. */
-    supportsFasten: boolean;
 }
 
 /** The shared context every saved row needs but that isn't part of the element itself. */
@@ -319,8 +317,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         return {
             insertable: toInsertableRow(matched, ctx, {
                 ...content,
-                fastenInfo: null,
-                supportsFasten: false
+                fastenInfo: null
             }),
             parameters: content.parameters
         };
@@ -354,20 +351,23 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             element.microversionId
         );
 
-        const fasten = matched.supportsFasten
-            ? await step.do(`load-element-${element.elementId}`, async () =>
-                  loadElementFasten(
-                      await this.api(sessionId),
-                      elementPath,
-                      element.elementType
-                  )
-              )
-            : { fastenInfo: null, supportsFasten: false };
+        let fastenInfo = null;
+        if (matched.supportsFasten) {
+            fastenInfo = await step.do(
+                `load-element-${element.elementId}`,
+                async () =>
+                    parseFastenInfo(
+                        await this.api(sessionId),
+                        elementPath,
+                        element.elementType
+                    )
+            );
+        }
 
         return {
             insertable: toInsertableRow(matched, ctx, {
                 ...content,
-                ...fasten
+                fastenInfo
             }),
             parameters: content.parameters
         };
@@ -640,25 +640,6 @@ export function getInsertablesToReload(
     );
 }
 
-/**
- * Fasten info for an element, re-parsed from Onshape. `supportsFasten` reflects whether
- * it still parses — it can only go false (mate connector removed). The returned
- * `FastenInfo` crosses the workflow step boundary via `step.do`'s own serialization.
- */
-async function loadElementFasten(
-    api: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType
-): Promise<{ fastenInfo: FastenInfo | null; supportsFasten: boolean }> {
-    try {
-        const fastenInfo = await parseFastenInfo(api, elementPath, elementType);
-        return { fastenInfo, supportsFasten: true };
-    } catch {
-        // Mate connector no longer present.
-        return { fastenInfo: null, supportsFasten: false };
-    }
-}
-
 /** Parsed configuration parameters, or null when the element is unconfigured. */
 async function loadElementConfiguration(
     api: OnshapeApi,
@@ -682,21 +663,27 @@ export function toInsertableRow(
     const { element } = matched;
     return {
         id: matched.insertableId,
-        elementId: element.elementId,
-        groupId: ctx.groupId,
+        // Onshape Ids
         documentId: ctx.documentId,
+        instanceId: ctx.version.id,
+        elementId: element.elementId,
+        // Owner Ids
+        groupId: ctx.groupId,
         libraryId: ctx.libraryId,
+        // Element fields
         name: element.name,
         elementType: element.elementType,
         microversionId: element.microversionId,
-        instanceId: ctx.version.id,
+        // Version fields
         versionName: ctx.version.name,
         versionCreatedAt: new Date(ctx.version.createdAt).toISOString(),
+        // Saved fields
         sortOrder: matched.sortOrder,
+        supportsFasten: matched.supportsFasten,
+        // Computed fields
         vendors: loaded.vendors,
         thumbnailUrls: loaded.thumbnailUrls,
         fastenInfo: loaded.fastenInfo,
-        supportsFasten: loaded.supportsFasten,
         buildIssues: checkInsertable({
             vendors: loaded.vendors,
             thumbnailUrls: loaded.thumbnailUrls
