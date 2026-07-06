@@ -12,11 +12,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { groups, insertables, libraries, favorites } from "../../shared/schema";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
-import {
-    bumpLibraryVersion,
-    placeNewGroup,
-    rebuildSearchDb
-} from "../library-data";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type LibraryId } from "../../shared/types";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -248,12 +244,6 @@ groupRoutes.post(
         }
 
         const groupId = crypto.randomUUID();
-        const sortOrder = await placeNewGroup(
-            db,
-            libraryId,
-            groupId,
-            body.selectedGroupId
-        );
 
         await c.env.LOAD_DOCUMENT_WORKFLOW.create({
             params: {
@@ -262,7 +252,7 @@ groupRoutes.post(
                 libraryId,
                 sessionId,
                 isNew: true,
-                sortOrder
+                selectedGroupId: body.selectedGroupId
             }
         });
 

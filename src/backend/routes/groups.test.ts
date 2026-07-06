@@ -127,7 +127,7 @@ describe("POST /group", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it("computes the sort position and triggers the workflow, without writing the group row itself", async () => {
+    it("forwards selectedGroupId and triggers the workflow, without writing the group row itself", async () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             name: "New Doc",
@@ -139,7 +139,10 @@ describe("POST /group", () => {
 
         const res = await createTestApp().request(
             `/api/group/library/${TEST_LIBRARY_ID}`,
-            sessionRequest("POST", { newDocumentId: "doc-new" }),
+            sessionRequest("POST", {
+                newDocumentId: "doc-new",
+                selectedGroupId: TEST_GROUP_ID
+            }),
             env
         );
         expect(res.status).toBe(200);
@@ -151,11 +154,11 @@ describe("POST /group", () => {
             documentId: "doc-new",
             libraryId: TEST_LIBRARY_ID,
             isNew: true,
-            sortOrder: 1
+            selectedGroupId: TEST_GROUP_ID
         });
 
-        // The workflow (mocked here) owns the actual insert — only the existing
-        // group exists, and its own sort order is untouched.
+        // The route (the workflow is mocked here) doesn't compute or write sort
+        // order itself anymore — only the existing group exists, untouched.
         const rows = await db.select().from(groups).all();
         expect(rows.map((r) => r.documentId)).toEqual([`doc-${TEST_GROUP_ID}`]);
         expect(rows[0].sortOrder).toBe(0);

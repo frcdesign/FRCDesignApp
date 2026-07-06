@@ -34,7 +34,6 @@ const matchedOf = (
     isNew: false,
     storedMicroversionId: el.microversionId,
     supportsFasten: false,
-    hasConfiguration: false,
     sortOrder: 0,
     ...overrides
 });
@@ -123,8 +122,7 @@ describe("matchElements", () => {
                     elementId: "e1",
                     insertableId: "keep-1",
                     microversionId: "mv-old",
-                    supportsFasten: true,
-                    hasConfiguration: true
+                    supportsFasten: true
                 }
             ],
             () => "fresh-uuid"
@@ -137,7 +135,6 @@ describe("matchElements", () => {
                 isNew: false,
                 storedMicroversionId: "mv-old",
                 supportsFasten: true,
-                hasConfiguration: true,
                 sortOrder: 1
             },
             {
@@ -146,7 +143,6 @@ describe("matchElements", () => {
                 isNew: true,
                 storedMicroversionId: null,
                 supportsFasten: false,
-                hasConfiguration: false,
                 sortOrder: 0
             }
         ]);

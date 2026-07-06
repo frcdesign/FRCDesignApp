@@ -3,7 +3,7 @@ import {
     WorkflowEvent,
     WorkflowStep
 } from "cloudflare:workers";
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getOnshapeApiForSessionId } from "../auth";
 import { type Db, getDb } from "../db";
@@ -13,17 +13,16 @@ import {
     type LibraryId,
     type ThumbnailUrls
 } from "../../shared/types";
-import {
-    configurations,
-    groups,
-    insertables,
-    libraries
-} from "../../shared/schema";
+import { groups, insertables, libraries } from "../../shared/schema";
 import {
     uploadDocumentThumbnails,
     uploadThumbnailsWithRetry
 } from "../routes/thumbnails";
-import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import {
+    bumpLibraryVersion,
+    placeNewGroup,
+    rebuildSearchDb
+} from "../library-data";
 import { getContents, getDocument } from "../onshape-api/endpoints/documents";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import {
@@ -63,7 +62,6 @@ export interface ExistingInsertable {
     insertableId: string;
     microversionId: string;
     supportsFasten: boolean;
-    hasConfiguration: boolean;
 }
 
 /**
@@ -84,8 +82,6 @@ export interface MatchedElement {
     storedMicroversionId: string | null;
     /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
     supportsFasten: boolean;
-    /** Whether this insertable already has a `configurations` row. */
-    hasConfiguration: boolean;
 }
 
 /** The shared context every loaded insertable needs but that isn't part of the element itself. */
@@ -96,8 +92,10 @@ interface GroupContext {
     versionId: string;
 }
 
-/** Whether the group row needs creating (with its sort position) or already exists. */
-type GroupCreation = { isNew: true; sortOrder: number } | { isNew: false };
+/** Whether the group row needs creating (after `selectedGroupId`) or already exists. */
+type GroupCreation =
+    | { isNew: true; selectedGroupId: string | undefined }
+    | { isNew: false };
 
 export type LoadGroupParams = {
     /** The group to sync. */
@@ -132,7 +130,7 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
             forceReload = false
         } = event.payload;
         const creation: GroupCreation = event.payload.isNew
-            ? { isNew: true, sortOrder: event.payload.sortOrder }
+            ? { isNew: true, selectedGroupId: event.payload.selectedGroupId }
             : { isNew: false };
 
         const versionId = await step.do("fetch-version", () =>
@@ -288,13 +286,22 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
                 .insert(libraries)
                 .values({ id: ctx.libraryId })
                 .onConflictDoNothing();
+            // Computed here, right before the insert, so placement and creation happen
+            // together — a step.do retry re-derives the same position safely, since the
+            // new group still isn't among the siblings placeNewGroup queries/renumbers.
+            const sortOrder = await placeNewGroup(
+                db,
+                ctx.libraryId,
+                ctx.groupId,
+                creation.selectedGroupId
+            );
             const groupInsert = db.insert(groups).values({
                 id: ctx.groupId,
                 documentId: ctx.documentId,
                 libraryId: ctx.libraryId,
                 name: docInfo.docName,
                 versionId: ctx.versionId,
-                sortOrder: creation.sortOrder,
+                sortOrder,
                 thumbnailUrls: docThumbnailUrls,
                 buildIssues
             });
@@ -368,16 +375,12 @@ export function getValidElements(
 // Pure element helpers.
 // ---------------------------------------------------------------------------
 
-/**
- * The existing insertables for a group, by the fields we match on, including whether
- * each already has a `configurations` row (a separate query, since configuration
- * existence isn't tracked on the insertable row itself).
- */
+/** The existing insertables for a group, by the fields we match on. */
 async function fetchExistingInsertables(
     db: Db,
     groupId: string
 ): Promise<ExistingInsertable[]> {
-    const existing = await db
+    return db
         .select({
             elementId: insertables.elementId,
             insertableId: insertables.id,
@@ -387,30 +390,6 @@ async function fetchExistingInsertables(
         .from(insertables)
         .where(eq(insertables.groupId, groupId))
         .all();
-
-    if (existing.length === 0) {
-        return existing.map((e) => ({ ...e, hasConfiguration: false }));
-    }
-
-    const configuredIds = new Set(
-        (
-            await db
-                .select({ id: configurations.id })
-                .from(configurations)
-                .where(
-                    inArray(
-                        configurations.id,
-                        existing.map((e) => e.insertableId)
-                    )
-                )
-                .all()
-        ).map((c) => c.id)
-    );
-
-    return existing.map((e) => ({
-        ...e,
-        hasConfiguration: configuredIds.has(e.insertableId)
-    }));
 }
 
 /**
@@ -435,8 +414,7 @@ export function matchElements(
             sortOrder: sortOrderByElementId.get(element.elementId) ?? 0,
             isNew: !match,
             storedMicroversionId: match?.microversionId ?? null,
-            supportsFasten: match?.supportsFasten ?? false,
-            hasConfiguration: match?.hasConfiguration ?? false
+            supportsFasten: match?.supportsFasten ?? false
         };
     });
 }
@@ -477,7 +455,6 @@ function toLoadInsertableData(
         microversionId: element.microversionId,
         sortOrder: matched.sortOrder,
         isNew: matched.isNew,
-        supportsFasten: matched.supportsFasten,
-        hasConfiguration: matched.hasConfiguration
+        supportsFasten: matched.supportsFasten
     };
 }

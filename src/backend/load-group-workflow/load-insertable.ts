@@ -40,8 +40,6 @@ export interface LoadInsertableData {
     isNew: boolean;
     /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
     supportsFasten: boolean;
-    /** Whether this insertable already has a `configurations` row. */
-    hasConfiguration: boolean;
 }
 
 interface LoadedFields {
@@ -167,7 +165,13 @@ export class LoadInsertable {
                 return;
             }
 
-            const configWrite = this.data.hasConfiguration
+            const existingConfig = await db
+                .select({ id: configurations.id })
+                .from(configurations)
+                .where(eq(configurations.id, this.data.insertableId))
+                .get();
+
+            const configWrite = existingConfig
                 ? db
                       .update(configurations)
                       .set({ parameters: loaded.parameters })

@@ -26,8 +26,7 @@ describe("toNewInsertableRow / toInsertableUpdate", () => {
         microversionId: "mv-1",
         sortOrder: 3,
         isNew: false,
-        supportsFasten: false,
-        hasConfiguration: false
+        supportsFasten: false
     };
     const loaded = {
         parameters: null,
