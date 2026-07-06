@@ -34,7 +34,7 @@ import { checkGroup } from "../parse/build-checks";
 import { LoadInsertable, type LoadInsertableData } from "./load-insertable";
 
 // ---------------------------------------------------------------------------
-// Data-flow types — each element flows DocumentElement → MatchedElement →
+// Data-flow types — each element flows DocumentElement → MatchedInsertable →
 // LoadInsertableData, so every stage's contents are explicit and named.
 // ---------------------------------------------------------------------------
 
@@ -49,19 +49,13 @@ export interface DocumentElement {
 /** Document metadata + ordered element list (output of the fetch-contents step). */
 export interface DocumentInfo {
     docName: string;
+    /** The document's most recently created version. */
+    versionId: string;
     thumbnailElementId?: string;
     /** The valid (part studio / assembly) elements. */
     elements: DocumentElement[];
     /** Valid element ids in display (folder-tree) order. */
     orderedElementIds: string[];
-}
-
-/** The fields of an existing insertable row we need to match against. */
-export interface ExistingInsertable {
-    elementId: string;
-    insertableId: string;
-    microversionId: string;
-    supportsFasten: boolean;
 }
 
 /**
@@ -71,7 +65,7 @@ export interface ExistingInsertable {
  * rederived at load time (see `toInsertableRow` in `./load-insertable`), so nothing is
  * stored twice.
  */
-export interface MatchedElement {
+export interface MatchedInsertable {
     isNew: boolean;
     element: DocumentElement;
     /** The insertable id to write: an existing row's id, or a fresh one for a new element. */
@@ -133,26 +127,28 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
             ? { isNew: true, selectedGroupId: event.payload.selectedGroupId }
             : { isNew: false };
 
-        const versionId = await step.do("fetch-version", () =>
-            this.fetchVersionId(sessionId, documentId)
+        // Fetch document metadata (including its version) + contents (the valid
+        // elements, in order) together, so the document is only fetched once.
+        const docInfo = await step.do("fetch-contents", () =>
+            this.fetchContents(sessionId, documentId)
         );
 
         const instancePath: InstancePath = {
             documentId,
-            instanceId: versionId,
+            instanceId: docInfo.versionId,
             instanceType: "v"
         };
-        const ctx: GroupContext = { groupId, documentId, libraryId, versionId };
-
-        // Fetch document contents (metadata + the valid elements, in order).
-        const docInfo = await step.do("fetch-contents", () =>
-            this.fetchContents(sessionId, instancePath)
-        );
+        const ctx: GroupContext = {
+            groupId,
+            documentId,
+            libraryId,
+            versionId: docInfo.versionId
+        };
 
         // Match each element to an existing insertable, assigning fresh ids to new
         // elements. Ids are generated inside the step so replays are stable.
         const matched = await step.do("match-elements", () =>
-            this.resolveMatches(groupId, docInfo)
+            this.resolveMatches(groupId, libraryId, docInfo)
         );
 
         // Upload document-level thumbnails (with retry).
@@ -201,26 +197,24 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
         return getOnshapeApiForSessionId(this.env.KV, sessionId);
     }
 
-    /** The id of the document's most recently created version. */
-    private async fetchVersionId(
-        sessionId: string,
-        documentId: string
-    ): Promise<string> {
-        const api = await this.api(sessionId);
-        const doc = await getDocument(api, { documentId });
-        return doc.recentVersion.id;
-    }
-
-    /** Document metadata + the valid elements in display order. */
+    /**
+     * Document metadata (including its most recently created version) + the valid
+     * elements in display order. Fetches the document itself only once — its version
+     * is folded in here rather than resolved as a separate step.
+     */
     private async fetchContents(
         sessionId: string,
-        instancePath: InstancePath
+        documentId: string
     ): Promise<DocumentInfo> {
         const api = await this.api(sessionId);
-        const [rawDoc, rawContents] = await Promise.all([
-            getDocument(api, instancePath),
-            getContents(api, instancePath)
-        ]);
+        const rawDoc = await getDocument(api, { documentId });
+        const versionId = rawDoc.recentVersion.id;
+        const instancePath: InstancePath = {
+            documentId,
+            instanceId: versionId,
+            instanceType: "v"
+        };
+        const rawContents = await getContents(api, instancePath);
 
         const elements = getValidElements(rawContents);
         const validElementIds = new Set(elements.map((e) => e.elementId));
@@ -230,21 +224,25 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
 
         return {
             docName: rawDoc.name,
+            versionId,
             thumbnailElementId: rawDoc.documentThumbnailElementId,
             elements,
             orderedElementIds
         };
     }
 
-    private async resolveMatches(
+    private resolveMatches(
         groupId: string,
+        libraryId: LibraryId,
         docInfo: DocumentInfo
-    ): Promise<MatchedElement[]> {
-        const existing = await fetchExistingInsertables(
+    ): Promise<MatchedInsertable[]> {
+        return matchElements(
             getDb(this.env.DB),
-            groupId
+            groupId,
+            libraryId,
+            docInfo,
+            () => crypto.randomUUID()
         );
-        return matchElements(docInfo, existing, () => crypto.randomUUID());
     }
 
     /**
@@ -375,55 +373,68 @@ export function getValidElements(
 // Pure element helpers.
 // ---------------------------------------------------------------------------
 
-/** The existing insertables for a group, by the fields we match on. */
-async function fetchExistingInsertables(
-    db: Db,
-    groupId: string
-): Promise<ExistingInsertable[]> {
-    return db
-        .select({
-            elementId: insertables.elementId,
-            insertableId: insertables.id,
-            microversionId: insertables.microversionId,
-            supportsFasten: insertables.supportsFasten
-        })
-        .from(insertables)
-        .where(eq(insertables.groupId, groupId))
-        .all();
-}
-
 /**
- * Matches each document element to an existing insertable, or assigns a fresh
- * insertable id + defaults for new elements. Pure: `newId` is injected so callers
- * (the memoized match-elements step) own id generation.
+ * Matches each document element to an existing insertable row (selected by
+ * groupId + libraryId + elementId), or assigns a fresh insertable id + defaults for
+ * new elements. `newId` is injected so callers (the memoized match-elements step)
+ * own id generation.
  */
-export function matchElements(
+export async function matchElements(
+    db: Db,
+    groupId: string,
+    libraryId: LibraryId,
     docInfo: DocumentInfo,
-    existing: ExistingInsertable[],
     newId: () => string
-): MatchedElement[] {
-    const existingByElementId = new Map(existing.map((e) => [e.elementId, e]));
+): Promise<MatchedInsertable[]> {
     const sortOrderByElementId = new Map(
         docInfo.orderedElementIds.map((id, i) => [id, i])
     );
-    return docInfo.elements.map((element) => {
-        const match = existingByElementId.get(element.elementId);
-        return {
-            element,
-            insertableId: match?.insertableId ?? newId(),
-            sortOrder: sortOrderByElementId.get(element.elementId) ?? 0,
-            isNew: !match,
-            storedMicroversionId: match?.microversionId ?? null,
-            supportsFasten: match?.supportsFasten ?? false
-        };
-    });
+    return Promise.all(
+        docInfo.elements.map(async (element) => {
+            const sortOrder = sortOrderByElementId.get(element.elementId) ?? 0;
+            const match = await db
+                .select({
+                    insertableId: insertables.id,
+                    microversionId: insertables.microversionId,
+                    supportsFasten: insertables.supportsFasten
+                })
+                .from(insertables)
+                .where(
+                    and(
+                        eq(insertables.groupId, groupId),
+                        eq(insertables.libraryId, libraryId),
+                        eq(insertables.elementId, element.elementId)
+                    )
+                )
+                .get();
+
+            if (!match) {
+                return {
+                    element,
+                    insertableId: newId(),
+                    sortOrder,
+                    isNew: true,
+                    storedMicroversionId: null,
+                    supportsFasten: false
+                };
+            }
+            return {
+                element,
+                insertableId: match.insertableId,
+                sortOrder,
+                isNew: false,
+                storedMicroversionId: match.microversionId,
+                supportsFasten: match.supportsFasten
+            };
+        })
+    );
 }
 
 /** The matched elements that need (re)loading from Onshape. */
 export function getInsertablesToReload(
-    matched: MatchedElement[],
+    matched: MatchedInsertable[],
     forceReload: boolean
-): MatchedElement[] {
+): MatchedInsertable[] {
     if (forceReload) {
         return matched;
     }
@@ -434,7 +445,7 @@ export function getInsertablesToReload(
 
 /** Builds one element's `LoadInsertable` data from its match + the group context. */
 function toLoadInsertableData(
-    matched: MatchedElement,
+    matched: MatchedInsertable,
     ctx: GroupContext
 ): LoadInsertableData {
     const { element } = matched;

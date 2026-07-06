@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { env } from "cloudflare:workers";
+import { describe, expect, it, beforeEach } from "vitest";
 import { ElementType } from "../../shared/types";
 import {
     OnshapeDocumentContents,
@@ -12,8 +13,18 @@ import {
     getInsertablesToReload,
     type DocumentElement,
     type DocumentInfo,
-    type MatchedElement
+    type MatchedInsertable
 } from "./load-group";
+import { getDb } from "../db";
+import {
+    TEST_GROUP_ID,
+    TEST_LIBRARY_ID,
+    resetDb,
+    seedGroup
+} from "../../__test_utils__";
+import { insertables } from "../../shared/schema";
+
+const db = getDb(env.DB);
 
 const element = (
     elementId: string,
@@ -27,8 +38,8 @@ const element = (
 
 const matchedOf = (
     el: DocumentElement,
-    overrides: Partial<MatchedElement> = {}
-): MatchedElement => ({
+    overrides: Partial<MatchedInsertable> = {}
+): MatchedInsertable => ({
     element: el,
     insertableId: `id-${el.elementId}`,
     isNew: false,
@@ -105,26 +116,38 @@ describe("getValidElements / getOrderedElementIds", () => {
     });
 });
 
-// --- pure: match + select ---------------------------------------------------
+// --- match + select ----------------------------------------------------------
 
 describe("matchElements", () => {
+    beforeEach(() => resetDb(db));
+
     const docInfo: DocumentInfo = {
         docName: "Doc",
+        versionId: "v-new",
         elements: [element("e1", "mv-new"), element("e2")],
         orderedElementIds: ["e2", "e1"]
     };
 
-    it("reuses existing rows and assigns ids + defaults to new elements", () => {
-        const matched = matchElements(
+    it("reuses existing rows (selected by groupId/libraryId/elementId) and assigns ids + defaults to new elements", async () => {
+        await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID);
+        await db.insert(insertables).values({
+            id: "keep-1",
+            groupId: TEST_GROUP_ID,
+            libraryId: TEST_LIBRARY_ID,
+            elementId: "e1",
+            documentId: "doc",
+            versionId: "v-old",
+            elementType: ElementType.PART_STUDIO,
+            name: "e1",
+            microversionId: "mv-old",
+            supportsFasten: true
+        });
+
+        const matched = await matchElements(
+            db,
+            TEST_GROUP_ID,
+            TEST_LIBRARY_ID,
             docInfo,
-            [
-                {
-                    elementId: "e1",
-                    insertableId: "keep-1",
-                    microversionId: "mv-old",
-                    supportsFasten: true
-                }
-            ],
             () => "fresh-uuid"
         );
 
