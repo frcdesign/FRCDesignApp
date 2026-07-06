@@ -60,22 +60,17 @@ export interface DocumentInfo {
 
 /**
  * A document element matched against the database. It carries only the fields the
- * match phase decides — the existing insertable id (or a fresh one for a new element),
- * its position, and the reload/fasten metadata. Everything else on the saved row is
- * rederived at load time (see `toInsertableRow` in `./load-insertable`), so nothing is
- * stored twice.
+ * match phase decides — whether it's new, its position, and its stored microversion
+ * (to decide whether it needs reloading). Everything else — including the insertable's
+ * own id — is resolved by `LoadInsertable` itself, right where it's needed.
  */
 export interface MatchedInsertable {
     isNew: boolean;
     element: DocumentElement;
-    /** The insertable id to write: an existing row's id, or a fresh one for a new element. */
-    insertableId: string;
     /** Position in the document's ordered element list. */
     sortOrder: number;
     /** The microversion currently stored in the DB (null for a new element). */
     storedMicroversionId: string | null;
-    /** Stored insert-and-fasten preference — gates re-parsing fasten info on reload. */
-    supportsFasten: boolean;
 }
 
 /** The shared context every loaded insertable needs but that isn't part of the element itself. */
@@ -148,7 +143,7 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
         // Match each element to an existing insertable, assigning fresh ids to new
         // elements. Ids are generated inside the step so replays are stable.
         const matched = await step.do("match-elements", () =>
-            this.resolveMatches(groupId, libraryId, docInfo)
+            this.resolveMatches(groupId, docInfo)
         );
 
         // Upload document-level thumbnails (with retry).
@@ -233,16 +228,9 @@ export class LoadGroupWorkflow extends WorkflowEntrypoint<
 
     private resolveMatches(
         groupId: string,
-        libraryId: LibraryId,
         docInfo: DocumentInfo
     ): Promise<MatchedInsertable[]> {
-        return matchElements(
-            getDb(this.env.DB),
-            groupId,
-            libraryId,
-            docInfo,
-            () => crypto.randomUUID()
-        );
+        return matchElements(getDb(this.env.DB), groupId, docInfo);
     }
 
     /**
@@ -374,17 +362,14 @@ export function getValidElements(
 // ---------------------------------------------------------------------------
 
 /**
- * Matches each document element to an existing insertable row (selected by
- * groupId + libraryId + elementId), or assigns a fresh insertable id + defaults for
- * new elements. `newId` is injected so callers (the memoized match-elements step)
- * own id generation.
+ * Matches each document element against the database (selected by groupId +
+ * elementId — groupId alone is enough, since it already uniquely scopes a group's
+ * insertables) to decide whether it's new and, if not, its stored microversion.
  */
 export async function matchElements(
     db: Db,
     groupId: string,
-    libraryId: LibraryId,
-    docInfo: DocumentInfo,
-    newId: () => string
+    docInfo: DocumentInfo
 ): Promise<MatchedInsertable[]> {
     const sortOrderByElementId = new Map(
         docInfo.orderedElementIds.map((id, i) => [id, i])
@@ -393,38 +378,21 @@ export async function matchElements(
         docInfo.elements.map(async (element) => {
             const sortOrder = sortOrderByElementId.get(element.elementId) ?? 0;
             const match = await db
-                .select({
-                    insertableId: insertables.id,
-                    microversionId: insertables.microversionId,
-                    supportsFasten: insertables.supportsFasten
-                })
+                .select({ microversionId: insertables.microversionId })
                 .from(insertables)
                 .where(
                     and(
                         eq(insertables.groupId, groupId),
-                        eq(insertables.libraryId, libraryId),
                         eq(insertables.elementId, element.elementId)
                     )
                 )
                 .get();
 
-            if (!match) {
-                return {
-                    element,
-                    insertableId: newId(),
-                    sortOrder,
-                    isNew: true,
-                    storedMicroversionId: null,
-                    supportsFasten: false
-                };
-            }
             return {
                 element,
-                insertableId: match.insertableId,
                 sortOrder,
-                isNew: false,
-                storedMicroversionId: match.microversionId,
-                supportsFasten: match.supportsFasten
+                isNew: !match,
+                storedMicroversionId: match?.microversionId ?? null
             };
         })
     );
@@ -450,7 +418,6 @@ function toLoadInsertableData(
 ): LoadInsertableData {
     const { element } = matched;
     return {
-        insertableId: matched.insertableId,
         groupId: ctx.groupId,
         documentId: ctx.documentId,
         libraryId: ctx.libraryId,
@@ -464,8 +431,6 @@ function toLoadInsertableData(
         name: element.name,
         elementType: element.elementType,
         microversionId: element.microversionId,
-        sortOrder: matched.sortOrder,
-        isNew: matched.isNew,
-        supportsFasten: matched.supportsFasten
+        sortOrder: matched.sortOrder
     };
 }

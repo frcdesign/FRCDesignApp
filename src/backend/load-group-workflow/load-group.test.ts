@@ -41,10 +41,8 @@ const matchedOf = (
     overrides: Partial<MatchedInsertable> = {}
 ): MatchedInsertable => ({
     element: el,
-    insertableId: `id-${el.elementId}`,
     isNew: false,
     storedMicroversionId: el.microversionId,
-    supportsFasten: false,
     sortOrder: 0,
     ...overrides
 });
@@ -128,7 +126,7 @@ describe("matchElements", () => {
         orderedElementIds: ["e2", "e1"]
     };
 
-    it("reuses existing rows (selected by groupId/libraryId/elementId) and assigns ids + defaults to new elements", async () => {
+    it("recognizes existing rows (selected by groupId/elementId) and flags new elements", async () => {
         await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID);
         await db.insert(insertables).values({
             id: "keep-1",
@@ -139,33 +137,22 @@ describe("matchElements", () => {
             versionId: "v-old",
             elementType: ElementType.PART_STUDIO,
             name: "e1",
-            microversionId: "mv-old",
-            supportsFasten: true
+            microversionId: "mv-old"
         });
 
-        const matched = await matchElements(
-            db,
-            TEST_GROUP_ID,
-            TEST_LIBRARY_ID,
-            docInfo,
-            () => "fresh-uuid"
-        );
+        const matched = await matchElements(db, TEST_GROUP_ID, docInfo);
 
         expect(matched).toEqual([
             {
                 element: docInfo.elements[0],
-                insertableId: "keep-1",
                 isNew: false,
                 storedMicroversionId: "mv-old",
-                supportsFasten: true,
                 sortOrder: 1
             },
             {
                 element: docInfo.elements[1],
-                insertableId: "fresh-uuid",
                 isNew: true,
                 storedMicroversionId: null,
-                supportsFasten: false,
                 sortOrder: 0
             }
         ]);

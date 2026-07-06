@@ -10,7 +10,6 @@ import {
 
 describe("toNewInsertableRow / toInsertableUpdate", () => {
     const data: LoadInsertableData = {
-        insertableId: "i1",
         groupId: "g1",
         documentId: "doc",
         libraryId: TEST_LIBRARY_ID,
@@ -24,10 +23,9 @@ describe("toNewInsertableRow / toInsertableUpdate", () => {
         name: "e1",
         elementType: ElementType.PART_STUDIO,
         microversionId: "mv-1",
-        sortOrder: 3,
-        isNew: false,
-        supportsFasten: false
+        sortOrder: 3
     };
+    const insertable = { insertableId: "i1", supportsFasten: false };
     const loaded = {
         parameters: null,
         vendors: [],
@@ -36,7 +34,7 @@ describe("toNewInsertableRow / toInsertableUpdate", () => {
     };
 
     it("toNewInsertableRow includes id/ownership fields + sortOrder and flags build issues", () => {
-        const row = toNewInsertableRow(data, loaded);
+        const row = toNewInsertableRow(data, insertable, loaded);
         expect(row).toMatchObject({
             id: "i1",
             elementId: "e1",
@@ -56,7 +54,7 @@ describe("toNewInsertableRow / toInsertableUpdate", () => {
     });
 
     it("toInsertableUpdate omits id/ownership fields and sortOrder", () => {
-        const update = toInsertableUpdate(data, loaded);
+        const update = toInsertableUpdate(data, insertable, loaded);
         expect(update).not.toHaveProperty("id");
         expect(update).not.toHaveProperty("elementId");
         expect(update).not.toHaveProperty("groupId");
