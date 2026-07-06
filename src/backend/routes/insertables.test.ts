@@ -19,7 +19,6 @@ import * as PartStudioEndpoints from "../onshape-api/endpoints/part-studios";
 import * as AssemblyEndpoints from "../onshape-api/endpoints/assemblies";
 
 const db = getDb(env.DB);
-const adminApp = () => createTestApp({ accessLevel: AccessLevel.ADMIN });
 
 // The target element to insert into — must be an editable workspace ("w").
 const target = "/d/doc-target/w/w-target/e/target-element";
@@ -40,7 +39,7 @@ describe("insertable routes", () => {
     it("POST /toggle-open-composite toggles the flag (admin only)", async () => {
         await seedPartStudio(db);
 
-        const res = await adminApp().request(
+        const res = await createTestApp().request(
             `/api/toggle-open-composite/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { isOpenComposite: true }),
             env
@@ -57,7 +56,9 @@ describe("insertable routes", () => {
 
     it("POST /toggle-open-composite is forbidden without admin access", async () => {
         await seedPartStudio(db);
-        const res = await createTestApp().request(
+        const res = await createTestApp({
+            accessLevel: AccessLevel.USER
+        }).request(
             `/api/toggle-open-composite/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { isOpenComposite: true }),
             env
@@ -68,7 +69,7 @@ describe("insertable routes", () => {
     it("POST /toggle-insert-and-fasten can clear fasten support", async () => {
         await seedPartStudio(db);
 
-        const res = await adminApp().request(
+        const res = await createTestApp().request(
             `/api/toggle-insert-and-fasten/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { supportsFasten: false }),
             env

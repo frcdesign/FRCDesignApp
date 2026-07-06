@@ -1,28 +1,60 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute } from "../app";
+import {
+    getApp,
+    getLibraryParam,
+    libraryRoute,
+    type AppBindings
+} from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { groups, insertables, libraries, favorites } from "../../shared/schema";
-import type { LoadDocumentParams } from "../load-document-workflow/load-document";
-import { fetchVersionInfo } from "../load-document-workflow/steps";
+import { type OnshapeApi } from "../onshape-api/onshape-api";
 import {
     bumpLibraryVersion,
     createOrderedGroup,
     rebuildSearchDb
 } from "../library-data";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 
 export const groupRoutes = getApp();
+
+export async function reloadGroup(
+    api: OnshapeApi,
+    workflow: AppBindings["LOAD_DOCUMENT_WORKFLOW"],
+    group: { id: string; documentId: string; instanceId: string },
+    sessionId: string,
+    forceReload: boolean
+): Promise<boolean> {
+    try {
+        const doc = await getDocument(api, { documentId: group.documentId });
+        if (!forceReload && doc.recentVersion.id === group.instanceId) {
+            return false;
+        }
+        await workflow.create({
+            params: { groupId: group.id, sessionId, forceReload }
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const reloadGroupsQuery = z.object({
+    forceReload: z.coerce.boolean().default(false)
+});
 
 /** POST /api/reload-groups/library/:libraryId?forceReload=true */
 groupRoutes.post(
     "/reload-groups" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("query", reloadGroupsQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const forceReload = c.req.query("forceReload") === "true";
+        const { forceReload } = c.req.valid("query");
         const sessionId = getSessionId(c);
         const onshapeApi = await c.var.getOnshapeApi();
 
@@ -42,50 +74,22 @@ groupRoutes.post(
             .where(eq(groups.libraryId, libraryId))
             .all();
 
-        // Only sync groups whose latest Onshape version differs from what's stored
-        // (or all of them when forced). Skip — rather than fail the batch — a group
-        // whose document can no longer be reached. The up-to-date check only needs
-        // the document's recentVersion id; the fuller version info (name/createdAt)
-        // is only fetched for groups that actually need reloading.
-        const toReload = (
-            await Promise.all(
-                groupRows.map(async (group) => {
-                    try {
-                        const doc = await getDocument(onshapeApi, {
-                            documentId: group.documentId
-                        });
-                        if (
-                            !forceReload &&
-                            doc.recentVersion.id === group.instanceId
-                        ) {
-                            return null;
-                        }
-                        const version = await fetchVersionInfo(
-                            onshapeApi,
-                            group.documentId,
-                            doc.recentVersion.id
-                        );
-                        return { groupId: group.id, version };
-                    } catch {
-                        return null;
-                    }
-                })
-            )
-        ).filter((r) => r !== null);
-
-        const instances = await Promise.all(
-            toReload.map(({ groupId, version }) => {
-                const params: LoadDocumentParams = {
-                    groupId,
+        const results = await Promise.all(
+            groupRows.map((group) =>
+                reloadGroup(
+                    onshapeApi,
+                    c.env.LOAD_DOCUMENT_WORKFLOW,
+                    group,
                     sessionId,
-                    version,
                     forceReload
-                };
-                return c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
-            })
+                )
+            )
         );
 
-        return c.json({ status: "triggered", count: instances.length });
+        return c.json({
+            status: "triggered",
+            count: results.filter(Boolean).length
+        });
     }
 );
 
@@ -212,24 +216,6 @@ groupRoutes.post(
             );
         }
 
-        let version;
-        try {
-            version = await fetchVersionInfo(
-                onshapeApi,
-                body.newDocumentId,
-                recentVersionId
-            );
-        } catch {
-            return c.json(
-                {
-                    type: "handled",
-                    message: "Failed to find a document version to use.",
-                    isError: true
-                },
-                422
-            );
-        }
-
         const db = getDb(c.env.DB);
 
         const existingGroup = await db
@@ -260,12 +246,13 @@ groupRoutes.post(
             libraryId,
             documentId: body.newDocumentId,
             name: documentName,
-            instanceId: version.instanceId,
+            instanceId: recentVersionId,
             selectedGroupId: body.selectedGroupId
         });
 
-        const params: LoadDocumentParams = { groupId, sessionId, version };
-        await c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
+        await c.env.LOAD_DOCUMENT_WORKFLOW.create({
+            params: { groupId, sessionId }
+        });
 
         return c.json({ name: documentName });
     }
