@@ -49,9 +49,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
 }
 
 /**
- * Adds `issue` to `issues`, returning a new array. No-op (returns the original
- * array) if an issue with the same type is already present, so the same check
- * can be applied repeatedly without duplicating issues.
+ * Adds `issue` to `issues`, returning a new array.
  */
 export function addBuildIssue(
     issues: BuildIssue[],
@@ -64,9 +62,7 @@ export function addBuildIssue(
 }
 
 /**
- * Removes any issue with the given `type`, returning a new array. Used e.g.
- * when a thumbnail is successfully reloaded to clear a stale `thumbnail-failed`
- * issue.
+ * Removes any issue with the given `type`.
  */
 export function clearBuildIssue(
     issues: BuildIssue[],
@@ -83,8 +79,7 @@ const SEVERITY_ORDER: BuildIssueSeverity[] = [
 ];
 
 /**
- * Returns the worst severity present in `issues`, or `null` when there are no
- * issues (i.e. all checks pass).
+ * Returns the worst severity present in `issues`, or `null` when there are no issues.
  */
 export function getMaxSeverity(
     issues: BuildIssue[]

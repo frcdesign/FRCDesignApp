@@ -16,11 +16,6 @@ import { OnshapeConfigurationResponse } from "../onshape-api/onshape-types";
 /** No-op visibility condition Onshape attaches to always-visible parameters. */
 const NONE = { btType: "BTParameterVisibilityCondition-177" } as const;
 
-/**
- * A trimmed real `GET .../configuration` response (node ids, namespaces, source
- * microversions, `currentConfiguration`, etc. removed) covering every parameter
- * kind, nested logical conditions, and both enum-option visibility shapes.
- */
 const RESPONSE: OnshapeConfigurationResponse = {
     btType: "BTConfigurationResponse-2019",
     configurationParameters: [
