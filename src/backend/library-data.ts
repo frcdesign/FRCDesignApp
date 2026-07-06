@@ -62,7 +62,7 @@ export async function getLibraryOut(
             documentId: group.documentId,
             path: {
                 documentId: group.documentId,
-                instanceId: group.instanceId,
+                instanceId: group.versionId,
                 instanceType: "v"
             },
             name: group.name,
@@ -78,10 +78,10 @@ export async function getLibraryOut(
             elementId: ins.elementId,
             groupId: ins.groupId,
             documentId: ins.documentId,
-            instanceId: ins.instanceId,
+            versionId: ins.versionId,
             path: {
                 documentId: ins.documentId,
-                instanceId: ins.instanceId,
+                instanceId: ins.versionId,
                 instanceType: "v",
                 elementId: ins.elementId
             },
@@ -114,18 +114,12 @@ export async function createOrderedGroup(
         libraryId: LibraryId;
         documentId: string;
         name: string;
-        instanceId: string;
+        versionId: string;
         selectedGroupId: string | undefined;
     }
 ): Promise<void> {
-    const {
-        groupId,
-        libraryId,
-        documentId,
-        name,
-        instanceId,
-        selectedGroupId
-    } = args;
+    const { groupId, libraryId, documentId, name, versionId, selectedGroupId } =
+        args;
 
     await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
 
@@ -150,7 +144,7 @@ export async function createOrderedGroup(
         documentId,
         libraryId,
         name,
-        instanceId,
+        versionId,
         sortOrder: currentOrder.indexOf(groupId)
     });
     await Promise.all(

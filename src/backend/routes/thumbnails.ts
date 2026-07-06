@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { WorkflowStep } from "cloudflare:workers";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
@@ -112,6 +113,39 @@ export async function uploadDocumentThumbnails(
         thumbnailPath,
         element.microversionId
     );
+}
+
+/**
+ * Uploads thumbnails with a manual retry schedule: two quick attempts, then two spaced
+ * ones (Onshape renders thumbnails asynchronously, so a fresh version's images may not
+ * exist yet). Each attempt is its own `step.do` with retries disabled so the sleeps
+ * between them are the only backoff. Shared by the load-group and load-insertable
+ * workflows' thumbnail uploads.
+ */
+export async function uploadThumbnailsWithRetry(
+    step: WorkflowStep,
+    prefix: string,
+    uploadFn: () => Promise<ThumbnailUrls | null>
+): Promise<ThumbnailUrls | null> {
+    const tryUpload = (n: number) =>
+        step.do(
+            `${prefix}-${n}`,
+            { retries: { limit: 0, delay: 0, backoff: "constant" } },
+            uploadFn
+        );
+
+    let thumbnails = await tryUpload(1);
+    if (thumbnails) return thumbnails;
+    await step.sleep(`${prefix}-wait-1`, "5 seconds");
+    thumbnails = await tryUpload(2);
+    if (thumbnails) return thumbnails;
+
+    await step.sleep(`${prefix}-wait-2`, "5 minutes");
+    thumbnails = await tryUpload(3);
+    if (thumbnails) return thumbnails;
+
+    await step.sleep(`${prefix}-wait-3`, "5 minutes");
+    return await tryUpload(4);
 }
 
 export const thumbnailRoutes = getApp();
@@ -232,7 +266,7 @@ thumbnailRoutes.post(
         const row = await db
             .select({
                 documentId: groups.documentId,
-                instanceId: groups.instanceId,
+                versionId: groups.versionId,
                 libraryId: groups.libraryId,
                 buildIssues: groups.buildIssues
             })
@@ -246,7 +280,7 @@ thumbnailRoutes.post(
 
         const instancePath: InstancePath = {
             documentId: row.documentId,
-            instanceId: row.instanceId,
+            instanceId: row.versionId,
             instanceType: "v"
         };
 

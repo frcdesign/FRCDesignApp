@@ -94,7 +94,7 @@ export async function seedGroup(
             libraryId,
             name: "Test Group",
             documentId: `doc-${id}`,
-            instanceId: "inst-1"
+            versionId: "inst-1"
         })
         .onConflictDoNothing();
     return id;
@@ -114,12 +114,10 @@ async function seedInsertable(
             libraryId: TEST_LIBRARY_ID,
             elementId: path.elementId,
             documentId: path.documentId,
-            instanceId: path.instanceId,
+            versionId: path.instanceId,
             elementType,
             name: `Test ${elementType}`,
-            microversionId: "mv-1",
-            versionName: "v1",
-            versionCreatedAt: new Date(0).toISOString()
+            microversionId: "mv-1"
         })
         .onConflictDoNothing();
     return id;

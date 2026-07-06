@@ -31,7 +31,7 @@ export const groups = sqliteTable(
         name: text("name").notNull(),
         // The Onshape document this group was added from
         documentId: text("document_id").notNull(),
-        instanceId: text("instance_id").notNull(),
+        versionId: text("version_id").notNull(),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
             .default(false),
@@ -68,8 +68,6 @@ export const insertables = sqliteTable(
         name: text("name").notNull(),
         elementType: text("element_type").notNull().$type<ElementType>(),
         microversionId: text("microversion_id").notNull(),
-        versionName: text("version_name").notNull(),
-        versionCreatedAt: text("version_created_at").notNull(),
         isVisible: integer("is_visible", { mode: "boolean" })
             .notNull()
             .default(true),
@@ -79,7 +77,7 @@ export const insertables = sqliteTable(
         supportsFasten: integer("supports_fasten", { mode: "boolean" })
             .notNull()
             .default(false),
-        instanceId: text("instance_id").notNull(),
+        versionId: text("version_id").notNull(),
         sortOrder: integer("sort_order").notNull().default(0),
         vendors: text("vendors", { mode: "json" })
             .$type<Vendor[]>()

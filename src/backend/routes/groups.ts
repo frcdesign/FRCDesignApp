@@ -25,13 +25,13 @@ export const groupRoutes = getApp();
 export async function reloadGroup(
     api: OnshapeApi,
     workflow: AppBindings["LOAD_DOCUMENT_WORKFLOW"],
-    group: { id: string; documentId: string; instanceId: string },
+    group: { id: string; documentId: string; versionId: string },
     sessionId: string,
     forceReload: boolean
 ): Promise<boolean> {
     try {
         const doc = await getDocument(api, { documentId: group.documentId });
-        if (!forceReload && doc.recentVersion.id === group.instanceId) {
+        if (!forceReload && doc.recentVersion.id === group.versionId) {
             return false;
         }
         await workflow.create({
@@ -68,7 +68,7 @@ groupRoutes.post(
             .select({
                 id: groups.id,
                 documentId: groups.documentId,
-                instanceId: groups.instanceId
+                versionId: groups.versionId
             })
             .from(groups)
             .where(eq(groups.libraryId, libraryId))
@@ -246,7 +246,7 @@ groupRoutes.post(
             libraryId,
             documentId: body.newDocumentId,
             name: documentName,
-            instanceId: recentVersionId,
+            versionId: recentVersionId,
             selectedGroupId: body.selectedGroupId
         });
 

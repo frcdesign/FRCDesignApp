@@ -24,7 +24,7 @@ describe("createOrderedGroup", () => {
             libraryId: TEST_LIBRARY_ID,
             documentId: "doc-new",
             name: "New Group",
-            instanceId: "inst-1",
+            versionId: "inst-1",
             selectedGroupId: undefined
         });
 
@@ -44,7 +44,7 @@ describe("createOrderedGroup", () => {
         expect(rows.find((r) => r.id === "new-group")).toMatchObject({
             documentId: "doc-new",
             name: "New Group",
-            instanceId: "inst-1",
+            versionId: "inst-1",
             sortOrder: 1
         });
     });
@@ -60,7 +60,7 @@ describe("createOrderedGroup", () => {
             libraryId: TEST_LIBRARY_ID,
             documentId: "doc-2",
             name: "G2",
-            instanceId: "inst-2",
+            versionId: "inst-2",
             selectedGroupId: undefined
         });
         await createOrderedGroup(db, {
@@ -68,7 +68,7 @@ describe("createOrderedGroup", () => {
             libraryId: TEST_LIBRARY_ID,
             documentId: "doc-3",
             name: "G3",
-            instanceId: "inst-3",
+            versionId: "inst-3",
             selectedGroupId: undefined
         });
         // Order is now [g1, g2, g3]; insert a new group right after g1.
@@ -77,7 +77,7 @@ describe("createOrderedGroup", () => {
             libraryId: TEST_LIBRARY_ID,
             documentId: "doc-1.5",
             name: "G1.5",
-            instanceId: "inst-1.5",
+            versionId: "inst-1.5",
             selectedGroupId: "g1"
         });
 

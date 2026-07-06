@@ -208,7 +208,7 @@ insertableRoutes.post(
         const row = await db
             .select({
                 documentId: insertables.documentId,
-                instanceId: insertables.instanceId,
+                versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 name: insertables.name,
                 elementType: insertables.elementType,
@@ -225,7 +225,7 @@ insertableRoutes.post(
 
         const sourcePath: ElementPath = {
             documentId: row.documentId,
-            instanceId: row.instanceId,
+            instanceId: row.versionId,
             instanceType: "v",
             elementId: row.elementId
         };
@@ -304,7 +304,7 @@ export async function getInsertableElementPath(
     const row = await db
         .select({
             documentId: insertables.documentId,
-            instanceId: insertables.instanceId,
+            versionId: insertables.versionId,
             elementId: insertables.elementId
         })
         .from(insertables)
@@ -317,7 +317,7 @@ export async function getInsertableElementPath(
 
     return {
         documentId: row.documentId,
-        instanceId: row.instanceId,
+        instanceId: row.versionId,
         instanceType: "v",
         elementId: row.elementId
     };

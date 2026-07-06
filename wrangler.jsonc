@@ -53,7 +53,7 @@
         {
             "name": "load-document-workflow",
             "binding": "LOAD_DOCUMENT_WORKFLOW",
-            "class_name": "LoadDocumentWorkflow"
+            "class_name": "LoadGroupWorkflow"
         }
     ],
     /**

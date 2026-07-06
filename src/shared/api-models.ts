@@ -8,7 +8,7 @@ export interface InsertableOut {
     elementId: string;
     groupId: string;
     documentId: string;
-    instanceId: string;
+    versionId: string;
     path: ElementPath;
     name: string;
     microversionId: string;

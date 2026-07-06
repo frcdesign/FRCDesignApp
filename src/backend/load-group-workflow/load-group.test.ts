@@ -1,23 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
 import {
     OnshapeDocumentContents,
     OnshapeElementType,
-    OnshapeFolderEntryType,
-    OnshapeVersionInfo
+    OnshapeFolderEntryType
 } from "../onshape-api/onshape-types";
-import { TEST_LIBRARY_ID } from "../../__test_utils__";
 import {
     getOrderedElementIds,
     getValidElements,
     matchElements,
     getInsertablesToReload,
-    toInsertableRow,
     type DocumentElement,
     type DocumentInfo,
     type MatchedElement
-} from "./load-document";
+} from "./load-group";
 
 const element = (
     elementId: string,
@@ -169,48 +165,5 @@ describe("selectReloads", () => {
         expect(
             getInsertablesToReload([unchanged, changed, fresh], true)
         ).toHaveLength(3);
-    });
-});
-
-// --- pure: row assembly -----------------------------------------------------
-
-describe("toInsertableRow", () => {
-    const ctx = {
-        groupId: "g1",
-        documentId: "doc",
-        libraryId: TEST_LIBRARY_ID,
-        version: {
-            id: "v1",
-            name: "V1",
-            createdAt: "2020-01-01T00:00:00.000Z"
-        } satisfies OnshapeVersionInfo
-    };
-
-    it("maps the matched id/sortOrder + version and flags build issues", () => {
-        const row = toInsertableRow(
-            matchedOf(element("e1"), { insertableId: "i1", sortOrder: 3 }),
-            ctx,
-            {
-                vendors: [],
-                thumbnailUrls: null,
-                fastenInfo: null
-            }
-        );
-        expect(row).toMatchObject({
-            id: "i1",
-            elementId: "e1",
-            groupId: "g1",
-            sortOrder: 3,
-            instanceId: "v1",
-            versionName: "V1",
-            versionCreatedAt: "2020-01-01T00:00:00.000Z",
-            vendors: [],
-            thumbnailUrls: null
-        });
-        // No vendors and no thumbnail → both issues flagged.
-        expect(row.buildIssues).toEqual([
-            { type: BuildIssueType.THUMBNAIL_FAILED },
-            { type: BuildIssueType.NO_VENDORS }
-        ]);
     });
 });

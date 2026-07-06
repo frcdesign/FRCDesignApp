@@ -1,5 +1,5 @@
 import { type Context, Hono } from "hono";
-import type { LoadDocumentParams } from "./load-document-workflow/load-document";
+import type { LoadGroupParams } from "./load-group-workflow/load-group";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
@@ -10,7 +10,7 @@ export interface AppBindings {
     KV: KVNamespace;
     ASSETS: Fetcher;
     THUMBNAILS: R2Bucket;
-    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
+    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadGroupParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
 }
