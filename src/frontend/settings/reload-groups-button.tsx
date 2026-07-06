@@ -26,7 +26,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         mutationKey: ["reload-groups"],
         mutationFn: async () => {
             return apiPost("/reload-groups" + toLibraryPath(libraryId), {
-                query: { reloadAll }
+                query: { forceReload: reloadAll }
             });
         },
         onError: getAppErrorHandler("Failed to reload documents!"),

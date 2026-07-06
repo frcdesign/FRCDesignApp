@@ -49,7 +49,7 @@ export async function reloadGroup(
 }
 
 const reloadGroupsQuery = z.object({
-    forceReload: z.coerce.boolean().default(false)
+    forceReload: z.stringbool().default(false)
 });
 
 /** POST /api/reload-groups/library/:libraryId?forceReload=true */

@@ -123,6 +123,76 @@ describe("group admin routes", () => {
     });
 });
 
+describe("POST /reload-groups", () => {
+    beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
+
+    /** Matches seedGroup's default versionId ("inst-1") — i.e. nothing changed upstream. */
+    function mockUnchangedDocument(): void {
+        vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
+            name: "Doc",
+            recentVersion: { id: "inst-1", name: "v" }
+        });
+    }
+
+    it("skips an unchanged group when forceReload is omitted", async () => {
+        await seedGroup(db, TEST_GROUP_ID);
+        mockUnchangedDocument();
+        const createSpy = vi
+            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
+            .mockResolvedValue({ id: "wf" } as never);
+
+        const res = await createTestApp().request(
+            `/api/reload-groups/library/${TEST_LIBRARY_ID}`,
+            sessionRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ status: "triggered", count: 0 });
+        expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    // Regression test: z.coerce.boolean() coerces the *string* "false" to `true`
+    // (any non-empty string is truthy), so an explicit forceReload=false used to
+    // force a reload just by being present. z.stringbool() fixes this.
+    it("still skips an unchanged group when forceReload=false is explicit", async () => {
+        await seedGroup(db, TEST_GROUP_ID);
+        mockUnchangedDocument();
+        const createSpy = vi
+            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
+            .mockResolvedValue({ id: "wf" } as never);
+
+        const res = await createTestApp().request(
+            `/api/reload-groups/library/${TEST_LIBRARY_ID}?forceReload=false`,
+            sessionRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ status: "triggered", count: 0 });
+        expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("reloads an unchanged group when forceReload=true", async () => {
+        await seedGroup(db, TEST_GROUP_ID);
+        mockUnchangedDocument();
+        const createSpy = vi
+            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
+            .mockResolvedValue({ id: "wf" } as never);
+
+        const res = await createTestApp().request(
+            `/api/reload-groups/library/${TEST_LIBRARY_ID}?forceReload=true`,
+            sessionRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ status: "triggered", count: 1 });
+        expect(createSpy).toHaveBeenCalledOnce();
+        expect(createSpy.mock.calls[0][0]?.params).toMatchObject({
+            forceReload: true
+        });
+    });
+});
+
 describe("POST /group", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
