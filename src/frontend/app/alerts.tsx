@@ -1,5 +1,7 @@
 import { modals } from "@mantine/modals";
-import { Text } from "@mantine/core";
+import { Group, Text } from "@mantine/core";
+import { IconSize } from "../common/style-constants";
+import { IconAlertTriangle } from "@tabler/icons-react";
 
 interface OpenWarningAlertProps {
     title: string;
@@ -8,7 +10,12 @@ interface OpenWarningAlertProps {
 
 function openWarningAlert(props: OpenWarningAlertProps): void {
     modals.openConfirmModal({
-        title: props.title,
+        title: (
+            <Group gap="xs">
+                <IconAlertTriangle size={IconSize.MEDIUM} color="#f08c00" />
+                <span>{props.title}</span>
+            </Group>
+        ),
         children: <Text size="sm">{props.text}</Text>,
         labels: { confirm: "Close", cancel: null },
         centered: true,
