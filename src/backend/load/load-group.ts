@@ -13,7 +13,7 @@ import {
     type ThumbnailUrls,
     type Vendor
 } from "../../shared/types";
-import { configurations, groups, insertables } from "../../shared/schema";
+import { configurations, group, insertables } from "../../shared/schema";
 import {
     uploadDocumentThumbnails,
     uploadThumbnails,
@@ -89,9 +89,6 @@ export async function loadGroup(
 ): Promise<GroupResult> {
     const { groupId, documentId } = job;
 
-    // One memoized plan per group: the skip decision, the element diff, and —
-    // because fresh insertable ids are minted inside it — ids that are stable
-    // across every replay of the steps below.
     const plan = await step.do(`plan-${groupId}`, DATA_RETRIES, () =>
         planGroup(deps, job)
     );
@@ -222,16 +219,13 @@ export async function planGroup(
     const onshape = await api(deps);
     const db = getDb(deps.env.DB);
 
-    // TODO: map Onshape 401/403/404 onto NonRetryableError
-    // (cloudflare:workflows) so a deleted document or revoked access fails
-    // fast instead of burning retries.
     const rawDoc = await getDocument(onshape, { documentId: job.documentId });
     const versionId = rawDoc.recentVersion.id;
 
     const existingGroup = await db
-        .select({ versionId: groups.versionId })
-        .from(groups)
-        .where(eq(groups.id, job.groupId))
+        .select({ versionId: group.versionId })
+        .from(group)
+        .where(eq(group.id, job.groupId))
         .get();
 
     if (shouldSkipGroup(existingGroup, versionId, job.forceReload)) {
@@ -484,7 +478,7 @@ type IdentityFields = Required<Pick<InsertableRow, IdentityColumns>>;
 type UserOwnedFields = Required<Pick<InsertableRow, UserOwnedColumns>>;
 export type ReloadedFields = Required<Pick<InsertableRow, ReloadedColumns>>;
 
-type GroupRow = typeof groups.$inferInsert;
+type GroupRow = typeof group.$inferInsert;
 type GroupIdentityColumns = "id" | "documentId" | "libraryId";
 /**
  * Extend this if the groups schema grows more user-owned columns (e.g. a
@@ -566,9 +560,9 @@ export async function commitGroup(
 ): Promise<{ status: "created" | "reloaded" }> {
     const { ctx } = commit;
     const exists = await db
-        .select({ id: groups.id })
-        .from(groups)
-        .where(eq(groups.id, ctx.groupId))
+        .select({ id: group.id })
+        .from(group)
+        .where(eq(group.id, ctx.groupId))
         .get();
 
     // placeNewGroup may renumber siblings eagerly, before the batch. If the
@@ -615,7 +609,7 @@ export function buildCommitBatch(
     // The conflict set is exactly the reload-owned fields — sortOrder is never
     // touched after creation.
     const groupWrite = db
-        .insert(groups)
+        .insert(group)
         .values({
             id: ctx.groupId,
             documentId: ctx.documentId,
@@ -623,7 +617,7 @@ export function buildCommitBatch(
             sortOrder: sortOrder ?? 0,
             ...groupFields
         })
-        .onConflictDoUpdate({ target: groups.id, set: groupFields });
+        .onConflictDoUpdate({ target: group.id, set: groupFields });
 
     const insertableWrites = loaded.map(({ plan, reloaded }) =>
         db

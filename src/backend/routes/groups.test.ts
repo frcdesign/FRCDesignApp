@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { favorites, groups, insertables } from "../../shared/schema";
+import { favorites, group, insertables } from "../../shared/schema";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
@@ -81,8 +81,8 @@ describe("group admin routes", () => {
 
         const group = await db
             .select()
-            .from(groups)
-            .where(eq(groups.id, TEST_GROUP_ID))
+            .from(group)
+            .where(eq(group.id, TEST_GROUP_ID))
             .get();
         expect(group?.sortAlphabetically).toBe(true);
     });
@@ -102,8 +102,8 @@ describe("group admin routes", () => {
 
         const rows = await db
             .select()
-            .from(groups)
-            .orderBy(asc(groups.sortOrder))
+            .from(group)
+            .orderBy(asc(group.sortOrder))
             .all();
         expect(rows.map((r) => r.id)).toEqual(["test-group-2", TEST_GROUP_ID]);
     });
@@ -118,7 +118,7 @@ describe("group admin routes", () => {
         );
         expect(res.status).toBe(200);
 
-        expect(await db.select().from(groups).all()).toHaveLength(0);
+        expect(await db.select().from(group).all()).toHaveLength(0);
         expect(await db.select().from(insertables).all()).toHaveLength(0);
     });
 });
@@ -229,7 +229,7 @@ describe("POST /group", () => {
 
         // The route (the workflow is mocked here) doesn't compute or write sort
         // order itself anymore — only the existing group exists, untouched.
-        const rows = await db.select().from(groups).all();
+        const rows = await db.select().from(group).all();
         expect(rows.map((r) => r.documentId)).toEqual([`doc-${TEST_GROUP_ID}`]);
         expect(rows[0].sortOrder).toBe(0);
     });

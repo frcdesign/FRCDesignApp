@@ -2,7 +2,7 @@ import { type Db } from "../backend/db";
 import {
     configurations,
     favorites,
-    groups,
+    group,
     insertables,
     libraries,
     users
@@ -57,7 +57,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);
     await db.delete(configurations);
     await db.delete(insertables);
-    await db.delete(groups);
+    await db.delete(group);
     await db.delete(users);
     await db.delete(libraries);
 }
@@ -88,7 +88,7 @@ export async function seedGroup(
 ): Promise<string> {
     await seedLibrary(db, libraryId);
     await db
-        .insert(groups)
+        .insert(group)
         .values({
             id,
             libraryId,

@@ -13,7 +13,7 @@ import {
 } from "../onshape-api/endpoints/thumbnails";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
-import { groups, insertables } from "../../shared/schema";
+import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
@@ -265,13 +265,13 @@ thumbnailRoutes.post(
 
         const row = await db
             .select({
-                documentId: groups.documentId,
-                versionId: groups.versionId,
-                libraryId: groups.libraryId,
-                buildIssues: groups.buildIssues
+                documentId: group.documentId,
+                versionId: group.versionId,
+                libraryId: group.libraryId,
+                buildIssues: group.buildIssues
             })
-            .from(groups)
-            .where(eq(groups.id, groupId))
+            .from(group)
+            .where(eq(group.id, groupId))
             .get();
 
         if (!row) {
@@ -291,7 +291,7 @@ thumbnailRoutes.post(
         );
 
         await db
-            .update(groups)
+            .update(group)
             .set({
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
@@ -299,7 +299,7 @@ thumbnailRoutes.post(
                     BuildIssueType.THUMBNAIL_FAILED
                 )
             })
-            .where(eq(groups.id, groupId));
+            .where(eq(group.id, groupId));
 
         await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });

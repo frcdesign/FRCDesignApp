@@ -2,7 +2,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "./db";
 import {
     libraries,
-    groups,
+    group,
     insertables,
     configurations
 } from "../shared/schema";
@@ -25,9 +25,9 @@ export async function getLibraryOut(
 ): Promise<LibraryOut> {
     const allGroups = await db
         .select()
-        .from(groups)
-        .where(eq(groups.libraryId, libraryId))
-        .orderBy(asc(groups.sortOrder))
+        .from(group)
+        .where(eq(group.libraryId, libraryId))
+        .orderBy(asc(group.sortOrder))
         .all();
 
     if (allGroups.length === 0) {
@@ -117,10 +117,10 @@ export async function placeNewGroup(
     selectedGroupId: string | undefined
 ): Promise<number> {
     const orderedGroups = await db
-        .select({ id: groups.id })
-        .from(groups)
-        .where(eq(groups.libraryId, libraryId))
-        .orderBy(asc(groups.sortOrder))
+        .select({ id: group.id })
+        .from(group)
+        .where(eq(group.libraryId, libraryId))
+        .orderBy(asc(group.sortOrder))
         .all();
     const currentOrder = orderedGroups.map((g) => g.id);
     const insertAfter = selectedGroupId
@@ -137,7 +137,7 @@ export async function placeNewGroup(
             .map((id, i) => [id, i] as const)
             .filter(([id]) => id !== groupId)
             .map(([id, i]) =>
-                db.update(groups).set({ sortOrder: i }).where(eq(groups.id, id))
+                db.update(group).set({ sortOrder: i }).where(eq(group.id, id))
             )
     );
 

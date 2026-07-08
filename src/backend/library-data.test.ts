@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { asc } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "./db";
-import { groups } from "../shared/schema";
+import { group } from "../shared/schema";
 import {
     resetDb,
     seedGroup,
@@ -19,7 +19,7 @@ const db = getDb(env.DB);
  * workflow writes once `placeNewGroup` has told it where the new group belongs.
  */
 async function insertGroupAt(id: string, sortOrder: number): Promise<void> {
-    await db.insert(groups).values({
+    await db.insert(group).values({
         id,
         libraryId: TEST_LIBRARY_ID,
         documentId: `doc-${id}`,
@@ -45,8 +45,8 @@ describe("placeNewGroup", () => {
 
         const rows = await db
             .select()
-            .from(groups)
-            .orderBy(asc(groups.sortOrder))
+            .from(group)
+            .orderBy(asc(group.sortOrder))
             .all();
         expect(rows.map((r) => r.id)).toEqual([TEST_GROUP_ID]);
         expect(rows[0].sortOrder).toBe(0);
@@ -71,8 +71,8 @@ describe("placeNewGroup", () => {
         // siblings get renumbered to make room for it.
         const rows = await db
             .select()
-            .from(groups)
-            .orderBy(asc(groups.sortOrder))
+            .from(group)
+            .orderBy(asc(group.sortOrder))
             .all();
         expect(rows.map((r) => r.id)).toEqual(["g1", "g2", "g3"]);
         expect(rows.map((r) => r.sortOrder)).toEqual([0, 2, 3]);
