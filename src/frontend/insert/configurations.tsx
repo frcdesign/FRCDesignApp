@@ -1,4 +1,12 @@
-import { Center, Checkbox, Loader, Select, TextInput } from "@mantine/core";
+import {
+    Center,
+    Checkbox,
+    Group,
+    Loader,
+    Select,
+    Text,
+    TextInput
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -287,25 +295,29 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     }
 
     return (
-        <Select
-            label={parameter.name}
-            id={parameter.id}
-            data={visibleOptions.map((option) => ({
-                value: option.id,
-                label: option.name
-            }))}
-            value={currentOption.id}
-            allowDeselect={false}
-            mt="sm"
-            checkIconPosition="right"
-            maxDropdownHeight={250}
-            comboboxProps={{ withinPortal: true }}
-            onChange={(newValue) => {
-                if (newValue !== null) {
-                    onValueChange(newValue);
-                }
-            }}
-        />
+        <Group gap="sm" align="center" mt="sm">
+            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+                {parameter.name}
+            </Text>
+            <Select
+                id={parameter.id}
+                data={visibleOptions.map((option) => ({
+                    value: option.id,
+                    label: option.name
+                }))}
+                value={currentOption.id}
+                allowDeselect={false}
+                checkIconPosition="right"
+                maxDropdownHeight={250}
+                comboboxProps={{ withinPortal: true }}
+                style={{ flex: 1 }}
+                onChange={(newValue) => {
+                    if (newValue !== null) {
+                        onValueChange(newValue);
+                    }
+                }}
+            />
+        </Group>
     );
 }
 
@@ -314,32 +326,37 @@ function BooleanParameter(
 ): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Checkbox
-            label={parameter.name}
-            labelPosition="left"
-            checked={value === "true"}
-            mt="sm"
-            styles={{
-                input: { cursor: "pointer" },
-                label: { cursor: "pointer" }
-            }}
-            onChange={handleBooleanChange((checked) =>
-                onValueChange(checked ? "true" : "false")
-            )}
-        />
+        <Group gap="sm" align="center" mt="sm">
+            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+                {parameter.name}
+            </Text>
+            <Checkbox
+                checked={value === "true"}
+                styles={{
+                    input: { cursor: "pointer" }
+                }}
+                onChange={handleBooleanChange((checked) =>
+                    onValueChange(checked ? "true" : "false")
+                )}
+            />
+        </Group>
     );
 }
 
 function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            mt="sm"
-            value={value}
-            onChange={(event) => onValueChange(event.currentTarget.value)}
-        />
+        <Group gap="sm" align="center" mt="sm">
+            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+                {parameter.name}
+            </Text>
+            <TextInput
+                id={parameter.id}
+                value={value}
+                style={{ flex: 1 }}
+                onChange={(event) => onValueChange(event.currentTarget.value)}
+            />
+        </Group>
     );
 }
 
@@ -436,27 +453,35 @@ function QuantityParameter(
     }, [evaluateOptions, expression, onValueChange]);
 
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            ref={ref}
-            value={focused ? expression : display}
-            error={errorMessage}
-            mt="sm"
-            onFocus={(event) => {
-                setFocused(true);
-                event.currentTarget.select();
-            }}
-            onBlur={handleSubmit}
-            onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                    ref.current?.blur();
-                    handleSubmit();
-                }
-            }}
-            onChange={(event) => {
-                setExpression(event.currentTarget.value);
-            }}
-        />
+        <Group gap="sm" align="flex-start" mt="sm">
+            <Text
+                size="sm"
+                style={{ minWidth: "120px", flexShrink: 0, paddingTop: "6px" }}
+            >
+                {parameter.name}
+            </Text>
+            <div style={{ flex: 1 }}>
+                <TextInput
+                    id={parameter.id}
+                    ref={ref}
+                    value={focused ? expression : display}
+                    error={errorMessage}
+                    onFocus={(event) => {
+                        setFocused(true);
+                        event.currentTarget.select();
+                    }}
+                    onBlur={handleSubmit}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            ref.current?.blur();
+                            handleSubmit();
+                        }
+                    }}
+                    onChange={(event) => {
+                        setExpression(event.currentTarget.value);
+                    }}
+                />
+            </div>
+        </Group>
     );
 }
