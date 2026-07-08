@@ -1,5 +1,5 @@
 import { type Context, Hono } from "hono";
-import type { LoadGroupParams } from "./load-group-workflow/load-group";
+import type { LoadGroupParams } from "./load/load-group";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
