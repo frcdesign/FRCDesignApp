@@ -33,6 +33,7 @@ import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
+import { SearchHitTitle } from "../search/search-results";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 
 interface FavoriteCardProps {
@@ -47,6 +48,8 @@ interface FavoriteCardProps {
  */
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
+
+    const uiState = useUiState()[0];
 
     const isHidden = useIsInsertableHidden(insertable);
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
@@ -76,6 +79,34 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         });
     };
 
+    const isSearchActive = Boolean(uiState.searchQuery && searchHit);
+    const titleComponent =
+        isSearchActive && searchHit ? (
+            <SearchHitTitle title={favoriteName} searchHit={searchHit} />
+        ) : (
+            <TextInput
+                value={favoriteName}
+                placeholder="Rename favorite"
+                size="xs"
+                radius="sm"
+                onChange={(event) => setFavoriteName(event.currentTarget.value)}
+                onBlur={saveFavoriteName}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                    }
+                }}
+                onClick={(event) => event.stopPropagation()}
+                onFocus={(event) => event.stopPropagation()}
+                styles={{ input: { minWidth: 0 } }}
+                style={{
+                    width: "50%",
+                    maxWidth: "100%",
+                    minWidth: 0
+                }}
+            />
+        );
+
     return (
         <ItemRow
             onClick={() => {
@@ -91,32 +122,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
-                    title={defaultTitle}
-                    titleComponent={
-                        <TextInput
-                            value={favoriteName}
-                            placeholder="Rename favorite"
-                            size="xs"
-                            radius="sm"
-                            onChange={(event) =>
-                                setFavoriteName(event.currentTarget.value)
-                            }
-                            onBlur={saveFavoriteName}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                    event.currentTarget.blur();
-                                }
-                            }}
-                            onClick={(event) => event.stopPropagation()}
-                            onFocus={(event) => event.stopPropagation()}
-                            styles={{ input: { minWidth: 0 } }}
-                            style={{
-                                width: "50%",
-                                maxWidth: "100%",
-                                minWidth: 0
-                            }}
-                        />
-                    }
+                    title={favoriteName}
+                    titleComponent={titleComponent}
                     thumbnailUrls={insertable.thumbnailUrls}
                     searchHit={searchHit}
                 />
