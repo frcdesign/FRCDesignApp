@@ -74,7 +74,7 @@ describe("favorites routes", () => {
 
             const app = createTestApp();
             const res = await app.request(
-                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-new`,
+                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-new&name=fav-new`,
                 jsonRequest("POST"),
                 env
             );
@@ -196,7 +196,7 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /default-configuration/:favoriteId", () => {
+    describe("POST /favorite/:favoriteId", () => {
         it("persists the default configuration", async () => {
             await seedPartStudio(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
@@ -204,7 +204,7 @@ describe("favorites routes", () => {
 
             const defaultConfiguration = { "param-id": "value" };
             const res = await app.request(
-                `/api/default-configuration/${favoriteId}`,
+                `/api/favorites/${favoriteId}`,
                 jsonRequest("POST", { defaultConfiguration }),
                 env
             );

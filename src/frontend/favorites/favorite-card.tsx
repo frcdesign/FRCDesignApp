@@ -1,9 +1,13 @@
-import { ReactNode } from "react";
-import { InsertableOut, Favorite } from "../../shared/api-models";
+import { ReactNode, useState } from "react";
+import {
+    Favorite,
+    FavoritesData,
+    InsertableOut
+} from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { Menu } from "@mantine/core";
+import { Menu, TextInput } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { useRouter } from "@tanstack/react-router";
@@ -49,9 +53,28 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         insertable.elementType
     );
 
+    const defaultTitle = favorite.name || insertable.name;
+    const [favoriteName, setFavoriteName] = useState(defaultTitle);
+    const updateFavoriteNameMutation = useUpdateFavoriteNameMutation();
+
     if (isHidden) {
         return null;
     }
+
+    const saveFavoriteName = () => {
+        const trimmedName = favoriteName.trim();
+        if (trimmedName.length === 0) {
+            setFavoriteName(defaultTitle);
+            return;
+        }
+        if (trimmedName === defaultTitle) return;
+
+        setFavoriteName(trimmedName);
+        updateFavoriteNameMutation.mutate({
+            favoriteId: favorite.id,
+            name: trimmedName
+        });
+    };
 
     return (
         <ItemRow
@@ -68,7 +91,32 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
-                    title={insertable.name}
+                    title={defaultTitle}
+                    titleComponent={
+                        <TextInput
+                            value={favoriteName}
+                            placeholder="Rename favorite"
+                            size="xs"
+                            radius="sm"
+                            onChange={(event) =>
+                                setFavoriteName(event.currentTarget.value)
+                            }
+                            onBlur={saveFavoriteName}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                    event.currentTarget.blur();
+                                }
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            onFocus={(event) => event.stopPropagation()}
+                            styles={{ input: { minWidth: 0 } }}
+                            style={{
+                                width: "50%",
+                                maxWidth: "100%",
+                                minWidth: 0
+                            }}
+                        />
+                    }
                     thumbnailUrls={insertable.thumbnailUrls}
                     searchHit={searchHit}
                 />
@@ -117,7 +165,8 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     openFavoriteMenu({
                         favoriteId: favorite.id,
                         insertableName: insertable.name,
-                        defaultConfiguration: favorite.defaultConfiguration
+                        defaultConfiguration: favorite.defaultConfiguration,
+                        favorite: favorite
                     });
                 }}
             >
@@ -173,6 +222,42 @@ function useSetFavoriteOrderMutation() {
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."
         ),
+        onSettled: async () => {
+            await queryClient.invalidateQueries({ queryKey });
+            void router.invalidate();
+        }
+    });
+}
+
+function useUpdateFavoriteNameMutation() {
+    const libraryId = useLibraryId();
+    const router = useRouter();
+
+    const queryKey = favoritesQueryKey(libraryId);
+
+    return useMutation({
+        mutationKey: ["update-favorite-name"],
+        mutationFn: async (args: { favoriteId: string; name: string }) => {
+            return apiPost("/favorite/" + args.favoriteId, {
+                body: { name: args.name }
+            });
+        },
+        onMutate: async (args) => {
+            await queryClient.cancelQueries({ queryKey });
+            queryClient.setQueryData(
+                queryKey,
+                produce((data?: FavoritesData) => {
+                    if (!data) return undefined;
+                    const fav = data.favorites[args.favoriteId];
+                    if (fav) {
+                        fav.name = args.name;
+                    }
+                    return data;
+                })
+            );
+            void router.invalidate();
+        },
+        onError: getAppErrorHandler("Unexpectedly failed to rename favorite."),
         onSettled: async () => {
             await queryClient.invalidateQueries({ queryKey });
             void router.invalidate();

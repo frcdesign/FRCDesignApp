@@ -130,28 +130,40 @@ interface CardTitleProps {
     title: string;
     searchHit?: SearchHit;
     thumbnailUrls: ThumbnailUrls;
+    /** Optional title override rendered instead of the default title text. */
+    titleComponent?: ReactNode;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, thumbnailUrls, buildStatusBadge } = props;
+    const {
+        searchHit,
+        title,
+        titleComponent,
+        thumbnailUrls,
+        buildStatusBadge
+    } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
     let cardTitle: ReactNode;
-    if (searchHit) {
+    if (titleComponent) {
+        cardTitle = titleComponent;
+    } else if (searchHit) {
         cardTitle = <SearchHitTitle title={title} searchHit={searchHit} />;
     } else {
-        cardTitle = title;
+        cardTitle = (
+            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                {title}
+            </Text>
+        );
     }
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
             <CardThumbnail thumbnailUrls={thumbnailUrls} />
-            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
-                {cardTitle}
-            </Text>
+            {cardTitle}
             {isHidden && (
                 <IconEyeOff
                     size={IconSize.SMALL}

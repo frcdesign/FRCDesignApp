@@ -150,7 +150,8 @@ export async function seedFavorite(
     db: Db,
     insertableId: string,
     userId: string = TEST_USER_ID,
-    sortOrder = 0
+    sortOrder = 0,
+    name = "test-favorite"
 ): Promise<string> {
     const id = crypto.randomUUID();
     await seedUser(db, userId);
@@ -161,6 +162,7 @@ export async function seedFavorite(
             userId,
             libraryId: TEST_LIBRARY_ID,
             insertableId,
+            name,
             sortOrder
         })
         .onConflictDoNothing();
