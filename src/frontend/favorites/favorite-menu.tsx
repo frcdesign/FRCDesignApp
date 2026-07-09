@@ -70,7 +70,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            return apiPost("/default-configuration/" + favoriteId, {
+            return apiPost("/favorite/" + favoriteId, {
                 body: { defaultConfiguration: configuration }
             });
         },
