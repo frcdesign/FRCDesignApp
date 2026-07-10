@@ -1,52 +1,16 @@
 import { and, eq, inArray } from "drizzle-orm";
-import {
-    getApp,
-    getLibraryParam,
-    libraryRoute,
-    type AppBindings
-} from "../app";
+import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
-import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
-import { type LibraryId } from "../../shared/types";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
 export const groupRoutes = getApp();
-
-export async function reloadGroup(
-    api: OnshapeApi,
-    workflow: AppBindings["LOAD_DOCUMENT_WORKFLOW"],
-    group: { id: string; documentId: string; versionId: string },
-    libraryId: LibraryId,
-    sessionId: string,
-    forceReload: boolean
-): Promise<boolean> {
-    try {
-        const doc = await getDocument(api, { documentId: group.documentId });
-        if (!forceReload && doc.recentVersion.id === group.versionId) {
-            return false;
-        }
-        await workflow.create({
-            params: {
-                groupId: group.id,
-                documentId: group.documentId,
-                libraryId,
-                sessionId,
-                isNew: false,
-                forceReload
-            }
-        });
-        return true;
-    } catch {
-        return false;
-    }
-}
 
 const reloadGroupsQuery = z.object({
     forceReload: z.stringbool().default(false)
@@ -61,7 +25,6 @@ groupRoutes.post(
         const libraryId = getLibraryParam(c);
         const { forceReload } = c.req.valid("query");
         const sessionId = getSessionId(c);
-        const onshapeApi = await c.var.getOnshapeApi();
 
         const db = getDb(c.env.DB);
         await db
@@ -69,33 +32,13 @@ groupRoutes.post(
             .values({ id: libraryId })
             .onConflictDoNothing();
 
-        const groupRows = await db
-            .select({
-                id: group.id,
-                documentId: group.documentId,
-                versionId: group.versionId
-            })
-            .from(group)
-            .where(eq(group.libraryId, libraryId))
-            .all();
-
-        const results = await Promise.all(
-            groupRows.map((group) =>
-                reloadGroup(
-                    onshapeApi,
-                    c.env.LOAD_DOCUMENT_WORKFLOW,
-                    group,
-                    libraryId,
-                    sessionId,
-                    forceReload
-                )
-            )
-        );
-
-        return c.json({
-            status: "triggered",
-            count: results.filter(Boolean).length
+        // The workflow owns the per-group version check — unchanged documents
+        // are skipped inside it (unless forceReload).
+        await c.env.LOAD_LIBRARY_WORKFLOW.create({
+            params: { libraryId, sessionId, forceReload }
         });
+
+        return c.json({ status: "triggered" });
     }
 );
 
@@ -242,13 +185,12 @@ groupRoutes.post(
 
         const groupId = crypto.randomUUID();
 
-        await c.env.LOAD_DOCUMENT_WORKFLOW.create({
+        await c.env.ADD_GROUP_WORKFLOW.create({
             params: {
                 groupId,
                 documentId: body.newDocumentId,
                 libraryId,
                 sessionId,
-                isNew: true,
                 selectedGroupId: body.selectedGroupId
             }
         });

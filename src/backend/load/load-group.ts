@@ -1,112 +1,79 @@
 import type { WorkflowStep } from "cloudflare:workers";
-import type { BatchItem } from "drizzle-orm/batch";
+import { NonRetryableError } from "cloudflare:workflows";
 import { eq, inArray } from "drizzle-orm";
-import type { AppBindings } from "../app";
-import { getOnshapeApiForSessionId } from "../auth";
 import { type Db, getDb } from "../db";
-import type { ElementPath, InstancePath } from "../../shared/onshape-path";
-import type { ParameterObj } from "../../shared/configuration-models";
-import {
-    ElementType,
-    type FastenInfo,
-    type LibraryId,
-    type ThumbnailUrls,
-    type Vendor
-} from "../../shared/types";
-import { configurations, group, insertables } from "../../shared/schema";
+import { ElementType } from "../../shared/types";
+import { group, insertables } from "../../shared/schema";
 import {
     uploadDocumentThumbnails,
-    uploadThumbnails,
     uploadThumbnailsWithRetry
 } from "../routes/thumbnails";
-import { placeNewGroup } from "../library-data";
-import { getContents, getDocument } from "../onshape-api/endpoints/documents";
-import { getConfiguration } from "../onshape-api/endpoints/configurations";
-import type { OnshapeApi } from "../onshape-api/onshape-api";
+import { getContents } from "../onshape-api/endpoints/documents";
 import {
     type OnshapeDocumentContents,
+    type OnshapeDocumentInfo,
     type OnshapeFolderEntry,
     OnshapeFolderEntryType
 } from "../onshape-api/onshape-types";
-import { checkGroup, checkInsertable } from "../parse/build-checks";
-import { parseOnshapeConfiguration } from "../parse/parse-configuration";
-import { parseVendors } from "../parse/parse-vendors";
-import { parseFastenInfo } from "../parse/insert-and-fasten";
+import { checkGroup } from "../parse/build-checks";
+import {
+    DATA_RETRIES,
+    type InheritedProps,
+    type InsertableJob,
+    type LoadDeps,
+    type Statement,
+    api,
+    loadInsertable,
+    versionPath
+} from "./load-insertable";
 
 export const ELEMENT_CONCURRENCY = 4;
 
-const DATA_RETRIES = {
-    retries: { limit: 3, delay: "5 seconds", backoff: "exponential" }
-} as const;
-
-/** A single group's load job — the per-group slice of the workflow's plan. */
 export interface GroupJob {
+    /**
+     * The group to load. Its row must already exist — creation (and placement)
+     * belong to AddGroup, which inserts a shell row before calling loadGroup.
+     */
     groupId: string;
-    documentId: string;
     forceReload: boolean;
     /**
-     * Only meaningful when the group row doesn't exist yet. Creation is
-     * detected from the db rather than declared by the caller — that's what
-     * makes a replay after a committed batch converge on the update path.
-     * Present → place after that sibling; absent → append.
+     * The getDocument result, fetched by the caller — which therefore owns the
+     * version-skip decision; loadGroup always loads.
      */
-    placeAfterGroupId?: string;
+    document: OnshapeDocumentInfo;
 }
 
-export interface LoadDeps {
-    env: AppBindings;
-    sessionId: string;
-    libraryId: LibraryId;
+export interface GroupLoadResult {
+    loadedElements: number;
+    deletedElements: number;
 }
-
-export type GroupResult =
-    | { groupId: string; status: "skipped" }
-    | {
-          groupId: string;
-          status: "created" | "reloaded";
-          loadedElements: number;
-          deletedElements: number;
-      }
-    /** Produced by the workflow when a group's pipeline fails for good. */
-    | { groupId: string; status: "failed" };
 
 /**
- * The group-scoped fields every element row inherits — the "shared data from
- * the calling group". It exists purely in memory: elements read it at build
- * time, never from a half-written group row.
+ * Syncs an Onshape document into its (existing) group row: plans the element
+ * diff, hands each changed element to its own {@link loadInsertable} (which
+ * writes its row independently), then deletes orphaned insertables and writes
+ * the group row.
+ *
+ * If any element fails for good, loadGroup throws *without* writing the group
+ * row: successes are already committed with fresh microversionIds, and the
+ * group's stale versionId queues it for the next sync — which retries only the
+ * failed elements.
  */
-export interface GroupContext {
-    libraryId: LibraryId;
-    groupId: string;
-    documentId: string;
-    versionId: string;
-}
-
 export async function loadGroup(
     deps: LoadDeps,
     step: WorkflowStep,
     job: GroupJob
-): Promise<GroupResult> {
-    const { groupId, documentId } = job;
+): Promise<GroupLoadResult> {
+    const { groupId, document } = job;
 
     const plan = await step.do(`plan-${groupId}`, DATA_RETRIES, () =>
         planGroup(deps, job)
     );
-    if (plan.skip) {
-        return { groupId, status: "skipped" };
-    }
+    const { inherited } = plan;
 
-    const ctx: GroupContext = {
-        libraryId: deps.libraryId,
-        groupId,
-        documentId,
-        versionId: plan.versionId
-    };
-
-    // Thumbnail steps ride uploadThumbnailsWithRetry's budget — durable,
-    // runtime-managed delays spread over minutes, since Onshape renders lazily
-    // after the first touch. Exhaustion resolves to null (a build issue on the
-    // row); it never fails the group.
+    // Rides uploadThumbnailsWithRetry's budget — durable, runtime-managed
+    // delays spread over minutes, since Onshape renders lazily after the first
+    // touch. Exhaustion resolves to null (a build issue on the group row).
     const docThumbnails = uploadThumbnailsWithRetry(
         step,
         `doc-thumbnail-${groupId}`,
@@ -114,85 +81,44 @@ export async function loadGroup(
             uploadDocumentThumbnails(
                 deps.env.THUMBNAILS,
                 await api(deps),
-                versionPath(documentId, plan.versionId)
+                versionPath(inherited.documentId, inherited.versionId)
             )
     );
 
-    // Two memoized steps per element: data (required) and thumbnail
-    // (best-effort), independent of each other and of every other element.
-    const toLoad = plan.elements.filter((element) => element.needsReload);
-    const outcomes = await mapLimit(
-        toLoad,
-        ELEMENT_CONCURRENCY,
-        async (element): Promise<LoadedElement | null> => {
-            const thumbnails = uploadThumbnailsWithRetry(
-                step,
-                `element-thumbnail-${groupId}-${element.elementId}`,
-                async () =>
-                    uploadThumbnails(
-                        deps.env.THUMBNAILS,
-                        await api(deps),
-                        elementPathOf(ctx, element.elementId),
-                        element.microversionId
-                    )
-            );
-            try {
-                const data = await step.do(
-                    `element-${groupId}-${element.elementId}`,
-                    DATA_RETRIES,
-                    () => loadElementData(deps, ctx, element)
-                );
-                return {
-                    plan: element,
-                    parameters: data.parameters,
-                    reloaded: buildReloadedFields(
-                        ctx,
-                        element,
-                        data,
-                        await thumbnails
-                    )
-                };
-            } catch {
-                // Data retries exhausted; the pending thumbnail step settles
-                // to null on its own. The group decides below.
-                return null;
-            }
+    const toLoad = plan.jobs.filter((insertable) => insertable.needsReload);
+    const failedElementIds: string[] = [];
+    await mapLimit(toLoad, ELEMENT_CONCURRENCY, async (insertableJob) => {
+        try {
+            await loadInsertable(deps, step, inherited, insertableJob);
+        } catch {
+            failedElementIds.push(insertableJob.elementId);
         }
-    );
-
-    // All-or-nothing: if any required fetch is unrecoverable, nothing commits.
-    // The group keeps its previous state, and its unchanged versionId queues
-    // the whole group for the next reload.
-    const failedIds = outcomes.flatMap((outcome, index) =>
-        outcome ? [] : [toLoad[index].elementId]
-    );
-    if (failedIds.length > 0) {
-        throw new Error(
-            `Group ${groupId}: elements failed to load: ${failedIds.join(", ")}`
-        );
-    }
-    const loaded = outcomes.filter(
-        (outcome): outcome is LoadedElement => outcome !== null
-    );
+    });
 
     const docThumbnailUrls = await docThumbnails;
 
-    const { status } = await step.do(`commit-${groupId}`, () =>
-        commitGroup(getDb(deps.env.DB), {
-            ctx,
-            docName: plan.docName,
-            hasThumbnailTab: plan.hasThumbnailTab,
-            docThumbnailUrls,
-            placeAfterGroupId: job.placeAfterGroupId,
-            loaded,
-            staleInsertableIds: plan.staleInsertableIds
-        })
-    );
+    if (failedElementIds.length > 0) {
+        throw new Error(
+            `Group ${groupId}: elements failed to load: ` +
+                failedElementIds.join(", ")
+        );
+    }
+
+    await step.do(`write-group-${groupId}`, async () => {
+        const db = getDb(deps.env.DB);
+        await db.batch(
+            buildGroupWriteBatch(
+                db,
+                inherited,
+                document,
+                docThumbnailUrls,
+                plan.staleInsertableIds
+            )
+        );
+    });
 
     return {
-        groupId,
-        status,
-        loadedElements: loaded.length,
+        loadedElements: toLoad.length,
         deletedElements: plan.staleInsertableIds.length
     };
 }
@@ -201,55 +127,54 @@ export async function loadGroup(
 // Planning — the plan step body, plus its pure core.
 // ---------------------------------------------------------------------------
 
-export type GroupPlan =
-    | { skip: true }
-    | {
-          skip: false;
-          versionId: string;
-          docName: string;
-          hasThumbnailTab: boolean;
-          elements: ElementPlan[];
-          staleInsertableIds: string[];
-      };
+export interface GroupPlan {
+    inherited: InheritedProps;
+    jobs: PlannedInsertable[];
+    /** Rows whose element no longer exists in the document. */
+    staleInsertableIds: string[];
+}
 
+/**
+ * The plan step body: resolves the group's inherited props from its row, then
+ * diffs the document's contents against the stored insertables. Freshly minted
+ * ids are generated here, inside the memoized step, so they're stable across
+ * every replay.
+ */
 export async function planGroup(
     deps: LoadDeps,
     job: GroupJob
 ): Promise<GroupPlan> {
-    const onshape = await api(deps);
     const db = getDb(deps.env.DB);
 
-    const rawDoc = await getDocument(onshape, { documentId: job.documentId });
-    const versionId = rawDoc.recentVersion.id;
-
-    const existingGroup = await db
-        .select({ versionId: group.versionId })
+    const groupRow = await db
+        .select({ documentId: group.documentId, libraryId: group.libraryId })
         .from(group)
         .where(eq(group.id, job.groupId))
         .get();
-
-    if (shouldSkipGroup(existingGroup, versionId, job.forceReload)) {
-        return { skip: true };
+    if (!groupRow) {
+        throw new NonRetryableError(
+            `Group ${job.groupId} does not exist — loadGroup needs a (shell) row`
+        );
     }
 
+    const inherited: InheritedProps = {
+        libraryId: groupRow.libraryId,
+        groupId: job.groupId,
+        documentId: groupRow.documentId,
+        versionId: job.document.recentVersion.id
+    };
+
     const contents = await getContents(
-        onshape,
-        versionPath(job.documentId, versionId)
+        await api(deps),
+        versionPath(inherited.documentId, inherited.versionId)
     );
-    const { elements, staleInsertableIds } = planElements(
+    const { jobs, staleInsertableIds } = planInsertables(
         parseContents(contents),
         await readGroupInsertables(db, job.groupId),
         job.forceReload
     );
 
-    return {
-        skip: false,
-        versionId,
-        docName: rawDoc.name,
-        hasThumbnailTab: !!rawDoc.documentThumbnailElementId,
-        elements,
-        staleInsertableIds
-    };
+    return { inherited, jobs, staleInsertableIds };
 }
 
 /** A part studio / assembly tab from the Onshape document contents. */
@@ -303,34 +228,24 @@ export async function readGroupInsertables(
         .where(eq(insertables.groupId, groupId));
 }
 
-/** A tab matched against the db: the tab's fields plus the match decisions. */
-export interface ElementPlan extends DocumentElement {
-    /** The existing row's id, or a freshly minted one for a new element. */
-    insertableId: string;
-    isNew: boolean;
-    /** Stored insert-and-fasten preference — gates re-parsing fasten info. */
-    supportsFasten: boolean;
-    /** Tab-order position. Seeds sortOrder on insert; never touched on reload. */
-    sortOrder: number;
+export interface PlannedInsertable extends InsertableJob {
     needsReload: boolean;
 }
 
-export interface GroupElementsPlan {
-    elements: ElementPlan[];
+export interface GroupInsertablesPlan {
+    jobs: PlannedInsertable[];
     staleInsertableIds: string[];
 }
 
 /**
  * Pure diff of the Onshape snapshot against the stored rows: which elements to
- * (re)load, which rows to delete, and each element's resolved id. This runs
- * inside the memoized plan step, so freshly minted ids are stable across every
- * replay.
+ * (re)load, which rows to delete, and each element's resolved id.
  */
-export function planElements(
+export function planInsertables(
     snapshot: DocumentSnapshot,
     existing: ExistingInsertable[],
     forceReload: boolean
-): GroupElementsPlan {
+): GroupInsertablesPlan {
     const existingByElementId = new Map(
         existing.map((row) => [row.elementId, row])
     );
@@ -338,7 +253,7 @@ export function planElements(
         snapshot.orderedTabIds.map((id, index) => [id, index])
     );
 
-    const elements = snapshot.tabs.map((tab): ElementPlan => {
+    const jobs = snapshot.tabs.map((tab): PlannedInsertable => {
         const stored = existingByElementId.get(tab.elementId);
         return {
             ...tab,
@@ -358,133 +273,35 @@ export function planElements(
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
 
-    return { elements, staleInsertableIds };
+    return { jobs, staleInsertableIds };
 }
 
 /**
- * The group-level skip. Sound because the commit is atomic: a half-loaded
- * group can never have claimed a versionId, so a matching versionId always
- * means "fully loaded at exactly this version".
+ * The caller-owned skip: a group whose stored versionId already matches the
+ * document's latest version is fully loaded, because loadGroup only writes the
+ * group row (claiming the versionId) after every element has landed. AddGroup
+ * shells carry a placeholder versionId, so an interrupted add is picked up by
+ * the next sync instead of being skipped.
  */
 export function shouldSkipGroup(
-    stored: { versionId: string } | undefined,
+    storedVersionId: string,
     latestVersionId: string,
     forceReload: boolean
 ): boolean {
-    return (
-        stored !== undefined &&
-        stored.versionId === latestVersionId &&
-        !forceReload
-    );
+    return storedVersionId === latestVersionId && !forceReload;
 }
 
 // ---------------------------------------------------------------------------
-// Element loading — the data step body, plus the pure join with thumbnails.
+// The group write — the final step's single atomic batch.
 // ---------------------------------------------------------------------------
-
-/** The required per-element data — everything except the thumbnail. */
-export interface ElementData {
-    parameters: ParameterObj[] | null;
-    vendors: Vendor[];
-    fastenInfo: FastenInfo | null;
-}
-
-/** One fully fetched element, ready to drop into the group's batch. */
-export interface LoadedElement {
-    plan: ElementPlan;
-    reloaded: ReloadedFields;
-    /** null → no configuration (any stale config row gets deleted). */
-    parameters: ParameterObj[] | null;
-}
-
-/**
- * The element data step body. A failure here fails the step (and, once retries
- * are exhausted, the group) — configuration and fasten info are required.
- */
-export async function loadElementData(
-    deps: LoadDeps,
-    ctx: GroupContext,
-    plan: ElementPlan
-): Promise<ElementData> {
-    const onshape = await api(deps);
-    const path = elementPathOf(ctx, plan.elementId);
-
-    const rawConfig = await getConfiguration(onshape, path);
-    const parameters =
-        rawConfig.configurationParameters.length === 0
-            ? null
-            : parseOnshapeConfiguration(rawConfig).parameters;
-
-    const vendors = parseVendors(
-        plan.name,
-        parameters ? { parameters } : undefined
-    );
-
-    // Never parsed for a brand-new element; gated by the stored preference on
-    // reload — same semantics as before.
-    const fastenInfo =
-        !plan.isNew && plan.supportsFasten
-            ? await parseFastenInfo(onshape, path, plan.elementType)
-            : null;
-
-    return { parameters, vendors, fastenInfo };
-}
-
-/** Joins an element's data step and thumbnail step into its reload-owned fields. */
-export function buildReloadedFields(
-    ctx: GroupContext,
-    plan: ElementPlan,
-    data: ElementData,
-    thumbnailUrls: ThumbnailUrls | null
-): ReloadedFields {
-    return {
-        name: plan.name,
-        elementType: plan.elementType,
-        microversionId: plan.microversionId,
-        versionId: ctx.versionId,
-        vendors: data.vendors,
-        thumbnailUrls,
-        fastenInfo: data.fastenInfo,
-        buildIssues: checkInsertable({ vendors: data.vendors, thumbnailUrls })
-    };
-}
-
-type InsertableRow = typeof insertables.$inferInsert;
-
-/** Written once when the row is created; never updated. */
-type IdentityColumns =
-    | "id"
-    | "libraryId"
-    | "groupId"
-    | "documentId"
-    | "elementId";
-
-/**
- * Owned by the user after creation.
- */
-type UserOwnedColumns =
-    | "sortOrder"
-    | "isVisible"
-    | "isOpenComposite"
-    | "supportsFasten";
-
-/** Everything else: recomputed from Onshape on every load. */
-type ReloadedColumns = Exclude<
-    keyof InsertableRow,
-    IdentityColumns | UserOwnedColumns
->;
-
-type IdentityFields = Required<Pick<InsertableRow, IdentityColumns>>;
-type UserOwnedFields = Required<Pick<InsertableRow, UserOwnedColumns>>;
-export type ReloadedFields = Required<Pick<InsertableRow, ReloadedColumns>>;
 
 type GroupRow = typeof group.$inferInsert;
 type GroupIdentityColumns = "id" | "documentId" | "libraryId";
 /**
- * Extend this if the groups schema grows more user-owned columns (e.g. a
- * sortAlphabetically flag) — the ReloadedGroupFields annotation will insist.
+ * Extend this if the groups schema grows more user-owned columns — the
+ * ReloadedGroupFields annotation below will insist.
  */
-type GroupUserOwnedColumns = "sortOrder";
+type GroupUserOwnedColumns = "sortOrder" | "sortAlphabetically";
 export type ReloadedGroupFields = Required<
     Pick<
         GroupRow,
@@ -492,204 +309,48 @@ export type ReloadedGroupFields = Required<
     >
 >;
 
-function identityFields(ctx: GroupContext, plan: ElementPlan): IdentityFields {
-    return {
-        id: plan.insertableId,
-        libraryId: ctx.libraryId,
-        groupId: ctx.groupId,
-        documentId: ctx.documentId,
-        elementId: plan.elementId
-    };
-}
-
 /**
- * The user-owned columns' new-row seeds. On an existing row the upsert
- * discards these (its conflict set omits them), so they only ever land when
- * the row is first inserted — that is the preservation guarantee.
+ * Builds the group's final batch: the group-row update (reload-owned fields
+ * only — creation and placement belong to AddGroup) plus the stale-row
+ * deletes. Configurations and favorites follow deleted insertables via their
+ * cascading foreign keys.
  */
-function newRowUserFields(plan: ElementPlan): UserOwnedFields {
-    return {
-        // Seeded from the tab-manager position; the user owns ordering after.
-        sortOrder: plan.sortOrder,
-        // Keep these two literals in sync with the schema column defaults.
-        isVisible: true,
-        isOpenComposite: false,
-        // The stored preference (always false for a brand-new element).
-        supportsFasten: plan.supportsFasten
-    };
-}
-
-/** A complete row for the upsert's VALUES: identity + user seeds + reloaded. */
-export function buildInsertableRow(
-    ctx: GroupContext,
-    plan: ElementPlan,
-    reloaded: ReloadedFields
-): InsertableRow {
-    return {
-        ...identityFields(ctx, plan),
-        ...newRowUserFields(plan),
-        ...reloaded
-    };
-}
-
-// ---------------------------------------------------------------------------
-// Commit — the group's single atomic batch.
-// ---------------------------------------------------------------------------
-
-export type Statement = BatchItem<"sqlite">;
-
-export interface GroupCommit {
-    ctx: GroupContext;
-    docName: string;
-    hasThumbnailTab: boolean;
-    docThumbnailUrls: ThumbnailUrls | null;
-    /** Consulted only when the group row doesn't exist yet. */
-    placeAfterGroupId?: string;
-    loaded: LoadedElement[];
-    staleInsertableIds: string[];
-}
-
-/**
- * The commit step body: one atomic `db.batch()` for the whole group. Existence
- * is re-checked here (not trusted from the memoized plan) so a replay after a
- * committed batch takes the update path instead of re-placing the group.
- */
-export async function commitGroup(
+export function buildGroupWriteBatch(
     db: Db,
-    commit: GroupCommit
-): Promise<{ status: "created" | "reloaded" }> {
-    const { ctx } = commit;
-    const exists = await db
-        .select({ id: group.id })
-        .from(group)
-        .where(eq(group.id, ctx.groupId))
-        .get();
-
-    // placeNewGroup may renumber siblings eagerly, before the batch. If the
-    // batch then fails, the worst case is a harmless sortOrder gap the retry
-    // re-derives. Fold its statements into the batch to make it airtight.
-    const sortOrder = exists
-        ? undefined
-        : await placeNewGroup(
-              db,
-              ctx.libraryId,
-              ctx.groupId,
-              commit.placeAfterGroupId
-          );
-
-    await db.batch(buildCommitBatch(db, commit, sortOrder));
-    return { status: exists ? "reloaded" : "created" };
-}
-
-/**
- * Builds the group's batch: group upsert, element upserts, configuration
- * upserts/deletes, and stale-row deletes. Exported so tests can apply it to a
- * database directly — including twice in a row, to assert that replays
- * converge instead of duplicating.
- */
-export function buildCommitBatch(
-    db: Db,
-    commit: GroupCommit,
-    /** Defined only when the group is being created. */
-    sortOrder: number | undefined
+    inherited: InheritedProps,
+    document: OnshapeDocumentInfo,
+    docThumbnailUrls: ReloadedGroupFields["thumbnailUrls"],
+    staleInsertableIds: string[]
 ): [Statement, ...Statement[]] {
-    const { ctx, loaded, staleInsertableIds } = commit;
-
     const groupFields: ReloadedGroupFields = {
-        name: commit.docName,
-        versionId: ctx.versionId,
-        thumbnailUrls: commit.docThumbnailUrls,
+        name: document.name,
+        versionId: inherited.versionId,
+        thumbnailUrls: docThumbnailUrls,
         buildIssues: checkGroup({
-            hasThumbnailTab: commit.hasThumbnailTab,
-            thumbnailUrls: commit.docThumbnailUrls
+            hasThumbnailTab: !!document.documentThumbnailElementId,
+            thumbnailUrls: docThumbnailUrls
         })
     };
 
-    // An upsert, so the create path and a replay converge on one statement.
-    // The conflict set is exactly the reload-owned fields — sortOrder is never
-    // touched after creation.
     const groupWrite = db
-        .insert(group)
-        .values({
-            id: ctx.groupId,
-            documentId: ctx.documentId,
-            libraryId: ctx.libraryId,
-            sortOrder: sortOrder ?? 0,
-            ...groupFields
-        })
-        .onConflictDoUpdate({ target: group.id, set: groupFields });
+        .update(group)
+        .set(groupFields)
+        .where(eq(group.id, inherited.groupId));
 
-    const insertableWrites = loaded.map(({ plan, reloaded }) =>
+    if (staleInsertableIds.length === 0) {
+        return [groupWrite];
+    }
+    return [
+        groupWrite,
         db
-            .insert(insertables)
-            .values(buildInsertableRow(ctx, plan, reloaded))
-            .onConflictDoUpdate({
-                target: [insertables.groupId, insertables.elementId],
-                set: reloaded
-            })
-    );
-
-    const configWrites = loaded.flatMap(({ plan, parameters }) => {
-        if (parameters !== null) {
-            return [
-                db
-                    .insert(configurations)
-                    .values({ id: plan.insertableId, parameters })
-                    .onConflictDoUpdate({
-                        target: configurations.id,
-                        set: { parameters }
-                    })
-            ];
-        }
-        // The element no longer has a configuration — drop the stale row
-        // rather than leaking it.
-        return plan.isNew
-            ? []
-            : [
-                  db
-                      .delete(configurations)
-                      .where(eq(configurations.id, plan.insertableId))
-              ];
-    });
-
-    // Elements removed from the document take their configurations with them.
-    const staleDeletes =
-        staleInsertableIds.length === 0
-            ? []
-            : [
-                  db
-                      .delete(configurations)
-                      .where(inArray(configurations.id, staleInsertableIds)),
-                  db
-                      .delete(insertables)
-                      .where(inArray(insertables.id, staleInsertableIds))
-              ];
-
-    return [groupWrite, ...insertableWrites, ...configWrites, ...staleDeletes];
+            .delete(insertables)
+            .where(inArray(insertables.id, staleInsertableIds))
+    ];
 }
 
 // ---------------------------------------------------------------------------
 // Small helpers.
 // ---------------------------------------------------------------------------
-
-/** Resolved fresh per step body, so replays after a token refresh stay valid. */
-function api(deps: LoadDeps): Promise<OnshapeApi> {
-    return getOnshapeApiForSessionId(deps.env.KV, deps.sessionId);
-}
-
-export function versionPath(
-    documentId: string,
-    versionId: string
-): InstancePath {
-    return { documentId, instanceId: versionId, instanceType: "v" };
-}
-
-export function elementPathOf(
-    ref: { documentId: string; versionId: string },
-    elementId: string
-): ElementPath {
-    return { ...versionPath(ref.documentId, ref.versionId), elementId };
-}
 
 /**
  * Promise.all with a concurrency cap, preserving input order. Dispatch
@@ -716,7 +377,7 @@ export async function mapLimit<T, R>(
 }
 
 // ---------------------------------------------------------------------------
-// Pure helpers for the document contents tree (unchanged).
+// Pure helpers for the document contents tree.
 // ---------------------------------------------------------------------------
 
 const VALID_ELEMENT_TYPES = new Set<string>([

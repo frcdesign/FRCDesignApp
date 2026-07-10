@@ -1,4 +1,4 @@
-export { LoadGroupWorkflow } from "./load/load-group";
+export { AddGroupWorkflow, LoadLibraryWorkflow } from "./load/workflows";
 import { createApp } from "./create-app";
 import { productionServices } from "./services";
 
