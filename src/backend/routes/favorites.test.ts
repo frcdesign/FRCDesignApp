@@ -110,7 +110,7 @@ describe("favorites routes", () => {
         it("is idempotent on a conflicting id", async () => {
             await seedPartStudio(db);
             const app = createTestApp();
-            const url = `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}&id=dup`;
+            const url = `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}&id=dup&name=dup`;
 
             await app.request(url, jsonRequest("POST"), env);
             await app.request(url, jsonRequest("POST"), env);

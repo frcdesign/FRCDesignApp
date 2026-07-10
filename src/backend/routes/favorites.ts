@@ -129,8 +129,8 @@ favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
     return c.json({ success: true });
 });
 
-/** POST /api/favorite/:favoriteId */
-favoriteRoutes.post("/favorite/:favoriteId", async (c) => {
+/** POST /api/favorites/:favoriteId */
+favoriteRoutes.post("/favorites/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
     const body = await c.req.json<{
         defaultConfiguration?: Configuration;
