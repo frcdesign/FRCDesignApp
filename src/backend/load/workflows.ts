@@ -15,10 +15,8 @@ import {
 import { getDocument } from "../onshape-api/endpoints/documents";
 import type { OnshapeDocumentInfo } from "../onshape-api/onshape-types";
 import { group, libraries } from "../../shared/schema";
-import { DATA_RETRIES, type LoadDeps, api } from "./load-insertable";
-import { loadGroup, mapLimit, shouldSkipGroup } from "./load-group";
-
-const GROUP_CONCURRENCY = 4;
+import { type LoadContext, api } from "./load-utils";
+import { loadGroup } from "./load-group";
 
 export interface LoadLibraryParams {
     libraryId: LibraryId;
@@ -59,9 +57,9 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
     ): Promise<GroupResult[]> {
         const { libraryId, sessionId } = event.payload;
         const forceReload = event.payload.forceReload ?? false;
-        const deps: LoadDeps = { env: this.env, sessionId };
+        const ctx: LoadContext = { env: this.env, sessionId, step };
 
-        const groups = await step.do("plan", async () => {
+        const groups = await step.do("list-groups", async () => {
             const db = getDb(this.env.DB);
             return await db
                 .select({
@@ -73,36 +71,35 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                 .where(eq(group.libraryId, libraryId));
         });
 
-        const results = await mapLimit(
-            groups,
-            GROUP_CONCURRENCY,
-            async (stored): Promise<GroupResult> => {
+        const results = await Promise.all(
+            groups.map(async (stored): Promise<GroupResult> => {
                 const { groupId } = stored;
                 try {
-                    const document = await step.do(
-                        `document-${groupId}`,
-                        DATA_RETRIES,
-                        () => fetchDocumentInfo(deps, stored.documentId)
+                    const document = await step.do(`document-${groupId}`, () =>
+                        fetchDocumentInfo(ctx, stored.documentId)
                     );
+                    // A group whose stored versionId matches the latest is
+                    // fully loaded — loadGroup claims the versionId only after
+                    // every element has landed. AddGroup shells carry a
+                    // placeholder versionId that never matches, so an
+                    // interrupted add is picked up here instead of skipped.
                     if (
-                        shouldSkipGroup(
-                            stored.versionId,
-                            document.recentVersion.id,
-                            forceReload
-                        )
+                        stored.versionId === document.recentVersion.id &&
+                        !forceReload
                     ) {
                         return { groupId, status: "skipped" };
                     }
-                    const loaded = await loadGroup(deps, step, {
+                    const loaded = await loadGroup(
+                        ctx,
                         groupId,
-                        forceReload,
-                        document
-                    });
+                        document,
+                        forceReload
+                    );
                     return { groupId, status: "reloaded", ...loaded };
                 } catch {
                     return { groupId, status: "failed" };
                 }
-            }
+            })
         );
 
         await step.do("finalize", () => finalizeLibrary(this.env, libraryId));
@@ -125,23 +122,28 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<GroupResult> {
         const params = event.payload;
-        const deps: LoadDeps = { env: this.env, sessionId: params.sessionId };
+        const ctx: LoadContext = {
+            env: this.env,
+            sessionId: params.sessionId,
+            step
+        };
 
         let result: GroupResult;
         try {
-            const document = await step.do("document", DATA_RETRIES, () =>
-                fetchDocumentInfo(deps, params.documentId)
+            const document = await step.do("document", () =>
+                fetchDocumentInfo(ctx, params.documentId)
             );
 
             await step.do("create-shell", () =>
                 this.createShell(params, document.name)
             );
 
-            const loaded = await loadGroup(deps, step, {
-                groupId: params.groupId,
-                forceReload: false,
-                document
-            });
+            const loaded = await loadGroup(
+                ctx,
+                params.groupId,
+                document,
+                false
+            );
             result = { groupId: params.groupId, status: "created", ...loaded };
         } catch {
             result = { groupId: params.groupId, status: "failed" };
@@ -194,10 +196,10 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
  * JSON is large, and step outputs are persisted.
  */
 async function fetchDocumentInfo(
-    deps: LoadDeps,
+    ctx: LoadContext,
     documentId: string
 ): Promise<OnshapeDocumentInfo> {
-    const doc = await getDocument(await api(deps), { documentId });
+    const doc = await getDocument(await api(ctx), { documentId });
     return {
         name: doc.name,
         documentThumbnailElementId: doc.documentThumbnailElementId,

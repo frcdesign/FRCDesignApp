@@ -12,23 +12,21 @@ import {
     resetDb,
     seedGroup
 } from "../../__test_utils__";
-import {
-    type InheritedProps,
-    type InsertableJob,
-    buildReloadedFields,
-    buildSaveBatch
-} from "./load-insertable";
+import { type ReloadedFields, saveInsertable } from "./load-insertable";
+import type { GroupFields, InsertableElement } from "./load-utils";
 
 const db = getDb(env.DB);
 
-const inherited: InheritedProps = {
+const groupFields: GroupFields = {
     libraryId: TEST_LIBRARY_ID,
     groupId: TEST_GROUP_ID,
     documentId: `doc-${TEST_GROUP_ID}`,
     versionId: "inst-2"
 };
 
-function job(overrides: Partial<InsertableJob> = {}): InsertableJob {
+function element(
+    overrides: Partial<InsertableElement> = {}
+): InsertableElement {
     return {
         insertableId: "ins-1",
         elementId: "elem-1",
@@ -36,37 +34,38 @@ function job(overrides: Partial<InsertableJob> = {}): InsertableJob {
         elementType: ElementType.PART_STUDIO,
         microversionId: "mv-1",
         sortOrder: 0,
-        isNew: true,
         supportsFasten: false,
         ...overrides
     };
 }
 
-/** Builds and applies the save batch the way loadInsertable's save step does. */
+/** Applies the save the way loadInsertable's save step does. */
 async function applySave(
-    insertableJob: InsertableJob,
+    el: InsertableElement,
     parameters: ParameterObj[] | null
 ): Promise<void> {
-    const reloaded = buildReloadedFields(
-        inherited,
-        insertableJob,
-        { parameters, vendors: [], fastenInfo: null },
-        null
-    );
-    await db.batch(
-        buildSaveBatch(db, inherited, insertableJob, reloaded, parameters)
-    );
+    const reloaded: ReloadedFields = {
+        name: el.name,
+        elementType: el.elementType,
+        microversionId: el.microversionId,
+        versionId: groupFields.versionId,
+        vendors: [],
+        thumbnailUrls: null,
+        fastenInfo: null,
+        buildIssues: []
+    };
+    await saveInsertable(db, groupFields, el, reloaded, parameters);
 }
 
-describe("buildSaveBatch", () => {
+describe("saveInsertable", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db);
     });
 
     it("creates the row and its configuration, and a replay converges", async () => {
-        await applySave(job(), TEST_PARAMETERS);
-        await applySave(job(), TEST_PARAMETERS);
+        await applySave(element(), TEST_PARAMETERS);
+        await applySave(element(), TEST_PARAMETERS);
 
         const rows = await db.select().from(insertables).all();
         expect(rows).toHaveLength(1);
@@ -87,7 +86,7 @@ describe("buildSaveBatch", () => {
     });
 
     it("preserves user-owned fields when reloading an existing row", async () => {
-        await applySave(job(), null);
+        await applySave(element(), null);
         // The user hides the element and moves it before the next reload.
         await db
             .update(insertables)
@@ -95,8 +94,7 @@ describe("buildSaveBatch", () => {
             .where(eq(insertables.id, "ins-1"));
 
         await applySave(
-            job({
-                isNew: false,
+            element({
                 name: "Renamed",
                 microversionId: "mv-2",
                 sortOrder: 0
@@ -118,22 +116,9 @@ describe("buildSaveBatch", () => {
     });
 
     it("drops the configuration row when the element no longer has one", async () => {
-        await applySave(job(), TEST_PARAMETERS);
-        await applySave(job({ isNew: false }), null);
+        await applySave(element(), TEST_PARAMETERS);
+        await applySave(element(), null);
 
         expect(await db.select().from(configurations).all()).toHaveLength(0);
-    });
-
-    it("emits only the insertable write for a new element without a configuration", () => {
-        const newJob = job();
-        const reloaded = buildReloadedFields(
-            inherited,
-            newJob,
-            { parameters: null, vendors: [], fastenInfo: null },
-            null
-        );
-        expect(
-            buildSaveBatch(db, inherited, newJob, reloaded, null)
-        ).toHaveLength(1);
     });
 });

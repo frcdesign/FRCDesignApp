@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ElementType } from "../../shared/types";
 import {
     type DocumentElement,
-    type DocumentSnapshot,
-    type ExistingInsertable,
-    planInsertables,
-    shouldSkipGroup
+    type StoredInsertable,
+    diffElements
 } from "./load-group";
 
 function tab(elementId: string, microversionId = "mv-1"): DocumentElement {
@@ -17,17 +15,10 @@ function tab(elementId: string, microversionId = "mv-1"): DocumentElement {
     };
 }
 
-function snapshot(
-    tabs: DocumentElement[],
-    orderedTabIds = tabs.map((t) => t.elementId)
-): DocumentSnapshot {
-    return { tabs, orderedTabIds };
-}
-
-function existingRow(
+function storedRow(
     elementId: string,
-    overrides: Partial<ExistingInsertable> = {}
-): ExistingInsertable {
+    overrides: Partial<StoredInsertable> = {}
+): StoredInsertable {
     return {
         id: `row-${elementId}`,
         elementId,
@@ -37,96 +28,59 @@ function existingRow(
     };
 }
 
-describe("planInsertables", () => {
-    it("mints an id for a brand-new element and marks it for loading", () => {
-        const { jobs, staleInsertableIds } = planInsertables(
-            snapshot([tab("e1")]),
-            [],
-            false
-        );
-        expect(staleInsertableIds).toEqual([]);
-        expect(jobs).toHaveLength(1);
-        expect(jobs[0]).toMatchObject({
+describe("diffElements", () => {
+    it("mints an id for a brand-new element and loads it", () => {
+        const { toLoad, staleIds } = diffElements([tab("e1")], [], false);
+        expect(staleIds).toEqual([]);
+        expect(toLoad).toHaveLength(1);
+        expect(toLoad[0]).toMatchObject({
             elementId: "e1",
-            isNew: true,
-            supportsFasten: false,
-            needsReload: true
+            supportsFasten: false
         });
-        expect(jobs[0].insertableId).toEqual(expect.any(String));
+        expect(toLoad[0].insertableId).toEqual(expect.any(String));
     });
 
-    it("skips an unchanged element but keeps its stored identity", () => {
-        const { jobs } = planInsertables(
-            snapshot([tab("e1")]),
-            [existingRow("e1", { supportsFasten: true })],
-            false
-        );
-        expect(jobs[0]).toMatchObject({
-            insertableId: "row-e1",
-            isNew: false,
-            supportsFasten: true,
-            needsReload: false
-        });
+    it("leaves an unchanged element alone", () => {
+        const { toLoad } = diffElements([tab("e1")], [storedRow("e1")], false);
+        expect(toLoad).toEqual([]);
     });
 
-    it("reloads an element whose microversion changed", () => {
-        const { jobs } = planInsertables(
-            snapshot([tab("e1", "mv-2")]),
-            [existingRow("e1")],
+    it("reloads an element whose microversion changed, keeping its identity", () => {
+        const { toLoad } = diffElements(
+            [tab("e1", "mv-2")],
+            [storedRow("e1", { supportsFasten: true })],
             false
         );
-        expect(jobs[0]).toMatchObject({
+        expect(toLoad).toHaveLength(1);
+        expect(toLoad[0]).toMatchObject({
             insertableId: "row-e1",
-            needsReload: true
+            supportsFasten: true
         });
     });
 
     it("reloads unchanged elements on forceReload", () => {
-        const { jobs } = planInsertables(
-            snapshot([tab("e1")]),
-            [existingRow("e1")],
-            true
-        );
-        expect(jobs[0].needsReload).toBe(true);
+        const { toLoad } = diffElements([tab("e1")], [storedRow("e1")], true);
+        expect(toLoad).toHaveLength(1);
+        expect(toLoad[0].insertableId).toBe("row-e1");
     });
 
     it("marks rows whose element left the document as stale", () => {
-        const { jobs, staleInsertableIds } = planInsertables(
-            snapshot([tab("e1")]),
-            [existingRow("e1"), existingRow("gone")],
+        const { toLoad, staleIds } = diffElements(
+            [tab("e1", "mv-2")],
+            [storedRow("e1"), storedRow("gone")],
             false
         );
-        expect(jobs.map((job) => job.elementId)).toEqual(["e1"]);
-        expect(staleInsertableIds).toEqual(["row-gone"]);
+        expect(toLoad.map((element) => element.elementId)).toEqual(["e1"]);
+        expect(staleIds).toEqual(["row-gone"]);
     });
 
-    it("seeds sortOrder from the display order", () => {
-        const { jobs } = planInsertables(
-            snapshot([tab("e1"), tab("e2")], ["e2", "e1"]),
-            [],
-            false
-        );
-        expect(jobs.map((job) => [job.elementId, job.sortOrder])).toEqual([
-            ["e1", 1],
-            ["e2", 0]
+    it("seeds sortOrder from the tab position", () => {
+        const { toLoad } = diffElements([tab("e1"), tab("e2")], [], false);
+        expect(
+            toLoad.map((element) => [element.elementId, element.sortOrder])
+        ).toEqual([
+            ["e1", 0],
+            ["e2", 1]
         ]);
-    });
-});
-
-describe("shouldSkipGroup", () => {
-    it("skips when the stored version matches the latest", () => {
-        expect(shouldSkipGroup("v1", "v1", false)).toBe(true);
-    });
-
-    it("loads when the document has a new version", () => {
-        expect(shouldSkipGroup("v1", "v2", false)).toBe(false);
-    });
-
-    it("never skips on forceReload", () => {
-        expect(shouldSkipGroup("v1", "v1", true)).toBe(false);
-    });
-
-    it("never skips an AddGroup shell's placeholder version", () => {
-        expect(shouldSkipGroup("", "v1", false)).toBe(false);
     });
 });
