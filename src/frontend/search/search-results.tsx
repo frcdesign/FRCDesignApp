@@ -37,7 +37,6 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         searchDbQuery.data,
         query,
         filters,
-        undefined,
         hasEditorAccess(loaderData.accessData.currentAccessLevel)
     );
 

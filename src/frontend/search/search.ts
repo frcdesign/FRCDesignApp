@@ -17,7 +17,6 @@ export function plural(objectLabel: ObjectLabel): string {
 export interface SearchFilters {
     groupId?: string;
     vendors?: Vendor[];
-    isFavorite?: boolean;
 }
 
 // Range is already defined by TypeScript
@@ -52,7 +51,6 @@ export function doSearch(
     searchDb: MiniSearch<SearchDocument>,
     query?: string,
     filters?: SearchFilters,
-    favoritedInsertableIds?: Set<string>,
     showHidden?: boolean
 ): SearchResult {
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
@@ -65,12 +63,6 @@ export function doSearch(
         filter: (searchResult) => {
             if (!showHidden && !searchResult.isVisible) {
                 return false;
-            }
-
-            if (filters?.isFavorite) {
-                if (!favoritedInsertableIds?.has(searchResult.id)) {
-                    return false;
-                }
             }
 
             let filteredByGroup = false;
