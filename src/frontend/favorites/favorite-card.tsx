@@ -32,7 +32,7 @@ import {
 import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
-import { SearchHit } from "../search/search";
+import { SearchHit } from "../search/insertable-search";
 import { SearchHitTitle } from "../search/search-results";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 

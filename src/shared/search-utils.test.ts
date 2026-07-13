@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { processTerm, tokenize } from "../../shared/search";
+import { tokenize } from "./search-utils";
+import { processTerm } from "./search-utils";
 
 describe("processTerm", () => {
     it("should process camelCase", () => {

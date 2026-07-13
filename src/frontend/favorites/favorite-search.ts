@@ -1,16 +1,16 @@
-import MiniSearch, {
-    Options,
-    SearchResult as MiniSearchResult
-} from "minisearch";
+import MiniSearch, { Options } from "minisearch";
 import { Favorite } from "../../shared/api-models";
-import { processTerm, tokenize } from "../../shared/search";
-import { Position, SearchHit } from "../search/search";
+import { tokenize, TypedMiniSearchResult } from "../../shared/search-utils";
+import { processTerm } from "../../shared/search-utils";
+import { Position, SearchHit } from "../search/insertable-search";
 
 interface FavoriteSearchDocument {
     id: string;
     name: string;
     favoriteId: string;
 }
+
+type FavoriteSearchResult = TypedMiniSearchResult<FavoriteSearchDocument>;
 
 const FAVORITE_SEARCH_OPTIONS: Options<FavoriteSearchDocument> = {
     fields: ["name", "favoriteId"],
@@ -40,11 +40,8 @@ function buildFavoriteSearchDb(
     return searchDb;
 }
 
-function generateHighlightPositions(
-    result: MiniSearchResult,
-    document: FavoriteSearchDocument
-): Position[] {
-    const name = document.name.toLowerCase();
+function generateHighlightPositions(result: FavoriteSearchResult): Position[] {
+    const name = result.name.toLowerCase();
     const positions: Position[] = [];
 
     for (const [term, matchedFields] of Object.entries(result.match)) {
@@ -63,7 +60,7 @@ function generateHighlightPositions(
     return positions;
 }
 
-export interface FavoriteSearchResult {
+export interface FilteredFavoritesResult {
     favorite: Favorite;
     searchHit: SearchHit | undefined;
 }
@@ -71,7 +68,7 @@ export interface FavoriteSearchResult {
 export function filterFavoritesForSearch(
     favorites: Favorite[],
     query?: string
-): FavoriteSearchResult[] {
+): FilteredFavoritesResult[] {
     if (!query || query.trim() === "") {
         return favorites.map((favorite) => ({
             favorite,
@@ -80,15 +77,19 @@ export function filterFavoritesForSearch(
     }
 
     const searchDb = buildFavoriteSearchDb(favorites);
-    const miniSearchResults = searchDb.search(query);
+    const miniSearchResults = searchDb.search(query, {
+        filter: () => {
+            // const searchResult = result as FavoriteSearchResult;
+            return true;
+        }
+    }) as FavoriteSearchResult[];
 
-    const results: FavoriteSearchResult[] = [];
+    const results: FilteredFavoritesResult[] = [];
 
     for (const miniSearchResult of miniSearchResults) {
-        const document = searchDb.getStoredFields(
-            miniSearchResult.id
-        ) as unknown as FavoriteSearchDocument;
-        const favorite = favorites.find((item) => item.id === document.id);
+        const favorite = favorites.find(
+            (item) => item.id === miniSearchResult.id
+        );
         if (!favorite) {
             continue;
         }
@@ -97,10 +98,7 @@ export function filterFavoritesForSearch(
             favorite,
             searchHit: {
                 id: favorite.id,
-                positions: generateHighlightPositions(
-                    miniSearchResult,
-                    document
-                )
+                positions: generateHighlightPositions(miniSearchResult)
             }
         });
     }

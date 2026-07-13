@@ -1,18 +1,9 @@
-import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
+import MiniSearch from "minisearch";
 import { Vendor } from "../../shared/types";
-import { SearchDocument } from "../../shared/search";
+import { SearchDocument } from "../../shared/build-insertable-search";
+import { TypedMiniSearchResult } from "../../shared/search-utils";
 
-/**
- * A user facing name to use for elements currently being filtered/searched on.
- */
-export type ObjectLabel = "element" | "favorite" | "search result";
-
-/**
- * Returns the plural form of an object label.
- */
-export function plural(objectLabel: ObjectLabel): string {
-    return objectLabel + "s";
-}
+type SearchDocumentResult = TypedMiniSearchResult<SearchDocument>;
 
 export interface SearchFilters {
     groupId?: string;
@@ -59,8 +50,10 @@ export function doSearch(
         return { hits: [], filtered };
     }
 
-    const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
-        filter: (searchResult) => {
+    const miniSearchResults = searchDb.search(query, {
+        filter: (result) => {
+            // Stored fields are merged onto each result, so it doubles as the document
+            const searchResult = result as SearchDocumentResult;
             if (!showHidden && !searchResult.isVisible) {
                 return false;
             }
@@ -93,25 +86,14 @@ export function doSearch(
 
             return true;
         }
-    });
+    }) as SearchDocumentResult[];
 
     // Add highlighting
     const hits: SearchHit[] = miniSearchResults
-        .map((miniSearchResult) => {
-            // Stored fields should be the same as SearchDocument
-            const document = searchDb.getStoredFields(
-                miniSearchResult.id
-            ) as unknown as SearchDocument;
-            const positions = generateHighlightPositions(
-                miniSearchResult,
-                document
-            );
-
-            return {
-                id: document.id,
-                positions
-            };
-        })
+        .map((miniSearchResult) => ({
+            id: miniSearchResult.id,
+            positions: generateHighlightPositions(miniSearchResult)
+        }))
         .slice(0, 50); // Limit to 50 results
 
     return { hits, filtered };
@@ -121,14 +103,11 @@ export function doSearch(
  * Generate highlight positions for matched terms in the document.
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
  */
-function generateHighlightPositions(
-    result: MiniSearchResult,
-    document: SearchDocument
-): Position[] {
+function generateHighlightPositions(result: SearchDocumentResult): Position[] {
     // Terms is an array of values in name (or spacedName) which matched
     // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
 
-    const name = document.name.toLowerCase();
+    const name = result.name.toLowerCase();
 
     const positions: Position[] = [];
 

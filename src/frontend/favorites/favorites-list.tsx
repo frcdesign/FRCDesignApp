@@ -12,9 +12,9 @@ import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
 import { ItemTable } from "../cards/card-components";
 import { useFavoritesQuery, useLibraryQuery } from "../queries";
-import { FilterResult, SearchHit } from "../search/search";
+import { FilterResult, SearchHit } from "../search/insertable-search";
 import {
-    FavoriteSearchResult,
+    FilteredFavoritesResult,
     filterFavoritesForSearch
 } from "./favorite-search";
 
@@ -64,7 +64,7 @@ export function FavoritesList(): ReactNode {
         );
 
         const matchedInsertables = matchedFavorites
-            .map((result: FavoriteSearchResult) => {
+            .map((result: FilteredFavoritesResult) => {
                 const insertable = insertables[result.favorite.insertableId];
                 return insertable ? { insertable, result } : undefined;
             })
@@ -73,7 +73,7 @@ export function FavoritesList(): ReactNode {
                     item
                 ): item is {
                     insertable: InsertableOut;
-                    result: FavoriteSearchResult;
+                    result: FilteredFavoritesResult;
                 } => !!item
             );
 

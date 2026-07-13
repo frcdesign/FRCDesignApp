@@ -11,7 +11,7 @@ import { IconColor, IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../app-common/app-menu";
-import { SearchHit } from "../search/search";
+import { SearchHit } from "../search/insertable-search";
 import { SearchHitTitle } from "../search/search-results";
 import { CardThumbnail } from "../insert/thumbnail";
 import { ConfigurablePath, InstancePath } from "../../shared/onshape-path";

@@ -16,7 +16,7 @@ import {
 } from "../../shared/api-models";
 import { Configuration } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
-import { SearchHit } from "../search/search";
+import { SearchHit } from "../search/insertable-search";
 import {
     FavoriteButton,
     FavoriteInsertableItem
