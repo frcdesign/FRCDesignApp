@@ -68,6 +68,7 @@ export interface Favorite {
     insertableId: string;
     libraryId: LibraryId;
     defaultConfiguration?: Configuration;
+    name?: string;
 }
 
 export interface FavoritesData {

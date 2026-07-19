@@ -14,7 +14,7 @@ import { ContextData } from "../shared/types";
 import { useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
-import { SEARCH_OPTIONS } from "../shared/search";
+import { SEARCH_OPTIONS } from "../shared/build-insertable-search";
 import { InstancePath } from "../shared/onshape-path";
 
 export function getConfigurationMatchKey() {

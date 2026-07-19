@@ -3,9 +3,21 @@ import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
 import { HeartIconColor, IconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../settings/vendor-filters";
-import { FilterResult, ObjectLabel, plural } from "./search";
+import { FilterResult } from "./insertable-search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../app-common/app-zero-state";
+
+/**
+ * A user facing name to use for elements currently being filtered/searched on.
+ */
+type ObjectLabel = "element" | "favorite" | "search result";
+
+/**
+ * Returns the plural form of an object label.
+ */
+function plural(objectLabel: ObjectLabel): string {
+    return objectLabel + "s";
+}
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {

@@ -9,7 +9,7 @@ import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/notifications";
 import { PreviewImageCard } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../insert/configurations";
-import { type FavoritesData } from "../../shared/api-models";
+import { Favorite, type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import { Configuration } from "../../shared/configuration-models";
@@ -26,15 +26,17 @@ interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
     defaultConfiguration?: Configuration;
+    favorite: Favorite;
 }
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
-    const { favoriteId, insertableName, defaultConfiguration } = props;
+    const { favoriteId, insertableName, favorite, defaultConfiguration } =
+        props;
     modals.open({
         title: (
             <Group gap="xs" wrap="nowrap">
                 <HeartIcon />
-                {insertableName}
+                {favorite.name ?? insertableName}
             </Group>
         ),
         size: 500,
@@ -68,7 +70,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            return apiPost("/default-configuration/" + favoriteId, {
+            return apiPost("/favorite/" + favoriteId, {
                 body: { defaultConfiguration: configuration }
             });
         },

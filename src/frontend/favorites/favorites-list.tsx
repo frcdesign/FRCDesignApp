@@ -1,7 +1,6 @@
 import { IconHeartBroken } from "@tabler/icons-react";
 import { HeartIconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import { filterInsertables } from "../search/filter";
 import {
     getFavoriteForInsertable,
@@ -12,13 +11,12 @@ import { SectionError, SectionLoading } from "../app-common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
 import { ItemTable } from "../cards/card-components";
+import { useFavoritesQuery, useLibraryQuery } from "../queries";
+import { FilterResult, SearchHit } from "../search/insertable-search";
 import {
-    useFavoritesQuery,
-    useLibraryQuery,
-    useSearchDbQuery
-} from "../queries";
-import { doSearch, FilterResult, SearchHit } from "../search/search";
-import { hasEditorAccess } from "../../shared/types";
+    FilteredFavoritesResult,
+    filterFavoritesForSearch
+} from "./favorite-search";
 
 /**
  * A list of current favorite cards.
@@ -26,23 +24,13 @@ import { hasEditorAccess } from "../../shared/types";
  */
 export function FavoritesList(): ReactNode {
     const uiState = useUiState()[0];
-    const loaderData = useLoaderData({ from: "/app" });
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
-    const searchDbQuery = useSearchDbQuery();
 
-    if (
-        libraryQuery.isPending ||
-        searchDbQuery.isPending ||
-        favoritesQuery.isPending
-    ) {
+    if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
-    } else if (
-        libraryQuery.isError ||
-        searchDbQuery.isError ||
-        favoritesQuery.isError
-    ) {
+    } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
             <SectionError
                 title="Failed to load favorites."
@@ -70,37 +58,46 @@ export function FavoritesList(): ReactNode {
     let filterResult: FilterResult;
     let searchHits: Record<string, SearchHit> = {};
     if (uiState.searchQuery) {
-        if (!searchDbQuery.data) {
-            return <SectionError title="Failed to load search database." />;
-        }
-        const favoriteInsertableIds = new Set(
-            Object.values(favoritesQuery.data.favorites).map(
-                (f) => f.insertableId
-            )
+        const matchedFavorites = filterFavoritesForSearch(
+            orderedFavorites,
+            uiState.searchQuery
         );
-        const searchResults = doSearch(
-            searchDbQuery.data,
-            uiState.searchQuery,
+
+        const matchedInsertables = matchedFavorites
+            .map((result: FilteredFavoritesResult) => {
+                const insertable = insertables[result.favorite.insertableId];
+                return insertable ? { insertable, result } : undefined;
+            })
+            .filter(
+                (
+                    item
+                ): item is {
+                    insertable: InsertableOut;
+                    result: FilteredFavoritesResult;
+                } => !!item
+            );
+
+        const filterResult2 = filterInsertables(
+            matchedInsertables.map((item) => item.insertable),
             {
                 vendors: uiState.vendorFilters,
-                isFavorite: true
-            },
-            favoriteInsertableIds,
-            hasEditorAccess(loaderData.accessData.currentAccessLevel)
+                isVisible: true
+            }
         );
 
-        filteredInsertables = searchResults.hits
-            .map((hit) => insertables[hit.id])
-            .filter((insertable) => !!insertable);
-
-        filterResult = searchResults.filtered;
-
-        searchHits = searchResults.hits.reduce(
-            (acc, hit) => {
-                acc[hit.id] = hit;
-                return acc;
-            },
-            {} as Record<string, SearchHit>
+        filteredInsertables = filterResult2.insertables;
+        filterResult = filterResult2.filtered;
+        searchHits = Object.fromEntries(
+            matchedInsertables
+                .filter((item) =>
+                    filteredInsertables.some(
+                        (insertable) => insertable.id === item.insertable.id
+                    )
+                )
+                .flatMap((item) => {
+                    const searchHit = item.result.searchHit;
+                    return searchHit ? [[item.insertable.id, searchHit]] : [];
+                })
         );
     } else {
         const filterResult2 = filterInsertables(favoriteInsertables, {

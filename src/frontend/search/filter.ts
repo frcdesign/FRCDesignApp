@@ -1,6 +1,6 @@
 import { InsertableOut } from "../../shared/api-models";
 import { Vendor } from "../../shared/types";
-import { FilterResult } from "./search";
+import { FilterResult } from "./insertable-search";
 
 export interface FilterArgs {
     /**

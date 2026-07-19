@@ -1,6 +1,11 @@
 import { ReactNode } from "react";
 import { useLoaderData } from "@tanstack/react-router";
-import { Position, SearchFilters, SearchHit, doSearch } from "./search";
+import {
+    Position,
+    SearchFilters,
+    SearchHit,
+    doSearch
+} from "./insertable-search";
 import { InsertableCard } from "../cards/insertable-card";
 import { ItemTable } from "../cards/card-components";
 import { SectionError, SectionLoading } from "../app-common/app-zero-state";
@@ -37,7 +42,6 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         searchDbQuery.data,
         query,
         filters,
-        undefined,
         hasEditorAccess(loaderData.accessData.currentAccessLevel)
     );
 

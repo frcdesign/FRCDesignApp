@@ -16,7 +16,7 @@ import {
 } from "../../shared/api-models";
 import { Configuration } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
-import { SearchHit } from "../search/search";
+import { SearchHit } from "../search/insertable-search";
 import {
     FavoriteButton,
     FavoriteInsertableItem
@@ -25,7 +25,7 @@ import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import { InsertableStatusBadge } from "./build-status";
 import {
     AdminOptionsSubmenu,
-    CardTitle,
+    CardTitleGroup,
     ItemRow,
     OpenDocumentItems,
     QuickInsertItems,
@@ -88,7 +88,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 openInsertMenu({ insertable });
             }}
             left={
-                <CardTitle
+                <CardTitleGroup
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}

@@ -13,7 +13,7 @@ import {
     Insertables,
     Groups
 } from "../shared/api-models";
-import { buildSearchDb } from "../shared/search";
+import { buildSearchDb } from "../shared/build-insertable-search";
 
 /**
  * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a

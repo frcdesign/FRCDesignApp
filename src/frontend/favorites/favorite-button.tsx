@@ -69,7 +69,8 @@ function useUpdateFavoritesMutation() {
                 return apiPost("/favorites" + toLibraryPath(libraryId), {
                     query: {
                         insertableId: args.insertable.id,
-                        id: args.favoriteId
+                        id: args.favoriteId,
+                        name: args.insertable.name
                     }
                 });
             } else {
