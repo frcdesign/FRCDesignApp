@@ -19,7 +19,7 @@ import { ChangeOrderItems } from "../common/change-order";
 import { useSetVisibilityMutation } from "../cards/card-hooks";
 import {
     AdminOptionsSubmenu,
-    CardTitle,
+    CardTitleGroup,
     ItemRow,
     OpenDocumentItems,
     ReloadThumbnailMenuItem
@@ -55,7 +55,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                 });
             }}
             left={
-                <CardTitle
+                <CardTitleGroup
                     title={group.name}
                     thumbnailUrls={group.thumbnailUrls}
                     buildStatusBadge={<GroupStatusBadge groupId={group.id} />}

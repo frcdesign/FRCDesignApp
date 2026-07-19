@@ -147,7 +147,7 @@ export const favorites = sqliteTable(
         defaultConfiguration: text("default_configuration", {
             mode: "json"
         }).$type<Configuration | null>(),
-        name: text("name").notNull().default(""),
+        name: text("name").$type<string | null>(),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

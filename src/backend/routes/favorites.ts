@@ -33,7 +33,7 @@ async function getFavorites(
             insertableId: row.insertableId,
             libraryId,
             defaultConfiguration: row.defaultConfiguration ?? undefined,
-            name: row.name || undefined
+            name: row.name ?? undefined
         };
         favoritesOut[row.id] = fav;
         favoriteOrder.push(row.id);
@@ -67,16 +67,10 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
 
     await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
-    const existingCount = await db
-        .select({ sortOrder: favorites.sortOrder })
-        .from(favorites)
-        .where(
-            and(
-                eq(favorites.userId, userId),
-                eq(favorites.libraryId, libraryId)
-            )
-        )
-        .all();
+    const existingFavorites = await db.$count(
+        favorites,
+        and(eq(favorites.userId, userId), eq(favorites.libraryId, libraryId))
+    );
 
     await db
         .insert(favorites)
@@ -86,7 +80,7 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
             libraryId,
             insertableId,
             name,
-            sortOrder: existingCount.length
+            sortOrder: existingFavorites
         })
         .onConflictDoNothing();
 
@@ -133,7 +127,7 @@ favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
 favoriteRoutes.post("/favorites/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
     const body = await c.req.json<{
-        defaultConfiguration?: Configuration;
+        defaultConfiguration?: Configuration | null;
         name?: string;
     }>();
 
@@ -141,19 +135,7 @@ favoriteRoutes.post("/favorites/:favoriteId", async (c) => {
         return c.json({ error: "favoriteId is required" }, 400);
     }
 
-    const updateValues: {
-        defaultConfiguration?: Configuration | null;
-        name?: string;
-    } = {};
-
-    if (body.defaultConfiguration !== undefined) {
-        updateValues.defaultConfiguration = body.defaultConfiguration;
-    }
-    if (body.name !== undefined) {
-        updateValues.name = body.name;
-    }
-
-    if (Object.keys(updateValues).length === 0) {
+    if (Object.keys(body).length === 0) {
         return c.json(
             { error: "defaultConfiguration or name is required" },
             400
@@ -161,10 +143,13 @@ favoriteRoutes.post("/favorites/:favoriteId", async (c) => {
     }
 
     const db = getDb(c.env.DB);
-    await db
-        .update(favorites)
-        .set(updateValues)
-        .where(eq(favorites.id, favoriteId));
+
+    if (Object.keys(body).length > 0) {
+        await db
+            .update(favorites)
+            .set(body)
+            .where(eq(favorites.id, favoriteId));
+    }
 
     return c.json({ success: true });
 });

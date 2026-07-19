@@ -15,7 +15,7 @@ import { openInsertMenu } from "../insert/insert-menu";
 import { openFavoriteMenu } from "./favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
-    CardTitle,
+    CardTitleGroup,
     ItemRow,
     OpenDocumentItems,
     QuickInsertItems
@@ -120,7 +120,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 });
             }}
             left={
-                <CardTitle
+                <CardTitleGroup
                     disabled={isAssemblyInPartStudio}
                     title={favoriteName}
                     titleComponent={titleComponent}

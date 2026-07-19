@@ -25,7 +25,7 @@ import { useIsInsertableHidden, useSetVisibilityMutation } from "./card-hooks";
 import { InsertableStatusBadge } from "./build-status";
 import {
     AdminOptionsSubmenu,
-    CardTitle,
+    CardTitleGroup,
     ItemRow,
     OpenDocumentItems,
     QuickInsertItems,
@@ -88,7 +88,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 openInsertMenu({ insertable });
             }}
             left={
-                <CardTitle
+                <CardTitleGroup
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}

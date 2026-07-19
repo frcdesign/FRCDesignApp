@@ -112,6 +112,15 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
     );
 }
 
+interface CardTitleVariants {
+    /** When a `titleComponent` is supplied, this is the override node. */
+    titleOverride: ReactNode;
+    /** When `searchHit` is supplied, this is the highlighted title node. */
+    highlightedTitle: ReactNode | null;
+    /** The plain fallback title node. */
+    defaultTitle: ReactNode;
+}
+
 interface CardTitleProps {
     /**
      * True to use disabled text styles.
@@ -125,7 +134,6 @@ interface CardTitleProps {
     showHiddenTag?: boolean;
     /**
      * The title to display.
-     * Ignored if SearchHit is provided.
      */
     title: string;
     searchHit?: SearchHit;
@@ -134,9 +142,14 @@ interface CardTitleProps {
     titleComponent?: ReactNode;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
+    /**
+     * Optional render prop that receives all title variants and returns the
+     * one that should be displayed.
+     */
+    children?: (titles: CardTitleVariants) => ReactNode;
 }
 
-export function CardTitle(props: CardTitleProps) {
+export function CardTitleGroup(props: CardTitleProps) {
     const {
         searchHit,
         title,
@@ -147,18 +160,23 @@ export function CardTitle(props: CardTitleProps) {
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
-    let cardTitle: ReactNode;
-    if (titleComponent) {
-        cardTitle = titleComponent;
-    } else if (searchHit) {
-        cardTitle = <SearchHitTitle title={title} searchHit={searchHit} />;
-    } else {
-        cardTitle = (
-            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
-                {title}
-            </Text>
-        );
-    }
+    const titleOverride = titleComponent;
+    const highlightedTitle = searchHit ? (
+        <SearchHitTitle title={title} searchHit={searchHit} />
+    ) : null;
+    const defaultTitle = (
+        <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+            {title}
+        </Text>
+    );
+
+    const cardTitle: ReactNode = props.children
+        ? props.children({
+              titleOverride,
+              highlightedTitle,
+              defaultTitle
+          })
+        : (titleOverride ?? highlightedTitle ?? defaultTitle);
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
