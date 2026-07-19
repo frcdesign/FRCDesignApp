@@ -1,6 +1,6 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import type { AppBindings } from "../app";
-import { getOnshapeApiForSessionId } from "../auth";
+import { getOnshapeApiFromSessionId } from "../auth";
 import type { OnshapeApi } from "../onshape-api/onshape-api";
 import type { ElementType, LibraryId, ThumbnailUrls } from "../../shared/types";
 
@@ -10,10 +10,14 @@ export interface LoadContext {
     step: WorkflowStep;
 }
 
+export function getOnshapeApiFromLoadContext(
+    ctx: LoadContext
+): Promise<OnshapeApi> {
+    return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
+}
+
 /**
- * The group-scoped fields every element in a load shares — resolved by
- * loadGroup's diff step and passed down in memory, never read back from a
- * half-written group row.
+ * Group-specific information used to identify a specific group.
  */
 export interface GroupFields {
     libraryId: LibraryId;
@@ -22,12 +26,8 @@ export interface GroupFields {
     versionId: string;
 }
 
-export interface GroupContext extends LoadContext, GroupFields {}
-
 /**
- * One element to load, with its identity already resolved by loadGroup's diff
- * step: the row's id (freshly minted for a new element, inside the memoized
- * step so it's replay-stable) and the stored fields the load consults.
+ * Insertable-specific information which is parsed from Onshape.
  */
 export interface InsertableElement {
     insertableId: string;
@@ -39,16 +39,8 @@ export interface InsertableElement {
     supportsFasten: boolean;
 }
 
-export function api(ctx: LoadContext): Promise<OnshapeApi> {
-    return getOnshapeApiForSessionId(ctx.env.KV, ctx.sessionId);
-}
-
 /**
- * Uploads thumbnails in a single step whose retry schedule is tuned to
- * Onshape's lazy rendering: a still-missing thumbnail throws to trigger a
- * quick second attempt, then spaced ones. Exhaustion resolves to null (a
- * build issue on the row); it never fails the caller. Shared by the group and
- * per-element thumbnail uploads.
+ * Uploads thumbnails in a single step with retrying.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,
@@ -62,7 +54,7 @@ export async function uploadThumbnailsStep(
                 retries: {
                     limit: 3,
                     delay: (retry) =>
-                        retry.ctx.attempt === 1 ? "5 seconds" : "5 minutes"
+                        retry.ctx.attempt === 1 ? "10 seconds" : "5 minutes"
                 }
             },
             async () => {

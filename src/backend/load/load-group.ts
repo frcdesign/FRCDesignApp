@@ -16,11 +16,10 @@ import {
 import { checkGroup } from "../parse/build-checks";
 import { loadInsertable } from "./load-insertable";
 import {
-    type GroupContext,
     type GroupFields,
     type InsertableElement,
     type LoadContext,
-    api,
+    getOnshapeApiFromLoadContext,
     uploadThumbnailsStep
 } from "./load-utils";
 import type { InstancePath } from "../../shared/onshape-path";
@@ -53,7 +52,6 @@ export async function loadGroup(
     const diff = await ctx.step.do(`diff-${groupId}`, () =>
         diffGroup(ctx, groupId, versionId, forceReload)
     );
-    const groupCtx: GroupContext = { ...ctx, ...diff.group };
 
     const versionPath: InstancePath = {
         documentId: diff.group.documentId,
@@ -66,7 +64,7 @@ export async function loadGroup(
         async () =>
             uploadDocumentThumbnails(
                 ctx.env.THUMBNAILS,
-                await api(ctx),
+                await getOnshapeApiFromLoadContext(ctx),
                 versionPath
             )
     );
@@ -75,7 +73,7 @@ export async function loadGroup(
     await Promise.all(
         diff.toLoad.map(async (element) => {
             try {
-                await loadInsertable(groupCtx, element);
+                await loadInsertable(ctx, diff.group, element);
             } catch {
                 failedElementIds.push(element.elementId);
             }
@@ -159,11 +157,14 @@ async function diffGroup(
         throw new NonRetryableError(`Group ${groupId} does not exist`);
     }
 
-    const contents = await getContents(await api(ctx), {
-        documentId: groupRow.documentId,
-        instanceId: versionId,
-        instanceType: "v"
-    });
+    const contents = await getContents(
+        await getOnshapeApiFromLoadContext(ctx),
+        {
+            documentId: groupRow.documentId,
+            instanceId: versionId,
+            instanceType: "v"
+        }
+    );
 
     const stored: StoredInsertable[] = await db
         .select({

@@ -13,9 +13,8 @@ import {
     rebuildSearchDb
 } from "../library-data";
 import { getDocument } from "../onshape-api/endpoints/documents";
-import type { OnshapeDocumentInfo } from "../onshape-api/onshape-types";
 import { group, libraries } from "../../shared/schema";
-import { type LoadContext, api } from "./load-utils";
+import { type LoadContext, getOnshapeApiFromLoadContext } from "./load-utils";
 import { loadGroup } from "./load-group";
 
 export interface LoadLibraryParams {
@@ -72,19 +71,19 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         });
 
         const results = await Promise.all(
-            groups.map(async (stored): Promise<GroupResult> => {
-                const { groupId } = stored;
+            groups.map(async (group): Promise<GroupResult> => {
+                const { groupId, documentId } = group;
                 try {
-                    const document = await step.do(`document-${groupId}`, () =>
-                        fetchDocumentInfo(ctx, stored.documentId)
+                    const document = await step.do(
+                        `document-${groupId}`,
+                        async () => {
+                            const onshapeApi =
+                                await getOnshapeApiFromLoadContext(ctx);
+                            return getDocument(onshapeApi, { documentId });
+                        }
                     );
-                    // A group whose stored versionId matches the latest is
-                    // fully loaded — loadGroup claims the versionId only after
-                    // every element has landed. AddGroup shells carry a
-                    // placeholder versionId that never matches, so an
-                    // interrupted add is picked up here instead of skipped.
                     if (
-                        stored.versionId === document.recentVersion.id &&
+                        group.versionId === document.recentVersion.id &&
                         !forceReload
                     ) {
                         return { groupId, status: "skipped" };
@@ -102,16 +101,14 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
             })
         );
 
-        await step.do("finalize", () => finalizeLibrary(this.env, libraryId));
+        await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
 
         return results;
     }
 }
 
 /**
- * Adds an Onshape document to a library: inserts a shell group row (owning its
- * placement), then loads it. The shell's placeholder versionId means a failed
- * or interrupted add is retried by the next library sync rather than skipped.
+ * Adds an Onshape document to a library by inserting and then loading it.
  */
 export class AddGroupWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -130,9 +127,12 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
         let result: GroupResult;
         try {
-            const document = await step.do("document", () =>
-                fetchDocumentInfo(ctx, params.documentId)
-            );
+            const document = await step.do("document", async () => {
+                const onshapeApi = await getOnshapeApiFromLoadContext(ctx);
+                return getDocument(onshapeApi, {
+                    documentId: params.documentId
+                });
+            });
 
             await step.do("create-shell", () =>
                 this.createShell(params, document.name)
@@ -150,9 +150,8 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         }
 
         await step.do("finalize", () =>
-            finalizeLibrary(this.env, params.libraryId)
+            finalizeLibrary(ctx.env, params.libraryId)
         );
-
         return result;
     }
 
@@ -165,9 +164,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
             .insert(libraries)
             .values({ id: params.libraryId })
             .onConflictDoNothing();
-        // placeNewGroup may renumber siblings eagerly, before the insert. If
-        // the insert then fails, the worst case is a harmless sortOrder gap
-        // the retry re-derives.
+        // placeNewGroup renumbers siblings eagerly. Failed inserts result in a gap that's fixed on the next edit.
         const sortOrder = await placeNewGroup(
             db,
             params.libraryId,
@@ -181,33 +178,12 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
                 documentId: params.documentId,
                 libraryId: params.libraryId,
                 name: docName,
-                // Placeholder — never matches a real version, so loadGroup
-                // claims the versionId only once the group is fully loaded.
-                versionId: "",
+                // Placeholder value so failed loads can be retried
+                versionId: "placeholder",
                 sortOrder
             })
-            // A replay after a committed insert converges instead of failing.
             .onConflictDoNothing();
     }
-}
-
-/**
- * getDocument, trimmed to the fields the pipeline reads — the full document
- * JSON is large, and step outputs are persisted.
- */
-async function fetchDocumentInfo(
-    ctx: LoadContext,
-    documentId: string
-): Promise<OnshapeDocumentInfo> {
-    const doc = await getDocument(await api(ctx), { documentId });
-    return {
-        name: doc.name,
-        documentThumbnailElementId: doc.documentThumbnailElementId,
-        recentVersion: {
-            id: doc.recentVersion.id,
-            name: doc.recentVersion.name
-        }
-    };
 }
 
 /** Rebuild the library's search index and bump its cache version. */

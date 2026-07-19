@@ -20,7 +20,7 @@ export function getSessionId(c: AppContext): string {
     return sessionId;
 }
 
-export async function getOnshapeApiForSessionId(
+export async function getOnshapeApiFromSessionId(
     kv: KVNamespace,
     sessionId: string
 ): Promise<OAuthApi> {
@@ -55,11 +55,16 @@ export async function isAuthenticated(c: AppContext) {
     }
 }
 
+/**
+ * Creates/caches an Onshape API instance from the AppContext.
+ *
+ * Note this function should not be called directly, as it is bound to the context directly.
+ */
 export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     const cached = c.get("onshapeApi");
     if (cached) return cached;
     const sessionId = getSessionId(c);
-    const api = await getOnshapeApiForSessionId(c.env.KV, sessionId);
+    const api = await getOnshapeApiFromSessionId(c.env.KV, sessionId);
     c.set("onshapeApi", api);
     return api;
 }

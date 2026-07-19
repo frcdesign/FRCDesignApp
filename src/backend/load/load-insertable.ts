@@ -17,15 +17,15 @@ import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
 import {
-    type GroupContext,
     type GroupFields,
     type InsertableElement,
-    api,
+    type LoadContext,
+    getOnshapeApiFromLoadContext,
     uploadThumbnailsStep
 } from "./load-utils";
 
 /**
- * Fields mirrored from Onshape hence updated on reload.
+ * Fields which are recomputed as a part of loading an insertable.
  */
 export interface ReloadedFields {
     name: string;
@@ -46,31 +46,23 @@ export interface ReloadedFields {
  * next reload of its group.
  */
 export async function loadInsertable(
-    ctx: GroupContext,
+    ctx: LoadContext,
+    group: GroupFields,
     element: InsertableElement
 ): Promise<void> {
     const { insertableId } = element;
     const path: ElementPath = {
-        documentId: ctx.documentId,
-        instanceId: ctx.versionId,
+        documentId: group.documentId,
+        instanceId: group.versionId,
         instanceType: "v",
         elementId: element.elementId
     };
 
-    const parameters = await ctx.step.do(`config-${insertableId}`, async () => {
-        const rawConfig = await getConfiguration(await api(ctx), path);
-        return rawConfig.configurationParameters.length === 0
-            ? null
-            : parseOnshapeConfiguration(rawConfig).parameters;
-    });
+    const parameters = await parseConfigurationStep(ctx, element, path);
 
     const vendors = parseVendors(element.name, parameters ?? []);
 
-    const fastenInfo = element.supportsFasten
-        ? await ctx.step.do(`fasten-${insertableId}`, async () =>
-              parseFastenInfo(await api(ctx), path, element.elementType)
-          )
-        : null;
+    const fastenInfo = await parseFastenInfoStep(ctx, element, path);
 
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
@@ -78,7 +70,7 @@ export async function loadInsertable(
         async () =>
             uploadThumbnails(
                 ctx.env.THUMBNAILS,
-                await api(ctx),
+                await getOnshapeApiFromLoadContext(ctx),
                 path,
                 element.microversionId
             )
@@ -88,7 +80,7 @@ export async function loadInsertable(
         name: element.name,
         elementType: element.elementType,
         microversionId: element.microversionId,
-        versionId: ctx.versionId,
+        versionId: group.versionId,
         vendors,
         thumbnailUrls,
         fastenInfo,
@@ -96,7 +88,48 @@ export async function loadInsertable(
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), ctx, element, reloaded, parameters)
+        saveInsertable(getDb(ctx.env.DB), group, element, reloaded, parameters)
+    );
+}
+
+/**
+ * Fetches and parses the element's configuration in a single memoized step,
+ * returning null when the element has no configuration parameters.
+ */
+function parseConfigurationStep(
+    ctx: LoadContext,
+    element: InsertableElement,
+    path: ElementPath
+): Promise<ParameterObj[] | null> {
+    return ctx.step.do(`config-${element.insertableId}`, async () => {
+        const rawConfig = await getConfiguration(
+            await getOnshapeApiFromLoadContext(ctx),
+            path
+        );
+        return rawConfig.configurationParameters.length === 0
+            ? null
+            : parseOnshapeConfiguration(rawConfig).parameters;
+    });
+}
+
+/**
+ * Fetches and parses the element's fasten info in a single memoized step, or
+ * null for an element that doesn't support fastening.
+ */
+async function parseFastenInfoStep(
+    ctx: LoadContext,
+    element: InsertableElement,
+    path: ElementPath
+): Promise<FastenInfo | null> {
+    if (!element.supportsFasten) {
+        return null;
+    }
+    return ctx.step.do(`fasten-${element.insertableId}`, async () =>
+        parseFastenInfo(
+            await getOnshapeApiFromLoadContext(ctx),
+            path,
+            element.elementType
+        )
     );
 }
 
@@ -120,9 +153,6 @@ export async function saveInsertable(
             groupId: groupFields.groupId,
             documentId: groupFields.documentId,
             elementId: element.elementId,
-            // New-row seeds for the user-owned columns. The conflict set below
-            // omits them, so on an existing row the user's values survive;
-            // isVisible and isOpenComposite ride the schema defaults.
             sortOrder: element.sortOrder,
             supportsFasten: element.supportsFasten,
             ...reloaded
@@ -132,19 +162,20 @@ export async function saveInsertable(
             set: reloaded
         });
 
-    const configurationWrite =
-        parameters !== null
-            ? db
-                  .insert(configurations)
-                  .values({ id: element.insertableId, parameters })
-                  .onConflictDoUpdate({
-                      target: configurations.id,
-                      set: { parameters }
-                  })
-            : // The element has no configuration — drop any stale row.
-              db
-                  .delete(configurations)
-                  .where(eq(configurations.id, element.insertableId));
+    let configurationWrite;
+    if (parameters === null) {
+        configurationWrite = db
+            .delete(configurations)
+            .where(eq(configurations.id, element.insertableId));
+    } else {
+        configurationWrite = db
+            .insert(configurations)
+            .values({ id: element.insertableId, parameters })
+            .onConflictDoUpdate({
+                target: configurations.id,
+                set: { parameters }
+            });
+    }
 
     await db.batch([insertableWrite, configurationWrite]);
 }
