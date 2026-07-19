@@ -17,7 +17,7 @@ import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
 import {
-    type GroupFields,
+    type InsertableGroupFields,
     type InsertableElement,
     type LoadContext,
     getOnshapeApiFromLoadContext,
@@ -39,15 +39,11 @@ export interface ReloadedFields {
 }
 
 /**
- * Loads and persists a single insertable, independent of every other element
- * in its group. Each stage is its own memoized step, and the row (plus its
- * configuration) is written once at the end — so a permanent failure leaves
- * the stored microversionId stale, which queues just this element for the
- * next reload of its group.
+ * Loads and persists a single insertable to the database.
  */
 export async function loadInsertable(
     ctx: LoadContext,
-    group: GroupFields,
+    group: InsertableGroupFields,
     element: InsertableElement
 ): Promise<void> {
     const { insertableId } = element;
@@ -60,7 +56,7 @@ export async function loadInsertable(
 
     const parameters = await parseConfigurationStep(ctx, element, path);
 
-    const vendors = parseVendors(element.name, parameters ?? []);
+    const vendors = parseVendors(element.name, parameters);
 
     const fastenInfo = await parseFastenInfoStep(ctx, element, path);
 
@@ -93,28 +89,24 @@ export async function loadInsertable(
 }
 
 /**
- * Fetches and parses the element's configuration in a single memoized step,
- * returning null when the element has no configuration parameters.
+ * Fetches and parses the element's configuration.
  */
 function parseConfigurationStep(
     ctx: LoadContext,
     element: InsertableElement,
     path: ElementPath
-): Promise<ParameterObj[] | null> {
+): Promise<ParameterObj[]> {
     return ctx.step.do(`config-${element.insertableId}`, async () => {
-        const rawConfig = await getConfiguration(
+        const onshapeConfiguration = await getConfiguration(
             await getOnshapeApiFromLoadContext(ctx),
             path
         );
-        return rawConfig.configurationParameters.length === 0
-            ? null
-            : parseOnshapeConfiguration(rawConfig).parameters;
+        return parseOnshapeConfiguration(onshapeConfiguration);
     });
 }
 
 /**
- * Fetches and parses the element's fasten info in a single memoized step, or
- * null for an element that doesn't support fastening.
+ * Fetches and parses the element's fasten info.
  */
 async function parseFastenInfoStep(
     ctx: LoadContext,
@@ -134,16 +126,14 @@ async function parseFastenInfoStep(
 }
 
 /**
- * The element's single atomic write: an insertable upsert (create and replay
- * converge on one statement; the conflict set is exactly {@link ReloadedFields})
- * plus the configuration row's upsert or delete.
+ * Writes a single insertable (plus configuration) to the database.
  */
 export async function saveInsertable(
     db: Db,
-    groupFields: GroupFields,
+    groupFields: InsertableGroupFields,
     element: InsertableElement,
     reloaded: ReloadedFields,
-    parameters: ParameterObj[] | null
+    parameters: ParameterObj[]
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)
@@ -163,7 +153,7 @@ export async function saveInsertable(
         });
 
     let configurationWrite;
-    if (parameters === null) {
+    if (parameters.length === 0) {
         configurationWrite = db
             .delete(configurations)
             .where(eq(configurations.id, element.insertableId));

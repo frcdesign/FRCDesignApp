@@ -17,9 +17,9 @@ export function getOnshapeApiFromLoadContext(
 }
 
 /**
- * Group-specific information used to identify a specific group.
+ * Group-specific information copied to an Insertable.
  */
-export interface GroupFields {
+export interface InsertableGroupFields {
     libraryId: LibraryId;
     groupId: string;
     documentId: string;

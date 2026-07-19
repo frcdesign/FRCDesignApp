@@ -16,7 +16,7 @@ import {
 import { checkGroup } from "../parse/build-checks";
 import { loadInsertable } from "./load-insertable";
 import {
-    type GroupFields,
+    type InsertableGroupFields,
     type InsertableElement,
     type LoadContext,
     getOnshapeApiFromLoadContext,
@@ -49,12 +49,28 @@ export async function loadGroup(
 ): Promise<GroupLoadResult> {
     const versionId = document.recentVersion.id;
 
-    const diff = await ctx.step.do(`diff-${groupId}`, () =>
-        diffGroup(ctx, groupId, versionId, forceReload)
+    // Resolve the group's stored identity (documentId, libraryId).
+    const groupFields = await ctx.step.do(`group-fields-${groupId}`, () =>
+        resolveGroupFields(ctx, groupId, versionId)
     );
 
+    // Read the document's loadable tabs (display order) and the stored rows.
+    const tabs = await ctx.step.do(`contents-${groupId}`, () =>
+        fetchDocumentTabs(ctx, groupFields.documentId, versionId)
+    );
+    const stored = await ctx.step.do(`stored-insertables-${groupId}`, () =>
+        fetchStoredInsertables(ctx, groupId)
+    );
+
+    // Select the elements to (re)load. Ids for new elements are minted inside
+    // the step so replays reuse them; orphan detection below is pure.
+    const toLoad = await ctx.step.do(`select-elements-${groupId}`, () =>
+        Promise.resolve(selectElementsToLoad(tabs, stored, forceReload))
+    );
+    const staleIds = findOrphanedRows(tabs, stored);
+
     const versionPath: InstancePath = {
-        documentId: diff.group.documentId,
+        documentId: groupFields.documentId,
         instanceId: versionId,
         instanceType: "v"
     };
@@ -71,9 +87,9 @@ export async function loadGroup(
 
     const failedElementIds: string[] = [];
     await Promise.all(
-        diff.toLoad.map(async (element) => {
+        toLoad.map(async (element) => {
             try {
-                await loadInsertable(ctx, diff.group, element);
+                await loadInsertable(ctx, groupFields, element);
             } catch {
                 failedElementIds.push(element.elementId);
             }
@@ -105,7 +121,7 @@ export async function loadGroup(
             .update(group)
             .set(reloaded)
             .where(eq(group.id, groupId));
-        if (diff.staleIds.length === 0) {
+        if (staleIds.length === 0) {
             await groupWrite;
             return;
         }
@@ -113,42 +129,25 @@ export async function loadGroup(
         // cascading foreign keys.
         await db.batch([
             groupWrite,
-            db.delete(insertables).where(inArray(insertables.id, diff.staleIds))
+            db.delete(insertables).where(inArray(insertables.id, staleIds))
         ]);
     });
 
     return {
-        loadedElements: diff.toLoad.length,
-        deletedElements: diff.staleIds.length
+        loadedElements: toLoad.length,
+        deletedElements: staleIds.length
     };
 }
 
-// ---------------------------------------------------------------------------
-// The diff step — everything the load needs, resolved in one memoized step.
-// ---------------------------------------------------------------------------
-
-export interface GroupDiff {
-    group: GroupFields;
-    toLoad: InsertableElement[];
-    /** Rows whose element no longer exists in the document. */
-    staleIds: string[];
-}
-
 /**
- * The diff step body: resolves the group's shared fields from its row, then
- * diffs the document's tabs against the stored insertables. Freshly minted
- * ids are generated here, inside the memoized step, so they're stable across
- * every replay.
+ * Resolves the group's stored identity from its row.
  */
-async function diffGroup(
+async function resolveGroupFields(
     ctx: LoadContext,
     groupId: string,
-    versionId: string,
-    forceReload: boolean
-): Promise<GroupDiff> {
-    const db = getDb(ctx.env.DB);
-
-    const groupRow = await db
+    versionId: string
+): Promise<InsertableGroupFields> {
+    const groupRow = await getDb(ctx.env.DB)
         .select({ documentId: group.documentId, libraryId: group.libraryId })
         .from(group)
         .where(eq(group.id, groupId))
@@ -156,17 +155,41 @@ async function diffGroup(
     if (!groupRow) {
         throw new NonRetryableError(`Group ${groupId} does not exist`);
     }
+    return {
+        libraryId: groupRow.libraryId,
+        groupId,
+        documentId: groupRow.documentId,
+        versionId
+    };
+}
 
+/**
+ * Fetches the document's part studio / assembly tabs, in display order.
+ */
+async function fetchDocumentTabs(
+    ctx: LoadContext,
+    documentId: string,
+    versionId: string
+): Promise<DocumentElement[]> {
     const contents = await getContents(
         await getOnshapeApiFromLoadContext(ctx),
         {
-            documentId: groupRow.documentId,
+            documentId,
             instanceId: versionId,
             instanceType: "v"
         }
     );
+    return parseContents(contents);
+}
 
-    const stored: StoredInsertable[] = await db
+/**
+ * Fetches the group's stored insertables.
+ */
+async function fetchStoredInsertables(
+    ctx: LoadContext,
+    groupId: string
+): Promise<StoredInsertable[]> {
+    return getDb(ctx.env.DB)
         .select({
             id: insertables.id,
             elementId: insertables.elementId,
@@ -175,16 +198,6 @@ async function diffGroup(
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
-
-    return {
-        group: {
-            libraryId: groupRow.libraryId,
-            groupId,
-            documentId: groupRow.documentId,
-            versionId
-        },
-        ...diffElements(parseContents(contents), stored, forceReload)
-    };
 }
 
 /** The stored fields the diff consults. */
@@ -196,16 +209,16 @@ export interface StoredInsertable {
 }
 
 /**
- * Pure diff of the document's tabs (in display order) against the stored
- * rows: which elements to (re)load — new, changed microversion, or all on
- * forceReload — and which rows to delete. Unchanged elements are simply left
- * alone.
+ * Selects which document tabs to (re)load — new, changed microversion, or all
+ * on forceReload — in display order. New elements are assigned a freshly minted
+ * id; a reused id keeps an existing element's identity. Unchanged elements are
+ * left out.
  */
-export function diffElements(
+export function selectElementsToLoad(
     tabs: DocumentElement[],
     stored: StoredInsertable[],
     forceReload: boolean
-): { toLoad: InsertableElement[]; staleIds: string[] } {
+): InsertableElement[] {
     const storedByElementId = new Map(
         stored.map((row) => [row.elementId, row])
     );
@@ -223,13 +236,21 @@ export function diffElements(
             sortOrder
         });
     });
+    return toLoad;
+}
 
+/**
+ * Finds the stored rows whose element no longer exists in the document; their
+ * ids are the rows to delete.
+ */
+export function findOrphanedRows(
+    tabs: DocumentElement[],
+    stored: StoredInsertable[]
+): string[] {
     const tabIds = new Set(tabs.map((tab) => tab.elementId));
-    const staleIds = stored
+    return stored
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
-
-    return { toLoad, staleIds };
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +296,9 @@ export function parseContents(
     return tabs.sort((a, b) => orderOf(a) - orderOf(b));
 }
 
+/**
+ * Iterates over an Onshape folder tree, returning each elementId in the order they're encountered.
+ */
 function* traverseEntry(entry: OnshapeFolderEntry): Generator<string> {
     if (entry.btType === OnshapeFolderEntryType.GROUP) {
         for (const child of entry.groups) yield* traverseEntry(child);

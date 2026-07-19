@@ -13,11 +13,11 @@ import {
     seedGroup
 } from "../../__test_utils__";
 import { type ReloadedFields, saveInsertable } from "./load-insertable";
-import type { GroupFields, InsertableElement } from "./load-utils";
+import type { InsertableGroupFields, InsertableElement } from "./load-utils";
 
 const db = getDb(env.DB);
 
-const groupFields: GroupFields = {
+const groupFields: InsertableGroupFields = {
     libraryId: TEST_LIBRARY_ID,
     groupId: TEST_GROUP_ID,
     documentId: `doc-${TEST_GROUP_ID}`,
@@ -42,7 +42,7 @@ function element(
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
     el: InsertableElement,
-    parameters: ParameterObj[] | null
+    parameters: ParameterObj[]
 ): Promise<void> {
     const reloaded: ReloadedFields = {
         name: el.name,
@@ -86,7 +86,7 @@ describe("saveInsertable", () => {
     });
 
     it("preserves user-owned fields when reloading an existing row", async () => {
-        await applySave(element(), null);
+        await applySave(element(), []);
         // The user hides the element and moves it before the next reload.
         await db
             .update(insertables)
@@ -99,7 +99,7 @@ describe("saveInsertable", () => {
                 microversionId: "mv-2",
                 sortOrder: 0
             }),
-            null
+            []
         );
 
         const row = await db
@@ -117,7 +117,7 @@ describe("saveInsertable", () => {
 
     it("drops the configuration row when the element no longer has one", async () => {
         await applySave(element(), TEST_PARAMETERS);
-        await applySave(element(), null);
+        await applySave(element(), []);
 
         expect(await db.select().from(configurations).all()).toHaveLength(0);
     });

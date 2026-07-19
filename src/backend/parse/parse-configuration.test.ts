@@ -119,7 +119,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
 };
 
 describe("parseOnshapeConfiguration", () => {
-    const { parameters } = parseOnshapeConfiguration(RESPONSE);
+    const parameters = parseOnshapeConfiguration(RESPONSE);
 
     it("parses every parameter", () => {
         expect(parameters.map((p) => [p.id, p.type])).toEqual([

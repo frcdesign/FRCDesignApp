@@ -1,6 +1,5 @@
 import {
     ConfigurationParameterType,
-    ConfigurationResult,
     EnumOption,
     OptionVisibilityCondition,
     OptionVisibilityConditionType,
@@ -103,7 +102,7 @@ function parseOptionVisibilityConditions(
 
 export function parseOnshapeConfiguration(
     onshapeConfiguration: OnshapeConfigurationResponse
-): ConfigurationResult {
+): ParameterObj[] {
     const parameters: ParameterObj[] = [];
 
     for (const parameter of onshapeConfiguration.configurationParameters) {
@@ -161,5 +160,5 @@ export function parseOnshapeConfiguration(
         }
     }
 
-    return { parameters };
+    return parameters;
 }

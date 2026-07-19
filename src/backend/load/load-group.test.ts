@@ -3,7 +3,8 @@ import { ElementType } from "../../shared/types";
 import {
     type DocumentElement,
     type StoredInsertable,
-    diffElements
+    findOrphanedRows,
+    selectElementsToLoad
 } from "./load-group";
 
 function tab(elementId: string, microversionId = "mv-1"): DocumentElement {
@@ -28,10 +29,9 @@ function storedRow(
     };
 }
 
-describe("diffElements", () => {
+describe("selectElementsToLoad", () => {
     it("mints an id for a brand-new element and loads it", () => {
-        const { toLoad, staleIds } = diffElements([tab("e1")], [], false);
-        expect(staleIds).toEqual([]);
+        const toLoad = selectElementsToLoad([tab("e1")], [], false);
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0]).toMatchObject({
             elementId: "e1",
@@ -41,12 +41,16 @@ describe("diffElements", () => {
     });
 
     it("leaves an unchanged element alone", () => {
-        const { toLoad } = diffElements([tab("e1")], [storedRow("e1")], false);
+        const toLoad = selectElementsToLoad(
+            [tab("e1")],
+            [storedRow("e1")],
+            false
+        );
         expect(toLoad).toEqual([]);
     });
 
     it("reloads an element whose microversion changed, keeping its identity", () => {
-        const { toLoad } = diffElements(
+        const toLoad = selectElementsToLoad(
             [tab("e1", "mv-2")],
             [storedRow("e1", { supportsFasten: true })],
             false
@@ -59,28 +63,46 @@ describe("diffElements", () => {
     });
 
     it("reloads unchanged elements on forceReload", () => {
-        const { toLoad } = diffElements([tab("e1")], [storedRow("e1")], true);
+        const toLoad = selectElementsToLoad(
+            [tab("e1")],
+            [storedRow("e1")],
+            true
+        );
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0].insertableId).toBe("row-e1");
     });
 
-    it("marks rows whose element left the document as stale", () => {
-        const { toLoad, staleIds } = diffElements(
-            [tab("e1", "mv-2")],
+    it("ignores an orphaned row rather than loading it", () => {
+        const toLoad = selectElementsToLoad(
+            [tab("e1")],
             [storedRow("e1"), storedRow("gone")],
             false
         );
-        expect(toLoad.map((element) => element.elementId)).toEqual(["e1"]);
-        expect(staleIds).toEqual(["row-gone"]);
+        expect(toLoad.map((element) => element.elementId)).toEqual([]);
     });
 
     it("seeds sortOrder from the tab position", () => {
-        const { toLoad } = diffElements([tab("e1"), tab("e2")], [], false);
+        const toLoad = selectElementsToLoad([tab("e1"), tab("e2")], [], false);
         expect(
             toLoad.map((element) => [element.elementId, element.sortOrder])
         ).toEqual([
             ["e1", 0],
             ["e2", 1]
         ]);
+    });
+});
+
+describe("findOrphanedRows", () => {
+    it("returns ids of stored rows whose element left the document", () => {
+        const staleIds = findOrphanedRows(
+            [tab("e1", "mv-2")],
+            [storedRow("e1"), storedRow("gone")]
+        );
+        expect(staleIds).toEqual(["row-gone"]);
+    });
+
+    it("is empty when every stored row still has its element", () => {
+        const staleIds = findOrphanedRows([tab("e1")], [storedRow("e1")]);
+        expect(staleIds).toEqual([]);
     });
 });
