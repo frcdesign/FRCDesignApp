@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { ElementType } from "../../shared/types";
 import {
-    type DocumentElement,
+    type OnshapeElement,
+    OnshapeElementType
+} from "../onshape-api/onshape-types";
+import {
     type StoredInsertable,
     findOrphanedRows,
     selectElementsToLoad
 } from "./load-group";
 
-function tab(elementId: string, microversionId = "mv-1"): DocumentElement {
+function tab(elementId: string, microversionId = "mv-1"): OnshapeElement {
     return {
-        elementId,
+        id: elementId,
         name: `Tab ${elementId}`,
-        elementType: ElementType.PART_STUDIO,
+        elementType: OnshapeElementType.PART_STUDIO,
         microversionId
     };
 }

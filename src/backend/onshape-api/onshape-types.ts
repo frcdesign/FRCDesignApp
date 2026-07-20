@@ -1,12 +1,5 @@
 /**
  * Hand-authored types for the Onshape API endpoints we use.
- *
- * These are the types we actually import — maintained by hand (using our own enums and
- * comments) against the generated reference at the repo root in `onshape-api-reference/`
- * (run `npm run gen:onshape-types` to refresh it, then fold any upstream drift in here).
- * NOTHING imports the generated reference — it's committed (for review/diffing) but
- * lives outside `src/`, so it's outside every tsconfig's scope and never surfaces in
- * editor autocomplete/auto-import.
  */
 import {
     ConfigurationParameterType,
@@ -18,9 +11,6 @@ import {
 } from "../../shared/configuration-models";
 
 // === configuration (GET .../configuration, GET .../configurationencodings/{cid}) ===
-
-/** btType Onshape attaches to an always-visible (unconditional) parameter/option. */
-export const VISIBILITY_CONDITION_NONE = "BTParameterVisibilityCondition-177";
 
 // --- visibility conditions --------------------------------------------------------
 
@@ -48,7 +38,7 @@ export interface OnshapeAlwaysShownVisibility {
 
 /** The "no condition" sentinel (also appears as a child of logical conditions). */
 export interface OnshapeNoVisibility {
-    btType: typeof VISIBILITY_CONDITION_NONE;
+    btType: VisibilityConditionType.NONE;
 }
 
 export type OnshapeVisibilityCondition =
@@ -210,7 +200,7 @@ export interface OnshapeElementReference {
 export type OnshapeFolderEntry = OnshapeElementGroup | OnshapeElementReference;
 
 /** An element (tab) listed in the document contents. */
-export interface OnshapeDocumentElement {
+export interface OnshapeElement {
     id: string;
     name: string;
     elementType: OnshapeElementType;
@@ -222,12 +212,10 @@ export interface OnshapeDocumentContents {
     /** Root folder; its `groups` is the ordered folder/element tree. */
     folders: OnshapeElementGroup;
     /** Flat list of all elements (tabs) in the document. */
-    elements: OnshapeDocumentElement[];
+    elements: OnshapeElement[];
 }
 
 // === assemblies (GET /assemblies/.../e/{eid}, POST .../{transformedinstances,features}) ===
-// The assembly definition is a large, deeply polymorphic feature tree; we consume just a
-// few fields, so these are hand-written rather than generated.
 
 /** A feature in an assembly's root or a subassembly. */
 export interface OnshapeAssemblyFeature {

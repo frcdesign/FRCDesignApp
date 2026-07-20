@@ -73,7 +73,11 @@ export enum VisibilityConditionType {
     LOGICAL = "BTParameterVisibilityLogical-178",
     EQUAL = "BTParameterVisibilityOnEqual-180",
     RANGE = "BTParameterVisibilityInRange-2980",
-    ALWAYS_SHOWN = "BTParameterVisibilityAlwaysShown-5487"
+    ALWAYS_SHOWN = "BTParameterVisibilityAlwaysShown-5487",
+    /**
+     * Note this is stripped by parsing.
+     */
+    NONE = "BTParameterVisibilityCondition-177"
 }
 
 export type VisibilityCondition =
@@ -125,7 +129,7 @@ export interface ParameterBase {
     id: string;
     name: string;
     default: string;
-    /** Cosmetic parameters don't affect geometry (e.g. UI-only toggles). */
+    /** Parameters excluded from configuration properties. */
     isCosmetic: boolean;
     condition?: VisibilityCondition;
 }

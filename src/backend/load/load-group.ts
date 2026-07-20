@@ -10,6 +10,7 @@ import { getContents } from "../onshape-api/endpoints/documents";
 import {
     type OnshapeDocumentContents,
     type OnshapeDocumentInfo,
+    type OnshapeElement,
     type OnshapeFolderEntry,
     OnshapeFolderEntryType
 } from "../onshape-api/onshape-types";
@@ -58,16 +59,19 @@ export async function loadGroup(
     const tabs = await ctx.step.do(`contents-${groupId}`, () =>
         fetchDocumentTabs(ctx, groupFields.documentId, versionId)
     );
-    const stored = await ctx.step.do(`stored-insertables-${groupId}`, () =>
-        fetchStoredInsertables(ctx, groupId)
+    const storedInsertables = await ctx.step.do(
+        `stored-insertables-${groupId}`,
+        () => fetchStoredInsertables(ctx, groupId)
     );
 
     // Select the elements to (re)load. Ids for new elements are minted inside
     // the step so replays reuse them; orphan detection below is pure.
     const toLoad = await ctx.step.do(`select-elements-${groupId}`, () =>
-        Promise.resolve(selectElementsToLoad(tabs, stored, forceReload))
+        Promise.resolve(
+            selectElementsToLoad(tabs, storedInsertables, forceReload)
+        )
     );
-    const staleIds = findOrphanedRows(tabs, stored);
+    const staleIds = findOrphanedRows(tabs, storedInsertables);
 
     const versionPath: InstancePath = {
         documentId: groupFields.documentId,
@@ -170,7 +174,7 @@ async function fetchDocumentTabs(
     ctx: LoadContext,
     documentId: string,
     versionId: string
-): Promise<DocumentElement[]> {
+): Promise<OnshapeElement[]> {
     const contents = await getContents(
         await getOnshapeApiFromLoadContext(ctx),
         {
@@ -200,7 +204,9 @@ async function fetchStoredInsertables(
         .where(eq(insertables.groupId, groupId));
 }
 
-/** The stored fields the diff consults. */
+/**
+ * Relevant fields pulled from existing insertables.
+ */
 export interface StoredInsertable {
     id: string;
     elementId: string;
@@ -209,13 +215,10 @@ export interface StoredInsertable {
 }
 
 /**
- * Selects which document tabs to (re)load — new, changed microversion, or all
- * on forceReload — in display order. New elements are assigned a freshly minted
- * id; a reused id keeps an existing element's identity. Unchanged elements are
- * left out.
+ * Selects document tabs
  */
 export function selectElementsToLoad(
-    tabs: DocumentElement[],
+    tabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
 ): InsertableElement[] {
@@ -225,13 +228,17 @@ export function selectElementsToLoad(
 
     const toLoad: InsertableElement[] = [];
     tabs.forEach((tab, sortOrder) => {
-        const row = storedByElementId.get(tab.elementId);
+        const row = storedByElementId.get(tab.id);
         if (row && !forceReload && row.microversionId === tab.microversionId) {
             return;
         }
         toLoad.push({
-            ...tab,
             insertableId: row?.id ?? crypto.randomUUID(),
+            elementId: tab.id,
+            name: tab.name,
+            // OnshapeElementType and the app ElementType share these values.
+            elementType: tab.elementType as unknown as ElementType,
+            microversionId: tab.microversionId,
             supportsFasten: row?.supportsFasten ?? false,
             sortOrder
         });
@@ -244,25 +251,13 @@ export function selectElementsToLoad(
  * ids are the rows to delete.
  */
 export function findOrphanedRows(
-    tabs: DocumentElement[],
-    stored: StoredInsertable[]
+    tabs: OnshapeElement[],
+    storedInsertables: StoredInsertable[]
 ): string[] {
-    const tabIds = new Set(tabs.map((tab) => tab.elementId));
-    return stored
+    const tabIds = new Set(tabs.map((tab) => tab.id));
+    return storedInsertables
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
-}
-
-// ---------------------------------------------------------------------------
-// Pure helpers for the document contents tree.
-// ---------------------------------------------------------------------------
-
-/** A part studio / assembly tab from the Onshape document contents. */
-export interface DocumentElement {
-    elementId: string;
-    name: string;
-    elementType: ElementType;
-    microversionId: string;
 }
 
 const VALID_ELEMENT_TYPES = new Set<string>([
@@ -271,28 +266,20 @@ const VALID_ELEMENT_TYPES = new Set<string>([
 ]);
 
 /**
- * The part studio / assembly tabs we load, sorted into display (folder-tree)
- * order — their index is the seed sortOrder. Tabs missing from the folder
- * tree sort last.
+ * The part studio / assembly tabs we load, sorted in display (folder-tree) order.
  */
 export function parseContents(
     contents: OnshapeDocumentContents
-): DocumentElement[] {
-    const tabs = contents.elements
-        .filter((e) => VALID_ELEMENT_TYPES.has(e.elementType))
-        .map((e) => ({
-            elementId: e.id,
-            name: e.name,
-            // OnshapeElementType and the app ElementType share these values.
-            elementType: e.elementType as unknown as ElementType,
-            microversionId: e.microversionId
-        }));
+): OnshapeElement[] {
+    const tabs = contents.elements.filter((e) =>
+        VALID_ELEMENT_TYPES.has(e.elementType)
+    );
 
     const displayOrder = new Map(
         orderedElementIds(contents).map((id, index) => [id, index])
     );
-    const orderOf = (tab: DocumentElement) =>
-        displayOrder.get(tab.elementId) ?? Infinity;
+    const orderOf = (tab: OnshapeElement) =>
+        displayOrder.get(tab.id) ?? Infinity;
     return tabs.sort((a, b) => orderOf(a) - orderOf(b));
 }
 
