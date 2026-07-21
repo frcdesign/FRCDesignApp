@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Vendor } from "../../shared/types";
-import {
-    ConfigurationParameterType,
-    QuantityType,
-    Unit
-} from "../../shared/configuration-models";
+import { ParameterType } from "../../shared/configuration-models";
+import { QuantityType, Unit } from "../../shared/configuration-enums";
 import { parseNameVendor, parseVendors } from "./parse-vendors";
 
 describe("parseNameVendor", () => {
@@ -38,7 +35,7 @@ describe("parseVendors", () => {
     it("falls back to enum option names when no name vendor found", () => {
         const parameters = [
             {
-                type: ConfigurationParameterType.ENUM as const,
+                type: ParameterType.ENUM as const,
                 id: "vendor",
                 name: "Vendor",
                 isCosmetic: false,
@@ -59,7 +56,7 @@ describe("parseVendors", () => {
     it("detects vendor by full name in enum options", () => {
         const parameters = [
             {
-                type: ConfigurationParameterType.ENUM as const,
+                type: ParameterType.ENUM as const,
                 id: "vendor",
                 name: "Vendor",
                 isCosmetic: false,
@@ -76,7 +73,7 @@ describe("parseVendors", () => {
     it("skips non-ENUM parameters", () => {
         const parameters = [
             {
-                type: ConfigurationParameterType.QUANTITY as const,
+                type: ParameterType.QUANTITY as const,
                 id: "length",
                 name: "Length",
                 isCosmetic: false,

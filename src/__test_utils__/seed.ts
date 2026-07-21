@@ -8,7 +8,7 @@ import {
     users
 } from "../shared/schema";
 import {
-    ConfigurationParameterType,
+    ParameterType,
     type ParameterObj
 } from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
@@ -37,7 +37,7 @@ export const TEST_ASSEMBLY_PATH: ElementPath = {
 
 export const TEST_PARAMETERS: ParameterObj[] = [
     {
-        type: ConfigurationParameterType.BOOLEAN,
+        type: ParameterType.BOOLEAN,
         id: "boolean",
         name: "Test boolean",
         isCosmetic: false,

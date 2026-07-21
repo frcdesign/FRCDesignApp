@@ -5,10 +5,9 @@ import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
 import {
     type ConfigurationResult,
-    type UnitInfo,
-    QuantityType,
-    type Unit
+    type UnitInfo
 } from "../../shared/configuration-models";
+import { QuantityType, type Unit } from "../../shared/configuration-enums";
 import { isInstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
 

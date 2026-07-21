@@ -14,17 +14,16 @@ import {
     Configuration,
     ConfigurationResult,
     ParameterObj,
-    ConfigurationParameterType,
+    ParameterType,
     EnumParameterObj,
-    OptionVisibilityConditionType,
+    OptionVisibilityType,
     BooleanParameterObj,
     StringParameterObj,
     QuantityParameterObj,
     UnitInfo,
-    QuantityType,
-    Unit,
     EnumOption
 } from "../../shared/configuration-models";
+import { QuantityType, Unit } from "../../shared/configuration-enums";
 import { evaluateCondition } from "../../shared/configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
@@ -177,13 +176,13 @@ function ConfigurationParameter(
     }
 
     // Need to expose and use parameter directly to get type narrowing
-    if (parameter.type === ConfigurationParameterType.ENUM) {
+    if (parameter.type === ParameterType.ENUM) {
         return <EnumParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.BOOLEAN) {
+    } else if (parameter.type === ParameterType.BOOLEAN) {
         return <BooleanParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.STRING) {
+    } else if (parameter.type === ParameterType.STRING) {
         return <StringParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.QUANTITY) {
+    } else if (parameter.type === ParameterType.QUANTITY) {
         return <QuantityParameter {...props} parameter={parameter} />;
     }
 }
@@ -216,11 +215,9 @@ function getVisibleOptions(
             )
         )
         .flatMap((optionCondition) => {
-            if (optionCondition.type == OptionVisibilityConditionType.LIST) {
+            if (optionCondition.type == OptionVisibilityType.LIST) {
                 return optionCondition.controlledOptions;
-            } else if (
-                optionCondition.type == OptionVisibilityConditionType.RANGE
-            ) {
+            } else if (optionCondition.type == OptionVisibilityType.RANGE) {
                 return optionIds.slice(
                     optionIds.indexOf(optionCondition.start),
                     optionIds.indexOf(optionCondition.end) + 1

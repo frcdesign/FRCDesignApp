@@ -1,11 +1,11 @@
 import {
     Configuration,
-    ConfigurationParameterType,
-    LogicalOp,
     ParameterObj,
+    ParameterType,
     VisibilityCondition,
-    VisibilityConditionType
+    VisibilityType
 } from "./configuration-models";
+import { LogicalOp } from "./configuration-enums";
 
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
@@ -16,7 +16,7 @@ export function evaluateCondition(
         return true;
     }
 
-    if (condition.type == VisibilityConditionType.LOGICAL) {
+    if (condition.type == VisibilityType.LOGICAL) {
         if (condition.operation == LogicalOp.AND) {
             return condition.children.every((child) =>
                 evaluateCondition(child, configuration, parameters)
@@ -26,13 +26,13 @@ export function evaluateCondition(
                 evaluateCondition(child, configuration, parameters)
             );
         }
-    } else if (condition.type == VisibilityConditionType.EQUAL) {
+    } else if (condition.type == VisibilityType.EQUAL) {
         return condition.value == configuration[condition.id];
-    } else if (condition.type == VisibilityConditionType.RANGE) {
+    } else if (condition.type == VisibilityType.RANGE) {
         const parameter = parameters.find(
             (parameter) => parameter.id === condition.id
         );
-        if (parameter?.type != ConfigurationParameterType.ENUM) {
+        if (parameter?.type != ParameterType.ENUM) {
             throw new Error(
                 "Visibility condition does not target a valid enum parameter."
             );
@@ -44,7 +44,7 @@ export function evaluateCondition(
         return optionIds
             .slice(startIndex, endIndex + 1)
             .includes(configuration[condition.id]);
-    } else if (condition.type === VisibilityConditionType.ALWAYS_SHOWN) {
+    } else if (condition.type === VisibilityType.ALWAYS_SHOWN) {
         return true;
     }
     return true;

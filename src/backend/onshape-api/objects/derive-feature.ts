@@ -1,5 +1,5 @@
 import {
-    ConfigurationParameterType,
+    ParameterType,
     type Configuration,
     type ParameterObj
 } from "../../../shared/configuration-models";
@@ -54,7 +54,7 @@ export class DerivedFeature {
         return parameters.map((parameter) => {
             const value = configuration[parameter.id] ?? parameter.default;
             switch (parameter.type) {
-                case ConfigurationParameterType.ENUM:
+                case ParameterType.ENUM:
                     return {
                         btType: "BTMParameterEnum-145",
                         parameterId: parameter.id,
@@ -62,19 +62,19 @@ export class DerivedFeature {
                         namespace: this.namespace,
                         enumName: parameter.id + "_conf"
                     };
-                case ConfigurationParameterType.QUANTITY:
+                case ParameterType.QUANTITY:
                     return {
                         btType: "BTMParameterQuantity-147",
                         parameterId: parameter.id,
                         expression: value
                     };
-                case ConfigurationParameterType.BOOLEAN:
+                case ParameterType.BOOLEAN:
                     return {
                         btType: "BTMParameterBoolean-144",
                         parameterId: parameter.id,
                         value
                     };
-                case ConfigurationParameterType.STRING:
+                case ParameterType.STRING:
                     return {
                         btType: "BTMParameterString-149",
                         parameterId: parameter.id,

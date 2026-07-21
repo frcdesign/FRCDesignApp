@@ -2,43 +2,64 @@
  * Hand-authored types for the Onshape API endpoints we use.
  */
 import {
-    ConfigurationParameterType,
     LogicalOp,
-    OptionVisibilityConditionType,
     QuantityType,
-    Unit,
-    VisibilityConditionType
-} from "../../shared/configuration-models";
+    Unit
+} from "../../shared/configuration-enums";
 
 // === configuration (GET .../configuration, GET .../configurationencodings/{cid}) ===
+
+/** `btType` discriminator of a configuration parameter. */
+export enum OnshapeParameterType {
+    ENUM = "BTMConfigurationParameterEnum-105",
+    QUANTITY = "BTMConfigurationParameterQuantity-1826",
+    BOOLEAN = "BTMConfigurationParameterBoolean-2550",
+    STRING = "BTMConfigurationParameterString-872"
+}
+
+/** `btType` discriminator of a parameter visibility condition. */
+export enum OnshapeVisibilityConditionType {
+    LOGICAL = "BTParameterVisibilityLogical-178",
+    EQUAL = "BTParameterVisibilityOnEqual-180",
+    RANGE = "BTParameterVisibilityInRange-2980",
+    ALWAYS_SHOWN = "BTParameterVisibilityAlwaysShown-5487",
+    /** The "no condition" sentinel; stripped during parsing. */
+    NONE = "BTParameterVisibilityCondition-177"
+}
+
+/** `btType` discriminator of an enum-option visibility condition. */
+export enum OnshapeOptionVisibilityConditionType {
+    LIST = "BTEnumOptionVisibilityForList-1613",
+    RANGE = "BTEnumOptionVisibilityForRange-4297"
+}
 
 // --- visibility conditions --------------------------------------------------------
 
 export interface OnshapeLogicalVisibility {
-    btType: VisibilityConditionType.LOGICAL;
+    btType: OnshapeVisibilityConditionType.LOGICAL;
     operation: LogicalOp;
     children: OnshapeVisibilityCondition[];
 }
 
 export interface OnshapeEqualVisibility {
-    btType: VisibilityConditionType.EQUAL;
+    btType: OnshapeVisibilityConditionType.EQUAL;
     parameterId: string;
     value: string;
 }
 
 export interface OnshapeRangeVisibility {
-    btType: VisibilityConditionType.RANGE;
+    btType: OnshapeVisibilityConditionType.RANGE;
     parameterId: string;
     optionRange: OnshapeOptionRange;
 }
 
 export interface OnshapeAlwaysShownVisibility {
-    btType: VisibilityConditionType.ALWAYS_SHOWN;
+    btType: OnshapeVisibilityConditionType.ALWAYS_SHOWN;
 }
 
 /** The "no condition" sentinel (also appears as a child of logical conditions). */
 export interface OnshapeNoVisibility {
-    btType: VisibilityConditionType.NONE;
+    btType: OnshapeVisibilityConditionType.NONE;
 }
 
 export type OnshapeVisibilityCondition =
@@ -57,13 +78,13 @@ export interface OnshapeOptionRange {
 // --- enum option visibility conditions --------------------------------------------
 
 export interface OnshapeOptionVisibilityForList {
-    btType: OptionVisibilityConditionType.LIST;
+    btType: OnshapeOptionVisibilityConditionType.LIST;
     controlledOptions: string[];
     condition: OnshapeVisibilityCondition;
 }
 
 export interface OnshapeOptionVisibilityForRange {
-    btType: OptionVisibilityConditionType.RANGE;
+    btType: OnshapeOptionVisibilityConditionType.RANGE;
     controlledRange: OnshapeOptionRange;
     condition: OnshapeVisibilityCondition;
 }
@@ -98,24 +119,24 @@ interface OnshapeParameterBase {
 }
 
 export interface OnshapeEnumParameter extends OnshapeParameterBase {
-    btType: ConfigurationParameterType.ENUM;
+    btType: OnshapeParameterType.ENUM;
     defaultValue: string;
     options: OnshapeEnumOption[];
     enumOptionVisibilityConditions?: OnshapeEnumOptionVisibilityConditionList;
 }
 
 export interface OnshapeBooleanParameter extends OnshapeParameterBase {
-    btType: ConfigurationParameterType.BOOLEAN;
+    btType: OnshapeParameterType.BOOLEAN;
     defaultValue: boolean;
 }
 
 export interface OnshapeStringParameter extends OnshapeParameterBase {
-    btType: ConfigurationParameterType.STRING;
+    btType: OnshapeParameterType.STRING;
     defaultValue: string;
 }
 
 export interface OnshapeQuantityParameter extends OnshapeParameterBase {
-    btType: ConfigurationParameterType.QUANTITY;
+    btType: OnshapeParameterType.QUANTITY;
     quantityType: QuantityType;
     rangeAndDefault: OnshapeQuantityRange;
 }

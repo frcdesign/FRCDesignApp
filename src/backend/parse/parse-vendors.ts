@@ -1,6 +1,6 @@
 import { Vendor, getVendorName } from "../../shared/types";
 import {
-    ConfigurationParameterType,
+    ParameterType,
     type ParameterObj
 } from "../../shared/configuration-models";
 
@@ -24,7 +24,7 @@ export function parseVendors(
 
     const vendors = new Set<Vendor>();
     for (const param of parameters) {
-        if (param.type !== ConfigurationParameterType.ENUM) continue;
+        if (param.type !== ParameterType.ENUM) continue;
         for (const option of param.options) {
             const vendor = parseNameVendor(option.name);
             if (vendor) {
