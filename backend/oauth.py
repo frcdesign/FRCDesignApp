@@ -24,8 +24,16 @@ def sign_in():
 
     db = connect.get_db()
     oauth = connect.get_oauth_session(db, connect.OAuthType.SIGN_IN)
+
+    # Onshape scopes the token to an enterprise using company_id. Without it, the new token gets
+    # the same scoping as the one we're replacing, so re-auth can never fix a company mismatch.
+    kwargs = {}
+    company_id = request.args.get("sessionCompanyId")
+    if company_id and company_id != connect.NO_COMPANY:
+        kwargs["company_id"] = company_id
+
     # Saving state is unneeded since Onshape saves it for us
-    auth_url, _ = oauth.authorization_url(connect.auth_base_url)
+    auth_url, _ = oauth.authorization_url(connect.auth_base_url, **kwargs)
 
     # Send user to Onshape's sign in page
     return flask.redirect(auth_url)

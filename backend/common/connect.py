@@ -61,6 +61,9 @@ base_url = "https://oauth.onshape.com/oauth"
 auth_base_url = base_url + "/authorize"
 token_url = base_url + "/token"
 
+# The value Onshape substitutes for sessionCompanyId when the user isn't in an enterprise session.
+NO_COMPANY = "cad"
+
 
 class OAuthType(enum.Enum):
     SIGN_IN = enum.auto()
