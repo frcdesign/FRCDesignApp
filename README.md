@@ -85,8 +85,8 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
+        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
     - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.

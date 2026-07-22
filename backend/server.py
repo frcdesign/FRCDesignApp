@@ -4,7 +4,7 @@ from backend.common.app_logging import APP_LOGGER, log_app_opened
 from backend.endpoints import api
 from backend.common import connect, env
 from backend import oauth
-from onshape_api.endpoints.users import ping
+from onshape_api.endpoints.users import get_session_info
 
 
 def create_app():
@@ -35,12 +35,29 @@ def create_app():
         """The base route used by Onshape."""
         api = connect.get_api()
 
-        authorized = api.oauth.authorized and ping(api, catch=True)
-        if not authorized:
+        def redirect_to_sign_in():
             # Save redirect url to session so we can get back here after processing OAuth2 redirect
             flask.session["redirect_url"] = connect.get_current_url()
-
             return flask.redirect("/sign-in")
+
+        if not api.oauth.authorized:
+            return redirect_to_sign_in()
+
+        try:
+            # Doubles as the auth check: fails if the token is invalid.
+            session_info = get_session_info(api)
+        except Exception:
+            return redirect_to_sign_in()
+
+        # Re-auth if the user's active company differs from the token's company. The
+        # token is tied to the company the user was in when they authorized, so a company
+        # switch requires a fresh token to talk to the right company. Onshape sends "cad"
+        # for non-enterprise sessions, which matches a token that has no company.
+        param_company_id = connect.get_optional_query_param("sessionCompanyId")
+        company = session_info.get("company") or {}
+        token_company_id = company.get("id") or "cad"
+        if token_company_id != param_company_id:
+            return redirect_to_sign_in()
 
         try:
             # This should never fail, but not worth crashing over
