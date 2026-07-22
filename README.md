@@ -67,12 +67,12 @@ Note that Python version 3.12 or greater is a hard requirement.
 
 To test Onshape app changes, you will need to create an OAuth application in the [Onshape Developer Portal](https://cad.onshape.com/appstore/dev-portal/oauthApps). Fill out the following information:
 
--   Name: (Arbitrary) FRC Design App Test
--   Primary format: (Arbitrary) com.frc-design-app-test
--   Summary: (Arbitrary) Test for the FRC Design App.
--   Redirect URLs: `https://localhost:3000/redirect`
--   OAuth URL: `https://localhost:3000/sign-in`
--   Check the permissions `can read your profile information`, `can read your documents`, `can write to your documents`, and `can delete your documents and workspaces`.
+- Name: (Arbitrary) FRC Design App Test
+- Primary format: (Arbitrary) com.frc-design-app-test
+- Summary: (Arbitrary) Test for the FRC Design App.
+- Redirect URLs: `https://localhost:3000/redirect`
+- OAuth URL: `https://localhost:3000/sign-in`
+- Check the permissions `can read your profile information`, `can read your documents`, `can write to your documents`, and `can delete your documents and workspaces`.
 
 Click Create application, then copy your OAuth app's OAuth client secret (in the popup) and OAuth client identifier into your `.env` file.
 
@@ -85,8 +85,8 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
-        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
+        - Assembly: `https://localhost:3000/app?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Part Studio: `https://localhost:3000/app?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
     - Icon: You'll need an icon. A good choice is the one at `/frontend/public/frc-design-dev-icon.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.
