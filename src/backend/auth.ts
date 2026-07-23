@@ -4,7 +4,7 @@ import { type AppContext, getApp } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
-import { ping } from "./onshape-api/endpoints/users";
+import { getSessionInfo } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
@@ -29,8 +29,12 @@ export async function getOnshapeApiForSessionId(
     const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
-            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
-            .then(makeAuthTokens);
+            .refreshAccessToken(
+                companyTokenEndpoint(tokens.companyId),
+                tokens.refreshToken,
+                []
+            )
+            .then((refreshed) => makeAuthTokens(refreshed, tokens.companyId));
 
         void saveTokens(kv, sessionId, newTokens);
 
@@ -46,10 +50,17 @@ export async function getOnshapeApiForSessionId(
     return new OAuthApi(accessToken, refreshCallback);
 }
 
-export async function isAuthenticated(c: AppContext) {
+export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await getOnshapeApi(c);
-        return ping(onshapeApi);
+        // Fetching session info doubles as the auth ping and tells us which company the
+        // current token is scoped to (null/absent company => personal "cad" context).
+        const sessionInfo = await getSessionInfo(onshapeApi);
+        const tokenCompanyId = sessionInfo.company?.id ?? "cad";
+        const requestCompanyId = c.req.query("sessionCompanyId") ?? "cad";
+        // On a mismatch, fail the check so `/init` restarts the sign-in flow, which re-mints
+        // a token scoped to the requested company (see companyTokenEndpoint usage below).
+        return requestCompanyId === tokenCompanyId;
     } catch {
         return false;
     }
@@ -70,6 +81,16 @@ function getOauthClient(): OAuth2Client {
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
+
+/**
+ * The OAuth token endpoint, scoped to a company when one is known. Onshape reads
+ * `company_id` as a query parameter and returns a company-scoped access token.
+ */
+function companyTokenEndpoint(companyId?: string): string {
+    return companyId
+        ? `${TOKEN_ENDPOINT}?company_id=${encodeURIComponent(companyId)}`
+        : TOKEN_ENDPOINT;
+}
 
 export const authRoutes = getApp();
 
@@ -110,12 +131,36 @@ export async function doSignIn(
 
     const state = generateState();
 
-    // Store the state and redirectUrl
-    await initSession(c, { state, redirectUrl });
+    // Capture the requested company so the callback can mint a company-scoped token.
+    const companyId = getSignInCompanyId(c, redirectUrl);
+
+    // Store the state, redirectUrl, and company
+    await initSession(c, { state, redirectUrl, companyId });
 
     return oauthClient
         .createAuthorizationURL(AUTH_ENDPOINT, state, [])
         .toString();
+}
+
+/**
+ * Resolves the Onshape `sessionCompanyId` for a sign-in, preferring the value on the
+ * sign-in request itself and falling back to the one carried by the `/init` redirectUrl.
+ */
+function getSignInCompanyId(
+    c: AppContext,
+    redirectUrl: string
+): string | undefined {
+    const direct = c.req.query("sessionCompanyId");
+    if (direct) return direct;
+    try {
+        return (
+            new URL(redirectUrl).searchParams.get("sessionCompanyId") ??
+            undefined
+        );
+    } catch {
+        // redirectUrl was not an absolute URL we can parse
+        return undefined;
+    }
 }
 
 export async function doCallback(c: AppContext): Promise<Response> {
@@ -145,8 +190,12 @@ export async function doCallback(c: AppContext): Promise<Response> {
     const oauthClient = getOauthClient();
 
     await oauthClient
-        .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
-        .then(makeAuthTokens)
+        .validateAuthorizationCode(
+            companyTokenEndpoint(session.companyId),
+            search.code,
+            null
+        )
+        .then((tokens) => makeAuthTokens(tokens, session.companyId))
         .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
@@ -168,6 +217,8 @@ function isSafari(request: Request): boolean {
 interface OAuthSessionData {
     state: string;
     redirectUrl: string;
+    /** Onshape company the token should be scoped to; absent for a personal context. */
+    companyId?: string;
 }
 
 async function getSession(
@@ -208,13 +259,16 @@ interface AuthTokens {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
+    /** Company the token is scoped to, carried forward so refreshes keep the scope. */
+    companyId?: string;
 }
 
-function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
+function makeAuthTokens(tokens: OAuth2Tokens, companyId?: string): AuthTokens {
     return {
         accessToken: tokens.accessToken(),
         refreshToken: tokens.refreshToken(),
-        expiresAt: tokens.accessTokenExpiresAt().getTime()
+        expiresAt: tokens.accessTokenExpiresAt().getTime(),
+        companyId
     };
 }
 

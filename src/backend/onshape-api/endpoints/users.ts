@@ -3,7 +3,13 @@ import { OAuthApi } from "../onshape-api";
 import { apiPath } from "../api-path";
 import { AccessLevel } from "../../../shared/types";
 
-export function getSessionInfo(client: OAuthApi): Promise<any> {
+export interface SessionInfo {
+    id: string;
+    /** The company the current access token is scoped to; null/absent for a personal context. */
+    company?: { id: string } | null;
+}
+
+export function getSessionInfo(client: OAuthApi): Promise<SessionInfo> {
     return client.get(
         apiPath("users", undefined, undefined, { endRoute: "sessioninfo" })
     );
