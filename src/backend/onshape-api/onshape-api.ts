@@ -3,12 +3,14 @@ import {
     type QueryOptions,
     type PostOptions
 } from "../../shared/url-params";
-import { env } from "cloudflare:workers";
+
+// Constant across all environments (dev/cert/production), so hardcoded here
+// rather than duplicated as a per-environment var in wrangler.jsonc.
+const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
+const ONSHAPE_API_VERSION = 16;
 
 export function getBaseUrl(): string {
-    const url = env.ONSHAPE_API_BASE_PATH ?? "https://cad.onshape.com";
-    const version = env.ONSHAPE_API_VERSION ?? 16;
-    return `${url}/api/v${version}`;
+    return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
 }
 
 export class OnshapeApiError extends Error {

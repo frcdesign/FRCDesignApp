@@ -29,11 +29,19 @@
      * databases, object storage, AI inference, real-time communication and more.
      * https://developers.cloudflare.com/workers/runtime-apis/bindings/
      */
+    /**
+     * Top-level config is the "dev" environment: it is used for local development
+     * (`npm run dev` / `wrangler dev --local`), which runs against simulated on-disk
+     * storage and never touches the remote resources below. Deployed environments are
+     * defined under "env" (cert, production) and each redeclares its own bindings, since
+     * bindings and vars are non-inheritable in Wrangler.
+     *
+     * The dev D1 entry intentionally omits "database_id" — it is unused in --local mode.
+     */
     "d1_databases": [
         {
             "binding": "DB",
             "database_name": "db",
-            "database_id": "d68c107e-2e40-407f-837b-eccdaa0ee3eb",
             "migrations_dir": "drizzle"
         }
     ],
@@ -64,13 +72,88 @@
      */
     "vars": {
         // Onshape team ID used to determine editor/admin access level in production
-        "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
-        "ONSHAPE_API_VERSION": 16,
-        "ONSHAPE_API_BASE_PATH": "https://cad.onshape.com"
-    }
+        "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+    },
     /**
      * Service Bindings (communicate between multiple Workers)
      * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
      */
     // "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+    /**
+     * Deployed environments. Bindings and vars are non-inheritable, so each environment
+     * redeclares its full set. Deploy with `wrangler deploy --env <name>`.
+     */
+    "env": {
+        // "cert": deployed as Worker `frc-design-app-cert` from the `cert` branch.
+        // Reuses the existing remote D1 / KV / R2 resources.
+        "cert": {
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "db",
+                    "database_id": "d68c107e-2e40-407f-837b-eccdaa0ee3eb",
+                    "migrations_dir": "drizzle"
+                }
+            ],
+            "kv_namespaces": [
+                {
+                    "binding": "KV",
+                    "id": "f3a2097219654fa99a2ac3cc1573b7e8"
+                }
+            ],
+            "r2_buckets": [
+                {
+                    "binding": "THUMBNAILS",
+                    "bucket_name": "frc-thumbnails"
+                }
+            ],
+            "workflows": [
+                {
+                    "name": "load-document-workflow-cert",
+                    "binding": "LOAD_DOCUMENT_WORKFLOW",
+                    "class_name": "LoadDocumentWorkflow"
+                }
+            ],
+            "vars": {
+                "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+            }
+        },
+        // "production": deployed as Worker `frc-design-app-production` from the `main`
+        // branch. Uses its own separate resources. The IDs below are PLACEHOLDERS — create
+        // the production D1 / KV / R2 (see deployment plan) and replace them with the real
+        // values before enabling production deploys. Until then, a production deploy fails
+        // safely at Cloudflare (resource not found).
+        "production": {
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "db-production",
+                    "database_id": "00000000-0000-0000-0000-000000000000",
+                    "migrations_dir": "drizzle"
+                }
+            ],
+            "kv_namespaces": [
+                {
+                    "binding": "KV",
+                    "id": "00000000000000000000000000000000"
+                }
+            ],
+            "r2_buckets": [
+                {
+                    "binding": "THUMBNAILS",
+                    "bucket_name": "frc-thumbnails-production"
+                }
+            ],
+            "workflows": [
+                {
+                    "name": "load-document-workflow-production",
+                    "binding": "LOAD_DOCUMENT_WORKFLOW",
+                    "class_name": "LoadDocumentWorkflow"
+                }
+            ],
+            "vars": {
+                "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+            }
+        }
+    }
 }
