@@ -69,7 +69,8 @@
      */
     "vars": {
         // Onshape team ID used to determine editor/admin access level in production
-        "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+        "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
+        "NODE_ENV": "development"
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -109,7 +110,8 @@
                 }
             ],
             "vars": {
-                "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+                "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
+                "NODE_ENV": "development"
             },
             "routes": [
                 {
@@ -147,7 +149,8 @@
                 }
             ],
             "vars": {
-                "ADMIN_TEAM": "5b620150b2190f0fca90ec10"
+                "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
+                "NODE_ENV": "production"
             }
         }
     }

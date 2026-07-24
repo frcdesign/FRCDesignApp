@@ -29,8 +29,6 @@ SESSION_SECRET=gNSzdRbs4dJYz0obHfeRwaD+u5QbZgJx+V8/rgUH6AiOdoppP3wjeaM97nZmxeJa
 
 # One of admin, editor, or user, depending on desired access to the app. Does nothing in production.
 ACCESS_LEVEL_OVERRIDE=admin
-
-NODE_ENV=development
 ```
 
 ## Onshape OAuth App Setup

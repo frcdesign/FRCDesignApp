@@ -110,7 +110,11 @@ authRoutes.get("/sign-in", async (c) => {
         });
     }
 
-    const authorizationUrl = await doSignIn(c, redirectUrl);
+    // Onshape passes the company the session is scoped to; absent means the
+    // personal "cad" context.
+    const companyId = query.sessionCompanyId ?? "cad";
+
+    const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
 
@@ -125,42 +129,20 @@ authRoutes.get("/callback", async (c) => {
  */
 export async function doSignIn(
     c: AppContext,
-    redirectUrl: string
+    redirectUrl: string,
+    companyId: string
 ): Promise<string> {
     const oauthClient = getOauthClient();
 
     const state = generateState();
 
-    // Capture the requested company so the callback can mint a company-scoped token.
-    const companyId = getSignInCompanyId(c, redirectUrl);
-
-    // Store the state, redirectUrl, and company
+    // Store the state, redirectUrl, and company so the callback can mint a
+    // company-scoped token.
     await initSession(c, { state, redirectUrl, companyId });
 
     return oauthClient
         .createAuthorizationURL(AUTH_ENDPOINT, state, [])
         .toString();
-}
-
-/**
- * Resolves the Onshape `sessionCompanyId` for a sign-in, preferring the value on the
- * sign-in request itself and falling back to the one carried by the `/init` redirectUrl.
- */
-function getSignInCompanyId(
-    c: AppContext,
-    redirectUrl: string
-): string | undefined {
-    const direct = c.req.query("sessionCompanyId");
-    if (direct) return direct;
-    try {
-        return (
-            new URL(redirectUrl).searchParams.get("sessionCompanyId") ??
-            undefined
-        );
-    } catch {
-        // redirectUrl was not an absolute URL we can parse
-        return undefined;
-    }
 }
 
 export async function doCallback(c: AppContext): Promise<Response> {
@@ -217,8 +199,8 @@ function isSafari(request: Request): boolean {
 interface OAuthSessionData {
     state: string;
     redirectUrl: string;
-    /** Onshape company the token should be scoped to; absent for a personal context. */
-    companyId?: string;
+    /** Onshape company the token should be scoped to; "cad" for a personal context. */
+    companyId: string;
 }
 
 async function getSession(

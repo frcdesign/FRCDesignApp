@@ -39,9 +39,12 @@ export function createApp(makeServices: AppServicesFactory) {
     // `/init` is the auth-gated entry point
     app.on("GET", "/init", async (c) => {
         if (!(await isAuthenticated(c))) {
-            return c.redirect(
-                `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`
-            );
+            const sessionCompanyId = c.req.query("sessionCompanyId");
+            let signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`;
+            if (sessionCompanyId) {
+                signInUrl += `&sessionCompanyId=${encodeURIComponent(sessionCompanyId)}`;
+            }
+            return c.redirect(signInUrl);
         }
         // Forward to normal Cloudflare
         return c.env.ASSETS.fetch(c.req.raw);
