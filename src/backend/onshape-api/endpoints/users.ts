@@ -20,26 +20,6 @@ export function getUserId(client: OAuthApi): Promise<string> {
     return getSessionInfo(client).then((info) => info.id);
 }
 
-/**
- * Pings the Onshape API's `users/sessioninfo` endpoint.
- *
- * Returns `true` if the ping was successful.
- *
- * @param catchErrors True to return `false` in place of any thrown exceptions.
- */
-export async function ping(
-    client: OAuthApi,
-    catchErrors = false
-): Promise<boolean> {
-    try {
-        await getSessionInfo(client);
-        return true;
-    } catch (error) {
-        if (catchErrors) return false;
-        throw error;
-    }
-}
-
 /** Returns the access level of the authenticated user relative to a given team. */
 export async function getAccessLevel(
     client: OnshapeApi,

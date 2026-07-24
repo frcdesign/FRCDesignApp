@@ -50,16 +50,16 @@ export async function getOnshapeApiForSessionId(
     return new OAuthApi(accessToken, refreshCallback);
 }
 
+export function getSessionCompanyId(c: AppContext) {
+    return c.req.query("sessionCompanyId") ?? "cad";
+}
+
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await getOnshapeApi(c);
-        // Fetching session info doubles as the auth ping and tells us which company the
-        // current token is scoped to (null/absent company => personal "cad" context).
         const sessionInfo = await getSessionInfo(onshapeApi);
         const tokenCompanyId = sessionInfo.company?.id ?? "cad";
-        const requestCompanyId = c.req.query("sessionCompanyId") ?? "cad";
-        // On a mismatch, fail the check so `/init` restarts the sign-in flow, which re-mints
-        // a token scoped to the requested company (see companyTokenEndpoint usage below).
+        const requestCompanyId = getSessionCompanyId(c);
         return requestCompanyId === tokenCompanyId;
     } catch {
         return false;

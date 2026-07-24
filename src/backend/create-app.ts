@@ -1,4 +1,4 @@
-import { authRoutes, isAuthenticated } from "./auth";
+import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
 import { getApp, type AppServicesFactory } from "./app";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
@@ -39,11 +39,7 @@ export function createApp(makeServices: AppServicesFactory) {
     // `/init` is the auth-gated entry point
     app.on("GET", "/init", async (c) => {
         if (!(await isAuthenticated(c))) {
-            const sessionCompanyId = c.req.query("sessionCompanyId");
-            let signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`;
-            if (sessionCompanyId) {
-                signInUrl += `&sessionCompanyId=${encodeURIComponent(sessionCompanyId)}`;
-            }
+            const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}&sessionCompanyId=${getSessionCompanyId(c)}`;
             return c.redirect(signInUrl);
         }
         // Forward to normal Cloudflare
