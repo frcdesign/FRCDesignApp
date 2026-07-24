@@ -28,7 +28,6 @@ userRoutes.get("/context-data", async (c) => {
         .where(eq(libraries.id, user.libraryId))
         .get();
 
-    // Always default to user in dev and the max in production
     const currentAccessLevel =
         env.NODE_ENV === "production" ? AccessLevel.USER : maxAccessLevel;
 
