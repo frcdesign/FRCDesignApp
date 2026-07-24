@@ -106,13 +106,7 @@
             "vars": {
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "development"
-            },
-            "routes": [
-                {
-                    "pattern": "cert.frcdesign.org",
-                    "custom_domain": true
-                }
-            ]
+            }
         },
         "production": {
             "d1_databases": [
