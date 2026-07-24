@@ -32,19 +32,20 @@
     "d1_databases": [
         {
             "binding": "DB",
-            "database_name": "db",
+            "database_name": "frc-design-app-dev-db",
             "migrations_dir": "drizzle"
         }
     ],
     "kv_namespaces": [
         {
-            "binding": "KV"
+            "binding": "KV",
+            "id": "8e77565b50314aa28be8246d6a19d1f1"
         }
     ],
     "r2_buckets": [
         {
             "binding": "THUMBNAILS",
-            "bucket_name": "frc-thumbnails"
+            "bucket_name": "frc-design-app-dev-thumbnails"
         }
     ],
     "workflows": [
@@ -92,7 +93,7 @@
             "r2_buckets": [
                 {
                     "binding": "THUMBNAILS",
-                    "bucket_name": "thumbnails-cert"
+                    "bucket_name": "frc-design-app-cert-thumbnails"
                 }
             ],
             "workflows": [
