@@ -4,9 +4,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { existsSync, readFileSync } from "fs";
 
-// Local HTTPS dev certs (mkcert) are only present on developer machines; they are
-// absent in CI (e.g. the deploy workflow's build step), so only enable HTTPS when the
-// cert files exist. `vite build` does not use the dev server and works without them.
+// Only enable https when localhost exists
 const httpsKeyPath = "localhost-key.pem";
 const httpsCertPath = "localhost.pem";
 const httpsDevServer =

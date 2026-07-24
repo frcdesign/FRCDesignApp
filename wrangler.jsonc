@@ -29,13 +29,6 @@
      * databases, object storage, AI inference, real-time communication and more.
      * https://developers.cloudflare.com/workers/runtime-apis/bindings/
      */
-    /**
-     * Top-level config is the "dev" environment: it is used for local development
-     * (`npm run dev` / `wrangler dev --local`), which runs against simulated on-disk
-     * storage and never touches the remote resources below. Deployed environments are
-     * defined under "env" (cert, production) and each redeclares its own bindings, since
-     * bindings and vars are non-inheritable in Wrangler.
-     */
     "d1_databases": [
         {
             "binding": "DB",
