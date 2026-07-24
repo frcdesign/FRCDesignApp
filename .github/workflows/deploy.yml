@@ -61,7 +61,7 @@ jobs:
               with:
                   apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                  preCommands: wrangler d1 migrations apply db --remote --env cert
+                  preCommands: wrangler d1 migrations apply DB --remote --env cert
                   command: deploy
 
     # Dormant until a `main` branch exists (the `if` never matches otherwise).
@@ -92,5 +92,5 @@ jobs:
               with:
                   apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                  preCommands: wrangler d1 migrations apply db-production --remote --env production
+                  preCommands: wrangler d1 migrations apply DB --remote --env production
                   command: deploy
