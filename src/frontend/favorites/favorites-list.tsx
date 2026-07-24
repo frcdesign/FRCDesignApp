@@ -32,17 +32,9 @@ export function FavoritesList(): ReactNode {
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
 
-    if (
-        libraryQuery.isPending ||
-        searchDbQuery.isPending ||
-        favoritesQuery.isPending
-    ) {
+    if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
-    } else if (
-        libraryQuery.isError ||
-        searchDbQuery.isError ||
-        favoritesQuery.isError
-    ) {
+    } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
             <SectionError
                 title="Failed to load favorites."
@@ -70,7 +62,9 @@ export function FavoritesList(): ReactNode {
     let filterResult: FilterResult;
     let searchHits: Record<string, SearchHit> = {};
     if (uiState.searchQuery) {
-        if (!searchDbQuery.data) {
+        if (searchDbQuery.isLoading) {
+            return <SectionLoading title="Searching..." />;
+        } else if (!searchDbQuery.data) {
             return <SectionError title="Failed to load search database." />;
         }
         const favoriteInsertableIds = new Set(
