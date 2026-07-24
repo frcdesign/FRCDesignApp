@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+    push:
+        branches: [cert, main]
+
+concurrency:
+    group: deploy-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    # Gate: run the same checks as ci.yml before any deploy.
+    ci:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Type-check
+              run: npm run tsc
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Test
+              run: npm test
+
+    deploy-cert:
+        needs: ci
+        if: github.ref == 'refs/heads/cert'
+        runs-on: ubuntu-latest
+        environment: cert
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            # The @cloudflare/vite-plugin selects the target environment at BUILD time
+            # via CLOUDFLARE_ENV and writes a redirected config that `wrangler deploy`
+            # then uses (deploying the `frc-design-app-cert` Worker).
+            - name: Build (cert)
+              run: npm run build
+              env:
+                  CLOUDFLARE_ENV: cert
+
+            - name: Apply migrations & deploy (cert)
+              uses: cloudflare/wrangler-action@v3
+              with:
+                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  preCommands: wrangler d1 migrations apply db --remote --env cert
+                  command: deploy
+
+    # Dormant until a `main` branch exists (the `if` never matches otherwise).
+    # Runs in a protected `production` GitHub Environment (add a required reviewer).
+    deploy-production:
+        needs: ci
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        environment: production
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build (production)
+              run: npm run build
+              env:
+                  CLOUDFLARE_ENV: production
+
+            - name: Apply migrations & deploy (production)
+              uses: cloudflare/wrangler-action@v3
+              with:
+                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  preCommands: wrangler d1 migrations apply db-production --remote --env production
+                  command: deploy

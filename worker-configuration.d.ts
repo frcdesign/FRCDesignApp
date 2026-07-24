@@ -7,8 +7,6 @@ interface __BaseEnv_Env {
     DB: D1Database;
     ASSETS: Fetcher;
     ADMIN_TEAM: "5b620150b2190f0fca90ec10";
-    ONSHAPE_API_VERSION: 16;
-    ONSHAPE_API_BASE_PATH: "https://frcdesign.onshape.com";
     API_ACCESS_KEY: string;
     API_SECRET_KEY: string;
     OAUTH_CLIENT_ID: string;
@@ -39,8 +37,6 @@ declare namespace NodeJS {
         Pick<
             Cloudflare.Env,
             | "ADMIN_TEAM"
-            | "ONSHAPE_API_VERSION"
-            | "ONSHAPE_API_BASE_PATH"
             | "API_ACCESS_KEY"
             | "API_SECRET_KEY"
             | "OAUTH_CLIENT_ID"
