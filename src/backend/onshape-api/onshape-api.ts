@@ -21,8 +21,33 @@ export class OnshapeApiError extends Error {
     }
 }
 
+/** Fallback wait when a 429 response omits (or malforms) the Retry-After header. */
+const DEFAULT_RETRY_AFTER_SECONDS = 60;
+
+/**
+ * Thrown on a 429 response. Carries the Onshape `Retry-After` value (seconds)
+ * so callers can wait it out. Extends {@link OnshapeApiError} (status 429) so
+ * existing `status`-based handling keeps working.
+ */
+export class OnshapeRateLimitError extends OnshapeApiError {
+    constructor(
+        message: string,
+        public readonly retryAfterSeconds: number
+    ) {
+        super(message, 429);
+        this.name = "OnshapeRateLimitError";
+    }
+}
+
 export abstract class OnshapeApi {
     protected readonly _baseUrl = getBaseUrl();
+
+    /**
+     * The `X-Rate-Limit-Remaining` count from the most recent response (Onshape
+     * sends it on every response), or undefined before the first call. Callers
+     * use it to pace request bursts against the per-endpoint limit.
+     */
+    lastRateLimitRemaining: number | undefined;
 
     protected abstract _request(
         method: string,
@@ -81,8 +106,30 @@ export abstract class OnshapeApi {
             signal: options?.signal,
             headers
         });
+
+        // Onshape returns X-Rate-Limit-Remaining on every response.
+        const remaining = parseInt(
+            res.headers.get("X-Rate-Limit-Remaining") ?? "",
+            10
+        );
+        if (Number.isFinite(remaining)) {
+            this.lastRateLimitRemaining = remaining;
+        }
+
         if (!res.ok) {
             const text = await res.text();
+            if (res.status === 429) {
+                const retryAfter = parseInt(
+                    res.headers.get("Retry-After") ?? "",
+                    10
+                );
+                throw new OnshapeRateLimitError(
+                    `Onshape API error 429: ${text}`,
+                    Number.isFinite(retryAfter)
+                        ? retryAfter
+                        : DEFAULT_RETRY_AFTER_SECONDS
+                );
+            }
             throw new OnshapeApiError(
                 `Onshape API error ${res.status}: ${text}`,
                 res.status

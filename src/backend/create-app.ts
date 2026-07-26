@@ -1,5 +1,7 @@
+import { HTTPException } from "hono/http-exception";
 import { authRoutes, isAuthenticated } from "./auth";
 import { getApp, type AppServicesFactory } from "./app";
+import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
 import { favoriteRoutes } from "./routes/favorites";
@@ -45,6 +47,25 @@ export function createApp(makeServices: AppServicesFactory) {
         }
         // Forward to normal Cloudflare
         return c.env.ASSETS.fetch(c.req.raw);
+    });
+
+    app.onError((err, c) => {
+        // Surface an Onshape rate limit as a 429 the client can retry, rather
+        // than blocking the request thread waiting it out.
+        if (err instanceof OnshapeRateLimitError) {
+            c.header("Retry-After", String(err.retryAfterSeconds));
+            return c.json(
+                {
+                    error: "Onshape rate limit reached. Please try again shortly."
+                },
+                429
+            );
+        }
+        if (err instanceof HTTPException) {
+            return err.getResponse();
+        }
+        console.error(err);
+        return c.json({ error: "Internal Server Error" }, 500);
     });
 
     return app;

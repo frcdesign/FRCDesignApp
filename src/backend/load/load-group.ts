@@ -1,10 +1,11 @@
 import { NonRetryableError } from "cloudflare:workflows";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import type { ThumbnailUrls } from "../../shared/types";
 import type { BuildIssue } from "../../shared/build-checker";
-import { group, insertables } from "../../shared/schema";
+import type { ParameterObj } from "../../shared/configuration-models";
+import { configurations, group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
 import { getContents } from "../onshape-api/endpoints/documents";
 import {
@@ -15,15 +16,22 @@ import {
     OnshapeFolderEntryType
 } from "../onshape-api/onshape-types";
 import { checkGroup } from "../parse/build-checks";
-import { loadInsertable } from "./load-insertable";
+import { loadInsertable, writePartNumbers } from "./load-insertable";
+import {
+    type ComputedPartNumbers,
+    computePartNumbers,
+    nextWaveSize
+} from "./load-part-numbers";
+import { enumerateConfigurations } from "../../shared/configuration-combinations";
 import {
     type InsertableGroupFields,
     type InsertableElement,
     type LoadContext,
+    ONSHAPE_STEP_RETRIES,
     getOnshapeApiFromLoadContext,
     uploadThumbnailsStep
 } from "./load-utils";
-import type { InstancePath } from "../../shared/onshape-path";
+import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 
 export interface GroupLoadResult {
     loadedElements: number;
@@ -136,6 +144,10 @@ export async function loadGroup(
             db.delete(insertables).where(inArray(insertables.id, staleIds))
         ]);
     });
+
+    // Index part numbers after the group is saved (so stale rows are gone),
+    // pacing against the rate limit.
+    await loadPartNumbers(ctx, groupId);
 
     return {
         loadedElements: toLoad.length,
@@ -304,4 +316,148 @@ function orderedElementIds(contents: OnshapeDocumentContents): string[] {
         ids.push(...traverseEntry(entry));
     }
     return ids;
+}
+
+/** A part-number indexing job for one insertable. */
+interface PartNumberJob {
+    insertableId: string;
+    path: ElementPath;
+    elementType: ElementType;
+    parameters: ParameterObj[];
+    /** Number of Onshape calls this job will make (0 when capped). */
+    cost: number;
+}
+
+/**
+ * Indexes part numbers for the group's `searchPartNumbers`-enabled insertables,
+ * running per-insertable steps in cost-packed parallel waves that stay within
+ * the live `X-Rate-Limit-Remaining` budget. Each insertable's cost is known up
+ * front from `enumerateConfigurations`, so waves never intentionally exceed the
+ * limit; a 429 from estimate drift is still waited out durably per step.
+ */
+async function loadPartNumbers(
+    ctx: LoadContext,
+    groupId: string
+): Promise<void> {
+    const db = getDb(ctx.env.DB);
+    const jobs = await ctx.step.do(`part-number-jobs-${groupId}`, () =>
+        selectPartNumberJobs(db, groupId)
+    );
+    if (jobs.length === 0) {
+        return;
+    }
+
+    let index = 0;
+    // Undefined until the first response reports a remaining count; until then
+    // (and if the header is ever absent) we fall back to one job at a time.
+    let budget: number | undefined;
+    while (index < jobs.length) {
+        const waveSize =
+            budget === undefined
+                ? 1
+                : nextWaveSize(
+                      jobs.slice(index).map((job) => job.cost),
+                      budget
+                  );
+        const wave = jobs.slice(index, index + waveSize);
+
+        const reported = await Promise.all(
+            wave.map((job) => runPartNumberJob(ctx, job))
+        );
+        const observed = reported.filter(
+            (value): value is number => value !== undefined
+        );
+        if (observed.length > 0) {
+            budget = Math.min(...observed);
+        }
+        index += waveSize;
+    }
+}
+
+/**
+ * Runs one insertable's part-number step (durable, honoring Retry-After) and a
+ * write step, returning the lowest remaining count it observed. On retry
+ * exhaustion it degrades to a flagged, empty result rather than failing the load.
+ */
+async function runPartNumberJob(
+    ctx: LoadContext,
+    job: PartNumberJob
+): Promise<number | undefined> {
+    let result: ComputedPartNumbers;
+    let incomplete = false;
+    try {
+        result = await ctx.step.do(
+            `part-numbers-${job.insertableId}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                computePartNumbers(
+                    await getOnshapeApiFromLoadContext(ctx),
+                    job.path,
+                    job.elementType,
+                    job.parameters
+                )
+        );
+    } catch {
+        result = {
+            defaultPartNumber: null,
+            partNumbers: {},
+            capped: false,
+            minRemaining: undefined
+        };
+        incomplete = true;
+    }
+
+    await ctx.step.do(`write-part-numbers-${job.insertableId}`, () =>
+        writePartNumbers(getDb(ctx.env.DB), job.insertableId, {
+            defaultPartNumber: result.defaultPartNumber,
+            partNumbers: result.partNumbers,
+            capped: result.capped,
+            incomplete
+        })
+    );
+
+    return result.minRemaining;
+}
+
+/** Loads the group's part-number jobs (enabled insertables + their parameters). */
+async function selectPartNumberJobs(
+    db: ReturnType<typeof getDb>,
+    groupId: string
+): Promise<PartNumberJob[]> {
+    const rows = await db
+        .select({
+            id: insertables.id,
+            documentId: insertables.documentId,
+            versionId: insertables.versionId,
+            elementId: insertables.elementId,
+            elementType: insertables.elementType,
+            parameters: configurations.parameters
+        })
+        .from(insertables)
+        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .where(
+            and(
+                eq(insertables.groupId, groupId),
+                eq(insertables.searchPartNumbers, true)
+            )
+        )
+        .all();
+
+    return rows.map((row) => {
+        const parameters = row.parameters ?? [];
+        const { configurations: combos, capped } =
+            enumerateConfigurations(parameters);
+        return {
+            insertableId: row.id,
+            path: {
+                documentId: row.documentId,
+                instanceId: row.versionId,
+                instanceType: "v",
+                elementId: row.elementId
+            },
+            elementType: row.elementType,
+            parameters,
+            cost: capped ? 0 : combos.length
+        };
+    });
 }

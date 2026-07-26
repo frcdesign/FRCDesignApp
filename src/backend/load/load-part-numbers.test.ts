@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePartNumbers } from "./load-part-numbers";
+import { computePartNumbers, nextWaveSize } from "./load-part-numbers";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import {
@@ -123,5 +123,28 @@ describe("computePartNumbers", () => {
 
         expect(result.capped).toBe(true);
         expect(result.partNumbers).toEqual({});
+    });
+});
+
+describe("nextWaveSize", () => {
+    it("packs as many leading jobs as fit within budget - reserve", () => {
+        expect(nextWaveSize([2, 2, 2], 10, 0)).toBe(3);
+    });
+
+    it("stops before a job would exceed the usable budget", () => {
+        expect(nextWaveSize([4, 4, 4], 10, 0)).toBe(2);
+    });
+
+    it("applies the reserve headroom", () => {
+        expect(nextWaveSize([3, 3], 10, 5)).toBe(1);
+    });
+
+    it("runs an over-budget job alone rather than stalling", () => {
+        expect(nextWaveSize([100], 10, 0)).toBe(1);
+        expect(nextWaveSize([100, 1], 10, 0)).toBe(1);
+    });
+
+    it("never returns zero for a non-empty job list", () => {
+        expect(nextWaveSize([50], 0, 20)).toBe(1);
     });
 });

@@ -17,6 +17,7 @@ import {
     clearBuildIssue
 } from "../../shared/build-checker";
 import { computePartNumbers } from "../load/load-part-numbers";
+import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -145,6 +146,7 @@ insertableRoutes.post(
         let defaultPartNumber: string | null = null;
         let partNumbers: PartNumberMap = {};
         let capped = false;
+        let incomplete = false;
 
         if (body.searchPartNumbers) {
             const onshapeApi = await c.var.getOnshapeApi();
@@ -159,25 +161,42 @@ insertableRoutes.post(
                 .from(configurations)
                 .where(eq(configurations.id, insertableId))
                 .get();
-            const computed = await computePartNumbers(
-                onshapeApi,
-                sourcePath,
-                row.elementType,
-                configRow?.parameters ?? []
-            );
-            defaultPartNumber = computed.defaultPartNumber;
-            partNumbers = computed.partNumbers;
-            capped = computed.capped;
+            try {
+                const computed = await computePartNumbers(
+                    onshapeApi,
+                    sourcePath,
+                    row.elementType,
+                    configRow?.parameters ?? []
+                );
+                defaultPartNumber = computed.defaultPartNumber;
+                partNumbers = computed.partNumbers;
+                capped = computed.capped;
+            } catch (error) {
+                if (!(error instanceof OnshapeRateLimitError)) {
+                    throw error;
+                }
+                // Rate limited: still enable the flag; the next reload (durable
+                // workflow retry) fills the part numbers in.
+                incomplete = true;
+            }
         }
 
-        const buildIssues = capped
-            ? addBuildIssue(row.buildIssues, {
-                  type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-              })
-            : clearBuildIssue(
-                  row.buildIssues,
-                  BuildIssueType.TOO_MANY_CONFIGURATIONS
-              );
+        let buildIssues = clearBuildIssue(
+            clearBuildIssue(
+                row.buildIssues,
+                BuildIssueType.TOO_MANY_CONFIGURATIONS
+            ),
+            BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
+        );
+        if (capped) {
+            buildIssues = addBuildIssue(buildIssues, {
+                type: BuildIssueType.TOO_MANY_CONFIGURATIONS
+            });
+        } else if (incomplete) {
+            buildIssues = addBuildIssue(buildIssues, {
+                type: BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
+            });
+        }
 
         await db.batch([
             db

@@ -24,7 +24,15 @@ export interface ComputedPartNumbers {
     partNumbers: PartNumberMap;
     /** True when enumeration was capped; `partNumbers` is left empty. */
     capped: boolean;
+    /**
+     * The lowest `X-Rate-Limit-Remaining` observed while fetching, or undefined
+     * if nothing was fetched. The scheduler uses it to update its budget.
+     */
+    minRemaining: number | undefined;
 }
+
+/** Headroom kept below the reported remaining count when packing waves. */
+export const PART_NUMBER_RATE_LIMIT_RESERVE = 20;
 
 /**
  * Fetches the part number for each configuration combination and folds them
@@ -38,6 +46,17 @@ export async function computePartNumbers(
     parameters: ParameterObj[],
     cap: number = MAX_PART_NUMBER_CONFIGURATIONS
 ): Promise<ComputedPartNumbers> {
+    let minRemaining: number | undefined;
+    const track = () => {
+        const remaining = client.lastRateLimitRemaining;
+        if (remaining !== undefined) {
+            minRemaining =
+                minRemaining === undefined
+                    ? remaining
+                    : Math.min(minRemaining, remaining);
+        }
+    };
+
     // Non-configurable insertables have a single part number, stored on the
     // insertable itself (there is no configurations row to hold a map).
     if (parameters.length === 0) {
@@ -47,12 +66,23 @@ export async function computePartNumbers(
             elementType,
             {}
         );
-        return { defaultPartNumber, partNumbers: {}, capped: false };
+        track();
+        return {
+            defaultPartNumber,
+            partNumbers: {},
+            capped: false,
+            minRemaining
+        };
     }
 
     const { configurations, capped } = enumerateConfigurations(parameters, cap);
     if (capped) {
-        return { defaultPartNumber: null, partNumbers: {}, capped: true };
+        return {
+            defaultPartNumber: null,
+            partNumbers: {},
+            capped: true,
+            minRemaining
+        };
     }
 
     const partNumbers: PartNumberMap = {};
@@ -63,6 +93,7 @@ export async function computePartNumbers(
             elementType,
             configuration
         );
+        track();
         // First-wins keeps the earliest (default-preferring) configuration per
         // part number, deduping combinations that resolve to the same part.
         if (partNumber && !(partNumber in partNumbers)) {
@@ -70,5 +101,35 @@ export async function computePartNumbers(
         }
     }
 
-    return { defaultPartNumber: null, partNumbers, capped: false };
+    return {
+        defaultPartNumber: null,
+        partNumbers,
+        capped: false,
+        minRemaining
+    };
+}
+
+/**
+ * Given the costs of the still-pending jobs (in order) and the current budget,
+ * returns how many leading jobs form the next parallel wave: as many as fit
+ * within `budget - reserve`, but always at least one so a job whose cost alone
+ * exceeds the budget still runs (in its own wave). The scheduler calls this
+ * repeatedly with the remaining jobs and the live budget.
+ */
+export function nextWaveSize(
+    pendingCosts: number[],
+    budget: number,
+    reserve: number = PART_NUMBER_RATE_LIMIT_RESERVE
+): number {
+    const usable = Math.max(budget - reserve, 0);
+    let count = 0;
+    let sum = 0;
+    for (const cost of pendingCosts) {
+        if (count > 0 && sum + cost > usable) {
+            break;
+        }
+        sum += cost;
+        count += 1;
+    }
+    return Math.max(count, 1);
 }
