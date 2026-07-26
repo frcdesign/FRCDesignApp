@@ -37,6 +37,7 @@ export interface InsertableElement {
     microversionId: string;
     sortOrder: number;
     supportsFasten: boolean;
+    searchPartNumbers: boolean;
 }
 
 /**

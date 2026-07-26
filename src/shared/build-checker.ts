@@ -19,7 +19,8 @@ export enum BuildIssueType {
     THUMBNAIL_FAILED = "thumbnail-failed",
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
-    NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables"
+    NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
+    TOO_MANY_CONFIGURATIONS = "too-many-configurations"
 }
 
 /**
@@ -33,7 +34,8 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
-    | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>;
+    | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
+    | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>;
 
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
@@ -42,6 +44,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
+        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

@@ -8,7 +8,11 @@ import {
     Vendor
 } from "./types";
 import { ThumbnailUrls } from "./types";
-import { Configuration, ParameterObj } from "./configuration-models";
+import {
+    Configuration,
+    ParameterObj,
+    PartNumberMap
+} from "./configuration-models";
 import { BuildIssue } from "./build-checker";
 
 export const libraries = sqliteTable("libraries", {
@@ -77,6 +81,14 @@ export const insertables = sqliteTable(
         supportsFasten: integer("supports_fasten", { mode: "boolean" })
             .notNull()
             .default(false),
+        // Whether this insertable's part numbers are indexed for search.
+        searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
+            .notNull()
+            .default(false),
+        // Part number of the default configuration. The sole source of part
+        // numbers for non-configurable insertables (which have no
+        // `configurations` row); null when part-number search is off.
+        defaultPartNumber: text("default_part_number"),
         versionId: text("version_id").notNull(),
         sortOrder: integer("sort_order").notNull().default(0),
         vendors: text("vendors", { mode: "json" })
@@ -107,6 +119,12 @@ export const configurations = sqliteTable("configurations", {
         .$type<ParameterObj[]>()
         .notNull()
         .default([]),
+    // Deduped map of part number -> the configuration that produces it, used
+    // for part-number search. Empty unless part-number search is enabled.
+    partNumbers: text("part_numbers", { mode: "json" })
+        .$type<PartNumberMap>()
+        .notNull()
+        .default({}),
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()

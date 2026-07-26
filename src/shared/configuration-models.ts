@@ -121,6 +121,15 @@ export interface QuantityParameterObj extends ParameterBase {
 export type Configuration = Record<string, string>;
 
 /**
+ * Maps a part number to the single (canonical) configuration that produces it.
+ *
+ * Keyed by part number because search looks parts up by number, and because
+ * many configurations can resolve to the same part number (e.g. parameters
+ * that don't affect the part); keying by number dedupes them inherently.
+ */
+export type PartNumberMap = Record<string, Configuration>;
+
+/**
  * Custom data collected from the current tab the user has open.
  */
 export interface UnitInfo {

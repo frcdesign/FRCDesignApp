@@ -1,5 +1,8 @@
 import {
     Configuration,
+    EnumOption,
+    EnumParameterObj,
+    OptionVisibilityType,
     ParameterObj,
     ParameterType,
     VisibilityCondition,
@@ -58,4 +61,53 @@ export function encodeConfigurationForQuery(
     return Object.entries(configuration)
         .map(([id, value]) => `${id}=${value}`)
         .join(";");
+}
+
+export function getOption(
+    options: EnumOption[],
+    optionId: string
+): EnumOption | undefined {
+    return options.find((option) => option.id == optionId);
+}
+
+/**
+ * Returns the enum options visible given the current (possibly partial)
+ * configuration, applying the parameter's option visibility conditions.
+ */
+export function getVisibleOptions(
+    enumParameter: EnumParameterObj,
+    configuration: Configuration,
+    parameters: ParameterObj[]
+): EnumOption[] {
+    // No conditions means everything is shown
+    if (enumParameter.optionConditions.length === 0) {
+        return enumParameter.options;
+    }
+
+    const optionIds = enumParameter.options.map((option) => option.id);
+
+    const validOptionIds = enumParameter.optionConditions
+        .filter((optionCondition) =>
+            evaluateCondition(
+                optionCondition.condition,
+                configuration,
+                parameters
+            )
+        )
+        .flatMap((optionCondition) => {
+            if (optionCondition.type == OptionVisibilityType.LIST) {
+                return optionCondition.controlledOptions;
+            } else if (optionCondition.type == OptionVisibilityType.RANGE) {
+                return optionIds.slice(
+                    optionIds.indexOf(optionCondition.start),
+                    optionIds.indexOf(optionCondition.end) + 1
+                );
+            }
+            throw new Error("Unhandled option condition type");
+        });
+
+    const validOptionsSet = new Set(validOptionIds);
+    return enumParameter.options.filter((option) =>
+        validOptionsSet.has(option.id)
+    );
 }

@@ -4,12 +4,19 @@ import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
-import { bumpLibraryVersion } from "../library-data";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
-    type ParameterObj
+    type ParameterObj,
+    type PartNumberMap
 } from "../../shared/configuration-models";
+import {
+    addBuildIssue,
+    BuildIssueType,
+    clearBuildIssue
+} from "../../shared/build-checker";
+import { computePartNumbers } from "../load/load-part-numbers";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -105,6 +112,92 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId));
 
         await bumpLibraryVersion(db, insertableRow.libraryId);
+        return c.json({ success: true });
+    }
+);
+
+/** POST /api/toggle-part-number-search/insertable/:insertableId */
+insertableRoutes.post(
+    "/toggle-part-number-search" + insertableRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const insertableId = getInsertableParam(c);
+        const body = await c.req.json<{ searchPartNumbers: boolean }>();
+
+        const row = await db
+            .select({
+                libraryId: insertables.libraryId,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
+                elementType: insertables.elementType,
+                buildIssues: insertables.buildIssues
+            })
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+        if (!row)
+            throw new HTTPException(404, { message: "Insertable not found" });
+
+        // When enabling, compute the part-number data inline so the index
+        // reflects the change immediately; when disabling, clear it.
+        let defaultPartNumber: string | null = null;
+        let partNumbers: PartNumberMap = {};
+        let capped = false;
+
+        if (body.searchPartNumbers) {
+            const onshapeApi = await c.var.getOnshapeApi();
+            const sourcePath: ElementPath = {
+                documentId: row.documentId,
+                instanceId: row.versionId,
+                instanceType: "v",
+                elementId: row.elementId
+            };
+            const configRow = await db
+                .select({ parameters: configurations.parameters })
+                .from(configurations)
+                .where(eq(configurations.id, insertableId))
+                .get();
+            const computed = await computePartNumbers(
+                onshapeApi,
+                sourcePath,
+                row.elementType,
+                configRow?.parameters ?? []
+            );
+            defaultPartNumber = computed.defaultPartNumber;
+            partNumbers = computed.partNumbers;
+            capped = computed.capped;
+        }
+
+        const buildIssues = capped
+            ? addBuildIssue(row.buildIssues, {
+                  type: BuildIssueType.TOO_MANY_CONFIGURATIONS
+              })
+            : clearBuildIssue(
+                  row.buildIssues,
+                  BuildIssueType.TOO_MANY_CONFIGURATIONS
+              );
+
+        await db.batch([
+            db
+                .update(insertables)
+                .set({
+                    searchPartNumbers: body.searchPartNumbers,
+                    defaultPartNumber,
+                    buildIssues
+                })
+                .where(eq(insertables.id, insertableId)),
+            // No-op when the insertable has no configuration row.
+            db
+                .update(configurations)
+                .set({ partNumbers })
+                .where(eq(configurations.id, insertableId))
+        ]);
+
+        await bumpLibraryVersion(db, row.libraryId);
+        // Part numbers live in the search index, so rebuild it now.
+        await rebuildSearchDb(db, row.libraryId);
         return c.json({ success: true });
     }
 );

@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../db";
 import { configurations, insertables } from "../../shared/schema";
-import type { ParameterObj } from "../../shared/configuration-models";
+import type {
+    ParameterObj,
+    PartNumberMap
+} from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
 import {
     TEST_GROUP_ID,
@@ -35,6 +38,7 @@ function element(
         microversionId: "mv-1",
         sortOrder: 0,
         supportsFasten: false,
+        searchPartNumbers: false,
         ...overrides
     };
 }
@@ -42,7 +46,9 @@ function element(
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
     el: InsertableElement,
-    parameters: ParameterObj[]
+    parameters: ParameterObj[],
+    partNumbers: PartNumberMap = {},
+    defaultPartNumber: string | null = null
 ): Promise<void> {
     const reloaded: ReloadedFields = {
         name: el.name,
@@ -52,9 +58,17 @@ async function applySave(
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
+        defaultPartNumber,
         buildIssues: []
     };
-    await saveInsertable(db, groupFields, el, reloaded, parameters);
+    await saveInsertable(
+        db,
+        groupFields,
+        el,
+        reloaded,
+        parameters,
+        partNumbers
+    );
 }
 
 describe("saveInsertable", () => {
@@ -120,5 +134,37 @@ describe("saveInsertable", () => {
         await applySave(element(), []);
 
         expect(await db.select().from(configurations).all()).toHaveLength(0);
+    });
+
+    it("persists the part-number map and default part number", async () => {
+        const partNumbers = { "PN-1": { p: "v1" }, "PN-2": { p: "v2" } };
+        await applySave(
+            element({ searchPartNumbers: true }),
+            TEST_PARAMETERS,
+            partNumbers
+        );
+
+        const config = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.id, "ins-1"))
+            .get();
+        expect(config?.partNumbers).toEqual(partNumbers);
+
+        const insertableRow = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-1"))
+            .get();
+        expect(insertableRow?.searchPartNumbers).toBe(true);
+
+        // A non-configurable insertable stores its single part number on the row.
+        await applySave(element(), [], {}, "PN-default");
+        const updated = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-1"))
+            .get();
+        expect(updated?.defaultPartNumber).toBe("PN-default");
     });
 });

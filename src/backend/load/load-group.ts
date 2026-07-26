@@ -198,7 +198,8 @@ async function fetchStoredInsertables(
             id: insertables.id,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
-            supportsFasten: insertables.supportsFasten
+            supportsFasten: insertables.supportsFasten,
+            searchPartNumbers: insertables.searchPartNumbers
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
@@ -212,6 +213,7 @@ export interface StoredInsertable {
     elementId: string;
     microversionId: string;
     supportsFasten: boolean;
+    searchPartNumbers: boolean;
 }
 
 /**
@@ -240,6 +242,7 @@ export function selectElementsToLoad(
             elementType: tab.elementType as unknown as ElementType,
             microversionId: tab.microversionId,
             supportsFasten: row?.supportsFasten ?? false,
+            searchPartNumbers: row?.searchPartNumbers ?? false,
             sortOrder
         });
     });

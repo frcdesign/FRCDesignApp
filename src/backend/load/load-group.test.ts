@@ -27,6 +27,7 @@ function storedRow(
         elementId,
         microversionId: "mv-1",
         supportsFasten: false,
+        searchPartNumbers: false,
         ...overrides
     };
 }
@@ -54,13 +55,19 @@ describe("selectElementsToLoad", () => {
     it("reloads an element whose microversion changed, keeping its identity", () => {
         const toLoad = selectElementsToLoad(
             [tab("e1", "mv-2")],
-            [storedRow("e1", { supportsFasten: true })],
+            [
+                storedRow("e1", {
+                    supportsFasten: true,
+                    searchPartNumbers: true
+                })
+            ],
             false
         );
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0]).toMatchObject({
             insertableId: "row-e1",
-            supportsFasten: true
+            supportsFasten: true,
+            searchPartNumbers: true
         });
     });
 

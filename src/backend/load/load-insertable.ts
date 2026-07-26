@@ -1,8 +1,15 @@
 import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../db";
 import type { ElementPath } from "../../shared/onshape-path";
-import type { ParameterObj } from "../../shared/configuration-models";
-import type { BuildIssue } from "../../shared/build-checker";
+import type {
+    ParameterObj,
+    PartNumberMap
+} from "../../shared/configuration-models";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-checker";
 import type {
     ElementType,
     FastenInfo,
@@ -16,6 +23,10 @@ import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
+import {
+    type ComputedPartNumbers,
+    computePartNumbers
+} from "./load-part-numbers";
 import {
     type InsertableGroupFields,
     type InsertableElement,
@@ -35,6 +46,9 @@ export interface ReloadedFields {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
+    // Part number of the default configuration; null unless part-number search
+    // is on and the insertable is non-configurable (see load-part-numbers).
+    defaultPartNumber: string | null;
     buildIssues: BuildIssue[];
 }
 
@@ -60,6 +74,13 @@ export async function loadInsertable(
 
     const fastenInfo = await parseFastenInfoStep(ctx, element, path);
 
+    const partNumbers = await parsePartNumbersStep(
+        ctx,
+        element,
+        path,
+        parameters
+    );
+
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
         `thumbnail-${insertableId}`,
@@ -72,6 +93,13 @@ export async function loadInsertable(
             )
     );
 
+    let buildIssues = checkInsertable({ vendors, thumbnailUrls });
+    if (partNumbers.capped) {
+        buildIssues = addBuildIssue(buildIssues, {
+            type: BuildIssueType.TOO_MANY_CONFIGURATIONS
+        });
+    }
+
     const reloaded: ReloadedFields = {
         name: element.name,
         elementType: element.elementType,
@@ -80,11 +108,19 @@ export async function loadInsertable(
         vendors,
         thumbnailUrls,
         fastenInfo,
-        buildIssues: checkInsertable({ vendors, thumbnailUrls })
+        defaultPartNumber: partNumbers.defaultPartNumber,
+        buildIssues
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), group, element, reloaded, parameters)
+        saveInsertable(
+            getDb(ctx.env.DB),
+            group,
+            element,
+            reloaded,
+            parameters,
+            partNumbers.partNumbers
+        )
     );
 }
 
@@ -103,6 +139,33 @@ function parseConfigurationStep(
         );
         return parseOnshapeConfiguration(onshapeConfiguration);
     });
+}
+
+/**
+ * Computes the insertable's part-number data when part-number search is enabled.
+ * A no-op (empty result) otherwise.
+ */
+function parsePartNumbersStep(
+    ctx: LoadContext,
+    element: InsertableElement,
+    path: ElementPath,
+    parameters: ParameterObj[]
+): Promise<ComputedPartNumbers> {
+    if (!element.searchPartNumbers) {
+        return Promise.resolve({
+            defaultPartNumber: null,
+            partNumbers: {},
+            capped: false
+        });
+    }
+    return ctx.step.do(`part-numbers-${element.insertableId}`, async () =>
+        computePartNumbers(
+            await getOnshapeApiFromLoadContext(ctx),
+            path,
+            element.elementType,
+            parameters
+        )
+    );
 }
 
 /**
@@ -133,7 +196,8 @@ export async function saveInsertable(
     groupFields: InsertableGroupFields,
     element: InsertableElement,
     reloaded: ReloadedFields,
-    parameters: ParameterObj[]
+    parameters: ParameterObj[],
+    partNumbers: PartNumberMap
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)
@@ -145,6 +209,7 @@ export async function saveInsertable(
             elementId: element.elementId,
             sortOrder: element.sortOrder,
             supportsFasten: element.supportsFasten,
+            searchPartNumbers: element.searchPartNumbers,
             ...reloaded
         })
         .onConflictDoUpdate({
@@ -160,10 +225,10 @@ export async function saveInsertable(
     } else {
         configurationWrite = db
             .insert(configurations)
-            .values({ id: element.insertableId, parameters })
+            .values({ id: element.insertableId, parameters, partNumbers })
             .onConflictDoUpdate({
                 target: configurations.id,
-                set: { parameters }
+                set: { parameters, partNumbers }
             });
     }
 

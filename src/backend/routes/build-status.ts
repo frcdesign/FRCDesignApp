@@ -39,6 +39,7 @@ buildStatusRoutes.get(
                     isVisible: insertables.isVisible,
                     isOpenComposite: insertables.isOpenComposite,
                     supportsFasten: insertables.supportsFasten,
+                    searchPartNumbers: insertables.searchPartNumbers,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder
                 })
@@ -81,6 +82,7 @@ buildStatusRoutes.get(
                 isVisible: ins.isVisible,
                 isOpenComposite: ins.isOpenComposite,
                 supportsFasten: ins.supportsFasten,
+                searchPartNumbers: ins.searchPartNumbers,
                 vendors: ins.vendors,
                 configuration: config
                     ? {

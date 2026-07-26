@@ -16,7 +16,6 @@ import {
     ParameterObj,
     ParameterType,
     EnumParameterObj,
-    OptionVisibilityType,
     BooleanParameterObj,
     StringParameterObj,
     QuantityParameterObj,
@@ -24,7 +23,11 @@ import {
     EnumOption
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
-import { evaluateCondition } from "../../shared/configuration-utils";
+import {
+    evaluateCondition,
+    getOption,
+    getVisibleOptions
+} from "../../shared/configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,
@@ -185,51 +188,6 @@ function ConfigurationParameter(
     } else if (parameter.type === ParameterType.QUANTITY) {
         return <QuantityParameter {...props} parameter={parameter} />;
     }
-}
-
-function getOption(
-    options: EnumOption[],
-    optionId: string
-): EnumOption | undefined {
-    return options.find((option) => option.id == optionId);
-}
-
-function getVisibleOptions(
-    enumParameter: EnumParameterObj,
-    configuration: Configuration,
-    parameters: ParameterObj[]
-): EnumOption[] {
-    // No conditions means everything is shown
-    if (enumParameter.optionConditions.length === 0) {
-        return enumParameter.options;
-    }
-
-    const optionIds = enumParameter.options.map((option) => option.id);
-
-    const validOptionIds = enumParameter.optionConditions
-        .filter((optionCondition) =>
-            evaluateCondition(
-                optionCondition.condition,
-                configuration,
-                parameters
-            )
-        )
-        .flatMap((optionCondition) => {
-            if (optionCondition.type == OptionVisibilityType.LIST) {
-                return optionCondition.controlledOptions;
-            } else if (optionCondition.type == OptionVisibilityType.RANGE) {
-                return optionIds.slice(
-                    optionIds.indexOf(optionCondition.start),
-                    optionIds.indexOf(optionCondition.end) + 1
-                );
-            }
-            throw new Error("Unhandled option condition type");
-        });
-
-    const validOptionsSet = new Set(validOptionIds);
-    return enumParameter.options.filter((option) =>
-        validOptionsSet.has(option.id)
-    );
 }
 
 function getFirstVisibleOption(

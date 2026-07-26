@@ -45,6 +45,7 @@ export interface InsertableBuildStatus {
     isVisible: boolean;
     isOpenComposite: boolean;
     supportsFasten: boolean;
+    searchPartNumbers: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
 }
