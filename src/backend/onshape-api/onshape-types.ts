@@ -268,6 +268,8 @@ export interface OnshapeAssemblyDefinition {
     rootAssembly: {
         features: OnshapeAssemblyFeature[];
         instances: OnshapeAssemblyInstance[];
+        /** The assembly's "Part number" property, when set. */
+        partNumber?: string;
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
@@ -283,6 +285,15 @@ export interface OnshapeInsertInstancesResponse {
 /** POST /assemblies|partstudios/.../features response (the subset we read). */
 export interface OnshapeCreatedFeature {
     feature: { featureId: string };
+}
+
+// === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
+
+/** A part in a part studio (the subset we read). */
+export interface OnshapePart {
+    partId: string;
+    /** The part's "Part number" property, when set. */
+    partNumber?: string;
 }
 
 // === part studios (GET .../partstudios/.../features) ===

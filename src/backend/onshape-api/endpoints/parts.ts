@@ -4,19 +4,11 @@ import { apiPath } from "../api-path";
 import { encodeConfigurationForQuery } from "../../../shared/configuration-utils";
 import { Configuration } from "../../../shared/configuration-models";
 import { ElementType } from "../../../shared/types";
-
-/** A part entry returned by the parts-metadata endpoint. */
-interface OnshapePartMetadata {
-    partId: string;
-    partNumber?: string;
-}
-
-/** The subset of the assembly definition we read. */
-interface OnshapeAssemblyDefinition {
-    rootAssembly?: {
-        partNumber?: string;
-    };
-}
+import type { OnshapeAssemblyDefinition, OnshapePart } from "../onshape-types";
+import {
+    parseAssemblyPartNumber,
+    parsePartStudioPartNumber
+} from "../../parse/parse-part-number";
 
 /**
  * Builds the `configuration` query for an element request. The value is the
@@ -30,18 +22,18 @@ function configurationQuery(
 }
 
 /** Returns the parts of a part studio for a given configuration. */
-function getParts(
+export function getParts(
     client: OnshapeApi,
     elementPath: ElementPath,
     configuration: Configuration
-): Promise<OnshapePartMetadata[]> {
+): Promise<OnshapePart[]> {
     return client.get(apiPath("parts", elementPath, toElementApiPath), {
         query: configurationQuery(configuration)
     });
 }
 
 /** Returns the assembly definition for a given configuration. */
-function getAssemblyDefinition(
+export function getAssemblyDefinition(
     client: OnshapeApi,
     elementPath: ElementPath,
     configuration: Configuration
@@ -55,7 +47,8 @@ function getAssemblyDefinition(
  * Returns the part number Onshape reports for an element in a given
  * configuration, or `null` if none is set. A part studio insertable resolves to
  * a single part, so its part number is taken from that part; an assembly uses
- * the root assembly's part number.
+ * the root assembly's part number. Extraction lives in
+ * `parse/parse-part-number.ts`.
  */
 export async function getPartNumber(
     client: OnshapeApi,
@@ -64,14 +57,11 @@ export async function getPartNumber(
     configuration: Configuration
 ): Promise<string | null> {
     if (elementType === ElementType.ASSEMBLY) {
-        const definition = await getAssemblyDefinition(
-            client,
-            elementPath,
-            configuration
+        return parseAssemblyPartNumber(
+            await getAssemblyDefinition(client, elementPath, configuration)
         );
-        return definition.rootAssembly?.partNumber || null;
     }
-
-    const parts = await getParts(client, elementPath, configuration);
-    return parts.find((part) => part.partNumber)?.partNumber || null;
+    return parsePartStudioPartNumber(
+        await getParts(client, elementPath, configuration)
+    );
 }
