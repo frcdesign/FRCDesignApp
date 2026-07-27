@@ -35,12 +35,7 @@ describe("placeNewGroup", () => {
     it("returns the end position and leaves existing groups untouched by default", async () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
 
-        const sortOrder = await placeNewGroup(
-            db,
-            TEST_LIBRARY_ID,
-            "new-group",
-            undefined
-        );
+        const sortOrder = await placeNewGroup(db, TEST_LIBRARY_ID, undefined);
         expect(sortOrder).toBe(1);
 
         const rows = await db
@@ -58,13 +53,8 @@ describe("placeNewGroup", () => {
         await insertGroupAt("g2", 1);
         await insertGroupAt("g3", 2);
 
-        // Insert a new group right after g1.
-        const sortOrder = await placeNewGroup(
-            db,
-            TEST_LIBRARY_ID,
-            "g1.5",
-            "g1"
-        );
+        // Open a slot right after g1.
+        const sortOrder = await placeNewGroup(db, TEST_LIBRARY_ID, "g1");
         expect(sortOrder).toBe(1);
 
         // g1.5 itself is never inserted by placeNewGroup — only the existing

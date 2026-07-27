@@ -168,7 +168,6 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         const sortOrder = await placeNewGroup(
             db,
             params.libraryId,
-            params.groupId,
             params.selectedGroupId
         );
         await db

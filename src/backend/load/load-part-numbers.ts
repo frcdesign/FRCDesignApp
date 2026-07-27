@@ -1,17 +1,29 @@
 /**
- * Computes the part-number data indexed for search when an insertable has
- * part-number search enabled: the default configuration's part number and, for
- * configurable insertables, a deduped map of part number -> configuration.
+ * Part-number indexing for insertables with part-number search enabled.
+ *
+ * Owns both halves: computing one insertable's part numbers (the default
+ * configuration's number, or a deduped map of part number -> configuration),
+ * and scheduling a whole group's worth of that work against Onshape's rate
+ * limit.
  */
+import { and, eq } from "drizzle-orm";
+import { type Db, getDb } from "../db";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import { ElementType } from "../../shared/types";
 import { ParameterObj, PartNumberMap } from "../../shared/configuration-models";
+import { configurations, insertables } from "../../shared/schema";
 import {
     enumerateConfigurations,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../../shared/configuration-combinations";
 import { getPartNumber } from "../onshape-api/endpoints/parts";
+import { writePartNumbers } from "./load-insertable";
+import {
+    type LoadContext,
+    ONSHAPE_STEP_RETRIES,
+    getOnshapeApiFromLoadContext
+} from "./load-utils";
 
 export interface ComputedPartNumbers {
     /**
@@ -132,4 +144,148 @@ export function nextWaveSize(
         count += 1;
     }
     return Math.max(count, 1);
+}
+
+/** A part-number indexing job for one insertable. */
+interface PartNumberJob {
+    insertableId: string;
+    path: ElementPath;
+    elementType: ElementType;
+    parameters: ParameterObj[];
+    /** Number of Onshape calls this job will make (0 when capped). */
+    cost: number;
+}
+
+/**
+ * Indexes part numbers for a group's `searchPartNumbers`-enabled insertables,
+ * running per-insertable steps in cost-packed parallel waves that stay within
+ * the live `X-Rate-Limit-Remaining` budget. Each insertable's cost is known up
+ * front from `enumerateConfigurations`, so waves never intentionally exceed the
+ * limit; a 429 from estimate drift is still waited out durably per step.
+ */
+export async function loadPartNumbers(
+    ctx: LoadContext,
+    groupId: string
+): Promise<void> {
+    const db = getDb(ctx.env.DB);
+    const jobs = await ctx.step.do(`part-number-jobs-${groupId}`, () =>
+        selectPartNumberJobs(db, groupId)
+    );
+    if (jobs.length === 0) {
+        return;
+    }
+
+    let index = 0;
+    // Undefined until the first response reports a remaining count; until then
+    // (and if the header is ever absent) we fall back to one job at a time.
+    let budget: number | undefined;
+    while (index < jobs.length) {
+        const waveSize =
+            budget === undefined
+                ? 1
+                : nextWaveSize(
+                      jobs.slice(index).map((job) => job.cost),
+                      budget
+                  );
+        const wave = jobs.slice(index, index + waveSize);
+
+        const reported = await Promise.all(
+            wave.map((job) => runPartNumberJob(ctx, job))
+        );
+        const observed = reported.filter(
+            (value): value is number => value !== undefined
+        );
+        if (observed.length > 0) {
+            budget = Math.min(...observed);
+        }
+        index += waveSize;
+    }
+}
+
+/**
+ * Runs one insertable's part-number step (durable, honoring Retry-After) and a
+ * write step, returning the lowest remaining count it observed. On retry
+ * exhaustion it degrades to a flagged, empty result rather than failing the load.
+ */
+async function runPartNumberJob(
+    ctx: LoadContext,
+    job: PartNumberJob
+): Promise<number | undefined> {
+    let result: ComputedPartNumbers;
+    let incomplete = false;
+    try {
+        result = await ctx.step.do(
+            `part-numbers-${job.insertableId}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                computePartNumbers(
+                    await getOnshapeApiFromLoadContext(ctx),
+                    job.path,
+                    job.elementType,
+                    job.parameters
+                )
+        );
+    } catch {
+        result = {
+            defaultPartNumber: null,
+            partNumbers: {},
+            capped: false,
+            minRemaining: undefined
+        };
+        incomplete = true;
+    }
+
+    await ctx.step.do(`write-part-numbers-${job.insertableId}`, () =>
+        writePartNumbers(getDb(ctx.env.DB), job.insertableId, {
+            defaultPartNumber: result.defaultPartNumber,
+            partNumbers: result.partNumbers,
+            capped: result.capped,
+            incomplete
+        })
+    );
+
+    return result.minRemaining;
+}
+
+/** Loads the group's part-number jobs (enabled insertables + their parameters). */
+async function selectPartNumberJobs(
+    db: Db,
+    groupId: string
+): Promise<PartNumberJob[]> {
+    const rows = await db
+        .select({
+            id: insertables.id,
+            documentId: insertables.documentId,
+            versionId: insertables.versionId,
+            elementId: insertables.elementId,
+            elementType: insertables.elementType,
+            parameters: configurations.parameters
+        })
+        .from(insertables)
+        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .where(
+            and(
+                eq(insertables.groupId, groupId),
+                eq(insertables.searchPartNumbers, true)
+            )
+        )
+        .all();
+
+    return rows.map((row) => {
+        const parameters = row.parameters ?? [];
+        const { configurations: combos, capped } =
+            enumerateConfigurations(parameters);
+        return {
+            insertableId: row.id,
+            path: {
+                documentId: row.documentId,
+                instanceId: row.versionId,
+                instanceType: "v",
+                elementId: row.elementId
+            },
+            elementType: row.elementType,
+            parameters,
+            cost: capped ? 0 : combos.length
+        };
+    });
 }

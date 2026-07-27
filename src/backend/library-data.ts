@@ -105,44 +105,40 @@ export async function getLibraryOut(
 }
 
 /**
- * Places a not-yet-created group in the library's sort order — directly after
- * `selectedGroupId` if given, otherwise at the end — by renumbering the existing
- * siblings, and returns the sort order the new group itself should be written with.
- * Doesn't write the new group's row; the caller (the load-group workflow) does that,
- * since it also decides whether this is a create or an update.
+ * Renumbers a library's groups to open a slot for a new group — directly after
+ * `selectedGroupId`, or at the end — and returns the sort order to write it with.
+ * The caller creates the row itself, since it also decides create vs. update.
  */
 export async function placeNewGroup(
     db: Db,
     libraryId: LibraryId,
-    groupId: string,
     selectedGroupId: string | undefined
 ): Promise<number> {
-    const orderedGroups = await db
+    const siblings = await db
         .select({ id: group.id })
         .from(group)
         .where(eq(group.libraryId, libraryId))
         .orderBy(asc(group.sortOrder))
         .all();
-    const currentOrder = orderedGroups.map((g) => g.id);
-    const insertAfter = selectedGroupId
-        ? currentOrder.indexOf(selectedGroupId)
+
+    const selectedIndex = selectedGroupId
+        ? siblings.findIndex((sibling) => sibling.id === selectedGroupId)
         : -1;
-    currentOrder.splice(
-        insertAfter !== -1 ? insertAfter + 1 : currentOrder.length,
-        0,
-        groupId
-    );
+    // An unknown or unspecified selection puts the new group last.
+    const newIndex = selectedIndex === -1 ? siblings.length : selectedIndex + 1;
 
+    // Renumber every sibling to close any gaps: those at or past the new slot
+    // shift up by one to make room for it.
     await Promise.all(
-        currentOrder
-            .map((id, i) => [id, i] as const)
-            .filter(([id]) => id !== groupId)
-            .map(([id, i]) =>
-                db.update(group).set({ sortOrder: i }).where(eq(group.id, id))
-            )
+        siblings.map((sibling, index) =>
+            db
+                .update(group)
+                .set({ sortOrder: index < newIndex ? index : index + 1 })
+                .where(eq(group.id, sibling.id))
+        )
     );
 
-    return currentOrder.indexOf(groupId);
+    return newIndex;
 }
 
 export async function bumpLibraryVersion(
