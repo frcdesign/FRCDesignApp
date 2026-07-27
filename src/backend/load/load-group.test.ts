@@ -4,10 +4,36 @@ import {
     OnshapeElementType
 } from "../onshape-api/onshape-types";
 import {
+    type GroupIdentity,
     type StoredInsertable,
-    findOrphanedRows,
-    selectElementsToLoad
+    findRemovedInsertables,
+    selectInsertablesToLoad
 } from "./load-group";
+import { TEST_LIBRARY_ID } from "../../__test_utils__";
+
+const IDENTITY: GroupIdentity = {
+    libraryId: TEST_LIBRARY_ID,
+    groupId: "group-1",
+    versionPath: {
+        documentId: "doc-1",
+        instanceId: "v-1",
+        instanceType: "v"
+    }
+};
+
+/** Runs the selection against the shared test identity. */
+function select(
+    insertableTabs: OnshapeElement[],
+    stored: StoredInsertable[],
+    forceReload: boolean
+) {
+    return selectInsertablesToLoad(
+        IDENTITY,
+        insertableTabs,
+        stored,
+        forceReload
+    );
+}
 
 function tab(elementId: string, microversionId = "mv-1"): OnshapeElement {
     return {
@@ -32,28 +58,39 @@ function storedRow(
     };
 }
 
-describe("selectElementsToLoad", () => {
+describe("selectInsertablesToLoad", () => {
     it("mints an id for a brand-new element and loads it", () => {
-        const toLoad = selectElementsToLoad([tab("e1")], [], false);
+        const toLoad = select([tab("e1")], [], false);
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0]).toMatchObject({
-            elementId: "e1",
-            supportsFasten: false
+            supportsFasten: false,
+            searchPartNumbers: false
         });
+        expect(toLoad[0].path.elementId).toBe("e1");
         expect(toLoad[0].insertableId).toEqual(expect.any(String));
     });
 
+    it("stamps the group identity and version path onto each insertable", () => {
+        const toLoad = select([tab("e1")], [], false);
+        expect(toLoad[0]).toMatchObject({
+            libraryId: IDENTITY.libraryId,
+            groupId: IDENTITY.groupId,
+            path: {
+                documentId: "doc-1",
+                instanceId: "v-1",
+                instanceType: "v",
+                elementId: "e1"
+            }
+        });
+    });
+
     it("leaves an unchanged element alone", () => {
-        const toLoad = selectElementsToLoad(
-            [tab("e1")],
-            [storedRow("e1")],
-            false
-        );
+        const toLoad = select([tab("e1")], [storedRow("e1")], false);
         expect(toLoad).toEqual([]);
     });
 
     it("reloads an element whose microversion changed, keeping its identity", () => {
-        const toLoad = selectElementsToLoad(
+        const toLoad = select(
             [tab("e1", "mv-2")],
             [
                 storedRow("e1", {
@@ -72,28 +109,29 @@ describe("selectElementsToLoad", () => {
     });
 
     it("reloads unchanged elements on forceReload", () => {
-        const toLoad = selectElementsToLoad(
-            [tab("e1")],
-            [storedRow("e1")],
-            true
-        );
+        const toLoad = select([tab("e1")], [storedRow("e1")], true);
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0].insertableId).toBe("row-e1");
     });
 
-    it("ignores an orphaned row rather than loading it", () => {
-        const toLoad = selectElementsToLoad(
+    it("ignores a removed row rather than loading it", () => {
+        const toLoad = select(
             [tab("e1")],
             [storedRow("e1"), storedRow("gone")],
             false
         );
-        expect(toLoad.map((element) => element.elementId)).toEqual([]);
+        expect(toLoad.map((insertable) => insertable.path.elementId)).toEqual(
+            []
+        );
     });
 
     it("seeds sortOrder from the tab position", () => {
-        const toLoad = selectElementsToLoad([tab("e1"), tab("e2")], [], false);
+        const toLoad = select([tab("e1"), tab("e2")], [], false);
         expect(
-            toLoad.map((element) => [element.elementId, element.sortOrder])
+            toLoad.map((insertable) => [
+                insertable.path.elementId,
+                insertable.sortOrder
+            ])
         ).toEqual([
             ["e1", 0],
             ["e2", 1]
@@ -101,17 +139,20 @@ describe("selectElementsToLoad", () => {
     });
 });
 
-describe("findOrphanedRows", () => {
+describe("findRemovedInsertables", () => {
     it("returns ids of stored rows whose element left the document", () => {
-        const staleIds = findOrphanedRows(
+        const removedIds = findRemovedInsertables(
             [tab("e1", "mv-2")],
             [storedRow("e1"), storedRow("gone")]
         );
-        expect(staleIds).toEqual(["row-gone"]);
+        expect(removedIds).toEqual(["row-gone"]);
     });
 
     it("is empty when every stored row still has its element", () => {
-        const staleIds = findOrphanedRows([tab("e1")], [storedRow("e1")]);
-        expect(staleIds).toEqual([]);
+        const removedIds = findRemovedInsertables(
+            [tab("e1")],
+            [storedRow("e1")]
+        );
+        expect(removedIds).toEqual([]);
     });
 });

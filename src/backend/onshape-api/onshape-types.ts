@@ -200,6 +200,7 @@ export interface OnshapeRecentVersion {
 
 /** GET /documents/{did} (only the fields we read). */
 export interface OnshapeDocumentInfo {
+    id: string;
     name: string;
     documentThumbnailElementId?: string;
     recentVersion: OnshapeRecentVersion;

@@ -1,8 +1,7 @@
-import { NonRetryableError } from "cloudflare:workflows";
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
-import type { ThumbnailUrls } from "../../shared/types";
+import type { LibraryId, ThumbnailUrls } from "../../shared/types";
 import type { BuildIssue } from "../../shared/build-checker";
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
@@ -18,8 +17,7 @@ import { checkGroup } from "../parse/build-checks";
 import { loadInsertable } from "./load-insertable";
 import { loadPartNumbers } from "./load-part-numbers";
 import {
-    type InsertableGroupFields,
-    type InsertableElement,
+    type InsertableToLoad,
     type LoadContext,
     getOnshapeApiFromLoadContext,
     uploadThumbnailsStep
@@ -29,6 +27,14 @@ import type { InstancePath } from "../../shared/onshape-path";
 export interface GroupLoadResult {
     loadedElements: number;
     deletedElements: number;
+}
+
+/** The group identity stamped onto every insertable loaded from it. */
+export interface GroupIdentity {
+    libraryId: LibraryId;
+    groupId: string;
+    /** The group document's version-pinned path. */
+    versionPath: InstancePath;
 }
 
 /**
@@ -45,63 +51,60 @@ export interface ReloadedGroupFields {
 
 export async function loadGroup(
     ctx: LoadContext,
+    libraryId: LibraryId,
     groupId: string,
     document: OnshapeDocumentInfo,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
     const versionId = document.recentVersion.id;
-
-    // Resolve the group's stored identity (documentId, libraryId).
-    const groupFields = await ctx.step.do(`group-fields-${groupId}`, () =>
-        resolveGroupFields(ctx, groupId, versionId)
-    );
+    const identity: GroupIdentity = {
+        libraryId,
+        groupId,
+        versionPath: {
+            documentId: document.id,
+            instanceId: versionId,
+            instanceType: "v"
+        }
+    };
 
     // Read the document's loadable tabs (display order) and the stored rows.
-    const tabs = await ctx.step.do(`contents-${groupId}`, () =>
-        fetchDocumentTabs(ctx, groupFields.documentId, versionId)
+    const insertableTabs = await ctx.step.do(`insertable-tabs-${groupId}`, () =>
+        fetchInsertableTabs(ctx, identity.versionPath)
     );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,
         () => fetchStoredInsertables(ctx, groupId)
     );
 
-    // Select the elements to (re)load. Ids for new elements are minted inside
-    // the step so replays reuse them; orphan detection below is pure.
-    const toLoad = await ctx.step.do(`select-elements-${groupId}`, () =>
-        Promise.resolve(
-            selectElementsToLoad(tabs, storedInsertables, forceReload)
-        )
-    );
-    const staleIds = findOrphanedRows(tabs, storedInsertables);
-
-    const versionPath: InstancePath = {
-        documentId: groupFields.documentId,
-        instanceId: versionId,
-        instanceType: "v"
-    };
-    const docThumbnails = uploadThumbnailsStep(
-        ctx,
-        `document-thumbnail-${groupId}`,
-        async () =>
-            uploadDocumentThumbnails(
-                ctx.env.THUMBNAILS,
-                await getOnshapeApiFromLoadContext(ctx),
-                versionPath
+    // Select the insertables to (re)load. Ids for new ones are minted inside
+    // the step so replays reuse them; removal detection below is pure.
+    const insertablesToLoad = await ctx.step.do(
+        `select-insertables-${groupId}`,
+        () =>
+            Promise.resolve(
+                selectInsertablesToLoad(
+                    identity,
+                    insertableTabs,
+                    storedInsertables,
+                    forceReload
+                )
             )
+    );
+    const removedInsertableIds = findRemovedInsertables(
+        insertableTabs,
+        storedInsertables
     );
 
     const failedElementIds: string[] = [];
     await Promise.all(
-        toLoad.map(async (element) => {
+        insertablesToLoad.map(async (insertable) => {
             try {
-                await loadInsertable(ctx, groupFields, element);
+                await loadInsertable(ctx, insertable);
             } catch {
-                failedElementIds.push(element.elementId);
+                failedElementIds.push(insertable.path.elementId);
             }
         })
     );
-
-    const docThumbnailUrls = await docThumbnails;
 
     if (failedElementIds.length > 0) {
         throw new Error(
@@ -109,6 +112,17 @@ export async function loadGroup(
                 failedElementIds.join(", ")
         );
     }
+
+    const docThumbnailUrls = await uploadThumbnailsStep(
+        ctx,
+        `document-thumbnail-${groupId}`,
+        async () =>
+            uploadDocumentThumbnails(
+                ctx.env.THUMBNAILS,
+                await getOnshapeApiFromLoadContext(ctx),
+                identity.versionPath
+            )
+    );
 
     await ctx.step.do(`save-group-${groupId}`, async () => {
         const reloaded: ReloadedGroupFields = {
@@ -126,7 +140,7 @@ export async function loadGroup(
             .update(group)
             .set(reloaded)
             .where(eq(group.id, groupId));
-        if (staleIds.length === 0) {
+        if (removedInsertableIds.length === 0) {
             await groupWrite;
             return;
         }
@@ -134,61 +148,33 @@ export async function loadGroup(
         // cascading foreign keys.
         await db.batch([
             groupWrite,
-            db.delete(insertables).where(inArray(insertables.id, staleIds))
+            db
+                .delete(insertables)
+                .where(inArray(insertables.id, removedInsertableIds))
         ]);
     });
 
-    // Index part numbers after the group is saved (so stale rows are gone),
-    // pacing against the rate limit.
+    // Index part numbers after the group is saved, so removed rows are gone.
     await loadPartNumbers(ctx, groupId);
 
     return {
-        loadedElements: toLoad.length,
-        deletedElements: staleIds.length
-    };
-}
-
-/**
- * Resolves the group's stored identity from its row.
- */
-async function resolveGroupFields(
-    ctx: LoadContext,
-    groupId: string,
-    versionId: string
-): Promise<InsertableGroupFields> {
-    const groupRow = await getDb(ctx.env.DB)
-        .select({ documentId: group.documentId, libraryId: group.libraryId })
-        .from(group)
-        .where(eq(group.id, groupId))
-        .get();
-    if (!groupRow) {
-        throw new NonRetryableError(`Group ${groupId} does not exist`);
-    }
-    return {
-        libraryId: groupRow.libraryId,
-        groupId,
-        documentId: groupRow.documentId,
-        versionId
+        loadedElements: insertablesToLoad.length,
+        deletedElements: removedInsertableIds.length
     };
 }
 
 /**
  * Fetches the document's part studio / assembly tabs, in display order.
  */
-async function fetchDocumentTabs(
+async function fetchInsertableTabs(
     ctx: LoadContext,
-    documentId: string,
-    versionId: string
+    versionPath: InstancePath
 ): Promise<OnshapeElement[]> {
     const contents = await getContents(
         await getOnshapeApiFromLoadContext(ctx),
-        {
-            documentId,
-            instanceId: versionId,
-            instanceType: "v"
-        }
+        versionPath
     );
-    return parseContents(contents);
+    return parseInsertableTabs(contents);
 }
 
 /**
@@ -222,47 +208,68 @@ export interface StoredInsertable {
 }
 
 /**
- * Selects document tabs
+ * Selects the tabs to (re)load: new ones, and stored ones whose microversion
+ * changed (or all of them, on `forceReload`). A stored insertable keeps its id
+ * and its user-owned flags; a new one gets a fresh id and the defaults.
  */
-export function selectElementsToLoad(
-    tabs: OnshapeElement[],
+export function selectInsertablesToLoad(
+    identity: GroupIdentity,
+    insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
-): InsertableElement[] {
+): InsertableToLoad[] {
     const storedByElementId = new Map(
         stored.map((row) => [row.elementId, row])
     );
 
-    const toLoad: InsertableElement[] = [];
-    tabs.forEach((tab, sortOrder) => {
-        const row = storedByElementId.get(tab.id);
-        if (row && !forceReload && row.microversionId === tab.microversionId) {
-            return;
-        }
-        toLoad.push({
-            insertableId: row?.id ?? crypto.randomUUID(),
-            elementId: tab.id,
+    const insertablesToLoad: InsertableToLoad[] = [];
+    insertableTabs.forEach((tab, sortOrder) => {
+        const fromTab = {
+            libraryId: identity.libraryId,
+            groupId: identity.groupId,
+            path: { ...identity.versionPath, elementId: tab.id },
             name: tab.name,
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
             microversionId: tab.microversionId,
-            supportsFasten: row?.supportsFasten ?? false,
-            searchPartNumbers: row?.searchPartNumbers ?? false,
             sortOrder
-        });
+        };
+
+        const storedRow = storedByElementId.get(tab.id);
+        if (storedRow) {
+            if (
+                !forceReload &&
+                storedRow.microversionId === tab.microversionId
+            ) {
+                return;
+            }
+            insertablesToLoad.push({
+                ...fromTab,
+                insertableId: storedRow.id,
+                supportsFasten: storedRow.supportsFasten,
+                searchPartNumbers: storedRow.searchPartNumbers
+            });
+        } else {
+            insertablesToLoad.push({
+                ...fromTab,
+                insertableId: crypto.randomUUID(),
+                supportsFasten: false,
+                searchPartNumbers: false
+            });
+        }
     });
-    return toLoad;
+    return insertablesToLoad;
 }
 
 /**
- * Finds the stored rows whose element no longer exists in the document; their
- * ids are the rows to delete.
+ * Finds the stored insertables whose tab no longer exists in the document;
+ * their ids are the rows to delete.
  */
-export function findOrphanedRows(
-    tabs: OnshapeElement[],
+export function findRemovedInsertables(
+    insertableTabs: OnshapeElement[],
     storedInsertables: StoredInsertable[]
 ): string[] {
-    const tabIds = new Set(tabs.map((tab) => tab.id));
+    const tabIds = new Set(insertableTabs.map((tab) => tab.id));
     return storedInsertables
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
@@ -276,7 +283,7 @@ const VALID_ELEMENT_TYPES = new Set<string>([
 /**
  * The part studio / assembly tabs we load, sorted in display (folder-tree) order.
  */
-export function parseContents(
+export function parseInsertableTabs(
     contents: OnshapeDocumentContents
 ): OnshapeElement[] {
     const tabs = contents.elements.filter((e) =>

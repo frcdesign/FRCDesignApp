@@ -195,6 +195,7 @@ describe("POST /group", () => {
     it("forwards selectedGroupId and triggers the workflow, without writing the group row itself", async () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
+            id: "doc-new",
             name: "New Doc",
             recentVersion: { id: "inst-new", name: "v" }
         });
@@ -233,6 +234,7 @@ describe("POST /group", () => {
     it("422s when the document was already added", async () => {
         await seedGroup(db, TEST_GROUP_ID); // documentId "doc-test-group"
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
+            id: "doc-test-group",
             name: "Dup",
             recentVersion: { id: "inst-1", name: "v" }
         });

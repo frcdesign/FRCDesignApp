@@ -6,6 +6,7 @@ import {
     OnshapeRateLimitError
 } from "../onshape-api/onshape-api";
 import type { ElementType, LibraryId, ThumbnailUrls } from "../../shared/types";
+import type { ElementPath } from "../../shared/onshape-path";
 
 export interface LoadContext {
     env: AppBindings;
@@ -20,21 +21,15 @@ export function getOnshapeApiFromLoadContext(
 }
 
 /**
- * Group-specific information copied to an Insertable.
+ * An insertable selected for (re)loading: where to read it from in Onshape,
+ * which group it belongs to, and the flags carried over from its existing row.
  */
-export interface InsertableGroupFields {
+export interface InsertableToLoad {
+    insertableId: string;
     libraryId: LibraryId;
     groupId: string;
-    documentId: string;
-    versionId: string;
-}
-
-/**
- * Insertable-specific information which is parsed from Onshape.
- */
-export interface InsertableElement {
-    insertableId: string;
-    elementId: string;
+    /** Version-pinned location of the element in Onshape. */
+    path: ElementPath;
     name: string;
     elementType: ElementType;
     microversionId: string;

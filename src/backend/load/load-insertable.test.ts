@@ -18,23 +18,21 @@ import {
     saveInsertable,
     writePartNumbers
 } from "./load-insertable";
-import type { InsertableGroupFields, InsertableElement } from "./load-utils";
+import type { InsertableToLoad } from "./load-utils";
 
 const db = getDb(env.DB);
 
-const groupFields: InsertableGroupFields = {
-    libraryId: TEST_LIBRARY_ID,
-    groupId: TEST_GROUP_ID,
-    documentId: `doc-${TEST_GROUP_ID}`,
-    versionId: "inst-2"
-};
-
-function element(
-    overrides: Partial<InsertableElement> = {}
-): InsertableElement {
+function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
     return {
         insertableId: "ins-1",
-        elementId: "elem-1",
+        libraryId: TEST_LIBRARY_ID,
+        groupId: TEST_GROUP_ID,
+        path: {
+            documentId: `doc-${TEST_GROUP_ID}`,
+            instanceId: "inst-2",
+            instanceType: "v",
+            elementId: "elem-1"
+        },
         name: "Element",
         elementType: ElementType.PART_STUDIO,
         microversionId: "mv-1",
@@ -47,20 +45,20 @@ function element(
 
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
-    el: InsertableElement,
+    toLoad: InsertableToLoad,
     parameters: ParameterObj[]
 ): Promise<void> {
     const reloaded: ReloadedFields = {
-        name: el.name,
-        elementType: el.elementType,
-        microversionId: el.microversionId,
-        versionId: groupFields.versionId,
+        name: toLoad.name,
+        elementType: toLoad.elementType,
+        microversionId: toLoad.microversionId,
+        versionId: toLoad.path.instanceId,
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
         buildIssues: []
     };
-    await saveInsertable(db, groupFields, el, reloaded, parameters);
+    await saveInsertable(db, toLoad, reloaded, parameters);
 }
 
 describe("saveInsertable", () => {

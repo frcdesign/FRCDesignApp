@@ -90,6 +90,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     }
                     const loaded = await loadGroup(
                         ctx,
+                        libraryId,
                         groupId,
                         document,
                         forceReload
@@ -140,6 +141,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
             const loaded = await loadGroup(
                 ctx,
+                params.libraryId,
                 params.groupId,
                 document,
                 false

@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../db";
-import type { ElementPath } from "../../shared/onshape-path";
 import type {
     ParameterObj,
     PartNumberMap
@@ -25,8 +24,7 @@ import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
 import {
-    type InsertableGroupFields,
-    type InsertableElement,
+    type InsertableToLoad,
     type LoadContext,
     getOnshapeApiFromLoadContext,
     uploadThumbnailsStep
@@ -51,22 +49,15 @@ export interface ReloadedFields {
  */
 export async function loadInsertable(
     ctx: LoadContext,
-    group: InsertableGroupFields,
-    element: InsertableElement
+    toLoad: InsertableToLoad
 ): Promise<void> {
-    const { insertableId } = element;
-    const path: ElementPath = {
-        documentId: group.documentId,
-        instanceId: group.versionId,
-        instanceType: "v",
-        elementId: element.elementId
-    };
+    const { insertableId, path } = toLoad;
 
-    const parameters = await parseConfigurationStep(ctx, element, path);
+    const parameters = await parseConfigurationStep(ctx, toLoad);
 
-    const vendors = parseVendors(element.name, parameters);
+    const vendors = parseVendors(toLoad.name, parameters);
 
-    const fastenInfo = await parseFastenInfoStep(ctx, element, path);
+    const fastenInfo = await parseFastenInfoStep(ctx, toLoad);
 
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
@@ -76,25 +67,25 @@ export async function loadInsertable(
                 ctx.env.THUMBNAILS,
                 await getOnshapeApiFromLoadContext(ctx),
                 path,
-                element.microversionId
+                toLoad.microversionId
             )
     );
 
     const reloaded: ReloadedFields = {
-        name: element.name,
-        elementType: element.elementType,
-        microversionId: element.microversionId,
-        versionId: group.versionId,
+        name: toLoad.name,
+        elementType: toLoad.elementType,
+        microversionId: toLoad.microversionId,
+        versionId: path.instanceId,
         vendors,
         thumbnailUrls,
         fastenInfo,
         buildIssues: checkInsertable({ vendors, thumbnailUrls })
     };
 
-    // Part numbers are computed separately, in loadGroup's rate-limit-aware
-    // post-pass; saveInsertable clears any stale values here.
+    // Part numbers are computed separately, in loadGroup's post-pass;
+    // saveInsertable clears any stale values here.
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), group, element, reloaded, parameters)
+        saveInsertable(getDb(ctx.env.DB), toLoad, reloaded, parameters)
     );
 }
 
@@ -103,13 +94,12 @@ export async function loadInsertable(
  */
 function parseConfigurationStep(
     ctx: LoadContext,
-    element: InsertableElement,
-    path: ElementPath
+    toLoad: InsertableToLoad
 ): Promise<ParameterObj[]> {
-    return ctx.step.do(`config-${element.insertableId}`, async () => {
+    return ctx.step.do(`config-${toLoad.insertableId}`, async () => {
         const onshapeConfiguration = await getConfiguration(
             await getOnshapeApiFromLoadContext(ctx),
-            path
+            toLoad.path
         );
         return parseOnshapeConfiguration(onshapeConfiguration);
     });
@@ -120,17 +110,16 @@ function parseConfigurationStep(
  */
 async function parseFastenInfoStep(
     ctx: LoadContext,
-    element: InsertableElement,
-    path: ElementPath
+    toLoad: InsertableToLoad
 ): Promise<FastenInfo | null> {
-    if (!element.supportsFasten) {
+    if (!toLoad.supportsFasten) {
         return null;
     }
-    return ctx.step.do(`fasten-${element.insertableId}`, async () =>
+    return ctx.step.do(`fasten-${toLoad.insertableId}`, async () =>
         parseFastenInfo(
             await getOnshapeApiFromLoadContext(ctx),
-            path,
-            element.elementType
+            toLoad.path,
+            toLoad.elementType
         )
     );
 }
@@ -142,22 +131,21 @@ async function parseFastenInfoStep(
  */
 export async function saveInsertable(
     db: Db,
-    groupFields: InsertableGroupFields,
-    element: InsertableElement,
+    toLoad: InsertableToLoad,
     reloaded: ReloadedFields,
     parameters: ParameterObj[]
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)
         .values({
-            id: element.insertableId,
-            libraryId: groupFields.libraryId,
-            groupId: groupFields.groupId,
-            documentId: groupFields.documentId,
-            elementId: element.elementId,
-            sortOrder: element.sortOrder,
-            supportsFasten: element.supportsFasten,
-            searchPartNumbers: element.searchPartNumbers,
+            id: toLoad.insertableId,
+            libraryId: toLoad.libraryId,
+            groupId: toLoad.groupId,
+            documentId: toLoad.path.documentId,
+            elementId: toLoad.path.elementId,
+            sortOrder: toLoad.sortOrder,
+            supportsFasten: toLoad.supportsFasten,
+            searchPartNumbers: toLoad.searchPartNumbers,
             defaultPartNumber: null,
             ...reloaded
         })
@@ -170,11 +158,11 @@ export async function saveInsertable(
     if (parameters.length === 0) {
         configurationWrite = db
             .delete(configurations)
-            .where(eq(configurations.id, element.insertableId));
+            .where(eq(configurations.id, toLoad.insertableId));
     } else {
         configurationWrite = db
             .insert(configurations)
-            .values({ id: element.insertableId, parameters, partNumbers: {} })
+            .values({ id: toLoad.insertableId, parameters, partNumbers: {} })
             .onConflictDoUpdate({
                 target: configurations.id,
                 set: { parameters, partNumbers: {} }
