@@ -1,52 +1,43 @@
 import { defineConfig } from "@hey-api/openapi-ts";
 
 /**
- * Generates a committed *reference* dump of the Onshape API operations we use, at the
- * repo root in `onshape-api-reference/` — deliberately outside `src/`, so it's outside
- * every tsconfig's scope and never surfaces in editor autocomplete/auto-import alongside
- * our real, hand-authored `Onshape*` types.
+ * Generates a committed *reference* dump of the Onshape API operations we use into
+ * `onshape-api-reference/` — outside `src/` on purpose, so it stays out of every
+ * tsconfig's scope and out of editor auto-import alongside our real types.
  *
- * Run with `npm run gen:onshape-types`. NOTHING imports this output — the types we
- * actually use are hand-authored in `src/backend/onshape-api/onshape-types.ts` (so they
- * can use our own enums, comments, and clean discriminated unions). This generated dump
- * exists only as a reference: re-running codegen and diffing it surfaces upstream API
- * drift (including fields we don't currently use) to fold into the hand-written types.
+ * Run with `npm run gen:onshape-types`.
  *
- * The upstream Onshape spec models polymorphism with `allOf` inheritance + a
- * `discriminator` on the base, which @hey-api does not expand into a `oneOf` union on
- * its own — a discriminator's concrete subtypes are unreachable by `$ref` and get pruned
- * by `orphans: false`. `UNION_BASES` lists discriminator base schema names: for each, we
- * add a *new* sibling schema (named mechanically via `unionName`, not hand-picked) that's
- * a `oneOf` of every member in the base's own `discriminator.mapping` (auto-derived, not
- * hand-listed), then repoint the handful of properties that reference the base
- * *polymorphically* (expecting any subtype) to point at the union instead. We
- * deliberately do NOT mutate the base schema itself in place — its subtypes still
- * `allOf`-extend it directly, and replacing the base with a union that contains its own
- * subtypes creates a circular type (`A = B | C`, `B = A & {...}`).
- *
- * `UNION_BASES` is deliberately short: some Onshape discriminators fan out to hundreds
- * of subtypes if you try to fully discriminate them (e.g. the FeatureScript feature-type
- * base behind `addAssemblyFeature`/`addPartStudioFeature`, which needs a fully
- * discriminated feature body to construct a request — those operations stay out of
- * `operations.include` below, not "reference" material). `getPartStudioFeatures` *is*
- * included despite sharing that same feature-type base (`BTMFeature-134`), because we
- * deliberately do NOT add it to `UNION_BASES` — its own flat fields (including the
- * recursive `subFeatures` and the plain `mateConnectorFeature` boolean) are all we need,
- * and skipping the union keeps its subtypes unreachable/pruned by `orphans: false`, so it
- * only costs its own small schema tree. `OMIT` trims fields that pull in large, unrelated
- * trees we don't use (thumbnail/owner/workspace chains) — note some fields are declared
- * both directly on a schema *and* re-declared on its `allOf` base(s), so both need an
- * entry to disappear.
+ * NOTHING imports this output. The types we actually use are hand-authored in
+ * `src/backend/onshape-api/onshape-types.ts`, so they can use our own enums and clean
+ * discriminated unions. This dump exists only to diff against: re-running codegen
+ * surfaces upstream API drift (including fields we don't use yet) to fold in by hand.
  */
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 
-// Mechanically derives a union schema's name from its discriminator base's own name
-// (e.g. "BTMConfigurationParameter-819" -> "BTMConfigurationParameter819Union") — this
-// is reference-only output, so there's no need to hand-pick a prettier name per base.
+// Derived mechanically ("BTMConfigurationParameter-819" ->
+// "BTMConfigurationParameter819Union"); reference-only output doesn't need pretty names.
 const unionName = (baseName: string) => `${baseName.replace(/-/g, "")}Union`;
 
-// Discriminator base schemas to synthesize a `oneOf` union sibling for (see above).
+/**
+ * Discriminator base schemas to synthesize a `oneOf` union sibling for.
+ *
+ * Onshape models polymorphism as `allOf` inheritance plus a `discriminator` on the base.
+ * @hey-api doesn't expand that into a union on its own, and a discriminator's subtypes
+ * are unreachable by `$ref` so `orphans: false` prunes them. For each base here,
+ * `patch.input` adds a sibling `oneOf` over the base's own `discriminator.mapping`, then
+ * repoints the properties that use the base polymorphically at that union.
+ *
+ * The base is never mutated in place: its subtypes `allOf`-extend it, so replacing it
+ * with a union of those subtypes would be circular (`A = B | C`, `B = A & {...}`).
+ *
+ * Keep this list short — some discriminators fan out to hundreds of subtypes. The
+ * FeatureScript feature base (`BTMFeature-134`) is the notable one: operations needing a
+ * fully discriminated feature body (`add*Feature`) are excluded from `operations.include`
+ * instead. `getPartStudioFeatures` shares that base but is intentionally absent here; its
+ * flat fields (recursive `subFeatures`, `mateConnectorFeature`) are all we need, and
+ * omitting the union keeps the subtypes pruned.
+ */
 const UNION_BASES: string[] = [
     "BTMConfigurationParameter-819",
     "BTParameterVisibilityCondition-177",
@@ -54,10 +45,16 @@ const UNION_BASES: string[] = [
     "BTGroupOrElementReference-2205"
 ];
 
+/**
+ * Fields trimmed because they pull in large, unrelated schema trees we don't use
+ * (thumbnail/owner/workspace chains — ~40 schemas for `BTDocumentInfo` alone).
+ *
+ * A field can be declared both directly on a schema *and* re-declared on its `allOf`
+ * bases, so every place it appears needs its own entry to make it disappear.
+ */
 const OMIT: Record<string, string[]> = {
-    // BTDocumentInfo's own fields, plus the same fields re-declared on its allOf bases
-    // (BTGlobalTreeNodeSummaryInfo -> BTGlobalTreeNodeInfo) — together pull in ~40
-    // unrelated schemas (workspace/user/thumbnail chains) we don't use.
+    // BTDocumentInfo plus its allOf bases (BTGlobalTreeNodeSummaryInfo ->
+    // BTGlobalTreeNodeInfo), which re-declare the same fields.
     BTDocumentInfo: [
         "thumbnail",
         "owner",
@@ -112,6 +109,7 @@ export default defineConfig({
                         : (schema.allOf?.find((p: any) => p.properties?.[name])
                               ?.properties ?? (schema.properties ??= {}));
 
+                // Add the sibling `oneOf` union for each discriminator base.
                 for (const baseName of UNION_BASES) {
                     const mapping = schemas[baseName]?.discriminator?.mapping;
                     if (mapping) {
@@ -153,8 +151,12 @@ export default defineConfig({
                 ).visibilityConditions.items = ref(
                     unionName("BTEnumOptionVisibilityCondition-3455")
                 );
-                propsWith(schemas["BTElementGroup-1458"], "groups").groups.items =
-                    ref(unionName("BTGroupOrElementReference-2205"));
+                propsWith(
+                    schemas["BTElementGroup-1458"],
+                    "groups"
+                ).groups.items = ref(
+                    unionName("BTGroupOrElementReference-2205")
+                );
 
                 for (const [name, fields] of Object.entries(OMIT)) {
                     const schema = schemas[name];
