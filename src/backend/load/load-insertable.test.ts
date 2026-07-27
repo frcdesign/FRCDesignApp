@@ -3,9 +3,11 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../db";
 import { configurations, insertables } from "../../shared/schema";
-import type { ParameterObj } from "../../shared/configuration-models";
+import type {
+    ParameterObj,
+    PartNumberMap
+} from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
@@ -13,11 +15,7 @@ import {
     resetDb,
     seedGroup
 } from "../../__test_utils__";
-import {
-    type ReloadedFields,
-    saveInsertable,
-    writePartNumbers
-} from "./load-insertable";
+import { type ReloadedFields, saveInsertable } from "./load-insertable";
 import type { InsertableToLoad } from "./load-utils";
 
 const db = getDb(env.DB);
@@ -46,7 +44,9 @@ function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
     toLoad: InsertableToLoad,
-    parameters: ParameterObj[]
+    parameters: ParameterObj[],
+    partNumbers: PartNumberMap = {},
+    defaultPartNumber: string | null = null
 ): Promise<void> {
     const reloaded: ReloadedFields = {
         name: toLoad.name,
@@ -56,9 +56,10 @@ async function applySave(
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
+        defaultPartNumber,
         buildIssues: []
     };
-    await saveInsertable(db, toLoad, reloaded, parameters);
+    await saveInsertable(db, toLoad, reloaded, parameters, partNumbers);
 }
 
 describe("saveInsertable", () => {
@@ -126,8 +127,11 @@ describe("saveInsertable", () => {
         expect(await db.select().from(configurations).all()).toHaveLength(0);
     });
 
-    it("keeps the searchPartNumbers flag but clears part-number data on save", async () => {
-        await applySave(element({ searchPartNumbers: true }), TEST_PARAMETERS);
+    it("writes the computed part numbers", async () => {
+        await applySave(element({ searchPartNumbers: true }), TEST_PARAMETERS, {
+            "PN-1": { p: "v1" },
+            "PN-2": { p: "v2" }
+        });
 
         const row = await db
             .select()
@@ -135,32 +139,6 @@ describe("saveInsertable", () => {
             .where(eq(insertables.id, "ins-1"))
             .get();
         expect(row?.searchPartNumbers).toBe(true);
-        expect(row?.defaultPartNumber).toBeNull();
-
-        const config = await db
-            .select()
-            .from(configurations)
-            .where(eq(configurations.id, "ins-1"))
-            .get();
-        expect(config?.partNumbers).toEqual({});
-    });
-});
-
-describe("writePartNumbers", () => {
-    beforeEach(async () => {
-        await resetDb(db);
-        await seedGroup(db);
-    });
-
-    it("writes the map and default onto an already-saved insertable", async () => {
-        await applySave(element({ searchPartNumbers: true }), TEST_PARAMETERS);
-
-        await writePartNumbers(db, "ins-1", {
-            defaultPartNumber: null,
-            partNumbers: { "PN-1": { p: "v1" }, "PN-2": { p: "v2" } },
-            capped: false,
-            incomplete: false
-        });
 
         const config = await db
             .select()
@@ -174,14 +152,12 @@ describe("writePartNumbers", () => {
     });
 
     it("stores the default part number for a non-configurable insertable", async () => {
-        await applySave(element({ searchPartNumbers: true }), []);
-
-        await writePartNumbers(db, "ins-1", {
-            defaultPartNumber: "PN-default",
-            partNumbers: {},
-            capped: false,
-            incomplete: false
-        });
+        await applySave(
+            element({ searchPartNumbers: true }),
+            [],
+            {},
+            "PN-default"
+        );
 
         const row = await db
             .select()
@@ -191,37 +167,29 @@ describe("writePartNumbers", () => {
         expect(row?.defaultPartNumber).toBe("PN-default");
     });
 
-    it("flags an incomplete index and clears it on a clean rewrite", async () => {
-        await applySave(element({ searchPartNumbers: true }), TEST_PARAMETERS);
+    // getPartNumberMap in library-data.ts reads these columns without
+    // re-checking the flag, so a disabled insertable must leave them empty.
+    it("leaves the part-number columns empty when the flag is off", async () => {
+        await applySave(
+            element({ searchPartNumbers: true }),
+            TEST_PARAMETERS,
+            { "PN-1": { p: "v1" } },
+            null
+        );
+        await applySave(element({ searchPartNumbers: false }), TEST_PARAMETERS);
 
-        await writePartNumbers(db, "ins-1", {
-            defaultPartNumber: null,
-            partNumbers: {},
-            capped: false,
-            incomplete: true
-        });
-        let row = await db
+        const row = await db
             .select()
             .from(insertables)
             .where(eq(insertables.id, "ins-1"))
             .get();
-        expect(row?.buildIssues).toContainEqual({
-            type: BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
-        });
+        expect(row?.defaultPartNumber).toBeNull();
 
-        await writePartNumbers(db, "ins-1", {
-            defaultPartNumber: null,
-            partNumbers: { "PN-1": { p: "v1" } },
-            capped: false,
-            incomplete: false
-        });
-        row = await db
+        const config = await db
             .select()
-            .from(insertables)
-            .where(eq(insertables.id, "ins-1"))
+            .from(configurations)
+            .where(eq(configurations.id, "ins-1"))
             .get();
-        expect(row?.buildIssues).not.toContainEqual({
-            type: BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
-        });
+        expect(config?.partNumbers).toEqual({});
     });
 });

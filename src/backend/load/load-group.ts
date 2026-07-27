@@ -15,7 +15,6 @@ import {
 } from "../onshape-api/onshape-types";
 import { checkGroup } from "../parse/build-checks";
 import { loadInsertable } from "./load-insertable";
-import { loadPartNumbers } from "./load-part-numbers";
 import {
     type InsertableToLoad,
     type LoadContext,
@@ -153,9 +152,6 @@ export async function loadGroup(
                 .where(inArray(insertables.id, removedInsertableIds))
         ]);
     });
-
-    // Index part numbers after the group is saved, so removed rows are gone.
-    await loadPartNumbers(ctx, groupId);
 
     return {
         loadedElements: insertablesToLoad.length,

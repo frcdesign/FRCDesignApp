@@ -8,16 +8,17 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
     type Configuration,
-    type ParameterObj,
-    type PartNumberMap
+    type ParameterObj
 } from "../../shared/configuration-models";
 import {
     addBuildIssue,
     BuildIssueType,
     clearBuildIssue
 } from "../../shared/build-checker";
-import { computePartNumbers } from "../load/load-part-numbers";
-import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
+import {
+    computePartNumbers,
+    type LoadedPartNumbers
+} from "../load/load-part-numbers";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -141,15 +142,15 @@ insertableRoutes.post(
         if (!row)
             throw new HTTPException(404, { message: "Insertable not found" });
 
-        // When enabling, compute the part-number data inline so the index
-        // reflects the change immediately; when disabling, clear it.
-        let defaultPartNumber: string | null = null;
-        let partNumbers: PartNumberMap = {};
-        let capped = false;
-        let incomplete = false;
-
+        // Compute before committing anything: if this throws, the flag stays
+        // off rather than being enabled with nothing indexed behind it. The
+        // error reaches the client via the app's onError handler.
+        let computed: LoadedPartNumbers = {
+            defaultPartNumber: null,
+            partNumbers: {},
+            capped: false
+        };
         if (body.searchPartNumbers) {
-            const onshapeApi = await c.var.getOnshapeApi();
             const sourcePath: ElementPath = {
                 documentId: row.documentId,
                 instanceId: row.versionId,
@@ -161,40 +162,22 @@ insertableRoutes.post(
                 .from(configurations)
                 .where(eq(configurations.id, insertableId))
                 .get();
-            try {
-                const computed = await computePartNumbers(
-                    onshapeApi,
-                    sourcePath,
-                    row.elementType,
-                    configRow?.parameters ?? []
-                );
-                defaultPartNumber = computed.defaultPartNumber;
-                partNumbers = computed.partNumbers;
-                capped = computed.capped;
-            } catch (error) {
-                if (!(error instanceof OnshapeRateLimitError)) {
-                    throw error;
-                }
-                // Rate limited: still enable the flag; the next reload (durable
-                // workflow retry) fills the part numbers in.
-                incomplete = true;
-            }
+            computed = await computePartNumbers(
+                await c.var.getOnshapeApi(),
+                sourcePath,
+                row.elementType,
+                configRow?.parameters ?? []
+            );
         }
+        const { defaultPartNumber, partNumbers } = computed;
 
         let buildIssues = clearBuildIssue(
-            clearBuildIssue(
-                row.buildIssues,
-                BuildIssueType.TOO_MANY_CONFIGURATIONS
-            ),
-            BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
+            row.buildIssues,
+            BuildIssueType.TOO_MANY_CONFIGURATIONS
         );
-        if (capped) {
+        if (computed.capped) {
             buildIssues = addBuildIssue(buildIssues, {
                 type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-            });
-        } else if (incomplete) {
-            buildIssues = addBuildIssue(buildIssues, {
-                type: BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
             });
         }
 

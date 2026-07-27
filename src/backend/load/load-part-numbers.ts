@@ -1,31 +1,41 @@
 /**
  * Part-number indexing for insertables with part-number search enabled.
  *
- * Owns both halves: computing one insertable's part numbers (the default
- * configuration's number, or a deduped map of part number -> configuration),
- * and scheduling a whole group's worth of that work against Onshape's rate
- * limit.
+ * Loading runs as part of the insertable's load, so part numbers are only
+ * recomputed when the insertable itself is reloaded. Configurations are fetched
+ * in small batches, one durable step each, so a rate-limited retry re-fetches
+ * only that batch.
  */
-import { and, eq } from "drizzle-orm";
-import { type Db, getDb } from "../db";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import { ElementType } from "../../shared/types";
-import { ParameterObj, PartNumberMap } from "../../shared/configuration-models";
-import { configurations, insertables } from "../../shared/schema";
+import {
+    Configuration,
+    ParameterObj,
+    PartNumberMap
+} from "../../shared/configuration-models";
 import {
     enumerateConfigurations,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../../shared/configuration-combinations";
 import { getPartNumber } from "../onshape-api/endpoints/parts";
-import { writePartNumbers } from "./load-insertable";
 import {
+    type InsertableToLoad,
     type LoadContext,
     ONSHAPE_STEP_RETRIES,
     getOnshapeApiFromLoadContext
 } from "./load-utils";
 
-export interface ComputedPartNumbers {
+/** Configurations fetched per workflow step. */
+export const PART_NUMBER_BATCH_SIZE = 20;
+
+/** A part number and the configuration that produces it. */
+export interface PartNumberEntry {
+    partNumber: string;
+    configuration: Configuration;
+}
+
+export interface LoadedPartNumbers {
     /**
      * The default configuration's part number, populated only for
      * non-configurable insertables (configurable ones carry it inside
@@ -36,68 +46,50 @@ export interface ComputedPartNumbers {
     partNumbers: PartNumberMap;
     /** True when enumeration was capped; `partNumbers` is left empty. */
     capped: boolean;
-    /**
-     * The lowest `X-Rate-Limit-Remaining` observed while fetching, or undefined
-     * if nothing was fetched. The scheduler uses it to update its budget.
-     */
-    minRemaining: number | undefined;
 }
 
-/** Headroom kept below the reported remaining count when packing waves. */
-export const PART_NUMBER_RATE_LIMIT_RESERVE = 20;
+/** The empty result, used when part-number search is off or enumeration caps. */
+function noPartNumbers(capped = false): LoadedPartNumbers {
+    return { defaultPartNumber: null, partNumbers: {}, capped };
+}
+
+/** Splits configurations into fixed-size batches, one per workflow step. */
+export function batchConfigurations(
+    configurations: Configuration[],
+    batchSize: number = PART_NUMBER_BATCH_SIZE
+): Configuration[][] {
+    const batches: Configuration[][] = [];
+    for (let i = 0; i < configurations.length; i += batchSize) {
+        batches.push(configurations.slice(i, i + batchSize));
+    }
+    return batches;
+}
 
 /**
- * Fetches the part number for each configuration combination and folds them
- * into a `PartNumberMap` keyed by part number (first-wins, so duplicates
- * collapse to one canonical, default-preferring configuration).
+ * Folds fetched entries into a map keyed by part number. First-wins, so
+ * configurations resolving to the same part collapse onto the earliest
+ * (default-preferring) one.
  */
-export async function computePartNumbers(
+export function mergePartNumbers(batches: PartNumberEntry[][]): PartNumberMap {
+    const partNumbers: PartNumberMap = {};
+    for (const batch of batches) {
+        for (const entry of batch) {
+            if (!(entry.partNumber in partNumbers)) {
+                partNumbers[entry.partNumber] = entry.configuration;
+            }
+        }
+    }
+    return partNumbers;
+}
+
+/** Fetches the part number for each of `configurations`, dropping blanks. */
+export async function fetchPartNumbers(
     client: OnshapeApi,
     path: ElementPath,
     elementType: ElementType,
-    parameters: ParameterObj[],
-    cap: number = MAX_PART_NUMBER_CONFIGURATIONS
-): Promise<ComputedPartNumbers> {
-    let minRemaining: number | undefined;
-    const track = () => {
-        const remaining = client.lastRateLimitRemaining;
-        if (remaining !== undefined) {
-            minRemaining =
-                minRemaining === undefined
-                    ? remaining
-                    : Math.min(minRemaining, remaining);
-        }
-    };
-
-    // Non-configurable insertables have a single part number, stored on the
-    // insertable itself (there is no configurations row to hold a map).
-    if (parameters.length === 0) {
-        const defaultPartNumber = await getPartNumber(
-            client,
-            path,
-            elementType,
-            {}
-        );
-        track();
-        return {
-            defaultPartNumber,
-            partNumbers: {},
-            capped: false,
-            minRemaining
-        };
-    }
-
-    const { configurations, capped } = enumerateConfigurations(parameters, cap);
-    if (capped) {
-        return {
-            defaultPartNumber: null,
-            partNumbers: {},
-            capped: true,
-            minRemaining
-        };
-    }
-
-    const partNumbers: PartNumberMap = {};
+    configurations: Configuration[]
+): Promise<PartNumberEntry[]> {
+    const entries: PartNumberEntry[] = [];
     for (const configuration of configurations) {
         const partNumber = await getPartNumber(
             client,
@@ -105,187 +97,113 @@ export async function computePartNumbers(
             elementType,
             configuration
         );
-        track();
-        // First-wins keeps the earliest (default-preferring) configuration per
-        // part number, deduping combinations that resolve to the same part.
-        if (partNumber && !(partNumber in partNumbers)) {
-            partNumbers[partNumber] = configuration;
+        if (partNumber) {
+            entries.push({ partNumber, configuration });
         }
     }
+    return entries;
+}
 
+/**
+ * Computes an insertable's part numbers in a single pass, without workflow
+ * steps. Used by the toggle route, which runs in a request and has no `step`.
+ */
+export async function computePartNumbers(
+    client: OnshapeApi,
+    path: ElementPath,
+    elementType: ElementType,
+    parameters: ParameterObj[],
+    cap: number = MAX_PART_NUMBER_CONFIGURATIONS
+): Promise<LoadedPartNumbers> {
+    // Non-configurable insertables have a single part number, stored on the
+    // insertable itself (there is no configurations row to hold a map).
+    if (parameters.length === 0) {
+        return {
+            defaultPartNumber: await getPartNumber(
+                client,
+                path,
+                elementType,
+                {}
+            ),
+            partNumbers: {},
+            capped: false
+        };
+    }
+
+    const { configurations, capped } = enumerateConfigurations(parameters, cap);
+    if (capped) {
+        return noPartNumbers(true);
+    }
+
+    const entries = await fetchPartNumbers(
+        client,
+        path,
+        elementType,
+        configurations
+    );
     return {
         defaultPartNumber: null,
-        partNumbers,
-        capped: false,
-        minRemaining
+        partNumbers: mergePartNumbers([entries]),
+        capped: false
     };
 }
 
 /**
- * Given the costs of the still-pending jobs (in order) and the current budget,
- * returns how many leading jobs form the next parallel wave: as many as fit
- * within `budget - reserve`, but always at least one so a job whose cost alone
- * exceeds the budget still runs (in its own wave). The scheduler calls this
- * repeatedly with the remaining jobs and the live budget.
- */
-export function nextWaveSize(
-    pendingCosts: number[],
-    budget: number,
-    reserve: number = PART_NUMBER_RATE_LIMIT_RESERVE
-): number {
-    const usable = Math.max(budget - reserve, 0);
-    let count = 0;
-    let sum = 0;
-    for (const cost of pendingCosts) {
-        if (count > 0 && sum + cost > usable) {
-            break;
-        }
-        sum += cost;
-        count += 1;
-    }
-    return Math.max(count, 1);
-}
-
-/** A part-number indexing job for one insertable. */
-interface PartNumberJob {
-    insertableId: string;
-    path: ElementPath;
-    elementType: ElementType;
-    parameters: ParameterObj[];
-    /** Number of Onshape calls this job will make (0 when capped). */
-    cost: number;
-}
-
-/**
- * Indexes part numbers for a group's `searchPartNumbers`-enabled insertables,
- * running per-insertable steps in cost-packed parallel waves that stay within
- * the live `X-Rate-Limit-Remaining` budget. Each insertable's cost is known up
- * front from `enumerateConfigurations`, so waves never intentionally exceed the
- * limit; a 429 from estimate drift is still waited out durably per step.
+ * Loads an insertable's part numbers as part of its load, one durable step per
+ * batch of configurations. Batches run sequentially — insertables already load
+ * in parallel, which is where the concurrency comes from.
+ *
+ * A batch that exhausts its retries throws, failing the insertable rather than
+ * saving a half-built map; the stored row keeps its previous part numbers.
  */
 export async function loadPartNumbers(
     ctx: LoadContext,
-    groupId: string
-): Promise<void> {
-    const db = getDb(ctx.env.DB);
-    const jobs = await ctx.step.do(`part-number-jobs-${groupId}`, () =>
-        selectPartNumberJobs(db, groupId)
-    );
-    if (jobs.length === 0) {
-        return;
+    toLoad: InsertableToLoad,
+    parameters: ParameterObj[]
+): Promise<LoadedPartNumbers> {
+    if (!toLoad.searchPartNumbers) {
+        return noPartNumbers();
     }
 
-    let index = 0;
-    // Undefined until the first response reports a remaining count; until then
-    // (and if the header is ever absent) we fall back to one job at a time.
-    let budget: number | undefined;
-    while (index < jobs.length) {
-        const waveSize =
-            budget === undefined
-                ? 1
-                : nextWaveSize(
-                      jobs.slice(index).map((job) => job.cost),
-                      budget
-                  );
-        const wave = jobs.slice(index, index + waveSize);
+    const { insertableId, path, elementType } = toLoad;
+    const onshapeApi = () => getOnshapeApiFromLoadContext(ctx);
 
-        const reported = await Promise.all(
-            wave.map((job) => runPartNumberJob(ctx, job))
-        );
-        const observed = reported.filter(
-            (value): value is number => value !== undefined
-        );
-        if (observed.length > 0) {
-            budget = Math.min(...observed);
-        }
-        index += waveSize;
-    }
-}
-
-/**
- * Runs one insertable's part-number step (durable, honoring Retry-After) and a
- * write step, returning the lowest remaining count it observed. On retry
- * exhaustion it degrades to a flagged, empty result rather than failing the load.
- */
-async function runPartNumberJob(
-    ctx: LoadContext,
-    job: PartNumberJob
-): Promise<number | undefined> {
-    let result: ComputedPartNumbers;
-    let incomplete = false;
-    try {
-        result = await ctx.step.do(
-            `part-numbers-${job.insertableId}`,
+    if (parameters.length === 0) {
+        const defaultPartNumber = await ctx.step.do(
+            `part-number-${insertableId}`,
             { retries: ONSHAPE_STEP_RETRIES },
-            async () =>
-                computePartNumbers(
-                    await getOnshapeApiFromLoadContext(ctx),
-                    job.path,
-                    job.elementType,
-                    job.parameters
-                )
+            async () => getPartNumber(await onshapeApi(), path, elementType, {})
         );
-    } catch {
-        result = {
-            defaultPartNumber: null,
-            partNumbers: {},
-            capped: false,
-            minRemaining: undefined
-        };
-        incomplete = true;
+        return { defaultPartNumber, partNumbers: {}, capped: false };
     }
 
-    await ctx.step.do(`write-part-numbers-${job.insertableId}`, () =>
-        writePartNumbers(getDb(ctx.env.DB), job.insertableId, {
-            defaultPartNumber: result.defaultPartNumber,
-            partNumbers: result.partNumbers,
-            capped: result.capped,
-            incomplete
-        })
-    );
+    const { configurations, capped } = enumerateConfigurations(parameters);
+    if (capped) {
+        return noPartNumbers(true);
+    }
 
-    return result.minRemaining;
-}
-
-/** Loads the group's part-number jobs (enabled insertables + their parameters). */
-async function selectPartNumberJobs(
-    db: Db,
-    groupId: string
-): Promise<PartNumberJob[]> {
-    const rows = await db
-        .select({
-            id: insertables.id,
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            elementId: insertables.elementId,
-            elementType: insertables.elementType,
-            parameters: configurations.parameters
-        })
-        .from(insertables)
-        .leftJoin(configurations, eq(configurations.id, insertables.id))
-        .where(
-            and(
-                eq(insertables.groupId, groupId),
-                eq(insertables.searchPartNumbers, true)
+    const batches: PartNumberEntry[][] = [];
+    for (const [index, batch] of batchConfigurations(
+        configurations
+    ).entries()) {
+        batches.push(
+            await ctx.step.do(
+                `part-numbers-${insertableId}-${index}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                async () =>
+                    fetchPartNumbers(
+                        await onshapeApi(),
+                        path,
+                        elementType,
+                        batch
+                    )
             )
-        )
-        .all();
+        );
+    }
 
-    return rows.map((row) => {
-        const parameters = row.parameters ?? [];
-        const { configurations: combos, capped } =
-            enumerateConfigurations(parameters);
-        return {
-            insertableId: row.id,
-            path: {
-                documentId: row.documentId,
-                instanceId: row.versionId,
-                instanceType: "v",
-                elementId: row.elementId
-            },
-            elementType: row.elementType,
-            parameters,
-            cost: capped ? 0 : combos.length
-        };
-    });
+    return {
+        defaultPartNumber: null,
+        partNumbers: mergePartNumbers(batches),
+        capped: false
+    };
 }

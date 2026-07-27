@@ -42,13 +42,6 @@ export class OnshapeRateLimitError extends OnshapeApiError {
 export abstract class OnshapeApi {
     protected readonly _baseUrl = getBaseUrl();
 
-    /**
-     * The `X-Rate-Limit-Remaining` count from the most recent response (Onshape
-     * sends it on every response), or undefined before the first call. Callers
-     * use it to pace request bursts against the per-endpoint limit.
-     */
-    lastRateLimitRemaining: number | undefined;
-
     protected abstract _request(
         method: string,
         url: string,
@@ -106,15 +99,6 @@ export abstract class OnshapeApi {
             signal: options?.signal,
             headers
         });
-
-        // Onshape returns X-Rate-Limit-Remaining on every response.
-        const remaining = parseInt(
-            res.headers.get("X-Rate-Limit-Remaining") ?? "",
-            10
-        );
-        if (Number.isFinite(remaining)) {
-            this.lastRateLimitRemaining = remaining;
-        }
 
         if (!res.ok) {
             const text = await res.text();

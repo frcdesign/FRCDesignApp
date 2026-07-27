@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { computePartNumbers, nextWaveSize } from "./load-part-numbers";
+import {
+    batchConfigurations,
+    computePartNumbers,
+    mergePartNumbers
+} from "./load-part-numbers";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import {
@@ -126,25 +130,57 @@ describe("computePartNumbers", () => {
     });
 });
 
-describe("nextWaveSize", () => {
-    it("packs as many leading jobs as fit within budget - reserve", () => {
-        expect(nextWaveSize([2, 2, 2], 10, 0)).toBe(3);
+describe("batchConfigurations", () => {
+    const configurations = [{ A: "1" }, { A: "2" }, { A: "3" }, { A: "4" }];
+
+    it("splits into full batches", () => {
+        expect(batchConfigurations(configurations, 2)).toEqual([
+            [{ A: "1" }, { A: "2" }],
+            [{ A: "3" }, { A: "4" }]
+        ]);
     });
 
-    it("stops before a job would exceed the usable budget", () => {
-        expect(nextWaveSize([4, 4, 4], 10, 0)).toBe(2);
+    it("leaves a partial final batch", () => {
+        expect(batchConfigurations(configurations, 3)).toEqual([
+            [{ A: "1" }, { A: "2" }, { A: "3" }],
+            [{ A: "4" }]
+        ]);
     });
 
-    it("applies the reserve headroom", () => {
-        expect(nextWaveSize([3, 3], 10, 5)).toBe(1);
+    it("returns one batch when the size exceeds the count", () => {
+        expect(batchConfigurations(configurations, 100)).toEqual([
+            configurations
+        ]);
     });
 
-    it("runs an over-budget job alone rather than stalling", () => {
-        expect(nextWaveSize([100], 10, 0)).toBe(1);
-        expect(nextWaveSize([100, 1], 10, 0)).toBe(1);
+    it("returns no batches for no configurations", () => {
+        expect(batchConfigurations([], 20)).toEqual([]);
+    });
+});
+
+describe("mergePartNumbers", () => {
+    it("merges entries across batches", () => {
+        expect(
+            mergePartNumbers([
+                [{ partNumber: "PN-1", configuration: { A: "1" } }],
+                [{ partNumber: "PN-2", configuration: { A: "2" } }]
+            ])
+        ).toEqual({ "PN-1": { A: "1" }, "PN-2": { A: "2" } });
     });
 
-    it("never returns zero for a non-empty job list", () => {
-        expect(nextWaveSize([50], 0, 20)).toBe(1);
+    it("keeps the first configuration for a repeated part number", () => {
+        expect(
+            mergePartNumbers([
+                [
+                    { partNumber: "PN-1", configuration: { A: "1" } },
+                    { partNumber: "PN-1", configuration: { A: "2" } }
+                ],
+                [{ partNumber: "PN-1", configuration: { A: "3" } }]
+            ])
+        ).toEqual({ "PN-1": { A: "1" } });
+    });
+
+    it("returns an empty map for no batches", () => {
+        expect(mergePartNumbers([])).toEqual({});
     });
 });

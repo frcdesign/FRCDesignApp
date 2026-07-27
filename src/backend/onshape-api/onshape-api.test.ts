@@ -31,7 +31,6 @@ describe("OnshapeApi._call rate limiting", () => {
             retryAfterSeconds: 450,
             status: 429
         });
-        expect(api.lastRateLimitRemaining).toBe(0);
     });
 
     it("falls back to a default when Retry-After is missing", async () => {
@@ -47,16 +46,5 @@ describe("OnshapeApi._call rate limiting", () => {
         expect(error).toBeInstanceOf(OnshapeApiError);
         expect(error).not.toBeInstanceOf(OnshapeRateLimitError);
         expect((error as OnshapeApiError).status).toBe(500);
-    });
-
-    it("records X-Rate-Limit-Remaining from a successful response", async () => {
-        const api = new TestApi(
-            new Response(JSON.stringify({ ok: true }), {
-                status: 200,
-                headers: { "X-Rate-Limit-Remaining": "42" }
-            })
-        );
-        await api.get("/x");
-        expect(api.lastRateLimitRemaining).toBe(42);
     });
 });

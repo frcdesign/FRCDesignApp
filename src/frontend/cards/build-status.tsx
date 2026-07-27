@@ -334,8 +334,6 @@ function getIssueMessage(issue: BuildIssue): string {
             return "This group has no unhidden insertables.";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
             return "Too many configurations to index part numbers.";
-        case BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE:
-            return "Part numbers weren't fully indexed; they'll retry on the next reload.";
     }
 }
 

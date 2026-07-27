@@ -7,8 +7,7 @@ import type {
 import {
     addBuildIssue,
     type BuildIssue,
-    BuildIssueType,
-    clearBuildIssue
+    BuildIssueType
 } from "../../shared/build-checker";
 import type {
     ElementType,
@@ -23,6 +22,7 @@ import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
+import { loadPartNumbers } from "./load-part-numbers";
 import {
     type InsertableToLoad,
     type LoadContext,
@@ -41,6 +41,8 @@ export interface ReloadedFields {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
+    /** Set only for non-configurable insertables; see load-part-numbers. */
+    defaultPartNumber: string | null;
     buildIssues: BuildIssue[];
 }
 
@@ -59,6 +61,8 @@ export async function loadInsertable(
 
     const fastenInfo = await parseFastenInfoStep(ctx, toLoad);
 
+    const partNumbers = await loadPartNumbers(ctx, toLoad, parameters);
+
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
         `thumbnail-${insertableId}`,
@@ -71,6 +75,13 @@ export async function loadInsertable(
             )
     );
 
+    let buildIssues = checkInsertable({ vendors, thumbnailUrls });
+    if (partNumbers.capped) {
+        buildIssues = addBuildIssue(buildIssues, {
+            type: BuildIssueType.TOO_MANY_CONFIGURATIONS
+        });
+    }
+
     const reloaded: ReloadedFields = {
         name: toLoad.name,
         elementType: toLoad.elementType,
@@ -79,13 +90,18 @@ export async function loadInsertable(
         vendors,
         thumbnailUrls,
         fastenInfo,
-        buildIssues: checkInsertable({ vendors, thumbnailUrls })
+        defaultPartNumber: partNumbers.defaultPartNumber,
+        buildIssues
     };
 
-    // Part numbers are computed separately, in loadGroup's post-pass;
-    // saveInsertable clears any stale values here.
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), toLoad, reloaded, parameters)
+        saveInsertable(
+            getDb(ctx.env.DB),
+            toLoad,
+            reloaded,
+            parameters,
+            partNumbers.partNumbers
+        )
     );
 }
 
@@ -125,15 +141,17 @@ async function parseFastenInfoStep(
 }
 
 /**
- * Writes a single insertable (plus configuration) to the database. Part-number
- * fields are cleared here; loadGroup's post-pass repopulates them via
- * {@link writePartNumbers} for insertables with part-number search enabled.
+ * Writes a single insertable (plus configuration) to the database, including
+ * the part numbers computed for this load. When part-number search is off both
+ * are empty, which keeps the columns clear — `getPartNumberMap` in
+ * library-data.ts relies on that rather than re-checking the flag.
  */
 export async function saveInsertable(
     db: Db,
     toLoad: InsertableToLoad,
     reloaded: ReloadedFields,
-    parameters: ParameterObj[]
+    parameters: ParameterObj[],
+    partNumbers: PartNumberMap
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)
@@ -146,12 +164,11 @@ export async function saveInsertable(
             sortOrder: toLoad.sortOrder,
             supportsFasten: toLoad.supportsFasten,
             searchPartNumbers: toLoad.searchPartNumbers,
-            defaultPartNumber: null,
             ...reloaded
         })
         .onConflictDoUpdate({
             target: [insertables.groupId, insertables.elementId],
-            set: { ...reloaded, defaultPartNumber: null }
+            set: reloaded
         });
 
     let configurationWrite;
@@ -162,68 +179,12 @@ export async function saveInsertable(
     } else {
         configurationWrite = db
             .insert(configurations)
-            .values({ id: toLoad.insertableId, parameters, partNumbers: {} })
+            .values({ id: toLoad.insertableId, parameters, partNumbers })
             .onConflictDoUpdate({
                 target: configurations.id,
-                set: { parameters, partNumbers: {} }
+                set: { parameters, partNumbers }
             });
     }
 
     await db.batch([insertableWrite, configurationWrite]);
-}
-
-/** The part-number data written by loadGroup's post-pass for one insertable. */
-export interface PartNumberWrite {
-    defaultPartNumber: string | null;
-    partNumbers: PartNumberMap;
-    /** Enumeration exceeded the cap; flags TOO_MANY_CONFIGURATIONS. */
-    capped: boolean;
-    /** Fetching couldn't finish (rate-limited); flags PART_NUMBER_INDEX_INCOMPLETE. */
-    incomplete: boolean;
-}
-
-/**
- * Persists computed part numbers onto an already-saved insertable: its
- * `defaultPartNumber`, its configuration row's `partNumbers` map, and the
- * part-number build issues (merged into the insertable's existing issues).
- */
-export async function writePartNumbers(
-    db: Db,
-    insertableId: string,
-    write: PartNumberWrite
-): Promise<void> {
-    const row = await db
-        .select({ buildIssues: insertables.buildIssues })
-        .from(insertables)
-        .where(eq(insertables.id, insertableId))
-        .get();
-
-    let buildIssues = clearBuildIssue(
-        clearBuildIssue(
-            row?.buildIssues ?? [],
-            BuildIssueType.TOO_MANY_CONFIGURATIONS
-        ),
-        BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
-    );
-    if (write.capped) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-        });
-    } else if (write.incomplete) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.PART_NUMBER_INDEX_INCOMPLETE
-        });
-    }
-
-    await db.batch([
-        db
-            .update(insertables)
-            .set({ defaultPartNumber: write.defaultPartNumber, buildIssues })
-            .where(eq(insertables.id, insertableId)),
-        // No-op when the insertable has no configuration row.
-        db
-            .update(configurations)
-            .set({ partNumbers: write.partNumbers })
-            .where(eq(configurations.id, insertableId))
-    ]);
 }

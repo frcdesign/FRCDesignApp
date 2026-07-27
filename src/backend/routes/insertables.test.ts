@@ -17,6 +17,8 @@ import {
 import { getDb } from "../db";
 import * as PartStudioEndpoints from "../onshape-api/endpoints/part-studios";
 import * as AssemblyEndpoints from "../onshape-api/endpoints/assemblies";
+import * as PartsEndpoints from "../onshape-api/endpoints/parts";
+import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 
 const db = getDb(env.DB);
 
@@ -141,5 +143,79 @@ describe("insertable routes", () => {
             ElementType.ASSEMBLY, // elementType
             expect.anything() // options
         );
+    });
+
+    it("POST /toggle-part-number-search indexes and enables the flag", async () => {
+        await seedPartStudio(db);
+        vi.spyOn(PartsEndpoints, "getPartNumber").mockResolvedValue("PN-123");
+
+        const res = await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: true }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(row?.searchPartNumbers).toBe(true);
+        expect(row?.defaultPartNumber).toBe("PN-123");
+    });
+
+    it("POST /toggle-part-number-search leaves the flag off when indexing fails", async () => {
+        await seedPartStudio(db);
+        vi.spyOn(PartsEndpoints, "getPartNumber").mockRejectedValue(
+            new OnshapeRateLimitError("rate limited", 450)
+        );
+
+        const res = await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: true }),
+            env
+        );
+        // Surfaced to the client rather than silently enabling.
+        expect(res.status).toBe(429);
+        expect(res.headers.get("Retry-After")).toBe("450");
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(row?.searchPartNumbers).toBe(false);
+        expect(row?.defaultPartNumber).toBeNull();
+    });
+
+    it("POST /toggle-part-number-search clears the data when disabling", async () => {
+        await seedPartStudio(db);
+        const spy = vi
+            .spyOn(PartsEndpoints, "getPartNumber")
+            .mockResolvedValue("PN-123");
+        await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: true }),
+            env
+        );
+        spy.mockClear();
+
+        const res = await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: false }),
+            env
+        );
+        expect(res.status).toBe(200);
+        // Disabling needs no Onshape calls.
+        expect(spy).not.toHaveBeenCalled();
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(row?.searchPartNumbers).toBe(false);
+        expect(row?.defaultPartNumber).toBeNull();
     });
 });
