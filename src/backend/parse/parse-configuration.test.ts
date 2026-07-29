@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     OptionVisibilityType,
-    ParameterObj,
+    ConfigurationParameter,
     ParameterType,
     VisibilityCondition,
     VisibilityType
@@ -230,7 +230,10 @@ describe("parseOnshapeConfiguration", () => {
 });
 
 describe("evaluateCondition", () => {
-    const makeEnumParam = (id: string, options: string[]): ParameterObj => ({
+    const makeEnumParam = (
+        id: string,
+        options: string[]
+    ): ConfigurationParameter => ({
         type: ParameterType.ENUM,
         id,
         name: id,

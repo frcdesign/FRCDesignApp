@@ -9,8 +9,8 @@ import {
 } from "./types";
 import { ThumbnailUrls } from "./types";
 import {
-    Configuration,
-    ParameterObj,
+    ParameterValues,
+    ConfigurationParameter,
     PartNumberMap
 } from "./configuration-models";
 import { BuildIssue } from "./build-checker";
@@ -116,7 +116,7 @@ export const configurations = sqliteTable("configurations", {
         .notNull()
         .references(() => insertables.id, { onDelete: "cascade" }),
     parameters: text("parameters", { mode: "json" })
-        .$type<ParameterObj[]>()
+        .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
     // Deduped map of part number -> the configuration that produces it, used
@@ -161,7 +161,7 @@ export const favorites = sqliteTable(
             .references(() => insertables.id, { onDelete: "cascade" }),
         defaultConfiguration: text("default_configuration", {
             mode: "json"
-        }).$type<Configuration | null>(),
+        }).$type<ParameterValues | null>(),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

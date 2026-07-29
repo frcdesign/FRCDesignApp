@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../db";
 import type {
-    InsertableConfiguration,
-    ParameterObj
+    Configuration,
+    ConfigurationParameter
 } from "../../shared/configuration-models";
 import type { BuildIssue } from "../../shared/build-checker";
 import type {
@@ -100,7 +100,7 @@ export async function loadInsertable(
 function parseConfigurationStep(
     ctx: LoadContext,
     toLoad: InsertableToLoad
-): Promise<ParameterObj[]> {
+): Promise<ConfigurationParameter[]> {
     return ctx.step.do(`config-${toLoad.insertableId}`, async () => {
         const onshapeConfiguration = await getConfiguration(
             await getOnshapeApi(ctx),
@@ -139,7 +139,7 @@ export async function saveInsertable(
     db: Db,
     toLoad: InsertableToLoad,
     reloaded: ReloadedFields,
-    configuration: InsertableConfiguration
+    configuration: Configuration
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)

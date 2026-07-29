@@ -1,7 +1,7 @@
 import { Vendor, getVendorName } from "../../shared/types";
 import {
     ParameterType,
-    type ParameterObj
+    type ConfigurationParameter
 } from "../../shared/configuration-models";
 
 export function parseNameVendor(name: string): Vendor | undefined {
@@ -17,7 +17,7 @@ export function parseNameVendor(name: string): Vendor | undefined {
 
 export function parseVendors(
     name: string,
-    parameters: ParameterObj[]
+    parameters: ConfigurationParameter[]
 ): Vendor[] {
     const nameVendor = parseNameVendor(name);
     if (nameVendor) return [nameVendor];

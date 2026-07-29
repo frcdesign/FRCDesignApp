@@ -2,7 +2,7 @@ import {
     type EnumOption,
     type OptionVisibilityCondition,
     OptionVisibilityType,
-    type ParameterObj,
+    type ConfigurationParameter,
     ParameterType,
     type VisibilityCondition,
     VisibilityType
@@ -109,8 +109,8 @@ function parseOptionVisibilityConditions(
 
 export function parseOnshapeConfiguration(
     onshapeConfiguration: OnshapeConfigurationResponse
-): ParameterObj[] {
-    const parameters: ParameterObj[] = [];
+): ConfigurationParameter[] {
+    const parameters: ConfigurationParameter[] = [];
 
     for (const parameter of onshapeConfiguration.configurationParameters) {
         const base = {

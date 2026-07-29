@@ -70,16 +70,16 @@ interface AlwaysShownVisibilityCondition {
 
 export interface ConfigurationResult {
     // defaultConfiguration: string;
-    parameters: ParameterObj[];
+    parameters: ConfigurationParameter[];
 }
 
-export type ParameterObj =
-    | EnumParameterObj
-    | QuantityParameterObj
-    | BooleanParameterObj
-    | StringParameterObj;
+export type ConfigurationParameter =
+    | EnumParameter
+    | QuantityParameter
+    | BooleanParameter
+    | StringParameter;
 
-export interface ParameterBase {
+export interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;
@@ -87,11 +87,11 @@ export interface ParameterBase {
     isCosmetic: boolean;
     condition?: VisibilityCondition;
 }
-export interface BooleanParameterObj extends ParameterBase {
+export interface BooleanParameter extends ConfigurationParameterBase {
     type: ParameterType.BOOLEAN;
 }
 
-export interface StringParameterObj extends ParameterBase {
+export interface StringParameter extends ConfigurationParameterBase {
     type: ParameterType.STRING;
 }
 
@@ -100,13 +100,13 @@ export interface EnumOption {
     name: string;
 }
 
-export interface EnumParameterObj extends ParameterBase {
+export interface EnumParameter extends ConfigurationParameterBase {
     type: ParameterType.ENUM;
     options: EnumOption[];
     optionConditions: OptionVisibilityCondition[];
 }
 
-export interface QuantityParameterObj extends ParameterBase {
+export interface QuantityParameter extends ConfigurationParameterBase {
     type: ParameterType.QUANTITY;
     quantityType: QuantityType;
     defaultValue: number;
@@ -116,25 +116,27 @@ export interface QuantityParameterObj extends ParameterBase {
 }
 
 /**
- * A specific configuration, consisting of a mapping of parameterIds to the value.
+ * A specific choice of values for an insertable's parameters, as a mapping of
+ * parameterId to value.
  */
-export type Configuration = Record<string, string>;
+export type ParameterValues = Record<string, string>;
 
 /**
- * Maps a part number to the single (canonical) configuration that produces it.
+ * Maps a part number to the single (canonical) parameter values which produce
+ * it.
  *
  * Keyed by part number because search looks parts up by number, and because
- * many configurations can resolve to the same part number (e.g. parameters
+ * many parameter values can resolve to the same part number (e.g. parameters
  * that don't affect the part); keying by number dedupes them inherently.
  */
-export type PartNumberMap = Record<string, Configuration>;
+export type PartNumberMap = Record<string, ParameterValues>;
 
 /**
- * An insertable's stored configuration: the parameters it exposes and the part
- * numbers its configurations resolve to. Mirrors the `configurations` row.
+ * An insertable's configuration: the parameters it exposes and the part numbers
+ * they resolve to. Mirrors the `configurations` row.
  */
-export interface InsertableConfiguration {
-    parameters: ParameterObj[];
+export interface Configuration {
+    parameters: ConfigurationParameter[];
     partNumbers: PartNumberMap;
 }
 

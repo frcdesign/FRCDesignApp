@@ -1,9 +1,9 @@
 import {
-    Configuration,
+    ParameterValues,
     EnumOption,
-    EnumParameterObj,
+    EnumParameter,
     OptionVisibilityType,
-    ParameterObj,
+    ConfigurationParameter,
     ParameterType,
     VisibilityCondition,
     VisibilityType
@@ -13,7 +13,7 @@ import { LogicalOp } from "./configuration-enums";
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
     configuration: Record<string, string>,
-    parameters: ParameterObj[]
+    parameters: ConfigurationParameter[]
 ): boolean {
     if (!condition) {
         return true;
@@ -53,7 +53,7 @@ export function evaluateCondition(
     return true;
 }
 export function encodeConfigurationForQuery(
-    configuration?: Configuration
+    configuration?: ParameterValues
 ): string {
     if (!configuration) {
         return "";
@@ -75,9 +75,9 @@ export function getOption(
  * configuration, applying the parameter's option visibility conditions.
  */
 export function getVisibleOptions(
-    enumParameter: EnumParameterObj,
-    configuration: Configuration,
-    parameters: ParameterObj[]
+    enumParameter: EnumParameter,
+    configuration: ParameterValues,
+    parameters: ConfigurationParameter[]
 ): EnumOption[] {
     // No conditions means everything is shown
     if (enumParameter.optionConditions.length === 0) {

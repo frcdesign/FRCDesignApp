@@ -7,8 +7,8 @@ import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
-    type Configuration,
-    type ParameterObj
+    type ParameterValues,
+    type ConfigurationParameter
 } from "../../shared/configuration-models";
 import {
     computePartNumbers,
@@ -219,7 +219,7 @@ insertableRoutes.post(
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
-            configuration: Configuration | undefined;
+            configuration: ParameterValues | undefined;
             useMateConnector: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;
@@ -252,7 +252,7 @@ insertableRoutes.post(
         }
 
         // Look up parsed configuration parameters from D1 if configuration is provided
-        let parameters: ParameterObj[] | undefined;
+        let parameters: ConfigurationParameter[] | undefined;
         if (body.configuration) {
             const configRow = await db
                 .select({ parameters: configurations.parameters })
@@ -289,7 +289,7 @@ insertableRoutes.post(
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
-            configuration: Configuration | undefined;
+            configuration: ParameterValues | undefined;
             fasten: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;

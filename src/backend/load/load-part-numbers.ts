@@ -10,8 +10,8 @@ import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import { ElementType } from "../../shared/types";
 import {
-    Configuration,
-    ParameterObj,
+    ParameterValues,
+    ConfigurationParameter,
     PartNumberMap
 } from "../../shared/configuration-models";
 import {
@@ -42,7 +42,7 @@ export const PART_NUMBER_BATCH_SIZE = 20;
 /** A part number and the configuration that produces it. */
 export interface PartNumberEntry {
     partNumber: string;
-    configuration: Configuration;
+    configuration: ParameterValues;
 }
 
 /** An insertable's indexed part numbers, and the issues indexing them raised. */
@@ -94,7 +94,7 @@ export async function getPartNumber(
     client: OnshapeApi,
     path: ElementPath,
     elementType: ElementType,
-    configuration: Configuration
+    configuration: ParameterValues
 ): Promise<string | null> {
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyPartNumber(
@@ -108,10 +108,10 @@ export async function getPartNumber(
 
 /** Splits configurations into fixed-size batches, one per workflow step. */
 export function batchConfigurations(
-    configurations: Configuration[],
+    configurations: ParameterValues[],
     batchSize: number = PART_NUMBER_BATCH_SIZE
-): Configuration[][] {
-    const batches: Configuration[][] = [];
+): ParameterValues[][] {
+    const batches: ParameterValues[][] = [];
     for (let i = 0; i < configurations.length; i += batchSize) {
         batches.push(configurations.slice(i, i + batchSize));
     }
@@ -139,7 +139,7 @@ export async function fetchPartNumbers(
     client: OnshapeApi,
     path: ElementPath,
     elementType: ElementType,
-    configurations: Configuration[]
+    configurations: ParameterValues[]
 ): Promise<PartNumberEntry[]> {
     const entries: PartNumberEntry[] = [];
     for (const configuration of configurations) {
@@ -162,10 +162,10 @@ export async function fetchPartNumbers(
  * `fetchDefault` and `fetchBatch` decide whether those run as workflow steps.
  */
 async function collectPartNumbers(
-    parameters: ParameterObj[],
+    parameters: ConfigurationParameter[],
     fetchDefault: () => Promise<string | null>,
     fetchBatch: (
-        batch: Configuration[],
+        batch: ParameterValues[],
         index: number
     ) => Promise<PartNumberEntry[]>
 ): Promise<PartNumbers> {
@@ -205,7 +205,7 @@ export function computePartNumbers(
     client: OnshapeApi,
     path: ElementPath,
     elementType: ElementType,
-    parameters: ParameterObj[]
+    parameters: ConfigurationParameter[]
 ): Promise<PartNumbers> {
     return collectPartNumbers(
         parameters,
@@ -225,7 +225,7 @@ export function computePartNumbers(
 export function loadPartNumbers(
     ctx: LoadContext,
     toLoad: InsertableToLoad,
-    parameters: ParameterObj[]
+    parameters: ConfigurationParameter[]
 ): Promise<PartNumbers> {
     if (!toLoad.searchPartNumbers) {
         return Promise.resolve(NO_PART_NUMBERS);

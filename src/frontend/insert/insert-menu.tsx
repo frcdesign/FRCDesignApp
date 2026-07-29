@@ -18,14 +18,14 @@ import {
 } from "../common/notifications";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 export function openInsertMenu(props: OpenInsertMenuProps) {
@@ -55,7 +55,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
     onInsert: () => void;
 }
 
@@ -64,7 +64,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const favorites = useFavoritesQuery().data?.favorites;
 
     const [configuration, setConfiguration] = useState<
-        Configuration | undefined
+        ParameterValues | undefined
     >(props.defaultConfiguration);
 
     if (!favorites) {
@@ -107,7 +107,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
 interface InsertButtonsProps {
     insertable: InsertableOut;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
     isFavorite: boolean;
     onInsert: () => void;
 }
@@ -159,7 +159,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
 function showRestoreToast(
     insertable: InsertableOut,
-    configuration?: Configuration
+    configuration?: ParameterValues
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",

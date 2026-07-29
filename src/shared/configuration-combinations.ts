@@ -4,8 +4,8 @@
  * parameters are held at their Onshape defaults (omitted from the record).
  */
 import {
-    Configuration,
-    ParameterObj,
+    ParameterValues,
+    ConfigurationParameter,
     ParameterType
 } from "./configuration-models";
 import { evaluateCondition, getVisibleOptions } from "./configuration-utils";
@@ -19,7 +19,7 @@ export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
 export interface EnumerateResult {
     /** The enumerated configurations, or empty when `capped`. */
-    configurations: Configuration[];
+    configurations: ParameterValues[];
     /** True when enumeration was stopped for exceeding the cap. */
     capped: boolean;
 }
@@ -33,10 +33,10 @@ export interface EnumerateResult {
  * matching how Onshape structures configurations top-to-bottom.
  */
 export function enumerateConfigurations(
-    parameters: ParameterObj[],
+    parameters: ConfigurationParameter[],
     cap: number = MAX_PART_NUMBER_CONFIGURATIONS
 ): EnumerateResult {
-    let configurations: Configuration[] = [{}];
+    let configurations: ParameterValues[] = [{}];
 
     for (const parameter of parameters) {
         if (
@@ -47,7 +47,7 @@ export function enumerateConfigurations(
             continue;
         }
 
-        const next: Configuration[] = [];
+        const next: ParameterValues[] = [];
         for (const configuration of configurations) {
             // A parameter hidden in this partial configuration is left unset;
             // Onshape applies its default.

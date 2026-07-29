@@ -11,14 +11,14 @@ import {
 } from "react";
 import { apiGet } from "../api-utils/api";
 import {
-    Configuration,
+    ParameterValues,
     ConfigurationResult,
-    ParameterObj,
+    ConfigurationParameter,
     ParameterType,
-    EnumParameterObj,
-    BooleanParameterObj,
-    StringParameterObj,
-    QuantityParameterObj,
+    EnumParameter,
+    BooleanParameter,
+    StringParameter,
+    QuantityParameter,
     UnitInfo,
     EnumOption
 } from "../../shared/configuration-models";
@@ -42,8 +42,8 @@ import { SectionError } from "../app-common/app-zero-state";
 interface ConfigurationWrapperProps {
     configurationId: string;
     microversionId: string;
-    configuration?: Configuration;
-    setConfiguration: Dispatch<Configuration>;
+    configuration?: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -75,7 +75,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 configuration[parameter.id] = parameter.default;
                 return configuration;
             },
-            {} as Configuration
+            {} as ParameterValues
         );
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
@@ -102,8 +102,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: Configuration;
-    setConfiguration: Dispatch<Configuration>;
+    configuration: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
     unitInfo: UnitInfo;
 }
 
@@ -128,7 +128,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
         };
 
         return (
-            <ConfigurationParameter
+            <ParameterInput
                 key={parameter.id}
                 parameter={parameter}
                 value={configuration[parameter.id]}
@@ -142,17 +142,17 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
     return <div>{parameters}</div>;
 }
 
-interface ParameterProps<T extends ParameterObj> {
+interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
     value: string;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: Configuration;
-    parameters: ParameterObj[];
+    configuration: ParameterValues;
+    parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }
 
-function ConfigurationParameter(
-    props: ParameterProps<ParameterObj>
+function ParameterInput(
+    props: ParameterProps<ConfigurationParameter>
 ): ReactNode {
     const { parameter } = props;
 
@@ -180,13 +180,13 @@ function ConfigurationParameter(
 
     // Need to expose and use parameter directly to get type narrowing
     if (parameter.type === ParameterType.ENUM) {
-        return <EnumParameter {...props} parameter={parameter} />;
+        return <EnumInput {...props} parameter={parameter} />;
     } else if (parameter.type === ParameterType.BOOLEAN) {
-        return <BooleanParameter {...props} parameter={parameter} />;
+        return <BooleanInput {...props} parameter={parameter} />;
     } else if (parameter.type === ParameterType.STRING) {
-        return <StringParameter {...props} parameter={parameter} />;
+        return <StringInput {...props} parameter={parameter} />;
     } else if (parameter.type === ParameterType.QUANTITY) {
-        return <QuantityParameter {...props} parameter={parameter} />;
+        return <QuantityInput {...props} parameter={parameter} />;
     }
 }
 
@@ -209,7 +209,7 @@ function getFirstVisibleOption(
     return visibleOptions[0];
 }
 
-function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
+function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     const { parameter, value, onValueChange, configuration, parameters } =
         props;
 
@@ -264,9 +264,7 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     );
 }
 
-function BooleanParameter(
-    props: ParameterProps<BooleanParameterObj>
-): ReactNode {
+function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
         <Checkbox
@@ -285,7 +283,7 @@ function BooleanParameter(
     );
 }
 
-function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
+function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
         <TextInput
@@ -299,7 +297,7 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
 }
 
 function getEvaluateOptions(
-    parameter: QuantityParameterObj,
+    parameter: QuantityParameter,
     contextData: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
@@ -337,9 +335,7 @@ function getEvaluateOptions(
     };
 }
 
-function QuantityParameter(
-    props: ParameterProps<QuantityParameterObj>
-): ReactNode {
+function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     // This parameter doesn't actually use value since it manages it's state internally
     const { parameter, value, onValueChange, unitInfo } = props;
 

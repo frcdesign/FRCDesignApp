@@ -2,7 +2,7 @@ import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
 import { SearchDocument } from "../../shared/search";
 import {
-    Configuration,
+    ParameterValues,
     PartNumberMap
 } from "../../shared/configuration-models";
 
@@ -37,7 +37,7 @@ export interface SearchHit {
      * When the hit matched on a part number, the configuration that produces
      * that part number, used to pre-fill the insert menu.
      */
-    configuration?: Configuration;
+    configuration?: ParameterValues;
 }
 
 export interface FilterResult {
@@ -147,7 +147,7 @@ function matchedConfiguration(
     result: MiniSearchResult,
     document: SearchDocument,
     query: string
-): Configuration | undefined {
+): ParameterValues | undefined {
     const matchedPartNumber = Object.values(result.match).some((fields) =>
         fields.includes("partNumbers")
     );
@@ -165,7 +165,7 @@ function matchedConfiguration(
 function findPartNumberConfig(
     query: string,
     partNumberConfigs: PartNumberMap
-): Configuration | undefined {
+): ParameterValues | undefined {
     const keys = Object.keys(partNumberConfigs);
     const normalizedQuery = query.trim().toLowerCase();
     if (keys.length === 0 || normalizedQuery === "") {

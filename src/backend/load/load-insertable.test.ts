@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../db";
 import { configurations, insertables } from "../../shared/schema";
 import type {
-    ParameterObj,
+    ConfigurationParameter,
     PartNumberMap
 } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
@@ -44,7 +44,7 @@ function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
     toLoad: InsertableToLoad,
-    parameters: ParameterObj[],
+    parameters: ConfigurationParameter[],
     partNumbers: PartNumberMap = {},
     defaultPartNumber: string | null = null
 ): Promise<void> {

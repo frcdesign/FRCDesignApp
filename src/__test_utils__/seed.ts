@@ -9,7 +9,7 @@ import {
 } from "../shared/schema";
 import {
     ParameterType,
-    type ParameterObj
+    type ConfigurationParameter
 } from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
 import { ElementType, LibraryId } from "../shared/types";
@@ -35,7 +35,7 @@ export const TEST_ASSEMBLY_PATH: ElementPath = {
     elementId: "e-assembly"
 };
 
-export const TEST_PARAMETERS: ParameterObj[] = [
+export const TEST_PARAMETERS: ConfigurationParameter[] = [
     {
         type: ParameterType.BOOLEAN,
         id: "boolean",

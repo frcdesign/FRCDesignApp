@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { enumerateConfigurations } from "./configuration-combinations";
 import {
-    BooleanParameterObj,
-    EnumParameterObj,
+    BooleanParameter,
+    EnumParameter,
     OptionVisibilityType,
-    ParameterObj,
+    ConfigurationParameter,
     ParameterType,
-    QuantityParameterObj,
-    StringParameterObj,
+    QuantityParameter,
+    StringParameter,
     VisibilityCondition,
     VisibilityType
 } from "./configuration-models";
@@ -16,8 +16,8 @@ import { QuantityType, Unit } from "./configuration-enums";
 function enumParam(
     id: string,
     optionIds: string[],
-    extra: Partial<EnumParameterObj> = {}
-): EnumParameterObj {
+    extra: Partial<EnumParameter> = {}
+): EnumParameter {
     return {
         id,
         name: id,
@@ -33,7 +33,7 @@ function enumParam(
     };
 }
 
-function boolParam(id: string): BooleanParameterObj {
+function boolParam(id: string): BooleanParameter {
     return {
         id,
         name: id,
@@ -43,7 +43,7 @@ function boolParam(id: string): BooleanParameterObj {
     };
 }
 
-function quantityParam(id: string): QuantityParameterObj {
+function quantityParam(id: string): QuantityParameter {
     return {
         id,
         name: id,
@@ -58,7 +58,7 @@ function quantityParam(id: string): QuantityParameterObj {
     };
 }
 
-function stringParam(id: string): StringParameterObj {
+function stringParam(id: string): StringParameter {
     return {
         id,
         name: id,
@@ -78,7 +78,7 @@ const alwaysShown: VisibilityCondition = { type: VisibilityType.ALWAYS_SHOWN };
 
 describe("enumerateConfigurations", () => {
     it("produces the cartesian product of enum parameters", () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             enumParam("A", ["a1", "a2"]),
             enumParam("B", ["b1", "b2", "b3"])
         ];
@@ -95,7 +95,7 @@ describe("enumerateConfigurations", () => {
     });
 
     it("ignores quantity and string parameters", () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             enumParam("A", ["a1", "a2"]),
             quantityParam("Q"),
             stringParam("S")
@@ -105,7 +105,7 @@ describe("enumerateConfigurations", () => {
     });
 
     it("skips a parameter hidden by its visibility condition", () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             boolParam("A"),
             enumParam("B", ["b1", "b2"], { condition: equals("A", "true") })
         ];
@@ -118,7 +118,7 @@ describe("enumerateConfigurations", () => {
     });
 
     it("prunes enum options hidden by option visibility conditions", () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             enumParam("A", ["a1", "a2"]),
             enumParam("B", ["b1", "b2"], {
                 optionConditions: [
@@ -144,7 +144,7 @@ describe("enumerateConfigurations", () => {
     });
 
     it("caps enumeration and reports it", () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             boolParam("A"),
             boolParam("B"),
             boolParam("C")

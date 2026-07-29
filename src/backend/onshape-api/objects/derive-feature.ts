@@ -1,7 +1,7 @@
 import {
     ParameterType,
-    type Configuration,
-    type ParameterObj
+    type ParameterValues,
+    type ConfigurationParameter
 } from "../../../shared/configuration-models";
 import { type ElementPath } from "../../../shared/onshape-path";
 
@@ -28,8 +28,8 @@ export class DerivedFeature {
         sourcePath: ElementPath,
         microversionId: string,
         useMateConnector: boolean,
-        configuration: Configuration | undefined,
-        parameters: ParameterObj[] | undefined
+        configuration: ParameterValues | undefined,
+        parameters: ConfigurationParameter[] | undefined
     ) {
         this.escapedName = escapeFeatureName(name);
         this.namespace = toNamespace(sourcePath, microversionId);
@@ -48,8 +48,8 @@ export class DerivedFeature {
     }
 
     private buildPartConfiguration(
-        configuration: Configuration,
-        parameters: ParameterObj[]
+        configuration: ParameterValues,
+        parameters: ConfigurationParameter[]
     ): object[] {
         return parameters.map((parameter) => {
             const value = configuration[parameter.id] ?? parameter.default;

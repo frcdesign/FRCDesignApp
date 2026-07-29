@@ -6,7 +6,7 @@ import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
@@ -125,7 +125,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {

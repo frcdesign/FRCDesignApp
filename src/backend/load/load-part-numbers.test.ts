@@ -8,9 +8,9 @@ import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import {
-    Configuration,
-    EnumParameterObj,
-    ParameterObj,
+    ParameterValues,
+    EnumParameter,
+    ConfigurationParameter,
     ParameterType
 } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
@@ -26,7 +26,7 @@ const PATH: ElementPath = {
 /** The client is only forwarded to the endpoint wrapper, which is mocked. */
 const CLIENT = {} as OnshapeApi;
 
-function enumParam(id: string, optionIds: string[]): EnumParameterObj {
+function enumParam(id: string, optionIds: string[]): EnumParameter {
     return {
         id,
         name: id,
@@ -43,7 +43,7 @@ function enumParam(id: string, optionIds: string[]): EnumParameterObj {
  * configuration. An empty configuration is the element's defaults.
  */
 function mockParts(
-    partNumberFor: (configuration: Configuration) => string | undefined
+    partNumberFor: (configuration: ParameterValues) => string | undefined
 ) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
@@ -58,7 +58,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("computePartNumbers", () => {
     it("dedupes configurations resolving to the same part number (first-wins)", async () => {
-        const params: ParameterObj[] = [
+        const params: ConfigurationParameter[] = [
             enumParam("A", ["a1", "a2"]),
             enumParam("B", ["b1", "b2"])
         ];
@@ -123,8 +123,9 @@ describe("computePartNumbers", () => {
 
     it("flags capped enumeration but still records the default", async () => {
         // 2^10 = 1024 combinations, past MAX_PART_NUMBER_CONFIGURATIONS.
-        const params: ParameterObj[] = Array.from({ length: 10 }, (_, i) =>
-            enumParam(`P${i}`, ["x", "y"])
+        const params: ConfigurationParameter[] = Array.from(
+            { length: 10 },
+            (_, i) => enumParam(`P${i}`, ["x", "y"])
         );
         mockParts(() => "PN-default");
 
