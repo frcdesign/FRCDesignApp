@@ -147,7 +147,9 @@ describe("insertable routes", () => {
 
     it("POST /toggle-part-number-search indexes and enables the flag", async () => {
         await seedPartStudio(db);
-        vi.spyOn(PartsEndpoints, "getPartNumber").mockResolvedValue("PN-123");
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p", partNumber: "PN-123" }
+        ]);
 
         const res = await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
@@ -167,7 +169,7 @@ describe("insertable routes", () => {
 
     it("POST /toggle-part-number-search leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
-        vi.spyOn(PartsEndpoints, "getPartNumber").mockRejectedValue(
+        vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
             new OnshapeRateLimitError("rate limited", 450)
         );
 
@@ -178,7 +180,8 @@ describe("insertable routes", () => {
         );
         // Surfaced to the client rather than silently enabling.
         expect(res.status).toBe(429);
-        expect(res.headers.get("Retry-After")).toBe("450");
+        const body: { retryAfterSeconds: number } = await res.json();
+        expect(body.retryAfterSeconds).toBe(450);
 
         const row = await db
             .select()
@@ -192,8 +195,8 @@ describe("insertable routes", () => {
     it("POST /toggle-part-number-search clears the data when disabling", async () => {
         await seedPartStudio(db);
         const spy = vi
-            .spyOn(PartsEndpoints, "getPartNumber")
-            .mockResolvedValue("PN-123");
+            .spyOn(PartsEndpoints, "getParts")
+            .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
         await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { searchPartNumbers: true }),

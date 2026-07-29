@@ -1,17 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
     batchConfigurations,
     computePartNumbers,
     mergePartNumbers
 } from "./load-part-numbers";
+import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import {
+    Configuration,
     EnumParameterObj,
     ParameterObj,
     ParameterType
 } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
+import { BuildIssueType } from "../../shared/build-checker";
 
 const PATH: ElementPath = {
     documentId: "d",
@@ -19,6 +22,9 @@ const PATH: ElementPath = {
     instanceType: "v",
     elementId: "e"
 };
+
+/** The client is only forwarded to the endpoint wrapper, which is mocked. */
+const CLIENT = {} as OnshapeApi;
 
 function enumParam(id: string, optionIds: string[]): EnumParameterObj {
     return {
@@ -32,25 +38,23 @@ function enumParam(id: string, optionIds: string[]): EnumParameterObj {
     };
 }
 
-/** A fake client whose returned part number is derived from the configuration. */
-function fakeClient(
-    partNumberFor: (configuration: string) => string | undefined
-): OnshapeApi {
-    return {
-        get: (
-            _path: string,
-            options?: { query?: { configuration?: string } }
-        ) =>
+/**
+ * Mocks the parts endpoint so the part number is derived from the requested
+ * configuration. An empty configuration is the element's defaults.
+ */
+function mockParts(
+    partNumberFor: (configuration: Configuration) => string | undefined
+) {
+    return vi
+        .spyOn(PartsEndpoints, "getParts")
+        .mockImplementation((_client, _path, configuration) =>
             Promise.resolve([
-                {
-                    partId: "p",
-                    partNumber: partNumberFor(
-                        options?.query?.configuration ?? ""
-                    )
-                }
+                { partId: "p", partNumber: partNumberFor(configuration) }
             ])
-    } as unknown as OnshapeApi;
+        );
 }
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("computePartNumbers", () => {
     it("dedupes configurations resolving to the same part number (first-wins)", async () => {
@@ -58,48 +62,56 @@ describe("computePartNumbers", () => {
             enumParam("A", ["a1", "a2"]),
             enumParam("B", ["b1", "b2"])
         ];
-        // Part number depends only on A, so the two B values collapse.
-        const client = fakeClient((configuration) => {
-            const a = /A=([^;]*)/.exec(configuration)?.[1];
-            return a ? `PN-${a}` : undefined;
-        });
+        // The part number depends only on A, so the two B values collapse.
+        mockParts((configuration) => `PN-${configuration.A ?? "default"}`);
 
         const result = await computePartNumbers(
-            client,
+            CLIENT,
             PATH,
             ElementType.PART_STUDIO,
             params
         );
 
-        expect(result.capped).toBe(false);
-        expect(result.defaultPartNumber).toBeNull();
+        expect(result.buildIssues).toEqual([]);
         expect(result.partNumbers).toEqual({
             "PN-a1": { A: "a1", B: "b1" },
             "PN-a2": { A: "a2", B: "b1" }
         });
     });
 
+    it("records the default configuration's part number even when configurable", async () => {
+        mockParts((configuration) => `PN-${configuration.A ?? "default"}`);
+
+        const result = await computePartNumbers(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [enumParam("A", ["a1", "a2"])]
+        );
+
+        expect(result.defaultPartNumber).toBe("PN-default");
+    });
+
     it("drops configurations with no part number", async () => {
-        const params: ParameterObj[] = [enumParam("A", ["a1", "a2"])];
-        const client = fakeClient((configuration) =>
-            configuration.includes("A=a1") ? "PN-a1" : undefined
+        mockParts((configuration) =>
+            configuration.A === "a1" ? "PN-a1" : undefined
         );
 
         const result = await computePartNumbers(
-            client,
+            CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            params
+            [enumParam("A", ["a1", "a2"])]
         );
 
         expect(result.partNumbers).toEqual({ "PN-a1": { A: "a1" } });
     });
 
     it("stores the default part number for non-configurable insertables", async () => {
-        const client = fakeClient(() => "PN-default");
+        mockParts(() => "PN-default");
 
         const result = await computePartNumbers(
-            client,
+            CLIENT,
             PATH,
             ElementType.PART_STUDIO,
             []
@@ -109,24 +121,25 @@ describe("computePartNumbers", () => {
         expect(result.partNumbers).toEqual({});
     });
 
-    it("reports capped enumeration without building a map", async () => {
-        const params: ParameterObj[] = [
-            enumParam("A", ["a1", "a2"]),
-            enumParam("B", ["b1", "b2"]),
-            enumParam("C", ["c1", "c2"])
-        ];
-        const client = fakeClient(() => "PN");
+    it("flags capped enumeration but still records the default", async () => {
+        // 2^10 = 1024 combinations, past MAX_PART_NUMBER_CONFIGURATIONS.
+        const params: ParameterObj[] = Array.from({ length: 10 }, (_, i) =>
+            enumParam(`P${i}`, ["x", "y"])
+        );
+        mockParts(() => "PN-default");
 
         const result = await computePartNumbers(
-            client,
+            CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            params,
-            4
+            params
         );
 
-        expect(result.capped).toBe(true);
+        expect(result.buildIssues).toEqual([
+            { type: BuildIssueType.TOO_MANY_CONFIGURATIONS }
+        ]);
         expect(result.partNumbers).toEqual({});
+        expect(result.defaultPartNumber).toBe("PN-default");
     });
 });
 

@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import type { LibraryId, ThumbnailUrls } from "../../shared/types";
@@ -18,7 +19,7 @@ import { loadInsertable } from "./load-insertable";
 import {
     type InsertableToLoad,
     type LoadContext,
-    getOnshapeApiFromLoadContext,
+    getOnshapeApi,
     uploadThumbnailsStep
 } from "./load-utils";
 import type { InstancePath } from "../../shared/onshape-path";
@@ -75,8 +76,11 @@ export async function loadGroup(
         () => fetchStoredInsertables(ctx, groupId)
     );
 
-    // Select the insertables to (re)load. Ids for new ones are minted inside
-    // the step so replays reuse them; removal detection below is pure.
+    // Selection is synchronous but *not* deterministic: it mints an id for each
+    // new insertable. Those ids have to be persisted by a step, or a restart
+    // would mint different ones — the insertable row would keep the id from the
+    // first attempt (it upserts on groupId+elementId) while its configuration
+    // row was written against the new one, orphaning the foreign key.
     const insertablesToLoad = await ctx.step.do(
         `select-insertables-${groupId}`,
         () =>
@@ -89,6 +93,7 @@ export async function loadGroup(
                 )
             )
     );
+    // Removal detection is pure, so it needs no step.
     const removedInsertableIds = findRemovedInsertables(
         insertableTabs,
         storedInsertables
@@ -118,7 +123,7 @@ export async function loadGroup(
         async () =>
             uploadDocumentThumbnails(
                 ctx.env.THUMBNAILS,
-                await getOnshapeApiFromLoadContext(ctx),
+                await getOnshapeApi(ctx),
                 identity.versionPath
             )
     );
@@ -135,22 +140,21 @@ export async function loadGroup(
         };
 
         const db = getDb(ctx.env.DB);
-        const groupWrite = db
-            .update(group)
-            .set(reloaded)
-            .where(eq(group.id, groupId));
-        if (removedInsertableIds.length === 0) {
-            await groupWrite;
-            return;
+        const writes: BatchItem<"sqlite">[] = [
+            db.update(group).set(reloaded).where(eq(group.id, groupId))
+        ];
+        if (removedInsertableIds.length > 0) {
+            // Configurations and favorites follow deleted insertables via their
+            // cascading foreign keys.
+            writes.push(
+                db
+                    .delete(insertables)
+                    .where(inArray(insertables.id, removedInsertableIds))
+            );
         }
-        // Configurations and favorites follow deleted insertables via their
-        // cascading foreign keys.
-        await db.batch([
-            groupWrite,
-            db
-                .delete(insertables)
-                .where(inArray(insertables.id, removedInsertableIds))
-        ]);
+        await db.batch(
+            writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
+        );
     });
 
     return {
@@ -166,10 +170,7 @@ async function fetchInsertableTabs(
     ctx: LoadContext,
     versionPath: InstancePath
 ): Promise<OnshapeElement[]> {
-    const contents = await getContents(
-        await getOnshapeApiFromLoadContext(ctx),
-        versionPath
-    );
+    const contents = await getContents(await getOnshapeApi(ctx), versionPath);
     return parseInsertableTabs(contents);
 }
 
@@ -277,39 +278,41 @@ const VALID_ELEMENT_TYPES = new Set<string>([
 ]);
 
 /**
- * The part studio / assembly tabs we load, sorted in display (folder-tree) order.
+ * The part studio / assembly tabs we load, in the order they appear in the
+ * document's tab bar.
+ *
+ * `contents.elements` is unordered, and `contents.folders` is the folder tree
+ * that defines display order — so walk the tree and pick up each tab as it is
+ * encountered. Onshape has been known to omit a tab from the tree, so anything
+ * left over is appended rather than dropped.
  */
 export function parseInsertableTabs(
     contents: OnshapeDocumentContents
 ): OnshapeElement[] {
-    const tabs = contents.elements.filter((e) =>
-        VALID_ELEMENT_TYPES.has(e.elementType)
+    const remaining = new Map(
+        contents.elements
+            .filter((element) => VALID_ELEMENT_TYPES.has(element.elementType))
+            .map((element) => [element.id, element])
     );
 
-    const displayOrder = new Map(
-        orderedElementIds(contents).map((id, index) => [id, index])
-    );
-    const orderOf = (tab: OnshapeElement) =>
-        displayOrder.get(tab.id) ?? Infinity;
-    return tabs.sort((a, b) => orderOf(a) - orderOf(b));
+    const tabs: OnshapeElement[] = [];
+    for (const elementId of traverseFolders(contents.folders.groups)) {
+        const tab = remaining.get(elementId);
+        if (tab) {
+            tabs.push(tab);
+            remaining.delete(elementId);
+        }
+    }
+    return [...tabs, ...remaining.values()];
 }
 
-/**
- * Iterates over an Onshape folder tree, returning each elementId in the order they're encountered.
- */
-function* traverseEntry(entry: OnshapeFolderEntry): Generator<string> {
-    if (entry.btType === OnshapeFolderEntryType.GROUP) {
-        for (const child of entry.groups) yield* traverseEntry(child);
-    } else if (entry.btType === OnshapeFolderEntryType.ELEMENT) {
-        yield entry.elementId;
+/** Yields each elementId in a folder tree, depth-first, in display order. */
+function* traverseFolders(entries: OnshapeFolderEntry[]): Generator<string> {
+    for (const entry of entries) {
+        if (entry.btType === OnshapeFolderEntryType.GROUP) {
+            yield* traverseFolders(entry.groups);
+        } else if (entry.btType === OnshapeFolderEntryType.ELEMENT) {
+            yield entry.elementId;
+        }
     }
-}
-
-/** Element ids in display (folder-tree) order. */
-function orderedElementIds(contents: OnshapeDocumentContents): string[] {
-    const ids: string[] = [];
-    for (const entry of contents.folders.groups) {
-        ids.push(...traverseEntry(entry));
-    }
-    return ids;
 }

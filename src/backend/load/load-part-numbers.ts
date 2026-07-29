@@ -15,15 +15,25 @@ import {
     PartNumberMap
 } from "../../shared/configuration-models";
 import {
-    enumerateConfigurations,
-    MAX_PART_NUMBER_CONFIGURATIONS
-} from "../../shared/configuration-combinations";
-import { getPartNumber } from "../onshape-api/endpoints/parts";
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType,
+    clearBuildIssue
+} from "../../shared/build-checker";
+import { enumerateConfigurations } from "../../shared/configuration-combinations";
+import {
+    getAssemblyDefinition,
+    getParts
+} from "../onshape-api/endpoints/parts";
+import {
+    parseAssemblyPartNumber,
+    parsePartStudioPartNumber
+} from "../parse/parse-part-number";
 import {
     type InsertableToLoad,
     type LoadContext,
     ONSHAPE_STEP_RETRIES,
-    getOnshapeApiFromLoadContext
+    getOnshapeApi
 } from "./load-utils";
 
 /** Configurations fetched per workflow step. */
@@ -35,22 +45,65 @@ export interface PartNumberEntry {
     configuration: Configuration;
 }
 
-export interface LoadedPartNumbers {
+/** An insertable's indexed part numbers, and the issues indexing them raised. */
+export interface PartNumbers {
     /**
-     * The default configuration's part number, populated only for
-     * non-configurable insertables (configurable ones carry it inside
-     * `partNumbers`). `null` otherwise.
+     * The part number of the insertable's default configuration, whether or not
+     * it is configurable. Also present in `partNumbers` for configurable ones.
      */
     defaultPartNumber: string | null;
     /** Deduped map of part number -> the configuration that produces it. */
     partNumbers: PartNumberMap;
-    /** True when enumeration was capped; `partNumbers` is left empty. */
-    capped: boolean;
+    /** Issues raised while indexing, e.g. `TOO_MANY_CONFIGURATIONS`. */
+    buildIssues: BuildIssue[];
 }
 
-/** The empty result, used when part-number search is off or enumeration caps. */
-function noPartNumbers(capped = false): LoadedPartNumbers {
-    return { defaultPartNumber: null, partNumbers: {}, capped };
+/** The result for an insertable that isn't indexed. */
+export const NO_PART_NUMBERS: PartNumbers = {
+    defaultPartNumber: null,
+    partNumbers: {},
+    buildIssues: []
+};
+
+/**
+ * Replaces any part-number issues in `issues` with the ones `partNumbers`
+ * raised, leaving unrelated issues alone. Used by both the load and the toggle
+ * route so they record issues the same way.
+ */
+export function withPartNumberIssues(
+    issues: BuildIssue[],
+    partNumbers: PartNumbers
+): BuildIssue[] {
+    let merged = clearBuildIssue(
+        issues,
+        BuildIssueType.TOO_MANY_CONFIGURATIONS
+    );
+    for (const issue of partNumbers.buildIssues) {
+        merged = addBuildIssue(merged, issue);
+    }
+    return merged;
+}
+
+/**
+ * Returns the part number Onshape reports for an element in a given
+ * configuration, or `null` if none is set. A part studio insertable resolves to
+ * a single part, so its part number comes from that part; an assembly uses the
+ * root assembly's part number.
+ */
+export async function getPartNumber(
+    client: OnshapeApi,
+    path: ElementPath,
+    elementType: ElementType,
+    configuration: Configuration
+): Promise<string | null> {
+    if (elementType === ElementType.ASSEMBLY) {
+        return parseAssemblyPartNumber(
+            await getAssemblyDefinition(client, path, configuration)
+        );
+    }
+    return parsePartStudioPartNumber(
+        await getParts(client, path, configuration)
+    );
 }
 
 /** Splits configurations into fixed-size batches, one per workflow step. */
@@ -67,8 +120,7 @@ export function batchConfigurations(
 
 /**
  * Folds fetched entries into a map keyed by part number. First-wins, so
- * configurations resolving to the same part collapse onto the earliest
- * (default-preferring) one.
+ * configurations resolving to the same part collapse onto the earliest one.
  */
 export function mergePartNumbers(batches: PartNumberEntry[][]): PartNumberMap {
     const partNumbers: PartNumberMap = {};
@@ -105,47 +157,61 @@ export async function fetchPartNumbers(
 }
 
 /**
- * Computes an insertable's part numbers in a single pass, without workflow
- * steps. Used by the toggle route, which runs in a request and has no `step`.
+ * The shape both indexing paths share: the default configuration's part number,
+ * then — for a configurable insertable — every combination, batched.
+ * `fetchDefault` and `fetchBatch` decide whether those run as workflow steps.
  */
-export async function computePartNumbers(
-    client: OnshapeApi,
-    path: ElementPath,
-    elementType: ElementType,
+async function collectPartNumbers(
     parameters: ParameterObj[],
-    cap: number = MAX_PART_NUMBER_CONFIGURATIONS
-): Promise<LoadedPartNumbers> {
-    // Non-configurable insertables have a single part number, stored on the
-    // insertable itself (there is no configurations row to hold a map).
+    fetchDefault: () => Promise<string | null>,
+    fetchBatch: (
+        batch: Configuration[],
+        index: number
+    ) => Promise<PartNumberEntry[]>
+): Promise<PartNumbers> {
+    // An empty configuration tells Onshape to apply every default.
+    const defaultPartNumber = await fetchDefault();
     if (parameters.length === 0) {
+        return { defaultPartNumber, partNumbers: {}, buildIssues: [] };
+    }
+
+    const { configurations, capped } = enumerateConfigurations(parameters);
+    if (capped) {
         return {
-            defaultPartNumber: await getPartNumber(
-                client,
-                path,
-                elementType,
-                {}
-            ),
+            defaultPartNumber,
             partNumbers: {},
-            capped: false
+            buildIssues: [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }]
         };
     }
 
-    const { configurations, capped } = enumerateConfigurations(parameters, cap);
-    if (capped) {
-        return noPartNumbers(true);
-    }
-
-    const entries = await fetchPartNumbers(
-        client,
-        path,
-        elementType,
+    const batches: PartNumberEntry[][] = [];
+    for (const [index, batch] of batchConfigurations(
         configurations
-    );
+    ).entries()) {
+        batches.push(await fetchBatch(batch, index));
+    }
     return {
-        defaultPartNumber: null,
-        partNumbers: mergePartNumbers([entries]),
-        capped: false
+        defaultPartNumber,
+        partNumbers: mergePartNumbers(batches),
+        buildIssues: []
     };
+}
+
+/**
+ * Computes an insertable's part numbers in a single pass, without workflow
+ * steps. Used by the toggle route, which runs in a request and has no `step`.
+ */
+export function computePartNumbers(
+    client: OnshapeApi,
+    path: ElementPath,
+    elementType: ElementType,
+    parameters: ParameterObj[]
+): Promise<PartNumbers> {
+    return collectPartNumbers(
+        parameters,
+        () => getPartNumber(client, path, elementType, {}),
+        (batch) => fetchPartNumbers(client, path, elementType, batch)
+    );
 }
 
 /**
@@ -156,54 +222,41 @@ export async function computePartNumbers(
  * A batch that exhausts its retries throws, failing the insertable rather than
  * saving a half-built map; the stored row keeps its previous part numbers.
  */
-export async function loadPartNumbers(
+export function loadPartNumbers(
     ctx: LoadContext,
     toLoad: InsertableToLoad,
     parameters: ParameterObj[]
-): Promise<LoadedPartNumbers> {
+): Promise<PartNumbers> {
     if (!toLoad.searchPartNumbers) {
-        return noPartNumbers();
+        return Promise.resolve(NO_PART_NUMBERS);
     }
 
     const { insertableId, path, elementType } = toLoad;
-    const onshapeApi = () => getOnshapeApiFromLoadContext(ctx);
-
-    if (parameters.length === 0) {
-        const defaultPartNumber = await ctx.step.do(
-            `part-number-${insertableId}`,
-            { retries: ONSHAPE_STEP_RETRIES },
-            async () => getPartNumber(await onshapeApi(), path, elementType, {})
-        );
-        return { defaultPartNumber, partNumbers: {}, capped: false };
-    }
-
-    const { configurations, capped } = enumerateConfigurations(parameters);
-    if (capped) {
-        return noPartNumbers(true);
-    }
-
-    const batches: PartNumberEntry[][] = [];
-    for (const [index, batch] of batchConfigurations(
-        configurations
-    ).entries()) {
-        batches.push(
-            await ctx.step.do(
+    return collectPartNumbers(
+        parameters,
+        () =>
+            ctx.step.do(
+                `part-number-${insertableId}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                async () =>
+                    getPartNumber(
+                        await getOnshapeApi(ctx),
+                        path,
+                        elementType,
+                        {}
+                    )
+            ),
+        (batch, index) =>
+            ctx.step.do(
                 `part-numbers-${insertableId}-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
                 async () =>
                     fetchPartNumbers(
-                        await onshapeApi(),
+                        await getOnshapeApi(ctx),
                         path,
                         elementType,
                         batch
                     )
             )
-        );
-    }
-
-    return {
-        defaultPartNumber: null,
-        partNumbers: mergePartNumbers(batches),
-        capped: false
-    };
+    );
 }

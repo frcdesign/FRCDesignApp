@@ -59,7 +59,7 @@ async function applySave(
         defaultPartNumber,
         buildIssues: []
     };
-    await saveInsertable(db, toLoad, reloaded, parameters, partNumbers);
+    await saveInsertable(db, toLoad, reloaded, { parameters, partNumbers });
 }
 
 describe("saveInsertable", () => {

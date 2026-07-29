@@ -11,14 +11,13 @@ import {
     type ParameterObj
 } from "../../shared/configuration-models";
 import {
-    addBuildIssue,
-    BuildIssueType,
-    clearBuildIssue
-} from "../../shared/build-checker";
-import {
     computePartNumbers,
-    type LoadedPartNumbers
+    NO_PART_NUMBERS,
+    type PartNumbers,
+    withPartNumberIssues
 } from "../load/load-part-numbers";
+import { type OnshapeApi } from "../onshape-api/onshape-api";
+import { ElementType } from "../../shared/types";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -142,58 +141,29 @@ insertableRoutes.post(
         if (!row)
             throw new HTTPException(404, { message: "Insertable not found" });
 
-        // Compute before committing anything: if this throws, the flag stays
-        // off rather than being enabled with nothing indexed behind it. The
-        // error reaches the client via the app's onError handler.
-        let computed: LoadedPartNumbers = {
-            defaultPartNumber: null,
-            partNumbers: {},
-            capped: false
-        };
-        if (body.searchPartNumbers) {
-            const sourcePath: ElementPath = {
-                documentId: row.documentId,
-                instanceId: row.versionId,
-                instanceType: "v",
-                elementId: row.elementId
-            };
-            const configRow = await db
-                .select({ parameters: configurations.parameters })
-                .from(configurations)
-                .where(eq(configurations.id, insertableId))
-                .get();
-            computed = await computePartNumbers(
-                await c.var.getOnshapeApi(),
-                sourcePath,
-                row.elementType,
-                configRow?.parameters ?? []
-            );
-        }
-        const { defaultPartNumber, partNumbers } = computed;
-
-        let buildIssues = clearBuildIssue(
-            row.buildIssues,
-            BuildIssueType.TOO_MANY_CONFIGURATIONS
-        );
-        if (computed.capped) {
-            buildIssues = addBuildIssue(buildIssues, {
-                type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-            });
-        }
+        // Index before committing anything: if this throws, the flag stays off
+        // rather than being enabled with nothing indexed behind it. The error
+        // reaches the client via the app's onError handler.
+        const indexed = body.searchPartNumbers
+            ? await indexPartNumbers(await c.var.getOnshapeApi(), db, {
+                  insertableId,
+                  ...row
+              })
+            : NO_PART_NUMBERS;
 
         await db.batch([
             db
                 .update(insertables)
                 .set({
                     searchPartNumbers: body.searchPartNumbers,
-                    defaultPartNumber,
-                    buildIssues
+                    defaultPartNumber: indexed.defaultPartNumber,
+                    buildIssues: withPartNumberIssues(row.buildIssues, indexed)
                 })
                 .where(eq(insertables.id, insertableId)),
             // No-op when the insertable has no configuration row.
             db
                 .update(configurations)
-                .set({ partNumbers })
+                .set({ partNumbers: indexed.partNumbers })
                 .where(eq(configurations.id, insertableId))
         ]);
 
@@ -203,6 +173,42 @@ insertableRoutes.post(
         return c.json({ success: true });
     }
 );
+
+/**
+ * Indexes an insertable's part numbers for the toggle route, reading the
+ * parameters it needs. Runs in a request, so it uses the unbatched
+ * {@link computePartNumbers} rather than the workflow's stepped loader.
+ */
+async function indexPartNumbers(
+    client: OnshapeApi,
+    db: Db,
+    insertable: {
+        insertableId: string;
+        documentId: string;
+        versionId: string;
+        elementId: string;
+        elementType: ElementType;
+    }
+): Promise<PartNumbers> {
+    const sourcePath: ElementPath = {
+        documentId: insertable.documentId,
+        instanceId: insertable.versionId,
+        instanceType: "v",
+        elementId: insertable.elementId
+    };
+    const configRow = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertable.insertableId))
+        .get();
+
+    return computePartNumbers(
+        client,
+        sourcePath,
+        insertable.elementType,
+        configRow?.parameters ?? []
+    );
+}
 
 /** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
 insertableRoutes.post(

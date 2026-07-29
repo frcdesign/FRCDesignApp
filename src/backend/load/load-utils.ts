@@ -14,9 +14,7 @@ export interface LoadContext {
     step: WorkflowStep;
 }
 
-export function getOnshapeApiFromLoadContext(
-    ctx: LoadContext
-): Promise<OnshapeApi> {
+export function getOnshapeApi(ctx: LoadContext): Promise<OnshapeApi> {
     return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
 }
 

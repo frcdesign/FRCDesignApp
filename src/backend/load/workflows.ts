@@ -14,23 +14,20 @@ import {
 } from "../library-data";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { group, libraries } from "../../shared/schema";
-import { type LoadContext, getOnshapeApiFromLoadContext } from "./load-utils";
+import { type LoadContext, getOnshapeApi } from "./load-utils";
 import { loadGroup } from "./load-group";
 
+/**
+ * Workflow parameters must be JSON-serializable, so these carry a `sessionId`
+ * rather than an `OnshapeApi`: the client is a class instance holding a token
+ * refresh callback, which cannot be serialized. Each step rebuilds it from the
+ * session (see `getOnshapeApi`), which also picks up a token
+ * refreshed while the instance was sleeping or retrying.
+ */
 export interface LoadLibraryParams {
     libraryId: LibraryId;
     sessionId: string;
     forceReload?: boolean;
-}
-
-export interface AddGroupParams {
-    /** The new group's id, minted by the route. */
-    groupId: string;
-    documentId: string;
-    libraryId: LibraryId;
-    sessionId: string;
-    /** An existing group to place the new group after. */
-    selectedGroupId?: string;
 }
 
 export type GroupResult =
@@ -54,8 +51,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<LoadLibraryParams>,
         step: WorkflowStep
     ): Promise<GroupResult[]> {
-        const { libraryId, sessionId } = event.payload;
-        const forceReload = event.payload.forceReload ?? false;
+        const { libraryId, sessionId, forceReload = false } = event.payload;
         const ctx: LoadContext = { env: this.env, sessionId, step };
 
         const groups = await step.do("list-groups", async () => {
@@ -77,8 +73,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     const document = await step.do(
                         `document-${groupId}`,
                         async () => {
-                            const onshapeApi =
-                                await getOnshapeApiFromLoadContext(ctx);
+                            const onshapeApi = await getOnshapeApi(ctx);
                             return getDocument(onshapeApi, { documentId });
                         }
                     );
@@ -108,6 +103,17 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
     }
 }
 
+/** See {@link LoadLibraryParams} for why this carries a `sessionId`. */
+export interface AddGroupParams {
+    /** The new group's id, minted by the route. */
+    groupId: string;
+    documentId: string;
+    libraryId: LibraryId;
+    sessionId: string;
+    /** An existing group to place the new group after. */
+    selectedGroupId?: string;
+}
+
 /**
  * Adds an Onshape document to a library by inserting and then loading it.
  */
@@ -129,14 +135,14 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         let result: GroupResult;
         try {
             const document = await step.do("document", async () => {
-                const onshapeApi = await getOnshapeApiFromLoadContext(ctx);
+                const onshapeApi = await getOnshapeApi(ctx);
                 return getDocument(onshapeApi, {
                     documentId: params.documentId
                 });
             });
 
-            await step.do("create-shell", () =>
-                this.createShell(params, document.name)
+            await step.do("create-shell-group", () =>
+                this.createShellGroup(params, document.name)
             );
 
             const loaded = await loadGroup(
@@ -157,9 +163,13 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         return result;
     }
 
-    private async createShell(
+    /**
+     * Writes the group row the load then fills in, creating the library if this
+     * is its first group.
+     */
+    private async createShellGroup(
         params: AddGroupParams,
-        docName: string
+        groupName: string
     ): Promise<void> {
         const db = getDb(this.env.DB);
         await db
@@ -178,7 +188,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
                 id: params.groupId,
                 documentId: params.documentId,
                 libraryId: params.libraryId,
-                name: docName,
+                name: groupName,
                 // Placeholder value so failed loads can be retried
                 versionId: "placeholder",
                 sortOrder

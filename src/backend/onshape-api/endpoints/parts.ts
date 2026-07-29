@@ -3,12 +3,7 @@ import { ElementPath, toElementApiPath } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
 import { encodeConfigurationForQuery } from "../../../shared/configuration-utils";
 import { Configuration } from "../../../shared/configuration-models";
-import { ElementType } from "../../../shared/types";
 import type { OnshapeAssemblyDefinition, OnshapePart } from "../onshape-types";
-import {
-    parseAssemblyPartNumber,
-    parsePartStudioPartNumber
-} from "../../parse/parse-part-number";
 
 /**
  * Builds the `configuration` query for an element request. The value is the
@@ -41,27 +36,4 @@ export function getAssemblyDefinition(
     return client.get(apiPath("assemblies", elementPath, toElementApiPath), {
         query: configurationQuery(configuration)
     });
-}
-
-/**
- * Returns the part number Onshape reports for an element in a given
- * configuration, or `null` if none is set. A part studio insertable resolves to
- * a single part, so its part number is taken from that part; an assembly uses
- * the root assembly's part number. Extraction lives in
- * `parse/parse-part-number.ts`.
- */
-export async function getPartNumber(
-    client: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType,
-    configuration: Configuration
-): Promise<string | null> {
-    if (elementType === ElementType.ASSEMBLY) {
-        return parseAssemblyPartNumber(
-            await getAssemblyDefinition(client, elementPath, configuration)
-        );
-    }
-    return parsePartStudioPartNumber(
-        await getParts(client, elementPath, configuration)
-    );
 }

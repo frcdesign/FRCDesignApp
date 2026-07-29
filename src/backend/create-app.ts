@@ -53,10 +53,10 @@ export function createApp(makeServices: AppServicesFactory) {
         // Surface an Onshape rate limit as a 429 the client can retry, rather
         // than blocking the request thread waiting it out.
         if (err instanceof OnshapeRateLimitError) {
-            c.header("Retry-After", String(err.retryAfterSeconds));
             return c.json(
                 {
-                    error: "Onshape rate limit reached. Please try again shortly."
+                    error: "Onshape rate limit reached. Please try again shortly.",
+                    retryAfterSeconds: err.retryAfterSeconds
                 },
                 429
             );

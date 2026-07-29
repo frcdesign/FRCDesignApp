@@ -130,6 +130,15 @@ export type Configuration = Record<string, string>;
 export type PartNumberMap = Record<string, Configuration>;
 
 /**
+ * An insertable's stored configuration: the parameters it exposes and the part
+ * numbers its configurations resolve to. Mirrors the `configurations` row.
+ */
+export interface InsertableConfiguration {
+    parameters: ParameterObj[];
+    partNumbers: PartNumberMap;
+}
+
+/**
  * Custom data collected from the current tab the user has open.
  */
 export interface UnitInfo {

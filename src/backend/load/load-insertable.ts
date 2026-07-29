@@ -1,14 +1,10 @@
 import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../db";
 import type {
-    ParameterObj,
-    PartNumberMap
+    InsertableConfiguration,
+    ParameterObj
 } from "../../shared/configuration-models";
-import {
-    addBuildIssue,
-    type BuildIssue,
-    BuildIssueType
-} from "../../shared/build-checker";
+import type { BuildIssue } from "../../shared/build-checker";
 import type {
     ElementType,
     FastenInfo,
@@ -22,11 +18,11 @@ import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
-import { loadPartNumbers } from "./load-part-numbers";
+import { loadPartNumbers, withPartNumberIssues } from "./load-part-numbers";
 import {
     type InsertableToLoad,
     type LoadContext,
-    getOnshapeApiFromLoadContext,
+    getOnshapeApi,
     uploadThumbnailsStep
 } from "./load-utils";
 
@@ -69,18 +65,11 @@ export async function loadInsertable(
         async () =>
             uploadThumbnails(
                 ctx.env.THUMBNAILS,
-                await getOnshapeApiFromLoadContext(ctx),
+                await getOnshapeApi(ctx),
                 path,
                 toLoad.microversionId
             )
     );
-
-    let buildIssues = checkInsertable({ vendors, thumbnailUrls });
-    if (partNumbers.capped) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-        });
-    }
 
     const reloaded: ReloadedFields = {
         name: toLoad.name,
@@ -91,17 +80,17 @@ export async function loadInsertable(
         thumbnailUrls,
         fastenInfo,
         defaultPartNumber: partNumbers.defaultPartNumber,
-        buildIssues
+        buildIssues: withPartNumberIssues(
+            checkInsertable({ vendors, thumbnailUrls }),
+            partNumbers
+        )
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(
-            getDb(ctx.env.DB),
-            toLoad,
-            reloaded,
+        saveInsertable(getDb(ctx.env.DB), toLoad, reloaded, {
             parameters,
-            partNumbers.partNumbers
-        )
+            partNumbers: partNumbers.partNumbers
+        })
     );
 }
 
@@ -114,7 +103,7 @@ function parseConfigurationStep(
 ): Promise<ParameterObj[]> {
     return ctx.step.do(`config-${toLoad.insertableId}`, async () => {
         const onshapeConfiguration = await getConfiguration(
-            await getOnshapeApiFromLoadContext(ctx),
+            await getOnshapeApi(ctx),
             toLoad.path
         );
         return parseOnshapeConfiguration(onshapeConfiguration);
@@ -133,7 +122,7 @@ async function parseFastenInfoStep(
     }
     return ctx.step.do(`fasten-${toLoad.insertableId}`, async () =>
         parseFastenInfo(
-            await getOnshapeApiFromLoadContext(ctx),
+            await getOnshapeApi(ctx),
             toLoad.path,
             toLoad.elementType
         )
@@ -150,8 +139,7 @@ export async function saveInsertable(
     db: Db,
     toLoad: InsertableToLoad,
     reloaded: ReloadedFields,
-    parameters: ParameterObj[],
-    partNumbers: PartNumberMap
+    configuration: InsertableConfiguration
 ): Promise<void> {
     const insertableWrite = db
         .insert(insertables)
@@ -172,17 +160,17 @@ export async function saveInsertable(
         });
 
     let configurationWrite;
-    if (parameters.length === 0) {
+    if (configuration.parameters.length === 0) {
         configurationWrite = db
             .delete(configurations)
             .where(eq(configurations.id, toLoad.insertableId));
     } else {
         configurationWrite = db
             .insert(configurations)
-            .values({ id: toLoad.insertableId, parameters, partNumbers })
+            .values({ id: toLoad.insertableId, ...configuration })
             .onConflictDoUpdate({
                 target: configurations.id,
-                set: { parameters, partNumbers }
+                set: configuration
             });
     }
 
