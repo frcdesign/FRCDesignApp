@@ -296,7 +296,12 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
 
     return (
         <Group gap="sm" align="center" mt="sm">
-            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+            <Text
+                size="sm"
+                style={{ whiteSpace: "nowrap", flex: 0 }}
+                component="label"
+                htmlFor={parameter.id}
+            >
                 {parameter.name}
             </Text>
             <Select
@@ -306,11 +311,11 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
                     label: option.name
                 }))}
                 value={currentOption.id}
+                style={{ flex: 1 }}
                 allowDeselect={false}
                 checkIconPosition="right"
                 maxDropdownHeight={250}
                 comboboxProps={{ withinPortal: true }}
-                style={{ flex: 1 }}
                 onChange={(newValue) => {
                     if (newValue !== null) {
                         onValueChange(newValue);
@@ -327,7 +332,12 @@ function BooleanParameter(
     const { parameter, value, onValueChange } = props;
     return (
         <Group gap="sm" align="center" mt="sm">
-            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+            <Text
+                size="sm"
+                style={{ whiteSpace: "nowrap", flex: 0 }}
+                component="label"
+                htmlFor={parameter.id}
+            >
                 {parameter.name}
             </Text>
             <Checkbox
@@ -347,7 +357,12 @@ function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
         <Group gap="sm" align="center" mt="sm">
-            <Text size="sm" style={{ minWidth: "120px", flexShrink: 0 }}>
+            <Text
+                size="sm"
+                style={{ whiteSpace: "nowrap", flex: 0 }}
+                component="label"
+                htmlFor={parameter.id}
+            >
                 {parameter.name}
             </Text>
             <TextInput
