@@ -39,17 +39,6 @@ export function getVersion(
     );
 }
 
-export function getLatestVersionPath(
-    client: OnshapeApi,
-    documentPath: DocumentPath
-): Promise<InstancePath> {
-    return getLatestVersion(client, documentPath).then((v) => ({
-        ...documentPath,
-        instanceId: v.id,
-        instanceType: "v" as const
-    }));
-}
-
 export function getLatestVersion(
     client: OnshapeApi,
     documentPath: DocumentPath
@@ -57,6 +46,14 @@ export function getLatestVersion(
     return getVersions(client, documentPath).then(
         (versions) => versions[versions.length - 1]
     );
+}
+
+/** Fetches the id of the most recently created version of a document. */
+export function getLatestVersionId(
+    client: OnshapeApi,
+    documentPath: DocumentPath
+): Promise<string> {
+    return getLatestVersion(client, documentPath).then((v) => v.id);
 }
 
 /** Creates a new version of a document from a given instance. */

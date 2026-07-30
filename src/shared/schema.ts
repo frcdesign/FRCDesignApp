@@ -74,7 +74,7 @@ export const insertables = sqliteTable(
         microversionId: text("microversion_id").notNull(),
         isVisible: integer("is_visible", { mode: "boolean" })
             .notNull()
-            .default(true),
+            .default(false),
         isOpenComposite: integer("is_open_composite", { mode: "boolean" })
             .notNull()
             .default(false),

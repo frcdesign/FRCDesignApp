@@ -22,7 +22,7 @@ import { loadPartNumbers, withPartNumberIssues } from "./load-part-numbers";
 import {
     type InsertableToLoad,
     type LoadContext,
-    getOnshapeApi,
+    getOnshapeApiFromContext,
     uploadThumbnailsStep
 } from "./load-utils";
 
@@ -65,7 +65,7 @@ export async function loadInsertable(
         async () =>
             uploadThumbnails(
                 ctx.env.THUMBNAILS,
-                await getOnshapeApi(ctx),
+                await getOnshapeApiFromContext(ctx),
                 path,
                 toLoad.microversionId
             )
@@ -103,7 +103,7 @@ function parseConfigurationStep(
 ): Promise<ConfigurationParameter[]> {
     return ctx.step.do(`config-${toLoad.insertableId}`, async () => {
         const onshapeConfiguration = await getConfiguration(
-            await getOnshapeApi(ctx),
+            await getOnshapeApiFromContext(ctx),
             toLoad.path
         );
         return parseOnshapeConfiguration(onshapeConfiguration);
@@ -122,7 +122,7 @@ async function parseFastenInfoStep(
     }
     return ctx.step.do(`fasten-${toLoad.insertableId}`, async () =>
         parseFastenInfo(
-            await getOnshapeApi(ctx),
+            await getOnshapeApiFromContext(ctx),
             toLoad.path,
             toLoad.elementType
         )
@@ -152,6 +152,7 @@ export async function saveInsertable(
             sortOrder: toLoad.sortOrder,
             supportsFasten: toLoad.supportsFasten,
             searchPartNumbers: toLoad.searchPartNumbers,
+            isVisible: toLoad.isVisible,
             ...reloaded
         })
         .onConflictDoUpdate({

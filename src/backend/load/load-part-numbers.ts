@@ -33,7 +33,7 @@ import {
     type InsertableToLoad,
     type LoadContext,
     ONSHAPE_STEP_RETRIES,
-    getOnshapeApi
+    getOnshapeApiFromContext
 } from "./load-utils";
 
 /** Configurations fetched per workflow step. */
@@ -240,7 +240,7 @@ export function loadPartNumbers(
                 { retries: ONSHAPE_STEP_RETRIES },
                 async () =>
                     getPartNumber(
-                        await getOnshapeApi(ctx),
+                        await getOnshapeApiFromContext(ctx),
                         path,
                         elementType,
                         {}
@@ -252,7 +252,7 @@ export function loadPartNumbers(
                 { retries: ONSHAPE_STEP_RETRIES },
                 async () =>
                     fetchPartNumbers(
-                        await getOnshapeApi(ctx),
+                        await getOnshapeApiFromContext(ctx),
                         path,
                         elementType,
                         batch

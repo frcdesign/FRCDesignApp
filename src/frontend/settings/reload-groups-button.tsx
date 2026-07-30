@@ -54,7 +54,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             children:
                 "Are you sure you want to reload" +
                 (reloadAll ? " all documents?" : " outdated documents?"),
-            labels: { confirm: "Reload", cancel: "Cancel" },
+            labels: { confirm: "Reload documents", cancel: "Cancel" },
             confirmProps: {
                 variant: "light",
                 color: reloadAll ? "red" : "blue"
@@ -71,7 +71,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             onClick={handleClick}
             loading={mutation.isPending}
         >
-            Reload
+            Reload documents
         </Button>
     );
 }

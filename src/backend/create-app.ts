@@ -12,6 +12,15 @@ import { configurationRoutes } from "./routes/configurations";
 import { buildStatusRoutes } from "./routes/build-status";
 
 /**
+ * Returns the relative URL of the given requestUrl.
+ * Used as a workaround to get the current URL without breaking in local dev due to Cloudflare stripping the port number.
+ */
+function getRelativeUrl(requestUrl: string) {
+    const { pathname, search } = new URL(requestUrl);
+    return pathname + search;
+}
+
+/**
  * Composition root for the Hono app. The injected `makeServices` factory is
  * bound onto each request's context so handlers can call `c.var.getOnshapeApi()`,
  * `c.var.getUserId()`, and `c.var.getAccessLevel()` directly.
@@ -41,7 +50,8 @@ export function createApp(makeServices: AppServicesFactory) {
     // `/init` is the auth-gated entry point
     app.on("GET", "/init", async (c) => {
         if (!(await isAuthenticated(c))) {
-            const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}&sessionCompanyId=${getSessionCompanyId(c)}`;
+            const currentUrl = getRelativeUrl(c.req.url);
+            const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
             return c.redirect(signInUrl);
         }
         // Forward to normal Cloudflare

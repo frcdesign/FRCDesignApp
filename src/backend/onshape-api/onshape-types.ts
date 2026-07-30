@@ -192,18 +192,11 @@ export enum OnshapeFolderEntryType {
     ELEMENT = "BTDocumentElementReference-2484"
 }
 
-/** A lightweight reference to a document's most recently created version. */
-export interface OnshapeRecentVersion {
-    id: string;
-    name: string;
-}
-
 /** GET /documents/{did} (only the fields we read). */
 export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
-    recentVersion: OnshapeRecentVersion;
 }
 
 /** A folder (group) node in the document contents tree. */

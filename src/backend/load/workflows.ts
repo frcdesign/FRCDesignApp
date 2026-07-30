@@ -13,8 +13,9 @@ import {
     rebuildSearchDb
 } from "../library-data";
 import { getDocument } from "../onshape-api/endpoints/documents";
+import { getLatestVersionId } from "../onshape-api/endpoints/versions";
 import { group, libraries } from "../../shared/schema";
-import { type LoadContext, getOnshapeApi } from "./load-utils";
+import { type LoadContext, getOnshapeApiFromContext } from "./load-utils";
 import { loadGroup } from "./load-group";
 
 /**
@@ -73,14 +74,22 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     const document = await step.do(
                         `document-${groupId}`,
                         async () => {
-                            const onshapeApi = await getOnshapeApi(ctx);
+                            const onshapeApi =
+                                await getOnshapeApiFromContext(ctx);
                             return getDocument(onshapeApi, { documentId });
                         }
                     );
-                    if (
-                        group.versionId === document.recentVersion.id &&
-                        !forceReload
-                    ) {
+                    const versionId = await step.do(
+                        `version-${groupId}`,
+                        async () => {
+                            const onshapeApi =
+                                await getOnshapeApiFromContext(ctx);
+                            return getLatestVersionId(onshapeApi, {
+                                documentId
+                            });
+                        }
+                    );
+                    if (group.versionId === versionId && !forceReload) {
                         return { groupId, status: "skipped" };
                     }
                     const loaded = await loadGroup(
@@ -88,6 +97,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                         libraryId,
                         groupId,
                         document,
+                        versionId,
                         forceReload
                     );
                     return { groupId, status: "reloaded", ...loaded };
@@ -135,8 +145,14 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         let result: GroupResult;
         try {
             const document = await step.do("document", async () => {
-                const onshapeApi = await getOnshapeApi(ctx);
+                const onshapeApi = await getOnshapeApiFromContext(ctx);
                 return getDocument(onshapeApi, {
+                    documentId: params.documentId
+                });
+            });
+            const versionId = await step.do("version", async () => {
+                const onshapeApi = await getOnshapeApiFromContext(ctx);
+                return getLatestVersionId(onshapeApi, {
                     documentId: params.documentId
                 });
             });
@@ -150,6 +166,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
                 params.libraryId,
                 params.groupId,
                 document,
+                versionId,
                 false
             );
             result = { groupId: params.groupId, status: "created", ...loaded };

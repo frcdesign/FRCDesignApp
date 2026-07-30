@@ -196,8 +196,7 @@ describe("POST /group", () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             id: "doc-new",
-            name: "New Doc",
-            recentVersion: { id: "inst-new", name: "v" }
+            name: "New Doc"
         });
         const createSpy = vi
             .spyOn(env.ADD_GROUP_WORKFLOW, "create")
@@ -235,8 +234,7 @@ describe("POST /group", () => {
         await seedGroup(db, TEST_GROUP_ID); // documentId "doc-test-group"
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             id: "doc-test-group",
-            name: "Dup",
-            recentVersion: { id: "inst-1", name: "v" }
+            name: "Dup"
         });
         const createSpy = vi
             .spyOn(env.ADD_GROUP_WORKFLOW, "create")

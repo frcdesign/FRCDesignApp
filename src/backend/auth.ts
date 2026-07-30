@@ -29,12 +29,8 @@ export async function getOnshapeApiFromSessionId(
     const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
-            .refreshAccessToken(
-                companyTokenEndpoint(tokens.companyId),
-                tokens.refreshToken,
-                []
-            )
-            .then((refreshed) => makeAuthTokens(refreshed, tokens.companyId));
+            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
+            .then((refreshed) => makeAuthTokens(refreshed));
 
         void saveTokens(kv, sessionId, newTokens);
 
@@ -56,7 +52,7 @@ export function getSessionCompanyId(c: AppContext) {
 
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
-        const onshapeApi = await getOnshapeApi(c);
+        const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
         const tokenCompanyId = sessionInfo.company?.id ?? "cad";
         const requestCompanyId = getSessionCompanyId(c);
@@ -87,16 +83,6 @@ function getOauthClient(): OAuth2Client {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-/**
- * The OAuth token endpoint, scoped to a company when one is known. Onshape reads
- * `company_id` as a query parameter and returns a company-scoped access token.
- */
-function companyTokenEndpoint(companyId?: string): string {
-    return companyId
-        ? `${TOKEN_ENDPOINT}?company_id=${encodeURIComponent(companyId)}`
-        : TOKEN_ENDPOINT;
-}
-
 export const authRoutes = getApp();
 
 authRoutes.get("/sign-in", async (c) => {
@@ -115,10 +101,7 @@ authRoutes.get("/sign-in", async (c) => {
         });
     }
 
-    // Onshape passes the company the session is scoped to; absent means the
-    // personal "cad" context.
     const companyId = query.sessionCompanyId ?? "cad";
-
     const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
@@ -141,13 +124,16 @@ export async function doSignIn(
 
     const state = generateState();
 
-    // Store the state, redirectUrl, and company so the callback can mint a
-    // company-scoped token.
-    await initSession(c, { state, redirectUrl, companyId });
+    // Store the state and redirectUrl so the callback can complete sign-in.
+    await initSession(c, { state, redirectUrl });
 
-    return oauthClient
-        .createAuthorizationURL(AUTH_ENDPOINT, state, [])
-        .toString();
+    const authorizationUrl = oauthClient.createAuthorizationURL(
+        AUTH_ENDPOINT,
+        state,
+        []
+    );
+    authorizationUrl.searchParams.set("company_id", companyId);
+    return authorizationUrl.toString();
 }
 
 export async function doCallback(c: AppContext): Promise<Response> {
@@ -177,12 +163,8 @@ export async function doCallback(c: AppContext): Promise<Response> {
     const oauthClient = getOauthClient();
 
     await oauthClient
-        .validateAuthorizationCode(
-            companyTokenEndpoint(session.companyId),
-            search.code,
-            null
-        )
-        .then((tokens) => makeAuthTokens(tokens, session.companyId))
+        .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
+        .then((tokens) => makeAuthTokens(tokens))
         .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
@@ -204,8 +186,6 @@ function isSafari(request: Request): boolean {
 interface OAuthSessionData {
     state: string;
     redirectUrl: string;
-    /** Onshape company the token should be scoped to; "cad" for a personal context. */
-    companyId: string;
 }
 
 async function getSession(
@@ -246,16 +226,13 @@ interface AuthTokens {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
-    /** Company the token is scoped to, carried forward so refreshes keep the scope. */
-    companyId?: string;
 }
 
-function makeAuthTokens(tokens: OAuth2Tokens, companyId?: string): AuthTokens {
+function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
     return {
         accessToken: tokens.accessToken(),
         refreshToken: tokens.refreshToken(),
-        expiresAt: tokens.accessTokenExpiresAt().getTime(),
-        companyId
+        expiresAt: tokens.accessTokenExpiresAt().getTime()
     };
 }
 

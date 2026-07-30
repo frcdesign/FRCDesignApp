@@ -14,7 +14,9 @@ export interface LoadContext {
     step: WorkflowStep;
 }
 
-export function getOnshapeApi(ctx: LoadContext): Promise<OnshapeApi> {
+export function getOnshapeApiFromContext(
+    ctx: LoadContext
+): Promise<OnshapeApi> {
     return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
 }
 
@@ -34,6 +36,7 @@ export interface InsertableToLoad {
     sortOrder: number;
     supportsFasten: boolean;
     searchPartNumbers: boolean;
+    isVisible: boolean;
 }
 
 /** The retry input a Workflow `delay` callback receives. */

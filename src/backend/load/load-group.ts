@@ -19,7 +19,7 @@ import { loadInsertable } from "./load-insertable";
 import {
     type InsertableToLoad,
     type LoadContext,
-    getOnshapeApi,
+    getOnshapeApiFromContext,
     uploadThumbnailsStep
 } from "./load-utils";
 import type { InstancePath } from "../../shared/onshape-path";
@@ -54,9 +54,9 @@ export async function loadGroup(
     libraryId: LibraryId,
     groupId: string,
     document: OnshapeDocumentInfo,
+    versionId: string,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const versionId = document.recentVersion.id;
     const identity: GroupIdentity = {
         libraryId,
         groupId,
@@ -123,7 +123,7 @@ export async function loadGroup(
         async () =>
             uploadDocumentThumbnails(
                 ctx.env.THUMBNAILS,
-                await getOnshapeApi(ctx),
+                await getOnshapeApiFromContext(ctx),
                 identity.versionPath
             )
     );
@@ -170,7 +170,10 @@ async function fetchInsertableTabs(
     ctx: LoadContext,
     versionPath: InstancePath
 ): Promise<OnshapeElement[]> {
-    const contents = await getContents(await getOnshapeApi(ctx), versionPath);
+    const contents = await getContents(
+        await getOnshapeApiFromContext(ctx),
+        versionPath
+    );
     return parseInsertableTabs(contents);
 }
 
@@ -187,7 +190,8 @@ async function fetchStoredInsertables(
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
             supportsFasten: insertables.supportsFasten,
-            searchPartNumbers: insertables.searchPartNumbers
+            searchPartNumbers: insertables.searchPartNumbers,
+            isVisible: insertables.isVisible
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
@@ -202,6 +206,7 @@ export interface StoredInsertable {
     microversionId: string;
     supportsFasten: boolean;
     searchPartNumbers: boolean;
+    isVisible: boolean;
 }
 
 /**
@@ -244,14 +249,16 @@ export function selectInsertablesToLoad(
                 ...fromTab,
                 insertableId: storedRow.id,
                 supportsFasten: storedRow.supportsFasten,
-                searchPartNumbers: storedRow.searchPartNumbers
+                searchPartNumbers: storedRow.searchPartNumbers,
+                isVisible: storedRow.isVisible
             });
         } else {
             insertablesToLoad.push({
                 ...fromTab,
                 insertableId: crypto.randomUUID(),
                 supportsFasten: false,
-                searchPartNumbers: false
+                searchPartNumbers: false,
+                isVisible: false
             });
         }
     });

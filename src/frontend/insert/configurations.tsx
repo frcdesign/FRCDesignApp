@@ -86,8 +86,10 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 <Loader />
             </Center>
         );
-    } else if (query.isError || unitInfoQuery.isError) {
-        return <SectionError title="Failed to load configuration" />;
+    } else if (query.isError) {
+        return <SectionError title="Failed to load configuration." />;
+    } else if (unitInfoQuery.isError) {
+        return <SectionError title="Failed to fetch document units." />;
     }
 
     return (
