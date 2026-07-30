@@ -72,12 +72,9 @@ export const insertables = sqliteTable(
         name: text("name").notNull(),
         elementType: text("element_type").notNull().$type<ElementType>(),
         microversionId: text("microversion_id").notNull(),
-        // Matches the column default the initial migration created. A new
-        // insertable starts hidden regardless: saveInsertable writes false
-        // explicitly, which is where that decision lives.
         isVisible: integer("is_visible", { mode: "boolean" })
             .notNull()
-            .default(true),
+            .default(false),
         isOpenComposite: integer("is_open_composite", { mode: "boolean" })
             .notNull()
             .default(false),
