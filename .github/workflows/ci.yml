@@ -2,8 +2,7 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [cert]
+  # Push builds (cert, main) run their checks in the `ci` job of deploy.yml.
 
 jobs:
   build-and-test:

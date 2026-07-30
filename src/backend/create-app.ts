@@ -1,5 +1,5 @@
 import { HTTPException } from "hono/http-exception";
-import { authRoutes, isAuthenticated } from "./auth";
+import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
 import { getApp, type AppServicesFactory } from "./app";
 import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
@@ -41,9 +41,8 @@ export function createApp(makeServices: AppServicesFactory) {
     // `/init` is the auth-gated entry point
     app.on("GET", "/init", async (c) => {
         if (!(await isAuthenticated(c))) {
-            return c.redirect(
-                `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}`
-            );
+            const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(c.req.url)}&sessionCompanyId=${getSessionCompanyId(c)}`;
+            return c.redirect(signInUrl);
         }
         // Forward to normal Cloudflare
         return c.env.ASSETS.fetch(c.req.raw);

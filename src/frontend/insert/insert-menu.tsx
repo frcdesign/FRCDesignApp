@@ -16,6 +16,8 @@ import {
     NotificationAction,
     renderNotification
 } from "../common/notifications";
+import { MenuButton } from "../app-common/app-menu";
+import { InsertableMenuItems } from "../cards/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { ParameterValues } from "../../shared/configuration-models";
@@ -92,8 +94,21 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configuration={configuration}
             />
             {parameters}
-            <Group justify="space-between" mt="md" wrap="nowrap">
-                <FavoriteButton favorite={favorite} insertable={insertable} />
+            <Group justify="space-between" wrap="nowrap" mt="mt">
+                <Group gap={4}>
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                    />
+                    <MenuButton>
+                        <InsertableMenuItems
+                            favorite={favorite}
+                            insertable={insertable}
+                            inInsertMenu
+                            configuration={configuration}
+                        />
+                    </MenuButton>
+                </Group>
                 <InsertButtons
                     insertable={insertable}
                     configuration={configuration}
@@ -112,6 +127,9 @@ interface InsertButtonsProps {
     onInsert: () => void;
 }
 
+/**
+ * The derive/insert button plus the insert and fasten checkbox.
+ */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { insertable, configuration, isFavorite, onInsert } = props;
 

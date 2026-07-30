@@ -1,3 +1,5 @@
+import { ParameterValues } from "./configuration-models";
+
 export type InstanceType = "w" | "v" | "m";
 
 export interface DocumentPath {
@@ -16,6 +18,10 @@ export interface ElementPath extends InstancePath {
 /** Represents a part inside a Part Studio. */
 export interface PartPath extends ElementPath {
     partId: string;
+}
+
+export interface ConfigurablePath extends ElementPath {
+    configuration: ParameterValues;
 }
 
 export function isDocumentPath(path: any): path is DocumentPath {
@@ -42,6 +48,15 @@ export function isElementPath(path: any): path is ElementPath {
 
 export function isPartPath(path: DocumentPath): path is PartPath {
     return isElementPath(path) && (path as PartPath).partId !== undefined;
+}
+
+export function isConfigurablePath(
+    path: DocumentPath
+): path is ConfigurablePath {
+    return (
+        isElementPath(path) &&
+        (path as ConfigurablePath).configuration !== undefined
+    );
 }
 
 export function toDocumentApiPath(path: DocumentPath): string {

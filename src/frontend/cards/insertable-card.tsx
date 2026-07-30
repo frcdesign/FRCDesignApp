@@ -15,6 +15,7 @@ import {
     getFavoriteForInsertable,
     InsertableOut
 } from "../../shared/api-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
 import {
@@ -118,26 +119,32 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
+    inInsertMenu?: boolean;
+    configuration?: ParameterValues;
 }
 
 export function InsertableMenuItems(
     props: InsertableMenuItemsProps
 ): ReactNode {
-    const { favorite, insertable } = props;
+    const { favorite, insertable, inInsertMenu, configuration } = props;
 
     return (
         <>
-            <QuickInsertItems
-                insertable={insertable}
-                isFavorite={favorite !== undefined}
-            />
-            <Menu.Divider />
+            {!inInsertMenu && (
+                <>
+                    <QuickInsertItems
+                        insertable={insertable}
+                        isFavorite={favorite !== undefined}
+                    />
+                    <Menu.Divider />
+                </>
+            )}
             <FavoriteInsertableItem
                 favorite={favorite}
                 insertable={insertable}
             />
             <Menu.Divider />
-            <OpenDocumentItems path={insertable.path} />
+            <OpenDocumentItems path={{ ...insertable.path, configuration }} />
             <AdminOptionsSubmenu>
                 <InsertableAdminContextMenu
                     insertableId={insertable.id}
