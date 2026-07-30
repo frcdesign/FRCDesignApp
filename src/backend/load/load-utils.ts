@@ -6,21 +6,13 @@ import {
     OnshapeRateLimitError
 } from "../onshape-api/onshape-api";
 import type { ElementType, LibraryId, ThumbnailUrls } from "../../shared/types";
-import type { ElementPath } from "../../shared/onshape-path";
+import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 
+/** The runtime plumbing a load runs against. */
 export interface LoadContext {
     env: AppBindings;
     sessionId: string;
     step: WorkflowStep;
-}
-
-/**
- * Data commonly needed for parsing insertable data from Onshape.
- */
-export interface ParseData {
-    insertableId: string;
-    insertablePath: ElementPath;
-    elementType: ElementType;
 }
 
 export function getOnshapeApiFromContext(
@@ -29,23 +21,32 @@ export function getOnshapeApiFromContext(
     return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
 }
 
+/** The group and document version a load reads from. */
+export interface GroupTarget {
+    libraryId: LibraryId;
+    groupId: string;
+    /** Version-pinned location of the group's document in Onshape. */
+    versionPath: InstancePath;
+}
+
 /**
- * An insertable selected for (re)loading: where to read it from in Onshape,
- * which group it belongs to, and the flags carried over from its existing row.
+ * An insertable a load reads: where it lives in Onshape, the ids it is stored
+ * under, and what the document's tab listing already told us about it.
+ *
+ * Deliberately carries none of the user-owned flags (`supportsFasten`,
+ * `searchPartNumbers`, `isVisible`) — `loadInsertable` reads the ones it needs
+ * itself, and the save never writes them for an existing row.
  */
-export interface InsertableToLoad {
+export interface InsertableTarget {
     insertableId: string;
     libraryId: LibraryId;
     groupId: string;
     /** Version-pinned location of the element in Onshape. */
-    path: ElementPath;
-    name: string;
+    elementPath: ElementPath;
     elementType: ElementType;
+    name: string;
     microversionId: string;
     sortOrder: number;
-    supportsFasten: boolean;
-    searchPartNumbers: boolean;
-    isVisible: boolean;
 }
 
 /** The retry input a Workflow `delay` callback receives. */

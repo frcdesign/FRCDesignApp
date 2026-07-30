@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
-import type { LibraryId, ThumbnailUrls } from "../../shared/types";
+import type { ThumbnailUrls } from "../../shared/types";
 import type { BuildIssue } from "../../shared/build-checker";
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
@@ -17,7 +17,8 @@ import {
 import { checkGroup } from "../parse/build-checks";
 import { loadInsertable } from "./load-insertable";
 import {
-    type InsertableToLoad,
+    type GroupTarget,
+    type InsertableTarget,
     type LoadContext,
     getOnshapeApiFromContext,
     uploadThumbnailsStep
@@ -27,14 +28,6 @@ import type { InstancePath } from "../../shared/onshape-path";
 export interface GroupLoadResult {
     loadedElements: number;
     deletedElements: number;
-}
-
-/** The group identity stamped onto every insertable loaded from it. */
-export interface GroupIdentity {
-    libraryId: LibraryId;
-    groupId: string;
-    /** The group document's version-pinned path. */
-    versionPath: InstancePath;
 }
 
 /**
@@ -51,25 +44,15 @@ export interface ReloadedGroupFields {
 
 export async function loadGroup(
     ctx: LoadContext,
-    libraryId: LibraryId,
-    groupId: string,
+    target: GroupTarget,
     document: OnshapeDocumentInfo,
-    versionId: string,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const identity: GroupIdentity = {
-        libraryId,
-        groupId,
-        versionPath: {
-            documentId: document.id,
-            instanceId: versionId,
-            instanceType: "v"
-        }
-    };
+    const { groupId, versionPath } = target;
 
     // Read the document's loadable tabs (display order) and the stored rows.
     const insertableTabs = await ctx.step.do(`insertable-tabs-${groupId}`, () =>
-        fetchInsertableTabs(ctx, identity.versionPath)
+        fetchInsertableTabs(ctx, versionPath)
     );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,
@@ -82,7 +65,7 @@ export async function loadGroup(
         () =>
             Promise.resolve(
                 selectInsertablesToLoad(
-                    identity,
+                    target,
                     insertableTabs,
                     storedInsertables,
                     forceReload
@@ -97,11 +80,11 @@ export async function loadGroup(
 
     const failedElementIds: string[] = [];
     await Promise.all(
-        insertablesToLoad.map(async (insertableToLoad) => {
+        insertablesToLoad.map(async (insertableTarget) => {
             try {
-                await loadInsertable(ctx, insertableToLoad);
+                await loadInsertable(ctx, insertableTarget);
             } catch {
-                failedElementIds.push(insertableToLoad.path.elementId);
+                failedElementIds.push(insertableTarget.elementPath.elementId);
             }
         })
     );
@@ -120,14 +103,14 @@ export async function loadGroup(
             uploadDocumentThumbnails(
                 ctx.env.THUMBNAILS,
                 await getOnshapeApiFromContext(ctx),
-                identity.versionPath
+                versionPath
             )
     );
 
     await ctx.step.do(`save-group-${groupId}`, async () => {
         const reloaded: ReloadedGroupFields = {
             name: document.name,
-            versionId,
+            versionId: versionPath.instanceId,
             thumbnailUrls: docThumbnailUrls,
             buildIssues: checkGroup({
                 hasThumbnailTab: !!document.documentThumbnailElementId,
@@ -184,81 +167,61 @@ async function fetchStoredInsertables(
         .select({
             id: insertables.id,
             elementId: insertables.elementId,
-            microversionId: insertables.microversionId,
-            supportsFasten: insertables.supportsFasten,
-            searchPartNumbers: insertables.searchPartNumbers,
-            isVisible: insertables.isVisible
+            microversionId: insertables.microversionId
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
 }
 
 /**
- * Relevant fields pulled from existing insertables.
+ * What an existing insertable row contributes to the reload decision: its id, so
+ * a reload keeps it, and its microversion, to tell whether it changed.
  */
 export interface StoredInsertable {
     id: string;
     elementId: string;
     microversionId: string;
-    supportsFasten: boolean;
-    searchPartNumbers: boolean;
-    isVisible: boolean;
 }
 
 /**
  * Selects the tabs to reload: new ones, and stored ones whose microversion
- * changed (or all of them, on `forceReload`). A stored insertable keeps its id
- * and its user-owned flags; a new one gets a fresh id and the defaults.
+ * changed (or all of them, on `forceReload`). A stored insertable keeps its id;
+ * a new one gets a fresh one.
  */
 export function selectInsertablesToLoad(
-    identity: GroupIdentity,
+    target: GroupTarget,
     insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
-): InsertableToLoad[] {
+): InsertableTarget[] {
     const storedByElementId = new Map(
         stored.map((row) => [row.elementId, row])
     );
 
-    const insertablesToLoad: InsertableToLoad[] = [];
+    const insertableTargets: InsertableTarget[] = [];
     insertableTabs.forEach((tab, sortOrder) => {
-        const fromTab = {
-            libraryId: identity.libraryId,
-            groupId: identity.groupId,
-            path: { ...identity.versionPath, elementId: tab.id },
-            name: tab.name,
+        const storedRow = storedByElementId.get(tab.id);
+        if (
+            storedRow &&
+            !forceReload &&
+            storedRow.microversionId === tab.microversionId
+        ) {
+            return;
+        }
+
+        insertableTargets.push({
+            insertableId: storedRow?.id ?? crypto.randomUUID(),
+            libraryId: target.libraryId,
+            groupId: target.groupId,
+            elementPath: { ...target.versionPath, elementId: tab.id },
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
+            name: tab.name,
             microversionId: tab.microversionId,
             sortOrder
-        };
-
-        const storedRow = storedByElementId.get(tab.id);
-        if (storedRow) {
-            if (
-                !forceReload &&
-                storedRow.microversionId === tab.microversionId
-            ) {
-                return;
-            }
-            insertablesToLoad.push({
-                ...fromTab,
-                insertableId: storedRow.id,
-                supportsFasten: storedRow.supportsFasten,
-                searchPartNumbers: storedRow.searchPartNumbers,
-                isVisible: storedRow.isVisible
-            });
-        } else {
-            insertablesToLoad.push({
-                ...fromTab,
-                insertableId: crypto.randomUUID(),
-                supportsFasten: false,
-                searchPartNumbers: false,
-                isVisible: false
-            });
-        }
+        });
     });
-    return insertablesToLoad;
+    return insertableTargets;
 }
 
 /**

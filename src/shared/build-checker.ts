@@ -20,7 +20,8 @@ export enum BuildIssueType {
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
-    TOO_MANY_CONFIGURATIONS = "too-many-configurations"
+    TOO_MANY_CONFIGURATIONS = "too-many-configurations",
+    MULTIPLE_PARTS = "multiple-parts"
 }
 
 /**
@@ -35,7 +36,8 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
-    | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>;
+    | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
+    | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>;
 
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
@@ -45,6 +47,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+        case BuildIssueType.MULTIPLE_PARTS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;
@@ -69,13 +72,13 @@ export function addBuildIssue(
 }
 
 /**
- * Removes any issue with the given `type`.
+ * Removes any issue whose type is one of `types`.
  */
 export function clearBuildIssue(
     issues: BuildIssue[],
-    type: BuildIssueType
+    ...types: BuildIssueType[]
 ): BuildIssue[] {
-    return issues.filter((issue) => issue.type !== type);
+    return issues.filter((issue) => !types.includes(issue.type));
 }
 
 /** Worst-to-best ordering. Higher index = more severe. */

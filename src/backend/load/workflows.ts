@@ -94,10 +94,16 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     }
                     const loaded = await loadGroup(
                         ctx,
-                        libraryId,
-                        groupId,
+                        {
+                            libraryId,
+                            groupId,
+                            versionPath: {
+                                documentId,
+                                instanceId: versionId,
+                                instanceType: "v"
+                            }
+                        },
                         document,
-                        versionId,
                         forceReload
                     );
                     return { groupId, status: "reloaded", ...loaded };
@@ -163,10 +169,16 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
             const loaded = await loadGroup(
                 ctx,
-                params.libraryId,
-                params.groupId,
+                {
+                    libraryId: params.libraryId,
+                    groupId: params.groupId,
+                    versionPath: {
+                        documentId: params.documentId,
+                        instanceId: versionId,
+                        instanceType: "v"
+                    }
+                },
                 document,
-                versionId,
                 false
             );
             result = { groupId: params.groupId, status: "created", ...loaded };

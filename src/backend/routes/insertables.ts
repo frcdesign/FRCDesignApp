@@ -11,10 +11,11 @@ import {
     type ConfigurationParameter
 } from "../../shared/configuration-models";
 import {
-    computePartNumbers,
     NO_PART_NUMBERS,
+    PART_NUMBER_ISSUE_TYPES,
+    parsePartNumbers,
     type PartNumberResult
-} from "../load/load-part-numbers";
+} from "../parse/parse-part-number";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementType } from "../../shared/types";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
@@ -30,7 +31,7 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
-import { addBuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, clearBuildIssue } from "../../shared/build-checker";
 
 export const insertableRoutes = getApp();
 
@@ -157,8 +158,13 @@ insertableRoutes.post(
                 .set({
                     searchPartNumbers: body.searchPartNumbers,
                     defaultPartNumber: indexed.defaultPartNumber,
+                    // Clear first, so an issue the reindex resolved (or that
+                    // disabling makes moot) doesn't stick around.
                     buildIssues: addBuildIssue(
-                        row.buildIssues,
+                        clearBuildIssue(
+                            row.buildIssues,
+                            ...PART_NUMBER_ISSUE_TYPES
+                        ),
                         ...indexed.buildIssues
                     )
                 })
@@ -180,7 +186,7 @@ insertableRoutes.post(
 /**
  * Indexes an insertable's part numbers for the toggle route, reading the
  * parameters it needs. Runs in a request, so it uses the unbatched
- * {@link computePartNumbers} rather than the workflow's stepped loader.
+ * {@link parsePartNumbers} rather than the workflow's stepped loader.
  */
 async function indexPartNumbers(
     client: OnshapeApi,
@@ -205,7 +211,7 @@ async function indexPartNumbers(
         .where(eq(configurations.id, insertable.insertableId))
         .get();
 
-    return computePartNumbers(
+    return parsePartNumbers(
         client,
         sourcePath,
         insertable.elementType,

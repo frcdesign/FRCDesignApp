@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { insertables } from "../../shared/schema";
 import { AccessLevel, ElementType } from "../../shared/types";
+import { BuildIssueType } from "../../shared/build-checker";
 import {
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,
@@ -220,5 +221,63 @@ describe("insertable routes", () => {
             .get();
         expect(row?.searchPartNumbers).toBe(false);
         expect(row?.defaultPartNumber).toBeNull();
+    });
+
+    // The route merges into the row's stored issues, so it has to clear the ones
+    // indexing owns first, or a resolved issue would stick around forever.
+    it("POST /toggle-part-number-search replaces stale part-number issues", async () => {
+        await seedPartStudio(db);
+        await db
+            .update(insertables)
+            .set({
+                buildIssues: [
+                    { type: BuildIssueType.NO_VENDORS },
+                    { type: BuildIssueType.TOO_MANY_CONFIGURATIONS }
+                ]
+            })
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID));
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p", partNumber: "PN-123" }
+        ]);
+
+        const res = await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: true }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
+            .get();
+        // The cap no longer applies, and the unrelated issue survives.
+        expect(row?.buildIssues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
+    });
+
+    it("POST /toggle-part-number-search records a multi-part studio", async () => {
+        await seedPartStudio(db);
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p1", partNumber: "PN-1" },
+            { partId: "p2", partNumber: "PN-2" }
+        ]);
+
+        const res = await createTestApp().request(
+            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { searchPartNumbers: true }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(row?.searchPartNumbers).toBe(true);
+        expect(row?.buildIssues).toEqual([
+            { type: BuildIssueType.MULTIPLE_PARTS }
+        ]);
     });
 });

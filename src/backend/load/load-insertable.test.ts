@@ -15,17 +15,17 @@ import {
     resetDb,
     seedGroup
 } from "../../__test_utils__";
-import { type ReloadedFields, saveInsertable } from "./load-insertable";
-import type { InsertableToLoad } from "./load-utils";
+import { type ParsedInsertable, saveInsertable } from "./load-insertable";
+import type { InsertableTarget } from "./load-utils";
 
 const db = getDb(env.DB);
 
-function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
+function element(overrides: Partial<InsertableTarget> = {}): InsertableTarget {
     return {
         insertableId: "ins-1",
         libraryId: TEST_LIBRARY_ID,
         groupId: TEST_GROUP_ID,
-        path: {
+        elementPath: {
             documentId: `doc-${TEST_GROUP_ID}`,
             instanceId: "inst-2",
             instanceType: "v",
@@ -35,32 +35,26 @@ function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
         elementType: ElementType.PART_STUDIO,
         microversionId: "mv-1",
         sortOrder: 0,
-        supportsFasten: false,
-        searchPartNumbers: false,
-        isVisible: true,
         ...overrides
     };
 }
 
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
-    toLoad: InsertableToLoad,
+    target: InsertableTarget,
     parameters: ConfigurationParameter[],
     partNumbers: PartNumberMap = {},
     defaultPartNumber: string | null = null
 ): Promise<void> {
-    const reloaded: ReloadedFields = {
-        name: toLoad.name,
-        elementType: toLoad.elementType,
-        microversionId: toLoad.microversionId,
-        versionId: toLoad.path.instanceId,
+    const parsed: ParsedInsertable = {
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
         defaultPartNumber,
-        buildIssues: []
+        buildIssues: [],
+        configuration: { parameters, partNumbers }
     };
-    await saveInsertable(db, toLoad, reloaded, { parameters, partNumbers });
+    await saveInsertable(db, target, parsed);
 }
 
 describe("saveInsertable", () => {
@@ -91,12 +85,33 @@ describe("saveInsertable", () => {
         });
     });
 
+    it("creates a new row hidden with its features off", async () => {
+        await applySave(element(), []);
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-1"))
+            .get();
+        expect(row).toMatchObject({
+            isVisible: false,
+            supportsFasten: false,
+            searchPartNumbers: false
+        });
+    });
+
     it("preserves user-owned fields when reloading an existing row", async () => {
         await applySave(element(), []);
-        // The user hides the element and moves it before the next reload.
+        // The user reveals the element, turns its features on, and moves it
+        // before the next reload.
         await db
             .update(insertables)
-            .set({ isVisible: false, sortOrder: 5 })
+            .set({
+                isVisible: true,
+                supportsFasten: true,
+                searchPartNumbers: true,
+                sortOrder: 5
+            })
             .where(eq(insertables.id, "ins-1"));
 
         await applySave(
@@ -116,7 +131,9 @@ describe("saveInsertable", () => {
         expect(row).toMatchObject({
             name: "Renamed",
             microversionId: "mv-2",
-            isVisible: false,
+            isVisible: true,
+            supportsFasten: true,
+            searchPartNumbers: true,
             sortOrder: 5
         });
     });
@@ -129,17 +146,10 @@ describe("saveInsertable", () => {
     });
 
     it("writes the computed part numbers", async () => {
-        await applySave(element({ searchPartNumbers: true }), TEST_PARAMETERS, {
+        await applySave(element(), TEST_PARAMETERS, {
             "PN-1": { p: "v1" },
             "PN-2": { p: "v2" }
         });
-
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, "ins-1"))
-            .get();
-        expect(row?.searchPartNumbers).toBe(true);
 
         const config = await db
             .select()
@@ -153,12 +163,7 @@ describe("saveInsertable", () => {
     });
 
     it("stores the default part number for a non-configurable insertable", async () => {
-        await applySave(
-            element({ searchPartNumbers: true }),
-            [],
-            {},
-            "PN-default"
-        );
+        await applySave(element(), [], {}, "PN-default");
 
         const row = await db
             .select()
@@ -169,15 +174,16 @@ describe("saveInsertable", () => {
     });
 
     // getPartNumberMap in library-data.ts reads these columns without
-    // re-checking the flag, so a disabled insertable must leave them empty.
-    it("leaves the part-number columns empty when the flag is off", async () => {
+    // re-checking searchPartNumbers, so a load that isn't indexing must clear
+    // them — which it does by passing NO_PART_NUMBERS through to the save.
+    it("clears the part-number columns when nothing was indexed", async () => {
         await applySave(
-            element({ searchPartNumbers: true }),
+            element(),
             TEST_PARAMETERS,
             { "PN-1": { p: "v1" } },
-            null
+            "PN-1"
         );
-        await applySave(element({ searchPartNumbers: false }), TEST_PARAMETERS);
+        await applySave(element(), TEST_PARAMETERS);
 
         const row = await db
             .select()
