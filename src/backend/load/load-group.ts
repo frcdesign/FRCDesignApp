@@ -11,10 +11,7 @@ import {
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
 import { getContents } from "../onshape-api/endpoints/documents";
-import type {
-    OnshapeDocumentInfo,
-    OnshapeElement
-} from "../onshape-api/onshape-types";
+import type { OnshapeElement } from "../onshape-api/onshape-types";
 import { checkGroup } from "../parse/build-checks";
 import { parseInsertableTabs } from "../parse/parse-document-contents";
 import { loadInsertable } from "./load-insertable";
@@ -33,27 +30,18 @@ export interface GroupLoadResult {
     failedElements: number;
 }
 
-/**
- * The fields a reload overwrites on the group row. Everything else is either
- * identity (id, documentId, libraryId) or owned by AddGroup / the user and
- * preserved across reloads (sortOrder, sortAlphabetically).
- */
+/** What a load computes for the group row. */
 interface ParsedGroup {
     name: string;
     thumbnailUrls: ThumbnailUrls | null;
     buildIssues: BuildIssue[];
-    /**
-     * Omitted when an insertable failed. Leaving the stored version stale is
-     * what makes a failure self-healing: the next reload picks this group up
-     * again, and the microversion check skips everything that already loaded.
-     */
+    /** Undefined if an insertable failed. */
     versionId?: string;
 }
 
 export async function loadGroup(
     ctx: LoadContext,
     target: GroupTarget,
-    document: OnshapeDocumentInfo,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
     const { groupId, versionPath } = target;
@@ -101,7 +89,6 @@ export async function loadGroup(
 
     await ctx.step.do(`save-group-${groupId}`, () =>
         saveGroup(getDb(ctx.env.DB), target, {
-            document,
             thumbnailUrls,
             removedInsertableIds,
             failedInsertableIds
@@ -141,7 +128,6 @@ async function loadInsertables(
 }
 
 interface SaveGroupInput {
-    document: OnshapeDocumentInfo;
     thumbnailUrls: ThumbnailUrls | null;
     /** Stored insertables whose tab left the document. */
     removedInsertableIds: string[];
@@ -158,21 +144,22 @@ async function saveGroup(
     target: GroupTarget,
     input: SaveGroupInput
 ): Promise<void> {
-    const { document, thumbnailUrls, removedInsertableIds } = input;
+    const { thumbnailUrls, removedInsertableIds } = input;
     const hasFailedInsertables = input.failedInsertableIds.length > 0;
 
-    const parsed: ParsedGroup = {
-        name: document.name,
+    const buildIssues = checkGroup({
+        hasThumbnailTab: !!target.thumbnailElementId,
         thumbnailUrls,
-        buildIssues: checkGroup({
-            hasThumbnailTab: !!document.documentThumbnailElementId,
-            thumbnailUrls,
-            hasFailedInsertables
-        }),
-        ...(hasFailedInsertables
-            ? {}
-            : { versionId: target.versionPath.instanceId })
+        hasFailedInsertables
+    });
+    const parsed: ParsedGroup = {
+        name: target.name,
+        thumbnailUrls,
+        buildIssues
     };
+    if (!hasFailedInsertables) {
+        parsed.versionId = target.versionPath.instanceId;
+    }
 
     const writes: BatchItem<"sqlite">[] = [
         db.update(group).set(parsed).where(eq(group.id, target.groupId))

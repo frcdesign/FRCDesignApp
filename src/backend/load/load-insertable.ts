@@ -61,7 +61,7 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
-    const partNumbers = flags.searchPartNumbers
+    const partNumberResult = flags.searchPartNumbers
         ? await loadPartNumbers(
               ctx,
               insertableId,
@@ -87,14 +87,14 @@ export async function loadInsertable(
         vendors,
         thumbnailUrls,
         fastenInfo,
-        defaultPartNumber: partNumbers.defaultPartNumber,
+        defaultPartNumber: partNumberResult.defaultPartNumber,
         buildIssues: addBuildIssue(
             checkInsertable({ vendors, thumbnailUrls }),
-            ...partNumbers.buildIssues
+            ...partNumberResult.buildIssues
         ),
         configuration: {
             parameters,
-            partNumbers: partNumbers.partNumbers
+            partNumbers: partNumberResult.partNumbers
         }
     };
 
@@ -106,9 +106,6 @@ export async function loadInsertable(
 /**
  * Reads the flags that decide how much of the load runs. A brand-new insertable
  * has no row yet, so it gets the same defaults the save writes.
- *
- * Stepped so a replay can't see a different answer than the first attempt if the
- * user toggles one mid-load.
  */
 function readFlagsStep(
     ctx: LoadContext,
@@ -171,12 +168,17 @@ export async function saveInsertable(
     target: InsertableTarget,
     parsed: ParsedInsertable
 ): Promise<void> {
-    const { configuration, ...reloaded } = {
+    const configuration = parsed.configuration;
+    const reloaded = {
         name: target.name,
         elementType: target.elementType,
         microversionId: target.microversionId,
         versionId: target.elementPath.instanceId,
-        ...parsed
+        vendors: parsed.vendors,
+        thumbnailUrls: parsed.thumbnailUrls,
+        fastenInfo: parsed.fastenInfo,
+        defaultPartNumber: parsed.defaultPartNumber,
+        buildIssues: parsed.buildIssues
     };
 
     const insertableWrite = db

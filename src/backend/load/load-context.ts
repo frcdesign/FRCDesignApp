@@ -18,27 +18,21 @@ export function getOnshapeApiFromContext(
     return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
 }
 
-/** The group and document version a load reads from. */
+/** A group a load reads, and what the document told us about it. */
 export interface GroupTarget {
     libraryId: LibraryId;
     groupId: string;
-    /** Version-pinned location of the group's document in Onshape. */
     versionPath: InstancePath;
+    name: string;
+    /** The tab the document renders its thumbnail from, when one is set. */
+    thumbnailElementId?: string;
 }
 
-/**
- * An insertable a load reads: where it lives in Onshape, the ids it is stored
- * under, and what the document's tab listing already told us about it.
- *
- * Deliberately carries none of the user-owned flags (`supportsFasten`,
- * `searchPartNumbers`, `isVisible`) — `loadInsertable` reads the ones it needs
- * itself, and the save never writes them for an existing row.
- */
+/** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
     libraryId: LibraryId;
     groupId: string;
-    /** Version-pinned location of the element in Onshape. */
     elementPath: ElementPath;
     elementType: ElementType;
     name: string;

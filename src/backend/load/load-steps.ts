@@ -10,7 +10,7 @@ interface RetryDelayInput {
 
 /**
  * How long Onshape asked us to wait, or `null` when the error wasn't a rate
- * limit. The workflow waits this out durably, so a 429 costs no CPU time.
+ * limit.
  */
 function rateLimitDelay(error: Error): `${number} seconds` | null {
     return error instanceof OnshapeRateLimitError
@@ -20,8 +20,7 @@ function rateLimitDelay(error: Error): `${number} seconds` | null {
 
 /**
  * Retry delay honoring Onshape's `Retry-After` on a 429, with an
- * exponential-ish fallback for other transient errors. The return is a
- * `${number} seconds` literal so it satisfies the Workflow delay type.
+ * exponential-ish fallback for other transient errors.
  */
 function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
@@ -32,9 +31,8 @@ function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     return `${seconds} seconds`;
 }
 
-/** Retry config for a step that calls Onshape; honors `Retry-After` on 429. */
 export const ONSHAPE_STEP_RETRIES = {
-    limit: 8,
+    limit: 3,
     delay: onshapeRetryDelay
 };
 

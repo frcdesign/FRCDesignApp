@@ -14,6 +14,7 @@ import { TEST_LIBRARY_ID } from "../../__test_utils__";
 const GROUP: GroupTarget = {
     libraryId: TEST_LIBRARY_ID,
     groupId: "group-1",
+    name: "Group",
     versionPath: {
         documentId: "doc-1",
         instanceId: "v-1",

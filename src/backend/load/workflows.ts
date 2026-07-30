@@ -14,7 +14,7 @@ import {
 } from "../library-data";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { getLatestVersionId } from "../onshape-api/endpoints/versions";
-import type { OnshapeDocumentInfo } from "../onshape-api/onshape-types";
+import type { InstancePath } from "../../shared/onshape-path";
 import { group, libraries } from "../../shared/schema";
 import {
     type GroupTarget,
@@ -23,13 +23,6 @@ import {
 } from "./load-context";
 import { loadGroup } from "./load-group";
 
-/**
- * Workflow parameters must be JSON-serializable, so these carry a `sessionId`
- * rather than an `OnshapeApi`: the client is a class instance holding a token
- * refresh callback, which cannot be serialized. Each step rebuilds it from the
- * session (see `getOnshapeApi`), which also picks up a token
- * refreshed while the instance was sleeping or retrying.
- */
 export interface LoadLibraryParams {
     libraryId: LibraryId;
     sessionId: string;
@@ -76,10 +69,10 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
             storedGroups.map(async (storedGroup): Promise<GroupResult> => {
                 const { groupId, documentId } = storedGroup;
                 try {
-                    const { document, target } = await resolveGroupTarget(
+                    const target = await resolveGroupTarget(
                         ctx,
                         { libraryId, groupId, documentId },
-                        `document-${groupId}`
+                        `-${groupId}`
                     );
                     if (
                         storedGroup.versionId ===
@@ -88,12 +81,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     ) {
                         return { groupId, status: "skipped" };
                     }
-                    const loaded = await loadGroup(
-                        ctx,
-                        target,
-                        document,
-                        forceReload
-                    );
+                    const loaded = await loadGroup(ctx, target, forceReload);
                     return { groupId, status: "reloaded", ...loaded };
                 } catch {
                     return { groupId, status: "failed" };
@@ -107,7 +95,6 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
     }
 }
 
-/** See {@link LoadLibraryParams} for why this carries a `sessionId`. */
 export interface AddGroupParams {
     /** The new group's id, minted by the route. */
     groupId: string;
@@ -138,17 +125,13 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
         let result: GroupResult;
         try {
-            const { document, target } = await resolveGroupTarget(
-                ctx,
-                params,
-                "document"
-            );
+            const target = await resolveGroupTarget(ctx, params, "");
 
             await step.do("create-shell-group", () =>
-                createShellGroup(ctx.env, params, document.name)
+                createShellGroup(ctx.env, params, target.name)
             );
 
-            const loaded = await loadGroup(ctx, target, document, false);
+            const loaded = await loadGroup(ctx, target, false);
             result = { groupId: params.groupId, status: "created", ...loaded };
         } catch {
             result = { groupId: params.groupId, status: "failed" };
@@ -161,37 +144,31 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
     }
 }
 
-/**
- * Reads the document and its latest version, pinning the group to that version.
- *
- * Both are cheap reads on the same document, so they share one step: a retry
- * costs two extra GETs and saves a step per group.
- */
+/** Reads the document and its latest version, pinning the group to that version. */
 async function resolveGroupTarget(
     ctx: LoadContext,
     ids: { libraryId: LibraryId; groupId: string; documentId: string },
-    stepName: string
-): Promise<{ document: OnshapeDocumentInfo; target: GroupTarget }> {
+    stepSuffix: string
+): Promise<GroupTarget> {
     const { documentId } = ids;
-    const { document, versionId } = await ctx.step.do(stepName, async () => {
-        const onshapeApi = await getOnshapeApiFromContext(ctx);
-        return {
-            document: await getDocument(onshapeApi, { documentId }),
-            versionId: await getLatestVersionId(onshapeApi, { documentId })
-        };
-    });
+    const document = await ctx.step.do(`document${stepSuffix}`, async () =>
+        getDocument(await getOnshapeApiFromContext(ctx), { documentId })
+    );
+    const versionId = await ctx.step.do(`version${stepSuffix}`, async () =>
+        getLatestVersionId(await getOnshapeApiFromContext(ctx), { documentId })
+    );
 
+    const versionPath: InstancePath = {
+        documentId,
+        instanceId: versionId,
+        instanceType: "v"
+    };
     return {
-        document,
-        target: {
-            libraryId: ids.libraryId,
-            groupId: ids.groupId,
-            versionPath: {
-                documentId,
-                instanceId: versionId,
-                instanceType: "v"
-            }
-        }
+        libraryId: ids.libraryId,
+        groupId: ids.groupId,
+        versionPath,
+        name: document.name,
+        thumbnailElementId: document.documentThumbnailElementId
     };
 }
 
