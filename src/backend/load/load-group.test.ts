@@ -8,7 +8,7 @@ import {
     findRemovedInsertables,
     selectInsertablesToLoad
 } from "./load-group";
-import type { GroupTarget } from "./load-utils";
+import type { GroupTarget } from "./load-context";
 import { TEST_LIBRARY_ID } from "../../__test_utils__";
 
 const GROUP: GroupTarget = {

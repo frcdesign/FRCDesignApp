@@ -14,8 +14,13 @@ import {
 } from "../library-data";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { getLatestVersionId } from "../onshape-api/endpoints/versions";
+import type { OnshapeDocumentInfo } from "../onshape-api/onshape-types";
 import { group, libraries } from "../../shared/schema";
-import { type LoadContext, getOnshapeApiFromContext } from "./load-utils";
+import {
+    type GroupTarget,
+    type LoadContext,
+    getOnshapeApiFromContext
+} from "./load-context";
 import { loadGroup } from "./load-group";
 
 /**
@@ -38,6 +43,7 @@ export type GroupResult =
           status: "created" | "reloaded";
           loadedElements: number;
           deletedElements: number;
+          failedElements: number;
       };
 
 /**
@@ -55,54 +61,36 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         const { libraryId, sessionId, forceReload = false } = event.payload;
         const ctx: LoadContext = { env: this.env, sessionId, step };
 
-        const groups = await step.do("list-groups", async () => {
-            const db = getDb(this.env.DB);
-            return await db
+        const storedGroups = await step.do("list-groups", () =>
+            getDb(ctx.env.DB)
                 .select({
                     groupId: group.id,
                     documentId: group.documentId,
                     versionId: group.versionId
                 })
                 .from(group)
-                .where(eq(group.libraryId, libraryId));
-        });
+                .where(eq(group.libraryId, libraryId))
+        );
 
         const results = await Promise.all(
-            groups.map(async (group): Promise<GroupResult> => {
-                const { groupId, documentId } = group;
+            storedGroups.map(async (storedGroup): Promise<GroupResult> => {
+                const { groupId, documentId } = storedGroup;
                 try {
-                    const document = await step.do(
-                        `document-${groupId}`,
-                        async () => {
-                            const onshapeApi =
-                                await getOnshapeApiFromContext(ctx);
-                            return getDocument(onshapeApi, { documentId });
-                        }
+                    const { document, target } = await resolveGroupTarget(
+                        ctx,
+                        { libraryId, groupId, documentId },
+                        `document-${groupId}`
                     );
-                    const versionId = await step.do(
-                        `version-${groupId}`,
-                        async () => {
-                            const onshapeApi =
-                                await getOnshapeApiFromContext(ctx);
-                            return getLatestVersionId(onshapeApi, {
-                                documentId
-                            });
-                        }
-                    );
-                    if (group.versionId === versionId && !forceReload) {
+                    if (
+                        storedGroup.versionId ===
+                            target.versionPath.instanceId &&
+                        !forceReload
+                    ) {
                         return { groupId, status: "skipped" };
                     }
                     const loaded = await loadGroup(
                         ctx,
-                        {
-                            libraryId,
-                            groupId,
-                            versionPath: {
-                                documentId,
-                                instanceId: versionId,
-                                instanceType: "v"
-                            }
-                        },
+                        target,
                         document,
                         forceReload
                     );
@@ -150,37 +138,17 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
         let result: GroupResult;
         try {
-            const document = await step.do("document", async () => {
-                const onshapeApi = await getOnshapeApiFromContext(ctx);
-                return getDocument(onshapeApi, {
-                    documentId: params.documentId
-                });
-            });
-            const versionId = await step.do("version", async () => {
-                const onshapeApi = await getOnshapeApiFromContext(ctx);
-                return getLatestVersionId(onshapeApi, {
-                    documentId: params.documentId
-                });
-            });
+            const { document, target } = await resolveGroupTarget(
+                ctx,
+                params,
+                "document"
+            );
 
             await step.do("create-shell-group", () =>
-                this.createShellGroup(params, document.name)
+                createShellGroup(ctx.env, params, document.name)
             );
 
-            const loaded = await loadGroup(
-                ctx,
-                {
-                    libraryId: params.libraryId,
-                    groupId: params.groupId,
-                    versionPath: {
-                        documentId: params.documentId,
-                        instanceId: versionId,
-                        instanceType: "v"
-                    }
-                },
-                document,
-                false
-            );
+            const loaded = await loadGroup(ctx, target, document, false);
             result = { groupId: params.groupId, status: "created", ...loaded };
         } catch {
             result = { groupId: params.groupId, status: "failed" };
@@ -191,39 +159,74 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         );
         return result;
     }
+}
 
-    /**
-     * Writes the group row the load then fills in, creating the library if this
-     * is its first group.
-     */
-    private async createShellGroup(
-        params: AddGroupParams,
-        groupName: string
-    ): Promise<void> {
-        const db = getDb(this.env.DB);
-        await db
-            .insert(libraries)
-            .values({ id: params.libraryId })
-            .onConflictDoNothing();
-        // placeNewGroup renumbers siblings eagerly. Failed inserts result in a gap that's fixed on the next edit.
-        const sortOrder = await placeNewGroup(
-            db,
-            params.libraryId,
-            params.selectedGroupId
-        );
-        await db
-            .insert(group)
-            .values({
-                id: params.groupId,
-                documentId: params.documentId,
-                libraryId: params.libraryId,
-                name: groupName,
-                // Placeholder value so failed loads can be retried
-                versionId: "placeholder",
-                sortOrder
-            })
-            .onConflictDoNothing();
-    }
+/**
+ * Reads the document and its latest version, pinning the group to that version.
+ *
+ * Both are cheap reads on the same document, so they share one step: a retry
+ * costs two extra GETs and saves a step per group.
+ */
+async function resolveGroupTarget(
+    ctx: LoadContext,
+    ids: { libraryId: LibraryId; groupId: string; documentId: string },
+    stepName: string
+): Promise<{ document: OnshapeDocumentInfo; target: GroupTarget }> {
+    const { documentId } = ids;
+    const { document, versionId } = await ctx.step.do(stepName, async () => {
+        const onshapeApi = await getOnshapeApiFromContext(ctx);
+        return {
+            document: await getDocument(onshapeApi, { documentId }),
+            versionId: await getLatestVersionId(onshapeApi, { documentId })
+        };
+    });
+
+    return {
+        document,
+        target: {
+            libraryId: ids.libraryId,
+            groupId: ids.groupId,
+            versionPath: {
+                documentId,
+                instanceId: versionId,
+                instanceType: "v"
+            }
+        }
+    };
+}
+
+/**
+ * Writes the group row the load then fills in, creating the library if this is
+ * its first group.
+ */
+async function createShellGroup(
+    env: AppBindings,
+    params: AddGroupParams,
+    groupName: string
+): Promise<void> {
+    const db = getDb(env.DB);
+    await db
+        .insert(libraries)
+        .values({ id: params.libraryId })
+        .onConflictDoNothing();
+    // placeNewGroup renumbers siblings eagerly. Failed inserts result in a gap that's fixed on the next edit.
+    const sortOrder = await placeNewGroup(
+        db,
+        params.libraryId,
+        params.selectedGroupId
+    );
+    await db
+        .insert(group)
+        .values({
+            id: params.groupId,
+            documentId: params.documentId,
+            libraryId: params.libraryId,
+            name: groupName,
+            // Placeholder value so failed loads can be retried
+            versionId: "placeholder",
+            sortOrder
+        })
+        .onConflictDoNothing();
 }
 
 /** Rebuild the library's search index and bump its cache version. */

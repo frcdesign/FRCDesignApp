@@ -336,6 +336,10 @@ function getIssueMessage(issue: BuildIssue): string {
             return "Too many configurations to index part numbers.";
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part.";
+        case BuildIssueType.INSERTABLES_FAILED:
+            return "Some insertables failed to load.";
+        case BuildIssueType.LOAD_FAILED:
+            return "This insertable failed to load.";
     }
 }
 

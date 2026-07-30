@@ -21,7 +21,9 @@ export enum BuildIssueType {
     NO_VENDORS = "no-vendors",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     TOO_MANY_CONFIGURATIONS = "too-many-configurations",
-    MULTIPLE_PARTS = "multiple-parts"
+    MULTIPLE_PARTS = "multiple-parts",
+    INSERTABLES_FAILED = "insertables-failed",
+    LOAD_FAILED = "load-failed"
 }
 
 /**
@@ -37,17 +39,21 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
-    | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>;
+    | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
+    | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
+    | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
 
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
+        case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.INSERTABLES_FAILED:
+        case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-        case BuildIssueType.MULTIPLE_PARTS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

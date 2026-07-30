@@ -10,6 +10,8 @@ interface GroupCheckInput {
     hasThumbnailTab: boolean;
     /** The uploaded thumbnail URLs, or `null` when generation failed. */
     thumbnailUrls: ThumbnailUrls | null;
+    /** Whether any of the group's insertables failed to load. */
+    hasFailedInsertables: boolean;
 }
 
 /**
@@ -26,6 +28,12 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
     } else if (!input.hasThumbnailTab) {
         issues = addBuildIssue(issues, {
             type: BuildIssueType.NO_THUMBNAIL_TAB
+        });
+    }
+
+    if (input.hasFailedInsertables) {
+        issues = addBuildIssue(issues, {
+            type: BuildIssueType.INSERTABLES_FAILED
         });
     }
 

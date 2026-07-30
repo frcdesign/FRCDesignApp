@@ -17,9 +17,9 @@ import { NO_PART_NUMBERS, loadPartNumbers } from "../parse/parse-part-number";
 import {
     type InsertableTarget,
     type LoadContext,
-    getOnshapeApiFromContext,
-    uploadThumbnailsStep
-} from "./load-utils";
+    getOnshapeApiFromContext
+} from "./load-context";
+import { uploadThumbnailsStep } from "./load-steps";
 
 /**
  * Everything a load computes for an insertable by reading Onshape. Exactly the

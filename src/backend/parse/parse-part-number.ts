@@ -33,9 +33,9 @@ import type {
 } from "../onshape-api/onshape-types";
 import {
     type LoadContext,
-    ONSHAPE_STEP_RETRIES,
     getOnshapeApiFromContext
-} from "../load/load-utils";
+} from "../load/load-context";
+import { ONSHAPE_STEP_RETRIES } from "../load/load-steps";
 
 /** Configurations fetched per workflow step. */
 const BATCH_SIZE = 20;

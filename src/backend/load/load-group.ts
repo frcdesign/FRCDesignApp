@@ -1,33 +1,36 @@
 import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import { getDb } from "../db";
+import { type Db, getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import type { ThumbnailUrls } from "../../shared/types";
-import type { BuildIssue } from "../../shared/build-checker";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-checker";
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
 import { getContents } from "../onshape-api/endpoints/documents";
-import {
-    type OnshapeDocumentContents,
-    type OnshapeDocumentInfo,
-    type OnshapeElement,
-    type OnshapeFolderEntry,
-    OnshapeFolderEntryType
+import type {
+    OnshapeDocumentInfo,
+    OnshapeElement
 } from "../onshape-api/onshape-types";
 import { checkGroup } from "../parse/build-checks";
+import { parseInsertableTabs } from "../parse/parse-document-contents";
 import { loadInsertable } from "./load-insertable";
 import {
     type GroupTarget,
     type InsertableTarget,
     type LoadContext,
-    getOnshapeApiFromContext,
-    uploadThumbnailsStep
-} from "./load-utils";
+    getOnshapeApiFromContext
+} from "./load-context";
+import { uploadThumbnailsStep } from "./load-steps";
 import type { InstancePath } from "../../shared/onshape-path";
 
 export interface GroupLoadResult {
     loadedElements: number;
     deletedElements: number;
+    failedElements: number;
 }
 
 /**
@@ -35,11 +38,16 @@ export interface GroupLoadResult {
  * identity (id, documentId, libraryId) or owned by AddGroup / the user and
  * preserved across reloads (sortOrder, sortAlphabetically).
  */
-export interface ReloadedGroupFields {
+interface ParsedGroup {
     name: string;
-    versionId: string;
     thumbnailUrls: ThumbnailUrls | null;
     buildIssues: BuildIssue[];
+    /**
+     * Omitted when an insertable failed. Leaving the stored version stale is
+     * what makes a failure self-healing: the next reload picks this group up
+     * again, and the microversion check skips everything that already loaded.
+     */
+    versionId?: string;
 }
 
 export async function loadGroup(
@@ -78,25 +86,9 @@ export async function loadGroup(
         storedInsertables
     );
 
-    const failedElementIds: string[] = [];
-    await Promise.all(
-        insertablesToLoad.map(async (insertableTarget) => {
-            try {
-                await loadInsertable(ctx, insertableTarget);
-            } catch {
-                failedElementIds.push(insertableTarget.elementPath.elementId);
-            }
-        })
-    );
+    const failedInsertableIds = await loadInsertables(ctx, insertablesToLoad);
 
-    if (failedElementIds.length > 0) {
-        throw new Error(
-            `Group ${groupId}: elements failed to load: ` +
-                failedElementIds.join(", ")
-        );
-    }
-
-    const docThumbnailUrls = await uploadThumbnailsStep(
+    const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
         `document-thumbnail-${groupId}`,
         async () =>
@@ -107,39 +99,127 @@ export async function loadGroup(
             )
     );
 
-    await ctx.step.do(`save-group-${groupId}`, async () => {
-        const reloaded: ReloadedGroupFields = {
-            name: document.name,
-            versionId: versionPath.instanceId,
-            thumbnailUrls: docThumbnailUrls,
-            buildIssues: checkGroup({
-                hasThumbnailTab: !!document.documentThumbnailElementId,
-                thumbnailUrls: docThumbnailUrls
-            })
-        };
-
-        const db = getDb(ctx.env.DB);
-        const writes: BatchItem<"sqlite">[] = [
-            db.update(group).set(reloaded).where(eq(group.id, groupId))
-        ];
-        if (removedInsertableIds.length > 0) {
-            // Configurations and favorites follow deleted insertables via their
-            // cascading foreign keys.
-            writes.push(
-                db
-                    .delete(insertables)
-                    .where(inArray(insertables.id, removedInsertableIds))
-            );
-        }
-        await db.batch(
-            writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
-        );
-    });
+    await ctx.step.do(`save-group-${groupId}`, () =>
+        saveGroup(getDb(ctx.env.DB), target, {
+            document,
+            thumbnailUrls,
+            removedInsertableIds,
+            failedInsertableIds
+        })
+    );
 
     return {
-        loadedElements: insertablesToLoad.length,
-        deletedElements: removedInsertableIds.length
+        loadedElements: insertablesToLoad.length - failedInsertableIds.length,
+        deletedElements: removedInsertableIds.length,
+        failedElements: failedInsertableIds.length
     };
+}
+
+/**
+ * Loads every selected insertable in parallel, returning the ids of the ones
+ * that failed.
+ *
+ * A failure isn't fatal: `loadInsertable` throws before it saves, so the stored
+ * row is untouched, and the group records the failure (see {@link saveGroup})
+ * rather than discarding the rest of the group's work.
+ */
+async function loadInsertables(
+    ctx: LoadContext,
+    targets: InsertableTarget[]
+): Promise<string[]> {
+    const failedInsertableIds: string[] = [];
+    await Promise.all(
+        targets.map(async (target) => {
+            try {
+                await loadInsertable(ctx, target);
+            } catch {
+                failedInsertableIds.push(target.insertableId);
+            }
+        })
+    );
+    return failedInsertableIds;
+}
+
+interface SaveGroupInput {
+    document: OnshapeDocumentInfo;
+    thumbnailUrls: ThumbnailUrls | null;
+    /** Stored insertables whose tab left the document. */
+    removedInsertableIds: string[];
+    /** Insertables that threw while loading. */
+    failedInsertableIds: string[];
+}
+
+/**
+ * Writes the group row, drops the insertables whose tabs are gone, and flags the
+ * ones that failed to load.
+ */
+async function saveGroup(
+    db: Db,
+    target: GroupTarget,
+    input: SaveGroupInput
+): Promise<void> {
+    const { document, thumbnailUrls, removedInsertableIds } = input;
+    const hasFailedInsertables = input.failedInsertableIds.length > 0;
+
+    const parsed: ParsedGroup = {
+        name: document.name,
+        thumbnailUrls,
+        buildIssues: checkGroup({
+            hasThumbnailTab: !!document.documentThumbnailElementId,
+            thumbnailUrls,
+            hasFailedInsertables
+        }),
+        ...(hasFailedInsertables
+            ? {}
+            : { versionId: target.versionPath.instanceId })
+    };
+
+    const writes: BatchItem<"sqlite">[] = [
+        db.update(group).set(parsed).where(eq(group.id, target.groupId))
+    ];
+    if (removedInsertableIds.length > 0) {
+        // Configurations and favorites follow deleted insertables via their
+        // cascading foreign keys.
+        writes.push(
+            db
+                .delete(insertables)
+                .where(inArray(insertables.id, removedInsertableIds))
+        );
+    }
+    writes.push(
+        ...(await flagFailedInsertables(db, input.failedInsertableIds))
+    );
+
+    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+}
+
+/**
+ * Adds `LOAD_FAILED` to each failed insertable's stored issues, keeping the ones
+ * its last good load recorded. A brand-new insertable has no row yet, so it gets
+ * no write — the group's `INSERTABLES_FAILED` covers it.
+ */
+async function flagFailedInsertables(
+    db: Db,
+    failedInsertableIds: string[]
+): Promise<BatchItem<"sqlite">[]> {
+    if (failedInsertableIds.length === 0) {
+        return [];
+    }
+    const rows = await db
+        .select({ id: insertables.id, buildIssues: insertables.buildIssues })
+        .from(insertables)
+        .where(inArray(insertables.id, failedInsertableIds));
+
+    return rows.map((row) =>
+        db
+            .update(insertables)
+            .set({
+                buildIssues: addBuildIssue(row.buildIssues, {
+                    type: BuildIssueType.LOAD_FAILED
+                })
+            })
+            .where(eq(insertables.id, row.id))
+    );
 }
 
 /**
@@ -157,6 +237,16 @@ async function fetchInsertableTabs(
 }
 
 /**
+ * What an existing insertable row contributes to the reload decision: its id, so
+ * a reload keeps it, and its microversion, to tell whether it changed.
+ */
+export interface StoredInsertable {
+    id: string;
+    elementId: string;
+    microversionId: string;
+}
+
+/**
  * Fetches the group's stored insertables.
  */
 async function fetchStoredInsertables(
@@ -171,16 +261,6 @@ async function fetchStoredInsertables(
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
-}
-
-/**
- * What an existing insertable row contributes to the reload decision: its id, so
- * a reload keeps it, and its microversion, to tell whether it changed.
- */
-export interface StoredInsertable {
-    id: string;
-    elementId: string;
-    microversionId: string;
 }
 
 /**
@@ -236,49 +316,4 @@ export function findRemovedInsertables(
     return storedInsertables
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
-}
-
-const VALID_ELEMENT_TYPES = new Set<string>([
-    ElementType.ASSEMBLY,
-    ElementType.PART_STUDIO
-]);
-
-/**
- * The part studio / assembly tabs we load, in the order they appear in the
- * document's tab bar.
- *
- * `contents.elements` is unordered, and `contents.folders` is the folder tree
- * that defines display order — so walk the tree and pick up each tab as it is
- * encountered. Onshape has been known to omit a tab from the tree, so anything
- * left over is appended rather than dropped.
- */
-export function parseInsertableTabs(
-    contents: OnshapeDocumentContents
-): OnshapeElement[] {
-    const remaining = new Map(
-        contents.elements
-            .filter((element) => VALID_ELEMENT_TYPES.has(element.elementType))
-            .map((element) => [element.id, element])
-    );
-
-    const tabs: OnshapeElement[] = [];
-    for (const elementId of traverseFolders(contents.folders.groups)) {
-        const tab = remaining.get(elementId);
-        if (tab) {
-            tabs.push(tab);
-            remaining.delete(elementId);
-        }
-    }
-    return [...tabs, ...remaining.values()];
-}
-
-/** Yields each elementId in a folder tree, depth-first, in display order. */
-function* traverseFolders(entries: OnshapeFolderEntry[]): Generator<string> {
-    for (const entry of entries) {
-        if (entry.btType === OnshapeFolderEntryType.GROUP) {
-            yield* traverseFolders(entry.groups);
-        } else if (entry.btType === OnshapeFolderEntryType.ELEMENT) {
-            yield entry.elementId;
-        }
-    }
 }

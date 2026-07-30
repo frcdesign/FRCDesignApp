@@ -16,7 +16,7 @@ import {
     seedGroup
 } from "../../__test_utils__";
 import { type ParsedInsertable, saveInsertable } from "./load-insertable";
-import type { InsertableTarget } from "./load-utils";
+import type { InsertableTarget } from "./load-context";
 
 const db = getDb(env.DB);
 
