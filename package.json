@@ -9,7 +9,7 @@
         ]
     },
     "scripts": {
-        "dev": "wrangler d1 migrations apply db --local && vite dev",
+        "dev": "wrangler d1 migrations apply DB --local && vite dev",
         "tsc": "tsc -b",
         "build": "tsc -b && vite build",
         "lint": "eslint .",
