@@ -37,6 +37,7 @@ function element(overrides: Partial<InsertableToLoad> = {}): InsertableToLoad {
         sortOrder: 0,
         supportsFasten: false,
         searchPartNumbers: false,
+        isVisible: true,
         ...overrides
     };
 }

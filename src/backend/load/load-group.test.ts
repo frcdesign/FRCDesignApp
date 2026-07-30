@@ -54,6 +54,7 @@ function storedRow(
         microversionId: "mv-1",
         supportsFasten: false,
         searchPartNumbers: false,
+        isVisible: true,
         ...overrides
     };
 }
