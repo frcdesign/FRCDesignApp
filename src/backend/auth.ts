@@ -4,7 +4,7 @@ import { type AppContext, getApp } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
-import { ping } from "./onshape-api/endpoints/users";
+import { getSessionInfo } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
@@ -29,8 +29,12 @@ export async function getOnshapeApiForSessionId(
     const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
-            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
-            .then(makeAuthTokens);
+            .refreshAccessToken(
+                companyTokenEndpoint(tokens.companyId),
+                tokens.refreshToken,
+                []
+            )
+            .then((refreshed) => makeAuthTokens(refreshed, tokens.companyId));
 
         void saveTokens(kv, sessionId, newTokens);
 
@@ -46,10 +50,17 @@ export async function getOnshapeApiForSessionId(
     return new OAuthApi(accessToken, refreshCallback);
 }
 
-export async function isAuthenticated(c: AppContext) {
+export function getSessionCompanyId(c: AppContext) {
+    return c.req.query("sessionCompanyId") ?? "cad";
+}
+
+export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await getOnshapeApi(c);
-        return ping(onshapeApi);
+        const sessionInfo = await getSessionInfo(onshapeApi);
+        const tokenCompanyId = sessionInfo.company?.id ?? "cad";
+        const requestCompanyId = getSessionCompanyId(c);
+        return requestCompanyId === tokenCompanyId;
     } catch {
         return false;
     }
@@ -71,6 +82,16 @@ function getOauthClient(): OAuth2Client {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
+/**
+ * The OAuth token endpoint, scoped to a company when one is known. Onshape reads
+ * `company_id` as a query parameter and returns a company-scoped access token.
+ */
+function companyTokenEndpoint(companyId?: string): string {
+    return companyId
+        ? `${TOKEN_ENDPOINT}?company_id=${encodeURIComponent(companyId)}`
+        : TOKEN_ENDPOINT;
+}
+
 export const authRoutes = getApp();
 
 authRoutes.get("/sign-in", async (c) => {
@@ -89,7 +110,11 @@ authRoutes.get("/sign-in", async (c) => {
         });
     }
 
-    const authorizationUrl = await doSignIn(c, redirectUrl);
+    // Onshape passes the company the session is scoped to; absent means the
+    // personal "cad" context.
+    const companyId = query.sessionCompanyId ?? "cad";
+
+    const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
 
@@ -104,14 +129,16 @@ authRoutes.get("/callback", async (c) => {
  */
 export async function doSignIn(
     c: AppContext,
-    redirectUrl: string
+    redirectUrl: string,
+    companyId: string
 ): Promise<string> {
     const oauthClient = getOauthClient();
 
     const state = generateState();
 
-    // Store the state and redirectUrl
-    await initSession(c, { state, redirectUrl });
+    // Store the state, redirectUrl, and company so the callback can mint a
+    // company-scoped token.
+    await initSession(c, { state, redirectUrl, companyId });
 
     return oauthClient
         .createAuthorizationURL(AUTH_ENDPOINT, state, [])
@@ -145,8 +172,12 @@ export async function doCallback(c: AppContext): Promise<Response> {
     const oauthClient = getOauthClient();
 
     await oauthClient
-        .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
-        .then(makeAuthTokens)
+        .validateAuthorizationCode(
+            companyTokenEndpoint(session.companyId),
+            search.code,
+            null
+        )
+        .then((tokens) => makeAuthTokens(tokens, session.companyId))
         .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
@@ -168,6 +199,8 @@ function isSafari(request: Request): boolean {
 interface OAuthSessionData {
     state: string;
     redirectUrl: string;
+    /** Onshape company the token should be scoped to; "cad" for a personal context. */
+    companyId: string;
 }
 
 async function getSession(
@@ -208,13 +241,16 @@ interface AuthTokens {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
+    /** Company the token is scoped to, carried forward so refreshes keep the scope. */
+    companyId?: string;
 }
 
-function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
+function makeAuthTokens(tokens: OAuth2Tokens, companyId?: string): AuthTokens {
     return {
         accessToken: tokens.accessToken(),
         refreshToken: tokens.refreshToken(),
-        expiresAt: tokens.accessTokenExpiresAt().getTime()
+        expiresAt: tokens.accessTokenExpiresAt().getTime(),
+        companyId
     };
 }
 

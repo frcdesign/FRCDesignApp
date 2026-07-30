@@ -94,16 +94,21 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configuration={configuration}
             />
             {parameters}
-            <Group justify="space-between" mt="md" wrap="nowrap">
-                <FavoriteButton favorite={favorite} insertable={insertable} />
-                <MenuButton>
-                    <InsertableMenuItems
+            <Group justify="space-between" wrap="nowrap" mt="mt">
+                <Group gap={4}>
+                    <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        inInsertMenu
-                        configuration={configuration}
                     />
-                </MenuButton>
+                    <MenuButton>
+                        <InsertableMenuItems
+                            favorite={favorite}
+                            insertable={insertable}
+                            inInsertMenu
+                            configuration={configuration}
+                        />
+                    </MenuButton>
+                </Group>
                 <InsertButtons
                     insertable={insertable}
                     configuration={configuration}
@@ -122,6 +127,9 @@ interface InsertButtonsProps {
     onInsert: () => void;
 }
 
+/**
+ * The derive/insert button plus the insert and fasten checkbox.
+ */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { insertable, configuration, isFavorite, onInsert } = props;
 
