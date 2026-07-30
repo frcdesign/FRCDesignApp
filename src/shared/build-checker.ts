@@ -52,16 +52,20 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
 }
 
 /**
- * Adds `issue` to `issues`, returning a new array.
+ * Adds each of `newIssues` to `issues`, skipping any whose type is already
+ * present, and returning a new array only when something was added.
  */
 export function addBuildIssue(
     issues: BuildIssue[],
-    issue: BuildIssue
+    ...newIssues: BuildIssue[]
 ): BuildIssue[] {
-    if (issues.some((existing) => existing.type === issue.type)) {
-        return issues;
+    let result = issues;
+    for (const issue of newIssues) {
+        if (!result.some((existing) => existing.type === issue.type)) {
+            result = [...result, issue];
+        }
     }
-    return [...issues, issue];
+    return result;
 }
 
 /**

@@ -27,9 +27,7 @@ export function normalizePartNumber(
  * An indexed part studio resolves to a single part, so the first part carrying
  * a part number is the one we want.
  */
-export function parsePartStudioPartNumber(
-    parts: OnshapePart[] | undefined | null
-): string | null {
+export function parsePartStudioPartNumber(parts: OnshapePart[]): string | null {
     if (!Array.isArray(parts)) {
         return null;
     }

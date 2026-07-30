@@ -13,8 +13,7 @@ import {
 import {
     computePartNumbers,
     NO_PART_NUMBERS,
-    type PartNumbers,
-    withPartNumberIssues
+    type PartNumberResult
 } from "../load/load-part-numbers";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementType } from "../../shared/types";
@@ -31,6 +30,7 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
+import { addBuildIssue } from "../../shared/build-checker";
 
 export const insertableRoutes = getApp();
 
@@ -157,7 +157,10 @@ insertableRoutes.post(
                 .set({
                     searchPartNumbers: body.searchPartNumbers,
                     defaultPartNumber: indexed.defaultPartNumber,
-                    buildIssues: withPartNumberIssues(row.buildIssues, indexed)
+                    buildIssues: addBuildIssue(
+                        row.buildIssues,
+                        ...indexed.buildIssues
+                    )
                 })
                 .where(eq(insertables.id, insertableId)),
             // No-op when the insertable has no configuration row.
@@ -189,7 +192,7 @@ async function indexPartNumbers(
         elementId: string;
         elementType: ElementType;
     }
-): Promise<PartNumbers> {
+): Promise<PartNumberResult> {
     const sourcePath: ElementPath = {
         documentId: insertable.documentId,
         instanceId: insertable.versionId,

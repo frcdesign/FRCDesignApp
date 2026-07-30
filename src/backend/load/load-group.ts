@@ -76,11 +76,7 @@ export async function loadGroup(
         () => fetchStoredInsertables(ctx, groupId)
     );
 
-    // Selection is synchronous but *not* deterministic: it mints an id for each
-    // new insertable. Those ids have to be persisted by a step, or a restart
-    // would mint different ones — the insertable row would keep the id from the
-    // first attempt (it upserts on groupId+elementId) while its configuration
-    // row was written against the new one, orphaning the foreign key.
+    // Wrap in a step so new UUIDs are deterministic
     const insertablesToLoad = await ctx.step.do(
         `select-insertables-${groupId}`,
         () =>
@@ -101,11 +97,11 @@ export async function loadGroup(
 
     const failedElementIds: string[] = [];
     await Promise.all(
-        insertablesToLoad.map(async (insertable) => {
+        insertablesToLoad.map(async (insertableToLoad) => {
             try {
-                await loadInsertable(ctx, insertable);
+                await loadInsertable(ctx, insertableToLoad);
             } catch {
-                failedElementIds.push(insertable.path.elementId);
+                failedElementIds.push(insertableToLoad.path.elementId);
             }
         })
     );
@@ -210,7 +206,7 @@ export interface StoredInsertable {
 }
 
 /**
- * Selects the tabs to (re)load: new ones, and stored ones whose microversion
+ * Selects the tabs to reload: new ones, and stored ones whose microversion
  * changed (or all of them, on `forceReload`). A stored insertable keeps its id
  * and its user-owned flags; a new one gets a fresh id and the defaults.
  */

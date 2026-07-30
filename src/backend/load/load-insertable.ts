@@ -4,7 +4,7 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import type { BuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, type BuildIssue } from "../../shared/build-checker";
 import type {
     ElementType,
     FastenInfo,
@@ -18,10 +18,11 @@ import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
-import { loadPartNumbers, withPartNumberIssues } from "./load-part-numbers";
+import { loadPartNumbers, NO_PART_NUMBERS } from "./load-part-numbers";
 import {
     type InsertableToLoad,
     type LoadContext,
+    type ParseData,
     getOnshapeApiFromContext,
     uploadThumbnailsStep
 } from "./load-utils";
@@ -47,17 +48,30 @@ export interface ReloadedFields {
  */
 export async function loadInsertable(
     ctx: LoadContext,
-    toLoad: InsertableToLoad
+    insertableToLoad: InsertableToLoad
 ): Promise<void> {
-    const { insertableId, path } = toLoad;
+    const { insertableId, path } = insertableToLoad;
 
-    const parameters = await parseConfigurationStep(ctx, toLoad);
+    const parseData: ParseData = {
+        insertableId,
+        insertablePath: path,
+        elementType: insertableToLoad.elementType
+    };
 
-    const vendors = parseVendors(toLoad.name, parameters);
+    let buildIssues: BuildIssue[] = [];
 
-    const fastenInfo = await parseFastenInfoStep(ctx, toLoad);
+    const parameters = await parseConfigurationStep(ctx, parseData);
 
-    const partNumbers = await loadPartNumbers(ctx, toLoad, parameters);
+    const vendors = parseVendors(insertableToLoad.name, parameters);
+
+    const fastenInfo = insertableToLoad.supportsFasten
+        ? await parseFastenInfoStep(ctx, parseData)
+        : null;
+
+    const partNumberResult = insertableToLoad.searchPartNumbers
+        ? await loadPartNumbers(ctx, parseData, parameters)
+        : NO_PART_NUMBERS;
+    buildIssues = addBuildIssue(buildIssues, ...partNumberResult.buildIssues);
 
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
@@ -67,29 +81,30 @@ export async function loadInsertable(
                 ctx.env.THUMBNAILS,
                 await getOnshapeApiFromContext(ctx),
                 path,
-                toLoad.microversionId
+                insertableToLoad.microversionId
             )
+    );
+    buildIssues = addBuildIssue(
+        buildIssues,
+        ...checkInsertable({ vendors, thumbnailUrls })
     );
 
     const reloaded: ReloadedFields = {
-        name: toLoad.name,
-        elementType: toLoad.elementType,
-        microversionId: toLoad.microversionId,
+        name: insertableToLoad.name,
+        elementType: insertableToLoad.elementType,
+        microversionId: insertableToLoad.microversionId,
         versionId: path.instanceId,
         vendors,
         thumbnailUrls,
         fastenInfo,
-        defaultPartNumber: partNumbers.defaultPartNumber,
-        buildIssues: withPartNumberIssues(
-            checkInsertable({ vendors, thumbnailUrls }),
-            partNumbers
-        )
+        defaultPartNumber: partNumberResult.defaultPartNumber,
+        buildIssues
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), toLoad, reloaded, {
+        saveInsertable(getDb(ctx.env.DB), insertableToLoad, reloaded, {
             parameters,
-            partNumbers: partNumbers.partNumbers
+            partNumbers: partNumberResult.partNumbers
         })
     );
 }
@@ -99,12 +114,12 @@ export async function loadInsertable(
  */
 function parseConfigurationStep(
     ctx: LoadContext,
-    toLoad: InsertableToLoad
+    { insertableId, insertablePath }: ParseData
 ): Promise<ConfigurationParameter[]> {
-    return ctx.step.do(`config-${toLoad.insertableId}`, async () => {
+    return ctx.step.do(`config-${insertableId}`, async () => {
         const onshapeConfiguration = await getConfiguration(
             await getOnshapeApiFromContext(ctx),
-            toLoad.path
+            insertablePath
         );
         return parseOnshapeConfiguration(onshapeConfiguration);
     });
@@ -113,27 +128,21 @@ function parseConfigurationStep(
 /**
  * Fetches and parses the element's fasten info.
  */
-async function parseFastenInfoStep(
+function parseFastenInfoStep(
     ctx: LoadContext,
-    toLoad: InsertableToLoad
-): Promise<FastenInfo | null> {
-    if (!toLoad.supportsFasten) {
-        return null;
-    }
-    return ctx.step.do(`fasten-${toLoad.insertableId}`, async () =>
+    { insertableId, insertablePath, elementType }: ParseData
+): Promise<FastenInfo> {
+    return ctx.step.do(`fasten-${insertableId}`, async () =>
         parseFastenInfo(
             await getOnshapeApiFromContext(ctx),
-            toLoad.path,
-            toLoad.elementType
+            insertablePath,
+            elementType
         )
     );
 }
 
 /**
- * Writes a single insertable (plus configuration) to the database, including
- * the part numbers computed for this load. When part-number search is off both
- * are empty, which keeps the columns clear — `getPartNumberMap` in
- * library-data.ts relies on that rather than re-checking the flag.
+ * Writes a single insertable (plus configuration) to the database.
  */
 export async function saveInsertable(
     db: Db,

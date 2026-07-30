@@ -14,6 +14,15 @@ export interface LoadContext {
     step: WorkflowStep;
 }
 
+/**
+ * Data commonly needed for parsing insertable data from Onshape.
+ */
+export interface ParseData {
+    insertableId: string;
+    insertablePath: ElementPath;
+    elementType: ElementType;
+}
+
 export function getOnshapeApiFromContext(
     ctx: LoadContext
 ): Promise<OnshapeApi> {

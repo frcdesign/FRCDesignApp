@@ -55,10 +55,8 @@ describe("parsePartStudioPartNumber", () => {
         ).toBeNull();
     });
 
-    it("returns null for an empty or malformed response", () => {
+    it("returns null for an empty response", () => {
         expect(parsePartStudioPartNumber([])).toBeNull();
-        expect(parsePartStudioPartNumber(undefined)).toBeNull();
-        expect(parsePartStudioPartNumber(null)).toBeNull();
     });
 });
 

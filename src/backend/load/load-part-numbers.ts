@@ -30,8 +30,8 @@ import {
     parsePartStudioPartNumber
 } from "../parse/parse-part-number";
 import {
-    type InsertableToLoad,
     type LoadContext,
+    type ParseData,
     ONSHAPE_STEP_RETRIES,
     getOnshapeApiFromContext
 } from "./load-utils";
@@ -46,7 +46,7 @@ export interface PartNumberEntry {
 }
 
 /** An insertable's indexed part numbers, and the issues indexing them raised. */
-export interface PartNumbers {
+export interface PartNumberResult {
     /**
      * The part number of the insertable's default configuration, whether or not
      * it is configurable. Also present in `partNumbers` for configurable ones.
@@ -59,7 +59,7 @@ export interface PartNumbers {
 }
 
 /** The result for an insertable that isn't indexed. */
-export const NO_PART_NUMBERS: PartNumbers = {
+export const NO_PART_NUMBERS: PartNumberResult = {
     defaultPartNumber: null,
     partNumbers: {},
     buildIssues: []
@@ -72,7 +72,7 @@ export const NO_PART_NUMBERS: PartNumbers = {
  */
 export function withPartNumberIssues(
     issues: BuildIssue[],
-    partNumbers: PartNumbers
+    partNumbers: PartNumberResult
 ): BuildIssue[] {
     let merged = clearBuildIssue(
         issues,
@@ -168,7 +168,7 @@ async function collectPartNumbers(
         batch: ParameterValues[],
         index: number
     ) => Promise<PartNumberEntry[]>
-): Promise<PartNumbers> {
+): Promise<PartNumberResult> {
     // An empty configuration tells Onshape to apply every default.
     const defaultPartNumber = await fetchDefault();
     if (parameters.length === 0) {
@@ -206,7 +206,7 @@ export function computePartNumbers(
     path: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[]
-): Promise<PartNumbers> {
+): Promise<PartNumberResult> {
     return collectPartNumbers(
         parameters,
         () => getPartNumber(client, path, elementType, {}),
@@ -224,14 +224,9 @@ export function computePartNumbers(
  */
 export function loadPartNumbers(
     ctx: LoadContext,
-    toLoad: InsertableToLoad,
+    { insertableId, insertablePath, elementType }: ParseData,
     parameters: ConfigurationParameter[]
-): Promise<PartNumbers> {
-    if (!toLoad.searchPartNumbers) {
-        return Promise.resolve(NO_PART_NUMBERS);
-    }
-
-    const { insertableId, path, elementType } = toLoad;
+): Promise<PartNumberResult> {
     return collectPartNumbers(
         parameters,
         () =>
@@ -241,7 +236,7 @@ export function loadPartNumbers(
                 async () =>
                     getPartNumber(
                         await getOnshapeApiFromContext(ctx),
-                        path,
+                        insertablePath,
                         elementType,
                         {}
                     )
@@ -253,7 +248,7 @@ export function loadPartNumbers(
                 async () =>
                     fetchPartNumbers(
                         await getOnshapeApiFromContext(ctx),
-                        path,
+                        insertablePath,
                         elementType,
                         batch
                     )
