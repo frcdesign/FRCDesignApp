@@ -105,10 +105,6 @@ export async function loadGroup(
 /**
  * Loads every selected insertable in parallel, returning the ids of the ones
  * that failed.
- *
- * A failure isn't fatal: `loadInsertable` throws before it saves, so the stored
- * row is untouched, and the group records the failure (see {@link saveGroup})
- * rather than discarding the rest of the group's work.
  */
 async function loadInsertables(
     ctx: LoadContext,
