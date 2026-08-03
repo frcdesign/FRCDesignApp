@@ -133,5 +133,5 @@ Double check your Action URLs configured in Onshape. You can also open Browser D
 ## Port Taken/Not Available
 
 Occasionally, a process will fail to fully shut down, causing problems when you next attempt to `Launch servers` since the port is already taken.
-If a process fails to start because a port is already taken, you can kill the process squatting on the port by running `lsof -i :<port number>`, e.g., `lsof -i :8080`, to get the PID of the process.
+If a process fails to start because a port is already taken, you can kill the process squatting on the port by running `lsof -i :<port number>`, e.g., `lsof -i :3000`, to get the PID of the process.
 You can then kill the process using `kill <PID>` (or, possibly, `kill -9 <PID>`).
