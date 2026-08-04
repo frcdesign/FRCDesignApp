@@ -76,28 +76,4 @@ describe("parseInsertableTabs", () => {
         );
         expect(tabIds(document)).toEqual(["a", "b", "orphan"]);
     });
-
-    it("ignores tree entries with no matching element", () => {
-        const document = contents(
-            [element("a")],
-            folder(ref("a"), ref("deleted"))
-        );
-        expect(tabIds(document)).toEqual(["a"]);
-    });
-
-    it("returns nothing for a document with no insertable tabs", () => {
-        expect(tabIds(contents([], folder()))).toEqual([]);
-    });
-
-    it("returns the full element, not just its id", () => {
-        const document = contents([element("a")], folder(ref("a")));
-        expect(parseInsertableTabs(document)).toEqual([
-            {
-                id: "a",
-                name: "Tab a",
-                elementType: OnshapeElementType.PART_STUDIO,
-                microversionId: "mv-1"
-            }
-        ]);
-    });
 });

@@ -74,7 +74,7 @@ export const PART_NUMBER_ISSUE_TYPES = [
  * a missing or blank value to `null`.
  */
 export function normalizePartNumber(
-    partNumber: string | undefined | null
+    partNumber: string | undefined
 ): string | null {
     const trimmed = partNumber?.trim();
     return trimmed ? trimmed : null;
@@ -106,9 +106,9 @@ export function parsePartStudioParts(parts: OnshapePart[]): PartStudioParts {
  * Returns the root assembly's part number, or `null` if none is set.
  */
 export function parseAssemblyPartNumber(
-    definition: OnshapeAssemblyDefinition | undefined | null
+    definition: OnshapeAssemblyDefinition
 ): string | null {
-    return normalizePartNumber(definition?.rootAssembly?.partNumber);
+    return normalizePartNumber(definition.rootAssembly.partNumber);
 }
 
 /**

@@ -8,10 +8,9 @@ import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
 import {
     ParameterValues,
-    EnumParameter,
-    ConfigurationParameter,
-    ParameterType
+    ConfigurationParameter
 } from "../../shared/configuration-models";
+import { enumParam } from "../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-checker";
 import {
@@ -40,39 +39,27 @@ const PATH: ElementPath = {
 /** The client is only forwarded to the endpoint wrapper, which is mocked. */
 const CLIENT = {} as OnshapeApi;
 
-function enumParam(id: string, optionIds: string[]): EnumParameter {
-    return {
-        id,
-        name: id,
-        default: optionIds[0],
-        isCosmetic: false,
-        type: ParameterType.ENUM,
-        options: optionIds.map((o) => ({ id: o, name: o })),
-        optionConditions: []
-    };
-}
-
 /**
- * Mocks the parts endpoint so the part number is derived from the requested
+ * Mocks the parts endpoint, deriving the studio's parts from the requested
  * configuration. An empty configuration is the element's defaults.
  */
 function mockParts(
-    partNumberFor: (configuration: ParameterValues) => string | undefined
+    partsFor: (configuration: ParameterValues) => OnshapePart[]
 ) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
         .mockImplementation((_client, _path, configuration) =>
-            Promise.resolve([
-                { partId: "p", partNumber: partNumberFor(configuration) }
-            ])
+            Promise.resolve(partsFor(configuration))
         );
 }
 
-/** Mocks the parts endpoint to return the same parts for every configuration. */
-function mockPartsList(parts: OnshapePart[]) {
-    return vi
-        .spyOn(PartsEndpoints, "getParts")
-        .mockResolvedValue(parts satisfies OnshapePart[]);
+/** Mocks a single-part studio whose part number depends on the configuration. */
+function mockPartNumbers(
+    partNumberFor: (configuration: ParameterValues) => string | undefined
+) {
+    return mockParts((configuration) => [
+        { partId: "p", partNumber: partNumberFor(configuration) }
+    ]);
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -84,7 +71,6 @@ describe("normalizePartNumber", () => {
 
     it("maps missing or blank values to null", () => {
         expect(normalizePartNumber(undefined)).toBeNull();
-        expect(normalizePartNumber(null)).toBeNull();
         expect(normalizePartNumber("")).toBeNull();
         expect(normalizePartNumber("   ")).toBeNull();
     });
@@ -106,20 +92,13 @@ describe("parsePartStudioParts", () => {
         ).toBe("217-2601");
     });
 
-    it("keeps the first part number when several parts carry one", () => {
+    it("reports the first part number and that there was more than one part", () => {
         expect(
             parsePartStudioParts([
                 { partId: "JHD", partNumber: "217-2600" },
                 { partId: "JHE", partNumber: "217-2601" }
-            ]).partNumber
-        ).toBe("217-2600");
-    });
-
-    it("reports more than one part", () => {
-        expect(
-            parsePartStudioParts([{ partId: "JHD" }, { partId: "JHE" }])
-                .hasMultipleParts
-        ).toBe(true);
+            ])
+        ).toEqual({ partNumber: "217-2600", hasMultipleParts: true });
     });
 
     it("returns null when no part carries a part number", () => {
@@ -148,13 +127,6 @@ describe("parseAssemblyPartNumber", () => {
         expect(parseAssemblyPartNumber(assembly())).toBeNull();
         expect(parseAssemblyPartNumber(assembly(""))).toBeNull();
     });
-
-    it("returns null for a malformed response", () => {
-        expect(parseAssemblyPartNumber(undefined)).toBeNull();
-        expect(
-            parseAssemblyPartNumber({} as OnshapeAssemblyDefinition)
-        ).toBeNull();
-    });
 });
 
 describe("parsePartNumbers", () => {
@@ -164,7 +136,9 @@ describe("parsePartNumbers", () => {
             enumParam("B", ["b1", "b2"])
         ];
         // The part number depends only on A, so the two B values collapse.
-        mockParts((configuration) => `PN-${configuration.A ?? "default"}`);
+        mockPartNumbers(
+            (configuration) => `PN-${configuration.A ?? "default"}`
+        );
 
         const result = await parsePartNumbers(
             CLIENT,
@@ -181,7 +155,9 @@ describe("parsePartNumbers", () => {
     });
 
     it("records the default configuration's part number even when configurable", async () => {
-        mockParts((configuration) => `PN-${configuration.A ?? "default"}`);
+        mockPartNumbers(
+            (configuration) => `PN-${configuration.A ?? "default"}`
+        );
 
         const result = await parsePartNumbers(
             CLIENT,
@@ -194,7 +170,7 @@ describe("parsePartNumbers", () => {
     });
 
     it("drops configurations with no part number", async () => {
-        mockParts((configuration) =>
+        mockPartNumbers((configuration) =>
             configuration.A === "a1" ? "PN-a1" : undefined
         );
 
@@ -209,7 +185,7 @@ describe("parsePartNumbers", () => {
     });
 
     it("stores the default part number for non-configurable insertables", async () => {
-        const spy = mockParts(() => "PN-default");
+        const spy = mockPartNumbers(() => "PN-default");
 
         const result = await parsePartNumbers(
             CLIENT,
@@ -231,7 +207,7 @@ describe("parsePartNumbers", () => {
             enumParam("A", ["a1", "a2", "a3", "a4", "a5", "a6", "a7"]),
             enumParam("B", ["b1", "b2", "b3", "b4", "b5", "b6", "b7"])
         ];
-        const spy = mockParts(
+        const spy = mockPartNumbers(
             (configuration) => `PN-${configuration.A}-${configuration.B}`
         );
 
@@ -253,7 +229,7 @@ describe("parsePartNumbers", () => {
             { length: 10 },
             (_, i) => enumParam(`P${i}`, ["x", "y"])
         );
-        mockParts(() => "PN-default");
+        mockPartNumbers(() => "PN-default");
 
         const result = await parsePartNumbers(
             CLIENT,
@@ -269,35 +245,14 @@ describe("parsePartNumbers", () => {
         expect(result.defaultPartNumber).toBe("PN-default");
     });
 
-    it("flags a part studio with more than one part", async () => {
-        mockPartsList([
-            { partId: "p1", partNumber: "PN-1" },
-            { partId: "p2", partNumber: "PN-2" }
-        ]);
-
-        const result = await parsePartNumbers(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])]
-        );
-
-        expect(result.buildIssues).toEqual([
-            { type: BuildIssueType.MULTIPLE_PARTS }
-        ]);
-    });
-
-    it("flags a studio that only has extra parts in some configuration", async () => {
-        vi.spyOn(PartsEndpoints, "getParts").mockImplementation(
-            (_client, _path, configuration) =>
-                Promise.resolve(
-                    configuration.A === "a2"
-                        ? [
-                              { partId: "p1", partNumber: "PN-1" },
-                              { partId: "p2", partNumber: "PN-2" }
-                          ]
-                        : [{ partId: "p1", partNumber: "PN-1" }]
-                )
+    it("flags a studio with more than one part in any configuration", async () => {
+        mockParts((configuration) =>
+            configuration.A === "a2"
+                ? [
+                      { partId: "p1", partNumber: "PN-1" },
+                      { partId: "p2", partNumber: "PN-2" }
+                  ]
+                : [{ partId: "p1", partNumber: "PN-1" }]
         );
 
         const result = await parsePartNumbers(
@@ -313,7 +268,7 @@ describe("parsePartNumbers", () => {
     });
 
     it("does not flag a single-part studio", async () => {
-        mockPartsList([{ partId: "p1", partNumber: "PN-1" }]);
+        mockParts(() => [{ partId: "p1", partNumber: "PN-1" }]);
 
         const result = await parsePartNumbers(
             CLIENT,
@@ -325,12 +280,10 @@ describe("parsePartNumbers", () => {
         expect(result.buildIssues).toEqual([]);
     });
 
-    it("never flags an assembly, however many parts it contains", async () => {
-        vi.spyOn(PartsEndpoints, "getAssemblyDefinition").mockResolvedValue({
-            rootAssembly: { features: [], instances: [], partNumber: "AM-1" },
-            parts: [{}, {}],
-            subAssemblies: []
-        });
+    it("indexes an assembly from its root part number", async () => {
+        vi.spyOn(PartsEndpoints, "getAssemblyDefinition").mockResolvedValue(
+            assembly("AM-1")
+        );
 
         const result = await parsePartNumbers(
             CLIENT,

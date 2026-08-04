@@ -129,63 +129,37 @@ describe("POST /reload-groups", () => {
 
     // The route no longer checks document versions itself — it just spawns one
     // LoadLibrary workflow, which owns the per-group skip decision.
-    it("triggers one library workflow with forceReload=false when omitted", async () => {
-        await seedGroup(db, TEST_GROUP_ID);
-        const createSpy = vi
-            .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
-            .mockResolvedValue({ id: "wf" } as never);
+    // The "false" case is a regression test: z.coerce.boolean() coerces the
+    // *string* "false" to `true` (any non-empty string is truthy), so an
+    // explicit forceReload=false used to force a reload just by being present.
+    // z.stringbool() fixes this.
+    it.each([
+        ["omitted", "", false],
+        ["false", "?forceReload=false", false],
+        ["true", "?forceReload=true", true]
+    ])(
+        "triggers one library workflow with forceReload %s",
+        async (_label, query, forceReload) => {
+            await seedGroup(db, TEST_GROUP_ID);
+            const createSpy = vi
+                .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
+                .mockResolvedValue({ id: "wf" } as never);
 
-        const res = await createTestApp().request(
-            `/api/reload-groups/library/${TEST_LIBRARY_ID}`,
-            sessionRequest("POST"),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ status: "triggered" });
-        expect(createSpy).toHaveBeenCalledOnce();
-        expect(createSpy.mock.calls[0][0]?.params).toEqual({
-            libraryId: TEST_LIBRARY_ID,
-            sessionId: "test-session",
-            forceReload: false
-        });
-    });
-
-    // Regression test: z.coerce.boolean() coerces the *string* "false" to `true`
-    // (any non-empty string is truthy), so an explicit forceReload=false used to
-    // force a reload just by being present. z.stringbool() fixes this.
-    it("passes an explicit forceReload=false through as false", async () => {
-        await seedGroup(db, TEST_GROUP_ID);
-        const createSpy = vi
-            .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
-            .mockResolvedValue({ id: "wf" } as never);
-
-        const res = await createTestApp().request(
-            `/api/reload-groups/library/${TEST_LIBRARY_ID}?forceReload=false`,
-            sessionRequest("POST"),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(createSpy.mock.calls[0][0]?.params).toMatchObject({
-            forceReload: false
-        });
-    });
-
-    it("passes forceReload=true through", async () => {
-        await seedGroup(db, TEST_GROUP_ID);
-        const createSpy = vi
-            .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
-            .mockResolvedValue({ id: "wf" } as never);
-
-        const res = await createTestApp().request(
-            `/api/reload-groups/library/${TEST_LIBRARY_ID}?forceReload=true`,
-            sessionRequest("POST"),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(createSpy.mock.calls[0][0]?.params).toMatchObject({
-            forceReload: true
-        });
-    });
+            const res = await createTestApp().request(
+                `/api/reload-groups/library/${TEST_LIBRARY_ID}${query}`,
+                sessionRequest("POST"),
+                env
+            );
+            expect(res.status).toBe(200);
+            expect(await res.json()).toEqual({ status: "triggered" });
+            expect(createSpy).toHaveBeenCalledOnce();
+            expect(createSpy.mock.calls[0][0]?.params).toEqual({
+                libraryId: TEST_LIBRARY_ID,
+                sessionId: "test-session",
+                forceReload
+            });
+        }
+    );
 });
 
 describe("POST /group", () => {

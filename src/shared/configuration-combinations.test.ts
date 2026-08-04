@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { enumerateConfigurations } from "./configuration-combinations";
 import {
-    BooleanParameter,
-    EnumParameter,
     OptionVisibilityType,
     ConfigurationParameter,
     ParameterType,
@@ -11,37 +9,8 @@ import {
     VisibilityCondition,
     VisibilityType
 } from "./configuration-models";
+import { boolParam, enumParam } from "../__test_utils__/configuration-fixtures";
 import { QuantityType, Unit } from "./configuration-enums";
-
-function enumParam(
-    id: string,
-    optionIds: string[],
-    extra: Partial<EnumParameter> = {}
-): EnumParameter {
-    return {
-        id,
-        name: id,
-        default: optionIds[0],
-        isCosmetic: false,
-        type: ParameterType.ENUM,
-        options: optionIds.map((optionId) => ({
-            id: optionId,
-            name: optionId
-        })),
-        optionConditions: [],
-        ...extra
-    };
-}
-
-function boolParam(id: string): BooleanParameter {
-    return {
-        id,
-        name: id,
-        default: "false",
-        isCosmetic: false,
-        type: ParameterType.BOOLEAN
-    };
-}
 
 function quantityParam(id: string): QuantityParameter {
     return {

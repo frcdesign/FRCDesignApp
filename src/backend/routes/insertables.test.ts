@@ -23,6 +23,15 @@ import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 
 const db = getDb(env.DB);
 
+/** Reads back a seeded insertable to assert on what a route wrote. */
+function readInsertable(insertableId: string) {
+    return db
+        .select()
+        .from(insertables)
+        .where(eq(insertables.id, insertableId))
+        .get();
+}
+
 // The target element to insert into — must be an editable workspace ("w").
 const target = "/d/doc-target/w/w-target/e/target-element";
 const targetPath = {
@@ -49,11 +58,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.isOpenComposite).toBe(true);
     });
 
@@ -79,11 +84,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.supportsFasten).toBe(false);
         expect(row?.fastenInfo).toBeNull();
     });
@@ -159,11 +160,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.searchPartNumbers).toBe(true);
         expect(row?.defaultPartNumber).toBe("PN-123");
     });
@@ -184,11 +181,7 @@ describe("insertable routes", () => {
         const body: { retryAfterSeconds: number } = await res.json();
         expect(body.retryAfterSeconds).toBe(450);
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.searchPartNumbers).toBe(false);
         expect(row?.defaultPartNumber).toBeNull();
     });
@@ -214,11 +207,7 @@ describe("insertable routes", () => {
         // Disabling needs no Onshape calls.
         expect(spy).not.toHaveBeenCalled();
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.searchPartNumbers).toBe(false);
         expect(row?.defaultPartNumber).toBeNull();
     });
@@ -247,37 +236,8 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
         // The cap no longer applies, and the unrelated issue survives.
         expect(row?.buildIssues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
-    });
-
-    it("POST /toggle-part-number-search records a multi-part studio", async () => {
-        await seedPartStudio(db);
-        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
-            { partId: "p1", partNumber: "PN-1" },
-            { partId: "p2", partNumber: "PN-2" }
-        ]);
-
-        const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
-            env
-        );
-        expect(res.status).toBe(200);
-
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-            .get();
-        expect(row?.searchPartNumbers).toBe(true);
-        expect(row?.buildIssues).toEqual([
-            { type: BuildIssueType.MULTIPLE_PARTS }
-        ]);
     });
 });

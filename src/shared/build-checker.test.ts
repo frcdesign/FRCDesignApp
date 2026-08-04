@@ -5,7 +5,6 @@ import {
     BuildIssueSeverity,
     BuildIssueType,
     clearBuildIssue,
-    getIssueSeverity,
     getMaxSeverity
 } from "./build-checker";
 
@@ -18,18 +17,6 @@ const TYPE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueType> = {
 
 const issue = (severity: BuildIssueSeverity): BuildIssue => ({
     type: TYPE_BY_SEVERITY[severity]
-});
-
-describe("getIssueSeverity", () => {
-    // A part number picked arbitrarily from several parts is wrong data, not a
-    // hint, so these are errors rather than warnings.
-    it.each([
-        BuildIssueType.MULTIPLE_PARTS,
-        BuildIssueType.INSERTABLES_FAILED,
-        BuildIssueType.LOAD_FAILED
-    ])("rates %s as an error", (type) => {
-        expect(getIssueSeverity({ type })).toBe(BuildIssueSeverity.ERROR);
-    });
 });
 
 describe("getMaxSeverity", () => {

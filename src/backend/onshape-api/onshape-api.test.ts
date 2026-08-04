@@ -15,15 +15,12 @@ class TestApi extends OnshapeApi {
     }
 }
 
-describe("OnshapeApi._call rate limiting", () => {
+describe("OnshapeApi error handling", () => {
     it("throws OnshapeRateLimitError with the Retry-After seconds on 429", async () => {
         const api = new TestApi(
             new Response("rate limited", {
                 status: 429,
-                headers: {
-                    "Retry-After": "450",
-                    "X-Rate-Limit-Remaining": "0"
-                }
+                headers: { "Retry-After": "450" }
             })
         );
         await expect(api.get("/x")).rejects.toMatchObject({
@@ -42,9 +39,9 @@ describe("OnshapeApi._call rate limiting", () => {
 
     it("throws a plain OnshapeApiError for non-429 failures", async () => {
         const api = new TestApi(new Response("boom", { status: 500 }));
-        const error = await api.get("/x").catch((e: unknown) => e);
-        expect(error).toBeInstanceOf(OnshapeApiError);
-        expect(error).not.toBeInstanceOf(OnshapeRateLimitError);
-        expect((error as OnshapeApiError).status).toBe(500);
+        const request = api.get("/x");
+        await expect(request).rejects.toBeInstanceOf(OnshapeApiError);
+        await expect(request).rejects.not.toBeInstanceOf(OnshapeRateLimitError);
+        await expect(request).rejects.toMatchObject({ status: 500 });
     });
 });
