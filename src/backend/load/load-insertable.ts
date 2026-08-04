@@ -198,7 +198,7 @@ export async function saveInsertable(
             ...reloaded
         })
         .onConflictDoUpdate({
-            target: [insertables.groupId, insertables.elementId],
+            target: insertables.id,
             set: reloaded
         });
 

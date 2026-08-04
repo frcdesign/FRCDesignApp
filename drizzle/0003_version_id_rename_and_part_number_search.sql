@@ -7,7 +7,9 @@ ALTER TABLE `insertables` ADD `default_part_number` text;--> statement-breakpoin
 ALTER TABLE `configurations` ADD `part_numbers` text NOT NULL DEFAULT '{}';--> statement-breakpoint
 /*
  A new insertable starts hidden, so `is_visible` defaults to false. SQLite has no
- ALTER COLUMN, so changing a default means recreating the table.
+ ALTER COLUMN, so changing a default means recreating the table. The recreate
+ also drops the `(element_id, group_id)` unique index, which the primary key
+ makes redundant.
 
  `configurations` and `favorites` both reference `insertables(id)` ON DELETE
  CASCADE, and D1 gives no way to switch that off: it runs migration statements in
@@ -71,5 +73,4 @@ DROP TABLE `insertables`;--> statement-breakpoint
 ALTER TABLE `__new_configurations` RENAME TO `configurations`;--> statement-breakpoint
 ALTER TABLE `__new_favorites` RENAME TO `favorites`;--> statement-breakpoint
 ALTER TABLE `__new_insertables` RENAME TO `insertables`;--> statement-breakpoint
-CREATE UNIQUE INDEX `insertables_element_id_group_id_unique` ON `insertables` (`element_id`,`group_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `favorites_user_id_library_id_insertable_id_unique` ON `favorites` (`user_id`,`library_id`,`insertable_id`);

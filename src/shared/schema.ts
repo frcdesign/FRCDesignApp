@@ -52,63 +52,59 @@ export const group = sqliteTable(
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
 
-export const insertables = sqliteTable(
-    "insertables",
-    {
-        id: text("id")
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        elementId: text("element_id").notNull(),
-        // The group this insertable belongs to (its primary parent).
-        groupId: text("group_id")
-            .notNull()
-            .references(() => group.id, { onDelete: "cascade" }),
-        // The Onshape document the element lives in (kept for Onshape API calls).
-        documentId: text("document_id").notNull(),
-        libraryId: text("library_id")
-            .notNull()
-            .$type<LibraryId>()
-            .references(() => libraries.id),
-        name: text("name").notNull(),
-        elementType: text("element_type").notNull().$type<ElementType>(),
-        microversionId: text("microversion_id").notNull(),
-        isVisible: integer("is_visible", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        isOpenComposite: integer("is_open_composite", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        supportsFasten: integer("supports_fasten", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        // Whether this insertable's part numbers are indexed for search.
-        searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        // Part number of the default configuration. The sole source of part
-        // numbers for non-configurable insertables (which have no
-        // `configurations` row); null when part-number search is off.
-        defaultPartNumber: text("default_part_number"),
-        versionId: text("version_id").notNull(),
-        sortOrder: integer("sort_order").notNull().default(0),
-        vendors: text("vendors", { mode: "json" })
-            .$type<Vendor[]>()
-            .notNull()
-            .default([]),
-        thumbnailUrls: text("thumbnail_urls", {
-            mode: "json"
-        }).$type<ThumbnailUrls | null>(),
-        fastenInfo: text("fasten_info", {
-            mode: "json"
-        }).$type<FastenInfo | null>(),
-        // Build-time issues flagged by the build checker, recomputed on reload.
-        buildIssues: text("build_issues", { mode: "json" })
-            .$type<BuildIssue[]>()
-            .notNull()
-            .default([])
-    },
-    (t) => [unique().on(t.elementId, t.groupId)]
-);
+export const insertables = sqliteTable("insertables", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+    elementId: text("element_id").notNull(),
+    // The group this insertable belongs to (its primary parent).
+    groupId: text("group_id")
+        .notNull()
+        .references(() => group.id, { onDelete: "cascade" }),
+    // The Onshape document the element lives in (kept for Onshape API calls).
+    documentId: text("document_id").notNull(),
+    libraryId: text("library_id")
+        .notNull()
+        .$type<LibraryId>()
+        .references(() => libraries.id),
+    name: text("name").notNull(),
+    elementType: text("element_type").notNull().$type<ElementType>(),
+    microversionId: text("microversion_id").notNull(),
+    isVisible: integer("is_visible", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    isOpenComposite: integer("is_open_composite", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    supportsFasten: integer("supports_fasten", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Whether this insertable's part numbers are indexed for search.
+    searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Part number of the default configuration. The sole source of part
+    // numbers for non-configurable insertables (which have no
+    // `configurations` row); null when part-number search is off.
+    defaultPartNumber: text("default_part_number"),
+    versionId: text("version_id").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    vendors: text("vendors", { mode: "json" })
+        .$type<Vendor[]>()
+        .notNull()
+        .default([]),
+    thumbnailUrls: text("thumbnail_urls", {
+        mode: "json"
+    }).$type<ThumbnailUrls | null>(),
+    fastenInfo: text("fasten_info", {
+        mode: "json"
+    }).$type<FastenInfo | null>(),
+    // Build-time issues flagged by the build checker, recomputed on reload.
+    buildIssues: text("build_issues", { mode: "json" })
+        .$type<BuildIssue[]>()
+        .notNull()
+        .default([])
+});
 
 export const configurations = sqliteTable("configurations", {
     id: text("id")
