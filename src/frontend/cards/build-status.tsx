@@ -4,6 +4,7 @@ import {
     Group,
     HoverCard,
     Loader,
+    ScrollArea,
     Stack,
     Switch,
     Text,
@@ -41,6 +42,10 @@ import {
     InsertableBuildStatus
 } from "../../shared/api-models";
 import { getVendorName, Vendor } from "../../shared/types";
+import {
+    ConfigurationParameter,
+    ParameterType
+} from "../../shared/configuration-models";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
@@ -492,6 +497,9 @@ export function InsertableStatusBadge({
                         status={insertable}
                     />
                     <InsertableParsedSection status={insertable} />
+                    <ConfigurationSection
+                        parameters={insertable.configuration?.parameters}
+                    />
                 </>
             }
         />
@@ -675,11 +683,83 @@ function InsertableParsedSection({
                 />
                 <ParsedRow
                     label="Configurable"
-                    value={{ kind: "bool", value: !!status.configuration }}
+                    // An indexed non-configurable insertable has a configuration
+                    // row with no parameters (just records), so "configurable"
+                    // keys on the parameters.
+                    value={{
+                        kind: "bool",
+                        value:
+                            (status.configuration?.parameters.length ?? 0) > 0
+                    }}
                 />
             </Stack>
         </>
     );
+}
+
+/**
+ * Lists the insertable's configuration parameters: each parameter's name, its
+ * type, and whether it's excluded from properties (which keeps it from
+ * multiplying the indexed configuration count). Renders nothing when the
+ * insertable has no parameters.
+ */
+function ConfigurationSection({
+    parameters
+}: {
+    parameters?: ConfigurationParameter[];
+}): ReactNode {
+    if (!parameters || parameters.length === 0) return null;
+    return (
+        <>
+            <Divider />
+            <Stack gap={6}>
+                <SectionHeader>Configuration</SectionHeader>
+                <ScrollArea.Autosize mah={220} type="auto">
+                    <Stack gap={4}>
+                        {parameters.map((parameter) => (
+                            <Group
+                                key={parameter.id}
+                                gap="xl"
+                                wrap="nowrap"
+                                justify="space-between"
+                            >
+                                <Text size="sm">{parameter.name}</Text>
+                                <Group gap={4} wrap="nowrap">
+                                    {parameter.isCosmetic && (
+                                        <Badge
+                                            size="xs"
+                                            variant="light"
+                                            color="gray"
+                                            title="Excluded from configuration properties"
+                                        >
+                                            Excluded
+                                        </Badge>
+                                    )}
+                                    <Badge size="xs" variant="default">
+                                        {getParameterTypeLabel(parameter.type)}
+                                    </Badge>
+                                </Group>
+                            </Group>
+                        ))}
+                    </Stack>
+                </ScrollArea.Autosize>
+            </Stack>
+        </>
+    );
+}
+
+/** The short label for a parameter's type, shown as a badge. */
+function getParameterTypeLabel(type: ParameterType): string {
+    switch (type) {
+        case ParameterType.ENUM:
+            return "Enum";
+        case ParameterType.BOOLEAN:
+            return "Boolean";
+        case ParameterType.QUANTITY:
+            return "Quantity";
+        case ParameterType.STRING:
+            return "Text";
+    }
 }
 
 /** A read-only label/value row in the "Parsed" section. */
