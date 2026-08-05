@@ -3,7 +3,26 @@ import { buildSearchDb, processTerm, tokenize } from "../../shared/search";
 import { doSearch } from "./search";
 import { LibraryOut } from "../../shared/api-models";
 import { ElementType, ThumbnailUrls } from "../../shared/types";
-import { PartNumberMap } from "../../shared/configuration-models";
+import {
+    ConfigurationRecord,
+    ParameterValues
+} from "../../shared/configuration-models";
+
+/** Builds a configuration record carrying just a part number + configuration. */
+function record(
+    partNumber: string,
+    configuration: ParameterValues
+): ConfigurationRecord {
+    return {
+        configuration,
+        partNumber,
+        name: null,
+        description: null,
+        material: null,
+        vendor: null,
+        hasMultipleParts: false
+    };
+}
 
 describe("processTerm", () => {
     it("should process camelCase", () => {
@@ -81,15 +100,15 @@ function library(): LibraryOut {
 }
 
 describe("doSearch part-number matching", () => {
-    const partNumberMap: Record<string, PartNumberMap> = {
-        i1: {
-            "217-2600": { length: "short" },
-            "217-2601": { length: "long" }
-        }
+    const recordsMap: Record<string, ConfigurationRecord[]> = {
+        i1: [
+            record("217-2600", { length: "short" }),
+            record("217-2601", { length: "long" })
+        ]
     };
 
     it("matches a part number and returns its configuration", () => {
-        const searchDb = buildSearchDb(library(), partNumberMap);
+        const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = doSearch(
             searchDb,
             "217-2601",
@@ -103,7 +122,7 @@ describe("doSearch part-number matching", () => {
     });
 
     it("does not attach a configuration for a name match", () => {
-        const searchDb = buildSearchDb(library(), partNumberMap);
+        const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = doSearch(
             searchDb,
             "Bracket",
@@ -113,5 +132,25 @@ describe("doSearch part-number matching", () => {
         );
         expect(hits).toHaveLength(1);
         expect(hits[0].configuration).toBeUndefined();
+    });
+
+    // Older revisions share a part number with the latest, which enumerates
+    // first. First-wins folding must keep that latest configuration.
+    it("resolves a shared part number to the latest (first-listed) configuration", () => {
+        const searchDb = buildSearchDb(library(), {
+            i1: [
+                record("217-2600", { version: "latest" }),
+                record("217-2600", { version: "older" })
+            ]
+        });
+        const { hits } = doSearch(
+            searchDb,
+            "217-2600",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits).toHaveLength(1);
+        expect(hits[0].configuration).toEqual({ version: "latest" });
     });
 });

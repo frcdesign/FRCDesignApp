@@ -4,7 +4,11 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-checker";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-checker";
 import type { FastenInfo, ThumbnailUrls, Vendor } from "../../shared/types";
 import { configurations, insertables } from "../../shared/schema";
 import { uploadThumbnails } from "../routes/thumbnails";
@@ -13,7 +17,11 @@ import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
-import { NO_PART_NUMBERS, loadPartNumbers } from "../parse/parse-part-number";
+import {
+    NO_RECORDS,
+    decideIndexing,
+    loadConfigurationRecords
+} from "../parse/parse-configuration-records";
 import {
     type InsertableTarget,
     type LoadContext,
@@ -30,8 +38,6 @@ export interface ParsedInsertable {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
-    /** Part number of the default configuration; null when not indexed. */
-    defaultPartNumber: string | null;
     buildIssues: BuildIssue[];
     configuration: Configuration;
 }
@@ -39,7 +45,8 @@ export interface ParsedInsertable {
 /** The user-owned flags that decide how much of a load runs. */
 interface InsertableFlags {
     supportsFasten: boolean;
-    searchPartNumbers: boolean;
+    /** Forces part-number indexing on, overriding the auto heuristic. */
+    forceIndex: boolean;
 }
 
 /**
@@ -61,15 +68,21 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
-    const partNumberResult = flags.searchPartNumbers
-        ? await loadPartNumbers(
+    const { shouldIndex, manyConfigurations } = decideIndexing(
+        vendors,
+        parameters,
+        flags.forceIndex
+    );
+
+    const recordsResult = shouldIndex
+        ? await loadConfigurationRecords(
               ctx,
               insertableId,
               elementPath,
               target.elementType,
               parameters
           )
-        : NO_PART_NUMBERS;
+        : NO_RECORDS;
 
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
@@ -83,19 +96,22 @@ export async function loadInsertable(
             )
     );
 
+    let buildIssues = addBuildIssue(
+        checkInsertable({ vendors, thumbnailUrls }),
+        ...recordsResult.buildIssues
+    );
+    if (manyConfigurations) {
+        buildIssues = addBuildIssue(buildIssues, {
+            type: BuildIssueType.MANY_CONFIGURATIONS
+        });
+    }
+
     const parsed: ParsedInsertable = {
         vendors,
         thumbnailUrls,
         fastenInfo,
-        defaultPartNumber: partNumberResult.defaultPartNumber,
-        buildIssues: addBuildIssue(
-            checkInsertable({ vendors, thumbnailUrls }),
-            ...partNumberResult.buildIssues
-        ),
-        configuration: {
-            parameters,
-            partNumbers: partNumberResult.partNumbers
-        }
+        buildIssues,
+        configuration: { parameters, records: recordsResult.records }
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -115,12 +131,12 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                searchPartNumbers: insertables.searchPartNumbers
+                forceIndex: insertables.forceIndex
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, searchPartNumbers: false };
+        return row ?? { supportsFasten: false, forceIndex: false };
     });
 }
 
@@ -177,7 +193,6 @@ export async function saveInsertable(
         vendors: parsed.vendors,
         thumbnailUrls: parsed.thumbnailUrls,
         fastenInfo: parsed.fastenInfo,
-        defaultPartNumber: parsed.defaultPartNumber,
         buildIssues: parsed.buildIssues
     };
 
@@ -194,7 +209,7 @@ export async function saveInsertable(
             // one keeps the user's choices, since `set` omits these.
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false,
+            forceIndex: false,
             ...reloaded
         })
         .onConflictDoUpdate({
@@ -202,12 +217,14 @@ export async function saveInsertable(
             set: reloaded
         });
 
+    // Keep a configurations row whenever there's config data to store — the
+    // parameters a configurable insertable exposes, the records an indexed one
+    // produced, or both. A non-configurable, non-indexed insertable needs neither.
     let configurationWrite;
-    if (configuration.parameters.length === 0) {
-        configurationWrite = db
-            .delete(configurations)
-            .where(eq(configurations.id, target.insertableId));
-    } else {
+    if (
+        configuration.parameters.length > 0 ||
+        configuration.records.length > 0
+    ) {
         configurationWrite = db
             .insert(configurations)
             .values({ id: target.insertableId, ...configuration })
@@ -215,6 +232,10 @@ export async function saveInsertable(
                 target: configurations.id,
                 set: configuration
             });
+    } else {
+        configurationWrite = db
+            .delete(configurations)
+            .where(eq(configurations.id, target.insertableId));
     }
 
     await db.batch([insertableWrite, configurationWrite]);

@@ -1,0 +1,287 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as PartsEndpoints from "../onshape-api/endpoints/parts";
+import * as MetadataEndpoints from "../onshape-api/endpoints/metadata";
+import { OnshapeApi } from "../onshape-api/onshape-api";
+import type {
+    OnshapeMetadataObject,
+    OnshapePart
+} from "../onshape-api/onshape-types";
+import { ElementPath } from "../../shared/onshape-path";
+import {
+    ParameterValues,
+    ConfigurationParameter
+} from "../../shared/configuration-models";
+import { enumParam } from "../../__test_utils__/configuration-fixtures";
+import { ElementType, Vendor } from "../../shared/types";
+import { BuildIssueType } from "../../shared/build-checker";
+import {
+    decideIndexing,
+    parseAssemblyRecord,
+    parseConfigurationRecords,
+    parsePartStudioRecord
+} from "./parse-configuration-records";
+
+const PATH: ElementPath = {
+    documentId: "d",
+    instanceId: "v",
+    instanceType: "v",
+    elementId: "e"
+};
+
+/** The client is only forwarded to the endpoint wrappers, which are mocked. */
+const CLIENT = {} as OnshapeApi;
+
+afterEach(() => vi.restoreAllMocks());
+
+/** A single enum whose N options make the element enumerate to N configurations. */
+function paramsWithConfigs(count: number): ConfigurationParameter[] {
+    return [
+        enumParam(
+            "A",
+            Array.from({ length: count }, (_, i) => `o${i}`)
+        )
+    ];
+}
+
+describe("decideIndexing", () => {
+    it.each([
+        // A vendor part below the auto line indexes on its own.
+        {
+            vendors: [Vendor.AM],
+            configs: 99,
+            force: false,
+            index: true,
+            many: false
+        },
+        // At the line it waits, and is flagged so an admin can trim or force it.
+        {
+            vendors: [Vendor.AM],
+            configs: 100,
+            force: false,
+            index: false,
+            many: true
+        },
+        // Force overrides the count, and clears the flag.
+        {
+            vendors: [Vendor.AM],
+            configs: 100,
+            force: true,
+            index: true,
+            many: false
+        },
+        // Past the hard cap behaves like any over-threshold vendor part.
+        {
+            vendors: [Vendor.AM],
+            configs: 600,
+            force: false,
+            index: false,
+            many: true
+        },
+        {
+            vendors: [Vendor.AM],
+            configs: 600,
+            force: true,
+            index: true,
+            many: false
+        },
+        // No vendor: never auto-eligible, never flagged, but still forceable.
+        { vendors: [], configs: 50, force: false, index: false, many: false },
+        { vendors: [], configs: 50, force: true, index: true, many: false }
+    ])(
+        "vendors=$vendors configs=$configs force=$force",
+        ({ vendors, configs, force, index, many }) => {
+            expect(
+                decideIndexing(vendors, paramsWithConfigs(configs), force)
+            ).toEqual({ shouldIndex: index, manyConfigurations: many });
+        }
+    );
+});
+
+describe("parsePartStudioRecord", () => {
+    it("reads the single part's metadata into the record", () => {
+        expect(
+            parsePartStudioRecord(
+                [
+                    {
+                        partId: "p",
+                        partNumber: "  217-2600 ",
+                        name: "Bracket",
+                        description: "A bracket",
+                        material: { displayName: "6061 Aluminum" },
+                        vendor: "AM"
+                    }
+                ],
+                { size: "L" }
+            )
+        ).toEqual({
+            configuration: { size: "L" },
+            partNumber: "217-2600",
+            name: "Bracket",
+            description: "A bracket",
+            material: "6061 Aluminum",
+            vendor: "AM",
+            hasMultipleParts: false
+        });
+    });
+
+    it("uses the first part carrying a part number", () => {
+        const record = parsePartStudioRecord(
+            [{ partId: "a" }, { partId: "b", partNumber: "217-2601" }],
+            {}
+        );
+        expect(record.partNumber).toBe("217-2601");
+    });
+
+    it("flags more than one part, keeping the first", () => {
+        const record = parsePartStudioRecord(
+            [
+                { partId: "a", partNumber: "PN-1" },
+                { partId: "b", partNumber: "PN-2" }
+            ],
+            {}
+        );
+        expect(record.partNumber).toBe("PN-1");
+        expect(record.hasMultipleParts).toBe(true);
+    });
+
+    it("returns an all-null record for an empty response", () => {
+        expect(parsePartStudioRecord([], { A: "a1" })).toEqual({
+            configuration: { A: "a1" },
+            partNumber: null,
+            name: null,
+            description: null,
+            material: null,
+            vendor: null,
+            hasMultipleParts: false
+        });
+    });
+});
+
+describe("parseAssemblyRecord", () => {
+    it("pulls the stored fields out of the metadata property bag", () => {
+        const metadata: OnshapeMetadataObject = {
+            properties: [
+                { name: "Part number", value: " AM-1234 " },
+                { name: "Name", value: "Gearbox" },
+                { name: "Description", value: "A gearbox" },
+                { name: "Material", value: { displayName: "Steel" } },
+                { name: "Vendor", value: "AM" },
+                // Not one of the fields we store — ignored.
+                { name: "State", value: "In Progress" }
+            ]
+        };
+        expect(parseAssemblyRecord(metadata, { q: "1" })).toEqual({
+            configuration: { q: "1" },
+            partNumber: "AM-1234",
+            name: "Gearbox",
+            description: "A gearbox",
+            material: "Steel",
+            vendor: "AM",
+            hasMultipleParts: false
+        });
+    });
+});
+
+/** Mocks the parts endpoint, deriving a studio's parts from the configuration. */
+function mockParts(
+    partsFor: (configuration: ParameterValues) => OnshapePart[]
+) {
+    return vi
+        .spyOn(PartsEndpoints, "getParts")
+        .mockImplementation((_client, _path, configuration) =>
+            Promise.resolve(partsFor(configuration))
+        );
+}
+
+describe("parseConfigurationRecords", () => {
+    it("returns a record per configuration, default first, in enumeration order", async () => {
+        mockParts((configuration) => [
+            { partId: "p", partNumber: `PN-${configuration.A ?? "default"}` }
+        ]);
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [enumParam("A", ["a1", "a2"])]
+        );
+
+        expect(result.buildIssues).toEqual([]);
+        expect(result.records.map((r) => r.partNumber)).toEqual([
+            "PN-default",
+            "PN-a1",
+            "PN-a2"
+        ]);
+    });
+
+    it("flags a studio with more than one part in any configuration", async () => {
+        mockParts((configuration) =>
+            configuration.A === "a2"
+                ? [
+                      { partId: "p1", partNumber: "PN-1" },
+                      { partId: "p2", partNumber: "PN-2" }
+                  ]
+                : [{ partId: "p1", partNumber: "PN-1" }]
+        );
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [enumParam("A", ["a1", "a2"])]
+        );
+
+        expect(result.buildIssues).toEqual([
+            { type: BuildIssueType.MULTIPLE_PARTS }
+        ]);
+    });
+
+    it("flags capped enumeration but still records the default", async () => {
+        const spy = mockParts(() => [
+            { partId: "p", partNumber: "PN-default" }
+        ]);
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            paramsWithConfigs(600)
+        );
+
+        expect(result.buildIssues).toEqual([
+            { type: BuildIssueType.TOO_MANY_CONFIGURATIONS }
+        ]);
+        expect(result.records).toHaveLength(1);
+        expect(result.records[0].partNumber).toBe("PN-default");
+        // Only the default probe; the combinations are never fetched.
+        expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("indexes an assembly through its element metadata", async () => {
+        const spy = vi
+            .spyOn(MetadataEndpoints, "getElementMetadata")
+            .mockResolvedValue({
+                properties: [{ name: "Part number", value: "AM-1" }]
+            });
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.ASSEMBLY,
+            []
+        );
+
+        expect(result.records).toEqual([
+            {
+                configuration: {},
+                partNumber: "AM-1",
+                name: null,
+                description: null,
+                material: null,
+                vendor: null,
+                hasMultipleParts: false
+            }
+        ]);
+        expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
+    });
+});

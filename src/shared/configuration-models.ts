@@ -122,22 +122,30 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 export type ParameterValues = Record<string, string>;
 
 /**
- * Maps a part number to the single (canonical) parameter values which produce
- * it.
- *
- * Keyed by part number because search looks parts up by number, and because
- * many parameter values can resolve to the same part number (e.g. parameters
- * that don't affect the part); keying by number dedupes them inherently.
+ * Everything a single checked configuration resolves to. One is stored per
+ * configuration we probe, so search, the UI, and future build checks can read
+ * back what each configuration produces without re-querying Onshape.
  */
-export type PartNumberMap = Record<string, ParameterValues>;
+export interface ConfigurationRecord {
+    /** The parameter values that produce it; empty means the element's defaults. */
+    configuration: ParameterValues;
+    partNumber: string | null;
+    name: string | null;
+    description: string | null;
+    /** Material display name, e.g. "6061 Aluminum". */
+    material: string | null;
+    vendor: string | null;
+    /** True when a part studio resolved to more than one part. */
+    hasMultipleParts: boolean;
+}
 
 /**
- * An insertable's configuration: the parameters it exposes and the part numbers
- * they resolve to. Mirrors the `configurations` row.
+ * An insertable's configuration: the parameters it exposes and a record for each
+ * configuration we probed. Mirrors the `configurations` row.
  */
 export interface Configuration {
     parameters: ConfigurationParameter[];
-    partNumbers: PartNumberMap;
+    records: ConfigurationRecord[];
 }
 
 /**

@@ -73,6 +73,18 @@ describe("enumerateConfigurations", () => {
         expect(configurations).toEqual([{ A: "a1" }, { A: "a2" }]);
     });
 
+    it("ignores cosmetic parameters", () => {
+        const params: ConfigurationParameter[] = [
+            enumParam("A", ["a1", "a2"]),
+            enumParam("C", ["c1", "c2"], { isCosmetic: true }),
+            boolParam("B")
+        ];
+        const { configurations } = enumerateConfigurations(params);
+        // C ("exclude from properties") rides its default, so only A and B vary.
+        expect(configurations).toHaveLength(4);
+        expect(configurations.every((c) => !("C" in c))).toBe(true);
+    });
+
     it("skips a parameter hidden by its visibility condition", () => {
         const params: ConfigurationParameter[] = [
             boolParam("A"),

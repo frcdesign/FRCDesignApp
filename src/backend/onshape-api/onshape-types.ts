@@ -286,8 +286,26 @@ export interface OnshapeCreatedFeature {
 /** A part in a part studio (the subset we read). */
 export interface OnshapePart {
     partId: string;
-    /** The part's "Part number" property, when set. */
+    /** The part's metadata properties, when set. */
     partNumber?: string;
+    name?: string;
+    description?: string;
+    material?: { displayName?: string };
+    vendor?: string;
+}
+
+// === element metadata (GET /metadata/.../e/{eid}) ===
+
+/** One property in an element's metadata bag. */
+export interface OnshapeMetadataProperty {
+    /** Display name, e.g. "Part number" — how we pick out the ones we store. */
+    name: string;
+    value: unknown;
+}
+
+/** GET /metadata/.../e/{eid} (the subset we read). */
+export interface OnshapeMetadataObject {
+    properties: OnshapeMetadataProperty[];
 }
 
 // === part studios (GET .../partstudios/.../features) ===

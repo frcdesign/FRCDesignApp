@@ -59,8 +59,8 @@ function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
         value: { kind: "bool", value: insertable.supportsFasten }
     });
     rows.push({
-        label: "Part number search",
-        value: { kind: "bool", value: insertable.searchPartNumbers }
+        label: "Force part number indexing",
+        value: { kind: "bool", value: insertable.forceIndex }
     });
     rows.push({
         label: "Vendors",
@@ -334,6 +334,12 @@ function getIssueMessage(issue: BuildIssue): string {
             return "This group has no unhidden insertables.";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
             return "Too many configurations to index part numbers.";
+        case BuildIssueType.MANY_CONFIGURATIONS:
+            return (
+                "Too many configurations to index automatically. Mark unused " +
+                "parameters as 'exclude from properties', then enable part-number " +
+                "search manually."
+            );
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part.";
         case BuildIssueType.INSERTABLES_FAILED:

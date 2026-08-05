@@ -6,9 +6,17 @@
 import MiniSearch, { Options } from "minisearch";
 import { LibraryOut } from "./api-models";
 import { Vendor } from "./types";
-import { PartNumberMap } from "./configuration-models";
+import { ConfigurationRecord, ParameterValues } from "./configuration-models";
 
 const deliminator = "^";
+
+/**
+ * Part number -> the (canonical) configuration that produces it. Derived from an
+ * insertable's `ConfigurationRecord[]` at index-build time: many configurations
+ * can share a part number, so this collapses them first-wins — and records come
+ * in enumeration order (latest option first), so search launches the latest.
+ */
+export type PartNumberMap = Record<string, ParameterValues>;
 
 /**
  * Adds spaces to a given string so prefix matching is more efficient.
@@ -74,9 +82,24 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
     processTerm
 };
 
+/**
+ * Folds an insertable's records into the search map: part number -> the first
+ * configuration that produces it. First-wins over enumeration order keeps the
+ * latest option (see {@link PartNumberMap}).
+ */
+function toPartNumberMap(records: ConfigurationRecord[]): PartNumberMap {
+    const partNumberConfigs: PartNumberMap = {};
+    for (const record of records) {
+        if (record.partNumber) {
+            partNumberConfigs[record.partNumber] ??= record.configuration;
+        }
+    }
+    return partNumberConfigs;
+}
+
 export function buildSearchDb(
     libraryData: LibraryOut,
-    partNumberMap: Record<string, PartNumberMap> = {}
+    recordsMap: Record<string, ConfigurationRecord[]> = {}
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
@@ -86,7 +109,9 @@ export function buildSearchDb(
         .filter((element) => !!element)
         .map((element) => {
             const parentGroup = libraryData.groups[element.groupId];
-            const partNumberConfigs = partNumberMap[element.id] ?? {};
+            const partNumberConfigs = toPartNumberMap(
+                recordsMap[element.id] ?? []
+            );
             return {
                 id: element.id,
                 groupId: element.groupId,

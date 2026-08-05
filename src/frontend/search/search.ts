@@ -1,10 +1,7 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
-import { SearchDocument } from "../../shared/search";
-import {
-    ParameterValues,
-    PartNumberMap
-} from "../../shared/configuration-models";
+import { SearchDocument, PartNumberMap } from "../../shared/search";
+import { ParameterValues } from "../../shared/configuration-models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -159,8 +156,9 @@ function matchedConfiguration(
 
 /**
  * Picks the configuration whose part number best matches the query, preferring
- * an exact match, then a prefix, then a substring. First-wins on ties (the map
- * is ordered default-first).
+ * an exact match, then a prefix, then a substring. First-wins on ties; the map
+ * is in enumeration order, so a tie resolves to the latest option (the first the
+ * insertable declares) — see PartNumberMap.
  */
 function findPartNumberConfig(
     query: string,

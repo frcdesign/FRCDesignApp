@@ -1,50 +1,18 @@
 import { OnshapeApi } from "../onshape-api";
-import {
-    ElementPath,
-    InstancePath,
-    toElementApiPath,
-    toInstanceApiPath
-} from "../../../shared/onshape-path";
+import { ElementPath, toElementApiPath } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
+import { encodeConfigurationForQuery } from "../../../shared/configuration-utils";
+import { ParameterValues } from "../../../shared/configuration-models";
+import type { OnshapeMetadataObject } from "../onshape-types";
 
-export function getInstanceMetadata(
-    client: OnshapeApi,
-    instancePath: InstancePath
-): Promise<any> {
-    return client.get(apiPath("metadata", instancePath, toInstanceApiPath), {
-        query: { includeComputedProperties: "false" }
-    });
-}
-
-export function getAllElementMetadata(
-    client: OnshapeApi,
-    instancePath: InstancePath
-): Promise<any> {
-    return client.get(
-        apiPath("metadata", instancePath, toInstanceApiPath, { endRoute: "e" }),
-        { query: { includeComputedProperties: "false" } }
-    );
-}
-
+/** Returns an element's metadata properties for a given configuration. */
 export function getElementMetadata(
     client: OnshapeApi,
-    elementPath: ElementPath
-): Promise<any> {
-    return client.get(apiPath("metadata", elementPath, toElementApiPath), {
-        query: { includeComputedProperties: "false" }
-    });
-}
-
-export function updateElementMetadata(
-    client: OnshapeApi,
     elementPath: ElementPath,
-    propertyId: string,
-    value: unknown
-): Promise<any> {
-    return client.post(apiPath("metadata", elementPath, toElementApiPath), {
-        body: {
-            jsonType: "metadata-element",
-            properties: [{ propertyId, value }]
-        }
+    configuration: ParameterValues
+): Promise<OnshapeMetadataObject> {
+    const encoded = encodeConfigurationForQuery(configuration);
+    return client.get(apiPath("metadata", elementPath, toElementApiPath), {
+        query: encoded ? { configuration: encoded } : {}
     });
 }

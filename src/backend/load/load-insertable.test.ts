@@ -5,7 +5,7 @@ import { getDb } from "../db";
 import { configurations, insertables } from "../../shared/schema";
 import type {
     ConfigurationParameter,
-    PartNumberMap
+    ConfigurationRecord
 } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
 import {
@@ -39,20 +39,34 @@ function element(overrides: Partial<InsertableTarget> = {}): InsertableTarget {
     };
 }
 
+/** Builds a configuration record with the given part number and defaults. */
+function record(
+    partNumber: string | null,
+    configuration: Record<string, string> = {}
+): ConfigurationRecord {
+    return {
+        configuration,
+        partNumber,
+        name: null,
+        description: null,
+        material: null,
+        vendor: null,
+        hasMultipleParts: false
+    };
+}
+
 /** Applies the save the way loadInsertable's save step does. */
 async function applySave(
     target: InsertableTarget,
     parameters: ConfigurationParameter[],
-    partNumbers: PartNumberMap = {},
-    defaultPartNumber: string | null = null
+    records: ConfigurationRecord[] = []
 ): Promise<void> {
     const parsed: ParsedInsertable = {
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
-        defaultPartNumber,
         buildIssues: [],
-        configuration: { parameters, partNumbers }
+        configuration: { parameters, records }
     };
     await saveInsertable(db, target, parsed);
 }
@@ -96,7 +110,7 @@ describe("saveInsertable", () => {
         expect(row).toMatchObject({
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false
+            forceIndex: false
         });
     });
 
@@ -109,7 +123,7 @@ describe("saveInsertable", () => {
             .set({
                 isVisible: true,
                 supportsFasten: true,
-                searchPartNumbers: true,
+                forceIndex: true,
                 sortOrder: 5
             })
             .where(eq(insertables.id, "ins-1"));
@@ -133,70 +147,47 @@ describe("saveInsertable", () => {
             microversionId: "mv-2",
             isVisible: true,
             supportsFasten: true,
-            searchPartNumbers: true,
+            forceIndex: true,
             sortOrder: 5
         });
     });
 
-    it("drops the configuration row when the element no longer has one", async () => {
-        await applySave(element(), TEST_PARAMETERS);
+    it("writes the computed configuration records", async () => {
+        const records = [
+            record("PN-1", { p: "v1" }),
+            record("PN-2", { p: "v2" })
+        ];
+        await applySave(element(), TEST_PARAMETERS, records);
+
+        const config = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.id, "ins-1"))
+            .get();
+        expect(config?.records).toEqual(records);
+    });
+
+    // An indexed insertable with no varying parameters still needs its records
+    // stored, so a configurations row is kept even when `parameters` is empty.
+    it("keeps a configuration row for a non-configurable indexed insertable", async () => {
+        await applySave(element(), [], [record("PN-default")]);
+
+        const config = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.id, "ins-1"))
+            .get();
+        expect(config?.parameters).toEqual([]);
+        expect(config?.records).toEqual([record("PN-default")]);
+    });
+
+    // library-data reads `records` off the row without re-checking whether the
+    // insertable is still indexed, so a reload with neither parameters nor
+    // records must drop the row rather than leave stale records behind.
+    it("drops the configuration row when there are no parameters or records", async () => {
+        await applySave(element(), TEST_PARAMETERS, [record("PN-1")]);
         await applySave(element(), []);
 
         expect(await db.select().from(configurations).all()).toHaveLength(0);
-    });
-
-    it("writes the computed part numbers", async () => {
-        await applySave(element(), TEST_PARAMETERS, {
-            "PN-1": { p: "v1" },
-            "PN-2": { p: "v2" }
-        });
-
-        const config = await db
-            .select()
-            .from(configurations)
-            .where(eq(configurations.id, "ins-1"))
-            .get();
-        expect(config?.partNumbers).toEqual({
-            "PN-1": { p: "v1" },
-            "PN-2": { p: "v2" }
-        });
-    });
-
-    it("stores the default part number for a non-configurable insertable", async () => {
-        await applySave(element(), [], {}, "PN-default");
-
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, "ins-1"))
-            .get();
-        expect(row?.defaultPartNumber).toBe("PN-default");
-    });
-
-    // getPartNumberMap in library-data.ts reads these columns without
-    // re-checking searchPartNumbers, so a load that isn't indexing must clear
-    // them — which it does by passing NO_PART_NUMBERS through to the save.
-    it("clears the part-number columns when nothing was indexed", async () => {
-        await applySave(
-            element(),
-            TEST_PARAMETERS,
-            { "PN-1": { p: "v1" } },
-            "PN-1"
-        );
-        await applySave(element(), TEST_PARAMETERS);
-
-        const row = await db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, "ins-1"))
-            .get();
-        expect(row?.defaultPartNumber).toBeNull();
-
-        const config = await db
-            .select()
-            .from(configurations)
-            .where(eq(configurations.id, "ins-1"))
-            .get();
-        expect(config?.partNumbers).toEqual({});
     });
 });

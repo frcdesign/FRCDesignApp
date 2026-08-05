@@ -13,7 +13,7 @@ import {
     Insertables,
     Groups
 } from "../shared/api-models";
-import { PartNumberMap } from "../shared/configuration-models";
+import { ConfigurationRecord } from "../shared/configuration-models";
 import { buildSearchDb } from "../shared/search";
 
 /**
@@ -44,10 +44,22 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        db.select({ id: configurations.id }).from(configurations).all()
+        db
+            .select({
+                id: configurations.id,
+                parameters: configurations.parameters
+            })
+            .from(configurations)
+            .all()
     ]);
 
-    const configSet = new Set(allConfigurations.map((c) => c.id));
+    // A row can exist just to hold records for a non-configurable insertable, so
+    // "configurable" keys on having parameters, not on the row existing.
+    const configSet = new Set(
+        allConfigurations
+            .filter((c) => c.parameters.length > 0)
+            .map((c) => c.id)
+    );
 
     const groupsOut: Groups = {};
     for (const group of allGroups) {
@@ -162,11 +174,11 @@ export async function rebuildSearchDb(
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const [libraryData, partNumberMap] = await Promise.all([
+    const [libraryData, recordsMap] = await Promise.all([
         getLibraryOut(db, libraryId),
-        getPartNumberMap(db, libraryId)
+        getRecordsMap(db, libraryId)
     ]);
-    const searchDb = JSON.stringify(buildSearchDb(libraryData, partNumberMap));
+    const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
     await db
         .insert(libraries)
         .values({ id: libraryId, searchDb })
@@ -175,32 +187,28 @@ export async function rebuildSearchDb(
 }
 
 /**
- * Assembles the per-insertable part-number map used to index part numbers:
- * a configurable insertable's map comes from its `configurations` row, while a
- * non-configurable one contributes its single `defaultPartNumber`.
+ * Assembles the per-insertable configuration records `buildSearchDb` dedupes into
+ * the part-number search map. Only indexed insertables have records.
  */
-async function getPartNumberMap(
+async function getRecordsMap(
     db: Db,
     libraryId: LibraryId
-): Promise<Record<string, PartNumberMap>> {
+): Promise<Record<string, ConfigurationRecord[]>> {
     const rows = await db
         .select({
             id: insertables.id,
-            defaultPartNumber: insertables.defaultPartNumber,
-            partNumbers: configurations.partNumbers
+            records: configurations.records
         })
         .from(insertables)
-        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .innerJoin(configurations, eq(configurations.id, insertables.id))
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
-    const partNumberMap: Record<string, PartNumberMap> = {};
+    const recordsMap: Record<string, ConfigurationRecord[]> = {};
     for (const row of rows) {
-        if (row.partNumbers && Object.keys(row.partNumbers).length > 0) {
-            partNumberMap[row.id] = row.partNumbers;
-        } else if (row.defaultPartNumber) {
-            partNumberMap[row.id] = { [row.defaultPartNumber]: {} };
+        if (row.records.length > 0) {
+            recordsMap[row.id] = row.records;
         }
     }
-    return partNumberMap;
+    return recordsMap;
 }

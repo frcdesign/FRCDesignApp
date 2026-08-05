@@ -11,13 +11,16 @@ import {
     type ConfigurationParameter
 } from "../../shared/configuration-models";
 import {
-    NO_PART_NUMBERS,
-    PART_NUMBER_ISSUE_TYPES,
-    parsePartNumbers,
-    type PartNumberResult
-} from "../parse/parse-part-number";
+    INDEXING_ISSUE_TYPES,
+    NO_RECORDS,
+    decideIndexing,
+    parseConfigurationRecords,
+    type ConfigurationRecordsResult
+} from "../parse/parse-configuration-records";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementType } from "../../shared/types";
+import { parseVendors } from "../parse/parse-vendors";
+import { BuildIssueType } from "../../shared/build-checker";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -125,7 +128,7 @@ insertableRoutes.post(
     async (c) => {
         const db = getDb(c.env.DB);
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ searchPartNumbers: boolean }>();
+        const body = await c.req.json<{ forceIndex: boolean }>();
 
         const row = await db
             .select({
@@ -134,6 +137,7 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
+                name: insertables.name,
                 buildIssues: insertables.buildIssues
             })
             .from(insertables)
@@ -142,80 +146,105 @@ insertableRoutes.post(
         if (!row)
             throw new HTTPException(404, { message: "Insertable not found" });
 
-        // Index before committing anything: if this throws, the flag stays off
-        // rather than being enabled with nothing indexed behind it. The error
-        // reaches the client via the app's onError handler.
-        const indexed = body.searchPartNumbers
-            ? await indexPartNumbers(await c.var.getOnshapeApi(), db, {
-                  insertableId,
-                  ...row
+        const parameters =
+            (
+                await db
+                    .select({ parameters: configurations.parameters })
+                    .from(configurations)
+                    .where(eq(configurations.id, insertableId))
+                    .get()
+            )?.parameters ?? [];
+        const vendors = parseVendors(row.name, parameters);
+        const { shouldIndex, manyConfigurations } = decideIndexing(
+            vendors,
+            parameters,
+            body.forceIndex
+        );
+
+        // Index before committing anything: if this throws, nothing is written.
+        // The error reaches the client via the app's onError handler.
+        const indexed = shouldIndex
+            ? await indexRecords(await c.var.getOnshapeApi(), {
+                  documentId: row.documentId,
+                  versionId: row.versionId,
+                  elementId: row.elementId,
+                  elementType: row.elementType,
+                  parameters
               })
-            : NO_PART_NUMBERS;
+            : NO_RECORDS;
+
+        // Clear first, so an issue the reindex resolved (or that disabling makes
+        // moot) doesn't stick around.
+        let buildIssues = addBuildIssue(
+            clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
+            ...indexed.buildIssues
+        );
+        if (manyConfigurations) {
+            buildIssues = addBuildIssue(buildIssues, {
+                type: BuildIssueType.MANY_CONFIGURATIONS
+            });
+        }
+
+        // Keep a configurations row while there's parameters or records to hold;
+        // a non-configurable insertable that stops indexing loses its row.
+        const configWrite =
+            parameters.length > 0 || indexed.records.length > 0
+                ? db
+                      .insert(configurations)
+                      .values({
+                          id: insertableId,
+                          parameters,
+                          records: indexed.records
+                      })
+                      .onConflictDoUpdate({
+                          target: configurations.id,
+                          set: { records: indexed.records }
+                      })
+                : db
+                      .delete(configurations)
+                      .where(eq(configurations.id, insertableId));
 
         await db.batch([
             db
                 .update(insertables)
-                .set({
-                    searchPartNumbers: body.searchPartNumbers,
-                    defaultPartNumber: indexed.defaultPartNumber,
-                    // Clear first, so an issue the reindex resolved (or that
-                    // disabling makes moot) doesn't stick around.
-                    buildIssues: addBuildIssue(
-                        clearBuildIssue(
-                            row.buildIssues,
-                            ...PART_NUMBER_ISSUE_TYPES
-                        ),
-                        ...indexed.buildIssues
-                    )
-                })
+                .set({ forceIndex: body.forceIndex, buildIssues })
                 .where(eq(insertables.id, insertableId)),
-            // No-op when the insertable has no configuration row.
-            db
-                .update(configurations)
-                .set({ partNumbers: indexed.partNumbers })
-                .where(eq(configurations.id, insertableId))
+            configWrite
         ]);
 
         await bumpLibraryVersion(db, row.libraryId);
-        // Part numbers live in the search index, so rebuild it now.
+        // Records feed the search index, so rebuild it now.
         await rebuildSearchDb(db, row.libraryId);
         return c.json({ success: true });
     }
 );
 
 /**
- * Indexes an insertable's part numbers for the toggle route, reading the
- * parameters it needs. Runs in a request, so it uses the unbatched
- * {@link parsePartNumbers} rather than the workflow's stepped loader.
+ * Indexes an insertable's configuration records for the toggle route. Runs in a
+ * request, so it uses the unbatched {@link parseConfigurationRecords} rather than
+ * the workflow's stepped loader.
  */
-async function indexPartNumbers(
+function indexRecords(
     client: OnshapeApi,
-    db: Db,
     insertable: {
-        insertableId: string;
         documentId: string;
         versionId: string;
         elementId: string;
         elementType: ElementType;
+        parameters: ConfigurationParameter[];
     }
-): Promise<PartNumberResult> {
+): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
         documentId: insertable.documentId,
         instanceId: insertable.versionId,
         instanceType: "v",
         elementId: insertable.elementId
     };
-    const configRow = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, insertable.insertableId))
-        .get();
-
-    return parsePartNumbers(
+    return parseConfigurationRecords(
         client,
         sourcePath,
         insertable.elementType,
-        configRow?.parameters ?? []
+        insertable.parameters
     );
 }
 

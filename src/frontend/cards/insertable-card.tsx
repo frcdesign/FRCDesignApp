@@ -188,7 +188,7 @@ export function InsertableAdminContextMenu(
             />
             <TogglePartNumberSearchMenuItem
                 insertableId={insertableId}
-                searchPartNumbers={insertableBuild.searchPartNumbers}
+                forceIndex={insertableBuild.forceIndex}
             />
         </>
     );
@@ -325,12 +325,12 @@ function ToggleInsertAndFastenMenuItem({
 
 interface TogglePartNumberSearchMenuItemProps {
     insertableId: string;
-    searchPartNumbers: boolean;
+    forceIndex: boolean;
 }
 
 function TogglePartNumberSearchMenuItem({
     insertableId,
-    searchPartNumbers
+    forceIndex
 }: TogglePartNumberSearchMenuItemProps): ReactNode {
     const router = useRouter();
 
@@ -340,15 +340,15 @@ function TogglePartNumberSearchMenuItem({
             apiPost(
                 "/toggle-part-number-search" + toInsertablePath(insertableId),
                 {
-                    body: { searchPartNumbers: newValue }
+                    body: { forceIndex: newValue }
                 }
             ),
         onSuccess: (_result, newValue: boolean) => {
             if (newValue) {
-                showSuccessToast("Successfully enabled part number search.");
+                showSuccessToast("Forcing part number indexing on.");
             }
         },
-        onError: getAppErrorHandler("Failed to update part number search."),
+        onError: getAppErrorHandler("Failed to update part number indexing."),
         onSettled: async () => {
             await queryClient.refetchQueries({
                 queryKey: contextDataQueryKey()
@@ -362,19 +362,19 @@ function TogglePartNumberSearchMenuItem({
 
     return (
         <Menu.Item
-            onClick={() => mutation.mutate(!searchPartNumbers)}
-            color={searchPartNumbers ? "red" : "blue"}
+            onClick={() => mutation.mutate(!forceIndex)}
+            color={forceIndex ? "red" : "blue"}
             leftSection={
-                searchPartNumbers ? (
+                forceIndex ? (
                     <IconCircleOff size={IconSize.SMALL} />
                 ) : (
                     <IconBarcode size={IconSize.SMALL} />
                 )
             }
         >
-            {searchPartNumbers
-                ? "Disable part number search"
-                : "Enable part number search"}
+            {forceIndex
+                ? "Stop forcing part number indexing"
+                : "Force part number indexing"}
         </Menu.Item>
     );
 }
