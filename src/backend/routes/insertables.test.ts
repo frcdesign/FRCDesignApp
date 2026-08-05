@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { insertables } from "../../shared/schema";
+import { configurations, insertables } from "../../shared/schema";
 import { ElementType } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
@@ -29,6 +29,15 @@ function readInsertable(insertableId: string) {
         .select()
         .from(insertables)
         .where(eq(insertables.id, insertableId))
+        .get();
+}
+
+/** Reads back an insertable's configuration row, if any. */
+function readConfig(insertableId: string) {
+    return db
+        .select()
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
         .get();
 }
 
@@ -121,7 +130,7 @@ describe("insertable routes", () => {
         );
     });
 
-    it("POST /toggle-part-number-search indexes and enables the flag", async () => {
+    it("POST /toggle-part-number-search indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p", partNumber: "PN-123" }
@@ -129,14 +138,27 @@ describe("insertable routes", () => {
 
         const res = await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            jsonRequest("POST", { forceIndex: true }),
             env
         );
         expect(res.status).toBe(200);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(true);
-        expect(row?.defaultPartNumber).toBe("PN-123");
+        expect(row?.forceIndex).toBe(true);
+
+        const config = await readConfig(TEST_PART_STUDIO_ID);
+        expect(config?.records).toEqual([
+            {
+                configuration: {},
+                partNumber: "PN-123",
+                name: null,
+                description: null,
+                material: null,
+                vendor: null,
+                hasMultipleParts: false,
+                isUnstableComposite: false
+            }
+        ]);
     });
 
     it("POST /toggle-part-number-search leaves the flag off when indexing fails", async () => {
@@ -147,7 +169,7 @@ describe("insertable routes", () => {
 
         const res = await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            jsonRequest("POST", { forceIndex: true }),
             env
         );
         // Surfaced to the client rather than silently enabling.
@@ -156,34 +178,37 @@ describe("insertable routes", () => {
         expect(body.retryAfterSeconds).toBe(450);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(false);
-        expect(row?.defaultPartNumber).toBeNull();
+        expect(row?.forceIndex).toBe(false);
+        // Nothing was written, so no records survive.
+        expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    it("POST /toggle-part-number-search clears the data when disabling", async () => {
+    // Turning force off on a part with no vendor drops it below the auto-index
+    // heuristic, so its records and configuration row go away.
+    it("POST /toggle-part-number-search clears the data when forcing off", async () => {
         await seedPartStudio(db);
         const spy = vi
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
         await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            jsonRequest("POST", { forceIndex: true }),
             env
         );
         spy.mockClear();
 
         const res = await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: false }),
+            jsonRequest("POST", { forceIndex: false }),
             env
         );
         expect(res.status).toBe(200);
-        // Disabling needs no Onshape calls.
+        // A part with no vendor isn't auto-eligible, so nothing is re-indexed.
         expect(spy).not.toHaveBeenCalled();
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(false);
-        expect(row?.defaultPartNumber).toBeNull();
+        expect(row?.forceIndex).toBe(false);
+        expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
     // The route merges into the row's stored issues, so it has to clear the ones
@@ -205,7 +230,7 @@ describe("insertable routes", () => {
 
         const res = await createTestApp().request(
             `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            jsonRequest("POST", { forceIndex: true }),
             env
         );
         expect(res.status).toBe(200);

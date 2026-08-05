@@ -41,10 +41,9 @@ export function parsedInsertable(
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
-        defaultPartNumber: null,
         isOpenComposite: false,
         buildIssues: [],
-        configuration: { parameters: [], partNumbers: {} },
+        configuration: { parameters: [], records: [] },
         ...overrides
     };
 }

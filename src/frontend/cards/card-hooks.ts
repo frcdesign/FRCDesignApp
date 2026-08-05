@@ -166,40 +166,39 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/** Toggles part-number search indexing for an insertable (a slow Onshape call). */
+/** Forces part-number indexing for an insertable (a slow Onshape call). */
 export function useTogglePartNumberSearchMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `part-number-search-${insertableId}`;
     return useMutation({
         mutationKey: ["toggle-part-number-search", insertableId],
-        mutationFn: (searchPartNumbers: boolean) =>
+        mutationFn: (forceIndex: boolean) =>
             apiPost(
                 "/toggle-part-number-search" + toInsertablePath(insertableId),
-                { body: { searchPartNumbers } }
+                { body: { forceIndex } }
             ),
-        onMutate: (searchPartNumbers) => {
+        onMutate: (forceIndex) => {
             showLoadingToast(
-                searchPartNumbers
-                    ? "Enabling part number search..."
-                    : "Disabling part number search...",
+                forceIndex
+                    ? "Forcing part number indexing..."
+                    : "Disabling forced part number indexing...",
                 toastId
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
-                if (insertable)
-                    insertable.searchPartNumbers = searchPartNumbers;
+                if (insertable) insertable.forceIndex = forceIndex;
             });
         },
-        onSuccess: (_result, searchPartNumbers) =>
+        onSuccess: (_result, forceIndex) =>
             showSuccessToast(
-                searchPartNumbers
-                    ? "Enabled part number search."
-                    : "Disabled part number search.",
+                forceIndex
+                    ? "Forced part number indexing."
+                    : "Disabled forced part number indexing.",
                 toastId
             ),
         onError: getAppErrorHandler(
-            "Unexpectedly failed to update part number search.",
+            "Unexpectedly failed to update part number indexing.",
             toastId
         ),
         onSettled: refreshLibrary

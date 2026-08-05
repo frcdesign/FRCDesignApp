@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../db";
 import { configurations, insertables } from "../../shared/schema";
+import type { ConfigurationRecord } from "../../shared/configuration-models";
 import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
@@ -25,6 +26,23 @@ function readInsertable() {
         .get();
 }
 
+/** Builds a configuration record with the given part number and defaults. */
+function record(
+    partNumber: string | null,
+    configuration: Record<string, string> = {}
+): ConfigurationRecord {
+    return {
+        configuration,
+        partNumber,
+        name: null,
+        description: null,
+        material: null,
+        vendor: null,
+        hasMultipleParts: false,
+        isUnstableComposite: false
+    };
+}
+
 describe("saveInsertable", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -35,20 +53,16 @@ describe("saveInsertable", () => {
         await saveInsertable(
             db,
             insertableTarget(),
-            parsedInsertable({
-                isOpenComposite: true,
-                defaultPartNumber: "PN-1"
-            })
+            parsedInsertable({ isOpenComposite: true })
         );
 
         expect(await readInsertable()).toMatchObject({
             // User-owned flags start off.
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false,
+            forceIndex: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
-            defaultPartNumber: "PN-1",
             lastLoadedAt: expect.any(Number)
         });
     });
@@ -57,10 +71,7 @@ describe("saveInsertable", () => {
         await saveInsertable(
             db,
             insertableTarget(),
-            parsedInsertable({
-                isOpenComposite: true,
-                defaultPartNumber: "PN-1"
-            })
+            parsedInsertable({ isOpenComposite: true })
         );
         // The user reveals the element, turns its features on, and reorders it.
         await db
@@ -68,12 +79,12 @@ describe("saveInsertable", () => {
             .set({
                 isVisible: true,
                 supportsFasten: true,
-                searchPartNumbers: true,
+                forceIndex: true,
                 sortOrder: 5
             })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
-        // A reload finds it renamed, no longer a composite, with no part number.
+        // A reload finds it renamed and no longer a composite.
         await saveInsertable(
             db,
             insertableTarget({
@@ -88,41 +99,75 @@ describe("saveInsertable", () => {
             // Preserved.
             isVisible: true,
             supportsFasten: true,
-            searchPartNumbers: true,
+            forceIndex: true,
             sortOrder: 5,
             // Overwritten.
             name: "Renamed",
             microversionId: "mv-2",
-            isOpenComposite: false,
-            defaultPartNumber: null
+            isOpenComposite: false
         });
     });
 
-    it("inserts the configuration row when there are parameters and drops it when there aren't", async () => {
+    it("writes the computed configuration records", async () => {
+        const records = [
+            record("PN-1", { p: "v1" }),
+            record("PN-2", { p: "v2" })
+        ];
+        await saveInsertable(
+            db,
+            insertableTarget(),
+            parsedInsertable({
+                configuration: { parameters: TEST_PARAMETERS, records }
+            })
+        );
+
+        const config = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(config?.records).toEqual(records);
+    });
+
+    // An indexed insertable with no varying parameters still needs its records
+    // stored, so a configurations row is kept even when `parameters` is empty.
+    it("keeps a configuration row for a non-configurable indexed insertable", async () => {
+        await saveInsertable(
+            db,
+            insertableTarget(),
+            parsedInsertable({
+                configuration: {
+                    parameters: [],
+                    records: [record("PN-default")]
+                }
+            })
+        );
+
+        const config = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.id, TEST_PART_STUDIO_ID))
+            .get();
+        expect(config?.parameters).toEqual([]);
+        expect(config?.records).toEqual([record("PN-default")]);
+    });
+
+    // library-data reads `records` off the row without re-checking whether the
+    // insertable is still indexed, so a reload with neither parameters nor
+    // records must drop the row rather than leave stale records behind.
+    it("drops the configuration row when there are no parameters or records", async () => {
         await saveInsertable(
             db,
             insertableTarget(),
             parsedInsertable({
                 configuration: {
                     parameters: TEST_PARAMETERS,
-                    partNumbers: { "PN-1": { boolean: "true" } }
+                    records: [record("PN-1")]
                 }
             })
         );
-        const config = await db
-            .select()
-            .from(configurations)
-            .where(eq(configurations.id, TEST_PART_STUDIO_ID))
-            .get();
-        expect(config).toMatchObject({
-            parameters: TEST_PARAMETERS,
-            partNumbers: { "PN-1": { boolean: "true" } }
-        });
-
-        // getPartNumberMap in library-data.ts reads the config without
-        // re-checking searchPartNumbers, so a reload with no parameters must
-        // drop the row rather than leave stale part numbers behind.
         await saveInsertable(db, insertableTarget(), parsedInsertable());
+
         expect(await db.select().from(configurations).all()).toHaveLength(0);
     });
 });

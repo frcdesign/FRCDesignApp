@@ -21,6 +21,7 @@ export enum BuildIssueType {
     NO_VENDORS = "no-vendors",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     TOO_MANY_CONFIGURATIONS = "too-many-configurations",
+    MANY_CONFIGURATIONS = "many-configurations",
     MULTIPLE_PARTS = "multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
@@ -40,6 +41,7 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
+    | BuildIssueOf<BuildIssueType.MANY_CONFIGURATIONS>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | BuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
@@ -58,6 +60,8 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "No unhidden insertables";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
             return "Too many configurations to index part numbers";
+        case BuildIssueType.MANY_CONFIGURATIONS:
+            return "Too many configurations to index automatically";
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
         case BuildIssueType.UNSTABLE_COMPOSITE:
@@ -81,6 +85,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+        case BuildIssueType.MANY_CONFIGURATIONS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

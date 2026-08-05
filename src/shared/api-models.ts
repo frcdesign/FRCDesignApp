@@ -50,7 +50,7 @@ export interface InsertableBuildStatus {
     elementType: ElementType;
     isVisible: boolean;
     supportsFasten: boolean;
-    searchPartNumbers: boolean;
+    forceIndex: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When this insertable was last successfully loaded (epoch ms); null if never. */

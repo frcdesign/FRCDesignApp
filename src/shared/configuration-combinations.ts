@@ -17,6 +17,14 @@ import { evaluateCondition, getVisibleOptions } from "./configuration-utils";
  */
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
+/**
+ * Below this many combinations, a vendor insertable is indexed automatically on
+ * load. At or above it, indexing waits for an admin to force it on (after
+ * trimming the count via "exclude from properties"); see the `MANY_CONFIGURATIONS`
+ * build issue.
+ */
+export const AUTO_INDEX_THRESHOLD = 100;
+
 export interface EnumerateResult {
     /** The enumerated configurations, or empty when `capped`. */
     configurations: ParameterValues[];
@@ -28,9 +36,15 @@ export interface EnumerateResult {
  * Returns the cartesian product of an insertable's enum and boolean parameter
  * values, pruning combinations hidden by visibility conditions.
  *
- * Parameters are folded in list order, evaluating each parameter's (and each
- * enum option's) visibility against the partial configuration built so far —
- * matching how Onshape structures configurations top-to-bottom.
+ * Parameters are folded in list order, and each parameter's values are appended
+ * in the order Onshape declares them (first option first). That order is
+ * load-bearing: part-number search dedupes configurations first-wins, so a part
+ * number shared across an enum's options resolves to the first-listed — the
+ * latest revision, by Onshape convention.
+ *
+ * Each parameter's (and each enum option's) visibility is evaluated against the
+ * partial configuration built so far, matching how Onshape structures
+ * configurations top-to-bottom.
  */
 export function enumerateConfigurations(
     parameters: ConfigurationParameter[],
@@ -44,6 +58,11 @@ export function enumerateConfigurations(
             parameter.type !== ParameterType.BOOLEAN
         ) {
             // Quantity and string parameters ride on their Onshape defaults.
+            continue;
+        }
+        if (parameter.isCosmetic) {
+            // "Exclude from properties": doesn't change the part's identity, so
+            // it rides its default rather than multiplying the configuration count.
             continue;
         }
 

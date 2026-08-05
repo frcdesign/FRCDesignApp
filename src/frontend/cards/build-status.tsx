@@ -577,7 +577,7 @@ function InsertableAdminSection({
             />
             <PartNumberSwitch
                 insertableId={insertableId}
-                searchPartNumbers={status.searchPartNumbers}
+                forceIndex={status.forceIndex}
             />
         </Stack>
     );
@@ -620,18 +620,18 @@ function FastenSwitch({
 
 function PartNumberSwitch({
     insertableId,
-    searchPartNumbers
+    forceIndex
 }: {
     insertableId: string;
-    searchPartNumbers: boolean;
+    forceIndex: boolean;
 }): ReactNode {
     const mutation = useTogglePartNumberSearchMutation(insertableId);
     return (
         <SwitchRow
-            label="Part number search"
-            description="Index all configurations"
-            checked={searchPartNumbers}
-            onToggle={() => mutation.mutate(!searchPartNumbers)}
+            label="Force part number indexing"
+            description="Index configurations even below the auto threshold"
+            checked={forceIndex}
+            onToggle={() => mutation.mutate(!forceIndex)}
         />
     );
 }

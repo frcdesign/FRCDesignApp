@@ -4,7 +4,11 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-issues";
 import {
     ElementType,
     type FastenInfo,
@@ -20,10 +24,11 @@ import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
 import {
-    NO_PART_NUMBERS,
+    NO_RECORDS,
     computeOpenComposite,
-    loadPartNumbers
-} from "../parse/parse-part-number";
+    decideIndexing,
+    loadConfigurationRecords
+} from "../parse/parse-configuration-records";
 import {
     type InsertableTarget,
     type LoadContext,
@@ -40,8 +45,6 @@ export interface ParsedInsertable {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
-    /** Part number of the default configuration; null when not indexed. */
-    defaultPartNumber: string | null;
     /** Whether the part studio resolves to an open composite. */
     isOpenComposite: boolean;
     buildIssues: BuildIssue[];
@@ -51,7 +54,8 @@ export interface ParsedInsertable {
 /** The user-owned flags that decide how much of a load runs. */
 interface InsertableFlags {
     supportsFasten: boolean;
-    searchPartNumbers: boolean;
+    /** Forces part-number indexing on, overriding the auto heuristic. */
+    forceIndex: boolean;
 }
 
 /**
@@ -75,8 +79,14 @@ export async function loadInsertable(
 
     const isOpenComposite = await computeOpenCompositeStep(ctx, target);
 
-    const partNumberResult = flags.searchPartNumbers
-        ? await loadPartNumbers(
+    const { shouldIndex, manyConfigurations } = decideIndexing(
+        vendors,
+        parameters,
+        flags.forceIndex
+    );
+
+    const recordsResult = shouldIndex
+        ? await loadConfigurationRecords(
               ctx,
               insertableId,
               elementPath,
@@ -84,7 +94,7 @@ export async function loadInsertable(
               parameters,
               isOpenComposite
           )
-        : NO_PART_NUMBERS;
+        : NO_RECORDS;
 
     const thumbnailUrls = await uploadThumbnailsStep(
         ctx,
@@ -98,20 +108,23 @@ export async function loadInsertable(
             )
     );
 
+    let buildIssues = addBuildIssue(
+        checkInsertable({ vendors, thumbnailUrls }),
+        ...recordsResult.buildIssues
+    );
+    if (manyConfigurations) {
+        buildIssues = addBuildIssue(buildIssues, {
+            type: BuildIssueType.MANY_CONFIGURATIONS
+        });
+    }
+
     const parsed: ParsedInsertable = {
         vendors,
         thumbnailUrls,
         fastenInfo,
-        defaultPartNumber: partNumberResult.defaultPartNumber,
         isOpenComposite,
-        buildIssues: addBuildIssue(
-            checkInsertable({ vendors, thumbnailUrls }),
-            ...partNumberResult.buildIssues
-        ),
-        configuration: {
-            parameters,
-            partNumbers: partNumberResult.partNumbers
-        }
+        buildIssues,
+        configuration: { parameters, records: recordsResult.records }
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -131,12 +144,12 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                searchPartNumbers: insertables.searchPartNumbers
+                forceIndex: insertables.forceIndex
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, searchPartNumbers: false };
+        return row ?? { supportsFasten: false, forceIndex: false };
     });
 }
 
@@ -158,9 +171,9 @@ function parseConfigurationStep(
 
 /**
  * Determines whether a part studio is an open composite from its default
- * configuration. Runs on every load, not just under part-number search, so the
- * insert path always requests the right part types. Assemblies are never
- * composites, so they skip the fetch.
+ * configuration. Runs on every load, not just under indexing, so the insert
+ * path always requests the right part types. Assemblies are never composites,
+ * so they skip the fetch.
  */
 function computeOpenCompositeStep(
     ctx: LoadContext,
@@ -213,7 +226,6 @@ export async function saveInsertable(
         vendors: parsed.vendors,
         thumbnailUrls: parsed.thumbnailUrls,
         fastenInfo: parsed.fastenInfo,
-        defaultPartNumber: parsed.defaultPartNumber,
         isOpenComposite: parsed.isOpenComposite,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: Date.now()
@@ -232,7 +244,7 @@ export async function saveInsertable(
             // one keeps the user's choices, since `set` omits these.
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false,
+            forceIndex: false,
             ...reloaded
         })
         .onConflictDoUpdate({
@@ -240,12 +252,14 @@ export async function saveInsertable(
             set: reloaded
         });
 
+    // Keep a configurations row whenever there's config data to store — the
+    // parameters a configurable insertable exposes, the records an indexed one
+    // produced, or both. A non-configurable, non-indexed insertable needs neither.
     let configurationWrite;
-    if (configuration.parameters.length === 0) {
-        configurationWrite = db
-            .delete(configurations)
-            .where(eq(configurations.id, target.insertableId));
-    } else {
+    if (
+        configuration.parameters.length > 0 ||
+        configuration.records.length > 0
+    ) {
         configurationWrite = db
             .insert(configurations)
             .values({ id: target.insertableId, ...configuration })
@@ -253,6 +267,10 @@ export async function saveInsertable(
                 target: configurations.id,
                 set: configuration
             });
+    } else {
+        configurationWrite = db
+            .delete(configurations)
+            .where(eq(configurations.id, target.insertableId));
     }
 
     await db.batch([insertableWrite, configurationWrite]);

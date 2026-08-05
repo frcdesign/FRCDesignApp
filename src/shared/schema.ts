@@ -12,7 +12,7 @@ import { ThumbnailUrls } from "./types";
 import {
     ParameterValues,
     ConfigurationParameter,
-    PartNumberMap
+    ConfigurationRecord
 } from "./configuration-models";
 import { BuildIssue } from "./build-issues";
 
@@ -84,14 +84,11 @@ export const insertables = sqliteTable("insertables", {
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Whether this insertable's part numbers are indexed for search.
-    searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
+    // Forces part-number indexing on, overriding the vendor + configuration-count
+    // heuristic. User-owned; preserved across reloads.
+    forceIndex: integer("force_index", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Part number of the default configuration. The sole source of part
-    // numbers for non-configurable insertables (which have no
-    // `configurations` row); null when part-number search is off.
-    defaultPartNumber: text("default_part_number"),
     versionId: text("version_id").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     vendors: text("vendors", { mode: "json" })
@@ -124,12 +121,12 @@ export const configurations = sqliteTable("configurations", {
         .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
-    // Deduped map of part number -> the configuration that produces it, used
-    // for part-number search. Empty unless part-number search is enabled.
-    partNumbers: text("part_numbers", { mode: "json" })
-        .$type<PartNumberMap>()
+    // One record per configuration we probed (part number + metadata). Empty
+    // unless the insertable is indexed. Search dedupes these to a part-number map.
+    records: text("records", { mode: "json" })
+        .$type<ConfigurationRecord[]>()
         .notNull()
-        .default({}),
+        .default([]),
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()
