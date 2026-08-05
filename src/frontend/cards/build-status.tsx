@@ -1,4 +1,12 @@
-import { Badge, Divider, Group, HoverCard, Stack, Text } from "@mantine/core";
+import {
+    Badge,
+    Divider,
+    Group,
+    HoverCard,
+    ScrollArea,
+    Stack,
+    Text
+} from "@mantine/core";
 import {
     IconAlertOctagon,
     IconAlertTriangle,
@@ -20,6 +28,10 @@ import {
     InsertableBuildStatus
 } from "../../shared/api-models";
 import { getVendorName, Vendor } from "../../shared/types";
+import {
+    ConfigurationParameter,
+    ParameterType
+} from "../../shared/configuration-models";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery } from "../queries";
@@ -68,7 +80,12 @@ function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
     });
     rows.push({
         label: "Configurable",
-        value: { kind: "bool", value: !!insertable.configuration }
+        // An indexed non-configurable insertable has a configuration row with no
+        // parameters (just records), so "configurable" keys on the parameters.
+        value: {
+            kind: "bool",
+            value: (insertable.configuration?.parameters.length ?? 0) > 0
+        }
     });
     return rows;
 }
@@ -179,15 +196,26 @@ interface BuildStatusCardProps {
     issues: BuildIssue[];
     /** Read-only "current state" rows shown above the build issues. */
     stateRows: StateRow[];
+    /** The insertable's configuration parameters, when it has any. */
+    parameters?: ConfigurationParameter[];
 }
 
-/** The hover-card dropdown content: state rows + divider + build issues. */
+/**
+ * The hover-card dropdown content: state rows, the configuration parameters (when
+ * there are any), and the build issues, divided into sections.
+ */
 export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { issues, stateRows } = props;
+    const { issues, stateRows, parameters } = props;
     // Size to content (capped) so short rows/messages don't wrap.
     return (
         <Stack gap="xs" w="max-content" maw={300}>
             <CurrentStateSection rows={stateRows} />
+            {parameters && parameters.length > 0 && (
+                <>
+                    <Divider />
+                    <ConfigurationSection parameters={parameters} />
+                </>
+            )}
             <Divider />
             <BuildIssuesSection issues={issues} />
         </Stack>
@@ -198,6 +226,8 @@ interface BuildStatusBadgeProps {
     issues: BuildIssue[];
     /** Read-only "current state" rows shown above the build issues. */
     stateRows: StateRow[];
+    /** The insertable's configuration parameters, when it has any. */
+    parameters?: ConfigurationParameter[];
 }
 
 /**
@@ -206,7 +236,7 @@ interface BuildStatusBadgeProps {
  * Only visible to editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, stateRows } = props;
+    const { issues, stateRows, parameters } = props;
     const maxSeverity = getMaxSeverity(issues);
 
     return (
@@ -224,7 +254,11 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                     <IssueIcon severity={maxSeverity} />
                 </HoverCard.Target>
                 <HoverCard.Dropdown p="sm">
-                    <BuildStatusCard issues={issues} stateRows={stateRows} />
+                    <BuildStatusCard
+                        issues={issues}
+                        stateRows={stateRows}
+                        parameters={parameters}
+                    />
                 </HoverCard.Dropdown>
             </HoverCard>
         </RequireAccessLevel>
@@ -244,6 +278,7 @@ export function InsertableStatusBadge({
         <BuildStatusBadge
             issues={getInsertableBuildIssues(insertable)}
             stateRows={getInsertableStateRows(insertable)}
+            parameters={insertable.configuration?.parameters}
         />
     );
 }
@@ -279,6 +314,68 @@ function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
                     <StateValue value={row.value} />
                 </Group>
             ))}
+        </Stack>
+    );
+}
+
+/** The short label for a parameter's type, shown as a badge. */
+function getParameterTypeLabel(type: ParameterType): string {
+    switch (type) {
+        case ParameterType.ENUM:
+            return "Enum";
+        case ParameterType.BOOLEAN:
+            return "Boolean";
+        case ParameterType.QUANTITY:
+            return "Quantity";
+        case ParameterType.STRING:
+            return "Text";
+    }
+}
+
+/**
+ * Lists the insertable's configuration parameters: each parameter's name, its
+ * type, and whether it's excluded from properties (which keeps it from
+ * multiplying the indexed configuration count).
+ */
+function ConfigurationSection({
+    parameters
+}: {
+    parameters: ConfigurationParameter[];
+}): ReactNode {
+    return (
+        <Stack gap={4}>
+            <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+                Configuration
+            </Text>
+            <ScrollArea.Autosize mah={220} type="auto">
+                <Stack gap={4}>
+                    {parameters.map((parameter) => (
+                        <Group
+                            key={parameter.id}
+                            gap="xl"
+                            wrap="nowrap"
+                            justify="space-between"
+                        >
+                            <Text size="sm">{parameter.name}</Text>
+                            <Group gap={4} wrap="nowrap">
+                                {parameter.isCosmetic && (
+                                    <Badge
+                                        size="xs"
+                                        variant="light"
+                                        color="gray"
+                                        title="Excluded from configuration properties"
+                                    >
+                                        Excluded
+                                    </Badge>
+                                )}
+                                <Badge size="xs" variant="default">
+                                    {getParameterTypeLabel(parameter.type)}
+                                </Badge>
+                            </Group>
+                        </Group>
+                    ))}
+                </Stack>
+            </ScrollArea.Autosize>
         </Stack>
     );
 }
