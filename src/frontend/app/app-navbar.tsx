@@ -3,6 +3,7 @@ import {
     Button,
     Group,
     Input,
+    Loader,
     Menu,
     TextInput
 } from "@mantine/core";
@@ -17,6 +18,8 @@ import { VendorMenu } from "../settings/vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { useSaveSettings } from "../settings/settings";
+import { RequireAccessLevel } from "../api-utils/access-level";
+import { useLibraryJobsQuery } from "../queries";
 import { LibraryId } from "../../shared/types";
 
 /**
@@ -37,8 +40,43 @@ export function AppNavbar(): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
             {leftGroup}
-            <SettingsButton />
+            <Group gap="xs" wrap="nowrap">
+                <RequireAccessLevel>
+                    <LibraryJobIndicator />
+                </RequireAccessLevel>
+                <SettingsButton />
+            </Group>
         </Group>
+    );
+}
+
+/**
+ * Shows a spinner in the header whenever a library job is running, so admins
+ * know work is happening without opening any page. Links to the jobs page.
+ */
+function LibraryJobIndicator(): ReactNode {
+    const navigate = useNavigate();
+    const { data } = useLibraryJobsQuery();
+    const runningCount =
+        data?.libraryJobs.filter((job) => job.status === "running").length ?? 0;
+
+    if (runningCount === 0) {
+        return null;
+    }
+
+    return (
+        <ActionIcon
+            variant="subtle"
+            color={PrimaryColor.PRIMARY}
+            title={
+                runningCount === 1
+                    ? "A library job is running"
+                    : `${runningCount} library jobs are running`
+            }
+            onClick={() => void navigate({ to: "/app/library-jobs" })}
+        >
+            <Loader size={IconSize.MEDIUM} color={PrimaryColor.CONTRAST} />
+        </ActionIcon>
     );
 }
 

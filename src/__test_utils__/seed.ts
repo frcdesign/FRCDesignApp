@@ -5,6 +5,7 @@ import {
     group,
     insertables,
     libraries,
+    libraryJobs,
     users
 } from "../shared/schema";
 import {
@@ -59,6 +60,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(insertables);
     await db.delete(group);
     await db.delete(users);
+    await db.delete(libraryJobs);
     await db.delete(libraries);
 }
 

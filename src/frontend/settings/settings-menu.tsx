@@ -1,8 +1,9 @@
-import { Divider, Group, Text, Title } from "@mantine/core";
+import { Button, Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { FontWeight } from "../common/style-constants";
+import { IconHistory } from "@tabler/icons-react";
+import { FontWeight, IconSize } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
+import { useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { type ContextData, Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
@@ -106,6 +107,8 @@ function ThemeSelect(props: ThemeSelectProps): ReactNode {
 }
 
 function AdminSettings(): ReactNode {
+    const navigate = useNavigate();
+
     return (
         <>
             {/* Always show the access level select so admins can change access level if needed */}
@@ -116,6 +119,18 @@ function AdminSettings(): ReactNode {
                 </SettingRow>
                 <SettingRow label="Reload all documents">
                     <ReloadGroupsButton reloadAll />
+                </SettingRow>
+                <SettingRow label="Library jobs">
+                    <Button
+                        variant="light"
+                        leftSection={<IconHistory size={IconSize.SMALL} />}
+                        onClick={() => {
+                            modals.closeAll();
+                            void navigate({ to: "/app/library-jobs" });
+                        }}
+                    >
+                        View jobs
+                    </Button>
                 </SettingRow>
             </RequireAccessLevel>
         </>

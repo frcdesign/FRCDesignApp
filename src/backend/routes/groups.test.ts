@@ -156,6 +156,7 @@ describe("POST /reload-groups", () => {
             expect(createSpy.mock.calls[0][0]?.params).toEqual({
                 libraryId: TEST_LIBRARY_ID,
                 sessionId: "test-session",
+                libraryJobId: expect.any(String),
                 forceReload
             });
         }

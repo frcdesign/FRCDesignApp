@@ -7,6 +7,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import { createLibraryJob } from "../library-jobs";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -34,8 +35,20 @@ groupRoutes.post(
 
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
-        await c.env.LOAD_LIBRARY_WORKFLOW.create({
-            params: { libraryId, sessionId, forceReload }
+        const libraryJobId = crypto.randomUUID();
+        const instance = await c.env.LOAD_LIBRARY_WORKFLOW.create({
+            params: { libraryId, sessionId, libraryJobId, forceReload }
+        });
+
+        await createLibraryJob(db, {
+            id: libraryJobId,
+            instanceId: instance.id,
+            type: "load-library",
+            libraryId,
+            label: forceReload
+                ? "Reload all documents"
+                : "Reload outdated documents",
+            triggeredBy: await c.var.getUserId().catch(() => null)
         });
 
         return c.json({ status: "triggered" });
@@ -184,15 +197,26 @@ groupRoutes.post(
         }
 
         const groupId = crypto.randomUUID();
+        const libraryJobId = crypto.randomUUID();
 
-        await c.env.ADD_GROUP_WORKFLOW.create({
+        const instance = await c.env.ADD_GROUP_WORKFLOW.create({
             params: {
                 groupId,
                 documentId: body.newDocumentId,
                 libraryId,
                 sessionId,
+                libraryJobId,
                 selectedGroupId: body.selectedGroupId
             }
+        });
+
+        await createLibraryJob(db, {
+            id: libraryJobId,
+            instanceId: instance.id,
+            type: "add-group",
+            libraryId,
+            label: "Add document: " + documentName,
+            triggeredBy: await c.var.getUserId().catch(() => null)
         });
 
         return c.json({ name: documentName });

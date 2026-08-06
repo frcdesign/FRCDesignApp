@@ -14,6 +14,11 @@ import {
     PartNumberMap
 } from "./configuration-models";
 import { BuildIssue } from "./build-checker";
+import type {
+    GroupResult,
+    LibraryJobStatus,
+    LibraryJobType
+} from "./library-job-models";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -162,3 +167,39 @@ export const favorites = sqliteTable(
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );
+
+/**
+ * A record of one background workflow run against a library (a "library job").
+ * Every workflow this app runs operates on a library, so the `type` column
+ * discriminates the growing family of them (currently reload and add-document).
+ * The row is created `running` by the trigger route and finalized by the
+ * workflow itself with its per-group result.
+ */
+export const libraryJobs = sqliteTable("library_jobs", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+    // The Cloudflare Workflows instance id, used to reconcile stale rows.
+    instanceId: text("instance_id").notNull(),
+    type: text("type").notNull().$type<LibraryJobType>(),
+    libraryId: text("library_id").notNull().$type<LibraryId>(),
+    status: text("status")
+        .notNull()
+        .$type<LibraryJobStatus>()
+        .default("running"),
+    // Human-readable summary, e.g. "Reload all documents".
+    label: text("label").notNull(),
+    // The user id that triggered the job, when known.
+    triggeredBy: text("triggered_by"),
+    // The workflow's per-group result once finished (array for reloads, single
+    // for add-document); failures carry their error message.
+    result: text("result", { mode: "json" }).$type<
+        GroupResult | GroupResult[] | null
+    >(),
+    // A short failure summary for partial/errored jobs.
+    error: text("error"),
+    createdAt: integer("created_at")
+        .notNull()
+        .$defaultFn(() => Date.now()),
+    finishedAt: integer("finished_at")
+});
