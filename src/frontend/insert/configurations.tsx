@@ -424,7 +424,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
         <Group gap="sm" align="flex-start" mt="sm">
             <Text
                 size="sm"
-                style={{ minWidth: "120px", flexShrink: 0, paddingTop: "6px" }}
+                style={{ whiteSpace: "nowrap", flex: 0, paddingTop: "6px" }}
             >
                 {parameter.name}
             </Text>
