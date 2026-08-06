@@ -103,9 +103,14 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-cert",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "load-library-workflow-cert",
+                    "binding": "LOAD_LIBRARY_WORKFLOW",
+                    "class_name": "LoadLibraryWorkflow"
+                },
+                {
+                    "name": "add-group-workflow-cert",
+                    "binding": "ADD_GROUP_WORKFLOW",
+                    "class_name": "AddGroupWorkflow"
                 }
             ],
             "vars": {
@@ -136,9 +141,14 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-production",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "load-library-workflow-production",
+                    "binding": "LOAD_LIBRARY_WORKFLOW",
+                    "class_name": "LoadLibraryWorkflow"
+                },
+                {
+                    "name": "add-group-workflow-production",
+                    "binding": "ADD_GROUP_WORKFLOW",
+                    "class_name": "AddGroupWorkflow"
                 }
             ],
             "vars": {
