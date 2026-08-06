@@ -94,7 +94,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configuration={configuration}
             />
             {parameters}
-            <Group justify="space-between" wrap="nowrap" mt="mt">
+            <Group justify="space-between" wrap="nowrap" mt="md">
                 <Group gap={4}>
                     <FavoriteButton
                         favorite={favorite}
@@ -154,7 +154,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     }, [insertMutation, onInsert, canFasten, uiState.fasten]);
 
     return (
-        <Group gap="sm">
+        <Group gap="sm" align="center">
             {canFasten && (
                 <Checkbox
                     label="Fasten"

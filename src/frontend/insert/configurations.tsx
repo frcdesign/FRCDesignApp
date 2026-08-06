@@ -1,4 +1,12 @@
-import { Center, Checkbox, Loader, Select, TextInput } from "@mantine/core";
+import {
+    Center,
+    Checkbox,
+    Group,
+    Loader,
+    Select,
+    Text,
+    TextInput
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -192,6 +200,48 @@ function ParameterInput(
     }
 }
 
+/**
+ * The height of a default sized Mantine input.
+ */
+const INPUT_HEIGHT = "36px";
+
+interface InputLabelProps {
+    label: string;
+    /**
+     * The id of the input the label describes.
+     */
+    htmlFor: string;
+    children: ReactNode;
+}
+
+/**
+ * A label displayed to the left of a parameter input.
+ *
+ * The label is given the height of an input so it stays aligned with the input
+ * itself rather than drifting when the input grows to show an error message.
+ */
+function InputLabel(props: InputLabelProps) {
+    const { label, htmlFor, children } = props;
+    return (
+        <Group gap="sm" align="flex-start" mt="sm">
+            <Text
+                size="sm"
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    height: INPUT_HEIGHT,
+                    cursor: "pointer"
+                }}
+                component="label"
+                htmlFor={htmlFor}
+            >
+                {label}
+            </Text>
+            {children}
+        </Group>
+    );
+}
+
 function getFirstVisibleOption(
     visibleOptions: EnumOption[],
     currentOptionId: string,
@@ -244,57 +294,60 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     }
 
     return (
-        <Select
-            label={parameter.name}
-            id={parameter.id}
-            data={visibleOptions.map((option) => ({
-                value: option.id,
-                label: option.name
-            }))}
-            value={currentOption.id}
-            allowDeselect={false}
-            mt="sm"
-            checkIconPosition="right"
-            maxDropdownHeight={250}
-            comboboxProps={{ withinPortal: true }}
-            onChange={(newValue) => {
-                if (newValue !== null) {
-                    onValueChange(newValue);
-                }
-            }}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <Select
+                id={parameter.id}
+                data={visibleOptions.map((option) => ({
+                    value: option.id,
+                    label: option.name
+                }))}
+                value={currentOption.id}
+                style={{ flex: 1 }}
+                allowDeselect={false}
+                checkIconPosition="right"
+                maxDropdownHeight={250}
+                comboboxProps={{ withinPortal: true }}
+                onChange={(newValue) => {
+                    if (newValue !== null) {
+                        onValueChange(newValue);
+                    }
+                }}
+            />
+        </InputLabel>
     );
 }
 
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Checkbox
-            label={parameter.name}
-            labelPosition="left"
-            checked={value === "true"}
-            mt="sm"
-            styles={{
-                input: { cursor: "pointer" },
-                label: { cursor: "pointer" }
-            }}
-            onChange={handleBooleanChange((checked) =>
-                onValueChange(checked ? "true" : "false")
-            )}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <Checkbox
+                id={parameter.id}
+                checked={value === "true"}
+                // The checkbox is shorter than an input, so center it against the label
+                style={{ alignSelf: "center" }}
+                styles={{
+                    input: { cursor: "pointer" }
+                }}
+                onChange={handleBooleanChange((checked) =>
+                    onValueChange(checked ? "true" : "false")
+                )}
+            />
+        </InputLabel>
     );
 }
 
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            mt="sm"
-            value={value}
-            onChange={(event) => onValueChange(event.currentTarget.value)}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <TextInput
+                id={parameter.id}
+                value={value}
+                style={{ flex: 1 }}
+                onChange={(event) => onValueChange(event.currentTarget.value)}
+            />
+        </InputLabel>
     );
 }
 
@@ -389,27 +442,28 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     }, [evaluateOptions, expression, onValueChange]);
 
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            ref={ref}
-            value={focused ? expression : display}
-            error={errorMessage}
-            mt="sm"
-            onFocus={(event) => {
-                setFocused(true);
-                event.currentTarget.select();
-            }}
-            onBlur={handleSubmit}
-            onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                    ref.current?.blur();
-                    handleSubmit();
-                }
-            }}
-            onChange={(event) => {
-                setExpression(event.currentTarget.value);
-            }}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <TextInput
+                id={parameter.id}
+                ref={ref}
+                value={focused ? expression : display}
+                error={errorMessage}
+                style={{ flex: 1 }}
+                onFocus={(event) => {
+                    setFocused(true);
+                    event.currentTarget.select();
+                }}
+                onBlur={handleSubmit}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        ref.current?.blur();
+                        handleSubmit();
+                    }
+                }}
+                onChange={(event) => {
+                    setExpression(event.currentTarget.value);
+                }}
+            />
+        </InputLabel>
     );
 }
