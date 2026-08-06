@@ -33,7 +33,6 @@
         {
             "binding": "DB",
             "database_name": "frc-design-app-dev-db",
-            "database_id": "dummy-id",
             "migrations_dir": "drizzle"
         }
     ],
