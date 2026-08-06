@@ -1,4 +1,4 @@
-export { LoadDocumentWorkflow } from "./parse/load-document";
+export { AddGroupWorkflow, LoadLibraryWorkflow } from "./load/workflows";
 import { createApp } from "./create-app";
 import { productionServices } from "./services";
 

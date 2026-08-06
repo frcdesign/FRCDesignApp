@@ -11,6 +11,11 @@ import { apiPath } from "../api-path";
 import { encodeConfiguration } from "./configurations";
 import { OnshapeElementType, PartType } from "./documents";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
+import {
+    OnshapeAssemblyDefinition,
+    OnshapeCreatedFeature,
+    OnshapeInsertInstancesResponse
+} from "../onshape-types";
 
 /** Retrieves information about an assembly. */
 export function getAssembly(
@@ -22,7 +27,7 @@ export function getAssembly(
         includeMateConnectors?: boolean;
         excludeSuppressed?: boolean;
     } = {}
-): Promise<any> {
+): Promise<OnshapeAssemblyDefinition> {
     return client.get(apiPath("assemblies", assemblyPath, toElementApiPath), {
         query: new URLSearchParams({
             includeMateFeatures: String(options.includeMateFeatures ?? false),
@@ -77,7 +82,6 @@ export function createAssembly(
  *
  * @param elementType The type of the element being inserted (part studio or assembly).
  * @param options.partTypes If inserting a part studio, the types of parts to include. Defaults to PARTS and COMPOSITE_PARTS.
- * @param options.useTransform If true, uses the `transformedinstances` endpoint and returns a result.
  */
 export function addElementToAssembly(
     client: OnshapeApi,
@@ -87,12 +91,11 @@ export function addElementToAssembly(
     options: {
         configuration?: Record<string, string> | string;
         partTypes?: PartType[];
-        useTransform?: boolean;
     } = {}
-): Promise<any> {
+): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
 
-    const { configuration, partTypes, useTransform = false } = options;
+    const { configuration, partTypes } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -119,26 +122,17 @@ export function addElementToAssembly(
         );
     }
 
-    if (useTransform) {
-        return client.post(
-            apiPath("assemblies", assemblyPath, toElementApiPath, {
-                endRoute: "transformedinstances"
-            }),
-            {
-                body: {
-                    transformGroups: [
-                        { instances: [instance], transform: IDENTITY_TRANSFORM }
-                    ]
-                }
-            }
-        );
-    }
-
-    return client.postNone(
+    return client.post(
         apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "instances"
+            endRoute: "transformedinstances"
         }),
-        { body: instance }
+        {
+            body: {
+                transformGroups: [
+                    { instances: [instance], transform: IDENTITY_TRANSFORM }
+                ]
+            }
+        }
     );
 }
 
@@ -180,7 +174,7 @@ export function addAssemblyFeature(
     assemblyPath: ElementPath,
     feature: object,
     featureId?: string
-): Promise<any> {
+): Promise<OnshapeCreatedFeature> {
     assertWorkspace(assemblyPath);
     return client.post(
         apiPath("assemblies", assemblyPath, toElementApiPath, {

@@ -1,149 +1,243 @@
 import { describe, expect, it } from "vitest";
 import {
-    ConfigurationParameterType,
-    QuantityType,
-    Unit,
-    VisibilityConditionType,
-    LogicalOp,
+    OptionVisibilityType,
+    ConfigurationParameter,
+    ParameterType,
     VisibilityCondition,
-    ParameterObj
+    VisibilityType
 } from "../../shared/configuration-models";
+import {
+    LogicalOp,
+    QuantityType,
+    Unit
+} from "../../shared/configuration-enums";
 import { evaluateCondition } from "../../shared/configuration-utils";
 import { parseOnshapeConfiguration } from "./parse-configuration";
+import {
+    OnshapeConfigurationResponse,
+    OnshapeOptionVisibilityConditionType,
+    OnshapeParameterType,
+    OnshapeVisibilityConditionType
+} from "../onshape-api/onshape-types";
 
-const NONE_CONDITION = { btType: "BTParameterVisibilityCondition-177" };
+/** No-op visibility condition Onshape attaches to always-visible parameters. */
+const NONE = { btType: OnshapeVisibilityConditionType.NONE } as const;
+
+const RESPONSE: OnshapeConfigurationResponse = {
+    btType: "BTConfigurationResponse-2019",
+    configurationParameters: [
+        {
+            btType: OnshapeParameterType.BOOLEAN,
+            parameterId: "Show_list",
+            parameterName: "Show list",
+            isCosmetic: true,
+            defaultValue: true,
+            visibilityCondition: NONE
+        },
+        {
+            btType: OnshapeParameterType.ENUM,
+            parameterId: "Vendor",
+            parameterName: "Vendor",
+            isCosmetic: false,
+            defaultValue: "Default",
+            options: [
+                { option: "Default", optionName: "WCP" },
+                { option: "REV", optionName: "REV" }
+            ],
+            enumOptionVisibilityConditions: { visibilityConditions: [] },
+            visibilityCondition: {
+                btType: OnshapeVisibilityConditionType.LOGICAL,
+                operation: LogicalOp.AND,
+                children: [
+                    {
+                        btType: OnshapeVisibilityConditionType.EQUAL,
+                        value: "true",
+                        parameterId: "Show_vendor_options"
+                    }
+                ]
+            }
+        },
+        {
+            btType: OnshapeParameterType.ENUM,
+            parameterId: "List",
+            parameterName: "List",
+            isCosmetic: false,
+            defaultValue: "WCP_1",
+            options: [
+                { option: "Default", optionName: "Always shown" },
+                { option: "WCP_1", optionName: "WCP 1" },
+                { option: "REV_1", optionName: "REV 1" }
+            ],
+            enumOptionVisibilityConditions: {
+                visibilityConditions: [
+                    {
+                        btType: OnshapeOptionVisibilityConditionType.RANGE,
+                        controlledRange: { start: "REV_1", end: "REV_2" },
+                        condition: {
+                            btType: OnshapeVisibilityConditionType.EQUAL,
+                            value: "REV",
+                            parameterId: "Vendor"
+                        }
+                    },
+                    {
+                        btType: OnshapeOptionVisibilityConditionType.LIST,
+                        controlledOptions: ["WCP_1", "WCP_2"],
+                        condition: {
+                            btType: OnshapeVisibilityConditionType.EQUAL,
+                            value: "Default",
+                            parameterId: "Vendor"
+                        }
+                    }
+                ]
+            },
+            // A logical wrapper whose only child is the no-op condition, which the
+            // parser drops — exercising the empty-children path.
+            visibilityCondition: {
+                btType: OnshapeVisibilityConditionType.LOGICAL,
+                operation: LogicalOp.AND,
+                children: [NONE]
+            }
+        },
+        {
+            btType: OnshapeParameterType.QUANTITY,
+            parameterId: "TTB_Length",
+            parameterName: "TTB Length",
+            isCosmetic: false,
+            quantityType: QuantityType.LENGTH,
+            rangeAndDefault: {
+                defaultValue: 1,
+                minValue: 0,
+                maxValue: 100000,
+                units: Unit.INCH
+            },
+            visibilityCondition: {
+                btType: OnshapeVisibilityConditionType.LOGICAL,
+                operation: LogicalOp.OR,
+                children: [
+                    {
+                        btType: OnshapeVisibilityConditionType.EQUAL,
+                        value: "TTB",
+                        parameterId: "Vendor"
+                    }
+                ]
+            }
+        }
+    ]
+};
 
 describe("parseOnshapeConfiguration", () => {
-    it("parses ENUM parameter", () => {
-        const raw = {
-            configurationParameters: [
-                {
-                    btType: ConfigurationParameterType.ENUM,
-                    parameterId: "size",
-                    parameterName: "Size",
-                    defaultValue: "small",
-                    visibilityCondition: NONE_CONDITION,
-                    options: [
-                        { option: "small", optionName: "Small" },
-                        { option: "large", optionName: "Large" }
-                    ],
-                    enumOptionVisibilityConditions: null
-                }
-            ]
-        };
-        const result = parseOnshapeConfiguration(raw);
+    const parameters = parseOnshapeConfiguration(RESPONSE);
 
-        expect(result.parameters).toHaveLength(1);
-        const param = result.parameters[0];
-        expect(param.type).toBe(ConfigurationParameterType.ENUM);
-        expect(param.id).toBe("size");
-        expect(param.name).toBe("Size");
-        expect(param.default).toBe("small");
-        expect(param.condition).toBeUndefined();
-        if (param.type === ConfigurationParameterType.ENUM) {
-            expect(param.options).toEqual([
-                { id: "small", name: "Small" },
-                { id: "large", name: "Large" }
-            ]);
-            expect(param.optionConditions).toEqual([]);
-        }
+    it("parses every parameter", () => {
+        expect(parameters.map((p) => [p.id, p.type])).toEqual([
+            ["Show_list", ParameterType.BOOLEAN],
+            ["Vendor", ParameterType.ENUM],
+            ["List", ParameterType.ENUM],
+            ["TTB_Length", ParameterType.QUANTITY]
+        ]);
     });
 
-    it("parses BOOLEAN parameter", () => {
-        const raw = {
-            configurationParameters: [
-                {
-                    btType: ConfigurationParameterType.BOOLEAN,
-                    parameterId: "mirror",
-                    parameterName: "Mirror",
-                    defaultValue: true,
-                    visibilityCondition: NONE_CONDITION
-                }
-            ]
-        };
-        const result = parseOnshapeConfiguration(raw);
-        const param = result.parameters[0];
-        expect(param.type).toBe(ConfigurationParameterType.BOOLEAN);
-        expect(param.default).toBe("true");
+    it("parses a BOOLEAN parameter and its cosmetic flag", () => {
+        expect(parameters[0]).toEqual({
+            type: ParameterType.BOOLEAN,
+            id: "Show_list",
+            name: "Show list",
+            isCosmetic: true,
+            default: "true",
+            condition: undefined
+        });
     });
 
-    it("parses STRING parameter", () => {
-        const raw = {
-            configurationParameters: [
+    it("parses an ENUM parameter with options and a logical condition", () => {
+        const vendor = parameters[1];
+        expect(vendor.isCosmetic).toBe(false);
+        if (vendor.type !== ParameterType.ENUM)
+            throw new Error("expected ENUM");
+        expect(vendor.default).toBe("Default");
+        expect(vendor.options).toEqual([
+            { id: "Default", name: "WCP" },
+            { id: "REV", name: "REV" }
+        ]);
+        expect(vendor.optionConditions).toEqual([]);
+        expect(vendor.condition).toEqual({
+            type: VisibilityType.LOGICAL,
+            operation: LogicalOp.AND,
+            children: [
                 {
-                    btType: ConfigurationParameterType.STRING,
-                    parameterId: "label",
-                    parameterName: "Label",
-                    defaultValue: "hello",
-                    visibilityCondition: NONE_CONDITION
+                    type: VisibilityType.EQUAL,
+                    id: "Show_vendor_options",
+                    value: "true"
                 }
             ]
-        };
-        const result = parseOnshapeConfiguration(raw);
-        const param = result.parameters[0];
-        expect(param.type).toBe(ConfigurationParameterType.STRING);
-        expect(param.default).toBe("hello");
+        });
     });
 
-    it("parses QUANTITY parameter (length)", () => {
-        const raw = {
-            configurationParameters: [
-                {
-                    btType: ConfigurationParameterType.QUANTITY,
-                    parameterId: "length",
-                    parameterName: "Length",
-                    quantityType: QuantityType.LENGTH,
-                    visibilityCondition: NONE_CONDITION,
-                    rangeAndDefault: {
-                        units: Unit.MILLIMETER,
-                        defaultValue: 25,
-                        minValue: 0,
-                        maxValue: 100
-                    }
+    it("parses enum option visibility conditions (list + range)", () => {
+        const list = parameters[2];
+        if (list.type !== ParameterType.ENUM) throw new Error("expected ENUM");
+        expect(list.optionConditions).toEqual([
+            {
+                type: OptionVisibilityType.RANGE,
+                start: "REV_1",
+                end: "REV_2",
+                condition: {
+                    type: VisibilityType.EQUAL,
+                    id: "Vendor",
+                    value: "REV"
                 }
-            ]
-        };
-        const result = parseOnshapeConfiguration(raw);
-        const param = result.parameters[0];
-        expect(param.type).toBe(ConfigurationParameterType.QUANTITY);
-        expect(param.default).toBe("25 mm");
-        if (param.type === ConfigurationParameterType.QUANTITY) {
-            expect(param.unit).toBe(Unit.MILLIMETER);
-            expect(param.defaultValue).toBe(25);
-            expect(param.min).toBe(0);
-            expect(param.max).toBe(100);
-        }
+            },
+            {
+                type: OptionVisibilityType.LIST,
+                controlledOptions: ["WCP_1", "WCP_2"],
+                condition: {
+                    type: VisibilityType.EQUAL,
+                    id: "Vendor",
+                    value: "Default"
+                }
+            }
+        ]);
     });
 
-    it("parses QUANTITY parameter (unitless integer)", () => {
-        const raw = {
-            configurationParameters: [
+    it("drops no-op children from a logical condition", () => {
+        expect(parameters[2].condition).toEqual({
+            type: VisibilityType.LOGICAL,
+            operation: LogicalOp.AND,
+            children: []
+        });
+    });
+
+    it("parses a QUANTITY parameter with units and range", () => {
+        const length = parameters[3];
+        if (length.type !== ParameterType.QUANTITY)
+            throw new Error("expected QUANTITY");
+        expect(length.default).toBe("1 in");
+        expect(length.defaultValue).toBe(1);
+        expect(length.min).toBe(0);
+        expect(length.max).toBe(100000);
+        expect(length.unit).toBe(Unit.INCH);
+        expect(length.condition).toEqual({
+            type: VisibilityType.LOGICAL,
+            operation: LogicalOp.OR,
+            children: [
                 {
-                    btType: ConfigurationParameterType.QUANTITY,
-                    parameterId: "count",
-                    parameterName: "Count",
-                    quantityType: QuantityType.INTEGER,
-                    visibilityCondition: NONE_CONDITION,
-                    rangeAndDefault: {
-                        units: Unit.UNITLESS,
-                        defaultValue: 4,
-                        minValue: 1,
-                        maxValue: 8
-                    }
+                    type: VisibilityType.EQUAL,
+                    id: "Vendor",
+                    value: "TTB"
                 }
             ]
-        };
-        const result = parseOnshapeConfiguration(raw);
-        const param = result.parameters[0];
-        expect(param.default).toBe("4");
+        });
     });
 });
 
 describe("evaluateCondition", () => {
-    const makeEnumParam = (id: string, options: string[]): ParameterObj => ({
-        type: ConfigurationParameterType.ENUM,
+    const makeEnumParam = (
+        id: string,
+        options: string[]
+    ): ConfigurationParameter => ({
+        type: ParameterType.ENUM,
         id,
         name: id,
+        isCosmetic: false,
         default: options[0],
         condition: undefined,
         optionConditions: [],
@@ -156,14 +250,14 @@ describe("evaluateCondition", () => {
 
     it("ALWAYS_SHOWN: returns true", () => {
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.ALWAYS_SHOWN
+            type: VisibilityType.ALWAYS_SHOWN
         };
         expect(evaluateCondition(condition, {}, [])).toBe(true);
     });
 
     it("EQUAL: returns true when value matches", () => {
         const condition = {
-            type: VisibilityConditionType.EQUAL as const,
+            type: VisibilityType.EQUAL as const,
             id: "size",
             value: "large"
         };
@@ -172,7 +266,7 @@ describe("evaluateCondition", () => {
 
     it("EQUAL: returns false when value does not match", () => {
         const condition = {
-            type: VisibilityConditionType.EQUAL as const,
+            type: VisibilityType.EQUAL as const,
             id: "size",
             value: "large"
         };
@@ -182,7 +276,7 @@ describe("evaluateCondition", () => {
     it("RANGE: returns true when value is in range", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.RANGE,
+            type: VisibilityType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -195,7 +289,7 @@ describe("evaluateCondition", () => {
     it("RANGE: returns false when value is below start", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.RANGE,
+            type: VisibilityType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -208,7 +302,7 @@ describe("evaluateCondition", () => {
     it("RANGE: returns false when value is above end", () => {
         const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.RANGE,
+            type: VisibilityType.RANGE,
             id: "size",
             start: "sm",
             end: "lg"
@@ -220,16 +314,16 @@ describe("evaluateCondition", () => {
 
     it("LOGICAL AND: true when all children match", () => {
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.LOGICAL,
+            type: VisibilityType.LOGICAL,
             operation: LogicalOp.AND,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -240,16 +334,16 @@ describe("evaluateCondition", () => {
 
     it("LOGICAL AND: false when one child does not match", () => {
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.LOGICAL,
+            type: VisibilityType.LOGICAL,
             operation: LogicalOp.AND,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -262,16 +356,16 @@ describe("evaluateCondition", () => {
 
     it("LOGICAL OR: true when one child matches", () => {
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.LOGICAL,
+            type: VisibilityType.LOGICAL,
             operation: LogicalOp.OR,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "b",
                     value: "2"
                 }
@@ -282,16 +376,16 @@ describe("evaluateCondition", () => {
 
     it("LOGICAL OR: false when no children match", () => {
         const condition: VisibilityCondition = {
-            type: VisibilityConditionType.LOGICAL,
+            type: VisibilityType.LOGICAL,
             operation: LogicalOp.OR,
             children: [
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "a",
                     value: "1"
                 },
                 {
-                    type: VisibilityConditionType.EQUAL,
+                    type: VisibilityType.EQUAL,
                     id: "b",
                     value: "2"
                 }

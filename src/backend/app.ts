@@ -1,14 +1,17 @@
 import { type Context, Hono } from "hono";
-import type { LoadDocumentParams } from "./parse/load-document";
-import { type AccessLevel, type LibraryId } from "../shared/types";
+import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
+import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
+import z from "zod";
+import { HTTPException } from "hono/http-exception";
 
 export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
     ASSETS: Fetcher;
     THUMBNAILS: R2Bucket;
-    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
+    LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
+    ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
 }
@@ -49,7 +52,12 @@ export function libraryRoute(): string {
 }
 
 export function getLibraryParam(c: AppContext): LibraryId {
-    return c.req.param("libraryId") as LibraryId;
+    const libraryId = c.req.param("libraryId");
+    const parsed = z.enum(LibraryId).safeParse(libraryId);
+    if (!parsed.success) {
+        throw new HTTPException(400, { message: "Invalid libraryId" });
+    }
+    return parsed.data;
 }
 
 export function insertableRoute(): string {

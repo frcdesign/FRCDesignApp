@@ -1,5 +1,8 @@
 import { ElementPath, InstancePath } from "./onshape-path";
-import { Configuration, ParameterObj } from "./configuration-models";
+import {
+    ParameterValues,
+    ConfigurationParameter
+} from "./configuration-models";
 import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
 import { BuildIssue } from "./build-checker";
 
@@ -8,7 +11,7 @@ export interface InsertableOut {
     elementId: string;
     groupId: string;
     documentId: string;
-    instanceId: string;
+    versionId: string;
     path: ElementPath;
     name: string;
     microversionId: string;
@@ -31,7 +34,7 @@ export interface GroupOut {
 
 export interface ConfigurationBuildStatus {
     buildIssues: BuildIssue[];
-    parameters: ParameterObj[];
+    parameters: ConfigurationParameter[];
 }
 
 export interface GroupBuildStatus {
@@ -45,6 +48,7 @@ export interface InsertableBuildStatus {
     isVisible: boolean;
     isOpenComposite: boolean;
     supportsFasten: boolean;
+    searchPartNumbers: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
 }
@@ -67,7 +71,7 @@ export interface Favorite {
     id: string;
     insertableId: string;
     libraryId: LibraryId;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 export interface FavoritesData {

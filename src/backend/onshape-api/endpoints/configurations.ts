@@ -1,11 +1,16 @@
 import { OnshapeApi } from "../onshape-api";
 import { ElementPath, toElementApiPath } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
+import {
+    OnshapeConfigurationInfo,
+    OnshapeConfigurationParameter,
+    OnshapeConfigurationResponse
+} from "../onshape-types";
 
 export function getConfiguration(
     client: OnshapeApi,
     elementPath: ElementPath
-): Promise<any> {
+): Promise<OnshapeConfigurationResponse> {
     return client.get(
         apiPath("elements", elementPath, toElementApiPath, {
             endRoute: "configuration"
@@ -16,9 +21,9 @@ export function getConfiguration(
 export function setConfiguration(
     client: OnshapeApi,
     elementPath: ElementPath,
-    parameters: any[] | null,
-    currentConfiguration: any[] | null
-): Promise<any> {
+    parameters: OnshapeConfigurationParameter[] | null,
+    currentConfiguration: unknown[] | null
+): Promise<OnshapeConfigurationResponse> {
     return client.post(
         apiPath("elements", elementPath, toElementApiPath, {
             endRoute: "configuration"
@@ -39,14 +44,14 @@ export async function decodeConfiguration(
     elementPath: ElementPath,
     configurationString: string
 ): Promise<Record<string, string>> {
-    const result = await client.get(
+    const result: OnshapeConfigurationInfo = await client.get(
         apiPath("elements", elementPath, toElementApiPath, {
             endRoute: "configurationencodings",
             endId: configurationString
         })
     );
     return Object.fromEntries(
-        result.parameters.map((p: any) => [p.parameterId, p.parameterValue])
+        result.parameters.map((p) => [p.parameterId, p.parameterValue])
     );
 }
 

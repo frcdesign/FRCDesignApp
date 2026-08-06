@@ -1,55 +1,25 @@
-export enum ConfigurationParameterType {
-    ENUM = "BTMConfigurationParameterEnum-105",
-    QUANTITY = "BTMConfigurationParameterQuantity-1826",
-    BOOLEAN = "BTMConfigurationParameterBoolean-2550",
-    STRING = "BTMConfigurationParameterString-872"
+import { LogicalOp, QuantityType, Unit } from "./configuration-enums";
+
+/** Discriminator of a parsed configuration parameter. */
+export enum ParameterType {
+    ENUM = "enum",
+    QUANTITY = "quantity",
+    BOOLEAN = "boolean",
+    STRING = "string"
 }
 
-export enum QuantityType {
-    LENGTH = "LENGTH",
-    ANGLE = "ANGLE",
-    INTEGER = "INTEGER",
-    REAL = "REAL"
+/** Discriminator of a parsed parameter visibility condition. */
+export enum VisibilityType {
+    LOGICAL = "logical",
+    EQUAL = "equal",
+    RANGE = "range",
+    ALWAYS_SHOWN = "alwaysShown"
 }
 
-export enum Unit {
-    METER = "meter",
-    CENTIMETER = "centimeter",
-    MILLIMETER = "millimeter",
-    YARD = "yard",
-    FOOT = "foot",
-    INCH = "inch",
-    DEGREE = "degree",
-    RADIAN = "radian",
-    UNITLESS = ""
-}
-
-export function getUnitDisplayStr(unit: Unit): string {
-    switch (unit) {
-        case Unit.METER:
-            return "m";
-        case Unit.CENTIMETER:
-            return "cm";
-        case Unit.MILLIMETER:
-            return "mm";
-        case Unit.YARD:
-            return "yd";
-        case Unit.FOOT:
-            return "ft";
-        case Unit.INCH:
-            return "in";
-        case Unit.DEGREE:
-            return "deg";
-        case Unit.RADIAN:
-            return "rad";
-        case Unit.UNITLESS:
-            return "";
-    }
-}
-
-export enum OptionVisibilityConditionType {
-    LIST = "BTEnumOptionVisibilityForList-1613",
-    RANGE = "BTEnumOptionVisibilityForRange-4297"
+/** Discriminator of a parsed enum-option visibility condition. */
+export enum OptionVisibilityType {
+    LIST = "list",
+    RANGE = "range"
 }
 
 export type OptionVisibilityCondition =
@@ -57,23 +27,16 @@ export type OptionVisibilityCondition =
     | RangeOptionVisibilityCondition;
 
 export interface EqualOptionVisibilityCondition {
-    type: OptionVisibilityConditionType.LIST;
+    type: OptionVisibilityType.LIST;
     controlledOptions: string[];
     condition: VisibilityCondition;
 }
 
 export interface RangeOptionVisibilityCondition {
-    type: OptionVisibilityConditionType.RANGE;
+    type: OptionVisibilityType.RANGE;
     start: string;
     end: string;
     condition: VisibilityCondition;
-}
-
-export enum VisibilityConditionType {
-    LOGICAL = "BTParameterVisibilityLogical-178",
-    EQUAL = "BTParameterVisibilityOnEqual-180",
-    RANGE = "BTParameterVisibilityInRange-2980",
-    ALWAYS_SHOWN = "BTParameterVisibilityAlwaysShown-5487"
 }
 
 export type VisibilityCondition =
@@ -83,56 +46,53 @@ export type VisibilityCondition =
     | AlwaysShownVisibilityCondition;
 
 interface LogicalVisibilityCondition {
-    type: VisibilityConditionType.LOGICAL;
+    type: VisibilityType.LOGICAL;
     operation: LogicalOp;
     children: VisibilityCondition[];
 }
 
-export enum LogicalOp {
-    AND = "AND",
-    OR = "OR"
-}
-
 interface EqualVisibilityCondition {
-    type: VisibilityConditionType.EQUAL;
+    type: VisibilityType.EQUAL;
     id: string;
     value: string;
 }
 
 interface RangeVisibilityCondition {
-    type: VisibilityConditionType.RANGE;
+    type: VisibilityType.RANGE;
     id: string;
     start: string;
     end: string;
 }
 
 interface AlwaysShownVisibilityCondition {
-    type: VisibilityConditionType.ALWAYS_SHOWN;
+    type: VisibilityType.ALWAYS_SHOWN;
 }
 
 export interface ConfigurationResult {
     // defaultConfiguration: string;
-    parameters: ParameterObj[];
+    parameters: ConfigurationParameter[];
 }
 
-export type ParameterObj =
-    | EnumParameterObj
-    | QuantityParameterObj
-    | BooleanParameterObj
-    | StringParameterObj;
+export type ConfigurationParameter =
+    | EnumParameter
+    | QuantityParameter
+    | BooleanParameter
+    | StringParameter;
 
-export interface ParameterBase {
+export interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;
+    /** Parameters excluded from configuration properties. */
+    isCosmetic: boolean;
     condition?: VisibilityCondition;
 }
-export interface BooleanParameterObj extends ParameterBase {
-    type: ConfigurationParameterType.BOOLEAN;
+export interface BooleanParameter extends ConfigurationParameterBase {
+    type: ParameterType.BOOLEAN;
 }
 
-export interface StringParameterObj extends ParameterBase {
-    type: ConfigurationParameterType.STRING;
+export interface StringParameter extends ConfigurationParameterBase {
+    type: ParameterType.STRING;
 }
 
 export interface EnumOption {
@@ -140,14 +100,14 @@ export interface EnumOption {
     name: string;
 }
 
-export interface EnumParameterObj extends ParameterBase {
-    type: ConfigurationParameterType.ENUM;
+export interface EnumParameter extends ConfigurationParameterBase {
+    type: ParameterType.ENUM;
     options: EnumOption[];
     optionConditions: OptionVisibilityCondition[];
 }
 
-export interface QuantityParameterObj extends ParameterBase {
-    type: ConfigurationParameterType.QUANTITY;
+export interface QuantityParameter extends ConfigurationParameterBase {
+    type: ParameterType.QUANTITY;
     quantityType: QuantityType;
     defaultValue: number;
     min: number;
@@ -156,9 +116,29 @@ export interface QuantityParameterObj extends ParameterBase {
 }
 
 /**
- * A specific configuration, consisting of a mapping of parameterIds to the value.
+ * A specific choice of values for an insertable's parameters, as a mapping of
+ * parameterId to value.
  */
-export type Configuration = Record<string, string>;
+export type ParameterValues = Record<string, string>;
+
+/**
+ * Maps a part number to the single (canonical) parameter values which produce
+ * it.
+ *
+ * Keyed by part number because search looks parts up by number, and because
+ * many parameter values can resolve to the same part number (e.g. parameters
+ * that don't affect the part); keying by number dedupes them inherently.
+ */
+export type PartNumberMap = Record<string, ParameterValues>;
+
+/**
+ * An insertable's configuration: the parameters it exposes and the part numbers
+ * they resolve to. Mirrors the `configurations` row.
+ */
+export interface Configuration {
+    parameters: ConfigurationParameter[];
+    partNumbers: PartNumberMap;
+}
 
 /**
  * Custom data collected from the current tab the user has open.
