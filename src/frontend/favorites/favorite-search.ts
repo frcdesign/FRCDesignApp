@@ -7,7 +7,6 @@ import { Position, SearchHit } from "../search/insertable-search";
 interface FavoriteSearchDocument {
     id: string;
     name: string;
-    favoriteId: string;
 }
 
 type FavoriteSearchResult = TypedMiniSearchResult<FavoriteSearchDocument>;
@@ -32,8 +31,7 @@ function buildFavoriteSearchDb(
     searchDb.addAll(
         favorites.map((favorite) => ({
             id: favorite.id,
-            name: favorite.name ?? "",
-            favoriteId: favorite.id
+            name: favorite.name ?? ""
         }))
     );
 

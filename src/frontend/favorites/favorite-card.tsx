@@ -79,33 +79,32 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         });
     };
 
-    const isSearchActive = Boolean(uiState.searchQuery && searchHit);
-    const titleComponent =
-        isSearchActive && searchHit ? (
-            <SearchHitTitle title={favoriteName} searchHit={searchHit} />
-        ) : (
-            <TextInput
-                value={favoriteName}
-                placeholder="Rename favorite"
-                size="xs"
-                radius="sm"
-                onChange={(event) => setFavoriteName(event.currentTarget.value)}
-                onBlur={saveFavoriteName}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                        event.currentTarget.blur();
-                    }
-                }}
-                onClick={(event) => event.stopPropagation()}
-                onFocus={(event) => event.stopPropagation()}
-                styles={{ input: { minWidth: 0 } }}
-                style={{
-                    width: "50%",
-                    maxWidth: "100%",
-                    minWidth: 0
-                }}
-            />
-        );
+    const isSearchActive = uiState.searchQuery && searchHit;
+    const titleComponent = isSearchActive ? (
+        <SearchHitTitle title={favoriteName} searchHit={searchHit} />
+    ) : (
+        <TextInput
+            value={favoriteName}
+            placeholder="Rename favorite"
+            size="xs"
+            radius="sm"
+            onChange={(event) => setFavoriteName(event.currentTarget.value)}
+            onBlur={saveFavoriteName}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                }
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onFocus={(event) => event.stopPropagation()}
+            styles={{ input: { minWidth: 0 } }}
+            style={{
+                width: "50%",
+                maxWidth: "100%",
+                minWidth: 0
+            }}
+        />
+    );
 
     return (
         <ItemRow
