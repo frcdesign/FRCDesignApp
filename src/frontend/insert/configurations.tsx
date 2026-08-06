@@ -200,6 +200,48 @@ function ParameterInput(
     }
 }
 
+/**
+ * The height of a default sized Mantine input.
+ */
+const INPUT_HEIGHT = "36px";
+
+interface InputLabelProps {
+    label: string;
+    /**
+     * The id of the input the label describes.
+     */
+    htmlFor: string;
+    children: ReactNode;
+}
+
+/**
+ * A label displayed to the left of a parameter input.
+ *
+ * The label is given the height of an input so it stays aligned with the input
+ * itself rather than drifting when the input grows to show an error message.
+ */
+function InputLabel(props: InputLabelProps) {
+    const { label, htmlFor, children } = props;
+    return (
+        <Group gap="sm" align="flex-start" mt="sm">
+            <Text
+                size="sm"
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    height: INPUT_HEIGHT,
+                    cursor: "pointer"
+                }}
+                component="label"
+                htmlFor={htmlFor}
+            >
+                {label}
+            </Text>
+            {children}
+        </Group>
+    );
+}
+
 function getFirstVisibleOption(
     visibleOptions: EnumOption[],
     currentOptionId: string,
@@ -252,15 +294,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     }
 
     return (
-        <Group gap="sm" align="center" mt="sm">
-            <Text
-                size="sm"
-                style={{ whiteSpace: "nowrap", flex: 0 }}
-                component="label"
-                htmlFor={parameter.id}
-            >
-                {parameter.name}
-            </Text>
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <Select
                 id={parameter.id}
                 data={visibleOptions.map((option) => ({
@@ -279,24 +313,19 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     }
                 }}
             />
-        </Group>
+        </InputLabel>
     );
 }
 
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Group gap="sm" align="center" mt="sm">
-            <Text
-                size="sm"
-                style={{ whiteSpace: "nowrap", flex: 0 }}
-                component="label"
-                htmlFor={parameter.id}
-            >
-                {parameter.name}
-            </Text>
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <Checkbox
+                id={parameter.id}
                 checked={value === "true"}
+                // The checkbox is shorter than an input, so center it against the label
+                style={{ alignSelf: "center" }}
                 styles={{
                     input: { cursor: "pointer" }
                 }}
@@ -304,29 +333,21 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
                     onValueChange(checked ? "true" : "false")
                 )}
             />
-        </Group>
+        </InputLabel>
     );
 }
 
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Group gap="sm" align="center" mt="sm">
-            <Text
-                size="sm"
-                style={{ whiteSpace: "nowrap", flex: 0 }}
-                component="label"
-                htmlFor={parameter.id}
-            >
-                {parameter.name}
-            </Text>
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
                 value={value}
                 style={{ flex: 1 }}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
-        </Group>
+        </InputLabel>
     );
 }
 
@@ -421,35 +442,28 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     }, [evaluateOptions, expression, onValueChange]);
 
     return (
-        <Group gap="sm" align="flex-start" mt="sm">
-            <Text
-                size="sm"
-                style={{ whiteSpace: "nowrap", flex: 0, paddingTop: "6px" }}
-            >
-                {parameter.name}
-            </Text>
-            <div style={{ flex: 1 }}>
-                <TextInput
-                    id={parameter.id}
-                    ref={ref}
-                    value={focused ? expression : display}
-                    error={errorMessage}
-                    onFocus={(event) => {
-                        setFocused(true);
-                        event.currentTarget.select();
-                    }}
-                    onBlur={handleSubmit}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                            ref.current?.blur();
-                            handleSubmit();
-                        }
-                    }}
-                    onChange={(event) => {
-                        setExpression(event.currentTarget.value);
-                    }}
-                />
-            </div>
-        </Group>
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <TextInput
+                id={parameter.id}
+                ref={ref}
+                value={focused ? expression : display}
+                error={errorMessage}
+                style={{ flex: 1 }}
+                onFocus={(event) => {
+                    setFocused(true);
+                    event.currentTarget.select();
+                }}
+                onBlur={handleSubmit}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        ref.current?.blur();
+                        handleSubmit();
+                    }
+                }}
+                onChange={(event) => {
+                    setExpression(event.currentTarget.value);
+                }}
+            />
+        </InputLabel>
     );
 }
