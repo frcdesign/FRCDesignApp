@@ -129,7 +129,7 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }

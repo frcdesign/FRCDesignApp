@@ -67,7 +67,7 @@ export async function getLibraryOut(
                 instanceType: "v"
             },
             name: group.name,
-            thumbnailUrls: group.thumbnailUrls!,
+            thumbnailUrls: group.thumbnailUrls ?? undefined,
             insertableOrder
         };
     }
@@ -91,7 +91,7 @@ export async function getLibraryOut(
             isVisible: ins.isVisible,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
-            thumbnailUrls: ins.thumbnailUrls!,
+            thumbnailUrls: ins.thumbnailUrls ?? undefined,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
             vendors: ins.vendors
         } satisfies InsertableOut;

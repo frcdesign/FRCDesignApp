@@ -18,7 +18,7 @@ export interface InsertableOut {
     isVisible: boolean;
     supportsFasten: boolean;
     elementType: ElementType;
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
     configurationId?: string;
     vendors: Vendor[];
 }
@@ -28,7 +28,7 @@ export interface GroupOut {
     documentId: string;
     path: InstancePath;
     name: string;
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
     insertableOrder: string[];
 }
 

@@ -28,7 +28,7 @@ function getHeightAndWidth(
 }
 
 interface CardThumbnailProps {
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
 }
 
 /**
@@ -49,14 +49,14 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
         >
             <HoverCard.Target>
                 <Thumbnail
-                    url={thumbnailUrls[ThumbnailSize.TINY]}
+                    url={thumbnailUrls && thumbnailUrls[ThumbnailSize.TINY]}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
                     spinnerSize={25}
                 />
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
-                    url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                    url={thumbnailUrls && thumbnailUrls[ThumbnailSize.STANDARD]}
                     heightAndWidth={getHeightAndWidth(
                         ThumbnailSize.STANDARD,
                         0.6
