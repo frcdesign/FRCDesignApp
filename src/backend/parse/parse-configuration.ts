@@ -1,86 +1,100 @@
 import {
-    ConfigurationParameterType,
-    ConfigurationResult,
-    EnumOption,
-    OptionVisibilityCondition,
-    OptionVisibilityConditionType,
-    ParameterObj,
-    QuantityType,
-    Unit,
-    VisibilityCondition,
-    VisibilityConditionType,
-    getUnitDisplayStr,
-    LogicalOp
+    type EnumOption,
+    type OptionVisibilityCondition,
+    OptionVisibilityType,
+    type ConfigurationParameter,
+    ParameterType,
+    type VisibilityCondition,
+    VisibilityType
 } from "../../shared/configuration-models";
-
-const VISIBILITY_CONDITION_NONE = "BTParameterVisibilityCondition-177";
+import { getUnitDisplayStr } from "../../shared/configuration-enums";
+import {
+    type OnshapeConfigurationResponse,
+    type OnshapeEnumOptionVisibilityConditionList,
+    OnshapeOptionVisibilityConditionType,
+    OnshapeParameterType,
+    type OnshapeVisibilityCondition,
+    OnshapeVisibilityConditionType
+} from "../onshape-api/onshape-types";
 
 function parseVisibilityCondition(
-    onshapeCondition: any
+    onshapeCondition: OnshapeVisibilityCondition | undefined
 ): VisibilityCondition | undefined {
     if (!onshapeCondition) return undefined;
+    if (onshapeCondition.btType === OnshapeVisibilityConditionType.NONE) {
+        return undefined;
+    }
 
-    const conditionType: string = onshapeCondition.btType;
-    if (conditionType === VISIBILITY_CONDITION_NONE) return undefined;
-
-    if (conditionType === VisibilityConditionType.LOGICAL) {
+    if (onshapeCondition.btType === OnshapeVisibilityConditionType.LOGICAL) {
         const children = onshapeCondition.children
-            .map(parseVisibilityCondition)
+            .map((child) => parseVisibilityCondition(child))
             .filter(
-                (condition: VisibilityCondition | undefined) => !!condition
+                (condition): condition is VisibilityCondition => !!condition
             );
 
         return {
-            type: VisibilityConditionType.LOGICAL,
-            operation: onshapeCondition.operation as LogicalOp,
+            type: VisibilityType.LOGICAL,
+            operation: onshapeCondition.operation,
             children
         };
-    } else if (conditionType === VisibilityConditionType.EQUAL) {
+    } else if (
+        onshapeCondition.btType === OnshapeVisibilityConditionType.EQUAL
+    ) {
         return {
-            type: VisibilityConditionType.EQUAL,
+            type: VisibilityType.EQUAL,
             id: onshapeCondition.parameterId,
             value: onshapeCondition.value
         };
-    } else if (conditionType === VisibilityConditionType.RANGE) {
+    } else if (
+        onshapeCondition.btType === OnshapeVisibilityConditionType.RANGE
+    ) {
         const optionRange = onshapeCondition.optionRange;
         return {
-            type: VisibilityConditionType.RANGE,
+            type: VisibilityType.RANGE,
             id: onshapeCondition.parameterId,
             start: optionRange.start,
             end: optionRange.end
         };
-    } else if (conditionType === VisibilityConditionType.ALWAYS_SHOWN) {
-        return { type: VisibilityConditionType.ALWAYS_SHOWN };
+    } else if (
+        onshapeCondition.btType === OnshapeVisibilityConditionType.ALWAYS_SHOWN
+    ) {
+        return { type: VisibilityType.ALWAYS_SHOWN };
     }
 
     return undefined;
 }
 
 function parseOptionVisibilityConditions(
-    onshapeOptionConditions: any
+    onshapeOptionConditions:
+        | OnshapeEnumOptionVisibilityConditionList
+        | undefined
 ): OptionVisibilityCondition[] {
     if (!onshapeOptionConditions) return [];
 
     return onshapeOptionConditions.visibilityConditions
-        .map((onshapeOptionCondition: any) => {
+        .map((onshapeOptionCondition): OptionVisibilityCondition | null => {
             const condition = parseVisibilityCondition(
                 onshapeOptionCondition.condition
             );
 
             if (!condition) return null;
 
-            const conditionType: string = onshapeOptionCondition.btType;
-            if (conditionType === OptionVisibilityConditionType.LIST) {
+            if (
+                onshapeOptionCondition.btType ===
+                OnshapeOptionVisibilityConditionType.LIST
+            ) {
                 return {
-                    type: OptionVisibilityConditionType.LIST,
-                    controlledOptions:
-                        onshapeOptionCondition.controlledOptions as string[],
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: onshapeOptionCondition.controlledOptions,
                     condition
                 };
-            } else if (conditionType === OptionVisibilityConditionType.RANGE) {
+            } else if (
+                onshapeOptionCondition.btType ===
+                OnshapeOptionVisibilityConditionType.RANGE
+            ) {
                 const range = onshapeOptionCondition.controlledRange;
                 return {
-                    type: OptionVisibilityConditionType.RANGE,
+                    type: OptionVisibilityType.RANGE,
                     start: range.start,
                     end: range.end,
                     condition
@@ -88,70 +102,70 @@ function parseOptionVisibilityConditions(
             }
             return null;
         })
-        .filter((condition: OptionVisibilityCondition | null) => !!condition);
+        .filter(
+            (condition): condition is OptionVisibilityCondition => !!condition
+        );
 }
 
 export function parseOnshapeConfiguration(
-    onshapeConfiguration: any
-): ConfigurationResult {
-    const parameters: ParameterObj[] = [];
+    onshapeConfiguration: OnshapeConfigurationResponse
+): ConfigurationParameter[] {
+    const parameters: ConfigurationParameter[] = [];
 
-    for (const parameter of onshapeConfiguration.configurationParameters as any[]) {
-        const type: ConfigurationParameterType = parameter.btType;
+    for (const parameter of onshapeConfiguration.configurationParameters) {
         const base = {
-            id: parameter.parameterId as string,
-            name: parameter.parameterName as string,
+            id: parameter.parameterId,
+            name: parameter.parameterName,
+            isCosmetic: parameter.isCosmetic,
             condition: parseVisibilityCondition(parameter.visibilityCondition)
         };
 
-        if (type === ConfigurationParameterType.ENUM) {
-            const options: EnumOption[] = (parameter.options as any[]).map(
-                (opt) => ({
-                    id: opt.option as string,
-                    name: opt.optionName as string
-                })
-            );
+        if (parameter.btType === OnshapeParameterType.ENUM) {
+            const options: EnumOption[] = parameter.options.map((opt) => ({
+                id: opt.option,
+                name: opt.optionName
+            }));
             parameters.push({
                 ...base,
-                type,
-                default: parameter.defaultValue as string,
+                type: ParameterType.ENUM,
+                default: parameter.defaultValue,
                 options,
                 optionConditions: parseOptionVisibilityConditions(
                     parameter.enumOptionVisibilityConditions
                 )
             });
-        } else if (type === ConfigurationParameterType.BOOLEAN) {
+        } else if (parameter.btType === OnshapeParameterType.BOOLEAN) {
             parameters.push({
                 ...base,
-                type,
+                type: ParameterType.BOOLEAN,
                 default: String(parameter.defaultValue).toLowerCase()
             });
-        } else if (type === ConfigurationParameterType.STRING) {
+        } else if (parameter.btType === OnshapeParameterType.STRING) {
             parameters.push({
                 ...base,
-                type,
-                default: parameter.defaultValue as string
+                type: ParameterType.STRING,
+                default: parameter.defaultValue
             });
-        } else if (type === ConfigurationParameterType.QUANTITY) {
+        } else if (parameter.btType === OnshapeParameterType.QUANTITY) {
             const range = parameter.rangeAndDefault;
-            const unit: Unit = range.units;
-            const val: number = range.defaultValue;
+            const unit = range.units;
+            const val = range.defaultValue;
 
             const abbr = getUnitDisplayStr(unit);
             const defaultStr = abbr ? `${val} ${abbr}` : String(val);
 
             parameters.push({
                 ...base,
-                type,
-                quantityType: parameter.quantityType as QuantityType,
+                type: ParameterType.QUANTITY,
+                quantityType: parameter.quantityType,
                 default: defaultStr,
                 defaultValue: val,
-                min: range.minValue as number,
-                max: range.maxValue as number,
+                min: range.minValue,
+                max: range.maxValue,
                 unit
             });
         }
     }
 
-    return { parameters };
+    return parameters;
 }

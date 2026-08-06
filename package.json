@@ -17,11 +17,13 @@
         "deploy:cert": "CLOUDFLARE_ENV=cert npm run build && wrangler d1 migrations apply db --remote --env cert && wrangler deploy",
         "deploy:production": "CLOUDFLARE_ENV=production npm run build && wrangler d1 migrations apply db-production --remote --env production && wrangler deploy",
         "typegen": "wrangler types",
+        "gen:onshape-types": "openapi-ts",
         "test": "vitest run",
         "test:watch": "vitest",
         "prepare": "husky"
     },
     "dependencies": {
+        "@hono/zod-validator": "^0.8.0",
         "@mantine/core": "^9.3.0",
         "@mantine/hooks": "^9.3.0",
         "@mantine/modals": "^9.3.0",
@@ -42,9 +44,10 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
-        "@cloudflare/vite-plugin": "^1.36.4",
-        "@cloudflare/vitest-pool-workers": "^0.16.16",
+        "@cloudflare/vite-plugin": "^1.45.1",
+        "@cloudflare/vitest-pool-workers": "^0.18.6",
         "@eslint/js": "^10.0.1",
+        "@hey-api/openapi-ts": "^0.99.0",
         "@tanstack/router-plugin": "^1.168.2",
         "@types/node": "^24.12.4",
         "@types/react": "^19.2.16",
@@ -66,6 +69,15 @@
         "typescript-eslint": "^8.58.2",
         "vite": "^8.0.10",
         "vitest": "^4.1.9",
-        "wrangler": "^4.93.0"
+        "wrangler": "^4.112.0"
+    },
+    "allowScripts": {
+        "esbuild@0.27.3": true,
+        "esbuild@0.18.20": true,
+        "esbuild@0.25.12": true,
+        "esbuild@0.28.1": true,
+        "@parcel/watcher@2.5.6": true,
+        "sharp@0.34.5": true,
+        "workerd@1.20260714.1": true
     }
 }

@@ -59,6 +59,10 @@ function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
         value: { kind: "bool", value: insertable.supportsFasten }
     });
     rows.push({
+        label: "Part number search",
+        value: { kind: "bool", value: insertable.searchPartNumbers }
+    });
+    rows.push({
         label: "Vendors",
         value: { kind: "vendors", vendors: insertable.vendors }
     });
@@ -328,6 +332,14 @@ function getIssueMessage(issue: BuildIssue): string {
             return "No vendors could be parsed.";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "This group has no unhidden insertables.";
+        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+            return "Too many configurations to index part numbers.";
+        case BuildIssueType.MULTIPLE_PARTS:
+            return "This part studio has more than one part.";
+        case BuildIssueType.INSERTABLES_FAILED:
+            return "Some insertables failed to load.";
+        case BuildIssueType.LOAD_FAILED:
+            return "This insertable failed to load.";
     }
 }
 

@@ -12,7 +12,7 @@ import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import {
     favoritesQueryKey,
     useFavoritesQuery,
@@ -25,7 +25,7 @@ import { PageError } from "../app-common/app-zero-state";
 interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
@@ -50,7 +50,7 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
 
 interface FavoriteMenuContentProps {
     favoriteId: string;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
@@ -62,7 +62,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const favoritesData = useFavoritesQuery().data;
 
     const [configuration, setConfiguration] = useState<
-        Configuration | undefined
+        ParameterValues | undefined
     >(defaultConfiguration);
 
     const setDefaultConfigurationMutation = useMutation({

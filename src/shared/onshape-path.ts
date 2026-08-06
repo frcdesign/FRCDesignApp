@@ -1,4 +1,4 @@
-import { Configuration } from "./configuration-models";
+import { ParameterValues } from "./configuration-models";
 
 export type InstanceType = "w" | "v" | "m";
 
@@ -21,7 +21,7 @@ export interface PartPath extends ElementPath {
 }
 
 export interface ConfigurablePath extends ElementPath {
-    configuration: Configuration;
+    configuration: ParameterValues;
 }
 
 export function isDocumentPath(path: any): path is DocumentPath {

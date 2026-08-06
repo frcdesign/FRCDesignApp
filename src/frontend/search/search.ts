@@ -1,6 +1,10 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
 import { SearchDocument } from "../../shared/search";
+import {
+    ParameterValues,
+    PartNumberMap
+} from "../../shared/configuration-models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -29,6 +33,11 @@ export interface Position {
 export interface SearchHit {
     id: string;
     positions: Position[];
+    /**
+     * When the hit matched on a part number, the configuration that produces
+     * that part number, used to pre-fill the insert menu.
+     */
+    configuration?: ParameterValues;
 }
 
 export interface FilterResult {
@@ -117,12 +126,58 @@ export function doSearch(
 
             return {
                 id: document.id,
-                positions
+                positions,
+                configuration: matchedConfiguration(
+                    miniSearchResult,
+                    document,
+                    query
+                )
             };
         })
         .slice(0, 50); // Limit to 50 results
 
     return { hits, filtered };
+}
+
+/**
+ * If the result matched on the part-number field, returns the configuration
+ * that produces the best-matching part number so the insert menu can launch it.
+ */
+function matchedConfiguration(
+    result: MiniSearchResult,
+    document: SearchDocument,
+    query: string
+): ParameterValues | undefined {
+    const matchedPartNumber = Object.values(result.match).some((fields) =>
+        fields.includes("partNumbers")
+    );
+    if (!matchedPartNumber) {
+        return undefined;
+    }
+    return findPartNumberConfig(query, document.partNumberConfigs);
+}
+
+/**
+ * Picks the configuration whose part number best matches the query, preferring
+ * an exact match, then a prefix, then a substring. First-wins on ties (the map
+ * is ordered default-first).
+ */
+function findPartNumberConfig(
+    query: string,
+    partNumberConfigs: PartNumberMap
+): ParameterValues | undefined {
+    const keys = Object.keys(partNumberConfigs);
+    const normalizedQuery = query.trim().toLowerCase();
+    if (keys.length === 0 || normalizedQuery === "") {
+        return undefined;
+    }
+
+    const match =
+        keys.find((key) => key.toLowerCase() === normalizedQuery) ??
+        keys.find((key) => key.toLowerCase().startsWith(normalizedQuery)) ??
+        keys.find((key) => key.toLowerCase().includes(normalizedQuery));
+
+    return match ? partNumberConfigs[match] : undefined;
 }
 
 /**

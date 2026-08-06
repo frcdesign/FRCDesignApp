@@ -2,14 +2,14 @@ import { type Db } from "../backend/db";
 import {
     configurations,
     favorites,
-    groups,
+    group,
     insertables,
     libraries,
     users
 } from "../shared/schema";
 import {
-    ConfigurationParameterType,
-    type ParameterObj
+    ParameterType,
+    type ConfigurationParameter
 } from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
 import { ElementType, LibraryId } from "../shared/types";
@@ -35,11 +35,12 @@ export const TEST_ASSEMBLY_PATH: ElementPath = {
     elementId: "e-assembly"
 };
 
-export const TEST_PARAMETERS: ParameterObj[] = [
+export const TEST_PARAMETERS: ConfigurationParameter[] = [
     {
-        type: ConfigurationParameterType.BOOLEAN,
+        type: ParameterType.BOOLEAN,
         id: "boolean",
         name: "Test boolean",
+        isCosmetic: false,
         default: "true"
     }
 ];
@@ -56,7 +57,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);
     await db.delete(configurations);
     await db.delete(insertables);
-    await db.delete(groups);
+    await db.delete(group);
     await db.delete(users);
     await db.delete(libraries);
 }
@@ -87,13 +88,13 @@ export async function seedGroup(
 ): Promise<string> {
     await seedLibrary(db, libraryId);
     await db
-        .insert(groups)
+        .insert(group)
         .values({
             id,
             libraryId,
             name: "Test Group",
             documentId: `doc-${id}`,
-            instanceId: "inst-1"
+            versionId: "inst-1"
         })
         .onConflictDoNothing();
     return id;
@@ -113,12 +114,10 @@ async function seedInsertable(
             libraryId: TEST_LIBRARY_ID,
             elementId: path.elementId,
             documentId: path.documentId,
-            instanceId: path.instanceId,
+            versionId: path.instanceId,
             elementType,
             name: `Test ${elementType}`,
-            microversionId: "mv-1",
-            versionName: "v1",
-            versionCreatedAt: new Date(0).toISOString()
+            microversionId: "mv-1"
         })
         .onConflictDoNothing();
     return id;

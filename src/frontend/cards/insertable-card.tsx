@@ -1,5 +1,6 @@
 import { Menu } from "@mantine/core";
 import {
+    IconBarcode,
     IconCircleCheck,
     IconCircleOff,
     IconEye,
@@ -14,7 +15,7 @@ import {
     getFavoriteForInsertable,
     InsertableOut
 } from "../../shared/api-models";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { ElementType } from "../../shared/types";
 import { SearchHit } from "../search/search";
 import {
@@ -85,7 +86,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     return;
                 }
 
-                openInsertMenu({ insertable });
+                openInsertMenu({
+                    insertable,
+                    defaultConfiguration: searchHit?.configuration
+                });
             }}
             left={
                 <CardTitle
@@ -116,7 +120,7 @@ interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     inInsertMenu?: boolean;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
 }
 
 export function InsertableMenuItems(
@@ -181,6 +185,10 @@ export function InsertableAdminContextMenu(
             <ToggleInsertAndFastenMenuItem
                 insertableId={insertableId}
                 supportsFasten={insertableBuild.supportsFasten}
+            />
+            <TogglePartNumberSearchMenuItem
+                insertableId={insertableId}
+                searchPartNumbers={insertableBuild.searchPartNumbers}
             />
         </>
     );
@@ -311,6 +319,62 @@ function ToggleInsertAndFastenMenuItem({
             {supportsFasten
                 ? "Disable insert and fasten"
                 : "Enable Insert and fasten"}
+        </Menu.Item>
+    );
+}
+
+interface TogglePartNumberSearchMenuItemProps {
+    insertableId: string;
+    searchPartNumbers: boolean;
+}
+
+function TogglePartNumberSearchMenuItem({
+    insertableId,
+    searchPartNumbers
+}: TogglePartNumberSearchMenuItemProps): ReactNode {
+    const router = useRouter();
+
+    const mutation = useMutation({
+        mutationKey: ["toggle-part-number-search"],
+        mutationFn: (newValue: boolean) =>
+            apiPost(
+                "/toggle-part-number-search" + toInsertablePath(insertableId),
+                {
+                    body: { searchPartNumbers: newValue }
+                }
+            ),
+        onSuccess: (_result, newValue: boolean) => {
+            if (newValue) {
+                showSuccessToast("Successfully enabled part number search.");
+            }
+        },
+        onError: getAppErrorHandler("Failed to update part number search."),
+        onSettled: async () => {
+            await queryClient.refetchQueries({
+                queryKey: contextDataQueryKey()
+            });
+            await queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
+            void router.invalidate();
+        }
+    });
+
+    return (
+        <Menu.Item
+            onClick={() => mutation.mutate(!searchPartNumbers)}
+            color={searchPartNumbers ? "red" : "blue"}
+            leftSection={
+                searchPartNumbers ? (
+                    <IconCircleOff size={IconSize.SMALL} />
+                ) : (
+                    <IconBarcode size={IconSize.SMALL} />
+                )
+            }
+        >
+            {searchPartNumbers
+                ? "Disable part number search"
+                : "Enable part number search"}
         </Menu.Item>
     );
 }

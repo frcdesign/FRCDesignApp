@@ -19,7 +19,11 @@ export enum BuildIssueType {
     THUMBNAIL_FAILED = "thumbnail-failed",
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
-    NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables"
+    NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
+    TOO_MANY_CONFIGURATIONS = "too-many-configurations",
+    MULTIPLE_PARTS = "multiple-parts",
+    INSERTABLES_FAILED = "insertables-failed",
+    LOAD_FAILED = "load-failed"
 }
 
 /**
@@ -33,15 +37,23 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
-    | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>;
+    | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
+    | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
+    | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
+    | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
+    | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
 
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
+        case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.INSERTABLES_FAILED:
+        case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
+        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;
@@ -49,30 +61,30 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
 }
 
 /**
- * Adds `issue` to `issues`, returning a new array. No-op (returns the original
- * array) if an issue with the same type is already present, so the same check
- * can be applied repeatedly without duplicating issues.
+ * Adds each of `newIssues` to `issues`, skipping any whose type is already
+ * present, and returning a new array only when something was added.
  */
 export function addBuildIssue(
     issues: BuildIssue[],
-    issue: BuildIssue
+    ...newIssues: BuildIssue[]
 ): BuildIssue[] {
-    if (issues.some((existing) => existing.type === issue.type)) {
-        return issues;
+    let result = issues;
+    for (const issue of newIssues) {
+        if (!result.some((existing) => existing.type === issue.type)) {
+            result = [...result, issue];
+        }
     }
-    return [...issues, issue];
+    return result;
 }
 
 /**
- * Removes any issue with the given `type`, returning a new array. Used e.g.
- * when a thumbnail is successfully reloaded to clear a stale `thumbnail-failed`
- * issue.
+ * Removes any issue whose type is one of `types`.
  */
 export function clearBuildIssue(
     issues: BuildIssue[],
-    type: BuildIssueType
+    ...types: BuildIssueType[]
 ): BuildIssue[] {
-    return issues.filter((issue) => issue.type !== type);
+    return issues.filter((issue) => !types.includes(issue.type));
 }
 
 /** Worst-to-best ordering. Higher index = more severe. */
@@ -83,8 +95,7 @@ const SEVERITY_ORDER: BuildIssueSeverity[] = [
 ];
 
 /**
- * Returns the worst severity present in `issues`, or `null` when there are no
- * issues (i.e. all checks pass).
+ * Returns the worst severity present in `issues`, or `null` when there are no issues.
  */
 export function getMaxSeverity(
     issues: BuildIssue[]

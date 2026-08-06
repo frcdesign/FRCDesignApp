@@ -1,25 +1,29 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
-import { getLatestVersion } from "../onshape-api/endpoints/versions";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
-import { libraries, groups, insertables, favorites } from "../../shared/schema";
-import type { LoadDocumentParams } from "../parse/load-document";
+import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 
 export const groupRoutes = getApp();
+
+const reloadGroupsQuery = z.object({
+    forceReload: z.stringbool().default(false)
+});
 
 /** POST /api/reload-groups/library/:libraryId?forceReload=true */
 groupRoutes.post(
     "/reload-groups" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("query", reloadGroupsQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const forceReload = c.req.query("forceReload") === "true";
-
+        const { forceReload } = c.req.valid("query");
         const sessionId = getSessionId(c);
 
         const db = getDb(c.env.DB);
@@ -28,27 +32,13 @@ groupRoutes.post(
             .values({ id: libraryId })
             .onConflictDoNothing();
 
-        // Each group re-syncs from its Onshape document.
-        const groupRows = await db
-            .select({ documentId: groups.documentId })
-            .from(groups)
-            .where(eq(groups.libraryId, libraryId))
-            .orderBy(asc(groups.sortOrder))
-            .all();
+        // The workflow owns the per-group version check — unchanged documents
+        // are skipped inside it (unless forceReload).
+        await c.env.LOAD_LIBRARY_WORKFLOW.create({
+            params: { libraryId, sessionId, forceReload }
+        });
 
-        const instances = await Promise.all(
-            groupRows.map(({ documentId }) => {
-                const params: LoadDocumentParams = {
-                    documentId,
-                    libraryId,
-                    sessionId,
-                    forceReload
-                };
-                return c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
-            })
-        );
-
-        return c.json({ status: "triggered", count: instances.length });
+        return c.json({ status: "triggered" });
     }
 );
 
@@ -104,13 +94,10 @@ groupRoutes.post(
 
         const db = getDb(c.env.DB);
         await db
-            .update(groups)
+            .update(group)
             .set({ sortAlphabetically: body.sortAlphabetically })
             .where(
-                and(
-                    eq(groups.id, body.groupId),
-                    eq(groups.libraryId, libraryId)
-                )
+                and(eq(group.id, body.groupId), eq(group.libraryId, libraryId))
             );
 
         await bumpLibraryVersion(db, libraryId);
@@ -130,10 +117,10 @@ groupRoutes.post(
         await Promise.all(
             body.groupOrder.map((id, i) =>
                 db
-                    .update(groups)
+                    .update(group)
                     .set({ sortOrder: i })
                     .where(
-                        and(eq(groups.id, id), eq(groups.libraryId, libraryId))
+                        and(eq(group.id, id), eq(group.libraryId, libraryId))
                     )
             )
         );
@@ -160,8 +147,7 @@ groupRoutes.post(
 
         let documentName: string;
         try {
-            const doc = await getDocument(onshapeApi, documentPath);
-            documentName = doc.name;
+            documentName = (await getDocument(onshapeApi, documentPath)).name;
         } catch {
             return c.json(
                 {
@@ -173,33 +159,15 @@ groupRoutes.post(
             );
         }
 
-        try {
-            await getLatestVersion(onshapeApi, documentPath);
-        } catch {
-            return c.json(
-                {
-                    type: "handled",
-                    message: "Failed to find a document version to use.",
-                    isError: true
-                },
-                422
-            );
-        }
-
         const db = getDb(c.env.DB);
 
-        await db
-            .insert(libraries)
-            .values({ id: libraryId })
-            .onConflictDoNothing();
-
         const existingGroup = await db
-            .select({ id: groups.id })
-            .from(groups)
+            .select({ id: group.id })
+            .from(group)
             .where(
                 and(
-                    eq(groups.documentId, body.newDocumentId),
-                    eq(groups.libraryId, libraryId)
+                    eq(group.documentId, body.newDocumentId),
+                    eq(group.libraryId, libraryId)
                 )
             )
             .get();
@@ -215,13 +183,17 @@ groupRoutes.post(
             );
         }
 
-        const params: LoadDocumentParams = {
-            documentId: body.newDocumentId,
-            libraryId,
-            sessionId,
-            selectedGroupId: body.selectedGroupId
-        };
-        await c.env.LOAD_DOCUMENT_WORKFLOW.create({ params });
+        const groupId = crypto.randomUUID();
+
+        await c.env.ADD_GROUP_WORKFLOW.create({
+            params: {
+                groupId,
+                documentId: body.newDocumentId,
+                libraryId,
+                sessionId,
+                selectedGroupId: body.selectedGroupId
+            }
+        });
 
         return c.json({ name: documentName });
     }
@@ -240,10 +212,8 @@ groupRoutes.delete(
 
         // Cascade deletes insertables → favorites, and configurations automatically
         await db
-            .delete(groups)
-            .where(
-                and(eq(groups.id, groupId), eq(groups.libraryId, libraryId))
-            );
+            .delete(group)
+            .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
 
         await bumpLibraryVersion(db, libraryId);
         await rebuildSearchDb(db, libraryId);

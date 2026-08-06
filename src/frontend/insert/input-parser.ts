@@ -15,7 +15,7 @@ import {
     getUnitDisplayStr,
     QuantityType,
     Unit
-} from "../../shared/configuration-models";
+} from "../../shared/configuration-enums";
 
 class ParseError extends Error {
     constructor(message: string) {
