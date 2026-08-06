@@ -22,23 +22,17 @@ export function isFinishedStatus(status: LibraryJobStatus): boolean {
 }
 
 /**
- * The outcome of loading a single group within a workflow run. Failures carry
- * their error message (and the group name, when known) so the UI can show which
- * group failed and why.
+ * Whether an entity's (group or insertable) most recent load completed. Partial
+ * outcomes (e.g. a group loaded but some of its insertables failed) are conveyed
+ * by `buildIssues`, not here.
  */
-export type GroupResult =
-    | { groupId: string; name?: string; status: "skipped" }
-    | { groupId: string; name?: string; status: "failed"; error: string }
-    | {
-          groupId: string;
-          name?: string;
-          status: "created" | "reloaded";
-          loadedElements: number;
-          deletedElements: number;
-          failedElements: number;
-      };
+export type LoadStatus = "success" | "failed";
 
-/** A single library-job record, as returned to the client. */
+/**
+ * A single library-job record, as returned to the client. Per-group detail lives
+ * on the groups/insertables themselves (their `lastLoaded*` + `buildIssues`), so
+ * the run record only carries the overall outcome.
+ */
 export interface LibraryJob {
     id: string;
     type: LibraryJobType;
@@ -46,7 +40,6 @@ export interface LibraryJob {
     status: LibraryJobStatus;
     label: string;
     triggeredBy: string | null;
-    result: GroupResult | GroupResult[] | null;
     error: string | null;
     createdAt: number;
     finishedAt: number | null;

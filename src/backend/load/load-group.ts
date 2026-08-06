@@ -35,6 +35,8 @@ interface ParsedGroup {
     name: string;
     thumbnailUrls: ThumbnailUrls | null;
     buildIssues: BuildIssue[];
+    /** When this (successful) load completed, epoch ms. */
+    lastLoadedAt: number;
     /** Undefined if an insertable failed. */
     versionId?: string;
 }
@@ -151,7 +153,10 @@ async function saveGroup(
     const parsed: ParsedGroup = {
         name: target.name,
         thumbnailUrls,
-        buildIssues
+        buildIssues,
+        // Stamp the successful load; failures never reach here, so a failed
+        // reload leaves the group's last-good time untouched.
+        lastLoadedAt: Date.now()
     };
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;

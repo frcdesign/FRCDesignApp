@@ -13,16 +13,6 @@ import {
 } from "../common/notifications";
 import { type LibraryJob } from "../../shared/library-job-models";
 
-/** Number of groups that failed within a finished job's result. */
-function failureCount(job: LibraryJob): number {
-    const results = Array.isArray(job.result)
-        ? job.result
-        : job.result
-          ? [job.result]
-          : [];
-    return results.filter((r) => r.status === "failed").length;
-}
-
 /** Refresh the library data a finished job may have changed, then toast it. */
 async function handleFinishedJob(
     job: LibraryJob,
@@ -37,14 +27,11 @@ async function handleFinishedJob(
     if (job.status === "complete") {
         showSuccessToast(`${job.label} finished.`);
     } else if (job.status === "partial") {
-        const failed = failureCount(job);
         showWarningToast(
-            `${job.label} finished — ${failed} ${
-                failed === 1 ? "group" : "groups"
-            } failed. See Library Jobs for details.`
+            `${job.label} finished with failures. Check the build status on affected documents.`
         );
     } else {
-        showErrorToast(`${job.label} failed. See Library Jobs for details.`);
+        showErrorToast(`${job.label} failed.`);
     }
 }
 

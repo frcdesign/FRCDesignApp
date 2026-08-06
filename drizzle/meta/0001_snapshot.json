@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "51adc508-ad21-4d21-b2a4-3f41d504d241",
+    "id": "287ca20e-8693-4ba5-82e8-f4fef738a1a0",
     "prevId": "a9068931-4c42-499e-9325-acf65f1e0750",
     "tables": {
         "configurations": {
@@ -210,6 +210,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'[]'"
+                },
+                "last_loaded_at": {
+                    "name": "last_loaded_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {
@@ -376,6 +383,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'[]'"
+                },
+                "last_loaded_at": {
+                    "name": "last_loaded_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {},
@@ -483,13 +497,6 @@
                 },
                 "triggered_by": {
                     "name": "triggered_by",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "result": {
-                    "name": "result",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": false,

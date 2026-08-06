@@ -14,11 +14,7 @@ import {
     PartNumberMap
 } from "./configuration-models";
 import { BuildIssue } from "./build-checker";
-import type {
-    GroupResult,
-    LibraryJobStatus,
-    LibraryJobType
-} from "./library-job-models";
+import type { LibraryJobStatus, LibraryJobType } from "./library-job-models";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -52,7 +48,11 @@ export const group = sqliteTable(
         buildIssues: text("build_issues", { mode: "json" })
             .$type<BuildIssue[]>()
             .notNull()
-            .default([])
+            .default([]),
+        // When this group was last successfully loaded (epoch ms). Null until the
+        // group's first load. Written by the load path; failures are conveyed by
+        // buildIssues, not here.
+        lastLoadedAt: integer("last_loaded_at")
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
@@ -108,7 +108,11 @@ export const insertables = sqliteTable("insertables", {
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()
-        .default([])
+        .default([]),
+    // When this insertable was last successfully loaded (epoch ms). Null until the
+    // insertable's first load. Written by the load path; failures are conveyed by
+    // buildIssues, not here.
+    lastLoadedAt: integer("last_loaded_at")
 });
 
 export const configurations = sqliteTable("configurations", {
@@ -169,11 +173,12 @@ export const favorites = sqliteTable(
 );
 
 /**
- * A record of one background workflow run against a library (a "library job").
- * Every workflow this app runs operates on a library, so the `type` column
+ * A run-log record of one background workflow run against a library (a "library
+ * job"). Every workflow this app runs operates on a library, so the `type` column
  * discriminates the growing family of them (currently reload and add-document).
- * The row is created `running` by the trigger route and finalized by the
- * workflow itself with its per-group result.
+ * The row is created `running` by the trigger route and finalized by the workflow
+ * with its overall outcome. Per-group detail lives on the groups/insertables
+ * themselves (their `lastLoadedAt` + `buildIssues`), not here.
  */
 export const libraryJobs = sqliteTable("library_jobs", {
     id: text("id")
@@ -191,12 +196,7 @@ export const libraryJobs = sqliteTable("library_jobs", {
     label: text("label").notNull(),
     // The user id that triggered the job, when known.
     triggeredBy: text("triggered_by"),
-    // The workflow's per-group result once finished (array for reloads, single
-    // for add-document); failures carry their error message.
-    result: text("result", { mode: "json" }).$type<
-        GroupResult | GroupResult[] | null
-    >(),
-    // A short failure summary for partial/errored jobs.
+    // A short overall failure summary for partial/errored jobs.
     error: text("error"),
     createdAt: integer("created_at")
         .notNull()

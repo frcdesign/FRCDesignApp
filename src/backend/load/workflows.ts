@@ -7,10 +7,7 @@ import { eq } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getDb } from "../db";
 import type { LibraryId } from "../../shared/types";
-import type {
-    GroupResult,
-    LibraryJobStatus
-} from "../../shared/library-job-models";
+import type { LibraryJobStatus } from "../../shared/library-job-models";
 import { finishLibraryJob } from "../library-jobs";
 import {
     bumpLibraryVersion,
@@ -36,7 +33,22 @@ export interface LoadLibraryParams {
     forceReload?: boolean;
 }
 
-/** Reads a caught value's message for storing on a failed group/job. */
+/**
+ * The in-memory outcome of loading a single group within a run. Used only to
+ * derive the run's overall status — per-group detail is persisted on the group
+ * itself (its `lastLoadedAt` + `buildIssues`), not on the run record.
+ */
+type GroupResult =
+    | { groupId: string; status: "skipped" | "failed" }
+    | {
+          groupId: string;
+          status: "created" | "reloaded";
+          loadedElements: number;
+          deletedElements: number;
+          failedElements: number;
+      };
+
+/** Reads a caught value's message for the run's overall error summary. */
 function errorMessage(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
 }
@@ -89,7 +101,6 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                 getDb(ctx.env.DB)
                     .select({
                         groupId: group.id,
-                        name: group.name,
                         documentId: group.documentId,
                         versionId: group.versionId
                     })
@@ -99,7 +110,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
 
             const results = await Promise.all(
                 storedGroups.map(async (storedGroup): Promise<GroupResult> => {
-                    const { groupId, name, documentId } = storedGroup;
+                    const { groupId, documentId } = storedGroup;
                     try {
                         const target = await resolveGroupTarget(
                             ctx,
@@ -111,24 +122,19 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                                 target.versionPath.instanceId &&
                             !forceReload
                         ) {
-                            return { groupId, name, status: "skipped" };
+                            return { groupId, status: "skipped" };
                         }
                         const loaded = await loadGroup(
                             ctx,
                             target,
                             forceReload
                         );
-                        return { groupId, name, status: "reloaded", ...loaded };
-                    } catch (e) {
+                        return { groupId, status: "reloaded", ...loaded };
+                    } catch {
                         // Per-group failures are isolated so one bad document
-                        // doesn't sink the whole run; the cause is surfaced on
-                        // the job's result for the admin UI.
-                        return {
-                            groupId,
-                            name,
-                            status: "failed",
-                            error: errorMessage(e)
-                        };
+                        // doesn't sink the whole run; the specific failure is
+                        // surfaced on the group itself via its build issues.
+                        return { groupId, status: "failed" };
                     }
                 })
             );
@@ -141,7 +147,6 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
             await step.do("record-library-job", () =>
                 finishLibraryJob(getDb(ctx.env.DB), libraryJobId, {
                     status,
-                    result: results,
                     error
                 })
             );
@@ -152,7 +157,6 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
             await step.do("record-library-job-error", () =>
                 finishLibraryJob(getDb(ctx.env.DB), libraryJobId, {
                     status: "errored",
-                    result: null,
                     error
                 })
             );
@@ -205,7 +209,6 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
                 const loaded = await loadGroup(ctx, target, false);
                 result = {
                     groupId: params.groupId,
-                    name: target.name,
                     status: "created",
                     ...loaded
                 };
@@ -213,7 +216,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
                 error = null;
             } catch (e) {
                 error = errorMessage(e);
-                result = { groupId: params.groupId, status: "failed", error };
+                result = { groupId: params.groupId, status: "failed" };
                 status = "errored";
             }
 
@@ -223,7 +226,6 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
             await step.do("record-library-job", () =>
                 finishLibraryJob(getDb(ctx.env.DB), params.libraryJobId, {
                     status,
-                    result,
                     error
                 })
             );
@@ -233,7 +235,6 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
             await step.do("record-library-job-error", () =>
                 finishLibraryJob(getDb(ctx.env.DB), params.libraryJobId, {
                     status: "errored",
-                    result: null,
                     error
                 })
             );

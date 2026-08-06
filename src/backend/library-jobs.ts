@@ -4,7 +4,6 @@ import { getDb, type Db } from "./db";
 import { libraryJobs } from "../shared/schema";
 import type { LibraryId } from "../shared/types";
 import type {
-    GroupResult,
     LibraryJob,
     LibraryJobStatus,
     LibraryJobType
@@ -22,7 +21,6 @@ export function toLibraryJob(row: LibraryJobRow): LibraryJob {
         status: row.status,
         label: row.label,
         triggeredBy: row.triggeredBy,
-        result: row.result,
         error: row.error,
         createdAt: row.createdAt,
         finishedAt: row.finishedAt
@@ -56,11 +54,10 @@ export async function createLibraryJob(
 
 interface FinishLibraryJobArgs {
     status: LibraryJobStatus;
-    result: GroupResult | GroupResult[] | null;
     error: string | null;
 }
 
-/** Marks a library job finished with its outcome. */
+/** Marks a library job finished with its overall outcome. */
 export async function finishLibraryJob(
     db: Db,
     id: string,
@@ -70,7 +67,6 @@ export async function finishLibraryJob(
         .update(libraryJobs)
         .set({
             status: args.status,
-            result: args.result,
             error: args.error,
             finishedAt: Date.now()
         })

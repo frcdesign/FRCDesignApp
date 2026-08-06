@@ -41,6 +41,8 @@ export interface GroupBuildStatus {
     buildIssues: BuildIssue[];
     sortAlphabetically: boolean;
     insertableOrder: string[];
+    /** When this group was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
 export interface InsertableBuildStatus {
@@ -51,6 +53,8 @@ export interface InsertableBuildStatus {
     searchPartNumbers: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
+    /** When this insertable was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
 export interface LibraryBuildStatus {

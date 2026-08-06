@@ -3,10 +3,12 @@ import {
     IconAlertOctagon,
     IconAlertTriangle,
     IconCheck,
+    IconClock,
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
 import { ComponentPropsWithRef, ReactNode, useMemo } from "react";
+import { formatRelativeTime } from "../common/format-time";
 import {
     addBuildIssue,
     BuildIssue,
@@ -179,14 +181,17 @@ interface BuildStatusCardProps {
     issues: BuildIssue[];
     /** Read-only "current state" rows shown above the build issues. */
     stateRows: StateRow[];
+    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
-/** The hover-card dropdown content: state rows + divider + build issues. */
+/** The hover-card dropdown content: last-loaded header + state rows + issues. */
 export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { issues, stateRows } = props;
+    const { issues, stateRows, lastLoadedAt } = props;
     // Size to content (capped) so short rows/messages don't wrap.
     return (
         <Stack gap="xs" w="max-content" maw={300}>
+            <LastLoadedHeader lastLoadedAt={lastLoadedAt} />
             <CurrentStateSection rows={stateRows} />
             <Divider />
             <BuildIssuesSection issues={issues} />
@@ -194,19 +199,39 @@ export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
     );
 }
 
+/** The "Loaded 3h ago" line pinned to the top-right corner of the card. */
+function LastLoadedHeader({
+    lastLoadedAt
+}: {
+    lastLoadedAt: number | null;
+}): ReactNode {
+    return (
+        <Group gap={4} wrap="nowrap" justify="flex-end" c="dimmed">
+            <IconClock size={IconSize.SMALL} />
+            <Text size="xs">
+                {lastLoadedAt === null
+                    ? "Never loaded"
+                    : `Loaded ${formatRelativeTime(lastLoadedAt)}`}
+            </Text>
+        </Group>
+    );
+}
+
 interface BuildStatusBadgeProps {
     issues: BuildIssue[];
     /** Read-only "current state" rows shown above the build issues. */
     stateRows: StateRow[];
+    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
 /**
  * An inline tag summarizing the build-checker state for a group or insertable,
- * with a read-only hover card showing the current state and any build issues.
- * Only visible to editors and admins.
+ * with a read-only hover card showing the last-loaded time, current state, and
+ * any build issues. Only visible to editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, stateRows } = props;
+    const { issues, stateRows, lastLoadedAt } = props;
     const maxSeverity = getMaxSeverity(issues);
 
     return (
@@ -224,7 +249,11 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                     <IssueIcon severity={maxSeverity} />
                 </HoverCard.Target>
                 <HoverCard.Dropdown p="sm">
-                    <BuildStatusCard issues={issues} stateRows={stateRows} />
+                    <BuildStatusCard
+                        issues={issues}
+                        stateRows={stateRows}
+                        lastLoadedAt={lastLoadedAt}
+                    />
                 </HoverCard.Dropdown>
             </HoverCard>
         </RequireAccessLevel>
@@ -244,6 +273,7 @@ export function InsertableStatusBadge({
         <BuildStatusBadge
             issues={getInsertableBuildIssues(insertable)}
             stateRows={getInsertableStateRows(insertable)}
+            lastLoadedAt={insertable.lastLoadedAt}
         />
     );
 }
@@ -258,6 +288,7 @@ export function GroupStatusBadge({ groupId }: { groupId: string }): ReactNode {
         <BuildStatusBadge
             issues={issues}
             stateRows={getGroupStateRows(groupStatus)}
+            lastLoadedAt={groupStatus.lastLoadedAt}
         />
     );
 }

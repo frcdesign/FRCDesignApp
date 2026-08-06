@@ -206,6 +206,7 @@ describe("loadGroup", () => {
         const groupRow = await readGroup();
         expect(groupRow?.versionId).toBe("v-2");
         expect(groupRow?.name).toBe("Reloaded Group");
+        expect(groupRow?.lastLoadedAt).toEqual(expect.any(Number));
         expect(groupRow?.buildIssues).not.toContainEqual({
             type: BuildIssueType.INSERTABLES_FAILED
         });

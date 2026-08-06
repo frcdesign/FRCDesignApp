@@ -25,7 +25,8 @@ buildStatusRoutes.get(
                     id: group.id,
                     buildIssues: group.buildIssues,
                     sortAlphabetically: group.sortAlphabetically,
-                    sortOrder: group.sortOrder
+                    sortOrder: group.sortOrder,
+                    lastLoadedAt: group.lastLoadedAt
                 })
                 .from(group)
                 .where(eq(group.libraryId, libraryId))
@@ -41,7 +42,8 @@ buildStatusRoutes.get(
                     supportsFasten: insertables.supportsFasten,
                     searchPartNumbers: insertables.searchPartNumbers,
                     vendors: insertables.vendors,
-                    sortOrder: insertables.sortOrder
+                    sortOrder: insertables.sortOrder,
+                    lastLoadedAt: insertables.lastLoadedAt
                 })
                 .from(insertables)
                 .where(eq(insertables.libraryId, libraryId))
@@ -70,7 +72,8 @@ buildStatusRoutes.get(
             groupsOut[group.id] = {
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
-                insertableOrder: groupInsertables.map((ins) => ins.id)
+                insertableOrder: groupInsertables.map((ins) => ins.id),
+                lastLoadedAt: group.lastLoadedAt
             };
         }
 
@@ -89,7 +92,8 @@ buildStatusRoutes.get(
                           buildIssues: config.buildIssues,
                           parameters: config.parameters
                       }
-                    : undefined
+                    : undefined,
+                lastLoadedAt: ins.lastLoadedAt
             };
         }
 
