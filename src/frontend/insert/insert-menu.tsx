@@ -154,7 +154,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     }, [insertMutation, onInsert, canFasten, uiState.fasten]);
 
     return (
-        <Group gap="sm">
+        <Group gap="sm" align="center">
             {canFasten && (
                 <Checkbox
                     label="Fasten"
