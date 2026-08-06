@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { LibraryId } from "../../shared/types";
-import type { Favorite } from "../../shared/api-models";
+import { LibraryId, Vendor } from "../../shared/types";
+import type { Favorite, InsertableOut } from "../../shared/api-models";
 import { filterFavoritesForSearch } from "./favorite-search";
 
 describe("filterFavoritesForSearch", () => {
@@ -49,5 +49,60 @@ describe("filterFavoritesForSearch", () => {
         expect(
             filterFavoritesForSearch(favorites, "different-insertable")
         ).toEqual([]);
+    });
+
+    it("falls back to the insertable name when the favorite has no custom name", () => {
+        const favorites: Favorite[] = [
+            {
+                id: "fav-3",
+                insertableId: "insertable-3",
+                libraryId: LibraryId.FRC_DESIGN_LIB
+            }
+        ];
+
+        const insertables = {
+            "insertable-3": {
+                name: "Wheel Assembly",
+                vendors: [Vendor.REV]
+            } as InsertableOut
+        };
+
+        expect(
+            filterFavoritesForSearch(favorites, "assembly", insertables).map(
+                (result) => result.favorite.id
+            )
+        ).toEqual(["fav-3"]);
+    });
+
+    it("filters favorites by vendor when a vendor filter is active", () => {
+        const favorites: Favorite[] = [
+            {
+                id: "fav-rev",
+                insertableId: "insertable-rev",
+                libraryId: LibraryId.FRC_DESIGN_LIB
+            },
+            {
+                id: "fav-vex",
+                insertableId: "insertable-vex",
+                libraryId: LibraryId.FRC_DESIGN_LIB
+            }
+        ];
+
+        const insertables = {
+            "insertable-rev": {
+                name: "REV Wheel",
+                vendors: [Vendor.REV]
+            } as InsertableOut,
+            "insertable-vex": {
+                name: "VEX Wheel",
+                vendors: [Vendor.VEX]
+            } as InsertableOut
+        };
+
+        expect(
+            filterFavoritesForSearch(favorites, "wheel", insertables, [
+                Vendor.REV
+            ]).map((result) => result.favorite.id)
+        ).toEqual(["fav-rev"]);
     });
 });

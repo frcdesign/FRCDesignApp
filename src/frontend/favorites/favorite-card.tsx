@@ -33,7 +33,6 @@ import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
 import { produce } from "immer";
 import { SearchHit } from "../search/insertable-search";
-import { SearchHitTitle } from "../search/search-results";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 
 interface FavoriteCardProps {
@@ -80,8 +79,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     };
 
     const isSearchActive = uiState.searchQuery && searchHit;
-    const titleComponent = isSearchActive ? (
-        <SearchHitTitle title={favoriteName} searchHit={searchHit} />
+    const titleContent = isSearchActive ? (
+        favoriteName
     ) : (
         <TextInput
             value={favoriteName}
@@ -122,10 +121,16 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 <CardTitleGroup
                     disabled={isAssemblyInPartStudio}
                     title={favoriteName}
-                    titleComponent={titleComponent}
                     thumbnailUrls={insertable.thumbnailUrls}
                     searchHit={searchHit}
-                />
+                >
+                    {({ defaultTitle }) => {
+                        if (isSearchActive) {
+                            return defaultTitle;
+                        }
+                        return titleContent;
+                    }}
+                </CardTitleGroup>
             }
             rightSection={
                 <FavoriteButton favorite={favorite} insertable={insertable} />
@@ -244,7 +249,7 @@ function useUpdateFavoriteNameMutation() {
     return useMutation({
         mutationKey: ["update-favorite-name"],
         mutationFn: async (args: { favoriteId: string; name: string }) => {
-            return apiPost("/favorite/" + args.favoriteId, {
+            return apiPost("/favorites/" + args.favoriteId, {
                 body: { name: args.name }
             });
         },

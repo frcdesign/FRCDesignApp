@@ -60,7 +60,9 @@ export function FavoritesList(): ReactNode {
     if (uiState.searchQuery) {
         const matchedFavorites = filterFavoritesForSearch(
             orderedFavorites,
-            uiState.searchQuery
+            uiState.searchQuery,
+            insertables,
+            uiState.vendorFilters
         );
 
         const matchedInsertables = matchedFavorites
