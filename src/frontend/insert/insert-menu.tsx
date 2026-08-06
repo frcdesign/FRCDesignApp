@@ -94,7 +94,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configuration={configuration}
             />
             {parameters}
-            <Group justify="space-between" wrap="nowrap" mt="mt">
+            <Group justify="space-between" wrap="nowrap" mt="md">
                 <Group gap={4}>
                     <FavoriteButton
                         favorite={favorite}
