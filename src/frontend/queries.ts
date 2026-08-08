@@ -1,7 +1,11 @@
 /**
  * Queries for getting data from various endpoints on the backend.
  */
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import {
+    keepPreviousData,
+    queryOptions,
+    useQuery
+} from "@tanstack/react-query";
 import { useLoaderData } from "@tanstack/react-router";
 import { apiGet } from "./api-utils/api";
 import {
@@ -123,6 +127,10 @@ export function getFavoritesQuery(libraryId: LibraryId) {
     });
 }
 
+export function buildStatusQueryMatchKey() {
+    return ["build-status"];
+}
+
 export function buildStatusQueryKey(
     libraryId: LibraryId,
     cacheVersion: number
@@ -140,6 +148,10 @@ export function getBuildStatusQuery(
             apiGet("/build-status/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
+        // Keep the previous version's data on screen while the next
+        // cacheVersion refetches, so the admin hover card (and its switches)
+        // don't blank out and close when a toggle bumps the cache version.
+        placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
     });

@@ -2,18 +2,27 @@ import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
-import { InsertableOut } from "../../shared/api-models";
+import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { showErrorToast, showSuccessToast } from "../common/notifications";
+import {
+    showErrorToast,
+    showLoadingToast,
+    showSuccessToast
+} from "../common/notifications";
 import {
     toInsertablePath,
     toLibraryPath,
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
+import {
+    buildStatusQueryKey,
+    contextDataQueryKey,
+    libraryQueryMatchKey
+} from "../queries";
+import { getQueryUpdater } from "../common/utils";
 
 /**
  * Shared onSettled for admin mutations that change per-entity data: pull fresh
@@ -30,15 +39,73 @@ function useRefreshLibraryOnSettled() {
     };
 }
 
+/** The build-status query key for the currently-viewed library. */
+function useBuildStatusKey() {
+    const libraryId = useLibraryId();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
+    return buildStatusQueryKey(libraryId, cacheVersion);
+}
+
+interface OptimisticToggleConfig<TVars> {
+    mutationKey: readonly unknown[];
+    mutationFn: (vars: TVars) => Promise<unknown>;
+    /** Optimistically applies the change to the cached build status. */
+    apply: (status: LibraryBuildStatus, vars: TVars) => void;
+    toastId: string;
+    loadingMessage: (vars: TVars) => string;
+    successMessage: (vars: TVars) => string;
+    errorMessage: string;
+}
+
+/**
+ * A mutation that optimistically flips a build-status flag, shows a
+ * loading→success/error toast, and reverts on failure — so the admin switches
+ * feel instant even when the underlying request is slow. Mirrors the optimistic
+ * `onMutate`/rollback pattern used by `useSetGroupOrderMutation`.
+ */
+function useOptimisticToggleMutation<TVars>(
+    config: OptimisticToggleConfig<TVars>
+) {
+    const onSettled = useRefreshLibraryOnSettled();
+    const key = useBuildStatusKey();
+
+    return useMutation({
+        mutationKey: config.mutationKey,
+        mutationFn: config.mutationFn,
+        onMutate: async (vars: TVars) => {
+            showLoadingToast(config.loadingMessage(vars), config.toastId);
+            await queryClient.cancelQueries({ queryKey: key });
+            const previous = queryClient.getQueryData<LibraryBuildStatus>(key);
+            queryClient.setQueryData(
+                key,
+                getQueryUpdater<LibraryBuildStatus>((status) =>
+                    config.apply(status, vars)
+                )
+            );
+            return { previous };
+        },
+        onSuccess: (_result, vars) => {
+            showSuccessToast(config.successMessage(vars), config.toastId);
+        },
+        onError: (error: Error, _vars, context) => {
+            queryClient.setQueryData(key, context?.previous);
+            getAppErrorHandler(config.errorMessage, config.toastId)(error);
+        },
+        onSettled
+    });
+}
+
 export function useSetVisibilityMutation(
     insertableIds: string[],
     isVisible: boolean
 ) {
     const libraryId = useLibraryId();
-    const router = useRouter();
+    const onSettled = useRefreshLibraryOnSettled();
+    const key = useBuildStatusKey();
 
     const mutation = useMutation({
-        mutationKey: ["set-element-visibility"],
+        mutationKey: ["set-element-visibility", ...insertableIds],
         mutationFn: async () => {
             return apiPost(
                 "/set-element-visibility" + toLibraryPath(libraryId),
@@ -50,18 +117,38 @@ export function useSetVisibilityMutation(
                 }
             );
         },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to modify visibility."
-        ),
-        onSettled: async () => {
-            await queryClient.refetchQueries({
-                queryKey: contextDataQueryKey()
-            });
-            await queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            void router.invalidate();
-        }
+        onMutate: async () => {
+            showLoadingToast(
+                isVisible ? "Showing elements..." : "Hiding elements...",
+                "set-visibility"
+            );
+            await queryClient.cancelQueries({ queryKey: key });
+            const previous = queryClient.getQueryData<LibraryBuildStatus>(key);
+            queryClient.setQueryData(
+                key,
+                getQueryUpdater<LibraryBuildStatus>((status) => {
+                    for (const id of insertableIds) {
+                        const insertable = status.insertables[id];
+                        if (insertable) insertable.isVisible = isVisible;
+                    }
+                })
+            );
+            return { previous };
+        },
+        onSuccess: () => {
+            showSuccessToast(
+                isVisible ? "Elements shown." : "Elements hidden.",
+                "set-visibility"
+            );
+        },
+        onError: (error: Error, _vars, context) => {
+            queryClient.setQueryData(key, context?.previous);
+            getAppErrorHandler(
+                "Unexpectedly failed to modify visibility.",
+                "set-visibility"
+            )(error);
+        },
+        onSettled
     });
 
     const mutate = useCallback(() => {
@@ -130,55 +217,76 @@ export function useToggleOpenCompositeMutation(
     insertableId: string,
     isOpenComposite: boolean
 ) {
-    const onSettled = useRefreshLibraryOnSettled();
-    return useMutation({
+    return useOptimisticToggleMutation<void>({
         mutationKey: ["toggle-open-composite", insertableId],
         mutationFn: () =>
             apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
                 body: { isOpenComposite: !isOpenComposite }
             }),
-        onError: getAppErrorHandler("Failed to update open composite setting."),
-        onSettled
+        apply: (status) => {
+            const insertable = status.insertables[insertableId];
+            if (insertable) insertable.isOpenComposite = !isOpenComposite;
+        },
+        toastId: `open-composite-${insertableId}`,
+        loadingMessage: () =>
+            isOpenComposite
+                ? "Removing open composite..."
+                : "Setting open composite...",
+        successMessage: () =>
+            isOpenComposite ? "Removed open composite." : "Set open composite.",
+        errorMessage: "Failed to update open composite setting."
     });
 }
 
 /** Toggles an insertable's "insert and fasten" support. */
 export function useToggleInsertAndFastenMutation(insertableId: string) {
-    const onSettled = useRefreshLibraryOnSettled();
-    return useMutation({
+    return useOptimisticToggleMutation<boolean>({
         mutationKey: ["toggle-insert-and-fasten", insertableId],
-        mutationFn: (newValue: boolean) =>
+        mutationFn: (newValue) =>
             apiPost(
                 "/toggle-insert-and-fasten" + toInsertablePath(insertableId),
                 { body: { supportsFasten: newValue } }
             ),
-        onSuccess: (_result, newValue: boolean) => {
-            if (newValue) {
-                showSuccessToast("Successfully enabled Insert and fasten.");
-            }
+        apply: (status, newValue) => {
+            const insertable = status.insertables[insertableId];
+            if (insertable) insertable.supportsFasten = newValue;
         },
-        onError: getAppErrorHandler("Failed to enable Insert and fasten."),
-        onSettled
+        toastId: `insert-and-fasten-${insertableId}`,
+        loadingMessage: (newValue) =>
+            newValue
+                ? "Enabling insert and fasten..."
+                : "Disabling insert and fasten...",
+        successMessage: (newValue) =>
+            newValue
+                ? "Enabled insert and fasten."
+                : "Disabled insert and fasten.",
+        errorMessage: "Failed to update insert and fasten."
     });
 }
 
 /** Toggles whether an insertable's part numbers are indexed for search. */
 export function useTogglePartNumberSearchMutation(insertableId: string) {
-    const onSettled = useRefreshLibraryOnSettled();
-    return useMutation({
+    return useOptimisticToggleMutation<boolean>({
         mutationKey: ["toggle-part-number-search", insertableId],
-        mutationFn: (newValue: boolean) =>
+        mutationFn: (newValue) =>
             apiPost(
                 "/toggle-part-number-search" + toInsertablePath(insertableId),
                 { body: { searchPartNumbers: newValue } }
             ),
-        onSuccess: (_result, newValue: boolean) => {
-            if (newValue) {
-                showSuccessToast("Successfully enabled part number search.");
-            }
+        apply: (status, newValue) => {
+            const insertable = status.insertables[insertableId];
+            if (insertable) insertable.searchPartNumbers = newValue;
         },
-        onError: getAppErrorHandler("Failed to update part number search."),
-        onSettled
+        toastId: `part-number-search-${insertableId}`,
+        loadingMessage: (newValue) =>
+            newValue
+                ? "Enabling part number search..."
+                : "Disabling part number search...",
+        successMessage: (newValue) =>
+            newValue
+                ? "Enabled part number search."
+                : "Disabled part number search.",
+        errorMessage: "Failed to update part number search."
     });
 }
 
@@ -189,17 +297,23 @@ export function useToggleSortOrderMutation(
     sortAlphabetically: boolean
 ) {
     const libraryId = useLibraryId();
-    return useMutation({
+    return useOptimisticToggleMutation<void>({
         mutationKey: ["sort-group-alphabetically", groupId],
         mutationFn: async () =>
             apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
                 body: { groupId, sortAlphabetically: !sortAlphabetically }
             }),
-        onError: getAppErrorHandler(`Failed to update group ${groupName}.`),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
+        apply: (status) => {
+            const group = status.groups[groupId];
+            if (group) group.sortAlphabetically = !sortAlphabetically;
+        },
+        toastId: `sort-order-${groupId}`,
+        loadingMessage: () =>
+            sortAlphabetically
+                ? "Switching to tab order..."
+                : "Sorting alphabetically...",
+        successMessage: () =>
+            sortAlphabetically ? "Using tab order." : "Sorted alphabetically.",
+        errorMessage: `Failed to update group ${groupName}.`
     });
 }

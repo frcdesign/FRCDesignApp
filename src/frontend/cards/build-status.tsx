@@ -141,14 +141,17 @@ interface BuildStatusCardProps {
     issues: BuildIssue[];
     /** When the entity was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
-    /** Entity-specific admin toggles + parsed info. */
+    /** The group/insertable admin menu wrapped by the card. */
     children: ReactNode;
 }
 
-/** The hover-card dropdown content: last-loaded header + build checks + admin/parsed. */
-export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
+/**
+ * The hover-card content: the last-loaded header and build checks wrapping the
+ * given group/insertable admin menu.
+ */
+function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
     const { issues, lastLoadedAt, children } = props;
-    // Size to content (capped) so short rows/messages don't wrap.
+    // Size to content (capped) so short rows don't wrap.
     return (
         <Stack gap="xs" w="max-content" miw={240} maw={320}>
             <LastLoadedHeader lastLoadedAt={lastLoadedAt} />
@@ -156,6 +159,47 @@ export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
             <Divider />
             {children}
         </Stack>
+    );
+}
+
+interface BuildStatusBadgeProps {
+    issues: BuildIssue[];
+    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
+    /** The group/insertable admin menu shown in the hover card. */
+    hoverMenu: ReactNode;
+}
+
+/**
+ * A severity icon whose hover card shows the build-status card wrapping the
+ * given admin menu. Only rendered for editors and admins.
+ */
+export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
+    const { issues, lastLoadedAt, hoverMenu } = props;
+    const maxSeverity = getMaxSeverity(issues);
+
+    return (
+        <RequireAccessLevel>
+            <HoverCard
+                withinPortal
+                shadow="md"
+                position="right"
+                withArrow
+                arrowSize={20}
+            >
+                <HoverCard.Target>
+                    <IssueIcon severity={maxSeverity} />
+                </HoverCard.Target>
+                <HoverCard.Dropdown p="sm" onClick={(e) => e.stopPropagation()}>
+                    <BuildStatusCard
+                        issues={issues}
+                        lastLoadedAt={lastLoadedAt}
+                    >
+                        {hoverMenu}
+                    </BuildStatusCard>
+                </HoverCard.Dropdown>
+            </HoverCard>
+        </RequireAccessLevel>
     );
 }
 
@@ -177,46 +221,6 @@ function LastLoadedHeader({
     );
 }
 
-interface BuildStatusBadgeProps {
-    issues: BuildIssue[];
-    /** When the entity was last successfully loaded (epoch ms); null if never. */
-    lastLoadedAt: number | null;
-    /** Entity-specific admin toggles + parsed info. */
-    children: ReactNode;
-}
-
-/**
- * An inline tag summarizing the build-checker state for a group or insertable.
- */
-export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, lastLoadedAt, children } = props;
-    const maxSeverity = getMaxSeverity(issues);
-
-    return (
-        <RequireAccessLevel>
-            <HoverCard
-                withinPortal
-                shadow="md"
-                position="right"
-                withArrow
-                arrowSize={20}
-            >
-                <HoverCard.Target>
-                    <IssueIcon severity={maxSeverity} />
-                </HoverCard.Target>
-                <HoverCard.Dropdown p="sm" onClick={(e) => e.stopPropagation()}>
-                    <BuildStatusCard
-                        issues={issues}
-                        lastLoadedAt={lastLoadedAt}
-                    >
-                        {children}
-                    </BuildStatusCard>
-                </HoverCard.Dropdown>
-            </HoverCard>
-        </RequireAccessLevel>
-    );
-}
-
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
     insertableId,
@@ -232,14 +236,17 @@ export function InsertableStatusBadge({
         <BuildStatusBadge
             issues={getInsertableBuildIssues(insertable)}
             lastLoadedAt={insertable.lastLoadedAt}
-        >
-            <InsertableAdminSection
-                insertableId={insertableId}
-                elementType={elementType}
-                status={insertable}
-            />
-            <InsertableParsedSection status={insertable} />
-        </BuildStatusBadge>
+            hoverMenu={
+                <>
+                    <InsertableAdminSection
+                        insertableId={insertableId}
+                        elementType={elementType}
+                        status={insertable}
+                    />
+                    <InsertableParsedSection status={insertable} />
+                </>
+            }
+        />
     );
 }
 
@@ -259,13 +266,14 @@ export function GroupStatusBadge({
         <BuildStatusBadge
             issues={issues}
             lastLoadedAt={groupStatus.lastLoadedAt}
-        >
-            <GroupAdminSection
-                groupId={groupId}
-                groupName={groupName}
-                status={groupStatus}
-            />
-        </BuildStatusBadge>
+            hoverMenu={
+                <GroupAdminSection
+                    groupId={groupId}
+                    groupName={groupName}
+                    status={groupStatus}
+                />
+            }
+        />
     );
 }
 
@@ -283,7 +291,6 @@ function SwitchRow(props: {
     label: string;
     checked: boolean;
     onToggle: () => void;
-    disabled?: boolean;
 }): ReactNode {
     return (
         <Group gap="xl" wrap="nowrap" justify="space-between">
@@ -292,7 +299,6 @@ function SwitchRow(props: {
                 size="sm"
                 checked={props.checked}
                 onChange={props.onToggle}
-                disabled={props.disabled}
             />
         </Group>
     );
@@ -340,16 +346,12 @@ function VisibilitySwitch({
     insertableId: string;
     isVisible: boolean;
 }): ReactNode {
-    const { mutate, isPending } = useSetVisibilityMutation(
-        [insertableId],
-        !isVisible
-    );
+    const { mutate } = useSetVisibilityMutation([insertableId], !isVisible);
     return (
         <SwitchRow
             label="Visible to users"
             checked={isVisible}
             onToggle={mutate}
-            disabled={isPending}
         />
     );
 }
@@ -367,7 +369,6 @@ function FastenSwitch({
             label="Insert and fasten"
             checked={supportsFasten}
             onToggle={() => mutation.mutate(!supportsFasten)}
-            disabled={mutation.isPending}
         />
     );
 }
@@ -385,7 +386,6 @@ function PartNumberSwitch({
             label="Part number search"
             checked={searchPartNumbers}
             onToggle={() => mutation.mutate(!searchPartNumbers)}
-            disabled={mutation.isPending}
         />
     );
 }
@@ -406,7 +406,6 @@ function OpenCompositeSwitch({
             label="Open composite"
             checked={isOpenComposite}
             onToggle={() => mutation.mutate()}
-            disabled={mutation.isPending}
         />
     );
 }
@@ -433,7 +432,6 @@ function GroupAdminSection({
                 label="Sort alphabetically"
                 checked={status.sortAlphabetically}
                 onToggle={() => mutation.mutate()}
-                disabled={mutation.isPending}
             />
         </Stack>
     );
