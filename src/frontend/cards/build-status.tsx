@@ -1,4 +1,12 @@
-import { Badge, Divider, Group, HoverCard, Stack, Text } from "@mantine/core";
+import {
+    Badge,
+    Divider,
+    Group,
+    HoverCard,
+    Stack,
+    Switch,
+    Text
+} from "@mantine/core";
 import {
     IconAlertOctagon,
     IconAlertTriangle,
@@ -21,74 +29,26 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "../../shared/api-models";
-import { getVendorName, Vendor } from "../../shared/types";
+import { ElementType, getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery } from "../queries";
+import {
+    useSetVisibilityMutation,
+    useToggleInsertAndFastenMutation,
+    useToggleOpenCompositeMutation,
+    useTogglePartNumberSearchMutation,
+    useToggleSortOrderMutation
+} from "./card-hooks";
 
 /**
- * The value of a "current state" row. A discriminated union so `StateValue` can
- * render each kind appropriately (a check/cross for booleans, badges for
- * vendors, plain text otherwise).
+ * The value of a read-only "parsed" row. A discriminated union so `StateValue`
+ * can render each kind appropriately (a check/cross for booleans, badges for
+ * vendors).
  */
 export type StateRowValue =
     | { kind: "bool"; value: boolean }
-    | { kind: "vendors"; vendors: Vendor[] }
-    | { kind: "text"; text: string };
-
-/** A single label/value row shown in the "current state" section. */
-export interface StateRow {
-    label: string;
-    value: StateRowValue;
-}
-
-/** Builds the read-only "current state" rows shown for an insertable. */
-function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
-    const rows: StateRow[] = [
-        {
-            label: "Visible to users",
-            value: { kind: "bool", value: insertable.isVisible }
-        }
-    ];
-    if (insertable.isOpenComposite !== undefined) {
-        rows.push({
-            label: "Open composite",
-            value: { kind: "bool", value: insertable.isOpenComposite }
-        });
-    }
-    rows.push({
-        label: "Insert and fasten",
-        value: { kind: "bool", value: insertable.supportsFasten }
-    });
-    rows.push({
-        label: "Part number search",
-        value: { kind: "bool", value: insertable.searchPartNumbers }
-    });
-    rows.push({
-        label: "Vendors",
-        value: { kind: "vendors", vendors: insertable.vendors }
-    });
-    rows.push({
-        label: "Configurable",
-        value: { kind: "bool", value: !!insertable.configuration }
-    });
-    return rows;
-}
-
-/** Builds the read-only "current state" rows shown for a group. */
-function getGroupStateRows(groupStatus: GroupBuildStatus): StateRow[] {
-    return [
-        {
-            label: "Default sort order",
-            value: {
-                kind: "text",
-                text: groupStatus.sortAlphabetically
-                    ? "Alphabetical"
-                    : "Standard"
-            }
-        }
-    ];
-}
+    | { kind: "vendors"; vendors: Vendor[] };
 
 /**
  * Returns the build issues for an insertable, merging insertable-level and
@@ -179,22 +139,22 @@ export function IssueIcon({
 
 interface BuildStatusCardProps {
     issues: BuildIssue[];
-    /** Read-only "current state" rows shown above the build issues. */
-    stateRows: StateRow[];
     /** When the entity was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
+    /** Entity-specific admin toggles + parsed info. */
+    children: ReactNode;
 }
 
-/** The hover-card dropdown content: last-loaded header + state rows + issues. */
+/** The hover-card dropdown content: last-loaded header + build checks + admin/parsed. */
 export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { issues, stateRows, lastLoadedAt } = props;
+    const { issues, lastLoadedAt, children } = props;
     // Size to content (capped) so short rows/messages don't wrap.
     return (
-        <Stack gap="xs" w="max-content" maw={300}>
+        <Stack gap="xs" w="max-content" miw={240} maw={320}>
             <LastLoadedHeader lastLoadedAt={lastLoadedAt} />
-            <CurrentStateSection rows={stateRows} />
-            <Divider />
             <BuildIssuesSection issues={issues} />
+            <Divider />
+            {children}
         </Stack>
     );
 }
@@ -219,19 +179,20 @@ function LastLoadedHeader({
 
 interface BuildStatusBadgeProps {
     issues: BuildIssue[];
-    /** Read-only "current state" rows shown above the build issues. */
-    stateRows: StateRow[];
     /** When the entity was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
+    /** Entity-specific admin toggles + parsed info. */
+    children: ReactNode;
 }
 
 /**
- * An inline tag summarizing the build-checker state for a group or insertable,
- * with a read-only hover card showing the last-loaded time, current state, and
- * any build issues. Only visible to editors and admins.
+ * An inline tag summarizing the build-checker state for a group or insertable.
+ * Hovering opens a card with the last-loaded time, build checks, and the
+ * interactive admin toggles / parsed info supplied as children. Only visible to
+ * editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, stateRows, lastLoadedAt } = props;
+    const { issues, lastLoadedAt, children } = props;
     const maxSeverity = getMaxSeverity(issues);
 
     return (
@@ -240,7 +201,9 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 withinPortal
                 shadow="md"
                 openDelay={150}
-                closeDelay={50}
+                // Generous close delay so the card can be moved into and its
+                // toggles clicked before it dismisses.
+                closeDelay={250}
                 position="right"
                 withArrow
                 arrowSize={20}
@@ -251,9 +214,10 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 <HoverCard.Dropdown p="sm">
                     <BuildStatusCard
                         issues={issues}
-                        stateRows={stateRows}
                         lastLoadedAt={lastLoadedAt}
-                    />
+                    >
+                        {children}
+                    </BuildStatusCard>
                 </HoverCard.Dropdown>
             </HoverCard>
         </RequireAccessLevel>
@@ -262,9 +226,11 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
 
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
-    insertableId
+    insertableId,
+    elementType
 }: {
     insertableId: string;
+    elementType: ElementType;
 }): ReactNode {
     const { data } = useBuildStatusQuery();
     const insertable = data?.insertables[insertableId];
@@ -272,14 +238,26 @@ export function InsertableStatusBadge({
     return (
         <BuildStatusBadge
             issues={getInsertableBuildIssues(insertable)}
-            stateRows={getInsertableStateRows(insertable)}
             lastLoadedAt={insertable.lastLoadedAt}
-        />
+        >
+            <InsertableAdminSection
+                insertableId={insertableId}
+                elementType={elementType}
+                status={insertable}
+            />
+            <InsertableParsedSection status={insertable} />
+        </BuildStatusBadge>
     );
 }
 
 /** Build-status badge pre-wired for a group (includes live visibility check). */
-export function GroupStatusBadge({ groupId }: { groupId: string }): ReactNode {
+export function GroupStatusBadge({
+    groupId,
+    groupName
+}: {
+    groupId: string;
+    groupName: string;
+}): ReactNode {
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
     const issues = useGroupBuildIssues(groupStatus, data?.insertables);
@@ -287,34 +265,228 @@ export function GroupStatusBadge({ groupId }: { groupId: string }): ReactNode {
     return (
         <BuildStatusBadge
             issues={issues}
-            stateRows={getGroupStateRows(groupStatus)}
             lastLoadedAt={groupStatus.lastLoadedAt}
-        />
+        >
+            <GroupAdminSection
+                groupId={groupId}
+                groupName={groupName}
+                status={groupStatus}
+            />
+        </BuildStatusBadge>
     );
 }
 
-function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
+/** A dimmed section header, e.g. "Admin" or "Parsed". */
+function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     return (
-        <Stack gap={4}>
-            <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
-                Current state
-            </Text>
-            {rows.map((row) => (
-                <Group
-                    key={row.label}
-                    gap="xl"
-                    wrap="nowrap"
-                    justify="space-between"
-                >
-                    <Text size="sm">{row.label}</Text>
-                    <StateValue value={row.value} />
-                </Group>
-            ))}
+        <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+            {children}
+        </Text>
+    );
+}
+
+/** A label + on/off Switch row for an editable admin flag. */
+function SwitchRow(props: {
+    label: string;
+    checked: boolean;
+    onToggle: () => void;
+    disabled?: boolean;
+}): ReactNode {
+    return (
+        <Group gap="xl" wrap="nowrap" justify="space-between">
+            <Text size="sm">{props.label}</Text>
+            <Switch
+                size="sm"
+                checked={props.checked}
+                onChange={props.onToggle}
+                disabled={props.disabled}
+            />
+        </Group>
+    );
+}
+
+/** The editable admin toggles for an insertable. */
+function InsertableAdminSection({
+    insertableId,
+    elementType,
+    status
+}: {
+    insertableId: string;
+    elementType: ElementType;
+    status: InsertableBuildStatus;
+}): ReactNode {
+    return (
+        <Stack gap={6}>
+            <SectionHeader>Admin</SectionHeader>
+            <VisibilitySwitch
+                insertableId={insertableId}
+                isVisible={status.isVisible}
+            />
+            <FastenSwitch
+                insertableId={insertableId}
+                supportsFasten={status.supportsFasten}
+            />
+            <PartNumberSwitch
+                insertableId={insertableId}
+                searchPartNumbers={status.searchPartNumbers}
+            />
+            {elementType === ElementType.PART_STUDIO && (
+                <OpenCompositeSwitch
+                    insertableId={insertableId}
+                    isOpenComposite={status.isOpenComposite}
+                />
+            )}
         </Stack>
     );
 }
 
-/** Renders a "current state" value: a check/cross for booleans, badges for vendors. */
+function VisibilitySwitch({
+    insertableId,
+    isVisible
+}: {
+    insertableId: string;
+    isVisible: boolean;
+}): ReactNode {
+    const { mutate, isPending } = useSetVisibilityMutation(
+        [insertableId],
+        !isVisible
+    );
+    return (
+        <SwitchRow
+            label="Visible to users"
+            checked={isVisible}
+            onToggle={mutate}
+            disabled={isPending}
+        />
+    );
+}
+
+function FastenSwitch({
+    insertableId,
+    supportsFasten
+}: {
+    insertableId: string;
+    supportsFasten: boolean;
+}): ReactNode {
+    const mutation = useToggleInsertAndFastenMutation(insertableId);
+    return (
+        <SwitchRow
+            label="Insert and fasten"
+            checked={supportsFasten}
+            onToggle={() => mutation.mutate(!supportsFasten)}
+            disabled={mutation.isPending}
+        />
+    );
+}
+
+function PartNumberSwitch({
+    insertableId,
+    searchPartNumbers
+}: {
+    insertableId: string;
+    searchPartNumbers: boolean;
+}): ReactNode {
+    const mutation = useTogglePartNumberSearchMutation(insertableId);
+    return (
+        <SwitchRow
+            label="Part number search"
+            checked={searchPartNumbers}
+            onToggle={() => mutation.mutate(!searchPartNumbers)}
+            disabled={mutation.isPending}
+        />
+    );
+}
+
+function OpenCompositeSwitch({
+    insertableId,
+    isOpenComposite
+}: {
+    insertableId: string;
+    isOpenComposite: boolean;
+}): ReactNode {
+    const mutation = useToggleOpenCompositeMutation(
+        insertableId,
+        isOpenComposite
+    );
+    return (
+        <SwitchRow
+            label="Open composite"
+            checked={isOpenComposite}
+            onToggle={() => mutation.mutate()}
+            disabled={mutation.isPending}
+        />
+    );
+}
+
+/** The editable admin toggles for a group. */
+function GroupAdminSection({
+    groupId,
+    groupName,
+    status
+}: {
+    groupId: string;
+    groupName: string;
+    status: GroupBuildStatus;
+}): ReactNode {
+    const mutation = useToggleSortOrderMutation(
+        groupId,
+        groupName,
+        status.sortAlphabetically
+    );
+    return (
+        <Stack gap={6}>
+            <SectionHeader>Admin</SectionHeader>
+            <SwitchRow
+                label="Sort alphabetically"
+                checked={status.sortAlphabetically}
+                onToggle={() => mutation.mutate()}
+                disabled={mutation.isPending}
+            />
+        </Stack>
+    );
+}
+
+/** The read-only auto-detected facts for an insertable. */
+function InsertableParsedSection({
+    status
+}: {
+    status: InsertableBuildStatus;
+}): ReactNode {
+    return (
+        <>
+            <Divider />
+            <Stack gap={6}>
+                <SectionHeader>Parsed</SectionHeader>
+                <ParsedRow
+                    label="Vendors"
+                    value={{ kind: "vendors", vendors: status.vendors }}
+                />
+                <ParsedRow
+                    label="Configurable"
+                    value={{ kind: "bool", value: !!status.configuration }}
+                />
+            </Stack>
+        </>
+    );
+}
+
+/** A read-only label/value row in the "Parsed" section. */
+function ParsedRow({
+    label,
+    value
+}: {
+    label: string;
+    value: StateRowValue;
+}): ReactNode {
+    return (
+        <Group gap="xl" wrap="nowrap" justify="space-between">
+            <Text size="sm">{label}</Text>
+            <StateValue value={value} />
+        </Group>
+    );
+}
+
+/** Renders a parsed value: a check/cross for booleans, badges for vendors. */
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
@@ -322,10 +494,6 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
         ) : (
             <IconX size={IconSize.SMALL} color={IconColor.RED} />
         );
-    }
-
-    if (value.kind === "text") {
-        return <Text size="sm">{value.text}</Text>;
     }
 
     if (value.vendors.length === 0) {

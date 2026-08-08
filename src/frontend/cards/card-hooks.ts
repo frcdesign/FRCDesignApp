@@ -15,6 +15,21 @@ import {
 import { getAppErrorHandler } from "../api-utils/errors";
 import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
 
+/**
+ * Shared onSettled for admin mutations that change per-entity data: pull fresh
+ * context + library data and re-run loaders so the UI reflects the change.
+ */
+function useRefreshLibraryOnSettled() {
+    const router = useRouter();
+    return async () => {
+        await queryClient.refetchQueries({ queryKey: contextDataQueryKey() });
+        await queryClient.invalidateQueries({
+            queryKey: libraryQueryMatchKey()
+        });
+        void router.invalidate();
+    };
+}
+
 export function useSetVisibilityMutation(
     insertableIds: string[],
     isVisible: boolean
@@ -65,7 +80,7 @@ export function useSetVisibilityMutation(
         });
     }, [isVisible, mutation]);
 
-    return { mutate };
+    return { mutate, isPending: mutation.isPending };
 }
 
 /**
@@ -106,6 +121,85 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
                 queryKey: libraryQueryMatchKey()
             });
             void router.invalidate();
+        }
+    });
+}
+
+/** Toggles an insertable's "open composite" flag (part studios only). */
+export function useToggleOpenCompositeMutation(
+    insertableId: string,
+    isOpenComposite: boolean
+) {
+    const onSettled = useRefreshLibraryOnSettled();
+    return useMutation({
+        mutationKey: ["toggle-open-composite", insertableId],
+        mutationFn: () =>
+            apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
+                body: { isOpenComposite: !isOpenComposite }
+            }),
+        onError: getAppErrorHandler("Failed to update open composite setting."),
+        onSettled
+    });
+}
+
+/** Toggles an insertable's "insert and fasten" support. */
+export function useToggleInsertAndFastenMutation(insertableId: string) {
+    const onSettled = useRefreshLibraryOnSettled();
+    return useMutation({
+        mutationKey: ["toggle-insert-and-fasten", insertableId],
+        mutationFn: (newValue: boolean) =>
+            apiPost(
+                "/toggle-insert-and-fasten" + toInsertablePath(insertableId),
+                { body: { supportsFasten: newValue } }
+            ),
+        onSuccess: (_result, newValue: boolean) => {
+            if (newValue) {
+                showSuccessToast("Successfully enabled Insert and fasten.");
+            }
+        },
+        onError: getAppErrorHandler("Failed to enable Insert and fasten."),
+        onSettled
+    });
+}
+
+/** Toggles whether an insertable's part numbers are indexed for search. */
+export function useTogglePartNumberSearchMutation(insertableId: string) {
+    const onSettled = useRefreshLibraryOnSettled();
+    return useMutation({
+        mutationKey: ["toggle-part-number-search", insertableId],
+        mutationFn: (newValue: boolean) =>
+            apiPost(
+                "/toggle-part-number-search" + toInsertablePath(insertableId),
+                { body: { searchPartNumbers: newValue } }
+            ),
+        onSuccess: (_result, newValue: boolean) => {
+            if (newValue) {
+                showSuccessToast("Successfully enabled part number search.");
+            }
+        },
+        onError: getAppErrorHandler("Failed to update part number search."),
+        onSettled
+    });
+}
+
+/** Toggles a group between alphabetical and tab sort order. */
+export function useToggleSortOrderMutation(
+    groupId: string,
+    groupName: string,
+    sortAlphabetically: boolean
+) {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["sort-group-alphabetically", groupId],
+        mutationFn: async () =>
+            apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
+                body: { groupId, sortAlphabetically: !sortAlphabetically }
+            }),
+        onError: getAppErrorHandler(`Failed to update group ${groupName}.`),
+        onSettled: () => {
+            void queryClient.invalidateQueries({
+                queryKey: libraryQueryMatchKey()
+            });
         }
     });
 }

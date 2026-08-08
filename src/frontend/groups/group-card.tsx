@@ -3,8 +3,6 @@ import {
     IconArrowRight,
     IconEye,
     IconEyeOff,
-    IconList,
-    IconSortAZ,
     IconTrash
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
@@ -34,7 +32,6 @@ import {
 } from "../queries";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
-import { getAppErrorHandler } from "../api-utils/errors";
 
 interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
@@ -58,7 +55,12 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                 <CardTitle
                     title={group.name}
                     thumbnailUrls={group.thumbnailUrls}
-                    buildStatusBadge={<GroupStatusBadge groupId={group.id} />}
+                    buildStatusBadge={
+                        <GroupStatusBadge
+                            groupId={group.id}
+                            groupName={group.name}
+                        />
+                    }
                 />
             }
             rightSection={<IconArrowRight size={IconSize.SMALL} />}
@@ -78,10 +80,7 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
         <>
             <OpenDocumentItems path={group.path} />
             <AdminOptionsSubmenu>
-                <GroupAdminContextMenu
-                    groupId={group.id}
-                    groupName={group.name}
-                />
+                <GroupAdminContextMenu groupId={group.id} />
             </AdminOptionsSubmenu>
         </>
     );
@@ -89,12 +88,10 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
 
 interface GroupAdminContextMenuProps {
     groupId: string;
-    groupName: string;
 }
 
 export function GroupAdminContextMenu({
-    groupId,
-    groupName
+    groupId
 }: GroupAdminContextMenuProps): ReactNode {
     const isHome = useIsHome();
     const groupStatus = useBuildStatusQuery().data?.groups[groupId];
@@ -119,11 +116,6 @@ export function GroupAdminContextMenu({
             />
             <HideAllElementsMenuItem
                 insertableOrder={groupStatus.insertableOrder}
-            />
-            <ToggleSortOrderMenuItem
-                groupId={groupId}
-                groupName={groupName}
-                sortAlphabetically={groupStatus.sortAlphabetically}
             />
             <ReloadThumbnailMenuItem id={groupId} isGroup={true} />
             {isHome && (
@@ -167,49 +159,6 @@ function HideAllElementsMenuItem({
             onClick={() => mutation.mutate()}
         >
             Hide all elements
-        </Menu.Item>
-    );
-}
-
-interface ToggleSortOrderMenuItemProps {
-    groupId: string;
-    groupName: string;
-    sortAlphabetically: boolean;
-}
-
-function ToggleSortOrderMenuItem({
-    groupId,
-    groupName,
-    sortAlphabetically
-}: ToggleSortOrderMenuItemProps): ReactNode {
-    const libraryId = useLibraryId();
-
-    const mutation = useMutation({
-        mutationKey: ["sort-group-alphabetically"],
-        mutationFn: async () =>
-            apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
-                body: { groupId, sortAlphabetically: !sortAlphabetically }
-            }),
-        onError: getAppErrorHandler(`Failed to update group ${groupName}.`),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
-    });
-
-    return (
-        <Menu.Item
-            leftSection={
-                sortAlphabetically ? (
-                    <IconList size={IconSize.SMALL} />
-                ) : (
-                    <IconSortAZ size={IconSize.SMALL} />
-                )
-            }
-            onClick={() => mutation.mutate()}
-        >
-            {sortAlphabetically ? "Use tab order" : "Sort alphabetically"}
         </Menu.Item>
     );
 }
