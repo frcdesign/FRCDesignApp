@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as InitRouteImport } from "./routes/init";
 import { Route as AppRouteRouteImport } from "./routes/app/route";
-import { Route as AppLibraryJobsRouteImport } from "./routes/app/library-jobs";
 import { Route as PagesSafariErrorRouteImport } from "./routes/_pages/safari-error";
 import { Route as PagesLicenseRouteImport } from "./routes/_pages/license";
 import { Route as PagesGrantDeniedRouteImport } from "./routes/_pages/grant-denied";
@@ -29,11 +28,6 @@ const AppRouteRoute = AppRouteRouteImport.update({
     id: "/app",
     path: "/app",
     getParentRoute: () => rootRouteImport
-} as any);
-const AppLibraryJobsRoute = AppLibraryJobsRouteImport.update({
-    id: "/library-jobs",
-    path: "/library-jobs",
-    getParentRoute: () => AppRouteRoute
 } as any);
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
     id: "/_pages/safari-error",
@@ -79,7 +73,6 @@ export interface FileRoutesByFullPath {
     "/grant-denied": typeof PagesGrantDeniedRoute;
     "/license": typeof PagesLicenseRoute;
     "/safari-error": typeof PagesSafariErrorRoute;
-    "/app/library-jobs": typeof AppLibraryJobsRoute;
     "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
     "/app/groups/": typeof AppGroupsIndexRoute;
 }
@@ -91,7 +84,6 @@ export interface FileRoutesByTo {
     "/grant-denied": typeof PagesGrantDeniedRoute;
     "/license": typeof PagesLicenseRoute;
     "/safari-error": typeof PagesSafariErrorRoute;
-    "/app/library-jobs": typeof AppLibraryJobsRoute;
     "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
     "/app/groups": typeof AppGroupsIndexRoute;
 }
@@ -104,7 +96,6 @@ export interface FileRoutesById {
     "/_pages/grant-denied": typeof PagesGrantDeniedRoute;
     "/_pages/license": typeof PagesLicenseRoute;
     "/_pages/safari-error": typeof PagesSafariErrorRoute;
-    "/app/library-jobs": typeof AppLibraryJobsRoute;
     "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
     "/app/groups/": typeof AppGroupsIndexRoute;
 }
@@ -118,7 +109,6 @@ export interface FileRouteTypes {
         | "/grant-denied"
         | "/license"
         | "/safari-error"
-        | "/app/library-jobs"
         | "/app/groups/$groupId"
         | "/app/groups/";
     fileRoutesByTo: FileRoutesByTo;
@@ -130,7 +120,6 @@ export interface FileRouteTypes {
         | "/grant-denied"
         | "/license"
         | "/safari-error"
-        | "/app/library-jobs"
         | "/app/groups/$groupId"
         | "/app/groups";
     id:
@@ -142,7 +131,6 @@ export interface FileRouteTypes {
         | "/_pages/grant-denied"
         | "/_pages/license"
         | "/_pages/safari-error"
-        | "/app/library-jobs"
         | "/app/groups/$groupId"
         | "/app/groups/";
     fileRoutesById: FileRoutesById;
@@ -172,13 +160,6 @@ declare module "@tanstack/react-router" {
             fullPath: "/app";
             preLoaderRoute: typeof AppRouteRouteImport;
             parentRoute: typeof rootRouteImport;
-        };
-        "/app/library-jobs": {
-            id: "/app/library-jobs";
-            path: "/library-jobs";
-            fullPath: "/app/library-jobs";
-            preLoaderRoute: typeof AppLibraryJobsRouteImport;
-            parentRoute: typeof AppRouteRoute;
         };
         "/_pages/safari-error": {
             id: "/_pages/safari-error";
@@ -233,13 +214,11 @@ declare module "@tanstack/react-router" {
 }
 
 interface AppRouteRouteChildren {
-    AppLibraryJobsRoute: typeof AppLibraryJobsRoute;
     AppGroupsGroupIdRoute: typeof AppGroupsGroupIdRoute;
     AppGroupsIndexRoute: typeof AppGroupsIndexRoute;
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-    AppLibraryJobsRoute: AppLibraryJobsRoute,
     AppGroupsGroupIdRoute: AppGroupsGroupIdRoute,
     AppGroupsIndexRoute: AppGroupsIndexRoute
 };

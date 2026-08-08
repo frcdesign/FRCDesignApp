@@ -4,12 +4,14 @@ import { IconPlus } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
+import { refreshLibraryWhenReloadCompletes } from "../api-utils/reload-refresh";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({
@@ -26,6 +28,7 @@ interface AddGroupMenuContentProps {
 function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const { selectedGroupId } = props;
     const libraryId = useLibraryId();
+    const router = useRouter();
     const [url, setUrl] = useState("");
 
     const mutation = useMutation({
@@ -51,6 +54,8 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
                 "Initiated workflow, which can take up to 30 minutes.",
                 "add-group"
             );
+            // Refresh the library automatically once the add finishes.
+            refreshLibraryWhenReloadCompletes(() => void router.invalidate());
         }
     });
 

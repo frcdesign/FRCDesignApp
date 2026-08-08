@@ -9,9 +9,8 @@ import {
     type LibraryBuildStatus,
     type LibraryOut
 } from "../shared/api-models";
-import { type LibraryJobsData } from "../shared/library-job-models";
 import { LibraryId } from "../shared/types";
-import { ContextData, hasEditorAccess } from "../shared/types";
+import { ContextData } from "../shared/types";
 import { useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
@@ -156,51 +155,4 @@ export function useBuildStatusQuery() {
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
     return useQuery(getFavoritesQuery(libraryId));
-}
-
-export function libraryJobsQueryKey(libraryId: LibraryId) {
-    return ["library-jobs", libraryId];
-}
-
-// Poll aggressively while a job is fresh, then back off as it ages — long
-// library reloads can run for many minutes and don't need second-by-second
-// updates the whole time. The KV-cached access level keeps the fast tier cheap.
-const FAST_POLL_MS = 3000;
-const MID_POLL_MS = 8000;
-const SLOW_POLL_MS = 15000;
-
-function libraryJobPollInterval(
-    data: LibraryJobsData | undefined
-): number | false {
-    const running = (data?.libraryJobs ?? []).filter(
-        (job) => job.status === "running"
-    );
-    if (running.length === 0) return false;
-    const oldestStart = Math.min(...running.map((job) => job.createdAt));
-    const elapsed = Date.now() - oldestStart;
-    if (elapsed < 30_000) return FAST_POLL_MS;
-    if (elapsed < 180_000) return MID_POLL_MS;
-    return SLOW_POLL_MS;
-}
-
-/**
- * Recent library jobs for the current library. Only enabled for editors (the
- * endpoint is editor-gated), and only polls while a job is running.
- */
-export function getLibraryJobsQuery(libraryId: LibraryId, enabled: boolean) {
-    return queryOptions<LibraryJobsData>({
-        queryKey: libraryJobsQueryKey(libraryId),
-        queryFn: () => apiGet("/library-jobs/library/" + libraryId),
-        enabled,
-        refetchInterval: (query) => libraryJobPollInterval(query.state.data)
-    });
-}
-
-export function useLibraryJobsQuery() {
-    const libraryId = useLibraryId();
-    const maxAccessLevel = useLoaderData({ from: "/app" }).accessData
-        .maxAccessLevel;
-    return useQuery(
-        getLibraryJobsQuery(libraryId, hasEditorAccess(maxAccessLevel))
-    );
 }

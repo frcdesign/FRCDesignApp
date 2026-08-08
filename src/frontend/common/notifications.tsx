@@ -3,7 +3,6 @@ import {
     IconInfoCircle,
     IconCircleCheck,
     IconCircleX,
-    IconAlertTriangle,
     ReactNode
 } from "@tabler/icons-react";
 import { IconSize } from "./style-constants";
@@ -59,15 +58,6 @@ export function showSuccessToast(message: string, id?: string): string {
         id,
         color: "green",
         icon: <IconCircleCheck size={IconSize.MEDIUM} />,
-        message
-    });
-}
-
-export function showWarningToast(message: string, id?: string): string {
-    return notifications.show({
-        id,
-        color: "yellow",
-        icon: <IconAlertTriangle size={IconSize.MEDIUM} />,
         message
     });
 }

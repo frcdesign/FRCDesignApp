@@ -11,6 +11,7 @@ import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
+import { refreshLibraryWhenReloadCompletes } from "../api-utils/reload-refresh";
 
 interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
@@ -34,6 +35,8 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             showInfoToast(
                 "Initiated workflow, which can take up to 30 minutes."
             );
+            // Refresh the library automatically once the reload finishes.
+            refreshLibraryWhenReloadCompletes(() => void router.invalidate());
         },
         onSettled: async () => {
             await queryClient.refetchQueries({

@@ -17,7 +17,6 @@ import {
 import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
-import { useLibraryJobWatcher } from "../../library-jobs/use-library-job-watcher";
 import { RootAppError } from "../../app/root-error";
 import { PrimaryColor } from "../../common/style-constants";
 import { type ContextData } from "../../../shared/types";
@@ -61,7 +60,6 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
-    useLibraryJobWatcher();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>

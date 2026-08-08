@@ -18,8 +18,8 @@ function accessLevelKey(sessionId: string): string {
 
 /**
  * Resolves the caller's access level, memoized in KV by session so frequent
- * requests (e.g. polling the library-jobs endpoint) don't each hit Onshape.
- * Falls back to a live lookup if KV is unavailable.
+ * requests (e.g. polling context-data for a reload's cacheVersion bump) don't
+ * each hit Onshape. Falls back to a live lookup if KV is unavailable.
  */
 export async function getCachedAccessLevel(
     c: AppContext

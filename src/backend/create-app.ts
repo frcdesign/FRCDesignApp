@@ -10,7 +10,6 @@ import { insertableRoutes } from "./routes/insertables";
 import { groupRoutes } from "./routes/groups";
 import { configurationRoutes } from "./routes/configurations";
 import { buildStatusRoutes } from "./routes/build-status";
-import { libraryJobRoutes } from "./routes/library-jobs";
 
 /**
  * Returns the relative URL of the given requestUrl.
@@ -46,7 +45,6 @@ export function createApp(makeServices: AppServicesFactory) {
     app.route("/api", insertableRoutes);
     app.route("/api", configurationRoutes);
     app.route("/api", buildStatusRoutes);
-    app.route("/api", libraryJobRoutes);
     app.route("/auth", authRoutes);
 
     // `/init` is the auth-gated entry point
