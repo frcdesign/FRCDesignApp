@@ -187,9 +187,6 @@ interface BuildStatusBadgeProps {
 
 /**
  * An inline tag summarizing the build-checker state for a group or insertable.
- * Hovering opens a card with the last-loaded time, build checks, and the
- * interactive admin toggles / parsed info supplied as children. Only visible to
- * editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     const { issues, lastLoadedAt, children } = props;
@@ -200,10 +197,6 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
             <HoverCard
                 withinPortal
                 shadow="md"
-                openDelay={150}
-                // Generous close delay so the card can be moved into and its
-                // toggles clicked before it dismisses.
-                closeDelay={250}
                 position="right"
                 withArrow
                 arrowSize={20}
@@ -211,7 +204,7 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 <HoverCard.Target>
                     <IssueIcon severity={maxSeverity} />
                 </HoverCard.Target>
-                <HoverCard.Dropdown p="sm">
+                <HoverCard.Dropdown p="sm" onClick={(e) => e.stopPropagation()}>
                     <BuildStatusCard
                         issues={issues}
                         lastLoadedAt={lastLoadedAt}
