@@ -11,7 +11,6 @@ import {
     IconAlertOctagon,
     IconAlertTriangle,
     IconCheck,
-    IconClock,
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
@@ -138,6 +137,8 @@ export function IssueIcon({
 }
 
 interface BuildStatusCardProps {
+    /** The group/insertable name shown in the header. */
+    name: string;
     issues: BuildIssue[];
     /** When the entity was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
@@ -146,16 +147,24 @@ interface BuildStatusCardProps {
 }
 
 /**
- * The hover-card content: the last-loaded header and build checks wrapping the
- * given group/insertable admin menu.
+ * The hover-card content: a header (name, severity summary, last-loaded time),
+ * the build checks (when any), and the wrapped group/insertable admin menu.
  */
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { issues, lastLoadedAt, children } = props;
-    // Size to content (capped) so short rows don't wrap.
+    const { name, issues, lastLoadedAt, children } = props;
     return (
-        <Stack gap="xs" w="max-content" miw={240} maw={320}>
-            <LastLoadedHeader lastLoadedAt={lastLoadedAt} />
-            <BuildIssuesSection issues={issues} />
+        <Stack gap="sm" w={300}>
+            <CardHeader
+                name={name}
+                issues={issues}
+                lastLoadedAt={lastLoadedAt}
+            />
+            {issues.length > 0 && (
+                <>
+                    <Divider />
+                    <BuildChecksSection issues={issues} />
+                </>
+            )}
             <Divider />
             {children}
         </Stack>
@@ -163,6 +172,8 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
 }
 
 interface BuildStatusBadgeProps {
+    /** The group/insertable name shown in the header. */
+    name: string;
     issues: BuildIssue[];
     /** When the entity was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
@@ -175,7 +186,7 @@ interface BuildStatusBadgeProps {
  * given admin menu. Only rendered for editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, lastLoadedAt, hoverMenu } = props;
+    const { name, issues, lastLoadedAt, hoverMenu } = props;
     const maxSeverity = getMaxSeverity(issues);
 
     return (
@@ -190,8 +201,9 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
                 <HoverCard.Target>
                     <IssueIcon severity={maxSeverity} />
                 </HoverCard.Target>
-                <HoverCard.Dropdown p="sm" onClick={(e) => e.stopPropagation()}>
+                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
                     <BuildStatusCard
+                        name={name}
                         issues={issues}
                         lastLoadedAt={lastLoadedAt}
                     >
@@ -203,16 +215,34 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     );
 }
 
-/** The "Loaded 3h ago" line pinned to the top-right corner of the card. */
-function LastLoadedHeader({
+/** The card header: name + severity summary on the left, last-loaded on the right. */
+function CardHeader({
+    name,
+    issues,
     lastLoadedAt
 }: {
+    name: string;
+    issues: BuildIssue[];
     lastLoadedAt: number | null;
 }): ReactNode {
     return (
-        <Group gap={4} wrap="nowrap" justify="flex-end" c="dimmed">
-            <IconClock size={IconSize.SMALL} />
-            <Text size="xs">
+        <Group
+            justify="space-between"
+            align="flex-start"
+            wrap="nowrap"
+            gap="sm"
+        >
+            <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
+                <Text fw={FontWeight.SEMI_BOLD} size="sm" lineClamp={2}>
+                    {name}
+                </Text>
+                <SeverityBadges issues={issues} />
+            </Stack>
+            <Text
+                size="xs"
+                c="dimmed"
+                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+            >
                 {lastLoadedAt === null
                     ? "Never loaded"
                     : `Loaded ${formatRelativeTime(lastLoadedAt)}`}
@@ -221,12 +251,132 @@ function LastLoadedHeader({
     );
 }
 
+/** Pill badges summarizing the issue counts, or an "all clear" badge. */
+function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
+    if (issues.length === 0) {
+        return (
+            <Badge
+                size="sm"
+                variant="light"
+                color="green"
+                leftSection={<IconCheck size={IconSize.TINY} />}
+            >
+                All checks pass
+            </Badge>
+        );
+    }
+
+    const counts = countSeverities(issues);
+    return (
+        <Group gap={6} wrap="wrap">
+            {counts.error > 0 && (
+                <CountBadge color="red" count={counts.error} noun="error" />
+            )}
+            {counts.warning > 0 && (
+                <CountBadge
+                    color="yellow"
+                    count={counts.warning}
+                    noun="warning"
+                />
+            )}
+            {counts.info > 0 && (
+                <CountBadge color="blue" count={counts.info} noun="note" />
+            )}
+        </Group>
+    );
+}
+
+function CountBadge({
+    color,
+    count,
+    noun
+}: {
+    color: string;
+    count: number;
+    noun: string;
+}): ReactNode {
+    return (
+        <Badge size="sm" variant="light" color={color}>
+            {count} {noun}
+            {count === 1 ? "" : "s"}
+        </Badge>
+    );
+}
+
+function countSeverities(issues: BuildIssue[]): {
+    error: number;
+    warning: number;
+    info: number;
+} {
+    const counts = { error: 0, warning: 0, info: 0 };
+    for (const issue of issues) {
+        switch (getIssueSeverity(issue)) {
+            case BuildIssueSeverity.ERROR:
+                counts.error += 1;
+                break;
+            case BuildIssueSeverity.WARNING:
+                counts.warning += 1;
+                break;
+            case BuildIssueSeverity.INFO:
+                counts.info += 1;
+                break;
+        }
+    }
+    return counts;
+}
+
+/** The build checks: one tinted callout per issue. Rendered only when non-empty. */
+function BuildChecksSection({ issues }: { issues: BuildIssue[] }): ReactNode {
+    return (
+        <Stack gap={6}>
+            <SectionHeader>Build checks</SectionHeader>
+            {issues.map((issue) => (
+                <IssueCallout key={issue.type} issue={issue} />
+            ))}
+        </Stack>
+    );
+}
+
+/** A single build issue rendered as a tinted callout box in its severity color. */
+function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
+    const severity = getIssueSeverity(issue);
+    return (
+        <Group
+            gap="xs"
+            wrap="nowrap"
+            align="flex-start"
+            p="xs"
+            style={{
+                backgroundColor: severityBackground(severity),
+                borderRadius: "var(--mantine-radius-sm)"
+            }}
+        >
+            <IssueIcon severity={severity} style={{ flexShrink: 0 }} />
+            <Text size="sm">{getIssueMessage(issue)}</Text>
+        </Group>
+    );
+}
+
+/** The light background tint for a build-issue callout. */
+function severityBackground(severity: BuildIssueSeverity): string {
+    switch (severity) {
+        case BuildIssueSeverity.ERROR:
+            return "var(--mantine-color-red-light)";
+        case BuildIssueSeverity.WARNING:
+            return "var(--mantine-color-yellow-light)";
+        case BuildIssueSeverity.INFO:
+            return "var(--mantine-color-blue-light)";
+    }
+}
+
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
     insertableId,
+    name,
     elementType
 }: {
     insertableId: string;
+    name: string;
     elementType: ElementType;
 }): ReactNode {
     const { data } = useBuildStatusQuery();
@@ -234,6 +384,7 @@ export function InsertableStatusBadge({
     if (!insertable) return null;
     return (
         <BuildStatusBadge
+            name={name}
             issues={getInsertableBuildIssues(insertable)}
             lastLoadedAt={insertable.lastLoadedAt}
             hoverMenu={
@@ -264,6 +415,7 @@ export function GroupStatusBadge({
     if (!groupStatus) return null;
     return (
         <BuildStatusBadge
+            name={groupName}
             issues={issues}
             lastLoadedAt={groupStatus.lastLoadedAt}
             hoverMenu={
@@ -280,21 +432,33 @@ export function GroupStatusBadge({
 /** A dimmed section header, e.g. "Admin" or "Parsed". */
 function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     return (
-        <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+        <Text
+            size="xs"
+            fw={FontWeight.SEMI_BOLD}
+            c="dimmed"
+            tt="uppercase"
+            style={{ letterSpacing: "0.03em" }}
+        >
             {children}
         </Text>
     );
 }
 
-/** A label + on/off Switch row for an editable admin flag. */
+/** A label (+ description) and on/off Switch row for an editable admin flag. */
 function SwitchRow(props: {
     label: string;
+    description: string;
     checked: boolean;
     onToggle: () => void;
 }): ReactNode {
     return (
-        <Group gap="xl" wrap="nowrap" justify="space-between">
-            <Text size="sm">{props.label}</Text>
+        <Group justify="space-between" wrap="nowrap" gap="md" align="center">
+            <div style={{ minWidth: 0 }}>
+                <Text size="sm">{props.label}</Text>
+                <Text size="xs" c="dimmed">
+                    {props.description}
+                </Text>
+            </div>
             <Switch
                 size="sm"
                 checked={props.checked}
@@ -315,7 +479,7 @@ function InsertableAdminSection({
     status: InsertableBuildStatus;
 }): ReactNode {
     return (
-        <Stack gap={6}>
+        <Stack gap="sm">
             <SectionHeader>Admin</SectionHeader>
             <VisibilitySwitch
                 insertableId={insertableId}
@@ -350,6 +514,7 @@ function VisibilitySwitch({
     return (
         <SwitchRow
             label="Visible to users"
+            description="Shown in the library list"
             checked={isVisible}
             onToggle={mutate}
         />
@@ -367,6 +532,7 @@ function FastenSwitch({
     return (
         <SwitchRow
             label="Insert and fasten"
+            description="Allows mate-on-insert"
             checked={supportsFasten}
             onToggle={() => mutation.mutate(!supportsFasten)}
         />
@@ -384,6 +550,7 @@ function PartNumberSwitch({
     return (
         <SwitchRow
             label="Part number search"
+            description="Indexed by vendor part number"
             checked={searchPartNumbers}
             onToggle={() => mutation.mutate(!searchPartNumbers)}
         />
@@ -404,6 +571,7 @@ function OpenCompositeSwitch({
     return (
         <SwitchRow
             label="Open composite"
+            description="Inserts as an open composite"
             checked={isOpenComposite}
             onToggle={() => mutation.mutate()}
         />
@@ -426,10 +594,11 @@ function GroupAdminSection({
         status.sortAlphabetically
     );
     return (
-        <Stack gap={6}>
+        <Stack gap="sm">
             <SectionHeader>Admin</SectionHeader>
             <SwitchRow
                 label="Sort alphabetically"
+                description="Order elements A–Z instead of by tab"
                 checked={status.sortAlphabetically}
                 onToggle={() => mutation.mutate()}
             />
@@ -531,35 +700,4 @@ function getIssueMessage(issue: BuildIssue): string {
         case BuildIssueType.LOAD_FAILED:
             return "This insertable failed to load.";
     }
-}
-
-function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
-    if (issues.length === 0) {
-        return (
-            <Stack gap={4}>
-                <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
-                    Build checks
-                </Text>
-
-                <Group gap="xs" wrap="nowrap">
-                    <IssueIcon severity={null} />
-                    <Text size="sm">All checks pass</Text>
-                </Group>
-            </Stack>
-        );
-    }
-
-    return (
-        <Stack gap={4}>
-            <Text size="xs" fw={500} c="dimmed">
-                Build checks
-            </Text>
-            {issues.map((issue) => (
-                <Group key={issue.type} gap="xs" wrap="nowrap">
-                    <IssueIcon severity={getIssueSeverity(issue)} />
-                    <Text size="sm">{getIssueMessage(issue)}</Text>
-                </Group>
-            ))}
-        </Stack>
-    );
 }

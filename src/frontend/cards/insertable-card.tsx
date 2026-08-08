@@ -79,6 +79,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     buildStatusBadge={
                         <InsertableStatusBadge
                             insertableId={insertable.id}
+                            name={insertable.name}
                             elementType={insertable.elementType}
                         />
                     }
