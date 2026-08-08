@@ -33,8 +33,39 @@ export function renderNotification(
     );
 }
 
-export function showInfoToast(message: string, id?: string): string {
+interface ToastConfig {
+    id?: string;
+    color: string;
+    icon?: ReactNode;
+    message: ReactNode;
+    loading?: boolean;
+    autoClose?: number | false;
+    withCloseButton?: boolean;
+}
+
+/**
+ * Shows a toast. When an `id` is given, any existing toast with that id is
+ * removed first so it can be replaced — e.g. a loading spinner upgraded to its
+ * success/error state. This is necessary because Mantine's `notifications.show`
+ * is a no-op when a toast with the same id is already displayed.
+ */
+function showToast(config: ToastConfig): string {
+    if (config.id) {
+        notifications.hide(config.id);
+    }
     return notifications.show({
+        id: config.id,
+        color: config.color,
+        icon: config.icon,
+        message: config.message,
+        loading: config.loading,
+        autoClose: config.autoClose,
+        withCloseButton: config.withCloseButton
+    });
+}
+
+export function showInfoToast(message: string, id?: string): string {
+    return showToast({
         id,
         color: "blue",
         icon: <IconInfoCircle size={IconSize.MEDIUM} />,
@@ -43,18 +74,18 @@ export function showInfoToast(message: string, id?: string): string {
 }
 
 export function showLoadingToast(message: string, id: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "blue",
         loading: true,
         message,
-        allowClose: false,
-        autoClose: false
+        autoClose: false,
+        withCloseButton: false
     });
 }
 
 export function showSuccessToast(message: string, id?: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "green",
         icon: <IconCircleCheck size={IconSize.MEDIUM} />,
@@ -63,7 +94,7 @@ export function showSuccessToast(message: string, id?: string): string {
 }
 
 export function showErrorToast(message: string, id?: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "red",
         icon: <IconCircleX size={IconSize.MEDIUM} />,
