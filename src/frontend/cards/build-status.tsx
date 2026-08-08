@@ -286,19 +286,21 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
     );
 }
 
-function CountBadge({
-    color,
-    count,
-    noun
-}: {
+interface CountBadgeProps {
     color: string;
     count: number;
+    /**
+     * error, warning, or info.
+     */
     noun: string;
-}): ReactNode {
+}
+
+function CountBadge({ color, count, noun }: CountBadgeProps): ReactNode {
+    const plural = count === 1 ? "" : "s";
+    const text = `${count} ${noun}${plural}`;
     return (
         <Badge size="sm" variant="light" color={color}>
-            {count} {noun}
-            {count === 1 ? "" : "s"}
+            {text}
         </Badge>
     );
 }
