@@ -465,6 +465,8 @@ function SwitchRow(props: {
                 size="sm"
                 checked={props.checked}
                 onChange={props.onToggle}
+                withThumbIndicator={false}
+                style={{ cursor: "pointer" }}
             />
         </Group>
     );
