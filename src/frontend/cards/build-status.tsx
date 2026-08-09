@@ -451,7 +451,7 @@ function SectionHeader({ children }: { children: ReactNode }): ReactNode {
 /** A label (+ description) and on/off Switch row for an editable admin flag. */
 function SwitchRow(props: {
     label: string;
-    description: string;
+    description?: string;
     checked: boolean;
     onToggle: () => void;
 }): ReactNode {
@@ -517,7 +517,6 @@ function VisibilitySwitch({
     return (
         <SwitchRow
             label="Visible to users"
-            description="Shown in the library list"
             checked={isVisible}
             onToggle={mutate}
         />
@@ -553,7 +552,7 @@ function PartNumberSwitch({
     return (
         <SwitchRow
             label="Part number search"
-            description="Indexed by vendor part number"
+            description="Index all configurations"
             checked={searchPartNumbers}
             onToggle={() => mutation.mutate(!searchPartNumbers)}
         />
@@ -571,7 +570,7 @@ function OpenCompositeSwitch({
     return (
         <SwitchRow
             label="Open composite"
-            description="Inserts as an open composite"
+            description="The part has an open composite"
             checked={isOpenComposite}
             onToggle={() => mutation.mutate(!isOpenComposite)}
         />
