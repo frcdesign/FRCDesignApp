@@ -6,7 +6,7 @@ import {
     BuildIssueType,
     clearBuildIssue,
     getMaxSeverity
-} from "./build-checker";
+} from "./build-issues";
 
 /** A representative issue type for each severity. */
 const TYPE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueType> = {

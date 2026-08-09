@@ -52,10 +52,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
         ),
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["library"] });
-            showInfoToast(
-                "Initiated workflow, which can take up to 30 minutes.",
-                "add-group"
-            );
+            showInfoToast("Workflow initiated.", "add-group");
             // Refresh the library automatically once the add finishes.
             refreshLibraryWhenReloadCompletes(
                 cacheVersion,

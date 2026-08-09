@@ -7,7 +7,7 @@ import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
 import { getContents } from "../onshape-api/endpoints/documents";

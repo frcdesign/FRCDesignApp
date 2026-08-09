@@ -4,7 +4,7 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
 import type { FastenInfo, ThumbnailUrls, Vendor } from "../../shared/types";
 import { configurations, insertables } from "../../shared/schema";
 import { uploadThumbnails } from "../routes/thumbnails";

@@ -24,7 +24,7 @@ import {
     getIssueDescription,
     getIssueSeverity,
     getMaxSeverity
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
@@ -297,7 +297,11 @@ interface CountBadgeProps {
 }
 
 function CountBadge({ color, count, noun }: CountBadgeProps): ReactNode {
-    const plural = count === 1 ? "" : "s";
+    let plural = "";
+    // Don't pluralize info since, e.g., 2 infos is wrong
+    if (noun !== "info" && count > 1) {
+        plural = "s";
+    }
     const text = `${count} ${noun}${plural}`;
     return (
         <Badge size="sm" variant="light" color={color}>

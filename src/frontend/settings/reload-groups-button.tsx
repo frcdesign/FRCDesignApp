@@ -38,9 +38,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
                 showInfoToast("A reload is already running.");
                 return;
             }
-            showInfoToast(
-                "Initiated workflow, which can take up to 30 minutes."
-            );
+            showInfoToast("Workflow initiated.");
             // Refresh the library automatically once the reload finishes.
             refreshLibraryWhenReloadCompletes(
                 cacheVersion,

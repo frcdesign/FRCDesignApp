@@ -12,7 +12,7 @@ import * as ConfigurationEndpoints from "../onshape-api/endpoints/configurations
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import { group, insertables } from "../../shared/schema";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
     type StoredInsertable,
     findRemovedInsertables,

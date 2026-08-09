@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { insertables } from "../../shared/schema";
 import { AccessLevel, ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,

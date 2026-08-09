@@ -21,7 +21,7 @@ import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import { enumerateConfigurations } from "../../shared/configuration-combinations";
 import {
     getAssemblyDefinition,

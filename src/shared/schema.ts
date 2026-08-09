@@ -13,7 +13,7 @@ import {
     ConfigurationParameter,
     PartNumberMap
 } from "./configuration-models";
-import { BuildIssue } from "./build-checker";
+import { BuildIssue } from "./build-issues";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),

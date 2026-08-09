@@ -16,7 +16,7 @@ import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
-import { BuildIssueType, clearBuildIssue } from "../../shared/build-checker";
+import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 

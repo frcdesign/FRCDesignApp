@@ -4,7 +4,7 @@ import {
     ConfigurationParameter
 } from "./configuration-models";
 import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
-import { BuildIssue } from "./build-checker";
+import { BuildIssue } from "./build-issues";
 
 export interface InsertableOut {
     id: string;
