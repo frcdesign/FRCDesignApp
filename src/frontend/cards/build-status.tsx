@@ -3,14 +3,17 @@ import {
     Divider,
     Group,
     HoverCard,
+    Loader,
     Stack,
     Switch,
-    Text
+    Text,
+    Tooltip
 } from "@mantine/core";
 import {
     IconAlertOctagon,
     IconAlertTriangle,
     IconCheck,
+    IconClock,
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
@@ -40,7 +43,7 @@ import {
 import { ElementType, getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useBuildStatusQuery } from "../queries";
+import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
@@ -269,14 +272,39 @@ function CardHeader({
                 </Text>
                 <SeverityBadges issues={issues} />
             </Stack>
-            <Text
-                size="xs"
-                c="dimmed"
-                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-            >
+            <LastModified lastLoadedAt={lastLoadedAt} />
+        </Group>
+    );
+}
+
+/**
+ * The last-modified time, or a spinner (with a tooltip) while a job is running.
+ */
+function LastModified({
+    lastLoadedAt
+}: {
+    lastLoadedAt: number | null;
+}): ReactNode {
+    const jobRunning = useJobStatusQuery().data?.running ?? false;
+    if (jobRunning) {
+        return (
+            <Tooltip label="A job is running">
+                <Loader size="xs" style={{ flexShrink: 0 }} />
+            </Tooltip>
+        );
+    }
+    return (
+        <Group
+            gap={4}
+            wrap="nowrap"
+            c="dimmed"
+            style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+            <IconClock size={IconSize.TINY} />
+            <Text size="xs">
                 {lastLoadedAt === null
-                    ? "Never changed"
-                    : `Changed ${formatRelativeTime(lastLoadedAt)}`}
+                    ? "Never modified"
+                    : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
             </Text>
         </Group>
     );

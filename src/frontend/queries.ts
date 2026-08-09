@@ -167,3 +167,26 @@ export function useFavoritesQuery() {
     const libraryId = useLibraryId();
     return useQuery(getFavoritesQuery(libraryId));
 }
+
+export function jobStatusQueryMatchKey() {
+    return ["job-status"];
+}
+
+export function jobStatusQueryKey(libraryId: LibraryId) {
+    return ["job-status", libraryId];
+}
+
+/** Whether a library-load job is running; polled so indicators stay live. */
+export function getJobStatusQuery(libraryId: LibraryId) {
+    return queryOptions<{ running: boolean }>({
+        queryKey: jobStatusQueryKey(libraryId),
+        queryFn: () => apiGet("/job-status/library/" + libraryId),
+        refetchInterval: 10_000
+    });
+}
+
+/** Only mounted by editor-gated components, so only editors poll. */
+export function useJobStatusQuery() {
+    const libraryId = useLibraryId();
+    return useQuery(getJobStatusQuery(libraryId));
+}
