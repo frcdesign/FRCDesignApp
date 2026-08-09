@@ -213,27 +213,24 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
 }
 
 /** Toggles an insertable's "open composite" flag (part studios only). */
-export function useToggleOpenCompositeMutation(
-    insertableId: string,
-    isOpenComposite: boolean
-) {
-    return useOptimisticToggleMutation<void>({
+export function useToggleOpenCompositeMutation(insertableId: string) {
+    return useOptimisticToggleMutation<boolean>({
         mutationKey: ["toggle-open-composite", insertableId],
-        mutationFn: () =>
+        mutationFn: (newValue) =>
             apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
-                body: { isOpenComposite: !isOpenComposite }
+                body: { isOpenComposite: newValue }
             }),
-        apply: (status) => {
+        apply: (status, newValue) => {
             const insertable = status.insertables[insertableId];
-            if (insertable) insertable.isOpenComposite = !isOpenComposite;
+            if (insertable) insertable.isOpenComposite = newValue;
         },
         toastId: `open-composite-${insertableId}`,
-        loadingMessage: () =>
-            isOpenComposite
-                ? "Removing open composite..."
-                : "Setting open composite...",
-        successMessage: () =>
-            isOpenComposite ? "Removed open composite." : "Set open composite.",
+        loadingMessage: (newValue) =>
+            newValue
+                ? "Setting open composite..."
+                : "Removing open composite...",
+        successMessage: (newValue) =>
+            newValue ? "Set open composite." : "Removed open composite.",
         errorMessage: "Failed to update open composite setting."
     });
 }
@@ -291,29 +288,25 @@ export function useTogglePartNumberSearchMutation(insertableId: string) {
 }
 
 /** Toggles a group between alphabetical and tab sort order. */
-export function useToggleSortOrderMutation(
-    groupId: string,
-    groupName: string,
-    sortAlphabetically: boolean
-) {
+export function useToggleSortOrderMutation(groupId: string, groupName: string) {
     const libraryId = useLibraryId();
-    return useOptimisticToggleMutation<void>({
+    return useOptimisticToggleMutation<boolean>({
         mutationKey: ["sort-group-alphabetically", groupId],
-        mutationFn: async () =>
+        mutationFn: async (newValue) =>
             apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
-                body: { groupId, sortAlphabetically: !sortAlphabetically }
+                body: { groupId, sortAlphabetically: newValue }
             }),
-        apply: (status) => {
+        apply: (status, newValue) => {
             const group = status.groups[groupId];
-            if (group) group.sortAlphabetically = !sortAlphabetically;
+            if (group) group.sortAlphabetically = newValue;
         },
         toastId: `sort-order-${groupId}`,
-        loadingMessage: () =>
-            sortAlphabetically
-                ? "Switching to tab order..."
-                : "Sorting alphabetically...",
-        successMessage: () =>
-            sortAlphabetically ? "Using tab order." : "Sorted alphabetically.",
+        loadingMessage: (newValue) =>
+            newValue
+                ? "Sorting alphabetically..."
+                : "Switching to tab order...",
+        successMessage: (newValue) =>
+            newValue ? "Sorted alphabetically." : "Using tab order.",
         errorMessage: `Failed to update group ${groupName}.`
     });
 }

@@ -244,8 +244,8 @@ function CardHeader({
                 style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             >
                 {lastLoadedAt === null
-                    ? "Never loaded"
-                    : `Loaded ${formatRelativeTime(lastLoadedAt)}`}
+                    ? "Never changed"
+                    : `Changed ${formatRelativeTime(lastLoadedAt)}`}
             </Text>
         </Group>
     );
@@ -280,7 +280,7 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
                 />
             )}
             {counts.info > 0 && (
-                <CountBadge color="blue" count={counts.info} noun="note" />
+                <CountBadge color="blue" count={counts.info} noun="info" />
             )}
         </Group>
     );
@@ -353,7 +353,11 @@ function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
                 borderRadius: "var(--mantine-radius-sm)"
             }}
         >
-            <IssueIcon severity={severity} style={{ flexShrink: 0 }} />
+            {/* Nudge the icon down so it aligns with the first line of text. */}
+            <IssueIcon
+                severity={severity}
+                style={{ flexShrink: 0, marginTop: 2 }}
+            />
             <Text size="sm">{getIssueMessage(issue)}</Text>
         </Group>
     );
@@ -568,16 +572,13 @@ function OpenCompositeSwitch({
     insertableId: string;
     isOpenComposite: boolean;
 }): ReactNode {
-    const mutation = useToggleOpenCompositeMutation(
-        insertableId,
-        isOpenComposite
-    );
+    const mutation = useToggleOpenCompositeMutation(insertableId);
     return (
         <SwitchRow
             label="Open composite"
             description="Inserts as an open composite"
             checked={isOpenComposite}
-            onToggle={() => mutation.mutate()}
+            onToggle={() => mutation.mutate(!isOpenComposite)}
         />
     );
 }
@@ -592,11 +593,7 @@ function GroupAdminSection({
     groupName: string;
     status: GroupBuildStatus;
 }): ReactNode {
-    const mutation = useToggleSortOrderMutation(
-        groupId,
-        groupName,
-        status.sortAlphabetically
-    );
+    const mutation = useToggleSortOrderMutation(groupId, groupName);
     return (
         <Stack gap="sm">
             <SectionHeader>Admin</SectionHeader>
@@ -604,7 +601,7 @@ function GroupAdminSection({
                 label="Sort alphabetically"
                 description="Order elements A–Z instead of by tab"
                 checked={status.sortAlphabetically}
-                onToggle={() => mutation.mutate()}
+                onToggle={() => mutation.mutate(!status.sortAlphabetically)}
             />
         </Stack>
     );
@@ -688,20 +685,20 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
 function getIssueMessage(issue: BuildIssue): string {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
-            return "The thumbnail failed to generate.";
+            return "The thumbnail failed to generate";
         case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "No thumbnail tab is set.";
+            return "No thumbnail tab is set";
         case BuildIssueType.NO_VENDORS:
-            return "No vendors could be parsed.";
+            return "No vendors could be parsed";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "This group has no unhidden insertables.";
+            return "This group has no unhidden insertables";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-            return "Too many configurations to index part numbers.";
+            return "Too many configurations to index part numbers";
         case BuildIssueType.MULTIPLE_PARTS:
-            return "This part studio has more than one part.";
+            return "This part studio has more than one part";
         case BuildIssueType.INSERTABLES_FAILED:
-            return "Some insertables failed to load.";
+            return "Some insertables failed to load";
         case BuildIssueType.LOAD_FAILED:
-            return "This insertable failed to load.";
+            return "This insertable failed to load";
     }
 }
