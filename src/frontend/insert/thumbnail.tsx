@@ -187,7 +187,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
 
-    if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
+    if (true || thumbnailIdQuery.isError || thumbnailQuery.isError) {
         return (
             <SectionError
                 title="Thumbnail generation timed out."

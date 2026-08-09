@@ -1,4 +1,4 @@
-import { Center, Loader, Stack, Text, Title } from "@mantine/core";
+import { Center, Loader, EmptyState } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import {
     FontWeight,
@@ -26,25 +26,34 @@ interface ZeroStateProps {
 function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
     return (
-        <Stack
-            align="center"
-            justify="center"
-            gap="xs"
-            ta="center"
-            py="xl"
+        <EmptyState
+            icon={icon}
+            title={title}
+            description={description}
+            size="sm"
             className={className}
         >
-            {icon}
-            <Title order={5} fw={FontWeight.SEMI_BOLD}>
-                {title}
-            </Title>
-            {description != null && (
-                <Text c="dimmed" size="sm" maw={400}>
-                    {description}
-                </Text>
-            )}
-            {action}
-        </Stack>
+            <EmptyState.Actions>{action}</EmptyState.Actions>
+        </EmptyState>
+        // <Stack
+        //     align="center"
+        //     justify="center"
+        //     gap="xs"
+        //     ta="center"
+        //     py="xl"
+        //     className={className}
+        // >
+        //     {icon}
+        //     <Title order={5} fw={FontWeight.SEMI_BOLD}>
+        //         {title}
+        //     </Title>
+        //     {description != null && (
+        //         <Text c="dimmed" size="sm" maw={400}>
+        //             {description}
+        //         </Text>
+        //     )}
+        //     {action}
+        // </Stack>
     );
 }
 
