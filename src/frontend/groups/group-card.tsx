@@ -27,7 +27,6 @@ import { GroupStatusBadge } from "../cards/build-status";
 import { useRefreshLibrary } from "../api-utils/refresh";
 import {
     libraryQueryKey,
-    libraryQueryMatchKey,
     useBuildStatusQuery,
     useLibraryQuery
 } from "../queries";
@@ -213,13 +212,8 @@ function useSetGroupOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
-            // Roll back the optimistic order (same version key, so refresh
-            // alone won't refetch it).
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
         },
-        // On success, pull the new version's data (and favorites) too.
+        // Reordering bumps the version, so the settle refetch reconciles.
         onSettled: refreshLibrary
     });
 }
