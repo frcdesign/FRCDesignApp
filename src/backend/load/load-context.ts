@@ -4,12 +4,15 @@ import { getOnshapeApiFromSessionId } from "../auth";
 import type { OnshapeApi } from "../onshape-api/onshape-api";
 import type { ElementType, LibraryId } from "../../shared/types";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
+import type { Limiter } from "./concurrency";
 
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {
     env: AppBindings;
     sessionId: string;
     step: WorkflowStep;
+    /** Bounds concurrent insertable loads across the whole run. */
+    limit: Limiter;
 }
 
 export function getOnshapeApiFromContext(

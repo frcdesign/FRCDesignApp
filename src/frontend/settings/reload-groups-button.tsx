@@ -27,13 +27,17 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
 
     const mutation = useMutation({
         mutationKey: ["reload-groups"],
-        mutationFn: async () => {
+        mutationFn: (): Promise<{ status: string }> => {
             return apiPost("/reload-groups" + toLibraryPath(libraryId), {
                 query: { forceReload: reloadAll }
             });
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
-        onSuccess: () => {
+        onSuccess: (data) => {
+            if (data.status === "already-running") {
+                showInfoToast("A reload is already running.");
+                return;
+            }
             showInfoToast(
                 "Initiated workflow, which can take up to 30 minutes."
             );

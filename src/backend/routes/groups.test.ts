@@ -14,6 +14,7 @@ import {
 } from "../../__test_utils__";
 import { getDb } from "../db";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";
+import * as ReloadLock from "../load/reload-lock";
 
 const db = getDb(env.DB);
 
@@ -141,6 +142,10 @@ describe("POST /reload-groups", () => {
         "triggers one library workflow with forceReload %s",
         async (_label, query, forceReload) => {
             await seedGroup(db, TEST_GROUP_ID);
+            vi.spyOn(ReloadLock, "isReloadRunning").mockResolvedValue(false);
+            const markSpy = vi
+                .spyOn(ReloadLock, "markReloadRunning")
+                .mockResolvedValue();
             const createSpy = vi
                 .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
                 .mockResolvedValue({ id: "wf" } as never);
@@ -158,8 +163,29 @@ describe("POST /reload-groups", () => {
                 sessionId: "test-session",
                 forceReload
             });
+            // The new run's instance id is recorded for the singleton check.
+            expect(markSpy).toHaveBeenCalledWith(
+                expect.anything(),
+                TEST_LIBRARY_ID,
+                "wf"
+            );
         }
     );
+
+    it("skips creating a workflow when a reload is already running", async () => {
+        await seedGroup(db, TEST_GROUP_ID);
+        vi.spyOn(ReloadLock, "isReloadRunning").mockResolvedValue(true);
+        const createSpy = vi.spyOn(env.LOAD_LIBRARY_WORKFLOW, "create");
+
+        const res = await createTestApp().request(
+            `/api/reload-groups/library/${TEST_LIBRARY_ID}`,
+            sessionRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ status: "already-running" });
+        expect(createSpy).not.toHaveBeenCalled();
+    });
 });
 
 describe("POST /group", () => {

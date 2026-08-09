@@ -21,6 +21,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./load-context";
+import { LOAD_CONCURRENCY, createLimiter } from "./concurrency";
 import { loadGroup } from "./load-group";
 
 export interface LoadLibraryParams {
@@ -53,7 +54,12 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<GroupResult[]> {
         const { libraryId, sessionId, forceReload = false } = event.payload;
-        const ctx: LoadContext = { env: this.env, sessionId, step };
+        const ctx: LoadContext = {
+            env: this.env,
+            sessionId,
+            step,
+            limit: createLimiter(LOAD_CONCURRENCY)
+        };
 
         const storedGroups = await step.do("list-groups", () =>
             getDb(ctx.env.DB)
@@ -121,7 +127,8 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         const ctx: LoadContext = {
             env: this.env,
             sessionId: params.sessionId,
-            step
+            step,
+            limit: createLimiter(LOAD_CONCURRENCY)
         };
 
         let result: GroupResult;

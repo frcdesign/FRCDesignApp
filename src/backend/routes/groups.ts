@@ -7,6 +7,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import { isReloadRunning, markReloadRunning } from "../load/reload-lock";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -26,6 +27,13 @@ groupRoutes.post(
         const { forceReload } = c.req.valid("query");
         const sessionId = getSessionId(c);
 
+        // Only one reload per library at a time. KV is eventually consistent
+        // with no compare-and-swap, so a sub-second double-trigger can still
+        // slip through — acceptable for an admin-only, low-frequency action.
+        if (await isReloadRunning(c.env, libraryId)) {
+            return c.json({ status: "already-running" });
+        }
+
         const db = getDb(c.env.DB);
         await db
             .insert(libraries)
@@ -34,9 +42,10 @@ groupRoutes.post(
 
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
-        await c.env.LOAD_LIBRARY_WORKFLOW.create({
+        const instance = await c.env.LOAD_LIBRARY_WORKFLOW.create({
             params: { libraryId, sessionId, forceReload }
         });
+        await markReloadRunning(c.env, libraryId, instance.id);
 
         return c.json({ status: "triggered" });
     }

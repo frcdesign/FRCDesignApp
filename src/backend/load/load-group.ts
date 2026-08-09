@@ -114,13 +114,15 @@ async function loadInsertables(
 ): Promise<string[]> {
     const failedInsertableIds: string[] = [];
     await Promise.all(
-        targets.map(async (target) => {
-            try {
-                await loadInsertable(ctx, target);
-            } catch {
-                failedInsertableIds.push(target.insertableId);
-            }
-        })
+        targets.map((target) =>
+            ctx.limit(async () => {
+                try {
+                    await loadInsertable(ctx, target);
+                } catch {
+                    failedInsertableIds.push(target.insertableId);
+                }
+            })
+        )
     );
     return failedInsertableIds;
 }

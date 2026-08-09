@@ -20,6 +20,7 @@ import {
     selectInsertablesToLoad
 } from "./load-group";
 import type { GroupTarget, LoadContext } from "./load-context";
+import { LOAD_CONCURRENCY, createLimiter } from "./concurrency";
 import * as LoadContextModule from "./load-context";
 import {
     FAKE_STEP,
@@ -153,7 +154,8 @@ const LOADED_TARGET: GroupTarget = {
 const CTX: LoadContext = {
     env,
     sessionId: "test-session",
-    step: FAKE_STEP
+    step: FAKE_STEP,
+    limit: createLimiter(LOAD_CONCURRENCY)
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */
