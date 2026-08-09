@@ -1,10 +1,6 @@
 import { Center, Loader, EmptyState } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import {
-    FontWeight,
-    HeartIconColor,
-    IconSize
-} from "../common/style-constants";
+import { HeartIconColor, IconSize } from "../common/style-constants";
 import { type JSX, ReactNode } from "react";
 
 const DEFAULT_ERROR_ICON = (
