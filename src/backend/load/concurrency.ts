@@ -5,9 +5,9 @@ export const LOAD_CONCURRENCY = 15;
 export type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
 
 /**
- * A minimal p-limit: caps in-flight tasks at `max`, queueing the rest in call
- * order. Bounds Onshape pressure so a rate-limit burst only hits the running
- * few and already-finished work is preserved.
+ * Runs at most `max` tasks at once, queueing the rest in call order. Bounds
+ * Onshape pressure so a rate-limit burst only hits the running few and
+ * already-finished work is preserved.
  */
 export function createLimiter(max: number): Limiter {
     let active = 0;
@@ -15,7 +15,8 @@ export function createLimiter(max: number): Limiter {
 
     const release = () => {
         active--;
-        queue.shift()?.();
+        const next = queue.shift();
+        if (next) next();
     };
 
     return async <T>(task: () => Promise<T>): Promise<T> => {

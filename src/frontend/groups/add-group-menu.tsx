@@ -4,14 +4,13 @@ import { IconPlus } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
-import { showInfoToast, showLoadingToast } from "../common/notifications";
+import { hideToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { refreshLibraryWhenReloadCompletes } from "../api-utils/reload-refresh";
+import { jobStatusQueryKey } from "../queries";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({
@@ -28,9 +27,6 @@ interface AddGroupMenuContentProps {
 function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const { selectedGroupId } = props;
     const libraryId = useLibraryId();
-    const router = useRouter();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
     const [url, setUrl] = useState("");
 
     const mutation = useMutation({
@@ -50,14 +46,13 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             "Failed to add document. Make sure the document is valid.",
             "add-group"
         ),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["library"] });
-            showInfoToast("Workflow initiated.", "add-group");
-            // Refresh the library automatically once the add finishes.
-            refreshLibraryWhenReloadCompletes(
-                cacheVersion,
-                () => void router.invalidate()
-            );
+        onSuccess: () => {
+            // The spinner now signals the running load; the navbar watcher
+            // refreshes the library when it finishes.
+            hideToast("add-group");
+            void queryClient.invalidateQueries({
+                queryKey: jobStatusQueryKey(libraryId)
+            });
         }
     });
 

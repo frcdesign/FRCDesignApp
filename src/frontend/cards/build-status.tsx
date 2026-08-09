@@ -306,7 +306,7 @@ function LastModified({
     const jobRunning = useJobStatusQuery().data?.running ?? false;
     if (jobRunning) {
         return (
-            <Tooltip label="A job is running">
+            <Tooltip label="The library is being loaded from Onshape in the background">
                 <Loader size="xs" style={{ flexShrink: 0 }} />
             </Tooltip>
         );

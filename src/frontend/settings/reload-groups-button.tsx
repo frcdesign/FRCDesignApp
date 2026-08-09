@@ -3,19 +3,13 @@ import { modals } from "@mantine/modals";
 import { IconRefresh } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showInfoToast } from "../common/notifications";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import {
-    contextDataQueryKey,
-    jobStatusQueryKey,
-    libraryQueryMatchKey
-} from "../queries";
-import { refreshLibraryWhenReloadCompletes } from "../api-utils/reload-refresh";
+import { jobStatusQueryKey } from "../queries";
 
 interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
@@ -25,9 +19,6 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     const reloadAll = props.reloadAll ?? false;
 
     const libraryId = useLibraryId();
-    const router = useRouter();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
 
     const mutation = useMutation({
         mutationKey: ["reload-groups"],
@@ -38,30 +29,14 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
-            // A job is running now (freshly triggered or already going); show
-            // the spinner immediately rather than on the next poll.
+            // Show the running spinner immediately rather than on the next poll;
+            // the navbar watcher refreshes the library when it finishes.
             void queryClient.invalidateQueries({
                 queryKey: jobStatusQueryKey(libraryId)
             });
             if (data.status === "already-running") {
                 showInfoToast("A reload is already running.");
-                return;
             }
-            showInfoToast("Workflow initiated.");
-            // Refresh the library automatically once the reload finishes.
-            refreshLibraryWhenReloadCompletes(
-                cacheVersion,
-                () => void router.invalidate()
-            );
-        },
-        onSettled: async () => {
-            await queryClient.refetchQueries({
-                queryKey: contextDataQueryKey()
-            });
-            await queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            void router.invalidate();
         }
     });
 
