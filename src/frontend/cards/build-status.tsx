@@ -21,6 +21,7 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
+    getIssueDescription,
     getIssueSeverity,
     getMaxSeverity
 } from "../../shared/build-checker";
@@ -358,7 +359,7 @@ function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
                 severity={severity}
                 style={{ flexShrink: 0, marginTop: 2 }}
             />
-            <Text size="sm">{getIssueMessage(issue)}</Text>
+            <Text size="sm">{getIssueDescription(issue)}</Text>
         </Group>
     );
 }
@@ -378,12 +379,10 @@ function severityBackground(severity: BuildIssueSeverity): string {
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
     insertableId,
-    name,
-    elementType
+    name
 }: {
     insertableId: string;
     name: string;
-    elementType: ElementType;
 }): ReactNode {
     const { data } = useBuildStatusQuery();
     const insertable = data?.insertables[insertableId];
@@ -397,7 +396,6 @@ export function InsertableStatusBadge({
                 <>
                     <InsertableAdminSection
                         insertableId={insertableId}
-                        elementType={elementType}
                         status={insertable}
                     />
                     <InsertableParsedSection status={insertable} />
@@ -425,11 +423,7 @@ export function GroupStatusBadge({
             issues={issues}
             lastLoadedAt={groupStatus.lastLoadedAt}
             hoverMenu={
-                <GroupAdminSection
-                    groupId={groupId}
-                    groupName={groupName}
-                    status={groupStatus}
-                />
+                <GroupAdminSection groupId={groupId} status={groupStatus} />
             }
         />
     );
@@ -470,7 +464,6 @@ function SwitchRow(props: {
                 checked={props.checked}
                 onChange={props.onToggle}
                 withThumbIndicator={false}
-                style={{ cursor: "pointer" }}
             />
         </Group>
     );
@@ -479,11 +472,9 @@ function SwitchRow(props: {
 /** The editable admin toggles for an insertable. */
 function InsertableAdminSection({
     insertableId,
-    elementType,
     status
 }: {
     insertableId: string;
-    elementType: ElementType;
     status: InsertableBuildStatus;
 }): ReactNode {
     return (
@@ -501,7 +492,7 @@ function InsertableAdminSection({
                 insertableId={insertableId}
                 searchPartNumbers={status.searchPartNumbers}
             />
-            {elementType === ElementType.PART_STUDIO && (
+            {status.elementType === ElementType.PART_STUDIO && (
                 <OpenCompositeSwitch
                     insertableId={insertableId}
                     isOpenComposite={status.isOpenComposite}
@@ -586,14 +577,12 @@ function OpenCompositeSwitch({
 /** The editable admin toggles for a group. */
 function GroupAdminSection({
     groupId,
-    groupName,
     status
 }: {
     groupId: string;
-    groupName: string;
     status: GroupBuildStatus;
 }): ReactNode {
-    const mutation = useToggleSortOrderMutation(groupId, groupName);
+    const mutation = useToggleSortOrderMutation(groupId);
     return (
         <Stack gap="sm">
             <SectionHeader>Admin</SectionHeader>
@@ -679,26 +668,4 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
             ))}
         </Group>
     );
-}
-
-/** The human-readable message for a build issue, rendered at display time. */
-function getIssueMessage(issue: BuildIssue): string {
-    switch (issue.type) {
-        case BuildIssueType.THUMBNAIL_FAILED:
-            return "The thumbnail failed to generate";
-        case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "No thumbnail tab is set";
-        case BuildIssueType.NO_VENDORS:
-            return "No vendors could be parsed";
-        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "This group has no unhidden insertables";
-        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-            return "Too many configurations to index part numbers";
-        case BuildIssueType.MULTIPLE_PARTS:
-            return "This part studio has more than one part";
-        case BuildIssueType.INSERTABLES_FAILED:
-            return "Some insertables failed to load";
-        case BuildIssueType.LOAD_FAILED:
-            return "This insertable failed to load";
-    }
 }

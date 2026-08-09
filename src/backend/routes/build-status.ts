@@ -37,6 +37,7 @@ buildStatusRoutes.get(
                     id: insertables.id,
                     groupId: insertables.groupId,
                     buildIssues: insertables.buildIssues,
+                    elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     isOpenComposite: insertables.isOpenComposite,
                     supportsFasten: insertables.supportsFasten,
@@ -82,6 +83,7 @@ buildStatusRoutes.get(
             const config = configMap.get(ins.id);
             insertablesOut[ins.id] = {
                 buildIssues: ins.buildIssues,
+                elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 isOpenComposite: ins.isOpenComposite,
                 supportsFasten: ins.supportsFasten,

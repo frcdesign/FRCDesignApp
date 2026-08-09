@@ -3,7 +3,7 @@ import { modals } from "@mantine/modals";
 import { IconRefresh } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { showInfoToast } from "../common/notifications";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
@@ -22,6 +22,8 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
 
     const libraryId = useLibraryId();
     const router = useRouter();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
 
     const mutation = useMutation({
         mutationKey: ["reload-groups"],
@@ -36,7 +38,10 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
                 "Initiated workflow, which can take up to 30 minutes."
             );
             // Refresh the library automatically once the reload finishes.
-            refreshLibraryWhenReloadCompletes(() => void router.invalidate());
+            refreshLibraryWhenReloadCompletes(
+                cacheVersion,
+                () => void router.invalidate()
+            );
         },
         onSettled: async () => {
             await queryClient.refetchQueries({

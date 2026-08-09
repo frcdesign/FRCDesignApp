@@ -7,8 +7,7 @@ import { type AccessLevel } from "../shared/types";
 /**
  * Production dependency wiring: resolves the Onshape API from the session, the
  * userId from session info, and the access level from the user's admin-team
- * membership (honoring the `ACCESS_LEVEL_OVERRIDE` binding, and otherwise
- * KV-cached to keep it off nearly every request).
+ * membership (honoring the access level override and KV cache).
  */
 export const productionServices: AppServicesFactory = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),

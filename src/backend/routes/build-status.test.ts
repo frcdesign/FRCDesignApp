@@ -15,6 +15,9 @@ import type { LibraryBuildStatus } from "../../shared/api-models";
 
 const db = getDb(env.DB);
 
+const GROUP_LOADED_AT = 1000;
+const INSERTABLE_LOADED_AT = 2000;
+
 describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
 
@@ -22,11 +25,11 @@ describe("GET /build-status", () => {
         await seedPartStudio(db);
         await db
             .update(group)
-            .set({ lastLoadedAt: 1000 })
+            .set({ lastLoadedAt: GROUP_LOADED_AT })
             .where(eq(group.id, TEST_GROUP_ID));
         await db
             .update(insertables)
-            .set({ lastLoadedAt: 2000 })
+            .set({ lastLoadedAt: INSERTABLE_LOADED_AT })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
         const res = await createTestApp().request(
@@ -37,8 +40,10 @@ describe("GET /build-status", () => {
         expect(res.status).toBe(200);
 
         const body: LibraryBuildStatus = await res.json();
-        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBe(1000);
-        expect(body.insertables[TEST_PART_STUDIO_ID].lastLoadedAt).toBe(2000);
+        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBe(GROUP_LOADED_AT);
+        expect(body.insertables[TEST_PART_STUDIO_ID].lastLoadedAt).toBe(
+            INSERTABLE_LOADED_AT
+        );
     });
 
     it("reports a never-loaded entity as null", async () => {

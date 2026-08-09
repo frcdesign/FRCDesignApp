@@ -1,27 +1,15 @@
 import { queryClient } from "../query-client";
-import {
-    contextDataQueryKey,
-    getContextDataQuery,
-    libraryQueryMatchKey
-} from "../queries";
-import { type ContextData } from "../../shared/types";
+import { getContextDataQuery, libraryQueryMatchKey } from "../queries";
 
-// A library reload/add-group workflow runs in the background and bumps the
-// library's cacheVersion when it finishes (see finalizeLibrary). We watch for
-// that bump to refresh the UI at completion — polling gently, since reloads can
-// run for many minutes, and always with a hard cap so it never spins forever.
+// How often to poll the backend while a load job is running.
 const POLL_INTERVAL_MS = 10_000;
+// Hard cap so polling never spins forever if the job never finishes.
 const MAX_POLL_MS = 40 * 60 * 1000;
 
 let pollHandle: ReturnType<typeof setInterval> | null = null;
 let baselineCacheVersion = 0;
 let deadline = 0;
 let onComplete: (() => void) | undefined;
-
-function cachedCacheVersion(): number | undefined {
-    return queryClient.getQueryData<ContextData>(contextDataQueryKey())
-        ?.accessData.cacheVersion;
-}
 
 function stopPolling(): void {
     if (pollHandle !== null) {
@@ -36,7 +24,7 @@ async function poll(): Promise<void> {
         return;
     }
 
-    let data: ContextData;
+    let data;
     try {
         data = await queryClient.fetchQuery(getContextDataQuery());
     } catch {
@@ -52,17 +40,12 @@ async function poll(): Promise<void> {
     }
 }
 
-/**
- * After a reload/add-group workflow is triggered, refreshes the library view
- * once the workflow finishes (detected via the library's cacheVersion bump),
- * then stops. Bounded by a hard cap so it never polls forever. A second trigger
- * while polling simply re-baselines against the current version.
- */
-export function refreshLibraryWhenReloadCompletes(callback?: () => void): void {
-    const baseline = cachedCacheVersion();
-    if (baseline === undefined) return;
-
-    baselineCacheVersion = baseline;
+/** Refreshes the library view once a triggered workflow bumps the cacheVersion past `baselineVersion`. */
+export function refreshLibraryWhenReloadCompletes(
+    baselineVersion: number,
+    callback?: () => void
+): void {
+    baselineCacheVersion = baselineVersion;
     deadline = Date.now() + MAX_POLL_MS;
     onComplete = callback;
 

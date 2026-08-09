@@ -179,8 +179,6 @@ export async function saveInsertable(
         fastenInfo: parsed.fastenInfo,
         defaultPartNumber: parsed.defaultPartNumber,
         buildIssues: parsed.buildIssues,
-        // Stamp the successful load; a failed insertable never reaches save, so
-        // its last-good time is preserved.
         lastLoadedAt: Date.now()
     };
 

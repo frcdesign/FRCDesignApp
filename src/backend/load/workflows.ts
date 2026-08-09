@@ -85,9 +85,6 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     const loaded = await loadGroup(ctx, target, forceReload);
                     return { groupId, status: "reloaded", ...loaded };
                 } catch {
-                    // Per-group failures are isolated so one bad document
-                    // doesn't sink the whole run; the failure surfaces on the
-                    // group itself via its build issues.
                     return { groupId, status: "failed" };
                 }
             })

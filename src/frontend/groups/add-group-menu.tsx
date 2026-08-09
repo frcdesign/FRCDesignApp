@@ -4,7 +4,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
@@ -29,6 +29,8 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const { selectedGroupId } = props;
     const libraryId = useLibraryId();
     const router = useRouter();
+    const cacheVersion = useLoaderData({ from: "/app" }).accessData
+        .cacheVersion;
     const [url, setUrl] = useState("");
 
     const mutation = useMutation({
@@ -55,7 +57,10 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
                 "add-group"
             );
             // Refresh the library automatically once the add finishes.
-            refreshLibraryWhenReloadCompletes(() => void router.invalidate());
+            refreshLibraryWhenReloadCompletes(
+                cacheVersion,
+                () => void router.invalidate()
+            );
         }
     });
 

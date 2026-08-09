@@ -80,7 +80,6 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                         <InsertableStatusBadge
                             insertableId={insertable.id}
                             name={insertable.name}
-                            elementType={insertable.elementType}
                         />
                     }
                 />

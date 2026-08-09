@@ -47,6 +47,7 @@ export interface GroupBuildStatus {
 
 export interface InsertableBuildStatus {
     buildIssues: BuildIssue[];
+    elementType: ElementType;
     isVisible: boolean;
     isOpenComposite: boolean;
     supportsFasten: boolean;

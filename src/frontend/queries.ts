@@ -148,9 +148,8 @@ export function getBuildStatusQuery(
             apiGet("/build-status/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
-        // Keep the previous version's data on screen while the next
-        // cacheVersion refetches, so the admin hover card (and its switches)
-        // don't blank out and close when a toggle bumps the cache version.
+        // A toggle bumps cacheVersion (and thus this key); keep the old data on
+        // screen while the new version refetches so the hover card doesn't close.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
