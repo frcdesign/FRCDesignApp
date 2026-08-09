@@ -63,7 +63,7 @@ function RunningJobLoader(): ReactNode {
     if (!jobRunning) return null;
     return (
         <Tooltip label="A job is running">
-            <Loader size="sm" color="white" />
+            <Loader size={IconSize.MEDIUM} color="white" />
         </Tooltip>
     );
 }

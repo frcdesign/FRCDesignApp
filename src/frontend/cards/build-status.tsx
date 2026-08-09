@@ -210,42 +210,55 @@ export function useCloseBuildCard(): () => void {
  * given admin menu. Only rendered for editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { name, issues, lastLoadedAt, hoverMenu } = props;
+    // Gate first so only editors mount the child (and thus poll job status).
+    return (
+        <RequireAccessLevel>
+            <BuildStatusHoverCard {...props} />
+        </RequireAccessLevel>
+    );
+}
+
+function BuildStatusHoverCard({
+    name,
+    issues,
+    lastLoadedAt,
+    hoverMenu
+}: BuildStatusBadgeProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
+    const jobRunning = useJobStatusQuery().data?.running ?? false;
 
     // Remounting is the only way to close an uncontrolled HoverCard on demand.
     const [cardKey, setCardKey] = useState(0);
     const close = useCallback(() => setCardKey((key) => key + 1), []);
 
     return (
-        <RequireAccessLevel>
-            <CloseCardContext value={close}>
-                <HoverCard
-                    key={cardKey}
-                    withinPortal
-                    shadow="md"
-                    position="right"
-                    withArrow
-                    arrowSize={20}
-                >
-                    <HoverCard.Target>
+        <CloseCardContext value={close}>
+            <HoverCard
+                key={cardKey}
+                withinPortal
+                shadow="md"
+                position="right"
+                withArrow
+                arrowSize={20}
+            >
+                <HoverCard.Target>
+                    {jobRunning ? (
+                        <Loader size={IconSize.SMALL} />
+                    ) : (
                         <IssueIcon severity={maxSeverity} />
-                    </HoverCard.Target>
-                    <HoverCard.Dropdown
-                        p="md"
-                        onClick={(e) => e.stopPropagation()}
+                    )}
+                </HoverCard.Target>
+                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
+                    <BuildStatusCard
+                        name={name}
+                        issues={issues}
+                        lastLoadedAt={lastLoadedAt}
                     >
-                        <BuildStatusCard
-                            name={name}
-                            issues={issues}
-                            lastLoadedAt={lastLoadedAt}
-                        >
-                            {hoverMenu}
-                        </BuildStatusCard>
-                    </HoverCard.Dropdown>
-                </HoverCard>
-            </CloseCardContext>
-        </RequireAccessLevel>
+                        {hoverMenu}
+                    </BuildStatusCard>
+                </HoverCard.Dropdown>
+            </HoverCard>
+        </CloseCardContext>
     );
 }
 
@@ -260,20 +273,25 @@ function CardHeader({
     lastLoadedAt: number | null;
 }): ReactNode {
     return (
-        <Group
-            justify="space-between"
-            align="flex-start"
-            wrap="nowrap"
-            gap="sm"
-        >
-            <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
-                <Text fw={FontWeight.SEMI_BOLD} size="sm" lineClamp={2}>
+        <Stack gap={6}>
+            <Group
+                justify="space-between"
+                align="center"
+                wrap="nowrap"
+                gap="sm"
+            >
+                <Text
+                    fw={FontWeight.SEMI_BOLD}
+                    size="sm"
+                    lineClamp={2}
+                    style={{ flex: 1, minWidth: 0 }}
+                >
                     {name}
                 </Text>
-                <SeverityBadges issues={issues} />
-            </Stack>
-            <LastModified lastLoadedAt={lastLoadedAt} />
-        </Group>
+                <LastModified lastLoadedAt={lastLoadedAt} />
+            </Group>
+            <SeverityBadges issues={issues} />
+        </Stack>
     );
 }
 
@@ -294,19 +312,21 @@ function LastModified({
         );
     }
     return (
-        <Group
-            gap={4}
-            wrap="nowrap"
-            c="dimmed"
-            style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-        >
-            <IconClock size={IconSize.TINY} />
-            <Text size="xs">
-                {lastLoadedAt === null
-                    ? "Never modified"
-                    : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
-            </Text>
-        </Group>
+        <Tooltip label="The last time changes were pulled from Onshape">
+            <Group
+                gap={4}
+                wrap="nowrap"
+                c="dimmed"
+                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+                <IconClock size={IconSize.TINY} />
+                <Text size="xs">
+                    {lastLoadedAt === null
+                        ? "Never modified"
+                        : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
+                </Text>
+            </Group>
+        </Tooltip>
     );
 }
 
