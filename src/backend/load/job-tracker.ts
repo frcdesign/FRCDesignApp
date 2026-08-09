@@ -1,7 +1,10 @@
 import type { AppBindings } from "../app";
 import type { LibraryId } from "../../shared/types";
 
-/** Safety net so a crashed run's entry clears; must outlast the longest reload. */
+/**
+ * Backstop for a job that crashes before untracking itself; must outlast the
+ * longest load (reloads and large adds can run for hours).
+ */
 const JOB_TTL_SECONDS = 60 * 60 * 24;
 
 /** Instance statuses that mean a job is still live. */
@@ -91,4 +94,26 @@ export async function trackJob(
     await env.KV.put(jobsKey(libraryId), JSON.stringify(jobs), {
         expirationTtl: JOB_TTL_SECONDS
     });
+}
+
+/**
+ * Removes a job's entry as it finishes — the workflow calls this in a final step
+ * so the running-job state clears promptly instead of waiting out the TTL. Only
+ * its own entry is touched, so concurrent jobs are unaffected.
+ */
+export async function untrackJob(
+    env: AppBindings,
+    libraryId: LibraryId,
+    instanceId: string
+): Promise<void> {
+    const remaining = (await readJobs(env, libraryId)).filter(
+        (job) => job.id !== instanceId
+    );
+    if (remaining.length === 0) {
+        await env.KV.delete(jobsKey(libraryId));
+    } else {
+        await env.KV.put(jobsKey(libraryId), JSON.stringify(remaining), {
+            expirationTtl: JOB_TTL_SECONDS
+        });
+    }
 }

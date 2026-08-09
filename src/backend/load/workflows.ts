@@ -22,6 +22,7 @@ import {
     getOnshapeApiFromContext
 } from "./load-context";
 import { LOAD_CONCURRENCY, createLimiter } from "./concurrency";
+import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
 
 export interface LoadLibraryParams {
@@ -97,6 +98,9 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         );
 
         await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
+        await step.do("untrack-job", () =>
+            untrackJob(ctx.env, libraryId, event.instanceId)
+        );
 
         return results;
     }
@@ -147,6 +151,9 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
         await step.do("finalize", () =>
             finalizeLibrary(ctx.env, params.libraryId)
+        );
+        await step.do("untrack-job", () =>
+            untrackJob(ctx.env, params.libraryId, event.instanceId)
         );
         return result;
     }
