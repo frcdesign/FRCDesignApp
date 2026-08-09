@@ -240,7 +240,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         onError: (error: Error, _vars, context) => {
             queryClient.setQueryData(key, context?.previous);
             getAppErrorHandler(
-                "Unexpectedly failed to update insert and fasten.",
+                "Failed to enable insert and fasten. Is the target valid?",
                 toastId
             )(error);
         },
