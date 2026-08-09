@@ -14,7 +14,15 @@ import {
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
-import { ComponentPropsWithRef, ReactNode, useMemo } from "react";
+import {
+    ComponentPropsWithRef,
+    ReactNode,
+    createContext,
+    use,
+    useCallback,
+    useMemo,
+    useState
+} from "react";
 import { formatRelativeTime } from "../common/format-time";
 import {
     addBuildIssue,
@@ -183,6 +191,18 @@ interface BuildStatusBadgeProps {
 }
 
 /**
+ * Dismisses the surrounding build-status hover card. Used by controls that open
+ * a modal, since `HoverCard` only closes on mouse-leave — never fired when a
+ * modal overlay simply covers the dropdown, leaving it stranded behind.
+ */
+const CloseCardContext = createContext<() => void>(() => undefined);
+
+/** Dismisses the build-status hover card a control is rendered inside. */
+export function useCloseBuildCard(): () => void {
+    return use(CloseCardContext);
+}
+
+/**
  * A severity icon whose hover card shows the build-status card wrapping the
  * given admin menu. Only rendered for editors and admins.
  */
@@ -190,28 +210,38 @@ export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     const { name, issues, lastLoadedAt, hoverMenu } = props;
     const maxSeverity = getMaxSeverity(issues);
 
+    // Remounting is the only way to close an uncontrolled HoverCard on demand.
+    const [cardKey, setCardKey] = useState(0);
+    const close = useCallback(() => setCardKey((key) => key + 1), []);
+
     return (
         <RequireAccessLevel>
-            <HoverCard
-                withinPortal
-                shadow="md"
-                position="right"
-                withArrow
-                arrowSize={20}
-            >
-                <HoverCard.Target>
-                    <IssueIcon severity={maxSeverity} />
-                </HoverCard.Target>
-                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
-                    <BuildStatusCard
-                        name={name}
-                        issues={issues}
-                        lastLoadedAt={lastLoadedAt}
+            <CloseCardContext value={close}>
+                <HoverCard
+                    key={cardKey}
+                    withinPortal
+                    shadow="md"
+                    position="right"
+                    withArrow
+                    arrowSize={20}
+                >
+                    <HoverCard.Target>
+                        <IssueIcon severity={maxSeverity} />
+                    </HoverCard.Target>
+                    <HoverCard.Dropdown
+                        p="md"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        {hoverMenu}
-                    </BuildStatusCard>
-                </HoverCard.Dropdown>
-            </HoverCard>
+                        <BuildStatusCard
+                            name={name}
+                            issues={issues}
+                            lastLoadedAt={lastLoadedAt}
+                        >
+                            {hoverMenu}
+                        </BuildStatusCard>
+                    </HoverCard.Dropdown>
+                </HoverCard>
+            </CloseCardContext>
         </RequireAccessLevel>
     );
 }
@@ -514,12 +544,18 @@ function VisibilitySwitch({
     isVisible: boolean;
 }): ReactNode {
     const { mutate } = useSetVisibilityMutation([insertableId], !isVisible);
+    const closeCard = useCloseBuildCard();
     return (
         <SwitchRow
             label="Visible to users"
             description="Shown in the library list"
             checked={isVisible}
-            onToggle={mutate}
+            onToggle={() => {
+                // Hiding opens a confirm modal; drop the hover card first so it
+                // isn't stranded behind the overlay.
+                if (isVisible) closeCard();
+                mutate();
+            }}
         />
     );
 }
