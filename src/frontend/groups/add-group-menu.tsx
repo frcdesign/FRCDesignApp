@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { parseUrl } from "../common/url";
 import { getAppErrorHandler, HandledError } from "../api-utils/errors";
-import { hideToast, showLoadingToast } from "../common/notifications";
+import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { jobStatusQueryKey } from "../queries";
@@ -47,9 +47,10 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             "add-group"
         ),
         onSuccess: () => {
-            // The spinner now signals the running load; the navbar watcher
-            // refreshes the library when it finishes.
-            hideToast("add-group");
+            // Replace the loading toast with a transient "started" toast; the
+            // spinner signals the running load and the navbar watcher reports
+            // completion.
+            showInfoToast("Adding document…", "add-group");
             void queryClient.invalidateQueries({
                 queryKey: jobStatusQueryKey(libraryId)
             });

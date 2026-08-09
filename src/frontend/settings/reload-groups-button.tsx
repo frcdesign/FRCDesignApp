@@ -30,13 +30,15 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
             // Show the running spinner immediately rather than on the next poll;
-            // the navbar watcher refreshes the library when it finishes.
+            // the navbar watcher refreshes and reports completion when it finishes.
             void queryClient.invalidateQueries({
                 queryKey: jobStatusQueryKey(libraryId)
             });
-            if (data.status === "already-running") {
-                showInfoToast("A reload is already running.");
-            }
+            showInfoToast(
+                data.status === "already-running"
+                    ? "A reload is already running."
+                    : "Reloading documents…"
+            );
         }
     });
 

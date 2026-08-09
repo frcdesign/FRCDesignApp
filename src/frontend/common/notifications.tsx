@@ -93,11 +93,6 @@ export function showSuccessToast(message: string, id?: string): string {
     });
 }
 
-/** Dismisses the toast with the given id, if shown. */
-export function hideToast(id: string): void {
-    notifications.hide(id);
-}
-
 export function showErrorToast(message: string, id?: string): string {
     return showToast({
         id,
