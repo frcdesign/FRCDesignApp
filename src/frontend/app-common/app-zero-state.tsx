@@ -32,6 +32,7 @@ function ZeroState(props: ZeroStateProps): ReactNode {
             description={description}
             size="sm"
             className={className}
+            style={{ paddingTop: 24, paddingBottom: 24 }}
         >
             <EmptyState.Actions>{action}</EmptyState.Actions>
         </EmptyState>

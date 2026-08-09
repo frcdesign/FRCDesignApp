@@ -158,7 +158,6 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const thumbnailQuery = useQuery({
         queryKey: ["thumbnail", thumbnailId],
         queryFn: async ({ signal }) => {
-            return;
             if (!thumbnailId) {
                 // Shouldn't happen due to enabled guard
                 return;
@@ -186,7 +185,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 
-    const heightAndWidth = getHeightAndWidth(size, 0.63);
+    const heightAndWidth = getHeightAndWidth(size, 0.91);
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
         return (
