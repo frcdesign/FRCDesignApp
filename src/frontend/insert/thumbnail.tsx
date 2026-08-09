@@ -158,6 +158,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const thumbnailQuery = useQuery({
         queryKey: ["thumbnail", thumbnailId],
         queryFn: async ({ signal }) => {
+            return;
             if (!thumbnailId) {
                 // Shouldn't happen due to enabled guard
                 return;
@@ -185,7 +186,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 
-    const heightAndWidth = getHeightAndWidth(size, 0.7);
+    const heightAndWidth = getHeightAndWidth(size, 0.63);
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
         return (
@@ -197,7 +198,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
-                <Loader size={36} />
+                <Loader size={3} />6
             </Center>
         );
     }
