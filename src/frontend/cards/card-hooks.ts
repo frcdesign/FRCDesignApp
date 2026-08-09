@@ -5,7 +5,7 @@ import { queryClient } from "../query-client";
 import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
+import { useLoaderData } from "@tanstack/react-router";
 import {
     showErrorToast,
     showLoadingToast,
@@ -17,27 +17,9 @@ import {
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import {
-    buildStatusQueryKey,
-    contextDataQueryKey,
-    libraryQueryMatchKey
-} from "../queries";
+import { buildStatusQueryKey } from "../queries";
+import { useRefreshLibrary } from "../api-utils/refresh";
 import { getQueryUpdater } from "../common/utils";
-
-/**
- * Shared onSettled for admin mutations that change per-entity data: pull fresh
- * context + library data and re-run loaders so the UI reflects the change.
- */
-function useRefreshLibraryOnSettled() {
-    const router = useRouter();
-    return async () => {
-        await queryClient.refetchQueries({ queryKey: contextDataQueryKey() });
-        await queryClient.invalidateQueries({
-            queryKey: libraryQueryMatchKey()
-        });
-        void router.invalidate();
-    };
-}
 
 /** The build-status query key for the currently-viewed library. */
 function useBuildStatusKey() {
@@ -66,7 +48,7 @@ export function useSetVisibilityMutation(
     isVisible: boolean
 ) {
     const libraryId = useLibraryId();
-    const onSettled = useRefreshLibraryOnSettled();
+    const onSettled = useRefreshLibrary();
     const key = useBuildStatusKey();
 
     const mutation = useMutation({
@@ -145,7 +127,7 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
 }
 
 export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
-    const router = useRouter();
+    const onSettled = useRefreshLibrary();
 
     const endpoint = isGroup
         ? `/reload-group-thumbnail/group/${id}`
@@ -160,22 +142,14 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
         onSuccess: () => {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
-        onSettled: async () => {
-            await queryClient.refetchQueries({
-                queryKey: contextDataQueryKey()
-            });
-            await queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            void router.invalidate();
-        }
+        onSettled
     });
 }
 
 /** Toggles an insertable's "open composite" flag (part studios only). */
 export function useToggleOpenCompositeMutation(insertableId: string) {
     const key = useBuildStatusKey();
-    const onSettled = useRefreshLibraryOnSettled();
+    const onSettled = useRefreshLibrary();
     return useMutation({
         mutationKey: ["toggle-open-composite", insertableId],
         mutationFn: (isOpenComposite: boolean) =>
@@ -208,7 +182,7 @@ export function useToggleOpenCompositeMutation(insertableId: string) {
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */
 export function useToggleInsertAndFastenMutation(insertableId: string) {
     const key = useBuildStatusKey();
-    const onSettled = useRefreshLibraryOnSettled();
+    const onSettled = useRefreshLibrary();
     const toastId = `insert-and-fasten-${insertableId}`;
     return useMutation({
         mutationKey: ["toggle-insert-and-fasten", insertableId],
@@ -251,7 +225,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
 /** Toggles part-number search indexing for an insertable (a slow Onshape call). */
 export function useTogglePartNumberSearchMutation(insertableId: string) {
     const key = useBuildStatusKey();
-    const onSettled = useRefreshLibraryOnSettled();
+    const onSettled = useRefreshLibrary();
     const toastId = `part-number-search-${insertableId}`;
     return useMutation({
         mutationKey: ["toggle-part-number-search", insertableId],
@@ -296,7 +270,7 @@ export function useTogglePartNumberSearchMutation(insertableId: string) {
 export function useToggleSortOrderMutation(groupId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const onSettled = useRefreshLibraryOnSettled();
+    const onSettled = useRefreshLibrary();
     return useMutation({
         mutationKey: ["sort-group-alphabetically", groupId],
         mutationFn: (sortAlphabetically: boolean) =>

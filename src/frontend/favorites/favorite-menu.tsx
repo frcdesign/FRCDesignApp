@@ -20,6 +20,7 @@ import {
 } from "../queries";
 import { getQueryUpdater } from "../common/utils";
 import { useLibraryId } from "../api-utils/library";
+import { useRefreshFavorites } from "../api-utils/refresh";
 import { PageError } from "../app-common/app-zero-state";
 
 interface OpenFavoriteMenuProps {
@@ -60,6 +61,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
+    const refreshFavorites = useRefreshFavorites();
 
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
@@ -93,12 +95,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         onSuccess: () => {
             showSuccessToast("Successfully updated default configuration.");
         },
-        onSettled: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: favoritesQueryKey(libraryId)
-            });
-            void router.invalidate();
-        }
+        onSettled: refreshFavorites
     });
 
     const favorite = favoritesData?.favorites[favoriteId];
