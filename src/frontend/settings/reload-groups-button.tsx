@@ -10,7 +10,11 @@ import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
+import {
+    contextDataQueryKey,
+    jobStatusQueryKey,
+    libraryQueryMatchKey
+} from "../queries";
 import { refreshLibraryWhenReloadCompletes } from "../api-utils/reload-refresh";
 
 interface ReloadGroupsButtonProps {
@@ -34,6 +38,11 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
+            // A job is running now (freshly triggered or already going); show
+            // the spinner immediately rather than on the next poll.
+            void queryClient.invalidateQueries({
+                queryKey: jobStatusQueryKey(libraryId)
+            });
             if (data.status === "already-running") {
                 showInfoToast("A reload is already running.");
                 return;

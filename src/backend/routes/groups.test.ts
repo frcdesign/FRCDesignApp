@@ -188,6 +188,23 @@ describe("POST /reload-groups", () => {
     });
 });
 
+describe("GET /job-status", () => {
+    beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
+
+    it.each([true, false])("reports running=%s", async (running) => {
+        vi.spyOn(ReloadLock, "isReloadRunning").mockResolvedValue(running);
+
+        const res = await createTestApp().request(
+            `/api/job-status/library/${TEST_LIBRARY_ID}`,
+            sessionRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ running });
+    });
+});
+
 describe("POST /group", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());

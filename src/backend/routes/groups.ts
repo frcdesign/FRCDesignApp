@@ -51,6 +51,16 @@ groupRoutes.post(
     }
 );
 
+/** GET /api/job-status/library/:libraryId */
+groupRoutes.get(
+    "/job-status" + libraryRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        const running = await isReloadRunning(c.env, getLibraryParam(c));
+        return c.json({ running });
+    }
+);
+
 /** POST /api/set-element-visibility/library/:libraryId */
 groupRoutes.post(
     "/set-element-visibility" + libraryRoute(),

@@ -1,5 +1,9 @@
 import { queryClient } from "../query-client";
-import { getContextDataQuery, libraryQueryMatchKey } from "../queries";
+import {
+    getContextDataQuery,
+    jobStatusQueryMatchKey,
+    libraryQueryMatchKey
+} from "../queries";
 
 // How often to poll the backend while a load job is running.
 const POLL_INTERVAL_MS = 10_000;
@@ -35,6 +39,10 @@ async function poll(): Promise<void> {
         stopPolling();
         await queryClient.invalidateQueries({
             queryKey: libraryQueryMatchKey()
+        });
+        // Clear the running-job spinner promptly instead of on the next poll.
+        await queryClient.invalidateQueries({
+            queryKey: jobStatusQueryMatchKey()
         });
         onComplete?.();
     }
