@@ -24,6 +24,7 @@ import {
 } from "../cards/card-components";
 import { AddGroupItem } from "./add-group-menu";
 import { GroupStatusBadge } from "../cards/build-status";
+import { useRefreshLibrary } from "../api-utils/refresh";
 import {
     libraryQueryKey,
     libraryQueryMatchKey,
@@ -165,6 +166,7 @@ function HideAllElementsMenuItem({
 
 function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
     const libraryId = useLibraryId();
+    const refreshLibrary = useRefreshLibrary();
 
     const mutation = useMutation({
         mutationKey: ["delete-group"],
@@ -172,11 +174,9 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
             apiDelete("/group" + toLibraryPath(libraryId), {
                 query: { groupId }
             }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
+        // Deleting cascade-removes insertables (and their favorites), so refresh
+        // the whole view, not just the library list.
+        onSuccess: refreshLibrary
     });
 
     return (
@@ -194,6 +194,7 @@ function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
     const cacheVersion = useLoaderData({ from: "/app" }).accessData
         .cacheVersion;
+    const refreshLibrary = useRefreshLibrary();
 
     return useMutation({
         mutationKey: ["group-order"],
@@ -212,9 +213,13 @@ function useSetGroupOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
+            // Roll back the optimistic order (same version key, so refresh
+            // alone won't refetch it).
             void queryClient.invalidateQueries({
                 queryKey: libraryQueryMatchKey()
             });
-        }
+        },
+        // On success, pull the new version's data (and favorites) too.
+        onSettled: refreshLibrary
     });
 }

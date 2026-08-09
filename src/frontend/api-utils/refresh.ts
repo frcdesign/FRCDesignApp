@@ -3,6 +3,8 @@ import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "../query-client";
 import { contextDataQueryKey, favoritesQueryKey } from "../queries";
 import { useLibraryId } from "./library";
+import { type ContextData } from "../../shared/types";
+import { getQueryUpdater } from "../common/utils";
 
 /**
  * Refreshes the whole library view: refetch the context (its cacheVersion keys
@@ -28,4 +30,21 @@ export function useRefreshFavorites(): () => Promise<void> {
         });
         await router.invalidate();
     }, [router, libraryId]);
+}
+
+/** Optimistically patches the cached context data and re-runs the loaders. */
+export function useUpdateContextData(): (
+    recipe: (data: ContextData) => void
+) => void {
+    const router = useRouter();
+    return useCallback(
+        (recipe: (data: ContextData) => void) => {
+            queryClient.setQueryData(
+                contextDataQueryKey(),
+                getQueryUpdater(recipe)
+            );
+            void router.invalidate();
+        },
+        [router]
+    );
 }
