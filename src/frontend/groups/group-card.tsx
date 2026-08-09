@@ -194,6 +194,7 @@ function useSetGroupOrderMutation() {
     const cacheVersion = useLoaderData({ from: "/app" }).accessData
         .cacheVersion;
     const refreshLibrary = useRefreshLibrary();
+    const key = libraryQueryKey(libraryId, cacheVersion);
 
     return useMutation({
         mutationKey: ["group-order"],
@@ -201,19 +202,23 @@ function useSetGroupOrderMutation() {
             apiPost("/group-order" + toLibraryPath(libraryId), {
                 body: { groupOrder }
             }),
-        onMutate: (newOrder: string[]) => {
+        onMutate: async (newOrder: string[]) => {
+            await queryClient.cancelQueries({ queryKey: key });
+            const previous = queryClient.getQueryData<LibraryOut>(key);
             queryClient.setQueryData(
-                libraryQueryKey(libraryId, cacheVersion),
+                key,
                 getQueryUpdater((data: LibraryOut) => {
                     data.groupOrder = newOrder;
                     return data;
                 })
             );
+            return { previous };
         },
-        onError: () => {
+        onError: (_error, _newOrder, context) => {
             showErrorToast("Unexpectedly failed to reorder group.");
+            queryClient.setQueryData(key, context?.previous);
         },
-        // Reordering bumps the version, so the settle refetch reconciles.
+        // On success the version bumps, so the settle refetch reconciles.
         onSettled: refreshLibrary
     });
 }
