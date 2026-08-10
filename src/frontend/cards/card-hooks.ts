@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
-import { queryClient } from "../query-client";
 import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
@@ -19,7 +18,7 @@ import {
 import { getAppErrorHandler } from "../api-utils/errors";
 import { buildStatusQueryKey } from "../queries";
 import { useRefreshLibrary } from "../api-utils/refresh";
-import { getQueryUpdater } from "../common/utils";
+import { patchQuery } from "../common/utils";
 
 /** The build-status query key for the currently-viewed library. */
 function useBuildStatusKey() {
@@ -27,15 +26,6 @@ function useBuildStatusKey() {
     const cacheVersion = useLoaderData({ from: "/app" }).accessData
         .cacheVersion;
     return buildStatusQueryKey(libraryId, cacheVersion);
-}
-
-/** Cancels in-flight build-status fetches and optimistically applies `recipe`. */
-async function patchBuildStatus(
-    key: readonly unknown[],
-    recipe: (status: LibraryBuildStatus) => void
-): Promise<void> {
-    await queryClient.cancelQueries({ queryKey: key });
-    queryClient.setQueryData(key, getQueryUpdater<LibraryBuildStatus>(recipe));
 }
 
 export function useSetVisibilityMutation(
@@ -64,7 +54,7 @@ export function useSetVisibilityMutation(
                 isVisible ? "Showing elements..." : "Hiding elements...",
                 "set-visibility"
             );
-            return patchBuildStatus(key, (status) => {
+            return patchQuery<LibraryBuildStatus>(key, (status) => {
                 for (const id of insertableIds) {
                     const insertable = status.insertables[id];
                     if (insertable) insertable.isVisible = isVisible;
@@ -148,7 +138,7 @@ export function useToggleOpenCompositeMutation(insertableId: string) {
                 body: { isOpenComposite }
             }),
         onMutate: (isOpenComposite) =>
-            patchBuildStatus(key, (status) => {
+            patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
                 if (insertable) insertable.isOpenComposite = isOpenComposite;
             }),
@@ -184,7 +174,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
                     : "Disabling insert and fasten...",
                 toastId
             );
-            return patchBuildStatus(key, (status) => {
+            return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
                 if (insertable) insertable.supportsFasten = supportsFasten;
             });
@@ -223,7 +213,7 @@ export function useTogglePartNumberSearchMutation(insertableId: string) {
                     : "Disabling part number search...",
                 toastId
             );
-            return patchBuildStatus(key, (status) => {
+            return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
                 if (insertable)
                     insertable.searchPartNumbers = searchPartNumbers;
@@ -256,7 +246,7 @@ export function useToggleSortOrderMutation(groupId: string) {
                 body: { groupId, sortAlphabetically }
             }),
         onMutate: (sortAlphabetically) =>
-            patchBuildStatus(key, (status) => {
+            patchQuery<LibraryBuildStatus>(key, (status) => {
                 const group = status.groups[groupId];
                 if (group) group.sortAlphabetically = sortAlphabetically;
             }),
