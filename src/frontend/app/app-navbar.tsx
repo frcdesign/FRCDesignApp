@@ -20,6 +20,7 @@ import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { useSaveSettings } from "../settings/settings";
 import { RequireAccessLevel } from "../api-utils/access-level";
+import { useIsSignedIn } from "../api-utils/sign-in";
 import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
 
@@ -43,9 +44,34 @@ export function AppNavbar(): ReactNode {
             {leftGroup}
             <Group wrap="nowrap" gap="xs">
                 <JobIndicator />
+                <SignInButton />
                 <SettingsButton />
             </Group>
         </Group>
+    );
+}
+
+/**
+ * Shown only when not signed in. Kicks off the Onshape OAuth flow and returns
+ * the user to their current location; context-data then reports them signed in.
+ */
+function SignInButton(): ReactNode {
+    const isSignedIn = useIsSignedIn();
+    if (isSignedIn) return null;
+
+    return (
+        <Button
+            variant="white"
+            onClick={() => {
+                const redirectUrl =
+                    window.location.pathname + window.location.search;
+                window.location.href =
+                    "/auth/sign-in?redirectUrl=" +
+                    encodeURIComponent(redirectUrl);
+            }}
+        >
+            Sign in
+        </Button>
     );
 }
 
