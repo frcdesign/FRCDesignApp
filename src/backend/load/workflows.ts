@@ -21,7 +21,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./load-context";
-import { LOAD_CONCURRENCY, createLimiter } from "./concurrency";
+import { LOAD_CONCURRENCY, createLimiter } from "./load-common";
 import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
 

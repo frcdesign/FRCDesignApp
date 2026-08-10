@@ -20,8 +20,7 @@ import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { useSaveSettings } from "../settings/settings";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useJobStatusQuery } from "../queries";
-import { useRefreshLibraryOnJobFinish } from "../api-utils/job-refresh";
+import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
 
 /**
@@ -60,9 +59,8 @@ function JobIndicator(): ReactNode {
 }
 
 function RunningJobLoader(): ReactNode {
-    const jobRunning = useJobStatusQuery().data?.running ?? false;
-    // Single editor-gated job-status consumer, so refresh-on-finish lives here.
-    useRefreshLibraryOnJobFinish(jobRunning);
+    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
+    const jobRunning = useJobStatus();
     if (!jobRunning) return null;
     return (
         <Tooltip label="The library is being loaded from Onshape in the background">

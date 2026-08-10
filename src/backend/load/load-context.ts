@@ -4,7 +4,7 @@ import { getOnshapeApiFromSessionId } from "../auth";
 import type { OnshapeApi } from "../onshape-api/onshape-api";
 import type { ElementType, LibraryId } from "../../shared/types";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
-import type { Limiter } from "./concurrency";
+import type { Limiter } from "./load-common";
 
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {

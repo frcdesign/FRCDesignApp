@@ -204,7 +204,6 @@ function useSetGroupOrderMutation() {
             }),
         onMutate: async (newOrder: string[]) => {
             await queryClient.cancelQueries({ queryKey: key });
-            const previous = queryClient.getQueryData<LibraryOut>(key);
             queryClient.setQueryData(
                 key,
                 getQueryUpdater((data: LibraryOut) => {
@@ -212,13 +211,11 @@ function useSetGroupOrderMutation() {
                     return data;
                 })
             );
-            return { previous };
         },
-        onError: (_error, _newOrder, context) => {
+        onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
-            queryClient.setQueryData(key, context?.previous);
         },
-        // On success the version bumps, so the settle refetch reconciles.
+        // Reconciled (or rolled back on error) by the onSettled library refetch.
         onSettled: refreshLibrary
     });
 }

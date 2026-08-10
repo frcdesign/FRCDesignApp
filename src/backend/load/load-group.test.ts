@@ -20,7 +20,7 @@ import {
     selectInsertablesToLoad
 } from "./load-group";
 import type { GroupTarget, LoadContext } from "./load-context";
-import { LOAD_CONCURRENCY, createLimiter } from "./concurrency";
+import { LOAD_CONCURRENCY, createLimiter } from "./load-common";
 import * as LoadContextModule from "./load-context";
 import {
     FAKE_STEP,

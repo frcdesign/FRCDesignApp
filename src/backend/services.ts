@@ -1,7 +1,7 @@
 import { type AppServicesFactory } from "./app";
 import { getOnshapeApi } from "./auth";
 import { getUserId } from "./onshape-api/endpoints/users";
-import { getCachedAccessLevel } from "./access-level-cache";
+import { getCachedAccessLevel } from "./access-level-utils";
 import { type AccessLevel } from "../shared/types";
 
 /**

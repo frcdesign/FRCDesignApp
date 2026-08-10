@@ -349,41 +349,50 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
     return (
         <Group gap={6} wrap="wrap">
             {counts.error > 0 && (
-                <CountBadge color="red" count={counts.error} noun="error" />
+                <CountBadge
+                    severity={BuildIssueSeverity.ERROR}
+                    count={counts.error}
+                />
             )}
             {counts.warning > 0 && (
                 <CountBadge
-                    color="yellow"
+                    severity={BuildIssueSeverity.WARNING}
                     count={counts.warning}
-                    noun="warning"
                 />
             )}
             {counts.info > 0 && (
-                <CountBadge color="blue" count={counts.info} noun="info" />
+                <CountBadge
+                    severity={BuildIssueSeverity.INFO}
+                    count={counts.info}
+                />
             )}
         </Group>
     );
 }
 
-interface CountBadgeProps {
-    color: string;
-    count: number;
-    /**
-     * error, warning, or info.
-     */
-    noun: string;
-}
+/** The badge color and singular noun for each severity. */
+const SEVERITY_BADGE: Record<
+    BuildIssueSeverity,
+    { color: string; noun: string }
+> = {
+    [BuildIssueSeverity.ERROR]: { color: "red", noun: "error" },
+    [BuildIssueSeverity.WARNING]: { color: "yellow", noun: "warning" },
+    [BuildIssueSeverity.INFO]: { color: "blue", noun: "info" }
+};
 
-function CountBadge({ color, count, noun }: CountBadgeProps): ReactNode {
-    let plural = "";
-    // Don't pluralize info since, e.g., 2 infos is wrong
-    if (noun !== "info" && count > 1) {
-        plural = "s";
-    }
-    const text = `${count} ${noun}${plural}`;
+function CountBadge({
+    severity,
+    count
+}: {
+    severity: BuildIssueSeverity;
+    count: number;
+}): ReactNode {
+    const { color, noun } = SEVERITY_BADGE[severity];
+    // Don't pluralize info, e.g. "2 infos" reads wrong.
+    const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
     return (
         <Badge size="sm" variant="light" color={color}>
-            {text}
+            {`${count} ${noun}${plural}`}
         </Badge>
     );
 }
@@ -514,13 +523,7 @@ export function GroupStatusBadge({
 /** A dimmed section header, e.g. "Admin" or "Parsed". */
 function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     return (
-        <Text
-            size="xs"
-            fw={FontWeight.SEMI_BOLD}
-            c="dimmed"
-            tt="uppercase"
-            style={{ letterSpacing: "0.03em" }}
-        >
+        <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
             {children}
         </Text>
     );
