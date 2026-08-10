@@ -597,18 +597,12 @@ function VisibilitySwitch({
     insertableId: string;
     isVisible: boolean;
 }): ReactNode {
-    const { mutate } = useSetVisibilityMutation([insertableId], !isVisible);
-    const closeCard = useCloseBuildCard();
+    const mutation = useSetVisibilityMutation([insertableId], !isVisible);
     return (
         <SwitchRow
             label="Visible to users"
             checked={isVisible}
-            onToggle={() => {
-                // Hiding opens a confirm modal; drop the hover card first so it
-                // isn't stranded behind the overlay.
-                if (isVisible) closeCard();
-                mutate();
-            }}
+            onToggle={() => mutation.mutate()}
         />
     );
 }

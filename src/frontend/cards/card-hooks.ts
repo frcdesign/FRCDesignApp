@@ -19,6 +19,7 @@ import { getAppErrorHandler } from "../api-utils/errors";
 import { buildStatusQueryKey } from "../queries";
 import { useRefreshLibrary } from "../api-utils/refresh";
 import { patchQuery } from "../common/utils";
+import { useCloseBuildCard } from "./build-status";
 
 /** The build-status query key for the currently-viewed library. */
 function useBuildStatusKey() {
@@ -36,6 +37,8 @@ export function useSetVisibilityMutation(
     const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
 
+    const closeCard = useCloseBuildCard();
+
     const mutation = useMutation({
         mutationKey: ["set-element-visibility", ...insertableIds],
         mutationFn: async () => {
@@ -51,7 +54,7 @@ export function useSetVisibilityMutation(
         },
         onMutate: async () => {
             showLoadingToast(
-                isVisible ? "Showing elements..." : "Hiding elements...",
+                isVisible ? "Showing insertables..." : "Hiding insertables...",
                 "set-visibility"
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -63,7 +66,7 @@ export function useSetVisibilityMutation(
         },
         onSuccess: () => {
             showSuccessToast(
-                isVisible ? "Elements shown." : "Elements hidden.",
+                isVisible ? "Insertables shown." : "Insertables hidden.",
                 "set-visibility"
             );
         },
@@ -79,6 +82,7 @@ export function useSetVisibilityMutation(
             mutation.mutate();
             return;
         }
+        closeCard();
         modals.openConfirmModal({
             title: "Hide elements",
             children:
@@ -88,7 +92,7 @@ export function useSetVisibilityMutation(
             onConfirm: () => mutation.mutate(),
             onCancel: () => showErrorToast("Cancelled hide operation.")
         });
-    }, [isVisible, mutation]);
+    }, [isVisible, closeCard, mutation]);
 
     return { mutate, isPending: mutation.isPending };
 }
