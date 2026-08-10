@@ -20,12 +20,8 @@ function refetchFavorites(libraryId: LibraryId): Promise<void> {
 }
 
 /**
- * Refreshes the whole library view: refetch the context (its cacheVersion keys
- * the library / search / build-status queries), refetch the snapshot queries a
- * mutation may have touched, and re-run the route loaders. Invalidating the
- * snapshot queries also rolls an optimistic update back to server truth when the
- * mutation failed — the query keys are unchanged there, so the version bump
- * alone wouldn't refetch them. A delete or hide can cascade into favorites too.
+ * Refreshes the library view (and favorites). Invalidating the snapshot queries
+ * also rolls a failed optimistic update back to server truth on the refetch.
  */
 export function useRefreshLibrary(): () => Promise<void> {
     const router = useRouter();
@@ -53,14 +49,12 @@ export function useRefreshFavorites(): () => Promise<void> {
     }, [router, libraryId]);
 }
 
-/**
- * Polls whether a load job is running and refreshes the library once it
- * finishes. Mount once (in an editor-gated spot) so the refresh fires from a
- * single place; read-only consumers should use `useJobStatusQuery` directly.
- */
+/** Polls whether a load job is running and refreshes the library once it finishes. */
 export function useJobStatus(): boolean {
     const refreshLibrary = useRefreshLibrary();
     const running = useJobStatusQuery().data?.running ?? false;
+    // A ref, not state: tracking the previous value to detect the finished
+    // transition shouldn't trigger a render (and set-state-in-effect is banned).
     const wasRunning = useRef(running);
     useEffect(() => {
         if (wasRunning.current && !running) {
@@ -71,16 +65,16 @@ export function useJobStatus(): boolean {
     return running;
 }
 
+type ContextDataUpdate = (data: ContextData) => void;
+
 /** Optimistically patches the cached context data and re-runs the loaders. */
-export function useUpdateContextData(): (
-    recipe: (data: ContextData) => void
-) => void {
+export function useUpdateContextData(): (update: ContextDataUpdate) => void {
     const router = useRouter();
     return useCallback(
-        (recipe: (data: ContextData) => void) => {
+        (update: ContextDataUpdate) => {
             queryClient.setQueryData(
                 contextDataQueryKey(),
-                getQueryUpdater(recipe)
+                getQueryUpdater(update)
             );
             void router.invalidate();
         },

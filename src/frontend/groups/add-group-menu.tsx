@@ -47,9 +47,6 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             "add-group"
         ),
         onSuccess: () => {
-            // Replace the loading toast with a transient "started" toast; the
-            // spinner signals the running load and the navbar watcher reports
-            // completion.
             showInfoToast("Adding document...", "add-group");
             void queryClient.invalidateQueries({
                 queryKey: jobStatusQueryKey(libraryId)

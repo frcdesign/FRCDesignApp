@@ -117,10 +117,8 @@
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
                 "NODE_ENV": "development"
             },
-            // Raise the per-invocation subrequest cap so a full library reload
-            // (many Onshape calls per insertable) doesn't hit the default limit.
             "limits": {
-                "subrequests": 200000
+                "subrequests": 500000
             }
         },
         "production": {
@@ -160,10 +158,8 @@
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "production"
             },
-            // Raise the per-invocation subrequest cap so a full library reload
-            // (many Onshape calls per insertable) doesn't hit the default limit.
             "limits": {
-                "subrequests": 200000
+                "subrequests": 500000
             }
         }
     }
