@@ -312,7 +312,10 @@ function LastModified({
         );
     }
     return (
-        <Tooltip label="The last time changes were pulled from Onshape">
+        <Tooltip
+            label="The last time changes were pulled from Onshape."
+            withArrow
+        >
             <Group
                 gap={4}
                 wrap="nowrap"
@@ -321,8 +324,8 @@ function LastModified({
             >
                 <IconClock size={IconSize.TINY} />
                 <Text size="xs">
-                    {lastLoadedAt === null
-                        ? "Never modified"
+                    {!lastLoadedAt
+                        ? "Unknown"
                         : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
                 </Text>
             </Group>
