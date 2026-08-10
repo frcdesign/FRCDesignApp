@@ -681,7 +681,7 @@ function GroupAdminSection({
             <SectionHeader>Admin</SectionHeader>
             <SwitchRow
                 label="Sort alphabetically"
-                description="Order elements A–Z instead of by tab"
+                description="Order elements A-Z instead of by tab"
                 checked={status.sortAlphabetically}
                 onToggle={() => mutation.mutate(!status.sortAlphabetically)}
             />
