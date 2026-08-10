@@ -26,6 +26,7 @@ import { ThumbnailUrls } from "../../shared/types";
 import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
+import { RequireSignIn } from "../api-utils/sign-in";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {
@@ -93,7 +94,7 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
         search.elementType === ElementType.ASSEMBLY;
 
     return (
-        <>
+        <RequireSignIn>
             {supportsFasten && (
                 <Menu.Item
                     leftSection={<IconPlus size={IconSize.SMALL} />}
@@ -108,7 +109,7 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
             >
                 Quick insert
             </Menu.Item>
-        </>
+        </RequireSignIn>
     );
 }
 

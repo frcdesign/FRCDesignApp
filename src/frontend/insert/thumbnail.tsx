@@ -10,6 +10,7 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
+import { useIsSignedIn } from "../api-utils/sign-in";
 
 interface HeightAndWidth {
     height: number;
@@ -126,11 +127,14 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 interface PreviewImageProps {
     path: ElementPath;
     configuration?: ParameterValues;
+    /** Stored thumbnail, shown instead of the live preview when not signed in. */
+    thumbnailUrls?: ThumbnailUrls;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, configuration } = props;
+    const { path, configuration, thumbnailUrls } = props;
     const size = ThumbnailSize.SMALL;
+    const isSignedIn = useIsSignedIn();
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
 
@@ -150,7 +154,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: false,
-        enabled: !isFetchingConfiguration
+        enabled: !isFetchingConfiguration && isSignedIn
     });
 
     const thumbnailId = thumbnailIdQuery.data;
@@ -182,10 +186,31 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             return 15000;
         },
         retry: 5,
-        enabled: !isFetchingConfiguration && thumbnailId !== undefined
+        enabled:
+            !isFetchingConfiguration && thumbnailId !== undefined && isSignedIn
     });
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
+
+    // Not signed in: no live Onshape preview, so show the stored thumbnail.
+    if (!isSignedIn) {
+        const url = thumbnailUrls?.[ThumbnailSize.STANDARD];
+        if (!url) {
+            return (
+                <SectionError
+                    title="Sign in to preview this part."
+                    description={null}
+                />
+            );
+        }
+        return (
+            <Thumbnail
+                url={url}
+                heightAndWidth={heightAndWidth}
+                spinnerSize={36}
+            />
+        );
+    }
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
         return (

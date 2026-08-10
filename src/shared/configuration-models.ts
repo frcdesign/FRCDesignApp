@@ -150,3 +150,12 @@ export interface UnitInfo {
     anglePrecision: number;
     realPrecision: number;
 }
+
+/** Fallback units when the document's units can't be fetched (e.g. not signed in). */
+export const DEFAULT_UNIT_INFO: UnitInfo = {
+    lengthUnit: Unit.MILLIMETER,
+    angleUnit: Unit.DEGREE,
+    lengthPrecision: 3,
+    anglePrecision: 3,
+    realPrecision: 3
+};

@@ -20,6 +20,7 @@ import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
 import { InstancePath } from "../shared/onshape-path";
+import { readLocalSettings } from "./settings/local-settings";
 
 export function getConfigurationMatchKey() {
     return ["configuration"];
@@ -67,12 +68,22 @@ export function contextDataQueryKey() {
 export function getContextDataQuery() {
     return queryOptions<ContextData>({
         queryKey: contextDataQueryKey(),
-        queryFn: () => apiGet("/context-data")
+        queryFn: async () => {
+            const data: ContextData = await apiGet("/context-data");
+            // Not signed in: overlay locally-persisted settings over the defaults.
+            if (!data.signedIn) {
+                data.settings = { ...data.settings, ...readLocalSettings() };
+            }
+            return data;
+        }
     });
 }
 
-/** Returns information needed to format unit expressions in the Insert dialog. */
-export function useUnitInfoQuery(instancePath: InstancePath) {
+/**
+ * Returns information needed to format unit expressions in the Insert dialog.
+ * Hits Onshape, so it must be disabled when the caller isn't signed in.
+ */
+export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
     return useQuery<UnitInfo>({
         queryKey: ["unit-info", instancePath],
         queryFn: () =>
@@ -82,7 +93,8 @@ export function useUnitInfoQuery(instancePath: InstancePath) {
                     instanceId: instancePath.instanceId,
                     instanceType: instancePath.instanceType
                 }
-            })
+            }),
+        enabled
     });
 }
 

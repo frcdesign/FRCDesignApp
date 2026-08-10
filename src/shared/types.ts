@@ -84,6 +84,8 @@ export interface AccessData {
 export interface ContextData {
     accessData: AccessData;
     settings: Settings;
+    /** Whether the caller has a valid Onshape session (see backend isSignedIn). */
+    signedIn: boolean;
 }
 export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;

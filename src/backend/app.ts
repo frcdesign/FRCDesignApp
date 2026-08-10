@@ -14,11 +14,15 @@ export interface AppBindings {
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
+    /** Testing-only: treat requests as signed in with a fake user. Not for production. */
+    FORCE_SIGNED_IN?: string;
 }
 
 interface AppVariables {
     /** Internal cache for {@link getOnshapeApi} in auth.ts. */
     onshapeApi?: OAuthApi;
+    /** Internal cache for isSignedIn in sign-in-utils.ts. */
+    signedIn?: boolean;
     /** Injected getters — see {@link AppServices} / `createApp`. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;

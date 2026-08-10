@@ -124,6 +124,31 @@ To see documents, add one or more documents and push a new app version to rebuil
 
 To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare UI instance.
 
+## Standalone (not-signed-in) mode
+
+The app also runs without an Onshape login. Opening it directly (e.g.
+`https://localhost:3000/`, rather than launching it from the Onshape panel)
+serves the read-only library UI: browse groups, search, and open the
+configuration menu. Anything that needs Onshape — inserting/deriving, favorites,
+saving settings server-side, and live configuration previews — is hidden and
+guarded server-side behind sign-in. Settings (theme/library) fall back to
+`localStorage`, and the configuration menu uses default units and the stored
+(static) thumbnail.
+
+This needs a populated database. Import a dump of the loaded cert DB into local
+D1, and (optionally) its thumbnails into local R2:
+
+```
+npx wrangler d1 execute DB --local --file=<cert-dump>.sql
+npx wrangler r2 object put frc-design-app-dev-thumbnails/thumbnails/<size>/<elementId> --file=<thumb>.gif
+```
+
+To exercise the signed-in-only UI (favorites, insert button) without a real
+Onshape session, set `FORCE_SIGNED_IN=true` in your `.env`. This is a
+testing-only escape hatch — it uses a fake user id and Onshape calls it reveals
+won't actually work, so leave it unset normally. Combine with
+`ACCESS_LEVEL_OVERRIDE=admin` to also show editor/admin controls.
+
 # Troubleshooting
 
 ## Onshape fails to load

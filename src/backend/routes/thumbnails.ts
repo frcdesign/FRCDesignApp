@@ -3,6 +3,7 @@ import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
+import { requireSignInMiddleware } from "../sign-in-utils";
 import { bumpLibraryVersion } from "../library-data";
 import {
     getElementThumbnail,
@@ -135,7 +136,7 @@ thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
 });
 
 /** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
-thumbnailRoutes.get("/thumbnail", async (c) => {
+thumbnailRoutes.get("/thumbnail", requireSignInMiddleware, async (c) => {
     const onshapeApi = await c.var.getOnshapeApi();
     const size =
         (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
@@ -154,6 +155,7 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
+    requireSignInMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {

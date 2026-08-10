@@ -5,8 +5,12 @@ import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
 import { type LibraryId } from "../../shared/types";
 import { type ParameterValues } from "../../shared/configuration-models";
+import { requireSignInMiddleware } from "../sign-in-utils";
 
 export const favoriteRoutes = getApp();
+
+// Favorites are per-user and require a signed-in Onshape session.
+favoriteRoutes.use(requireSignInMiddleware);
 
 async function getFavorites(
     db: Db,

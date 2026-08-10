@@ -25,6 +25,7 @@ import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import { useFavoritesQuery } from "../queries";
+import { RequireSignIn } from "../api-utils/sign-in";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
@@ -112,13 +113,13 @@ export function InsertableMenuItems(
     return (
         <>
             {!inInsertMenu && (
-                <>
+                <RequireSignIn>
                     <QuickInsertItems
                         insertable={insertable}
                         isFavorite={favorite !== undefined}
                     />
                     <Menu.Divider />
-                </>
+                </RequireSignIn>
             )}
             <FavoriteInsertableItem
                 favorite={favorite}

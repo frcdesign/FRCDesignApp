@@ -10,13 +10,18 @@
 import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "../../shared/onshape-path";
 import { useCallback, useEffect } from "react";
+import { useIsSignedIn } from "./sign-in";
 
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });
+    // Not signed in means no Onshape iframe parent to message.
+    const isSignedIn = useIsSignedIn();
 
     useEffect(() => {
-        sendInitMessage(search);
-    }, [search]);
+        if (isSignedIn) {
+            sendInitMessage(search);
+        }
+    }, [search, isSignedIn]);
 
     useEffect(() => {
         const handlePostMessage = (event: MessageEvent) => {
@@ -38,11 +43,13 @@ export function useMessageListener() {
 
 export function useMessageSender() {
     const search = useSearch({ from: "/app" });
+    const isSignedIn = useIsSignedIn();
     return useCallback(
         (message: Message) => {
+            if (!isSignedIn) return;
             sendMessage(search, message);
         },
-        [search]
+        [search, isSignedIn]
     );
 }
 

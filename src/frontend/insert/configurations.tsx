@@ -28,7 +28,8 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption
+    EnumOption,
+    DEFAULT_UNIT_INFO
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
@@ -46,6 +47,7 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
+import { useIsSignedIn } from "../api-utils/sign-in";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -70,7 +72,13 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     const search = useSearch({ from: "/app" });
-    const unitInfoQuery = useUnitInfoQuery(search);
+    // Fetching document units requires Onshape; when not signed in, fall back to
+    // default units so the configuration still renders.
+    const isSignedIn = useIsSignedIn();
+    const unitInfoQuery = useUnitInfoQuery(search, isSignedIn);
+    const unitInfo =
+        (isSignedIn ? unitInfoQuery.data : DEFAULT_UNIT_INFO) ??
+        DEFAULT_UNIT_INFO;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -88,7 +96,11 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
 
-    if (query.isPending || unitInfoQuery.isPending || !configuration) {
+    if (
+        query.isPending ||
+        (isSignedIn && unitInfoQuery.isPending) ||
+        !configuration
+    ) {
         return (
             <Center my="md">
                 <Loader />
@@ -96,7 +108,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
     } else if (query.isError) {
         return <SectionError title="Failed to load configuration." />;
-    } else if (unitInfoQuery.isError) {
+    } else if (isSignedIn && unitInfoQuery.isError) {
         return <SectionError title="Failed to fetch document units." />;
     }
 
@@ -105,7 +117,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
             configurationResult={query.data}
             configuration={configuration}
             setConfiguration={setConfiguration}
-            unitInfo={unitInfoQuery.data}
+            unitInfo={unitInfo}
         />
     );
 }

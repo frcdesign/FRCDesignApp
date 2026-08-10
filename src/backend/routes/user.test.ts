@@ -42,7 +42,8 @@ describe("user routes", () => {
             settings: {
                 theme: Theme.SYSTEM,
                 libraryId: LibraryId.FRC_DESIGN_LIB
-            }
+            },
+            signedIn: true
         });
     });
 

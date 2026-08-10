@@ -24,6 +24,7 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
+import { RequireSignIn } from "../api-utils/sign-in";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
@@ -92,6 +93,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
+                thumbnailUrls={insertable.thumbnailUrls}
             />
             {parameters}
             <Group justify="space-between" wrap="nowrap" mt="md">
@@ -109,12 +111,14 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         />
                     </MenuButton>
                 </Group>
-                <InsertButtons
-                    insertable={insertable}
-                    configuration={configuration}
-                    isFavorite={favorite !== undefined}
-                    onInsert={onInsert}
-                />
+                <RequireSignIn>
+                    <InsertButtons
+                        insertable={insertable}
+                        configuration={configuration}
+                        isFavorite={favorite !== undefined}
+                        onInsert={onInsert}
+                    />
+                </RequireSignIn>
             </Group>
         </>
     );

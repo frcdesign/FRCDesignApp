@@ -120,6 +120,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
             <PreviewImageCard
                 path={insertable.path}
                 configuration={configuration}
+                thumbnailUrls={insertable.thumbnailUrls}
             />
             <ConfigurationWrapper
                 configuration={configuration}

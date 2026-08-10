@@ -21,6 +21,7 @@ import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { favoritesQueryKey } from "../queries";
 import { useRefreshFavorites } from "../api-utils/refresh";
+import { RequireSignIn } from "../api-utils/sign-in";
 
 enum Operation {
     ADD,
@@ -122,20 +123,22 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
 
     return (
-        <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={(event) => {
-                event.stopPropagation();
-                const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
-            }}
-            title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
-            {favoriteIcon}
-        </ActionIcon>
+        <RequireSignIn>
+            <ActionIcon
+                variant="subtle"
+                color="gray"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    const favoriteId = favorite?.id ?? crypto.randomUUID();
+                    mutation.mutate({ operation, insertable, favoriteId });
+                }}
+                title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
+                {favoriteIcon}
+            </ActionIcon>
+        </RequireSignIn>
     );
 }
 
@@ -154,22 +157,24 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     const mutation = useUpdateFavoritesMutation();
 
     return (
-        <Menu.Item
-            leftSection={
-                operation === Operation.ADD ? (
-                    <HeartIcon />
-                ) : (
-                    <HeartBrokenIcon />
-                )
-            }
-            color={operation === Operation.ADD ? undefined : "red"}
-            onClick={() => {
-                const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
-            }}
-        >
-            {operation === Operation.ADD ? "Favorite" : "Unfavorite"}
-        </Menu.Item>
+        <RequireSignIn>
+            <Menu.Item
+                leftSection={
+                    operation === Operation.ADD ? (
+                        <HeartIcon />
+                    ) : (
+                        <HeartBrokenIcon />
+                    )
+                }
+                color={operation === Operation.ADD ? undefined : "red"}
+                onClick={() => {
+                    const favoriteId = favorite?.id ?? crypto.randomUUID();
+                    mutation.mutate({ operation, insertable, favoriteId });
+                }}
+            >
+                {operation === Operation.ADD ? "Favorite" : "Unfavorite"}
+            </Menu.Item>
+        </RequireSignIn>
     );
 }
 

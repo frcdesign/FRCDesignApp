@@ -8,234 +8,255 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as InitRouteImport } from './routes/init'
-import { Route as AppRouteRouteImport } from './routes/app/route'
-import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
-import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
-import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
-import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
-import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
-import { Route as AppGroupsIndexRouteImport } from './routes/app/groups/index'
-import { Route as AppGroupsGroupIdRouteImport } from './routes/app/groups/$groupId'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as InitRouteImport } from "./routes/init";
+import { Route as AppRouteRouteImport } from "./routes/app/route";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as PagesSafariErrorRouteImport } from "./routes/_pages/safari-error";
+import { Route as PagesLicenseRouteImport } from "./routes/_pages/license";
+import { Route as PagesGrantDeniedRouteImport } from "./routes/_pages/grant-denied";
+import { Route as PagesCookieErrorRouteImport } from "./routes/_pages/cookie-error";
+import { Route as PagesBetaCompleteRouteImport } from "./routes/_pages/beta-complete";
+import { Route as AppGroupsIndexRouteImport } from "./routes/app/groups/index";
+import { Route as AppGroupsGroupIdRouteImport } from "./routes/app/groups/$groupId";
 
 const InitRoute = InitRouteImport.update({
-  id: '/init',
-  path: '/init',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/init",
+    path: "/init",
+    getParentRoute: () => rootRouteImport
+} as any);
 const AppRouteRoute = AppRouteRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/app",
+    path: "/app",
+    getParentRoute: () => rootRouteImport
+} as any);
+const IndexRoute = IndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => rootRouteImport
+} as any);
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
-  id: '/_pages/safari-error',
-  path: '/safari-error',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/_pages/safari-error",
+    path: "/safari-error",
+    getParentRoute: () => rootRouteImport
+} as any);
 const PagesLicenseRoute = PagesLicenseRouteImport.update({
-  id: '/_pages/license',
-  path: '/license',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/_pages/license",
+    path: "/license",
+    getParentRoute: () => rootRouteImport
+} as any);
 const PagesGrantDeniedRoute = PagesGrantDeniedRouteImport.update({
-  id: '/_pages/grant-denied',
-  path: '/grant-denied',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/_pages/grant-denied",
+    path: "/grant-denied",
+    getParentRoute: () => rootRouteImport
+} as any);
 const PagesCookieErrorRoute = PagesCookieErrorRouteImport.update({
-  id: '/_pages/cookie-error',
-  path: '/cookie-error',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/_pages/cookie-error",
+    path: "/cookie-error",
+    getParentRoute: () => rootRouteImport
+} as any);
 const PagesBetaCompleteRoute = PagesBetaCompleteRouteImport.update({
-  id: '/_pages/beta-complete',
-  path: '/beta-complete',
-  getParentRoute: () => rootRouteImport,
-} as any)
+    id: "/_pages/beta-complete",
+    path: "/beta-complete",
+    getParentRoute: () => rootRouteImport
+} as any);
 const AppGroupsIndexRoute = AppGroupsIndexRouteImport.update({
-  id: '/groups/',
-  path: '/groups/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
+    id: "/groups/",
+    path: "/groups/",
+    getParentRoute: () => AppRouteRoute
+} as any);
 const AppGroupsGroupIdRoute = AppGroupsGroupIdRouteImport.update({
-  id: '/groups/$groupId',
-  path: '/groups/$groupId',
-  getParentRoute: () => AppRouteRoute,
-} as any)
+    id: "/groups/$groupId",
+    path: "/groups/$groupId",
+    getParentRoute: () => AppRouteRoute
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
-  '/beta-complete': typeof PagesBetaCompleteRoute
-  '/cookie-error': typeof PagesCookieErrorRoute
-  '/grant-denied': typeof PagesGrantDeniedRoute
-  '/license': typeof PagesLicenseRoute
-  '/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups/': typeof AppGroupsIndexRoute
+    "/": typeof IndexRoute;
+    "/app": typeof AppRouteRouteWithChildren;
+    "/init": typeof InitRoute;
+    "/beta-complete": typeof PagesBetaCompleteRoute;
+    "/cookie-error": typeof PagesCookieErrorRoute;
+    "/grant-denied": typeof PagesGrantDeniedRoute;
+    "/license": typeof PagesLicenseRoute;
+    "/safari-error": typeof PagesSafariErrorRoute;
+    "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
+    "/app/groups/": typeof AppGroupsIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
-  '/beta-complete': typeof PagesBetaCompleteRoute
-  '/cookie-error': typeof PagesCookieErrorRoute
-  '/grant-denied': typeof PagesGrantDeniedRoute
-  '/license': typeof PagesLicenseRoute
-  '/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups': typeof AppGroupsIndexRoute
+    "/": typeof IndexRoute;
+    "/app": typeof AppRouteRouteWithChildren;
+    "/init": typeof InitRoute;
+    "/beta-complete": typeof PagesBetaCompleteRoute;
+    "/cookie-error": typeof PagesCookieErrorRoute;
+    "/grant-denied": typeof PagesGrantDeniedRoute;
+    "/license": typeof PagesLicenseRoute;
+    "/safari-error": typeof PagesSafariErrorRoute;
+    "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
+    "/app/groups": typeof AppGroupsIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
-  '/_pages/beta-complete': typeof PagesBetaCompleteRoute
-  '/_pages/cookie-error': typeof PagesCookieErrorRoute
-  '/_pages/grant-denied': typeof PagesGrantDeniedRoute
-  '/_pages/license': typeof PagesLicenseRoute
-  '/_pages/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups/': typeof AppGroupsIndexRoute
+    __root__: typeof rootRouteImport;
+    "/": typeof IndexRoute;
+    "/app": typeof AppRouteRouteWithChildren;
+    "/init": typeof InitRoute;
+    "/_pages/beta-complete": typeof PagesBetaCompleteRoute;
+    "/_pages/cookie-error": typeof PagesCookieErrorRoute;
+    "/_pages/grant-denied": typeof PagesGrantDeniedRoute;
+    "/_pages/license": typeof PagesLicenseRoute;
+    "/_pages/safari-error": typeof PagesSafariErrorRoute;
+    "/app/groups/$groupId": typeof AppGroupsGroupIdRoute;
+    "/app/groups/": typeof AppGroupsIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/app'
-    | '/init'
-    | '/beta-complete'
-    | '/cookie-error'
-    | '/grant-denied'
-    | '/license'
-    | '/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups/'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/app'
-    | '/init'
-    | '/beta-complete'
-    | '/cookie-error'
-    | '/grant-denied'
-    | '/license'
-    | '/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups'
-  id:
-    | '__root__'
-    | '/app'
-    | '/init'
-    | '/_pages/beta-complete'
-    | '/_pages/cookie-error'
-    | '/_pages/grant-denied'
-    | '/_pages/license'
-    | '/_pages/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups/'
-  fileRoutesById: FileRoutesById
+    fileRoutesByFullPath: FileRoutesByFullPath;
+    fullPaths:
+        | "/"
+        | "/app"
+        | "/init"
+        | "/beta-complete"
+        | "/cookie-error"
+        | "/grant-denied"
+        | "/license"
+        | "/safari-error"
+        | "/app/groups/$groupId"
+        | "/app/groups/";
+    fileRoutesByTo: FileRoutesByTo;
+    to:
+        | "/"
+        | "/app"
+        | "/init"
+        | "/beta-complete"
+        | "/cookie-error"
+        | "/grant-denied"
+        | "/license"
+        | "/safari-error"
+        | "/app/groups/$groupId"
+        | "/app/groups";
+    id:
+        | "__root__"
+        | "/"
+        | "/app"
+        | "/init"
+        | "/_pages/beta-complete"
+        | "/_pages/cookie-error"
+        | "/_pages/grant-denied"
+        | "/_pages/license"
+        | "/_pages/safari-error"
+        | "/app/groups/$groupId"
+        | "/app/groups/";
+    fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  AppRouteRoute: typeof AppRouteRouteWithChildren
-  InitRoute: typeof InitRoute
-  PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
-  PagesCookieErrorRoute: typeof PagesCookieErrorRoute
-  PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
-  PagesLicenseRoute: typeof PagesLicenseRoute
-  PagesSafariErrorRoute: typeof PagesSafariErrorRoute
+    IndexRoute: typeof IndexRoute;
+    AppRouteRoute: typeof AppRouteRouteWithChildren;
+    InitRoute: typeof InitRoute;
+    PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute;
+    PagesCookieErrorRoute: typeof PagesCookieErrorRoute;
+    PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute;
+    PagesLicenseRoute: typeof PagesLicenseRoute;
+    PagesSafariErrorRoute: typeof PagesSafariErrorRoute;
 }
 
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/init': {
-      id: '/init'
-      path: '/init'
-      fullPath: '/init'
-      preLoaderRoute: typeof InitRouteImport
-      parentRoute: typeof rootRouteImport
+declare module "@tanstack/react-router" {
+    interface FileRoutesByPath {
+        "/init": {
+            id: "/init";
+            path: "/init";
+            fullPath: "/init";
+            preLoaderRoute: typeof InitRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/app": {
+            id: "/app";
+            path: "/app";
+            fullPath: "/app";
+            preLoaderRoute: typeof AppRouteRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/": {
+            id: "/";
+            path: "/";
+            fullPath: "/";
+            preLoaderRoute: typeof IndexRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/_pages/safari-error": {
+            id: "/_pages/safari-error";
+            path: "/safari-error";
+            fullPath: "/safari-error";
+            preLoaderRoute: typeof PagesSafariErrorRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/_pages/license": {
+            id: "/_pages/license";
+            path: "/license";
+            fullPath: "/license";
+            preLoaderRoute: typeof PagesLicenseRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/_pages/grant-denied": {
+            id: "/_pages/grant-denied";
+            path: "/grant-denied";
+            fullPath: "/grant-denied";
+            preLoaderRoute: typeof PagesGrantDeniedRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/_pages/cookie-error": {
+            id: "/_pages/cookie-error";
+            path: "/cookie-error";
+            fullPath: "/cookie-error";
+            preLoaderRoute: typeof PagesCookieErrorRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/_pages/beta-complete": {
+            id: "/_pages/beta-complete";
+            path: "/beta-complete";
+            fullPath: "/beta-complete";
+            preLoaderRoute: typeof PagesBetaCompleteRouteImport;
+            parentRoute: typeof rootRouteImport;
+        };
+        "/app/groups/": {
+            id: "/app/groups/";
+            path: "/groups";
+            fullPath: "/app/groups/";
+            preLoaderRoute: typeof AppGroupsIndexRouteImport;
+            parentRoute: typeof AppRouteRoute;
+        };
+        "/app/groups/$groupId": {
+            id: "/app/groups/$groupId";
+            path: "/groups/$groupId";
+            fullPath: "/app/groups/$groupId";
+            preLoaderRoute: typeof AppGroupsGroupIdRouteImport;
+            parentRoute: typeof AppRouteRoute;
+        };
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/safari-error': {
-      id: '/_pages/safari-error'
-      path: '/safari-error'
-      fullPath: '/safari-error'
-      preLoaderRoute: typeof PagesSafariErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/license': {
-      id: '/_pages/license'
-      path: '/license'
-      fullPath: '/license'
-      preLoaderRoute: typeof PagesLicenseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/grant-denied': {
-      id: '/_pages/grant-denied'
-      path: '/grant-denied'
-      fullPath: '/grant-denied'
-      preLoaderRoute: typeof PagesGrantDeniedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/cookie-error': {
-      id: '/_pages/cookie-error'
-      path: '/cookie-error'
-      fullPath: '/cookie-error'
-      preLoaderRoute: typeof PagesCookieErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/beta-complete': {
-      id: '/_pages/beta-complete'
-      path: '/beta-complete'
-      fullPath: '/beta-complete'
-      preLoaderRoute: typeof PagesBetaCompleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/groups/': {
-      id: '/app/groups/'
-      path: '/groups'
-      fullPath: '/app/groups/'
-      preLoaderRoute: typeof AppGroupsIndexRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/app/groups/$groupId': {
-      id: '/app/groups/$groupId'
-      path: '/groups/$groupId'
-      fullPath: '/app/groups/$groupId'
-      preLoaderRoute: typeof AppGroupsGroupIdRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-  }
 }
 
 interface AppRouteRouteChildren {
-  AppGroupsGroupIdRoute: typeof AppGroupsGroupIdRoute
-  AppGroupsIndexRoute: typeof AppGroupsIndexRoute
+    AppGroupsGroupIdRoute: typeof AppGroupsGroupIdRoute;
+    AppGroupsIndexRoute: typeof AppGroupsIndexRoute;
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppGroupsGroupIdRoute: AppGroupsGroupIdRoute,
-  AppGroupsIndexRoute: AppGroupsIndexRoute,
-}
+    AppGroupsGroupIdRoute: AppGroupsGroupIdRoute,
+    AppGroupsIndexRoute: AppGroupsIndexRoute
+};
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
-  AppRouteRouteChildren,
-)
+    AppRouteRouteChildren
+);
 
 const rootRouteChildren: RootRouteChildren = {
-  AppRouteRoute: AppRouteRouteWithChildren,
-  InitRoute: InitRoute,
-  PagesBetaCompleteRoute: PagesBetaCompleteRoute,
-  PagesCookieErrorRoute: PagesCookieErrorRoute,
-  PagesGrantDeniedRoute: PagesGrantDeniedRoute,
-  PagesLicenseRoute: PagesLicenseRoute,
-  PagesSafariErrorRoute: PagesSafariErrorRoute,
-}
+    IndexRoute: IndexRoute,
+    AppRouteRoute: AppRouteRouteWithChildren,
+    InitRoute: InitRoute,
+    PagesBetaCompleteRoute: PagesBetaCompleteRoute,
+    PagesCookieErrorRoute: PagesCookieErrorRoute,
+    PagesGrantDeniedRoute: PagesGrantDeniedRoute,
+    PagesLicenseRoute: PagesLicenseRoute,
+    PagesSafariErrorRoute: PagesSafariErrorRoute
+};
 export const routeTree = rootRouteImport
-  ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+    ._addFileChildren(rootRouteChildren)
+    ._addFileTypes<FileRouteTypes>();

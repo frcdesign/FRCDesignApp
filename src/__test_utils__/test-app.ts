@@ -9,6 +9,11 @@ export interface TestAppOptions {
     accessLevel?: AccessLevel;
     /** Onshape mock returned by `c.var.getOnshapeApi()` (default a fresh mock). */
     onshapeApi?: MockOnshapeApi;
+    /**
+     * When false, `getOnshapeApi` rejects so `isSignedIn()` is false (simulating
+     * a not-signed-in caller). Default true.
+     */
+    signedIn?: boolean;
 }
 
 /**
@@ -17,8 +22,12 @@ export interface TestAppOptions {
  * `app.request(path, init, env)` (pass `env` from `cloudflare:workers`).
  */
 export function createTestApp(options: TestAppOptions = {}) {
+    const signedIn = options.signedIn ?? true;
     return createApp(() => ({
-        getOnshapeApi: () => Promise.resolve(MOCK_ONSHAPE_API),
+        getOnshapeApi: () =>
+            signedIn
+                ? Promise.resolve(options.onshapeApi ?? MOCK_ONSHAPE_API)
+                : Promise.reject(new Error("Not signed in")),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
             Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN)

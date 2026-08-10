@@ -21,6 +21,7 @@ import { FavoritesList } from "../../../favorites/favorites-list";
 import { useLibraryQuery } from "../../../queries";
 import { getLibraryName, useLibraryId } from "../../../api-utils/library";
 import { updateUiState, useUiState } from "../../../api-utils/ui-state";
+import { useIsSignedIn } from "../../../api-utils/sign-in";
 
 export const Route = createFileRoute("/app/groups/")({
     component: HomeList,
@@ -33,6 +34,8 @@ function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
+    // Favorites are per-user and hidden until signed in.
+    const isSignedIn = useIsSignedIn();
 
     const isSearch = !!uiState.searchQuery;
     const listKey = isSearch ? "search" : "library";
@@ -124,7 +127,7 @@ function HomeList(): ReactNode {
                     }
                 }}
             >
-                {favoritesAccordion}
+                {isSignedIn && favoritesAccordion}
                 {childAccordion}
             </Accordion>
             <Outlet />
