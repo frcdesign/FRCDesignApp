@@ -28,8 +28,7 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption,
-    DEFAULT_UNIT_INFO
+    EnumOption
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
@@ -76,9 +75,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     // default units so the configuration still renders.
     const isSignedIn = useIsSignedIn();
     const unitInfoQuery = useUnitInfoQuery(search, isSignedIn);
-    const unitInfo =
-        (isSignedIn ? unitInfoQuery.data : DEFAULT_UNIT_INFO) ??
-        DEFAULT_UNIT_INFO;
+    // Not signed in: no document units, so each quantity renders in its own unit.
+    const unitInfo = isSignedIn ? unitInfoQuery.data : undefined;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -126,7 +124,7 @@ interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
     configuration: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
-    unitInfo: UnitInfo;
+    unitInfo?: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
@@ -170,7 +168,7 @@ interface ParameterProps<T extends ConfigurationParameter> {
     onValueChange: (newValue: string | undefined) => void;
     configuration: ParameterValues;
     parameters: ConfigurationParameter[];
-    unitInfo: UnitInfo;
+    unitInfo?: UnitInfo;
 }
 
 function ParameterInput(
@@ -363,33 +361,40 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     );
 }
 
+/** Fallback display precision when document units aren't available (not signed in). */
+const DEFAULT_QUANTITY_PRECISION = 3;
+
 function getEvaluateOptions(
     parameter: QuantityParameter,
-    contextData: UnitInfo
+    unitInfo?: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
         min: valueWithUnits(parameter.min, parameter.unit),
         max: valueWithUnits(parameter.max, parameter.unit)
     };
+    // Without document units (not signed in), display each quantity in its own unit.
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,
-            displayPrecision: contextData.lengthPrecision,
-            displayUnit: contextData.lengthUnit,
+            displayPrecision:
+                unitInfo?.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.lengthUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
-            displayPrecision: contextData.anglePrecision,
-            displayUnit: contextData.angleUnit,
+            displayPrecision:
+                unitInfo?.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.angleUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType == QuantityType.REAL) {
         return {
             quantityType,
-            displayPrecision: contextData.realPrecision,
+            displayPrecision:
+                unitInfo?.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };
