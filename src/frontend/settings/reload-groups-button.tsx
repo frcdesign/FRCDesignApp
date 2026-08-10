@@ -37,7 +37,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             showInfoToast(
                 data.status === "already-running"
                     ? "A reload is already running."
-                    : "Reloading documents…"
+                    : "Reloading documents..."
             );
         }
     });

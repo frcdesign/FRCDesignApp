@@ -19,9 +19,9 @@ import {
     loadGroup,
     selectInsertablesToLoad
 } from "./load-group";
-import type { GroupTarget, LoadContext } from "./load-context";
+import type { GroupTarget, LoadContext } from "./load-common";
 import { LOAD_CONCURRENCY, createLimiter } from "./load-common";
-import * as LoadContextModule from "./load-context";
+import * as LoadCommonModule from "./load-common";
 import {
     FAKE_STEP,
     MOCK_ONSHAPE_API,
@@ -189,7 +189,7 @@ describe("loadGroup", () => {
         // The real one reads OAuth tokens out of KV; every Onshape call these
         // tests reach is mocked at the endpoint wrapper instead.
         vi.spyOn(
-            LoadContextModule,
+            LoadCommonModule,
             "getOnshapeApiFromContext"
         ).mockResolvedValue(MOCK_ONSHAPE_API);
     });

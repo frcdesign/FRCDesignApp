@@ -18,7 +18,7 @@ import {
     type InsertableTarget,
     type LoadContext,
     getOnshapeApiFromContext
-} from "./load-context";
+} from "./load-common";
 import { uploadThumbnailsStep } from "./load-steps";
 
 /**
