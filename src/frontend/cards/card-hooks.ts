@@ -29,11 +29,7 @@ function useBuildStatusKey() {
     return buildStatusQueryKey(libraryId, cacheVersion);
 }
 
-/**
- * Cancels in-flight build-status fetches and optimistically applies `recipe`.
- * A failed mutation is reconciled by the onSettled library refetch, not undone
- * here.
- */
+/** Cancels in-flight build-status fetches and optimistically applies `recipe`. */
 async function patchBuildStatus(
     key: readonly unknown[],
     recipe: (status: LibraryBuildStatus) => void

@@ -43,13 +43,10 @@ interface ToastConfig {
     withCloseButton?: boolean;
 }
 
-/**
- * Shows a toast. When an `id` is given, any existing toast with that id is
- * removed first so it can be replaced — e.g. a loading spinner upgraded to its
- * success/error state. This is necessary because Mantine's `notifications.show`
- * is a no-op when a toast with the same id is already displayed.
- */
+/** Shows a toast, replacing any existing toast with the same id. */
 function showToast(config: ToastConfig): string {
+    // Mantine's `show` no-ops when a toast with this id already exists, so hide
+    // it first to replace it (e.g. a loading toast upgraded to success).
     if (config.id) {
         notifications.hide(config.id);
     }
