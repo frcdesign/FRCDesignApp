@@ -16,7 +16,7 @@ import {
     seedGroup
 } from "../../__test_utils__";
 import { type ParsedInsertable, saveInsertable } from "./load-insertable";
-import type { InsertableTarget } from "./load-context";
+import type { InsertableTarget } from "./load-common";
 
 const db = getDb(env.DB);
 
@@ -74,7 +74,8 @@ describe("saveInsertable", () => {
             groupId: TEST_GROUP_ID,
             elementId: "elem-1",
             microversionId: "mv-1",
-            versionId: "inst-2"
+            versionId: "inst-2",
+            lastLoadedAt: expect.any(Number)
         });
 
         const configs = await db.select().from(configurations).all();

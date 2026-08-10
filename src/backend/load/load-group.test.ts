@@ -12,15 +12,16 @@ import * as ConfigurationEndpoints from "../onshape-api/endpoints/configurations
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import { group, insertables } from "../../shared/schema";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
     type StoredInsertable,
     findRemovedInsertables,
     loadGroup,
     selectInsertablesToLoad
 } from "./load-group";
-import type { GroupTarget, LoadContext } from "./load-context";
-import * as LoadContextModule from "./load-context";
+import type { GroupTarget, LoadContext } from "./load-common";
+import { LOAD_CONCURRENCY, createLimiter } from "./load-common";
+import * as LoadCommonModule from "./load-common";
 import {
     FAKE_STEP,
     MOCK_ONSHAPE_API,
@@ -153,7 +154,8 @@ const LOADED_TARGET: GroupTarget = {
 const CTX: LoadContext = {
     env,
     sessionId: "test-session",
-    step: FAKE_STEP
+    step: FAKE_STEP,
+    limit: createLimiter(LOAD_CONCURRENCY)
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */
@@ -187,7 +189,7 @@ describe("loadGroup", () => {
         // The real one reads OAuth tokens out of KV; every Onshape call these
         // tests reach is mocked at the endpoint wrapper instead.
         vi.spyOn(
-            LoadContextModule,
+            LoadCommonModule,
             "getOnshapeApiFromContext"
         ).mockResolvedValue(MOCK_ONSHAPE_API);
     });
@@ -206,6 +208,7 @@ describe("loadGroup", () => {
         const groupRow = await readGroup();
         expect(groupRow?.versionId).toBe("v-2");
         expect(groupRow?.name).toBe("Reloaded Group");
+        expect(groupRow?.lastLoadedAt).toEqual(expect.any(Number));
         expect(groupRow?.buildIssues).not.toContainEqual({
             type: BuildIssueType.INSERTABLES_FAILED
         });

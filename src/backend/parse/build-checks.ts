@@ -3,7 +3,7 @@ import {
     addBuildIssue,
     BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 
 interface GroupCheckInput {
     /** Whether the Onshape document has a designated thumbnail tab/element. */

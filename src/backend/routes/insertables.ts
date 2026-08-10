@@ -31,7 +31,7 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
-import { addBuildIssue, clearBuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
 

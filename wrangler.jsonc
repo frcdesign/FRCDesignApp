@@ -116,6 +116,9 @@
             "vars": {
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
                 "NODE_ENV": "development"
+            },
+            "limits": {
+                "subrequests": 500000
             }
         },
         "production": {
@@ -154,6 +157,9 @@
             "vars": {
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "production"
+            },
+            "limits": {
+                "subrequests": 500000
             }
         }
     }

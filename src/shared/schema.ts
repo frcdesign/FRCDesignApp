@@ -13,7 +13,7 @@ import {
     ConfigurationParameter,
     PartNumberMap
 } from "./configuration-models";
-import { BuildIssue } from "./build-checker";
+import { BuildIssue } from "./build-issues";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -47,7 +47,11 @@ export const group = sqliteTable(
         buildIssues: text("build_issues", { mode: "json" })
             .$type<BuildIssue[]>()
             .notNull()
-            .default([])
+            .default([]),
+        // When this group was last successfully loaded (epoch ms). Null until the
+        // group's first load. Written by the load path; failures are conveyed by
+        // buildIssues, not here.
+        lastLoadedAt: integer("last_loaded_at")
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
@@ -103,7 +107,11 @@ export const insertables = sqliteTable("insertables", {
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()
-        .default([])
+        .default([]),
+    // When this insertable was last successfully loaded (epoch ms). Null until the
+    // insertable's first load. Written by the load path; failures are conveyed by
+    // buildIssues, not here.
+    lastLoadedAt: integer("last_loaded_at")
 });
 
 export const configurations = sqliteTable("configurations", {

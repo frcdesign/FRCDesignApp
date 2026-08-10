@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import { checkGroup, checkInsertable } from "./build-checks";
 
 const THUMBNAILS: ThumbnailUrls = {

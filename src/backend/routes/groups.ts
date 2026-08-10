@@ -7,6 +7,11 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import {
+    isAnyJobRunning,
+    isReloadRunning,
+    trackJob
+} from "../load/job-tracker";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -26,6 +31,12 @@ groupRoutes.post(
         const { forceReload } = c.req.valid("query");
         const sessionId = getSessionId(c);
 
+        // Only one reload per library at a time. Racy under a sub-second
+        // double-trigger (KV has no compare-and-swap), which is fine here.
+        if (await isReloadRunning(c.env, libraryId)) {
+            return c.json({ status: "already-running" });
+        }
+
         const db = getDb(c.env.DB);
         await db
             .insert(libraries)
@@ -34,11 +45,22 @@ groupRoutes.post(
 
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
-        await c.env.LOAD_LIBRARY_WORKFLOW.create({
+        const instance = await c.env.LOAD_LIBRARY_WORKFLOW.create({
             params: { libraryId, sessionId, forceReload }
         });
+        await trackJob(c.env, libraryId, "reload", instance.id);
 
         return c.json({ status: "triggered" });
+    }
+);
+
+/** GET /api/job-status/library/:libraryId */
+groupRoutes.get(
+    "/job-status" + libraryRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        const running = await isAnyJobRunning(c.env, getLibraryParam(c));
+        return c.json({ running });
     }
 );
 
@@ -185,7 +207,7 @@ groupRoutes.post(
 
         const groupId = crypto.randomUUID();
 
-        await c.env.ADD_GROUP_WORKFLOW.create({
+        const instance = await c.env.ADD_GROUP_WORKFLOW.create({
             params: {
                 groupId,
                 documentId: body.newDocumentId,
@@ -194,6 +216,7 @@ groupRoutes.post(
                 selectedGroupId: body.selectedGroupId
             }
         });
+        await trackJob(c.env, libraryId, "add-group", instance.id);
 
         return c.json({ name: documentName });
     }

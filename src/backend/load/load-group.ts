@@ -7,7 +7,7 @@ import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import { group, insertables } from "../../shared/schema";
 import { uploadDocumentThumbnails } from "../routes/thumbnails";
 import { getContents } from "../onshape-api/endpoints/documents";
@@ -20,7 +20,7 @@ import {
     type InsertableTarget,
     type LoadContext,
     getOnshapeApiFromContext
-} from "./load-context";
+} from "./load-common";
 import { uploadThumbnailsStep } from "./load-steps";
 import type { InstancePath } from "../../shared/onshape-path";
 
@@ -35,6 +35,8 @@ interface ParsedGroup {
     name: string;
     thumbnailUrls: ThumbnailUrls | null;
     buildIssues: BuildIssue[];
+    /** When this (successful) load completed, epoch ms. */
+    lastLoadedAt: number;
     /** Undefined if an insertable failed. */
     versionId?: string;
 }
@@ -112,13 +114,15 @@ async function loadInsertables(
 ): Promise<string[]> {
     const failedInsertableIds: string[] = [];
     await Promise.all(
-        targets.map(async (target) => {
-            try {
-                await loadInsertable(ctx, target);
-            } catch {
-                failedInsertableIds.push(target.insertableId);
-            }
-        })
+        targets.map((target) =>
+            ctx.limit(async () => {
+                try {
+                    await loadInsertable(ctx, target);
+                } catch {
+                    failedInsertableIds.push(target.insertableId);
+                }
+            })
+        )
     );
     return failedInsertableIds;
 }
@@ -151,7 +155,10 @@ async function saveGroup(
     const parsed: ParsedGroup = {
         name: target.name,
         thumbnailUrls,
-        buildIssues
+        buildIssues,
+        // Stamp the successful load; failures never reach here, so a failed
+        // reload leaves the group's last-good time untouched.
+        lastLoadedAt: Date.now()
     };
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;

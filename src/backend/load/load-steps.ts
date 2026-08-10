@@ -1,6 +1,6 @@
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 import type { ThumbnailUrls } from "../../shared/types";
-import type { LoadContext } from "./load-context";
+import type { LoadContext } from "./load-common";
 
 /** The retry input a Workflow `delay` callback receives. */
 interface RetryDelayInput {

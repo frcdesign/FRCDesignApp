@@ -4,7 +4,7 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
 import type { FastenInfo, ThumbnailUrls, Vendor } from "../../shared/types";
 import { configurations, insertables } from "../../shared/schema";
 import { uploadThumbnails } from "../routes/thumbnails";
@@ -18,7 +18,7 @@ import {
     type InsertableTarget,
     type LoadContext,
     getOnshapeApiFromContext
-} from "./load-context";
+} from "./load-common";
 import { uploadThumbnailsStep } from "./load-steps";
 
 /**
@@ -178,7 +178,8 @@ export async function saveInsertable(
         thumbnailUrls: parsed.thumbnailUrls,
         fastenInfo: parsed.fastenInfo,
         defaultPartNumber: parsed.defaultPartNumber,
-        buildIssues: parsed.buildIssues
+        buildIssues: parsed.buildIssues,
+        lastLoadedAt: Date.now()
     };
 
     const insertableWrite = db

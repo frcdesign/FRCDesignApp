@@ -21,7 +21,7 @@ import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import { enumerateConfigurations } from "../../shared/configuration-combinations";
 import {
     getAssemblyDefinition,
@@ -34,7 +34,7 @@ import type {
 import {
     type LoadContext,
     getOnshapeApiFromContext
-} from "../load/load-context";
+} from "../load/load-common";
 import { ONSHAPE_STEP_RETRIES } from "../load/load-steps";
 
 /** Configurations fetched per workflow step. */

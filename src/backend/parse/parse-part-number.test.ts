@@ -12,7 +12,7 @@ import {
 } from "../../shared/configuration-models";
 import { enumParam } from "../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
     normalizePartNumber,
     parseAssemblyPartNumber,

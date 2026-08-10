@@ -43,6 +43,28 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
 
+/** A human-readable description of a build issue, shown to editors. */
+export function getIssueDescription(issue: BuildIssue): string {
+    switch (issue.type) {
+        case BuildIssueType.THUMBNAIL_FAILED:
+            return "Thumbnail failed to generate";
+        case BuildIssueType.NO_THUMBNAIL_TAB:
+            return "No thumbnail tab set";
+        case BuildIssueType.NO_VENDORS:
+            return "No vendors could be parsed";
+        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
+            return "No unhidden insertables";
+        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+            return "Too many configurations to index part numbers";
+        case BuildIssueType.MULTIPLE_PARTS:
+            return "This part studio has more than one part";
+        case BuildIssueType.INSERTABLES_FAILED:
+            return "Some child insertables failed to load";
+        case BuildIssueType.LOAD_FAILED:
+            return "This insertable failed to load";
+    }
+}
+
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     switch (issue.type) {

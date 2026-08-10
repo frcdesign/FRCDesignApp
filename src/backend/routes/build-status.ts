@@ -25,7 +25,8 @@ buildStatusRoutes.get(
                     id: group.id,
                     buildIssues: group.buildIssues,
                     sortAlphabetically: group.sortAlphabetically,
-                    sortOrder: group.sortOrder
+                    sortOrder: group.sortOrder,
+                    lastLoadedAt: group.lastLoadedAt
                 })
                 .from(group)
                 .where(eq(group.libraryId, libraryId))
@@ -36,12 +37,14 @@ buildStatusRoutes.get(
                     id: insertables.id,
                     groupId: insertables.groupId,
                     buildIssues: insertables.buildIssues,
+                    elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     isOpenComposite: insertables.isOpenComposite,
                     supportsFasten: insertables.supportsFasten,
                     searchPartNumbers: insertables.searchPartNumbers,
                     vendors: insertables.vendors,
-                    sortOrder: insertables.sortOrder
+                    sortOrder: insertables.sortOrder,
+                    lastLoadedAt: insertables.lastLoadedAt
                 })
                 .from(insertables)
                 .where(eq(insertables.libraryId, libraryId))
@@ -70,7 +73,8 @@ buildStatusRoutes.get(
             groupsOut[group.id] = {
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
-                insertableOrder: groupInsertables.map((ins) => ins.id)
+                insertableOrder: groupInsertables.map((ins) => ins.id),
+                lastLoadedAt: group.lastLoadedAt
             };
         }
 
@@ -79,6 +83,7 @@ buildStatusRoutes.get(
             const config = configMap.get(ins.id);
             insertablesOut[ins.id] = {
                 buildIssues: ins.buildIssues,
+                elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 isOpenComposite: ins.isOpenComposite,
                 supportsFasten: ins.supportsFasten,
@@ -89,7 +94,8 @@ buildStatusRoutes.get(
                           buildIssues: config.buildIssues,
                           parameters: config.parameters
                       }
-                    : undefined
+                    : undefined,
+                lastLoadedAt: ins.lastLoadedAt
             };
         }
 
