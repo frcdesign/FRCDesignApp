@@ -68,7 +68,7 @@ export function useSetVisibilityMutation(
                 isVisible ? "Showing elements..." : "Hiding elements...",
                 "set-visibility"
             );
-            await patchBuildStatus(key, (status) => {
+            return patchBuildStatus(key, (status) => {
                 for (const id of insertableIds) {
                     const insertable = status.insertables[id];
                     if (insertable) insertable.isVisible = isVisible;
@@ -264,12 +264,6 @@ export function useToggleSortOrderMutation(groupId: string) {
                 const group = status.groups[groupId];
                 if (group) group.sortAlphabetically = sortAlphabetically;
             }),
-        onSuccess: (_result, sortAlphabetically) =>
-            showSuccessToast(
-                sortAlphabetically
-                    ? "Sorted alphabetically."
-                    : "Using tab order."
-            ),
         onError: getAppErrorHandler(
             "Unexpectedly failed to update sort order."
         ),
