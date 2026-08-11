@@ -92,6 +92,7 @@ export default defineConfig({
                     "GET /documents/d/{did}/{wvm}/{wvmid}/contents",
                     "GET /documents/{did}",
                     "GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}",
+                    "GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}",
                     "GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features"
                 ]
             },

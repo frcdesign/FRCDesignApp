@@ -9,6 +9,7 @@ import {
 } from "../onshape-api/onshape-types";
 import * as DocumentEndpoints from "../onshape-api/endpoints/documents";
 import * as ConfigurationEndpoints from "../onshape-api/endpoints/configurations";
+import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import { getDb } from "../db";
 import { ElementType } from "../../shared/types";
 import { group, insertables } from "../../shared/schema";
@@ -192,6 +193,8 @@ describe("loadGroup", () => {
             LoadCommonModule,
             "getOnshapeApiFromContext"
         ).mockResolvedValue(MOCK_ONSHAPE_API);
+        // Every part-studio load probes its parts for the open-composite flag.
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
     });
 
     afterEach(() => vi.restoreAllMocks());

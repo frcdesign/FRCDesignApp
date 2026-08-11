@@ -40,14 +40,13 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "../../shared/api-models";
-import { ElementType, getVendorName, Vendor } from "../../shared/types";
+import { getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
-    useToggleOpenCompositeMutation,
     useTogglePartNumberSearchMutation,
     useToggleSortOrderMutation
 } from "./card-hooks";
@@ -580,12 +579,6 @@ function InsertableAdminSection({
                 insertableId={insertableId}
                 searchPartNumbers={status.searchPartNumbers}
             />
-            {status.elementType === ElementType.PART_STUDIO && (
-                <OpenCompositeSwitch
-                    insertableId={insertableId}
-                    isOpenComposite={status.isOpenComposite}
-                />
-            )}
         </Stack>
     );
 }
@@ -639,24 +632,6 @@ function PartNumberSwitch({
             description="Index all configurations"
             checked={searchPartNumbers}
             onToggle={() => mutation.mutate(!searchPartNumbers)}
-        />
-    );
-}
-
-function OpenCompositeSwitch({
-    insertableId,
-    isOpenComposite
-}: {
-    insertableId: string;
-    isOpenComposite: boolean;
-}): ReactNode {
-    const mutation = useToggleOpenCompositeMutation(insertableId);
-    return (
-        <SwitchRow
-            label="Open composite"
-            description="The part has an open composite"
-            checked={isOpenComposite}
-            onToggle={() => mutation.mutate(!isOpenComposite)}
         />
     );
 }

@@ -44,13 +44,15 @@ async function applySave(
     target: InsertableTarget,
     parameters: ConfigurationParameter[],
     partNumbers: PartNumberMap = {},
-    defaultPartNumber: string | null = null
+    defaultPartNumber: string | null = null,
+    isOpenComposite = false
 ): Promise<void> {
     const parsed: ParsedInsertable = {
         vendors: [],
         thumbnailUrls: null,
         fastenInfo: null,
         defaultPartNumber,
+        isOpenComposite,
         buildIssues: [],
         configuration: { parameters, partNumbers }
     };
@@ -97,8 +99,34 @@ describe("saveInsertable", () => {
         expect(row).toMatchObject({
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false
+            searchPartNumbers: false,
+            isOpenComposite: false
         });
+    });
+
+    it("writes the computed open-composite flag on every save", async () => {
+        await applySave(element(), [], {}, null, true);
+        expect(
+            (
+                await db
+                    .select()
+                    .from(insertables)
+                    .where(eq(insertables.id, "ins-1"))
+                    .get()
+            )?.isOpenComposite
+        ).toBe(true);
+
+        // A reload that finds it is no longer a composite clears the flag.
+        await applySave(element(), [], {}, null, false);
+        expect(
+            (
+                await db
+                    .select()
+                    .from(insertables)
+                    .where(eq(insertables.id, "ins-1"))
+                    .get()
+            )?.isOpenComposite
+        ).toBe(false);
     });
 
     it("preserves user-owned fields when reloading an existing row", async () => {

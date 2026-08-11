@@ -35,33 +35,6 @@ import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
 
-/** POST /api/toggle-open-composite/insertable/:insertableId */
-insertableRoutes.post(
-    "/toggle-open-composite" + insertableRoute(),
-    requireEditorMiddleware,
-    async (c) => {
-        const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ isOpenComposite: boolean }>();
-
-        const db = getDb(c.env.DB);
-        const row = await db
-            .select({ libraryId: insertables.libraryId })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-        if (!row)
-            throw new HTTPException(404, { message: "Insertable not found" });
-
-        await db
-            .update(insertables)
-            .set({ isOpenComposite: body.isOpenComposite })
-            .where(eq(insertables.id, insertableId));
-
-        await bumpLibraryVersion(db, row.libraryId);
-        return c.json({ success: true });
-    }
-);
-
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
@@ -134,6 +107,7 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
+                isOpenComposite: insertables.isOpenComposite,
                 buildIssues: insertables.buildIssues
             })
             .from(insertables)
@@ -197,6 +171,7 @@ async function indexPartNumbers(
         versionId: string;
         elementId: string;
         elementType: ElementType;
+        isOpenComposite: boolean;
     }
 ): Promise<PartNumberResult> {
     const sourcePath: ElementPath = {
@@ -215,7 +190,8 @@ async function indexPartNumbers(
         client,
         sourcePath,
         insertable.elementType,
-        configRow?.parameters ?? []
+        configRow?.parameters ?? [],
+        insertable.isOpenComposite
     );
 }
 

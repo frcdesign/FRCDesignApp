@@ -5,15 +5,25 @@ import type {
     ConfigurationParameter
 } from "../../shared/configuration-models";
 import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
-import type { FastenInfo, ThumbnailUrls, Vendor } from "../../shared/types";
+import {
+    ElementType,
+    type FastenInfo,
+    type ThumbnailUrls,
+    type Vendor
+} from "../../shared/types";
 import { configurations, insertables } from "../../shared/schema";
 import { uploadThumbnails } from "../routes/thumbnails";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";
+import { getParts } from "../onshape-api/endpoints/parts";
 import { checkInsertable } from "../parse/build-checks";
 import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
-import { NO_PART_NUMBERS, loadPartNumbers } from "../parse/parse-part-number";
+import {
+    NO_PART_NUMBERS,
+    computeOpenComposite,
+    loadPartNumbers
+} from "../parse/parse-part-number";
 import {
     type InsertableTarget,
     type LoadContext,
@@ -32,6 +42,8 @@ export interface ParsedInsertable {
     fastenInfo: FastenInfo | null;
     /** Part number of the default configuration; null when not indexed. */
     defaultPartNumber: string | null;
+    /** Whether the part studio resolves to an open composite. */
+    isOpenComposite: boolean;
     buildIssues: BuildIssue[];
     configuration: Configuration;
 }
@@ -61,13 +73,16 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
+    const isOpenComposite = await computeOpenCompositeStep(ctx, target);
+
     const partNumberResult = flags.searchPartNumbers
         ? await loadPartNumbers(
               ctx,
               insertableId,
               elementPath,
               target.elementType,
-              parameters
+              parameters,
+              isOpenComposite
           )
         : NO_PART_NUMBERS;
 
@@ -88,6 +103,7 @@ export async function loadInsertable(
         thumbnailUrls,
         fastenInfo,
         defaultPartNumber: partNumberResult.defaultPartNumber,
+        isOpenComposite,
         buildIssues: addBuildIssue(
             checkInsertable({ vendors, thumbnailUrls }),
             ...partNumberResult.buildIssues
@@ -141,6 +157,26 @@ function parseConfigurationStep(
 }
 
 /**
+ * Determines whether a part studio is an open composite from its default
+ * configuration. Runs on every load, not just under part-number search, so the
+ * insert path always requests the right part types. Assemblies are never
+ * composites, so they skip the fetch.
+ */
+function computeOpenCompositeStep(
+    ctx: LoadContext,
+    { insertableId, elementPath, elementType }: InsertableTarget
+): Promise<boolean> {
+    if (elementType !== ElementType.PART_STUDIO) {
+        return Promise.resolve(false);
+    }
+    return ctx.step.do(`open-composite-${insertableId}`, async () =>
+        computeOpenComposite(
+            await getParts(await getOnshapeApiFromContext(ctx), elementPath, {})
+        )
+    );
+}
+
+/**
  * Fetches and parses the element's fasten info.
  */
 function parseFastenInfoStep(
@@ -178,6 +214,7 @@ export async function saveInsertable(
         thumbnailUrls: parsed.thumbnailUrls,
         fastenInfo: parsed.fastenInfo,
         defaultPartNumber: parsed.defaultPartNumber,
+        isOpenComposite: parsed.isOpenComposite,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: Date.now()
     };

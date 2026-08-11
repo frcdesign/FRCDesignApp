@@ -283,11 +283,15 @@ export interface OnshapeCreatedFeature {
 
 // === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
 
+/** A part's body classification; `composite` marks an open composite's part. */
+export type OnshapePartBodyType = "solid" | "sheet" | "composite";
+
 /** A part in a part studio (the subset we read). */
 export interface OnshapePart {
     partId: string;
     /** The part's "Part number" property, when set. */
     partNumber?: string;
+    bodyType?: OnshapePartBodyType;
 }
 
 // === part studios (GET .../partstudios/.../features) ===
