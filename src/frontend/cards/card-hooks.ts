@@ -131,34 +131,6 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
     });
 }
 
-/** Toggles an insertable's "open composite" flag (part studios only). */
-export function useToggleOpenCompositeMutation(insertableId: string) {
-    const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
-    return useMutation({
-        mutationKey: ["toggle-open-composite", insertableId],
-        mutationFn: (isOpenComposite: boolean) =>
-            apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
-                body: { isOpenComposite }
-            }),
-        onMutate: (isOpenComposite) =>
-            patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable) insertable.isOpenComposite = isOpenComposite;
-            }),
-        onSuccess: (_result, isOpenComposite) =>
-            showSuccessToast(
-                isOpenComposite
-                    ? "Set open composite."
-                    : "Removed open composite."
-            ),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update open composite."
-        ),
-        onSettled: refreshLibrary
-    });
-}
-
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */
 export function useToggleInsertAndFastenMutation(insertableId: string) {
     const key = useBuildStatusKey();

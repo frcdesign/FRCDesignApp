@@ -22,6 +22,7 @@ export enum BuildIssueType {
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     TOO_MANY_CONFIGURATIONS = "too-many-configurations",
     MULTIPLE_PARTS = "multiple-parts",
+    UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
     LOAD_FAILED = "load-failed"
 }
@@ -40,6 +41,7 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
+    | BuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
 
@@ -58,6 +60,8 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "Too many configurations to index part numbers";
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
+        case BuildIssueType.UNSTABLE_COMPOSITE:
+            return "The part studio does not use an open composite across all configurations";
         case BuildIssueType.INSERTABLES_FAILED:
             return "Some child insertables failed to load";
         case BuildIssueType.LOAD_FAILED:
@@ -71,6 +75,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
         case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
