@@ -11,6 +11,14 @@ import { defineConfig } from "@hey-api/openapi-ts";
  * `src/backend/onshape-api/onshape-types.ts`, so they can use our own enums and clean
  * discriminated unions. This dump exists only to diff against: re-running codegen
  * surfaces upstream API drift (including fields we don't use yet) to fold in by hand.
+ *
+ * To model a new endpoint or field:
+ *   1. Add its operation (e.g. `GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}`) to
+ *      `operations.include` below — the dump only carries the operations listed there.
+ *   2. Run `npm run gen:onshape-types` and read the regenerated response type in
+ *      `onshape-api-reference/types.gen.ts` to see the real shape.
+ *   3. Hand-author the subset you need onto the matching interface in
+ *      `onshape-types.ts`. The reference stays committed as the diff baseline.
  */
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });

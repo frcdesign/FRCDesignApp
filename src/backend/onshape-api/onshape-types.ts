@@ -1,5 +1,11 @@
 /**
- * Hand-authored types for the Onshape API endpoints we use.
+ * Hand-authored types for the Onshape API endpoints we use — each interface is a
+ * curated subset of an Onshape response, using our own enums and unions.
+ *
+ * To find the real shape of a response (or a field you want to add), regenerate
+ * the reference dump in `onshape-api-reference/` and read it there; see
+ * `openapi-ts.config.ts` for the recipe (add the operation to its include list,
+ * run `npm run gen:onshape-types`, then copy the subset here).
  */
 import {
     LogicalOp,

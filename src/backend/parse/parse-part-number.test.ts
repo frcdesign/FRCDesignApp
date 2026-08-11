@@ -15,6 +15,7 @@ import { ElementType } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
     computeOpenComposite,
+    evaluateParts,
     normalizePartNumber,
     parseAssemblyPartNumber,
     parsePartNumbers,
@@ -77,152 +78,116 @@ describe("normalizePartNumber", () => {
     });
 });
 
-describe("parsePartStudioParts", () => {
-    it("returns the part number of the studio's part", () => {
+describe("evaluateParts", () => {
+    it("indexes the sole part of a normal single-part studio", () => {
         expect(
-            parsePartStudioParts(
-                [{ partId: "JHD", partNumber: "217-2600" }],
-                false
-            )
+            evaluateParts([
+                { partId: "p", partNumber: "PN-1", bodyType: "solid" }
+            ])
         ).toEqual({
-            partNumber: "217-2600",
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false,
+            partToUse: { partId: "p", partNumber: "PN-1", bodyType: "solid" }
         });
     });
 
-    it("skips parts without a part number", () => {
+    it("flags multiple parts when a non-composite studio has more than one", () => {
         expect(
-            parsePartStudioParts(
-                [
-                    { partId: "JHD" },
-                    { partId: "JHE", partNumber: "  217-2601  " }
-                ],
-                false
-            ).partNumber
-        ).toBe("217-2601");
+            evaluateParts([
+                { partId: "p1", bodyType: "solid" },
+                { partId: "p2", bodyType: "solid" }
+            ])
+        ).toMatchObject({ hasMultipleParts: true, isOpenComposite: false });
     });
 
-    it("reports the first part number and that there was more than one part", () => {
+    it("uses the composite and ignores the constituents of an open composite", () => {
         expect(
-            parsePartStudioParts(
-                [
-                    { partId: "JHD", partNumber: "217-2600" },
-                    { partId: "JHE", partNumber: "217-2601" }
-                ],
-                false
-            )
-        ).toEqual({
-            partNumber: "217-2600",
-            hasMultipleParts: true,
-            isUnstableComposite: false
-        });
-    });
-
-    it("returns null when no part carries a part number", () => {
-        expect(
-            parsePartStudioParts(
-                [{ partId: "JHD" }, { partId: "JHE", partNumber: "  " }],
-                false
-            ).partNumber
-        ).toBeNull();
-    });
-
-    it("returns null for an empty response", () => {
-        expect(parsePartStudioParts([], false)).toEqual({
-            partNumber: null,
+            evaluateParts([
+                { partId: "c", partNumber: "PN-C", bodyType: "composite" },
+                { partId: "p1", partNumber: "PN-1", bodyType: "solid" }
+            ])
+        ).toMatchObject({
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: true,
+            partToUse: { partId: "c" }
         });
     });
 
-    describe("open composite", () => {
-        it("reads the composite part's number, ignoring the constituents", () => {
-            expect(
-                parsePartStudioParts(
-                    [
-                        {
-                            partId: "c",
-                            partNumber: "PN-C",
-                            bodyType: "composite"
-                        },
-                        { partId: "p1", partNumber: "PN-1", bodyType: "solid" },
-                        { partId: "p2", partNumber: "PN-2", bodyType: "solid" }
-                    ],
-                    true
-                )
-            ).toEqual({
-                partNumber: "PN-C",
-                hasMultipleParts: false,
-                isUnstableComposite: false
-            });
-        });
+    it("is not an open composite for a lone composite part", () => {
+        expect(
+            evaluateParts([{ partId: "c", bodyType: "composite" }])
+                .isOpenComposite
+        ).toBe(false);
+    });
 
-        it("flags an unstable composite when the composite is gone", () => {
-            expect(
-                parsePartStudioParts(
-                    [
-                        { partId: "p1", partNumber: "PN-1", bodyType: "solid" },
-                        { partId: "p2", partNumber: "PN-2", bodyType: "solid" }
-                    ],
-                    true
-                )
-            ).toEqual({
-                partNumber: null,
-                hasMultipleParts: false,
-                isUnstableComposite: true
-            });
-        });
-
-        it("flags multiple parts when more than one composite resolves", () => {
-            expect(
-                parsePartStudioParts(
-                    [
-                        {
-                            partId: "c1",
-                            partNumber: "PN-1",
-                            bodyType: "composite"
-                        },
-                        {
-                            partId: "c2",
-                            partNumber: "PN-2",
-                            bodyType: "composite"
-                        }
-                    ],
-                    true
-                )
-            ).toEqual({
-                partNumber: "PN-1",
-                hasMultipleParts: true,
-                isUnstableComposite: false
-            });
-        });
+    it("flags multiple parts when more than one composite resolves", () => {
+        expect(
+            evaluateParts([
+                { partId: "c1", bodyType: "composite" },
+                { partId: "c2", bodyType: "composite" }
+            ])
+        ).toMatchObject({ hasMultipleParts: true, isOpenComposite: true });
     });
 });
 
 describe("computeOpenComposite", () => {
-    it("is true when multiple parts include a composite", () => {
+    it("reports whether the parts form an open composite", () => {
         expect(
             computeOpenComposite([
                 { partId: "c", bodyType: "composite" },
                 { partId: "p", bodyType: "solid" }
             ])
         ).toBe(true);
+        expect(computeOpenComposite([{ partId: "p", bodyType: "solid" }])).toBe(
+            false
+        );
+    });
+});
+
+describe("parsePartStudioParts", () => {
+    it("reads the sole part's number for a normal studio", () => {
+        expect(
+            parsePartStudioParts(
+                [{ partId: "JHD", partNumber: "  217-2600 " }],
+                false
+            )
+        ).toEqual({
+            partNumber: "217-2600",
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
     });
 
-    it("is false for a lone composite", () => {
+    it("reads the composite's number when the studio is an open composite", () => {
         expect(
-            computeOpenComposite([{ partId: "c", bodyType: "composite" }])
-        ).toBe(false);
+            parsePartStudioParts(
+                [
+                    { partId: "c", partNumber: "PN-C", bodyType: "composite" },
+                    { partId: "p", partNumber: "PN-1", bodyType: "solid" }
+                ],
+                true
+            )
+        ).toEqual({
+            partNumber: "PN-C",
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
     });
 
-    it("is false when no part is a composite", () => {
+    it("flags an unstable composite and indexes nothing when an expected composite is missing", () => {
         expect(
-            computeOpenComposite([
-                { partId: "p1", bodyType: "solid" },
-                { partId: "p2", bodyType: "solid" }
-            ])
-        ).toBe(false);
+            parsePartStudioParts(
+                [
+                    { partId: "p1", partNumber: "PN-1", bodyType: "solid" },
+                    { partId: "p2", partNumber: "PN-2", bodyType: "solid" }
+                ],
+                true
+            )
+        ).toEqual({
+            partNumber: null,
+            hasMultipleParts: false,
+            isUnstableComposite: true
+        });
     });
 });
 

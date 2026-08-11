@@ -81,15 +81,47 @@ export function normalizePartNumber(
     return trimmed ? trimmed : null;
 }
 
+/** What a part studio's parts resolve to, before build issues are decided. */
+export interface PartsEvaluation {
+    /** True when more than one part could be the one to index. */
+    hasMultipleParts: boolean;
+    /** True when the studio is an open composite (see {@link computeOpenComposite}). */
+    isOpenComposite: boolean;
+    /** The part whose number to index, or `undefined` when there are none. */
+    partToUse: OnshapePart | undefined;
+}
+
+/**
+ * The one place that reads meaning out of a `/parts` response: whether the
+ * studio is an open composite, and which part carries the number to index. An
+ * indexed part studio is meant to be a single part; an open composite is the
+ * exception, where only the composite matters and the loose constituents are
+ * ignored. More than one candidate (part, or composite) is the arbitrary-choice
+ * case that `MULTIPLE_PARTS` flags.
+ */
+export function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
+    const composites = parts.filter((part) => part.bodyType === "composite");
+    if (parts.length > 1 && composites.length > 0) {
+        return {
+            hasMultipleParts: composites.length > 1,
+            isOpenComposite: true,
+            partToUse: composites[0]
+        };
+    }
+    return {
+        hasMultipleParts: parts.length > 1,
+        isOpenComposite: false,
+        partToUse: parts[0]
+    };
+}
+
 /**
  * Whether a part studio is an open composite: it resolves to more than one part
  * and one of them is the composite. Stable across configurations, so it's
  * computed once from the default configuration.
  */
 export function computeOpenComposite(parts: OnshapePart[]): boolean {
-    return (
-        parts.length > 1 && parts.some((part) => part.bodyType === "composite")
-    );
+    return evaluateParts(parts).isOpenComposite;
 }
 
 /** What a part studio resolved to for one configuration. */
@@ -103,37 +135,26 @@ export interface PartStudioParts {
 }
 
 /**
- * Reads a part studio's part number, and notes whether it resolved to more than
- * one part. An indexed part studio is meant to be a single part, so the first
- * part carrying a number is the one we want — and more than one part means that
- * choice was arbitrary.
- *
- * An open composite is the exception: only its composite part matters, so we
- * read that part's number and ignore the loose constituents. Losing the
- * composite in a configuration is instead an `UNSTABLE_COMPOSITE`, and more than
- * one composite is the arbitrary-choice case.
+ * Reads a part studio's part number for one configuration. `isOpenComposite` is
+ * the studio's expected state (from its default configuration): a config that
+ * doesn't resolve to a composite when one is expected is an `UNSTABLE_COMPOSITE`,
+ * and we index nothing for it rather than a stray constituent part.
  */
 export function parsePartStudioParts(
     parts: OnshapePart[],
     isOpenComposite: boolean
 ): PartStudioParts {
-    if (isOpenComposite) {
-        const composites = parts.filter(
-            (part) => part.bodyType === "composite"
-        );
+    const evaluation = evaluateParts(parts);
+    if (isOpenComposite && !evaluation.isOpenComposite) {
         return {
-            partNumber: normalizePartNumber(composites[0]?.partNumber),
-            hasMultipleParts: composites.length > 1,
-            isUnstableComposite: composites.length === 0
+            partNumber: null,
+            hasMultipleParts: false,
+            isUnstableComposite: true
         };
     }
-    let partNumber: string | null = null;
-    for (const part of parts) {
-        partNumber ??= normalizePartNumber(part?.partNumber);
-    }
     return {
-        partNumber,
-        hasMultipleParts: parts.length > 1,
+        partNumber: normalizePartNumber(evaluation.partToUse?.partNumber),
+        hasMultipleParts: evaluation.hasMultipleParts,
         isUnstableComposite: false
     };
 }

@@ -11,7 +11,6 @@ import * as DocumentEndpoints from "../onshape-api/endpoints/documents";
 import * as ConfigurationEndpoints from "../onshape-api/endpoints/configurations";
 import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import { getDb } from "../db";
-import { ElementType } from "../../shared/types";
 import { group, insertables } from "../../shared/schema";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
@@ -29,7 +28,8 @@ import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
     resetDb,
-    seedGroup
+    seedGroup,
+    seedInsertable
 } from "../../__test_utils__";
 
 const GROUP: GroupTarget = {
@@ -249,16 +249,10 @@ describe("loadGroup", () => {
     it("adds LOAD_FAILED to a failed insertable's existing issues", async () => {
         mockContents([tab("e1", "mv-2")]);
         // A row from a previous good load, carrying an unrelated issue.
-        await db.insert(insertables).values({
+        await seedInsertable(db, {
             id: "ins-e1",
-            groupId: TEST_GROUP_ID,
-            libraryId: TEST_LIBRARY_ID,
             elementId: "e1",
-            documentId: `doc-${TEST_GROUP_ID}`,
-            versionId: "v-1",
-            elementType: ElementType.PART_STUDIO,
             name: "Existing",
-            microversionId: "mv-1",
             buildIssues: [{ type: BuildIssueType.NO_VENDORS }]
         });
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockRejectedValue(
