@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/notifications";
 import { PreviewImageCard } from "../insert/thumbnail";
+import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
 import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
@@ -121,7 +122,10 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 path={insertable.path}
                 microversionId={insertable.microversionId}
                 configuration={configuration}
-                thumbnailUrls={insertable.thumbnailUrls}
+                microversionId={insertable.microversionId}
+                canonicalConfiguration={encodeCanonicalConfiguration(
+                    configuration ?? {}
+                )}
             />
             <ConfigurationWrapper
                 configuration={configuration}

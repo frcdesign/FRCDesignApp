@@ -72,11 +72,19 @@ export function getVendorName(vendor: Vendor) {
             return "West Coast Products";
     }
 }
+/**
+ * The two thumbnail sizes we generate and store, as the `WxH` Onshape wants.
+ * SMALL fills list rows; LARGE fills the hover card and the insert preview.
+ */
 export enum ThumbnailSize {
-    STANDARD = "300x300",
-    LARGE = "600x340",
-    SMALL = "300x170",
-    TINY = "70x40"
+    SMALL = "70x40",
+    LARGE = "300x300"
+}
+
+/** An element's two stored thumbnail URLs, produced (and stored) as a pair. */
+export interface ThumbnailUrls {
+    small: string;
+    large: string;
 }
 export enum Theme {
     SYSTEM = "system",
@@ -103,9 +111,9 @@ export interface AccessData {
     signedIn: boolean;
 }
 
-export interface ThumbnailUrls {
-    [ThumbnailSize.TINY]: string;
-    [ThumbnailSize.STANDARD]: string;
+export interface ContextData {
+    accessData: AccessData;
+    settings: Settings;
 }
 export enum LibraryId {
     FRC_DESIGN_LIB = "frc-design-lib",

@@ -25,6 +25,11 @@ interface __BaseEnv_Env {
             import("./src/backend/index").AddGroupWorkflow["run"]
         >[0]["payload"]
     >;
+    THUMBNAIL_WORKFLOW: Workflow<
+        Parameters<
+            import("./src/backend/index").ThumbnailWorkflow["run"]
+        >[0]["payload"]
+    >;
 }
 declare namespace Cloudflare {
     interface GlobalProps {
@@ -54,6 +59,11 @@ declare namespace Cloudflare {
                 import("./src/backend/index").AddGroupWorkflow["run"]
             >[0]["payload"]
         >;
+        THUMBNAIL_WORKFLOW: Workflow<
+            Parameters<
+                import("./src/backend/index").ThumbnailWorkflow["run"]
+            >[0]["payload"]
+        >;
     }
     interface ProductionEnv {
         KV: KVNamespace;
@@ -77,6 +87,11 @@ declare namespace Cloudflare {
         ADD_GROUP_WORKFLOW: Workflow<
             Parameters<
                 import("./src/backend/index").AddGroupWorkflow["run"]
+            >[0]["payload"]
+        >;
+        THUMBNAIL_WORKFLOW: Workflow<
+            Parameters<
+                import("./src/backend/index").ThumbnailWorkflow["run"]
             >[0]["payload"]
         >;
     }

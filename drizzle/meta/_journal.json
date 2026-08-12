@@ -29,6 +29,13 @@
             "when": 1786511719906,
             "tag": "0003_drop_search_db",
             "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "6",
+            "when": 1786511719907,
+            "tag": "0004_explicit_thumbnail_urls",
+            "breakpoints": true
         }
     ]
 }

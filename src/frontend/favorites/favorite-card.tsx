@@ -1,3 +1,4 @@
+import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
 import { ReactNode } from "react";
 import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
@@ -71,7 +72,16 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     title={insertable.name}
-                    thumbnailUrls={insertable.thumbnailUrls}
+                    smallThumbnailUrl={insertable.smallThumbnailUrl}
+                    largeThumbnailUrl={insertable.largeThumbnailUrl}
+                    thumbnailTarget={{
+                        elementId: insertable.elementId,
+                        microversionId: insertable.microversionId,
+                        configuration: encodeCanonicalConfiguration(
+                            favorite.defaultConfiguration ?? {}
+                        ),
+                        warm: true
+                    }}
                     searchHit={searchHit}
                 />
             }

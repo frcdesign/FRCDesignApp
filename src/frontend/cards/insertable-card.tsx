@@ -1,3 +1,4 @@
+import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -76,7 +77,17 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}
-                    thumbnailUrls={insertable.thumbnailUrls}
+                    smallThumbnailUrl={insertable.smallThumbnailUrl}
+                    largeThumbnailUrl={insertable.largeThumbnailUrl}
+                    thumbnailTarget={{
+                        elementId: insertable.elementId,
+                        microversionId: insertable.microversionId,
+                        configuration: encodeCanonicalConfiguration(
+                            searchHit?.configuration ?? {}
+                        ),
+                        // A cold search would otherwise start a render per row.
+                        warm: false
+                    }}
                     showHiddenTag={!insertable.isVisible}
                     buildStatusBadge={
                         <InsertableStatusBadge

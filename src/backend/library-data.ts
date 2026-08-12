@@ -79,7 +79,8 @@ export async function getLibraryOut(
                 instanceType: "v"
             },
             name: group.name,
-            thumbnailUrls: group.thumbnailUrls ?? undefined,
+            smallThumbnailUrl: group.smallThumbnailUrl ?? undefined,
+            largeThumbnailUrl: group.largeThumbnailUrl ?? undefined,
             insertableOrder
         };
     }
@@ -103,7 +104,8 @@ export async function getLibraryOut(
             isVisible: ins.isVisible,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
-            thumbnailUrls: ins.thumbnailUrls ?? undefined,
+            smallThumbnailUrl: ins.smallThumbnailUrl ?? undefined,
+            largeThumbnailUrl: ins.largeThumbnailUrl ?? undefined,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
             vendors: ins.vendors
         } satisfies InsertableOut;

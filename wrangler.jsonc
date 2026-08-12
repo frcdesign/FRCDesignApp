@@ -66,6 +66,11 @@
             "name": "add-group-workflow",
             "binding": "ADD_GROUP_WORKFLOW",
             "class_name": "AddGroupWorkflow"
+        },
+        {
+            "name": "thumbnail-workflow",
+            "binding": "THUMBNAIL_WORKFLOW",
+            "class_name": "ThumbnailWorkflow"
         }
     ],
     /**
@@ -126,6 +131,11 @@
                     "name": "add-group-workflow-cert",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
+                },
+                {
+                    "name": "thumbnail-workflow-cert",
+                    "binding": "THUMBNAIL_WORKFLOW",
+                    "class_name": "ThumbnailWorkflow"
                 }
             ],
             "vars": {
@@ -176,6 +186,11 @@
                     "name": "add-group-workflow-production",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
+                },
+                {
+                    "name": "thumbnail-workflow-production",
+                    "binding": "THUMBNAIL_WORKFLOW",
+                    "class_name": "ThumbnailWorkflow"
                 }
             ],
             "vars": {

@@ -15,7 +15,9 @@ import {
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { getLatestVersionId } from "../onshape-api/endpoints/versions";
 import type { InstancePath } from "../../shared/onshape-path";
-import { group, libraries } from "../../shared/schema";
+import { group, insertables, libraries } from "../../shared/schema";
+import type { ThumbnailParams } from "../../shared/thumbnails";
+import { uploadConfigurationThumbnails } from "../routes/thumbnails";
 import {
     type GroupTarget,
     type LoadContext,
@@ -25,6 +27,7 @@ import {
 } from "./load-common";
 import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
+import { THUMBNAIL_STEP_RETRIES } from "./load-steps";
 
 export interface LoadLibraryParams {
     libraryId: LibraryId;
@@ -230,4 +233,59 @@ async function finalizeLibrary(
     const db = getDb(env.DB);
     await rebuildSearchDb(env.SEARCH_INDEX, db, libraryId);
     await bumpLibraryVersion(db, libraryId);
+}
+
+/**
+ * Renders and stores one configuration's thumbnails outside a request, since
+ * Onshape can take minutes and a Worker request cannot wait that long. Until it
+ * finishes, requests fall back to the element's default thumbnail.
+ */
+export class ThumbnailWorkflow extends WorkflowEntrypoint<
+    AppBindings,
+    ThumbnailParams
+> {
+    async run(
+        event: WorkflowEvent<ThumbnailParams>,
+        step: WorkflowStep
+    ): Promise<void> {
+        const { elementId, microversionId, configuration } = event.payload;
+
+        const elementPath = await step.do("resolve-element", async () => {
+            const row = await getDb(this.env.DB)
+                .select({
+                    documentId: insertables.documentId,
+                    versionId: insertables.versionId
+                })
+                .from(insertables)
+                .where(eq(insertables.elementId, elementId))
+                .get();
+            if (!row) {
+                throw new Error(`No insertable for element ${elementId}`);
+            }
+            return {
+                documentId: row.documentId,
+                instanceId: row.versionId,
+                instanceType: "v" as const,
+                elementId
+            };
+        });
+
+        await step.do(
+            "render-thumbnails",
+            { retries: THUMBNAIL_STEP_RETRIES },
+            async () =>
+                uploadConfigurationThumbnails(
+                    this.env.THUMBNAILS,
+                    await getOnshapeApiFromContext({
+                        env: this.env,
+                        sessionId: "",
+                        step,
+                        limit: createLimiter(1)
+                    }),
+                    elementPath,
+                    microversionId,
+                    configuration
+                )
+        );
+    }
 }

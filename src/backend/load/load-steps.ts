@@ -37,6 +37,17 @@ export const ONSHAPE_STEP_RETRIES = {
 };
 
 /**
+ * Retries for a step waiting on an Onshape render: wait out a rate limit,
+ * otherwise poll, since Onshape renders thumbnails asynchronously.
+ */
+export const THUMBNAIL_STEP_RETRIES = {
+    limit: 3,
+    delay: (retry: RetryDelayInput) =>
+        rateLimitDelay(retry.error) ??
+        (retry.ctx.attempt === 1 ? "10 seconds" : "5 minutes")
+};
+
+/**
  * Uploads thumbnails in a single step with retrying, returning `null` when they
  * never showed up — the caller records that as a build issue rather than failing
  * the load.
@@ -50,14 +61,7 @@ export async function uploadThumbnailsStep(
         return await ctx.step.do(
             name,
             {
-                retries: {
-                    limit: 3,
-                    // Wait out a rate limit; otherwise poll for the thumbnail,
-                    // which Onshape renders asynchronously.
-                    delay: (retry: RetryDelayInput) =>
-                        rateLimitDelay(retry.error) ??
-                        (retry.ctx.attempt === 1 ? "10 seconds" : "5 minutes")
-                }
+                retries: THUMBNAIL_STEP_RETRIES
             },
             async () => {
                 const thumbnails = await uploadFn();

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
+import { ThumbnailUrls, Vendor } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import { checkGroup, checkInsertable } from "./build-checks";
 
 const THUMBNAILS: ThumbnailUrls = {
-    [ThumbnailSize.TINY]: "/api/thumbnail/tiny/x",
-    [ThumbnailSize.STANDARD]: "/api/thumbnail/standard/x"
+    small: "/api/thumbnail/70x40/x",
+    large: "/api/thumbnail/300x300/x"
 };
 
 /** A group with nothing wrong; each test spreads in the one fault it checks. */

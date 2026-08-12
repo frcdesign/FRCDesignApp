@@ -43,7 +43,18 @@ KV serves as a cheap, lightweight way to persist user data across multiple Cloud
 
 R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. The app uses it to store and cache thumbnails in order to improve reliability.
 
-Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits. Instead, we fetch a thumbnail from Onshape the first time it's needed, store it in R2, and serve it from R2 on all subsequent requests. Thumbnails are served via `/api/thumbnail/:size/:elementId`.
+Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a render can require polling and take minutes. Instead, we fetch a thumbnail from Onshape the first time it's needed, store it in R2, and serve it from R2 on all subsequent requests. Thumbnails are served via `/api/thumbnail/:size/:elementId?v=<microversionId>&c=<configuration>`.
+
+Two sizes are stored per configuration (`70x40` for list rows, `300x300` for the hover card and insert preview), always generated as a pair so a row and its hover never disagree. Keys are split by prefix:
+
+| Prefix                | Holds                                             | Lifecycle             |
+| --------------------- | ------------------------------------------------- | --------------------- |
+| `thumbnails/default/` | Each element's default-configuration thumbnails   | **Never expires**     |
+| `thumbnails/config/`  | One entry per canonical configuration we rendered | Expire after ~90 days |
+
+**Operational requirement:** the `config/` prefix needs an R2 **lifecycle rule** to expire objects (R2 lifecycle rules are configured per bucket in the dashboard or via the API — they cannot be expressed in `wrangler.jsonc`). The `default/` prefix must be left alone: every configuration falls back to it while its own render is pending or after it expires.
+
+Configuration thumbnails are produced at runtime rather than indexed at load. A request for one that doesn't exist yet serves the default thumbnail with a short cache lifetime (so the real one can take over as soon as it lands), and — when the request asks to `warm` — starts a `ThumbnailWorkflow` to render it. The workflow's instance id is derived from the configuration, so concurrent requests for the same thumbnail collapse onto a single render. Cache keys use a _canonical_ configuration (`canonicalizeConfiguration` in `src/shared/configuration-utils.ts`), which drops hidden and default-valued parameters and normalizes quantity expressions, so equivalent selections share one stored object.
 
 ### Workflows — Document Sync (`c.env.LOAD_DOCUMENT_WORKFLOW`)
 
@@ -94,13 +105,13 @@ Once the backend confirms authentication and serves the React app, the frontend 
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                          | Lifetime                                  | Who reads/writes it                                     |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)      | Backend Worker on every API request                     |
-| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days. | Backend Worker in `src/backend/auth.ts`                 |
-| **R2**             | Part and group thumbnail images                                                        | Indefinite (30-day browser cache-control) | Backend Worker in `src/backend/routes/thumbnails.ts`    |
-| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions          | Frontend only, via `src/frontend/api-utils/ui-state.ts` |
-| **sessionStorage** | Not used                                                                               | —                                         | —                                                       |
+| Store              | What it holds                                                                          | Lifetime                                        | Who reads/writes it                                     |
+| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)            | Backend Worker on every API request                     |
+| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days.       | Backend Worker in `src/backend/auth.ts`                 |
+| **R2**             | Part and group thumbnail images                                                        | Defaults indefinite; per-configuration ~90 days | Backend Worker in `src/backend/routes/thumbnails.ts`    |
+| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions                | Frontend only, via `src/frontend/api-utils/ui-state.ts` |
+| **sessionStorage** | Not used                                                                               | —                                               | —                                                       |
 
 ## Codebase Map
 

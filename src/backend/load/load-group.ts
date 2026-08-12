@@ -33,7 +33,8 @@ export interface GroupLoadResult {
 /** What a load computes for the group row. */
 interface ParsedGroup {
     name: string;
-    thumbnailUrls: ThumbnailUrls | null;
+    smallThumbnailUrl: string | null;
+    largeThumbnailUrl: string | null;
     buildIssues: BuildIssue[];
     /** When this (successful) load completed, epoch ms. */
     lastLoadedAt: number;
@@ -154,7 +155,8 @@ async function saveGroup(
     });
     const parsed: ParsedGroup = {
         name: target.name,
-        thumbnailUrls,
+        smallThumbnailUrl: thumbnailUrls?.small ?? null,
+        largeThumbnailUrl: thumbnailUrls?.large ?? null,
         buildIssues,
         // Stamp the successful load; failures never reach here, so a failed
         // reload leaves the group's last-good time untouched.

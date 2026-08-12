@@ -13,7 +13,7 @@ import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../app-common/app-menu";
 import { SearchHit } from "../search/search";
 import { SearchHitTitle } from "../search/search-results";
-import { CardThumbnail } from "../insert/thumbnail";
+import { CardThumbnail, type ThumbnailTarget } from "../insert/thumbnail";
 import { ConfigurablePath, InstancePath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
@@ -22,7 +22,7 @@ import {
 } from "../insert/insert-hooks";
 import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import { ThumbnailUrls } from "../../shared/types";
+
 import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
@@ -129,13 +129,23 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
+    /** Set to show a specific configuration's thumbnail instead of the default. */
+    thumbnailTarget?: ThumbnailTarget;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, thumbnailUrls, buildStatusBadge } = props;
+    const {
+        searchHit,
+        title,
+        smallThumbnailUrl,
+        largeThumbnailUrl,
+        thumbnailTarget,
+        buildStatusBadge
+    } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
@@ -157,7 +167,11 @@ export function CardTitle(props: CardTitleProps) {
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <CardThumbnail thumbnailUrls={thumbnailUrls} />
+            <CardThumbnail
+                smallThumbnailUrl={smallThumbnailUrl}
+                largeThumbnailUrl={largeThumbnailUrl}
+                target={thumbnailTarget}
+            />
             <Stack gap={0} miw={0} flex={1}>
                 <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                     {cardTitle}

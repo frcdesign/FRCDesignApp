@@ -32,20 +32,19 @@ import {
     EMPTY_UNIT_INFO,
     SearchRecord
 } from "../../shared/configuration-models";
-import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
     evaluateCondition,
     findRecordForConfiguration,
+    getEvaluateOptions,
     getOption,
     getVisibleOptions
 } from "../../shared/configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
-    EvaluateOptions,
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "./input-parser";
+} from "../../shared/input-parser";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
@@ -391,52 +390,6 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
             />
         </InputLabel>
     );
-}
-
-/** Display precision used when the document's units aren't available. */
-const DEFAULT_QUANTITY_PRECISION = 3;
-
-function getEvaluateOptions(
-    parameter: QuantityParameter,
-    unitInfo: UnitInfo
-): EvaluateOptions {
-    const quantityType = parameter.quantityType;
-    const minAndMax = {
-        min: valueWithUnits(parameter.min, parameter.unit),
-        max: valueWithUnits(parameter.max, parameter.unit)
-    };
-    // Fall back to the parameter's own unit when the document's isn't available.
-    if (quantityType === QuantityType.LENGTH) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
-            ...minAndMax
-        };
-    } else if (quantityType === QuantityType.ANGLE) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.angleUnit ?? parameter.unit,
-            ...minAndMax
-        };
-    } else if (quantityType == QuantityType.REAL) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: Unit.UNITLESS,
-            ...minAndMax
-        };
-    }
-    return {
-        quantityType: QuantityType.INTEGER,
-        displayPrecision: 0,
-        displayUnit: Unit.UNITLESS,
-        ...minAndMax
-    };
 }
 
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {

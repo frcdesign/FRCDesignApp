@@ -9,8 +9,11 @@
 import {
     ParameterType,
     type BooleanParameter,
-    type EnumParameter
+    type EnumParameter,
+    type QuantityParameter,
+    type UnitInfo
 } from "../shared/configuration-models";
+import { QuantityType, Unit } from "../shared/configuration-enums";
 
 /** Builds an enum parameter whose options are named after their ids. */
 export function enumParam(
@@ -42,3 +45,32 @@ export function boolParam(id: string): BooleanParameter {
         type: ParameterType.BOOLEAN
     };
 }
+
+/** Builds a length quantity parameter, defaulting to `1 in`. */
+export function quantityParam(
+    id: string,
+    extra: Partial<QuantityParameter> = {}
+): QuantityParameter {
+    return {
+        id,
+        name: id,
+        default: "1 in",
+        isCosmetic: false,
+        type: ParameterType.QUANTITY,
+        quantityType: QuantityType.LENGTH,
+        defaultValue: 1,
+        min: 0,
+        max: 100,
+        unit: Unit.INCH,
+        ...extra
+    };
+}
+
+/** Document units: inches to 4 decimals, degrees to 3. */
+export const TEST_UNIT_INFO: UnitInfo = {
+    angleUnit: Unit.DEGREE,
+    lengthUnit: Unit.INCH,
+    lengthPrecision: 4,
+    anglePrecision: 3,
+    realPrecision: 3
+};

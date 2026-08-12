@@ -8,7 +8,6 @@ import {
     Theme,
     Vendor
 } from "./types";
-import { ThumbnailUrls } from "./types";
 import {
     ParameterValues,
     ConfigurationParameter,
@@ -41,9 +40,8 @@ export const group = sqliteTable(
             .notNull()
             .default(false),
         sortOrder: integer("sort_order").notNull().default(0),
-        thumbnailUrls: text("thumbnail_urls", {
-            mode: "json"
-        }).$type<ThumbnailUrls>(),
+        smallThumbnailUrl: text("small_thumbnail_url"),
+        largeThumbnailUrl: text("large_thumbnail_url"),
         // Build-time issues flagged by the build checker, recomputed on reload.
         buildIssues: text("build_issues", { mode: "json" })
             .$type<BuildIssue[]>()
@@ -95,9 +93,8 @@ export const insertables = sqliteTable("insertables", {
         .$type<Vendor[]>()
         .notNull()
         .default([]),
-    thumbnailUrls: text("thumbnail_urls", {
-        mode: "json"
-    }).$type<ThumbnailUrls | null>(),
+    smallThumbnailUrl: text("small_thumbnail_url"),
+    largeThumbnailUrl: text("large_thumbnail_url"),
     fastenInfo: text("fasten_info", {
         mode: "json"
     }).$type<FastenInfo | null>(),

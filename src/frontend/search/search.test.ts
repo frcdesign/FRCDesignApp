@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildSearchDb, processTerm, tokenize } from "../../shared/search";
 import { doSearch, type Position } from "./search";
 import { LibraryOut } from "../../shared/api-models";
-import { ElementType, ThumbnailUrls } from "../../shared/types";
+import { ElementType } from "../../shared/types";
 import {
     ConfigurationRecord,
     ParameterValues
@@ -80,8 +80,6 @@ describe("tokenize", () => {
     });
 });
 
-const thumbnailUrls = {} as ThumbnailUrls;
-
 function library(name = "Bracket"): LibraryOut {
     return {
         groupOrder: ["g1"],
@@ -91,7 +89,6 @@ function library(name = "Bracket"): LibraryOut {
                 documentId: "d1",
                 path: { documentId: "d1", instanceId: "v1", instanceType: "v" },
                 name: "Group",
-                thumbnailUrls,
                 insertableOrder: ["i1"]
             }
         },
@@ -113,7 +110,6 @@ function library(name = "Bracket"): LibraryOut {
                 isVisible: true,
                 supportsFasten: false,
                 elementType: ElementType.PART_STUDIO,
-                thumbnailUrls,
                 vendors: []
             }
         }

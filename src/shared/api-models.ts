@@ -3,7 +3,7 @@ import {
     ParameterValues,
     ConfigurationParameter
 } from "./configuration-models";
-import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
+import { ElementType, LibraryId, Vendor } from "./types";
 import { BuildIssue } from "./build-issues";
 
 export interface InsertableOut {
@@ -18,7 +18,8 @@ export interface InsertableOut {
     isVisible: boolean;
     supportsFasten: boolean;
     elementType: ElementType;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
     configurationId?: string;
     vendors: Vendor[];
 }
@@ -28,7 +29,8 @@ export interface GroupOut {
     documentId: string;
     path: InstancePath;
     name: string;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
     insertableOrder: string[];
 }
 
