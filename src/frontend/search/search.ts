@@ -190,6 +190,26 @@ function findBestRecord(
     );
 }
 
+/** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * How much of a matched term to underline: the longest query term it starts
+ * with — what the user actually typed — so a prefix search underlines only the
+ * typed prefix. Falls back to the whole term if none is a prefix.
+ */
+function matchedPrefixLength(term: string, queryTerms: string[]): number {
+    let length = 0;
+    for (const queryTerm of queryTerms) {
+        if (term.startsWith(queryTerm) && queryTerm.length > length) {
+            length = queryTerm.length;
+        }
+    }
+    return length || term.length;
+}
+
 /**
  * Generate highlight positions for matched terms in the document.
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
@@ -198,8 +218,9 @@ function generateHighlightPositions(
     result: MiniSearchResult,
     document: SearchDocument
 ): Position[] {
-    // Terms is an array of values in name (or spacedName) which matched
-    // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
+    // `match` is keyed by the document terms that matched, `queryTerms` by what
+    // was typed: searching "mot" matches the term "motor", and we underline just
+    // its "mot". Overlapping ranges are merged when they're applied.
 
     const name = document.name.toLowerCase();
 
@@ -210,11 +231,14 @@ function generateHighlightPositions(
         if (!matchedFields.includes("name")) {
             continue;
         }
-        const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
+        const length = matchedPrefixLength(term, result.queryTerms);
+        const matchedLocations = name.matchAll(
+            new RegExp(escapeRegExp(term), "g")
+        );
         for (const match of matchedLocations) {
             positions.push({
                 start: match.index,
-                length: term.length
+                length
             });
         }
     }

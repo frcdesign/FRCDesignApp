@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSearchDb, processTerm, tokenize } from "../../shared/search";
-import { doSearch } from "./search";
+import { doSearch, type Position } from "./search";
 import { LibraryOut } from "../../shared/api-models";
 import { ElementType, ThumbnailUrls } from "../../shared/types";
 import {
@@ -82,7 +82,7 @@ describe("tokenize", () => {
 
 const thumbnailUrls = {} as ThumbnailUrls;
 
-function library(): LibraryOut {
+function library(name = "Bracket"): LibraryOut {
     return {
         groupOrder: ["g1"],
         groups: {
@@ -108,7 +108,7 @@ function library(): LibraryOut {
                     instanceType: "v",
                     elementId: "e1"
                 },
-                name: "Bracket",
+                name,
                 microversionId: "mv1",
                 isVisible: true,
                 supportsFasten: false,
@@ -175,6 +175,52 @@ describe("doSearch part-number matching", () => {
         );
         expect(hits).toHaveLength(1);
         expect(hits[0].configuration).toEqual({ version: "latest" });
+    });
+});
+
+describe("doSearch highlighting", () => {
+    /** The characters `positions` underline, merged the way applyRanges does. */
+    function highlighted(text: string, positions: Position[]): string {
+        const covered = new Set<number>();
+        for (const { start, length } of positions) {
+            for (let i = start; i < start + length; i++) {
+                covered.add(i);
+            }
+        }
+        return [...text].filter((_, i) => covered.has(i)).join("");
+    }
+
+    function highlightFor(name: string, query: string): string {
+        const { hits } = doSearch(
+            buildSearchDb(library(name)),
+            query,
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits).toHaveLength(1);
+        return highlighted(name, hits[0].positions);
+    }
+
+    it("underlines only the typed prefix, not the whole matched term", () => {
+        expect(highlightFor("Bracket", "brack")).toBe("Brack");
+    });
+
+    it("underlines the whole term for an exact match", () => {
+        expect(highlightFor("Bracket", "bracket")).toBe("Bracket");
+    });
+
+    it("underlines a prefix spanning camelCase sub-terms", () => {
+        expect(highlightFor("MAXSpline", "maxsp")).toBe("MAXSp");
+    });
+
+    it("underlines a prefix of a later word", () => {
+        expect(highlightFor("Motor Mount", "mou")).toBe("Mou");
+    });
+
+    it("matches terms literally rather than as patterns", () => {
+        // An unescaped "1.5" would also underline the "125".
+        expect(highlightFor("1.5 x 125 Spacer", "1.5")).toBe("1.5");
     });
 });
 
