@@ -1,4 +1,4 @@
-import { Group, Menu, Table, Text } from "@mantine/core";
+import { Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     IconExternalLink,
     IconEyeOff,
@@ -146,12 +146,28 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
+    // The part number + name of the hit's best-matching configuration, dropping
+    // a name that just repeats the title.
+    const details = searchHit
+        ? [searchHit.partNumber, searchHit.partName].filter(
+              (value): value is string =>
+                  !!value && value.toLowerCase() !== title.toLowerCase()
+          )
+        : [];
+
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
             <CardThumbnail thumbnailUrls={thumbnailUrls} />
-            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
-                {cardTitle}
-            </Text>
+            <Stack gap={0} miw={0} flex={1}>
+                <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                    {cardTitle}
+                </Text>
+                {details.length > 0 && (
+                    <Text size="xs" c="dimmed" truncate>
+                        {details.join(" · ")}
+                    </Text>
+                )}
+            </Stack>
             {isHidden && (
                 <IconEyeOff
                     size={IconSize.SMALL}

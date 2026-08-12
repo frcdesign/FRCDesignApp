@@ -6,17 +6,9 @@
 import MiniSearch, { Options } from "minisearch";
 import { LibraryOut } from "./api-models";
 import { Vendor } from "./types";
-import { ConfigurationRecord, ParameterValues } from "./configuration-models";
+import { ConfigurationRecord, SearchRecord } from "./configuration-models";
 
 const deliminator = "^";
-
-/**
- * Part number -> the (canonical) configuration that produces it. Derived from an
- * insertable's `ConfigurationRecord[]` at index-build time: many configurations
- * can share a part number, so this collapses them first-wins — and records come
- * in enumeration order (latest option first), so search launches the latest.
- */
-export type PartNumberMap = Record<string, ParameterValues>;
 
 /**
  * Adds spaces to a given string so prefix matching is more efficient.
@@ -41,10 +33,57 @@ export function processTerm(term: string): string[] {
     return Array.from(new Set(terms));
 }
 
+// A mixed number, simple fraction, or decimal (incl. leading-dot). Alternatives
+// are ordered longest-first so `1-1/2` is consumed whole, not as `1` + `1/2`.
+const NUMERIC_PATTERN = /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*/g;
+
+/**
+ * Rewrites numbers/fractions to a single 2-dp decimal so `.5`, `1/2`, and `0.50`
+ * all become `"0.5"`. Applied at both index and query time (via `tokenize`), so
+ * the canonical form matches on both sides without keeping the raw fragments —
+ * which would only add noise (`2` weakly matching `1/2`) and index size. Thread
+ * specs and part numbers (`10-32`, `217-2600`) contain no fraction/decimal and
+ * are left untouched.
+ */
+function canonicalizeNumbers(text: string): string {
+    return text.replace(
+        NUMERIC_PATTERN,
+        (match, mixedWhole, mixedNum, mixedDen, fracNum, fracDen) => {
+            let value: number;
+            if (mixedWhole !== undefined) {
+                value =
+                    Number(mixedWhole) + Number(mixedNum) / Number(mixedDen);
+            } else if (fracNum !== undefined) {
+                value = Number(fracNum) / Number(fracDen);
+            } else {
+                value = Number(match);
+            }
+            if (!Number.isFinite(value)) {
+                return match;
+            }
+            return String(Math.round(value * 100) / 100);
+        }
+    );
+}
+
+/**
+ * Canonicalizes a string for direct (non-tokenized) comparison — same number
+ * canonicalization as the index, lowercased — so exact/prefix/substring checks
+ * against a stored part number or name agree with what the index matched (e.g. a
+ * `.5` query lines up with a stored `"1/2 Bearing"`).
+ */
+export function normalizeForMatch(text: string): string {
+    return canonicalizeNumbers(text).toLowerCase();
+}
+
 export function tokenize(text: string): string[] {
-    // Don't lowercase so we can use casing for term splitting
+    // Canonicalize fractions/decimals before splitting (they span `/` and `-`,
+    // which the split would otherwise break apart). Don't lowercase — casing is
+    // needed by processTerm's camelCase splitting.
     // Remove -, (, ), ", ', #, &, /, and whitespace
-    return text.split(/[-()"'#&\s^/]+/).filter(Boolean);
+    return canonicalizeNumbers(text)
+        .split(/[-()"'#&\s^/]+/)
+        .filter(Boolean);
 }
 
 export interface SearchDocument {
@@ -54,16 +93,20 @@ export interface SearchDocument {
     vendors: Vendor[];
     name: string;
     groupName: string;
-    // Space-joined part numbers (the searchable field); empty when the
+    // Space-joined, deduped part numbers (a searchable field); empty when the
     // insertable has no indexed part numbers.
     partNumbers: string;
-    // Part number -> the configuration that produces it, used to launch the
-    // matched configuration. Stored, not indexed.
-    partNumberConfigs: PartNumberMap;
+    // Space-joined, deduped configuration (part) names (a searchable field);
+    // empty when the insertable has no indexed records.
+    partNames: string;
+    // One entry per distinct (part number, name) the insertable produces, in
+    // enumeration order. Stored, not indexed — used to pick the best-matching
+    // configuration for a hit and to launch it in the insert menu.
+    records: SearchRecord[];
 }
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "groupName", "partNumbers"],
+    fields: ["name", "groupName", "partNumbers", "partNames"],
     storeFields: [
         "id",
         "groupId",
@@ -71,10 +114,12 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
         "vendors",
         "name",
         "groupName",
-        "partNumberConfigs"
+        "records"
     ],
     searchOptions: {
-        boost: { groupName: 0.5 },
+        // The insertable's own title leads; part names and the group name are
+        // weaker signals, so a title match outranks them.
+        boost: { partNames: 0.7, groupName: 0.5 },
         prefix: true
     },
     // Custom tokenizer to split on special characters
@@ -82,19 +127,41 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
     processTerm
 };
 
+/** Joins the distinct non-null values with spaces (a searchable field's form). */
+function uniqueJoin(values: (string | null)[]): string {
+    return Array.from(
+        new Set(values.filter((value): value is string => !!value))
+    ).join(" ");
+}
+
 /**
- * Folds an insertable's records into the search map: part number -> the first
- * configuration that produces it. First-wins over enumeration order keeps the
- * latest option (see {@link PartNumberMap}).
+ * Distills an insertable's records to the slice search needs, in enumeration
+ * order (default-first, latest-option-first), keeping the first occurrence of
+ * each distinct (part number, name) pair and dropping records with neither.
+ * First-wins keeps the latest revision, as {@link ConfigurationRecord} ordering
+ * intends.
  */
-function toPartNumberMap(records: ConfigurationRecord[]): PartNumberMap {
-    const partNumberConfigs: PartNumberMap = {};
+export function toSearchRecords(
+    records: ConfigurationRecord[]
+): SearchRecord[] {
+    const seen = new Set<string>();
+    const searchRecords: SearchRecord[] = [];
     for (const record of records) {
-        if (record.partNumber) {
-            partNumberConfigs[record.partNumber] ??= record.configuration;
+        if (!record.partNumber && !record.name) {
+            continue;
         }
+        const key = JSON.stringify([record.partNumber, record.name]);
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        searchRecords.push({
+            partNumber: record.partNumber,
+            name: record.name,
+            configuration: record.configuration
+        });
     }
-    return partNumberConfigs;
+    return searchRecords;
 }
 
 export function buildSearchDb(
@@ -109,9 +176,7 @@ export function buildSearchDb(
         .filter((element) => !!element)
         .map((element) => {
             const parentGroup = libraryData.groups[element.groupId];
-            const partNumberConfigs = toPartNumberMap(
-                recordsMap[element.id] ?? []
-            );
+            const records = toSearchRecords(recordsMap[element.id] ?? []);
             return {
                 id: element.id,
                 groupId: element.groupId,
@@ -119,8 +184,9 @@ export function buildSearchDb(
                 vendors: element.vendors,
                 name: element.name,
                 groupName: parentGroup.name,
-                partNumbers: Object.keys(partNumberConfigs).join(" "),
-                partNumberConfigs
+                partNumbers: uniqueJoin(records.map((r) => r.partNumber)),
+                partNames: uniqueJoin(records.map((r) => r.name)),
+                records
             };
         });
 

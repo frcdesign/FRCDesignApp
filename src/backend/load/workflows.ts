@@ -228,6 +228,6 @@ async function finalizeLibrary(
     libraryId: LibraryId
 ): Promise<void> {
     const db = getDb(env.DB);
-    await rebuildSearchDb(db, libraryId);
+    await rebuildSearchDb(env.SEARCH_INDEX, db, libraryId);
     await bumpLibraryVersion(db, libraryId);
 }

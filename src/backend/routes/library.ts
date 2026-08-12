@@ -8,9 +8,7 @@ import {
 } from "../app";
 import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
-import { getLibraryOut } from "../library-data";
-import { HTTPException } from "hono/http-exception";
-import { HttpStatus } from "http-status-ts";
+import { getLibraryOut, searchIndexKey } from "../library-data";
 
 export const libraryRoutes = getApp();
 
@@ -41,28 +39,25 @@ libraryRoutes.get(
     }
 );
 
-/** GET /api/search-db/library/:libraryId?v=:cacheVersion */
+/**
+ * GET /api/search-db/library/:libraryId?v=:cacheVersion
+ *
+ * Streams the library's serialized MiniSearch index from R2.
+ */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const db = getDb(c.env.DB);
 
-        const library = await db
-            .select({ searchDb: libraries.searchDb })
-            .from(libraries)
-            .where(eq(libraries.id, libraryId))
-            .get();
-
-        const searchDb = library?.searchDb;
-
-        if (!searchDb) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Failed to find searchDb"
-            });
+        const object = await c.env.SEARCH_INDEX.get(searchIndexKey(libraryId));
+        if (!object) {
+            return c.notFound();
         }
 
-        return c.json({ searchDb });
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set("etag", object.httpEtag);
+        return new Response(object.body, { headers });
     }
 );

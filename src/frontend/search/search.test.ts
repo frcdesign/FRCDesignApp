@@ -8,15 +8,16 @@ import {
     ParameterValues
 } from "../../shared/configuration-models";
 
-/** Builds a configuration record carrying just a part number + configuration. */
+/** Builds a configuration record carrying a part number, name, + configuration. */
 function record(
-    partNumber: string,
-    configuration: ParameterValues
+    partNumber: string | null,
+    configuration: ParameterValues,
+    name: string | null = null
 ): ConfigurationRecord {
     return {
         configuration,
         partNumber,
-        name: null,
+        name,
         description: null,
         material: null,
         vendor: null,
@@ -57,6 +58,25 @@ describe("tokenize", () => {
             "X",
             "Contact"
         ]);
+    });
+
+    it("canonicalizes fractions and decimals to a 2-dp decimal", () => {
+        expect(tokenize("1/2")).toEqual(["0.5"]);
+        expect(tokenize(".5")).toEqual(["0.5"]);
+        expect(tokenize("0.50")).toEqual(["0.5"]);
+        expect(tokenize("3/4")).toEqual(["0.75"]);
+        expect(tokenize("1-1/2")).toEqual(["1.5"]);
+        expect(tokenize("1.5")).toEqual(["1.5"]);
+        expect(tokenize("1/3")).toEqual(["0.33"]);
+    });
+
+    it("leaves thread specs and part numbers untouched", () => {
+        expect(tokenize("10-32")).toEqual(["10", "32"]);
+        expect(tokenize("217-2600")).toEqual(["217", "2600"]);
+    });
+
+    it("canonicalizes a fraction inside a name", () => {
+        expect(tokenize("1/2 Bearing")).toEqual(["0.5", "Bearing"]);
     });
 });
 
@@ -122,7 +142,7 @@ describe("doSearch part-number matching", () => {
         expect(hits[0].configuration).toEqual({ length: "long" });
     });
 
-    it("does not attach a configuration for a name match", () => {
+    it("attaches the default (first) record for a title match", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = doSearch(
             searchDb,
@@ -132,7 +152,9 @@ describe("doSearch part-number matching", () => {
             true
         );
         expect(hits).toHaveLength(1);
-        expect(hits[0].configuration).toBeUndefined();
+        // The insertable's own name matched, so the row shows its default config.
+        expect(hits[0].configuration).toEqual({ length: "short" });
+        expect(hits[0].partNumber).toBe("217-2600");
     });
 
     // Older revisions share a part number with the latest, which enumerates
@@ -153,5 +175,44 @@ describe("doSearch part-number matching", () => {
         );
         expect(hits).toHaveLength(1);
         expect(hits[0].configuration).toEqual({ version: "latest" });
+    });
+});
+
+describe("doSearch name matching", () => {
+    const recordsMap: Record<string, ConfigurationRecord[]> = {
+        i1: [
+            record("217-2600", { length: "short" }, "1/2 Bearing"),
+            record("217-2601", { length: "long" }, "3/4 Bearing")
+        ]
+    };
+
+    it("matches a part name, returning its number, name, and configuration", () => {
+        const searchDb = buildSearchDb(library(), recordsMap);
+        const { hits } = doSearch(
+            searchDb,
+            "3/4 bearing",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits).toHaveLength(1);
+        expect(hits[0].partName).toBe("3/4 Bearing");
+        expect(hits[0].partNumber).toBe("217-2601");
+        expect(hits[0].configuration).toEqual({ length: "long" });
+    });
+
+    it("finds a fractional name by its decimal forms (.5, 0.5, 1/2)", () => {
+        const searchDb = buildSearchDb(library(), recordsMap);
+        for (const query of [".5", "0.5", "1/2"]) {
+            const { hits } = doSearch(
+                searchDb,
+                query,
+                undefined,
+                undefined,
+                true
+            );
+            const hit = hits.find((h) => h.id === "i1");
+            expect(hit?.partName).toBe("1/2 Bearing");
+        }
     });
 });

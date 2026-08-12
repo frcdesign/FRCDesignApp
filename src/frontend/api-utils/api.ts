@@ -49,6 +49,28 @@ export async function apiGet(
     }).then(handleResponse);
 }
 
+/**
+ * Gets a plain-text body from a backend /api route (e.g. the search index blob,
+ * served pre-gzipped and decompressed transparently by the browser). Returns
+ * null on 404 so a missing resource is a graceful empty state, not an error.
+ */
+export async function apiGetText(
+    path: string,
+    options?: QueryOptionsWithCacheId
+): Promise<string | null> {
+    const response = await fetch(
+        getUrl(path, options?.query, options?.cacheId),
+        { signal: options?.signal }
+    );
+    if (response.status === 404) {
+        return null;
+    }
+    if (!response.ok) {
+        throw new Error("Network response failed.");
+    }
+    return response.text();
+}
+
 export async function apiGetRawImage(
     url: string,
     signal?: AbortSignal

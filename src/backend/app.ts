@@ -11,6 +11,8 @@ export interface AppBindings {
     KV: KVNamespace;
     ASSETS: Fetcher;
     THUMBNAILS: R2Bucket;
+    /** Serialized MiniSearch index per library, keyed by {@link searchIndexKey}. */
+    SEARCH_INDEX: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     ADMIN_TEAM: string;

@@ -29,11 +29,13 @@ import {
     QuantityParameter,
     UnitInfo,
     EnumOption,
-    EMPTY_UNIT_INFO
+    EMPTY_UNIT_INFO,
+    SearchRecord
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
     evaluateCondition,
+    findRecordForConfiguration,
     getOption,
     getVisibleOptions
 } from "../../shared/configuration-utils";
@@ -105,12 +107,48 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }
 
     return (
-        <ConfigurationParameters
-            configurationResult={query.data}
-            configuration={configuration}
-            setConfiguration={setConfiguration}
-            unitInfo={unitInfo}
-        />
+        <>
+            <RecordSummary
+                records={query.data.records}
+                configuration={configuration}
+            />
+            <ConfigurationParameters
+                configurationResult={query.data}
+                configuration={configuration}
+                setConfiguration={setConfiguration}
+                unitInfo={unitInfo}
+            />
+        </>
+    );
+}
+
+/**
+ * The part number + name the currently-selected configuration produces.
+ * Recomputes on every configuration change, so it updates live as the user
+ * changes selections. Renders nothing when the selection has no indexed record.
+ */
+function RecordSummary({
+    records,
+    configuration
+}: {
+    records: SearchRecord[];
+    configuration: ParameterValues;
+}): ReactNode {
+    const record = findRecordForConfiguration(configuration, records);
+    const details = record
+        ? [record.partNumber, record.name].filter(
+              (value): value is string => !!value
+          )
+        : [];
+    if (details.length === 0) {
+        return null;
+    }
+    return (
+        <Group gap="xs" wrap="nowrap" justify="center" mb="xs">
+            <Text size="sm" fw={500} ta="center">
+                {details.join(" · ")}
+            </Text>
+        </Group>
     );
 }
 

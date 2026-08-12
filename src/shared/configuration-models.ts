@@ -71,6 +71,22 @@ interface AlwaysShownVisibilityCondition {
 export interface ConfigurationResult {
     // defaultConfiguration: string;
     parameters: ConfigurationParameter[];
+    /** The insertable's search records, so the insert menu can show the part
+     * number + name of the selected configuration. Empty when not indexed. */
+    records: SearchRecord[];
+}
+
+/**
+ * The slice of a {@link ConfigurationRecord} search needs: what a configuration
+ * produces (part number + name) and the configuration that produces it. Kept
+ * MiniSearch-free so both the search index and the `/configuration` route can
+ * share it.
+ */
+export interface SearchRecord {
+    partNumber: string | null;
+    name: string | null;
+    /** The (enumerated) parameter values that produce it; empty for the default. */
+    configuration: ParameterValues;
 }
 
 export type ConfigurationParameter =

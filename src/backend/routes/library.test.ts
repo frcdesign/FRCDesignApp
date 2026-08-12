@@ -12,14 +12,24 @@ import {
     seedLibrary
 } from "../../__test_utils__";
 import { getDb } from "../db";
+import { rebuildSearchDb, searchIndexKey } from "../library-data";
 import { LibraryOut } from "../../shared/api-models";
 import { LibraryId } from "../../shared/types";
 
 const db = getDb(env.DB);
 
+/** Inflates a gzip stream to text (the browser does this transparently). */
+async function inflate(body: ReadableStream): Promise<string> {
+    return new Response(
+        body.pipeThrough(new DecompressionStream("gzip"))
+    ).text();
+}
+
 describe("library routes", () => {
     beforeEach(async () => {
         await resetDb(db);
+        // The R2 bucket persists across tests in this file; clear the index.
+        await env.SEARCH_INDEX.delete(searchIndexKey(TEST_LIBRARY_ID));
     });
 
     it("GET /library-data returns groups and insertables", async () => {
@@ -43,8 +53,10 @@ describe("library routes", () => {
         );
     });
 
-    it("GET /search-db returns a serialized search index", async () => {
-        await seedLibrary(db);
+    it("GET /search-db streams the library's gzipped index from R2", async () => {
+        await seedTestData(db);
+        await seedConfiguration(db, TEST_PART_STUDIO_ID);
+        await rebuildSearchDb(env.SEARCH_INDEX, db, TEST_LIBRARY_ID);
         const app = createTestApp();
 
         const res = await app.request(
@@ -53,10 +65,23 @@ describe("library routes", () => {
             env
         );
         expect(res.status).toBe(200);
+        expect(res.headers.get("Content-Encoding")).toBe("gzip");
 
-        const body: { searchDb: string } = await res.json();
-        expect(typeof body.searchDb).toBe("string");
-        expect(body.searchDb.length).toBeGreaterThan(0);
+        // The body is the serialized MiniSearch index (a JSON object).
+        const parsed = JSON.parse(await inflate(res.body!));
+        expect(parsed.documentCount).toBeGreaterThan(0);
+    });
+
+    it("GET /search-db 404s when the library has no index", async () => {
+        await seedLibrary(db);
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/search-db/library/${TEST_LIBRARY_ID}`,
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(404);
     });
 
     it("GET /library-version returns the library's version", async () => {

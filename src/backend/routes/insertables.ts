@@ -198,7 +198,7 @@ insertableRoutes.post(
 
         await bumpLibraryVersion(db, row.libraryId);
         // Records feed the search index, so rebuild it now.
-        await rebuildSearchDb(db, row.libraryId);
+        await rebuildSearchDb(c.env.SEARCH_INDEX, db, row.libraryId);
         return c.json({ success: true });
     }
 );

@@ -5,10 +5,38 @@ import {
     OptionVisibilityType,
     ConfigurationParameter,
     ParameterType,
+    SearchRecord,
     VisibilityCondition,
     VisibilityType
 } from "./configuration-models";
 import { LogicalOp } from "./configuration-enums";
+
+/**
+ * Finds the record a (full) configuration selection produces. Records are keyed
+ * only by the enumerated parameters (enum/boolean, non-cosmetic — see
+ * `enumerateConfigurations`), so a record matches when every value in its
+ * `configuration` equals the user's selection for that key. When several match
+ * (a parameter hidden in some configs yields shorter key-sets), the most
+ * specific — the record with the most keys — wins.
+ */
+export function findRecordForConfiguration(
+    configuration: ParameterValues,
+    records: SearchRecord[]
+): SearchRecord | undefined {
+    let best: SearchRecord | undefined;
+    let bestKeys = -1;
+    for (const record of records) {
+        const keys = Object.keys(record.configuration);
+        const matches = keys.every(
+            (key) => configuration[key] === record.configuration[key]
+        );
+        if (matches && keys.length > bestKeys) {
+            best = record;
+            bestKeys = keys.length;
+        }
+    }
+    return best;
+}
 
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,

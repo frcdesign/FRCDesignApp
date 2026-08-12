@@ -166,23 +166,46 @@ export async function bumpLibraryVersion(
         });
 }
 
+/** The R2 object key holding a library's serialized MiniSearch index. */
+export function searchIndexKey(libraryId: LibraryId): string {
+    return `search-index/${libraryId}.json`;
+}
+
+/** Gzips a string to bytes (R2 stores it pre-compressed; the browser inflates). */
+async function gzip(text: string): Promise<ArrayBuffer> {
+    const compressed = new Response(text).body!.pipeThrough(
+        new CompressionStream("gzip")
+    );
+    return new Response(compressed).arrayBuffer();
+}
+
 /**
  * Rebuilds the serialized MiniSearch index for a library from its current
- * groups/insertables and stores it on the `libraries` row in D1.
+ * groups/insertables and stores it, gzipped, in R2. Bump `cacheVersion`
+ * alongside so clients refetch under a new URL.
  */
 export async function rebuildSearchDb(
+    bucket: R2Bucket,
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
+    const start = Date.now();
     const [libraryData, recordsMap] = await Promise.all([
         getLibraryOut(db, libraryId),
         getRecordsMap(db, libraryId)
     ]);
     const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
-    await db
-        .insert(libraries)
-        .values({ id: libraryId, searchDb })
-        .onConflictDoUpdate({ target: libraries.id, set: { searchDb } });
+    const compressed = await gzip(searchDb);
+    await bucket.put(searchIndexKey(libraryId), compressed, {
+        httpMetadata: {
+            contentType: "application/json",
+            contentEncoding: "gzip"
+        }
+    });
+    console.log(
+        `Rebuilt search index for ${libraryId}: ${searchDb.length} B json, ` +
+            `${compressed.byteLength} B gzip, ${Date.now() - start} ms`
+    );
     return searchDb;
 }
 

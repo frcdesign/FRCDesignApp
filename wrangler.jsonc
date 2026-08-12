@@ -50,6 +50,10 @@
         {
             "binding": "THUMBNAILS",
             "bucket_name": "frc-design-app-dev-thumbnails"
+        },
+        {
+            "binding": "SEARCH_INDEX",
+            "bucket_name": "frc-design-app-dev-search-index"
         }
     ],
     "workflows": [
@@ -106,6 +110,10 @@
                 {
                     "binding": "THUMBNAILS",
                     "bucket_name": "frc-design-app-cert-thumbnails"
+                },
+                {
+                    "binding": "SEARCH_INDEX",
+                    "bucket_name": "frc-design-app-cert-search-index"
                 }
             ],
             "workflows": [
@@ -152,6 +160,10 @@
                 {
                     "binding": "THUMBNAILS",
                     "bucket_name": "frc-thumbnails-production"
+                },
+                {
+                    "binding": "SEARCH_INDEX",
+                    "bucket_name": "frc-search-index-production"
                 }
             ],
             "workflows": [

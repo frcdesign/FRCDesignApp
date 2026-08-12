@@ -245,7 +245,7 @@ groupRoutes.delete(
             .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
 
         await bumpLibraryVersion(db, libraryId);
-        await rebuildSearchDb(db, libraryId);
+        await rebuildSearchDb(c.env.SEARCH_INDEX, db, libraryId);
         return c.json({ success: true });
     }
 );

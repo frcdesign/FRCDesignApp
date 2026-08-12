@@ -1,7 +1,10 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
-import { SearchDocument, PartNumberMap } from "../../shared/search";
-import { ParameterValues } from "../../shared/configuration-models";
+import { SearchDocument, normalizeForMatch } from "../../shared/search";
+import {
+    ParameterValues,
+    SearchRecord
+} from "../../shared/configuration-models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -31,10 +34,12 @@ export interface SearchHit {
     id: string;
     positions: Position[];
     /**
-     * When the hit matched on a part number, the configuration that produces
-     * that part number, used to pre-fill the insert menu.
+     * The best-matching configuration for this hit, used to pre-fill the insert
+     * menu — its part number, name, and the parameter values that produce it.
      */
     configuration?: ParameterValues;
+    partNumber?: string;
+    partName?: string;
 }
 
 export interface FilterResult {
@@ -121,14 +126,13 @@ export function doSearch(
                 document
             );
 
+            const record = matchedRecord(miniSearchResult, document, query);
             return {
                 id: document.id,
                 positions,
-                configuration: matchedConfiguration(
-                    miniSearchResult,
-                    document,
-                    query
-                )
+                configuration: record?.configuration,
+                partNumber: record?.partNumber ?? undefined,
+                partName: record?.name ?? undefined
             };
         })
         .slice(0, 50); // Limit to 50 results
@@ -137,45 +141,53 @@ export function doSearch(
 }
 
 /**
- * If the result matched on the part-number field, returns the configuration
- * that produces the best-matching part number so the insert menu can launch it.
+ * Picks the single best-matching record for a hit: the one whose part number
+ * matched (when the hit matched the part-number field), else whose name matched
+ * (part-name field), else the default record (`records[0]`) for a pure title
+ * match — so every result row can show a part number + name.
  */
-function matchedConfiguration(
+function matchedRecord(
     result: MiniSearchResult,
     document: SearchDocument,
     query: string
-): ParameterValues | undefined {
-    const matchedPartNumber = Object.values(result.match).some((fields) =>
-        fields.includes("partNumbers")
-    );
-    if (!matchedPartNumber) {
-        return undefined;
+): SearchRecord | undefined {
+    const matchedFields = Object.values(result.match).flat();
+    if (matchedFields.includes("partNumbers")) {
+        return findBestRecord(query, document.records, (r) => r.partNumber);
     }
-    return findPartNumberConfig(query, document.partNumberConfigs);
+    if (matchedFields.includes("partNames")) {
+        return findBestRecord(query, document.records, (r) => r.name);
+    }
+    // Pure title (or group) match: show the default configuration's record.
+    return document.records[0];
 }
 
 /**
- * Picks the configuration whose part number best matches the query, preferring
- * an exact match, then a prefix, then a substring. First-wins on ties; the map
- * is in enumeration order, so a tie resolves to the latest option (the first the
- * insertable declares) — see PartNumberMap.
+ * Picks the record whose selected value (part number or name) best matches the
+ * query, preferring an exact match, then a prefix, then a substring. First-wins
+ * on ties; records are in enumeration order, so a tie resolves to the latest
+ * option (the first the insertable declares).
  */
-function findPartNumberConfig(
+function findBestRecord(
     query: string,
-    partNumberConfigs: PartNumberMap
-): ParameterValues | undefined {
-    const keys = Object.keys(partNumberConfigs);
-    const normalizedQuery = query.trim().toLowerCase();
-    if (keys.length === 0 || normalizedQuery === "") {
+    records: SearchRecord[],
+    selector: (record: SearchRecord) => string | null
+): SearchRecord | undefined {
+    const normalizedQuery = normalizeForMatch(query.trim());
+    if (records.length === 0 || normalizedQuery === "") {
         return undefined;
     }
 
-    const match =
-        keys.find((key) => key.toLowerCase() === normalizedQuery) ??
-        keys.find((key) => key.toLowerCase().startsWith(normalizedQuery)) ??
-        keys.find((key) => key.toLowerCase().includes(normalizedQuery));
+    // Canonicalize the same way the index did, so a fraction/decimal query lines
+    // up with the stored original (e.g. `.5` matches a `"1/2 Bearing"` name).
+    const value = (record: SearchRecord) =>
+        normalizeForMatch(selector(record) ?? "");
 
-    return match ? partNumberConfigs[match] : undefined;
+    return (
+        records.find((r) => value(r) === normalizedQuery) ??
+        records.find((r) => value(r).startsWith(normalizedQuery)) ??
+        records.find((r) => value(r).includes(normalizedQuery))
+    );
 }
 
 /**

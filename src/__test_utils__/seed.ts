@@ -66,10 +66,7 @@ export async function seedLibrary(
     db: Db,
     id: LibraryId = TEST_LIBRARY_ID
 ): Promise<string> {
-    await db
-        .insert(libraries)
-        .values({ id, searchDb: "{ fake-search-db: true }" })
-        .onConflictDoNothing();
+    await db.insert(libraries).values({ id }).onConflictDoNothing();
     return id;
 }
 

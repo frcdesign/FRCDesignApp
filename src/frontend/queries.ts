@@ -6,7 +6,7 @@ import {
     queryOptions,
     useQuery
 } from "@tanstack/react-query";
-import { apiGet } from "./api-utils/api";
+import { apiGet, apiGetText } from "./api-utils/api";
 import {
     type FavoritesData,
     type LibraryBuildStatus,
@@ -117,13 +117,17 @@ export function searchDbQueryKey(libraryId: LibraryId, cacheVersion: number) {
 export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<MiniSearch | null>({
         queryKey: searchDbQueryKey(libraryId, cacheVersion),
-        queryFn: async () =>
-            apiGet("/search-db/library/" + libraryId, {
-                cacheId: cacheVersion
-            }).then((result: { searchDb: string | null }) => {
-                if (!result.searchDb) return null;
-                return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
-            }),
+        queryFn: async () => {
+            const searchDb = await apiGetText(
+                "/search-db/library/" + libraryId,
+                {
+                    cacheId: cacheVersion
+                }
+            );
+            return searchDb
+                ? MiniSearch.loadJSON(searchDb, SEARCH_OPTIONS)
+                : null;
+        },
         staleTime: Infinity,
         gcTime: Infinity
     });
