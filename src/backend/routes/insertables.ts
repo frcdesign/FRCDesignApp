@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -41,7 +42,9 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!row)
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
 
         await db
             .update(insertables)
@@ -69,7 +72,9 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!insertableRow)
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
 
         let fastenInfo = null;
         if (body.supportsFasten) {
@@ -87,7 +92,7 @@ insertableRoutes.post(
                 .get();
 
             if (!insertable) {
-                throw new HTTPException(404, {
+                throw new HTTPException(HttpStatus.NOT_FOUND, {
                     message: "Insertable not found"
                 });
             }
@@ -145,7 +150,7 @@ insertableRoutes.post(
             .get();
 
         if (!insertable) {
-            throw new HTTPException(404, {
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
                 message: "Insertable not found"
             });
         }
@@ -220,7 +225,9 @@ insertableRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
         }
 
         const sourcePath: ElementPath = {
@@ -271,7 +278,7 @@ insertableRoutes.post(
 
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
-            throw new HTTPException(400, {
+            throw new HTTPException(HttpStatus.BAD_REQUEST, {
                 message: `${row.name} does not support insert and fasten.`
             });
         }
@@ -313,7 +320,9 @@ export async function getInsertableElementPath(
         .get();
 
     if (!row) {
-        throw new HTTPException(404, { message: "Insertable not found" });
+        throw new HTTPException(HttpStatus.NOT_FOUND, {
+            message: "Insertable not found"
+        });
     }
 
     return {

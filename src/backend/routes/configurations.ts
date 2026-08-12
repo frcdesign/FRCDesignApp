@@ -11,6 +11,7 @@ import {
 } from "../../shared/configuration-models";
 import { isInstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 
 export const configurationRoutes = getApp();
 
@@ -18,7 +19,7 @@ export const configurationRoutes = getApp();
 configurationRoutes.get("/configuration/:configurationId", async (c) => {
     const configurationId = c.req.param("configurationId");
     if (!configurationId) {
-        throw new HTTPException(400, {
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
             message: "configurationId is required"
         });
     }
@@ -31,7 +32,7 @@ configurationRoutes.get("/configuration/:configurationId", async (c) => {
         .get();
 
     if (!config) {
-        throw new HTTPException(404, {
+        throw new HTTPException(HttpStatus.NOT_FOUND, {
             message: "Failed to find configuration"
         });
     }
@@ -51,7 +52,7 @@ configurationRoutes.get("/unit-info", async (c) => {
         instanceType: c.req.query("instanceType")
     };
     if (!isInstancePath(instancePath)) {
-        throw new HTTPException(400, {
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
             message: "instancePath is required"
         });
     }

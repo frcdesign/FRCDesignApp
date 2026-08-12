@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
 import { getLibraryOut } from "../library-data";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 
 export const libraryRoutes = getApp();
 
@@ -28,7 +29,9 @@ libraryRoutes.get("/search-db" + libraryRoute(), async (c) => {
     const searchDb = library?.searchDb;
 
     if (!searchDb) {
-        throw new HTTPException(404, { message: "Failed to find searchDb" });
+        throw new HTTPException(HttpStatus.NOT_FOUND, {
+            message: "Failed to find searchDb"
+        });
     }
 
     return c.json({ searchDb });

@@ -4,6 +4,7 @@ import {
     type PostOptions
 } from "../../shared/url-params";
 import { env } from "cloudflare:workers";
+import { HttpStatus } from "http-status-ts";
 
 export function getBaseUrl(): string {
     const url = env.ONSHAPE_API_BASE_PATH ?? "https://cad.onshape.com";
@@ -112,7 +113,7 @@ export class OAuthApi extends OnshapeApi {
             method,
             headers: this._makeHeaders(init.headers)
         });
-        if (res.status === 401) {
+        if (res.status === HttpStatus.UNAUTHORIZED) {
             this._accessToken = await this._refreshCallback();
             return fetch(url, {
                 ...init,
