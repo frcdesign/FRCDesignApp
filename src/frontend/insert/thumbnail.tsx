@@ -1,5 +1,5 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
-import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
+import { apiGet, loadApiImage, loadImage } from "../api-utils/api";
 import { ThumbnailUrls, ThumbnailSize, ElementType } from "../../shared/types";
 import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
@@ -113,7 +113,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
             if (url === undefined) {
                 throw new Error("Tried to get thumbnail with no URL");
             }
-            return apiGetRawImage(url, signal);
+            return loadImage(url, signal);
         },
         retry: 1,
         enabled: url !== undefined
@@ -203,7 +203,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 // Shouldn't happen due to enabled guard
                 return;
             }
-            return apiGetImage("/thumbnail", {
+            return loadApiImage("/thumbnail", {
                 query: {
                     size,
                     thumbnailId,

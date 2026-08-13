@@ -33,6 +33,7 @@ import {
     SearchRecord
 } from "../../shared/configuration-models";
 import {
+    canonicalizeConfiguration,
     evaluateCondition,
     findRecordForConfiguration,
     getEvaluateOptions,
@@ -55,11 +56,22 @@ interface ConfigurationWrapperProps {
     microversionId: string;
     configuration?: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
+    /**
+     * Reports the selection's canonical form, which addresses its thumbnail and
+     * is what a favorite stores. Only this component has the parameters and
+     * units needed to compute it.
+     */
+    onCanonicalConfiguration?: (canonical: ParameterValues) => void;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, microversionId, configuration, setConfiguration } =
-        props;
+    const {
+        configurationId,
+        microversionId,
+        configuration,
+        setConfiguration,
+        onCanonicalConfiguration
+    } = props;
 
     const query = useQuery<ConfigurationResult>({
         queryKey: getConfigurationKey(configurationId, microversionId),
@@ -94,6 +106,18 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
+
+    const parameters = query.data?.parameters;
+    // Reruns when the document's units arrive, so an early canonical form
+    // computed against the fallback units is replaced rather than kept.
+    useEffect(() => {
+        if (!parameters || !configuration) {
+            return;
+        }
+        onCanonicalConfiguration?.(
+            canonicalizeConfiguration(configuration, parameters, unitInfo)
+        );
+    }, [parameters, unitInfo, configuration, onCanonicalConfiguration]);
 
     if (query.isPending || !configuration) {
         return (

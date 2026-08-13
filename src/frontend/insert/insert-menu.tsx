@@ -73,6 +73,10 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(props.defaultConfiguration);
+    // Reported by ConfigurationWrapper, which has the parameters and units the
+    // canonical form needs. Empty means the element's default configuration.
+    const [canonicalConfiguration, setCanonicalConfiguration] =
+        useState<ParameterValues>({});
 
     useEffect(() => {
         if (!isSignedIn) {
@@ -94,6 +98,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
+                onCanonicalConfiguration={setCanonicalConfiguration}
             />
         );
     }
@@ -107,7 +112,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 thumbnailUrls={insertable.thumbnailUrls}
                 microversionId={insertable.microversionId}
                 canonicalConfiguration={encodeCanonicalConfiguration(
-                    configuration ?? {}
+                    canonicalConfiguration
                 )}
             />
             {parameters}

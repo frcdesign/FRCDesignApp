@@ -200,9 +200,9 @@ export function getEvaluateOptions(
 function canonicalizeValue(
     parameter: ConfigurationParameter,
     value: string,
-    unitInfo: UnitInfo
+    unitInfo?: UnitInfo
 ): string {
-    if (parameter.type === ParameterType.QUANTITY) {
+    if (parameter.type === ParameterType.QUANTITY && unitInfo) {
         // "1in", "1 in", and "(0.5 + 0.5) in" are the same configuration; the
         // evaluated, rounded display form is the one spelling of it. An
         // unparseable value can't be normalized, so it rides as-is.
@@ -228,11 +228,15 @@ function canonicalizeValue(
  * visibility condition are dropped, as are values matching the parameter's
  * default — Onshape applies the default for anything omitted, so an
  * all-defaults selection canonicalizes to `{}`, which is the default thumbnail.
+ *
+ * `unitInfo` is only needed to evaluate quantity expressions; omit it where the
+ * configuration can't contain them (enumerated records hold enum and boolean
+ * values only), and those values ride through trimmed.
  */
 export function canonicalizeConfiguration(
     configuration: ParameterValues,
     parameters: ConfigurationParameter[],
-    unitInfo: UnitInfo
+    unitInfo?: UnitInfo
 ): ParameterValues {
     const canonical: ParameterValues = {};
     for (const parameter of parameters) {

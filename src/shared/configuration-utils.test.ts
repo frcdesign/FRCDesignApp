@@ -6,7 +6,11 @@ import {
     encodeCanonicalConfiguration,
     findRecordForConfiguration
 } from "./configuration-utils";
-import { SearchRecord, VisibilityType } from "./configuration-models";
+import {
+    ParameterValues,
+    SearchRecord,
+    VisibilityType
+} from "./configuration-models";
 import {
     boolParam,
     enumParam,
@@ -121,6 +125,56 @@ describe("canonicalizeConfiguration", () => {
 
     it("ignores parameters that aren't set", () => {
         expect(canon({ size: "l" })).toEqual({ size: "l" });
+    });
+});
+
+// The two sides that address a thumbnail derive their configuration differently:
+// an indexed record comes from `enumerateConfigurations` (visible, non-cosmetic
+// enum/boolean values only, defaults included), while the insert menu holds the
+// user's whole selection. Canonicalizing both is what makes them agree.
+describe("canonical keys agree across surfaces", () => {
+    const size = enumParam("size", ["s", "l"]);
+    const flag = boolParam("flag");
+    const finish = enumParam("finish", ["matte", "gloss"], {
+        isCosmetic: true
+    });
+    const length = quantityParam("length");
+    const parameters = [size, flag, finish, length];
+
+    it("keys an enumerated record and the equivalent selection alike", () => {
+        // What indexing stores: enumerated values, no cosmetic/quantity params.
+        const record = canonicalizeConfiguration(
+            { size: "l", flag: "false" },
+            parameters
+        );
+        // What the insert menu holds: everything, including the defaults.
+        const selection = canonicalizeConfiguration(
+            { size: "l", flag: "false", finish: "matte", length: "1 in" },
+            parameters,
+            TEST_UNIT_INFO
+        );
+        expect(configurationKey(record)).toBe(configurationKey(selection));
+    });
+
+    it("keys a non-default cosmetic or quantity value differently", () => {
+        // Enumeration never varies these, but they do change what renders, so
+        // the selection must not collide with the enumerated record.
+        const record = canonicalizeConfiguration({ size: "l" }, parameters);
+        const selections: ParameterValues[] = [
+            { size: "l", finish: "gloss" },
+            { size: "l", length: "2 in" }
+        ];
+        for (const selection of selections) {
+            expect(
+                configurationKey(
+                    canonicalizeConfiguration(
+                        selection,
+                        parameters,
+                        TEST_UNIT_INFO
+                    )
+                )
+            ).not.toBe(configurationKey(record));
+        }
     });
 });
 

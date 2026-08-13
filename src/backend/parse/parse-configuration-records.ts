@@ -28,6 +28,7 @@ import {
     AUTO_INDEX_THRESHOLD,
     enumerateConfigurations
 } from "../../shared/configuration-combinations";
+import { canonicalizeConfiguration } from "../../shared/configuration-utils";
 import { getParts } from "../onshape-api/endpoints/parts";
 import { getElementMetadata } from "../onshape-api/endpoints/metadata";
 import type {
@@ -262,7 +263,7 @@ export async function parseConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, capped);
+    return toResult(defaultRecord, batchRecords, capped, parameters);
 }
 
 /**
@@ -313,7 +314,7 @@ export async function loadConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, capped);
+    return toResult(defaultRecord, batchRecords, capped, parameters);
 }
 
 /**
@@ -396,9 +397,20 @@ async function fetchBatch(
 function toResult(
     defaultRecord: ConfigurationRecord,
     batches: ConfigurationRecord[][],
-    capped: boolean
+    capped: boolean,
+    parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
-    const records = [defaultRecord, ...batches.flat()];
+    // Store the canonical configuration, so a record addresses the same thumbnail
+    // the insert menu does for the same selection. Enumeration already omits
+    // cosmetic, quantity, and string parameters, and canonicalizing drops the
+    // ones left at their default.
+    const records = [defaultRecord, ...batches.flat()].map((record) => ({
+        ...record,
+        configuration: canonicalizeConfiguration(
+            record.configuration,
+            parameters
+        )
+    }));
 
     let buildIssues: BuildIssue[] = [];
     if (capped) {

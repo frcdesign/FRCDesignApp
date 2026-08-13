@@ -8,12 +8,12 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/notifications";
 import { PreviewImageCard } from "../insert/thumbnail";
-import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
 import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import { ParameterValues } from "../../shared/configuration-models";
+import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
 import {
     favoritesQueryKey,
     useFavoritesQuery,
@@ -67,12 +67,18 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(defaultConfiguration);
+    // Reported by ConfigurationWrapper; addresses this selection's thumbnail.
+    const [canonicalConfiguration, setCanonicalConfiguration] =
+        useState<ParameterValues>({});
 
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
+            // Store the canonical form: Onshape applies defaults for whatever
+            // it omits, so it inserts the same thing, and it addresses the same
+            // thumbnail the favorites row asks for.
             return apiPost("/default-configuration/" + favoriteId, {
-                body: { defaultConfiguration: configuration }
+                body: { defaultConfiguration: canonicalConfiguration }
             });
         },
         onMutate: async () => {
@@ -82,7 +88,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 queryKey,
                 getQueryUpdater((data: FavoritesData) => {
                     const fav = data.favorites[favoriteId];
-                    if (fav) fav.defaultConfiguration = configuration;
+                    if (fav) fav.defaultConfiguration = canonicalConfiguration;
                     return data;
                 })
             );
@@ -124,10 +130,11 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 configuration={configuration}
                 microversionId={insertable.microversionId}
                 canonicalConfiguration={encodeCanonicalConfiguration(
-                    configuration ?? {}
+                    canonicalConfiguration
                 )}
             />
             <ConfigurationWrapper
+                onCanonicalConfiguration={setCanonicalConfiguration}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
                 configurationId={insertable.configurationId}

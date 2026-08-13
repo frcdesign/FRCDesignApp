@@ -71,34 +71,35 @@ export async function apiGetText(
     return response.text();
 }
 
-export async function apiGetRawImage(
+/**
+ * Checks that an image URL resolves, and returns it to render.
+ *
+ * Fetching it here both surfaces failures as a rejected query (so callers keep
+ * their loading, error, and retry behavior) and puts the response in the browser
+ * cache, so the `<img>` that follows is served from it. Returning the URL rather
+ * than an object URL matters: a blob URL lives until the page unloads, and
+ * nothing can safely revoke one that a cached query may still be sharing.
+ */
+export async function loadImage(
     url: string,
     signal?: AbortSignal
 ): Promise<string> {
-    return fetch(url, {
-        signal
-    }).then(handleImageResponse);
-}
-
-/**
- * Makes a get request for an image to a backend /api route.
- * Returns a local url for the image.
- */
-export async function apiGetImage(
-    path: string,
-    options?: QueryOptionsWithCacheId
-): Promise<string> {
-    return fetch(getUrl(path, options?.query, options?.cacheId), {
-        signal: options?.signal
-    }).then(handleImageResponse);
-}
-
-async function handleImageResponse(response: Response) {
+    const response = await fetch(url, { signal });
     if (!response.ok) {
         throw new Error("Network response failed.");
     }
-    const blob = await response.blob();
-    return URL.createObjectURL(blob);
+    return url;
+}
+
+/** {@link loadImage} for a backend /api route. */
+export async function loadApiImage(
+    path: string,
+    options?: QueryOptionsWithCacheId
+): Promise<string> {
+    return loadImage(
+        getUrl(path, options?.query, options?.cacheId),
+        options?.signal
+    );
 }
 
 /**
