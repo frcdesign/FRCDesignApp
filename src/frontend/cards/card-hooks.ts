@@ -52,7 +52,7 @@ export function useSetVisibilityMutation(
                 }
             );
         },
-        onMutate: async () => {
+        onMutate: () => {
             showLoadingToast(
                 isVisible ? "Showing insertables..." : "Hiding insertables...",
                 "set-visibility"
