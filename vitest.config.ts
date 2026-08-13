@@ -1,4 +1,7 @@
-import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
+import {
+    cloudflareTest,
+    readD1Migrations
+} from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -30,7 +33,8 @@ export default defineConfig({
                 test: {
                     name: "backend",
                     include: ["src/backend/**/*.test.ts"],
-                    setupFiles: ["./src/__test_utils__/apply-migrations.ts"]
+                    setupFiles: ["./src/__test_utils__/apply-migrations.ts"],
+                    maxWorkers: 1
                 }
             }
         ]

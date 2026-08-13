@@ -4,8 +4,8 @@ import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
 import { type LibraryId } from "../../shared/types";
-import { type Configuration } from "../../shared/configuration-models";
 import { HttpStatus } from "http-status-ts";
+import { type ParameterValues } from "../../shared/configuration-models";
 
 export const favoriteRoutes = getApp();
 

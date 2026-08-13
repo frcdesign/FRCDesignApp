@@ -10,6 +10,13 @@ import { libraries, groups, insertables, favorites } from "../../shared/schema";
 import type { LoadDocumentParams } from "../parse/load-document";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { HttpStatus } from "http-status-ts";
+import {
+    isAnyJobRunning,
+    isReloadRunning,
+    trackJob
+} from "../load/job-tracker";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 
 export const groupRoutes = getApp();
 
@@ -168,19 +175,6 @@ groupRoutes.post(
                 {
                     type: "handled",
                     message: "Failed to find the specified document.",
-                    isError: true
-                },
-                HttpStatus.UNPROCESSABLE_ENTITY
-            );
-        }
-
-        try {
-            await getLatestVersion(onshapeApi, documentPath);
-        } catch {
-            return c.json(
-                {
-                    type: "handled",
-                    message: "Failed to find a document version to use.",
                     isError: true
                 },
                 HttpStatus.UNPROCESSABLE_ENTITY
