@@ -20,6 +20,7 @@ import { handleAppError, HandledError } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { favoritesQueryKey } from "../queries";
+import { useRefreshFavorites } from "../api-utils/refresh";
 
 enum Operation {
     ADD,
@@ -55,6 +56,7 @@ function updateFavorites(
 function useUpdateFavoritesMutation() {
     const libraryId = useLibraryId();
     const router = useRouter();
+    const refreshFavorites = useRefreshFavorites();
     const queryKey = favoritesQueryKey(libraryId);
 
     return useMutation<null, Error, UpdateFavoritesArgs>({
@@ -94,10 +96,7 @@ function useUpdateFavoritesMutation() {
                 `Unexpectedly failed to ${action} ${args.insertable.name}.`
             );
         },
-        onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey });
-            void router.invalidate();
-        }
+        onSettled: refreshFavorites
     });
 }
 

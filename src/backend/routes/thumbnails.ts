@@ -12,12 +12,12 @@ import {
 } from "../onshape-api/endpoints/thumbnails";
 import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
-import { groups, insertables } from "../../shared/schema";
+import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
-import { BuildIssueType, clearBuildIssue } from "../../shared/build-checker";
+import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
 
 const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
@@ -89,19 +89,16 @@ export async function uploadDocumentThumbnails(
         getContents(onshapeApi, versionPath)
     ]);
 
-    let thumbnailElementId: string = onshapeDocument.documentThumbnailElementId;
+    let thumbnailElementId = onshapeDocument.documentThumbnailElementId;
     if (!thumbnailElementId) {
-        const els: any[] = contents.elements;
-        if (els.length < 1)
+        if (contents.elements.length < 1)
             throw new Error(
                 `Document ${onshapeDocument.name} has no elements to use as a thumbnail.`
             );
-        thumbnailElementId = els[0].id;
+        thumbnailElementId = contents.elements[0].id;
     }
 
-    const element = (contents.elements as any[]).find(
-        (e) => e.id === thumbnailElementId
-    );
+    const element = contents.elements.find((e) => e.id === thumbnailElementId);
     if (!element) {
         throw new Error("Unexpectedly failed to find the thumbnail element.");
     }
@@ -241,13 +238,13 @@ thumbnailRoutes.post(
 
         const row = await db
             .select({
-                documentId: groups.documentId,
-                instanceId: groups.instanceId,
-                libraryId: groups.libraryId,
-                buildIssues: groups.buildIssues
+                documentId: group.documentId,
+                versionId: group.versionId,
+                libraryId: group.libraryId,
+                buildIssues: group.buildIssues
             })
-            .from(groups)
-            .where(eq(groups.id, groupId))
+            .from(group)
+            .where(eq(group.id, groupId))
             .get();
 
         if (!row) {
@@ -258,7 +255,7 @@ thumbnailRoutes.post(
 
         const instancePath: InstancePath = {
             documentId: row.documentId,
-            instanceId: row.instanceId,
+            instanceId: row.versionId,
             instanceType: "v"
         };
 
@@ -269,7 +266,7 @@ thumbnailRoutes.post(
         );
 
         await db
-            .update(groups)
+            .update(group)
             .set({
                 thumbnailUrls: thumbnails,
                 buildIssues: clearBuildIssue(
@@ -277,7 +274,7 @@ thumbnailRoutes.post(
                     BuildIssueType.THUMBNAIL_FAILED
                 )
             })
-            .where(eq(groups.id, groupId));
+            .where(eq(group.id, groupId));
 
         await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });

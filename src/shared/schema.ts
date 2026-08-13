@@ -8,8 +8,12 @@ import {
     Vendor
 } from "./types";
 import { ThumbnailUrls } from "./types";
-import { Configuration, ParameterObj } from "./configuration-models";
-import { BuildIssue } from "./build-checker";
+import {
+    ParameterValues,
+    ConfigurationParameter,
+    PartNumberMap
+} from "./configuration-models";
+import { BuildIssue } from "./build-issues";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -18,7 +22,7 @@ export const libraries = sqliteTable("libraries", {
     searchDb: text("search_db")
 });
 
-export const groups = sqliteTable(
+export const group = sqliteTable(
     "groups",
     {
         id: text("id")
@@ -31,7 +35,7 @@ export const groups = sqliteTable(
         name: text("name").notNull(),
         // The Onshape document this group was added from
         documentId: text("document_id").notNull(),
-        instanceId: text("instance_id").notNull(),
+        versionId: text("version_id").notNull(),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
             .default(false),
@@ -43,62 +47,72 @@ export const groups = sqliteTable(
         buildIssues: text("build_issues", { mode: "json" })
             .$type<BuildIssue[]>()
             .notNull()
-            .default([])
+            .default([]),
+        // When this group was last successfully loaded (epoch ms). Null until the
+        // group's first load. Written by the load path; failures are conveyed by
+        // buildIssues, not here.
+        lastLoadedAt: integer("last_loaded_at")
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
 
-export const insertables = sqliteTable(
-    "insertables",
-    {
-        id: text("id")
-            .primaryKey()
-            .$defaultFn(() => crypto.randomUUID()),
-        elementId: text("element_id").notNull(),
-        // The group this insertable belongs to (its primary parent).
-        groupId: text("group_id")
-            .notNull()
-            .references(() => groups.id, { onDelete: "cascade" }),
-        // The Onshape document the element lives in (kept for Onshape API calls).
-        documentId: text("document_id").notNull(),
-        libraryId: text("library_id")
-            .notNull()
-            .$type<LibraryId>()
-            .references(() => libraries.id),
-        name: text("name").notNull(),
-        elementType: text("element_type").notNull().$type<ElementType>(),
-        microversionId: text("microversion_id").notNull(),
-        versionName: text("version_name").notNull(),
-        versionCreatedAt: text("version_created_at").notNull(),
-        isVisible: integer("is_visible", { mode: "boolean" })
-            .notNull()
-            .default(true),
-        isOpenComposite: integer("is_open_composite", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        supportsFasten: integer("supports_fasten", { mode: "boolean" })
-            .notNull()
-            .default(false),
-        instanceId: text("instance_id").notNull(),
-        sortOrder: integer("sort_order").notNull().default(0),
-        vendors: text("vendors", { mode: "json" })
-            .$type<Vendor[]>()
-            .notNull()
-            .default([]),
-        thumbnailUrls: text("thumbnail_urls", {
-            mode: "json"
-        }).$type<ThumbnailUrls | null>(),
-        fastenInfo: text("fasten_info", {
-            mode: "json"
-        }).$type<FastenInfo | null>(),
-        // Build-time issues flagged by the build checker, recomputed on reload.
-        buildIssues: text("build_issues", { mode: "json" })
-            .$type<BuildIssue[]>()
-            .notNull()
-            .default([])
-    },
-    (t) => [unique().on(t.elementId, t.groupId)]
-);
+export const insertables = sqliteTable("insertables", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+    elementId: text("element_id").notNull(),
+    // The group this insertable belongs to (its primary parent).
+    groupId: text("group_id")
+        .notNull()
+        .references(() => group.id, { onDelete: "cascade" }),
+    // The Onshape document the element lives in (kept for Onshape API calls).
+    documentId: text("document_id").notNull(),
+    libraryId: text("library_id")
+        .notNull()
+        .$type<LibraryId>()
+        .references(() => libraries.id),
+    name: text("name").notNull(),
+    elementType: text("element_type").notNull().$type<ElementType>(),
+    microversionId: text("microversion_id").notNull(),
+    isVisible: integer("is_visible", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    isOpenComposite: integer("is_open_composite", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    supportsFasten: integer("supports_fasten", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Whether this insertable's part numbers are indexed for search.
+    searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Part number of the default configuration. The sole source of part
+    // numbers for non-configurable insertables (which have no
+    // `configurations` row); null when part-number search is off.
+    defaultPartNumber: text("default_part_number"),
+    versionId: text("version_id").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    vendors: text("vendors", { mode: "json" })
+        .$type<Vendor[]>()
+        .notNull()
+        .default([]),
+    thumbnailUrls: text("thumbnail_urls", {
+        mode: "json"
+    }).$type<ThumbnailUrls | null>(),
+    fastenInfo: text("fasten_info", {
+        mode: "json"
+    }).$type<FastenInfo | null>(),
+    // Build-time issues flagged by the build checker, recomputed on reload.
+    buildIssues: text("build_issues", { mode: "json" })
+        .$type<BuildIssue[]>()
+        .notNull()
+        .default([]),
+    // When this insertable was last successfully loaded (epoch ms). Null until the
+    // insertable's first load. Written by the load path; failures are conveyed by
+    // buildIssues, not here.
+    lastLoadedAt: integer("last_loaded_at")
+});
 
 export const configurations = sqliteTable("configurations", {
     id: text("id")
@@ -106,9 +120,15 @@ export const configurations = sqliteTable("configurations", {
         .notNull()
         .references(() => insertables.id, { onDelete: "cascade" }),
     parameters: text("parameters", { mode: "json" })
-        .$type<ParameterObj[]>()
+        .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
+    // Deduped map of part number -> the configuration that produces it, used
+    // for part-number search. Empty unless part-number search is enabled.
+    partNumbers: text("part_numbers", { mode: "json" })
+        .$type<PartNumberMap>()
+        .notNull()
+        .default({}),
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()
@@ -145,7 +165,7 @@ export const favorites = sqliteTable(
             .references(() => insertables.id, { onDelete: "cascade" }),
         defaultConfiguration: text("default_configuration", {
             mode: "json"
-        }).$type<Configuration | null>(),
+        }).$type<ParameterValues | null>(),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

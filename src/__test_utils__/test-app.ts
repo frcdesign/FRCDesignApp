@@ -5,7 +5,7 @@ import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 export interface TestAppOptions {
     /** Current user id, returned by `c.var.getUserId()` (default `"test-user"`). */
     userId?: string;
-    /** Access level returned by `c.var.getAccessLevel()` (default `USER`). */
+    /** Access level returned by `c.var.getAccessLevel()` (default `ADMIN`). */
     accessLevel?: AccessLevel;
     /** Onshape mock returned by `c.var.getOnshapeApi()` (default a fresh mock). */
     onshapeApi?: MockOnshapeApi;
@@ -21,7 +21,7 @@ export function createTestApp(options: TestAppOptions = {}) {
         getOnshapeApi: () => Promise.resolve(MOCK_ONSHAPE_API),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
-            Promise.resolve(options.accessLevel ?? AccessLevel.USER)
+            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN)
     }));
 }
 

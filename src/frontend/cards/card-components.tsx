@@ -23,7 +23,7 @@ import {
 import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
 import { ThumbnailUrls } from "../../shared/types";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
@@ -58,7 +58,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 
 interface QuickInsertItemProps {
     insertable: InsertableOut;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
     isFavorite: boolean;
 }
 
@@ -129,7 +129,7 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }

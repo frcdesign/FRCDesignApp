@@ -3,13 +3,15 @@ import {
     addBuildIssue,
     BuildIssue,
     BuildIssueType
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 
 interface GroupCheckInput {
     /** Whether the Onshape document has a designated thumbnail tab/element. */
     hasThumbnailTab: boolean;
     /** The uploaded thumbnail URLs, or `null` when generation failed. */
     thumbnailUrls: ThumbnailUrls | null;
+    /** Whether any of the group's insertables failed to load. */
+    hasFailedInsertables: boolean;
 }
 
 /**
@@ -26,6 +28,12 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
     } else if (!input.hasThumbnailTab) {
         issues = addBuildIssue(issues, {
             type: BuildIssueType.NO_THUMBNAIL_TAB
+        });
+    }
+
+    if (input.hasFailedInsertables) {
+        issues = addBuildIssue(issues, {
+            type: BuildIssueType.INSERTABLES_FAILED
         });
     }
 

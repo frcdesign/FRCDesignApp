@@ -27,6 +27,7 @@ import {
 } from "../app/alerts";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { favoritesQueryKey, useFavoritesQuery } from "../queries";
+import { useRefreshFavorites } from "../api-utils/refresh";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
@@ -148,6 +149,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
 function useSetFavoriteOrderMutation() {
     const libraryId = useLibraryId();
     const router = useRouter();
+    const refreshFavorites = useRefreshFavorites();
 
     const queryKey = favoritesQueryKey(libraryId);
 
@@ -173,9 +175,6 @@ function useSetFavoriteOrderMutation() {
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."
         ),
-        onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey });
-            void router.invalidate();
-        }
+        onSettled: refreshFavorites
     });
 }

@@ -2,7 +2,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "./db";
 import {
     libraries,
-    groups,
+    group,
     insertables,
     configurations
 } from "../shared/schema";
@@ -13,6 +13,7 @@ import {
     Insertables,
     Groups
 } from "../shared/api-models";
+import { PartNumberMap } from "../shared/configuration-models";
 import { buildSearchDb } from "../shared/search";
 
 /**
@@ -25,9 +26,9 @@ export async function getLibraryOut(
 ): Promise<LibraryOut> {
     const allGroups = await db
         .select()
-        .from(groups)
-        .where(eq(groups.libraryId, libraryId))
-        .orderBy(asc(groups.sortOrder))
+        .from(group)
+        .where(eq(group.libraryId, libraryId))
+        .orderBy(asc(group.sortOrder))
         .all();
 
     if (allGroups.length === 0) {
@@ -62,11 +63,11 @@ export async function getLibraryOut(
             documentId: group.documentId,
             path: {
                 documentId: group.documentId,
-                instanceId: group.instanceId,
+                instanceId: group.versionId,
                 instanceType: "v"
             },
             name: group.name,
-            thumbnailUrls: group.thumbnailUrls!,
+            thumbnailUrls: group.thumbnailUrls ?? undefined,
             insertableOrder
         };
     }
@@ -78,10 +79,10 @@ export async function getLibraryOut(
             elementId: ins.elementId,
             groupId: ins.groupId,
             documentId: ins.documentId,
-            instanceId: ins.instanceId,
+            versionId: ins.versionId,
             path: {
                 documentId: ins.documentId,
-                instanceId: ins.instanceId,
+                instanceId: ins.versionId,
                 instanceType: "v",
                 elementId: ins.elementId
             },
@@ -90,7 +91,7 @@ export async function getLibraryOut(
             isVisible: ins.isVisible,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
-            thumbnailUrls: ins.thumbnailUrls!,
+            thumbnailUrls: ins.thumbnailUrls ?? undefined,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
             vendors: ins.vendors
         } satisfies InsertableOut;
@@ -101,6 +102,43 @@ export async function getLibraryOut(
         groups: groupsOut,
         insertables: insertablesOut
     };
+}
+
+/**
+ * Renumbers a library's groups to open a slot for a new group — directly after
+ * `selectedGroupId`, or at the end — and returns the sort order to write it with.
+ * The caller creates the row itself, since it also decides create vs. update.
+ */
+export async function placeNewGroup(
+    db: Db,
+    libraryId: LibraryId,
+    selectedGroupId: string | undefined
+): Promise<number> {
+    const siblings = await db
+        .select({ id: group.id })
+        .from(group)
+        .where(eq(group.libraryId, libraryId))
+        .orderBy(asc(group.sortOrder))
+        .all();
+
+    const selectedIndex = selectedGroupId
+        ? siblings.findIndex((sibling) => sibling.id === selectedGroupId)
+        : -1;
+    // An unknown or unspecified selection puts the new group last.
+    const newIndex = selectedIndex === -1 ? siblings.length : selectedIndex + 1;
+
+    // Renumber every sibling to close any gaps: those at or past the new slot
+    // shift up by one to make room for it.
+    await Promise.all(
+        siblings.map((sibling, index) =>
+            db
+                .update(group)
+                .set({ sortOrder: index < newIndex ? index : index + 1 })
+                .where(eq(group.id, sibling.id))
+        )
+    );
+
+    return newIndex;
 }
 
 export async function bumpLibraryVersion(
@@ -124,11 +162,45 @@ export async function rebuildSearchDb(
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const libraryData = await getLibraryOut(db, libraryId);
-    const searchDb = JSON.stringify(buildSearchDb(libraryData));
+    const [libraryData, partNumberMap] = await Promise.all([
+        getLibraryOut(db, libraryId),
+        getPartNumberMap(db, libraryId)
+    ]);
+    const searchDb = JSON.stringify(buildSearchDb(libraryData, partNumberMap));
     await db
         .insert(libraries)
         .values({ id: libraryId, searchDb })
         .onConflictDoUpdate({ target: libraries.id, set: { searchDb } });
     return searchDb;
+}
+
+/**
+ * Assembles the per-insertable part-number map used to index part numbers:
+ * a configurable insertable's map comes from its `configurations` row, while a
+ * non-configurable one contributes its single `defaultPartNumber`.
+ */
+async function getPartNumberMap(
+    db: Db,
+    libraryId: LibraryId
+): Promise<Record<string, PartNumberMap>> {
+    const rows = await db
+        .select({
+            id: insertables.id,
+            defaultPartNumber: insertables.defaultPartNumber,
+            partNumbers: configurations.partNumbers
+        })
+        .from(insertables)
+        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .where(eq(insertables.libraryId, libraryId))
+        .all();
+
+    const partNumberMap: Record<string, PartNumberMap> = {};
+    for (const row of rows) {
+        if (row.partNumbers && Object.keys(row.partNumbers).length > 0) {
+            partNumberMap[row.id] = row.partNumbers;
+        } else if (row.defaultPartNumber) {
+            partNumberMap[row.id] = { [row.defaultPartNumber]: {} };
+        }
+    }
+    return partNumberMap;
 }

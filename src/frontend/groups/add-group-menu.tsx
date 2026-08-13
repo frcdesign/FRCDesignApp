@@ -10,6 +10,7 @@ import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
+import { jobStatusQueryKey } from "../queries";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({
@@ -45,12 +46,11 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             "Failed to add document. Make sure the document is valid.",
             "add-group"
         ),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["library"] });
-            showInfoToast(
-                "Initiated workflow, which can take up to 30 minutes.",
-                "add-group"
-            );
+        onSuccess: () => {
+            showInfoToast("Adding document...", "add-group");
+            void queryClient.invalidateQueries({
+                queryKey: jobStatusQueryKey(libraryId)
+            });
         }
     });
 

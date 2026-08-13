@@ -11,9 +11,7 @@ const ONSHAPE_API_VERSION = 16;
 import { HttpStatus } from "http-status-ts";
 
 export function getBaseUrl(): string {
-    const url = env.ONSHAPE_API_BASE_PATH ?? "https://cad.onshape.com";
-    const version = env.ONSHAPE_API_VERSION ?? 16;
-    return `${url}/api/v${version}`;
+    return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
 }
 
 export class OnshapeApiError extends Error {
@@ -23,6 +21,24 @@ export class OnshapeApiError extends Error {
     ) {
         super(message);
         this.name = "OnshapeApiError";
+    }
+}
+
+/** Fallback wait when a 429 response omits (or malforms) the Retry-After header. */
+const DEFAULT_RETRY_AFTER_SECONDS = 60;
+
+/**
+ * Thrown on a 429 response. Carries the Onshape `Retry-After` value (seconds)
+ * so callers can wait it out. Extends {@link OnshapeApiError} (status 429) so
+ * existing `status`-based handling keeps working.
+ */
+export class OnshapeRateLimitError extends OnshapeApiError {
+    constructor(
+        message: string,
+        public readonly retryAfterSeconds: number
+    ) {
+        super(message, 429);
+        this.name = "OnshapeRateLimitError";
     }
 }
 
@@ -86,8 +102,21 @@ export abstract class OnshapeApi {
             signal: options?.signal,
             headers
         });
+
         if (!res.ok) {
             const text = await res.text();
+            if (res.status === 429) {
+                const retryAfter = parseInt(
+                    res.headers.get("Retry-After") ?? "",
+                    10
+                );
+                throw new OnshapeRateLimitError(
+                    `Onshape API error 429: ${text}`,
+                    Number.isFinite(retryAfter)
+                        ? retryAfter
+                        : DEFAULT_RETRY_AFTER_SECONDS
+                );
+            }
             throw new OnshapeApiError(
                 `Onshape API error ${res.status}: ${text}`,
                 res.status

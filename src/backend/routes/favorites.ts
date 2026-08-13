@@ -139,7 +139,7 @@ favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
 favoriteRoutes.post("/default-configuration/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
     const body = await c.req.json<{
-        defaultConfiguration: Configuration;
+        defaultConfiguration: ParameterValues;
     }>();
 
     const db = getDb(c.env.DB);

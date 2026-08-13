@@ -2,14 +2,14 @@ import { type Db } from "../backend/db";
 import {
     configurations,
     favorites,
-    groups,
+    group,
     insertables,
     libraries,
     users
 } from "../shared/schema";
 import {
-    ConfigurationParameterType,
-    type ParameterObj
+    ParameterType,
+    type ConfigurationParameter
 } from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
 import { ElementType, LibraryId } from "../shared/types";
@@ -35,11 +35,12 @@ export const TEST_ASSEMBLY_PATH: ElementPath = {
     elementId: "e-assembly"
 };
 
-export const TEST_PARAMETERS: ParameterObj[] = [
+export const TEST_PARAMETERS: ConfigurationParameter[] = [
     {
-        type: ConfigurationParameterType.BOOLEAN,
+        type: ParameterType.BOOLEAN,
         id: "boolean",
         name: "Test boolean",
+        isCosmetic: false,
         default: "true"
     }
 ];
@@ -56,7 +57,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);
     await db.delete(configurations);
     await db.delete(insertables);
-    await db.delete(groups);
+    await db.delete(group);
     await db.delete(users);
     await db.delete(libraries);
 }
@@ -87,63 +88,57 @@ export async function seedGroup(
 ): Promise<string> {
     await seedLibrary(db, libraryId);
     await db
-        .insert(groups)
+        .insert(group)
         .values({
             id,
             libraryId,
             name: "Test Group",
             documentId: `doc-${id}`,
-            instanceId: "inst-1"
+            versionId: "inst-1"
         })
         .onConflictDoNothing();
     return id;
 }
 
-async function seedInsertable(
+/**
+ * Inserts an insertable row, defaulting to the standard part studio. Pass
+ * overrides to seed a row with the specific columns a test wants to manipulate.
+ */
+export async function seedInsertable(
     db: Db,
-    id: string,
-    path: ElementPath,
-    elementType: ElementType
+    overrides: Partial<typeof insertables.$inferInsert> = {}
 ): Promise<string> {
-    await db
-        .insert(insertables)
-        .values({
-            id,
-            groupId: TEST_GROUP_ID,
-            libraryId: TEST_LIBRARY_ID,
-            elementId: path.elementId,
-            documentId: path.documentId,
-            instanceId: path.instanceId,
-            elementType,
-            name: `Test ${elementType}`,
-            microversionId: "mv-1",
-            versionName: "v1",
-            versionCreatedAt: new Date(0).toISOString()
-        })
-        .onConflictDoNothing();
-    return id;
+    const elementType = overrides.elementType ?? ElementType.PART_STUDIO;
+    const values = {
+        id: TEST_PART_STUDIO_ID,
+        groupId: TEST_GROUP_ID,
+        libraryId: TEST_LIBRARY_ID,
+        elementId: TEST_PART_STUDIO_PATH.elementId,
+        documentId: TEST_PART_STUDIO_PATH.documentId,
+        versionId: TEST_PART_STUDIO_PATH.instanceId,
+        elementType,
+        name: `Test ${elementType}`,
+        microversionId: "mv-1",
+        ...overrides
+    };
+    await db.insert(insertables).values(values).onConflictDoNothing();
+    return values.id;
 }
 
 /** Seeds the standard part-studio insertable (ensures library + group). */
 export async function seedPartStudio(db: Db): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(
-        db,
-        TEST_PART_STUDIO_ID,
-        TEST_PART_STUDIO_PATH,
-        ElementType.PART_STUDIO
-    );
+    return seedInsertable(db);
 }
 
 /** Seeds the standard assembly insertable (ensures library + group). */
 export async function seedAssembly(db: Db): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(
-        db,
-        TEST_ASSEMBLY_ID,
-        TEST_ASSEMBLY_PATH,
-        ElementType.ASSEMBLY
-    );
+    return seedInsertable(db, {
+        id: TEST_ASSEMBLY_ID,
+        elementId: TEST_ASSEMBLY_PATH.elementId,
+        elementType: ElementType.ASSEMBLY
+    });
 }
 
 export async function seedFavorite(

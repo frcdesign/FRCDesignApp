@@ -1,20 +1,41 @@
-import { Badge, Divider, Group, HoverCard, Stack, Text } from "@mantine/core";
+import {
+    Badge,
+    Divider,
+    Group,
+    HoverCard,
+    Loader,
+    Stack,
+    Switch,
+    Text,
+    Tooltip
+} from "@mantine/core";
 import {
     IconAlertOctagon,
     IconAlertTriangle,
     IconCheck,
+    IconClock,
     IconInfoCircle,
     IconX
 } from "@tabler/icons-react";
-import { ComponentPropsWithRef, ReactNode, useMemo } from "react";
+import {
+    ComponentPropsWithRef,
+    ReactNode,
+    createContext,
+    use,
+    useCallback,
+    useMemo,
+    useState
+} from "react";
+import { formatRelativeTime } from "../common/format-time";
 import {
     addBuildIssue,
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
+    getIssueDescription,
     getIssueSeverity,
     getMaxSeverity
-} from "../../shared/build-checker";
+} from "../../shared/build-issues";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
@@ -22,67 +43,22 @@ import {
 import { getVendorName, Vendor } from "../../shared/types";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useBuildStatusQuery } from "../queries";
+import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
+import {
+    useSetVisibilityMutation,
+    useToggleInsertAndFastenMutation,
+    useTogglePartNumberSearchMutation,
+    useToggleSortOrderMutation
+} from "./card-hooks";
 
 /**
- * The value of a "current state" row. A discriminated union so `StateValue` can
- * render each kind appropriately (a check/cross for booleans, badges for
- * vendors, plain text otherwise).
+ * The value of a read-only "parsed" row. A discriminated union so `StateValue`
+ * can render each kind appropriately (a check/cross for booleans, badges for
+ * vendors).
  */
 export type StateRowValue =
     | { kind: "bool"; value: boolean }
-    | { kind: "vendors"; vendors: Vendor[] }
-    | { kind: "text"; text: string };
-
-/** A single label/value row shown in the "current state" section. */
-export interface StateRow {
-    label: string;
-    value: StateRowValue;
-}
-
-/** Builds the read-only "current state" rows shown for an insertable. */
-function getInsertableStateRows(insertable: InsertableBuildStatus): StateRow[] {
-    const rows: StateRow[] = [
-        {
-            label: "Visible to users",
-            value: { kind: "bool", value: insertable.isVisible }
-        }
-    ];
-    if (insertable.isOpenComposite !== undefined) {
-        rows.push({
-            label: "Open composite",
-            value: { kind: "bool", value: insertable.isOpenComposite }
-        });
-    }
-    rows.push({
-        label: "Insert and fasten",
-        value: { kind: "bool", value: insertable.supportsFasten }
-    });
-    rows.push({
-        label: "Vendors",
-        value: { kind: "vendors", vendors: insertable.vendors }
-    });
-    rows.push({
-        label: "Configurable",
-        value: { kind: "bool", value: !!insertable.configuration }
-    });
-    return rows;
-}
-
-/** Builds the read-only "current state" rows shown for a group. */
-function getGroupStateRows(groupStatus: GroupBuildStatus): StateRow[] {
-    return [
-        {
-            label: "Default sort order",
-            value: {
-                kind: "text",
-                text: groupStatus.sortAlphabetically
-                    ? "Alphabetical"
-                    : "Standard"
-            }
-        }
-    ];
-}
+    | { kind: "vendors"; vendors: Vendor[] };
 
 /**
  * Returns the build issues for an insertable, merging insertable-level and
@@ -172,114 +148,557 @@ export function IssueIcon({
 }
 
 interface BuildStatusCardProps {
+    /** The group/insertable name shown in the header. */
+    name: string;
     issues: BuildIssue[];
-    /** Read-only "current state" rows shown above the build issues. */
-    stateRows: StateRow[];
+    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
+    /** The group/insertable admin menu wrapped by the card. */
+    children: ReactNode;
 }
 
-/** The hover-card dropdown content: state rows + divider + build issues. */
-export function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { issues, stateRows } = props;
-    // Size to content (capped) so short rows/messages don't wrap.
+/**
+ * The hover-card content: a header (name, severity summary, last-loaded time),
+ * the build checks (when any), and the wrapped group/insertable admin menu.
+ */
+function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
+    const { name, issues, lastLoadedAt, children } = props;
     return (
-        <Stack gap="xs" w="max-content" maw={300}>
-            <CurrentStateSection rows={stateRows} />
+        <Stack gap="sm" w={300}>
+            <CardHeader
+                name={name}
+                issues={issues}
+                lastLoadedAt={lastLoadedAt}
+            />
+            {issues.length > 0 && (
+                <>
+                    <Divider />
+                    <BuildChecksSection issues={issues} />
+                </>
+            )}
             <Divider />
-            <BuildIssuesSection issues={issues} />
+            {children}
         </Stack>
     );
 }
 
 interface BuildStatusBadgeProps {
+    /** The group/insertable name shown in the header. */
+    name: string;
     issues: BuildIssue[];
-    /** Read-only "current state" rows shown above the build issues. */
-    stateRows: StateRow[];
+    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
+    /** The group/insertable admin menu shown in the hover card. */
+    hoverMenu: ReactNode;
 }
 
 /**
- * An inline tag summarizing the build-checker state for a group or insertable,
- * with a read-only hover card showing the current state and any build issues.
- * Only visible to editors and admins.
+ * Dismisses the surrounding build-status hover card. Used by controls that open
+ * a modal, since `HoverCard` only closes on mouse-leave — never fired when a
+ * modal overlay simply covers the dropdown, leaving it stranded behind.
+ */
+const CloseCardContext = createContext<() => void>(() => undefined);
+
+/** Dismisses the build-status hover card a control is rendered inside. */
+export function useCloseBuildCard(): () => void {
+    return use(CloseCardContext);
+}
+
+/**
+ * A severity icon whose hover card shows the build-status card wrapping the
+ * given admin menu. Only rendered for editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    const { issues, stateRows } = props;
-    const maxSeverity = getMaxSeverity(issues);
-
+    // Gate first so only editors mount the child (and thus poll job status).
     return (
         <RequireAccessLevel>
+            <BuildStatusHoverCard {...props} />
+        </RequireAccessLevel>
+    );
+}
+
+function BuildStatusHoverCard({
+    name,
+    issues,
+    lastLoadedAt,
+    hoverMenu
+}: BuildStatusBadgeProps): ReactNode {
+    const maxSeverity = getMaxSeverity(issues);
+    const jobRunning = useJobStatusQuery().data?.running ?? false;
+
+    // Remounting is the only way to close an uncontrolled HoverCard on demand.
+    const [cardKey, setCardKey] = useState(0);
+    const close = useCallback(() => setCardKey((key) => key + 1), []);
+
+    return (
+        <CloseCardContext value={close}>
             <HoverCard
+                key={cardKey}
                 withinPortal
                 shadow="md"
-                openDelay={150}
-                closeDelay={50}
                 position="right"
                 withArrow
                 arrowSize={20}
             >
                 <HoverCard.Target>
-                    <IssueIcon severity={maxSeverity} />
+                    {jobRunning ? (
+                        <Loader size={IconSize.SMALL} />
+                    ) : (
+                        <IssueIcon severity={maxSeverity} />
+                    )}
                 </HoverCard.Target>
-                <HoverCard.Dropdown p="sm">
-                    <BuildStatusCard issues={issues} stateRows={stateRows} />
+                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
+                    <BuildStatusCard
+                        name={name}
+                        issues={issues}
+                        lastLoadedAt={lastLoadedAt}
+                    >
+                        {hoverMenu}
+                    </BuildStatusCard>
                 </HoverCard.Dropdown>
             </HoverCard>
-        </RequireAccessLevel>
+        </CloseCardContext>
     );
+}
+
+/** The card header: name + severity summary on the left, last-loaded on the right. */
+function CardHeader({
+    name,
+    issues,
+    lastLoadedAt
+}: {
+    name: string;
+    issues: BuildIssue[];
+    lastLoadedAt: number | null;
+}): ReactNode {
+    return (
+        <Stack gap={6}>
+            <Group
+                justify="space-between"
+                align="center"
+                wrap="nowrap"
+                gap="sm"
+            >
+                <Text
+                    fw={FontWeight.SEMI_BOLD}
+                    size="sm"
+                    lineClamp={2}
+                    style={{ flex: 1, minWidth: 0 }}
+                >
+                    {name}
+                </Text>
+                <LastModified lastLoadedAt={lastLoadedAt} />
+            </Group>
+            <SeverityBadges issues={issues} />
+        </Stack>
+    );
+}
+
+/**
+ * The last-modified time, or a spinner (with a tooltip) while a job is running.
+ */
+function LastModified({
+    lastLoadedAt
+}: {
+    lastLoadedAt: number | null;
+}): ReactNode {
+    const jobRunning = useJobStatusQuery().data?.running ?? false;
+    if (jobRunning) {
+        return (
+            <Tooltip label="The library is being loaded from Onshape in the background">
+                <Loader size="xs" style={{ flexShrink: 0 }} />
+            </Tooltip>
+        );
+    }
+    return (
+        <Tooltip
+            label="The last time changes were pulled from Onshape."
+            withArrow
+        >
+            <Group
+                gap={4}
+                wrap="nowrap"
+                c="dimmed"
+                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+                <IconClock size={IconSize.TINY} />
+                <Text size="xs">
+                    {!lastLoadedAt
+                        ? "Unknown"
+                        : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
+                </Text>
+            </Group>
+        </Tooltip>
+    );
+}
+
+/** Pill badges summarizing the issue counts, or an "all clear" badge. */
+function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
+    if (issues.length === 0) {
+        return (
+            <Badge
+                size="sm"
+                variant="light"
+                color="green"
+                leftSection={<IconCheck size={IconSize.TINY} />}
+            >
+                All checks pass
+            </Badge>
+        );
+    }
+
+    const counts = countSeverities(issues);
+    return (
+        <Group gap={6} wrap="wrap">
+            {counts.error > 0 && (
+                <CountBadge
+                    severity={BuildIssueSeverity.ERROR}
+                    count={counts.error}
+                />
+            )}
+            {counts.warning > 0 && (
+                <CountBadge
+                    severity={BuildIssueSeverity.WARNING}
+                    count={counts.warning}
+                />
+            )}
+            {counts.info > 0 && (
+                <CountBadge
+                    severity={BuildIssueSeverity.INFO}
+                    count={counts.info}
+                />
+            )}
+        </Group>
+    );
+}
+
+/** The badge color and singular noun for each severity. */
+const SEVERITY_BADGE: Record<
+    BuildIssueSeverity,
+    { color: string; noun: string }
+> = {
+    [BuildIssueSeverity.ERROR]: { color: "red", noun: "error" },
+    [BuildIssueSeverity.WARNING]: { color: "yellow", noun: "warning" },
+    [BuildIssueSeverity.INFO]: { color: "blue", noun: "info" }
+};
+
+function CountBadge({
+    severity,
+    count
+}: {
+    severity: BuildIssueSeverity;
+    count: number;
+}): ReactNode {
+    const { color, noun } = SEVERITY_BADGE[severity];
+    // Don't pluralize info, e.g. "2 infos" reads wrong.
+    const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
+    return (
+        <Badge size="sm" variant="light" color={color}>
+            {`${count} ${noun}${plural}`}
+        </Badge>
+    );
+}
+
+function countSeverities(issues: BuildIssue[]): {
+    error: number;
+    warning: number;
+    info: number;
+} {
+    const counts = { error: 0, warning: 0, info: 0 };
+    for (const issue of issues) {
+        switch (getIssueSeverity(issue)) {
+            case BuildIssueSeverity.ERROR:
+                counts.error += 1;
+                break;
+            case BuildIssueSeverity.WARNING:
+                counts.warning += 1;
+                break;
+            case BuildIssueSeverity.INFO:
+                counts.info += 1;
+                break;
+        }
+    }
+    return counts;
+}
+
+/** The build checks: one tinted callout per issue. Rendered only when non-empty. */
+function BuildChecksSection({ issues }: { issues: BuildIssue[] }): ReactNode {
+    return (
+        <Stack gap={6}>
+            <SectionHeader>Build checks</SectionHeader>
+            {issues.map((issue) => (
+                <IssueCallout key={issue.type} issue={issue} />
+            ))}
+        </Stack>
+    );
+}
+
+/** A single build issue rendered as a tinted callout box in its severity color. */
+function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
+    const severity = getIssueSeverity(issue);
+    return (
+        <Group
+            gap="xs"
+            wrap="nowrap"
+            align="flex-start"
+            p="xs"
+            style={{
+                backgroundColor: severityBackground(severity),
+                borderRadius: "var(--mantine-radius-sm)"
+            }}
+        >
+            {/* Nudge the icon down so it aligns with the first line of text. */}
+            <IssueIcon
+                severity={severity}
+                style={{ flexShrink: 0, marginTop: 2 }}
+            />
+            <Text size="sm">{getIssueDescription(issue)}</Text>
+        </Group>
+    );
+}
+
+/** The light background tint for a build-issue callout. */
+function severityBackground(severity: BuildIssueSeverity): string {
+    switch (severity) {
+        case BuildIssueSeverity.ERROR:
+            return "var(--mantine-color-red-light)";
+        case BuildIssueSeverity.WARNING:
+            return "var(--mantine-color-yellow-light)";
+        case BuildIssueSeverity.INFO:
+            return "var(--mantine-color-blue-light)";
+    }
 }
 
 /** Build-status badge pre-wired for an insertable. */
 export function InsertableStatusBadge({
-    insertableId
+    insertableId,
+    name
 }: {
     insertableId: string;
+    name: string;
 }): ReactNode {
     const { data } = useBuildStatusQuery();
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
     return (
         <BuildStatusBadge
+            name={name}
             issues={getInsertableBuildIssues(insertable)}
-            stateRows={getInsertableStateRows(insertable)}
+            lastLoadedAt={insertable.lastLoadedAt}
+            hoverMenu={
+                <>
+                    <InsertableAdminSection
+                        insertableId={insertableId}
+                        status={insertable}
+                    />
+                    <InsertableParsedSection status={insertable} />
+                </>
+            }
         />
     );
 }
 
 /** Build-status badge pre-wired for a group (includes live visibility check). */
-export function GroupStatusBadge({ groupId }: { groupId: string }): ReactNode {
+export function GroupStatusBadge({
+    groupId,
+    groupName
+}: {
+    groupId: string;
+    groupName: string;
+}): ReactNode {
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
     const issues = useGroupBuildIssues(groupStatus, data?.insertables);
     if (!groupStatus) return null;
     return (
         <BuildStatusBadge
+            name={groupName}
             issues={issues}
-            stateRows={getGroupStateRows(groupStatus)}
+            lastLoadedAt={groupStatus.lastLoadedAt}
+            hoverMenu={
+                <GroupAdminSection groupId={groupId} status={groupStatus} />
+            }
         />
     );
 }
 
-function CurrentStateSection({ rows }: { rows: StateRow[] }): ReactNode {
+/** A dimmed section header, e.g. "Admin" or "Parsed". */
+function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     return (
-        <Stack gap={4}>
-            <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
-                Current state
-            </Text>
-            {rows.map((row) => (
-                <Group
-                    key={row.label}
-                    gap="xl"
-                    wrap="nowrap"
-                    justify="space-between"
-                >
-                    <Text size="sm">{row.label}</Text>
-                    <StateValue value={row.value} />
-                </Group>
-            ))}
+        <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+            {children}
+        </Text>
+    );
+}
+
+/** A label (+ description) and on/off Switch row for an editable admin flag. */
+function SwitchRow(props: {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onToggle: () => void;
+}): ReactNode {
+    return (
+        <Group justify="space-between" wrap="nowrap" gap="md" align="center">
+            <div style={{ minWidth: 0 }}>
+                <Text size="sm">{props.label}</Text>
+                <Text size="xs" c="dimmed">
+                    {props.description}
+                </Text>
+            </div>
+            <Switch
+                size="sm"
+                checked={props.checked}
+                onChange={props.onToggle}
+                withThumbIndicator={false}
+            />
+        </Group>
+    );
+}
+
+/** The editable admin toggles for an insertable. */
+function InsertableAdminSection({
+    insertableId,
+    status
+}: {
+    insertableId: string;
+    status: InsertableBuildStatus;
+}): ReactNode {
+    return (
+        <Stack gap="sm">
+            <SectionHeader>Admin</SectionHeader>
+            <VisibilitySwitch
+                insertableId={insertableId}
+                isVisible={status.isVisible}
+            />
+            <FastenSwitch
+                insertableId={insertableId}
+                supportsFasten={status.supportsFasten}
+            />
+            <PartNumberSwitch
+                insertableId={insertableId}
+                searchPartNumbers={status.searchPartNumbers}
+            />
         </Stack>
     );
 }
 
-/** Renders a "current state" value: a check/cross for booleans, badges for vendors. */
+function VisibilitySwitch({
+    insertableId,
+    isVisible
+}: {
+    insertableId: string;
+    isVisible: boolean;
+}): ReactNode {
+    const mutation = useSetVisibilityMutation([insertableId], !isVisible);
+    return (
+        <SwitchRow
+            label="Visible to users"
+            checked={isVisible}
+            onToggle={() => mutation.mutate()}
+        />
+    );
+}
+
+function FastenSwitch({
+    insertableId,
+    supportsFasten
+}: {
+    insertableId: string;
+    supportsFasten: boolean;
+}): ReactNode {
+    const mutation = useToggleInsertAndFastenMutation(insertableId);
+    return (
+        <SwitchRow
+            label="Insert and fasten"
+            description="Allows mate-on-insert"
+            checked={supportsFasten}
+            onToggle={() => mutation.mutate(!supportsFasten)}
+        />
+    );
+}
+
+function PartNumberSwitch({
+    insertableId,
+    searchPartNumbers
+}: {
+    insertableId: string;
+    searchPartNumbers: boolean;
+}): ReactNode {
+    const mutation = useTogglePartNumberSearchMutation(insertableId);
+    return (
+        <SwitchRow
+            label="Part number search"
+            description="Index all configurations"
+            checked={searchPartNumbers}
+            onToggle={() => mutation.mutate(!searchPartNumbers)}
+        />
+    );
+}
+
+/** The editable admin toggles for a group. */
+function GroupAdminSection({
+    groupId,
+    status
+}: {
+    groupId: string;
+    status: GroupBuildStatus;
+}): ReactNode {
+    const mutation = useToggleSortOrderMutation(groupId);
+    return (
+        <Stack gap="sm">
+            <SectionHeader>Admin</SectionHeader>
+            <SwitchRow
+                label="Sort alphabetically"
+                description="Order elements A-Z instead of by tab"
+                checked={status.sortAlphabetically}
+                onToggle={() => mutation.mutate(!status.sortAlphabetically)}
+            />
+        </Stack>
+    );
+}
+
+/** The read-only auto-detected facts for an insertable. */
+function InsertableParsedSection({
+    status
+}: {
+    status: InsertableBuildStatus;
+}): ReactNode {
+    return (
+        <>
+            <Divider />
+            <Stack gap={6}>
+                <SectionHeader>Parsed</SectionHeader>
+                <ParsedRow
+                    label="Vendors"
+                    value={{ kind: "vendors", vendors: status.vendors }}
+                />
+                <ParsedRow
+                    label="Configurable"
+                    value={{ kind: "bool", value: !!status.configuration }}
+                />
+            </Stack>
+        </>
+    );
+}
+
+/** A read-only label/value row in the "Parsed" section. */
+function ParsedRow({
+    label,
+    value
+}: {
+    label: string;
+    value: StateRowValue;
+}): ReactNode {
+    return (
+        <Group gap="xl" wrap="nowrap" justify="space-between">
+            <Text size="sm">{label}</Text>
+            <StateValue value={value} />
+        </Group>
+    );
+}
+
+/** Renders a parsed value: a check/cross for booleans, badges for vendors. */
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
@@ -287,10 +706,6 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
         ) : (
             <IconX size={IconSize.SMALL} color={IconColor.RED} />
         );
-    }
-
-    if (value.kind === "text") {
-        return <Text size="sm">{value.text}</Text>;
     }
 
     if (value.vendors.length === 0) {
@@ -314,50 +729,5 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
                 </Badge>
             ))}
         </Group>
-    );
-}
-
-/** The human-readable message for a build issue, rendered at display time. */
-function getIssueMessage(issue: BuildIssue): string {
-    switch (issue.type) {
-        case BuildIssueType.THUMBNAIL_FAILED:
-            return "The thumbnail failed to generate.";
-        case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "No thumbnail tab is set.";
-        case BuildIssueType.NO_VENDORS:
-            return "No vendors could be parsed.";
-        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "This group has no unhidden insertables.";
-    }
-}
-
-function BuildIssuesSection({ issues }: { issues: BuildIssue[] }): ReactNode {
-    if (issues.length === 0) {
-        return (
-            <Stack gap={4}>
-                <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
-                    Build checks
-                </Text>
-
-                <Group gap="xs" wrap="nowrap">
-                    <IssueIcon severity={null} />
-                    <Text size="sm">All checks pass</Text>
-                </Group>
-            </Stack>
-        );
-    }
-
-    return (
-        <Stack gap={4}>
-            <Text size="xs" fw={500} c="dimmed">
-                Build checks
-            </Text>
-            {issues.map((issue) => (
-                <Group key={issue.type} gap="xs" wrap="nowrap">
-                    <IssueIcon severity={getIssueSeverity(issue)} />
-                    <Text size="sm">{getIssueMessage(issue)}</Text>
-                </Group>
-            ))}
-        </Stack>
     );
 }

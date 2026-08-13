@@ -12,7 +12,7 @@ import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import {
     favoritesQueryKey,
     useFavoritesQuery,
@@ -20,12 +20,13 @@ import {
 } from "../queries";
 import { getQueryUpdater } from "../common/utils";
 import { useLibraryId } from "../api-utils/library";
+import { useRefreshFavorites } from "../api-utils/refresh";
 import { PageError } from "../app-common/app-zero-state";
 
 interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
@@ -50,7 +51,7 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
 
 interface FavoriteMenuContentProps {
     favoriteId: string;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
@@ -60,9 +61,10 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
+    const refreshFavorites = useRefreshFavorites();
 
     const [configuration, setConfiguration] = useState<
-        Configuration | undefined
+        ParameterValues | undefined
     >(defaultConfiguration);
 
     const setDefaultConfigurationMutation = useMutation({
@@ -93,12 +95,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         onSuccess: () => {
             showSuccessToast("Successfully updated default configuration.");
         },
-        onSettled: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: favoritesQueryKey(libraryId)
-            });
-            void router.invalidate();
-        }
+        onSettled: refreshFavorites
     });
 
     const favorite = favoritesData?.favorites[favoriteId];

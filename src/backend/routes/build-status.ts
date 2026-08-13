@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { getApp, getLibraryParam, libraryRoute } from "../app";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
-import { groups, insertables, configurations } from "../../shared/schema";
+import { group, insertables, configurations } from "../../shared/schema";
 import {
     type LibraryBuildStatus,
     type GroupBuildStatus,
@@ -22,25 +22,28 @@ buildStatusRoutes.get(
         const [allGroups, allInsertables] = await Promise.all([
             db
                 .select({
-                    id: groups.id,
-                    buildIssues: groups.buildIssues,
-                    sortAlphabetically: groups.sortAlphabetically,
-                    sortOrder: groups.sortOrder
+                    id: group.id,
+                    buildIssues: group.buildIssues,
+                    sortAlphabetically: group.sortAlphabetically,
+                    sortOrder: group.sortOrder,
+                    lastLoadedAt: group.lastLoadedAt
                 })
-                .from(groups)
-                .where(eq(groups.libraryId, libraryId))
-                .orderBy(asc(groups.sortOrder))
+                .from(group)
+                .where(eq(group.libraryId, libraryId))
+                .orderBy(asc(group.sortOrder))
                 .all(),
             db
                 .select({
                     id: insertables.id,
                     groupId: insertables.groupId,
                     buildIssues: insertables.buildIssues,
+                    elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
-                    isOpenComposite: insertables.isOpenComposite,
                     supportsFasten: insertables.supportsFasten,
+                    searchPartNumbers: insertables.searchPartNumbers,
                     vendors: insertables.vendors,
-                    sortOrder: insertables.sortOrder
+                    sortOrder: insertables.sortOrder,
+                    lastLoadedAt: insertables.lastLoadedAt
                 })
                 .from(insertables)
                 .where(eq(insertables.libraryId, libraryId))
@@ -69,7 +72,8 @@ buildStatusRoutes.get(
             groupsOut[group.id] = {
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
-                insertableOrder: groupInsertables.map((ins) => ins.id)
+                insertableOrder: groupInsertables.map((ins) => ins.id),
+                lastLoadedAt: group.lastLoadedAt
             };
         }
 
@@ -78,16 +82,18 @@ buildStatusRoutes.get(
             const config = configMap.get(ins.id);
             insertablesOut[ins.id] = {
                 buildIssues: ins.buildIssues,
+                elementType: ins.elementType,
                 isVisible: ins.isVisible,
-                isOpenComposite: ins.isOpenComposite,
                 supportsFasten: ins.supportsFasten,
+                searchPartNumbers: ins.searchPartNumbers,
                 vendors: ins.vendors,
                 configuration: config
                     ? {
                           buildIssues: config.buildIssues,
                           parameters: config.parameters
                       }
-                    : undefined
+                    : undefined,
+                lastLoadedAt: ins.lastLoadedAt
             };
         }
 

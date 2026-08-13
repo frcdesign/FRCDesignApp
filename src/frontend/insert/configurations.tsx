@@ -1,4 +1,12 @@
-import { Center, Checkbox, Loader, Select, TextInput } from "@mantine/core";
+import {
+    Center,
+    Checkbox,
+    Group,
+    Loader,
+    Select,
+    Text,
+    TextInput
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -11,21 +19,23 @@ import {
 } from "react";
 import { apiGet } from "../api-utils/api";
 import {
-    Configuration,
+    ParameterValues,
     ConfigurationResult,
-    ParameterObj,
-    ConfigurationParameterType,
-    EnumParameterObj,
-    OptionVisibilityConditionType,
-    BooleanParameterObj,
-    StringParameterObj,
-    QuantityParameterObj,
+    ConfigurationParameter,
+    ParameterType,
+    EnumParameter,
+    BooleanParameter,
+    StringParameter,
+    QuantityParameter,
     UnitInfo,
-    QuantityType,
-    Unit,
     EnumOption
 } from "../../shared/configuration-models";
-import { evaluateCondition } from "../../shared/configuration-utils";
+import { QuantityType, Unit } from "../../shared/configuration-enums";
+import {
+    evaluateCondition,
+    getOption,
+    getVisibleOptions
+} from "../../shared/configuration-utils";
 import { handleBooleanChange } from "../common/utils";
 import {
     EvaluateOptions,
@@ -40,8 +50,8 @@ import { SectionError } from "../app-common/app-zero-state";
 interface ConfigurationWrapperProps {
     configurationId: string;
     microversionId: string;
-    configuration?: Configuration;
-    setConfiguration: Dispatch<Configuration>;
+    configuration?: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -73,7 +83,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 configuration[parameter.id] = parameter.default;
                 return configuration;
             },
-            {} as Configuration
+            {} as ParameterValues
         );
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
@@ -84,8 +94,10 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 <Loader />
             </Center>
         );
-    } else if (query.isError || unitInfoQuery.isError) {
-        return <SectionError title="Failed to load configuration" />;
+    } else if (query.isError) {
+        return <SectionError title="Failed to load configuration." />;
+    } else if (unitInfoQuery.isError) {
+        return <SectionError title="Failed to fetch document units." />;
     }
 
     return (
@@ -100,8 +112,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: Configuration;
-    setConfiguration: Dispatch<Configuration>;
+    configuration: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
     unitInfo: UnitInfo;
 }
 
@@ -126,7 +138,7 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
         };
 
         return (
-            <ConfigurationParameter
+            <ParameterInput
                 key={parameter.id}
                 parameter={parameter}
                 value={configuration[parameter.id]}
@@ -140,17 +152,17 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
     return <div>{parameters}</div>;
 }
 
-interface ParameterProps<T extends ParameterObj> {
+interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
     value: string;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: Configuration;
-    parameters: ParameterObj[];
+    configuration: ParameterValues;
+    parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }
 
-function ConfigurationParameter(
-    props: ParameterProps<ParameterObj>
+function ParameterInput(
+    props: ParameterProps<ConfigurationParameter>
 ): ReactNode {
     const { parameter } = props;
 
@@ -177,61 +189,56 @@ function ConfigurationParameter(
     }
 
     // Need to expose and use parameter directly to get type narrowing
-    if (parameter.type === ConfigurationParameterType.ENUM) {
-        return <EnumParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.BOOLEAN) {
-        return <BooleanParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.STRING) {
-        return <StringParameter {...props} parameter={parameter} />;
-    } else if (parameter.type === ConfigurationParameterType.QUANTITY) {
-        return <QuantityParameter {...props} parameter={parameter} />;
+    if (parameter.type === ParameterType.ENUM) {
+        return <EnumInput {...props} parameter={parameter} />;
+    } else if (parameter.type === ParameterType.BOOLEAN) {
+        return <BooleanInput {...props} parameter={parameter} />;
+    } else if (parameter.type === ParameterType.STRING) {
+        return <StringInput {...props} parameter={parameter} />;
+    } else if (parameter.type === ParameterType.QUANTITY) {
+        return <QuantityInput {...props} parameter={parameter} />;
     }
 }
 
-function getOption(
-    options: EnumOption[],
-    optionId: string
-): EnumOption | undefined {
-    return options.find((option) => option.id == optionId);
+/**
+ * The height of a default sized Mantine input.
+ */
+const INPUT_HEIGHT = "36px";
+
+interface InputLabelProps {
+    label: string;
+    /**
+     * The id of the input the label describes.
+     */
+    htmlFor: string;
+    children: ReactNode;
 }
 
-function getVisibleOptions(
-    enumParameter: EnumParameterObj,
-    configuration: Configuration,
-    parameters: ParameterObj[]
-): EnumOption[] {
-    // No conditions means everything is shown
-    if (enumParameter.optionConditions.length === 0) {
-        return enumParameter.options;
-    }
-
-    const optionIds = enumParameter.options.map((option) => option.id);
-
-    const validOptionIds = enumParameter.optionConditions
-        .filter((optionCondition) =>
-            evaluateCondition(
-                optionCondition.condition,
-                configuration,
-                parameters
-            )
-        )
-        .flatMap((optionCondition) => {
-            if (optionCondition.type == OptionVisibilityConditionType.LIST) {
-                return optionCondition.controlledOptions;
-            } else if (
-                optionCondition.type == OptionVisibilityConditionType.RANGE
-            ) {
-                return optionIds.slice(
-                    optionIds.indexOf(optionCondition.start),
-                    optionIds.indexOf(optionCondition.end) + 1
-                );
-            }
-            throw new Error("Unhandled option condition type");
-        });
-
-    const validOptionsSet = new Set(validOptionIds);
-    return enumParameter.options.filter((option) =>
-        validOptionsSet.has(option.id)
+/**
+ * A label displayed to the left of a parameter input.
+ *
+ * The label is given the height of an input so it stays aligned with the input
+ * itself rather than drifting when the input grows to show an error message.
+ */
+function InputLabel(props: InputLabelProps) {
+    const { label, htmlFor, children } = props;
+    return (
+        <Group gap="sm" align="flex-start" mt="sm">
+            <Text
+                size="sm"
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    height: INPUT_HEIGHT,
+                    cursor: "pointer"
+                }}
+                component="label"
+                htmlFor={htmlFor}
+            >
+                {label}
+            </Text>
+            {children}
+        </Group>
     );
 }
 
@@ -254,7 +261,7 @@ function getFirstVisibleOption(
     return visibleOptions[0];
 }
 
-function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
+function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     const { parameter, value, onValueChange, configuration, parameters } =
         props;
 
@@ -287,64 +294,65 @@ function EnumParameter(props: ParameterProps<EnumParameterObj>): ReactNode {
     }
 
     return (
-        <Select
-            label={parameter.name}
-            id={parameter.id}
-            data={visibleOptions.map((option) => ({
-                value: option.id,
-                label: option.name
-            }))}
-            value={currentOption.id}
-            allowDeselect={false}
-            mt="sm"
-            checkIconPosition="right"
-            maxDropdownHeight={250}
-            comboboxProps={{ withinPortal: true }}
-            onChange={(newValue) => {
-                if (newValue !== null) {
-                    onValueChange(newValue);
-                }
-            }}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <Select
+                id={parameter.id}
+                data={visibleOptions.map((option) => ({
+                    value: option.id,
+                    label: option.name
+                }))}
+                value={currentOption.id}
+                style={{ flex: 1 }}
+                allowDeselect={false}
+                checkIconPosition="right"
+                maxDropdownHeight={250}
+                comboboxProps={{ withinPortal: true }}
+                onChange={(newValue) => {
+                    if (newValue !== null) {
+                        onValueChange(newValue);
+                    }
+                }}
+            />
+        </InputLabel>
     );
 }
 
-function BooleanParameter(
-    props: ParameterProps<BooleanParameterObj>
-): ReactNode {
+function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <Checkbox
-            label={parameter.name}
-            labelPosition="left"
-            checked={value === "true"}
-            mt="sm"
-            styles={{
-                input: { cursor: "pointer" },
-                label: { cursor: "pointer" }
-            }}
-            onChange={handleBooleanChange((checked) =>
-                onValueChange(checked ? "true" : "false")
-            )}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <Checkbox
+                id={parameter.id}
+                checked={value === "true"}
+                // The checkbox is shorter than an input, so center it against the label
+                style={{ alignSelf: "center" }}
+                styles={{
+                    input: { cursor: "pointer" }
+                }}
+                onChange={handleBooleanChange((checked) =>
+                    onValueChange(checked ? "true" : "false")
+                )}
+            />
+        </InputLabel>
     );
 }
 
-function StringParameter(props: ParameterProps<StringParameterObj>): ReactNode {
+function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            mt="sm"
-            value={value}
-            onChange={(event) => onValueChange(event.currentTarget.value)}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <TextInput
+                id={parameter.id}
+                value={value}
+                style={{ flex: 1 }}
+                onChange={(event) => onValueChange(event.currentTarget.value)}
+            />
+        </InputLabel>
     );
 }
 
 function getEvaluateOptions(
-    parameter: QuantityParameterObj,
+    parameter: QuantityParameter,
     contextData: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
@@ -382,9 +390,7 @@ function getEvaluateOptions(
     };
 }
 
-function QuantityParameter(
-    props: ParameterProps<QuantityParameterObj>
-): ReactNode {
+function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     // This parameter doesn't actually use value since it manages it's state internally
     const { parameter, value, onValueChange, unitInfo } = props;
 
@@ -436,27 +442,28 @@ function QuantityParameter(
     }, [evaluateOptions, expression, onValueChange]);
 
     return (
-        <TextInput
-            label={parameter.name}
-            id={parameter.id}
-            ref={ref}
-            value={focused ? expression : display}
-            error={errorMessage}
-            mt="sm"
-            onFocus={(event) => {
-                setFocused(true);
-                event.currentTarget.select();
-            }}
-            onBlur={handleSubmit}
-            onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                    ref.current?.blur();
-                    handleSubmit();
-                }
-            }}
-            onChange={(event) => {
-                setExpression(event.currentTarget.value);
-            }}
-        />
+        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+            <TextInput
+                id={parameter.id}
+                ref={ref}
+                value={focused ? expression : display}
+                error={errorMessage}
+                style={{ flex: 1 }}
+                onFocus={(event) => {
+                    setFocused(true);
+                    event.currentTarget.select();
+                }}
+                onBlur={handleSubmit}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        ref.current?.blur();
+                        handleSubmit();
+                    }
+                }}
+                onChange={(event) => {
+                    setExpression(event.currentTarget.value);
+                }}
+            />
+        </InputLabel>
     );
 }

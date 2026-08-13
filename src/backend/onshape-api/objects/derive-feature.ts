@@ -1,7 +1,7 @@
 import {
-    ConfigurationParameterType,
-    type Configuration,
-    type ParameterObj
+    ParameterType,
+    type ParameterValues,
+    type ConfigurationParameter
 } from "../../../shared/configuration-models";
 import { type ElementPath } from "../../../shared/onshape-path";
 
@@ -28,8 +28,8 @@ export class DerivedFeature {
         sourcePath: ElementPath,
         microversionId: string,
         useMateConnector: boolean,
-        configuration: Configuration | undefined,
-        parameters: ParameterObj[] | undefined
+        configuration: ParameterValues | undefined,
+        parameters: ConfigurationParameter[] | undefined
     ) {
         this.escapedName = escapeFeatureName(name);
         this.namespace = toNamespace(sourcePath, microversionId);
@@ -48,13 +48,13 @@ export class DerivedFeature {
     }
 
     private buildPartConfiguration(
-        configuration: Configuration,
-        parameters: ParameterObj[]
+        configuration: ParameterValues,
+        parameters: ConfigurationParameter[]
     ): object[] {
         return parameters.map((parameter) => {
             const value = configuration[parameter.id] ?? parameter.default;
             switch (parameter.type) {
-                case ConfigurationParameterType.ENUM:
+                case ParameterType.ENUM:
                     return {
                         btType: "BTMParameterEnum-145",
                         parameterId: parameter.id,
@@ -62,19 +62,19 @@ export class DerivedFeature {
                         namespace: this.namespace,
                         enumName: parameter.id + "_conf"
                     };
-                case ConfigurationParameterType.QUANTITY:
+                case ParameterType.QUANTITY:
                     return {
                         btType: "BTMParameterQuantity-147",
                         parameterId: parameter.id,
                         expression: value
                     };
-                case ConfigurationParameterType.BOOLEAN:
+                case ParameterType.BOOLEAN:
                     return {
                         btType: "BTMParameterBoolean-144",
                         parameterId: parameter.id,
                         value
                     };
-                case ConfigurationParameterType.STRING:
+                case ParameterType.STRING:
                     return {
                         btType: "BTMParameterString-149",
                         parameterId: parameter.id,

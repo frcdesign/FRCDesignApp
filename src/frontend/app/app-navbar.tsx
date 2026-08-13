@@ -3,8 +3,10 @@ import {
     Button,
     Group,
     Input,
+    Loader,
     Menu,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
 import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
 import { IconSize, PrimaryColor } from "../common/style-constants";
@@ -17,6 +19,8 @@ import { VendorMenu } from "../settings/vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { useSaveSettings } from "../settings/settings";
+import { RequireAccessLevel } from "../api-utils/access-level";
+import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
 
 /**
@@ -37,8 +41,34 @@ export function AppNavbar(): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
             {leftGroup}
-            <SettingsButton />
+            <Group wrap="nowrap" gap="xs">
+                <JobIndicator />
+                <SettingsButton />
+            </Group>
         </Group>
+    );
+}
+
+/** Editor-only spinner shown while a library-load job is running. */
+function JobIndicator(): ReactNode {
+    return (
+        <RequireAccessLevel>
+            <RunningJobLoader />
+        </RequireAccessLevel>
+    );
+}
+
+function RunningJobLoader(): ReactNode {
+    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
+    const jobRunning = useJobStatus();
+    if (!jobRunning) return null;
+    return (
+        <Tooltip
+            withArrow
+            label="The library is being loaded from Onshape in the background"
+        >
+            <Loader size={IconSize.MEDIUM} color="white" />
+        </Tooltip>
     );
 }
 

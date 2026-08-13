@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { QuantityType, Unit } from "../../shared/configuration-models";
+import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
     TEST_PART_STUDIO_ID,
     createTestApp,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { MateLocation } from "../../shared/types";
+import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
 import {
+    getFastenQuery,
     parseFastenInfoFromPartStudio,
     parseFastenInfoFromAssembly
 } from "./insert-and-fasten";
@@ -9,8 +10,18 @@ describe("parseFastenInfoFromPartStudio", () => {
     it("returns Feature location with empty path when mate connector is found", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "other", featureId: "other-id" },
-                { featureType: "mateConnector", featureId: "mate-id-1" }
+                {
+                    featureType: "other",
+                    featureId: "other-id",
+                    name: "Other",
+                    suppressed: false
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "mate-id-1",
+                    name: "Mate connector 1",
+                    suppressed: false
+                }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);
@@ -22,17 +33,69 @@ describe("parseFastenInfoFromPartStudio", () => {
     it("uses first mate connector when multiple are present", () => {
         const rawFeatureList = {
             features: [
-                { featureType: "mateConnector", featureId: "first" },
-                { featureType: "mateConnector", featureId: "second" }
+                {
+                    featureType: "mateConnector",
+                    featureId: "first",
+                    name: "Mate connector 1",
+                    suppressed: false
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "second",
+                    name: "Mate connector 2",
+                    suppressed: false
+                }
             ]
         };
         const result = parseFastenInfoFromPartStudio(rawFeatureList);
         expect(result.mateConnectorId).toBe("first");
     });
 
+    it("skips a suppressed mate connector in favor of the next valid one", () => {
+        const rawFeatureList = {
+            features: [
+                {
+                    featureType: "mateConnector",
+                    featureId: "suppressed-mate",
+                    name: "Mate connector 1",
+                    suppressed: true
+                },
+                {
+                    featureType: "mateConnector",
+                    featureId: "active-mate",
+                    name: "Mate connector 2",
+                    suppressed: false
+                }
+            ]
+        };
+        const result = parseFastenInfoFromPartStudio(rawFeatureList);
+        expect(result.mateConnectorId).toBe("active-mate");
+    });
+
+    it("throws when the only mate connector is suppressed", () => {
+        const rawFeatureList = {
+            features: [
+                {
+                    featureType: "mateConnector",
+                    featureId: "suppressed-mate",
+                    name: "Mate connector 1",
+                    suppressed: true
+                }
+            ]
+        };
+        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+    });
+
     it("throws when no mate connector is found", () => {
         const rawFeatureList = {
-            features: [{ featureType: "extrude", featureId: "ext-1" }]
+            features: [
+                {
+                    featureType: "extrude",
+                    featureId: "ext-1",
+                    name: "Extrude 1",
+                    suppressed: false
+                }
+            ]
         };
         expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
     });
@@ -110,5 +173,47 @@ describe("parseFastenInfoFromAssembly", () => {
             subAssemblies: []
         };
         expect(() => parseFastenInfoFromAssembly(rawAssemblyInfo)).toThrow();
+    });
+});
+
+describe("getFastenQuery", () => {
+    const fasten: FastenInfo = {
+        mateConnectorId: "mc",
+        mateLocation: MateLocation.Feature,
+        path: ["fp"]
+    };
+
+    it("builds a part-studio mate connector query for a part studio target", () => {
+        expect(getFastenQuery(ElementType.PART_STUDIO, ["np"], fasten)).toEqual(
+            {
+                btType: "BTMPartStudioMateConnectorQuery-1324",
+                featureId: "mc",
+                path: ["np"]
+            }
+        );
+    });
+
+    it("uses a part-studio query for a Part mate in an assembly (combined path)", () => {
+        const partFasten: FastenInfo = {
+            mateConnectorId: "mc",
+            mateLocation: MateLocation.Part,
+            path: ["fp"]
+        };
+        expect(
+            getFastenQuery(ElementType.ASSEMBLY, ["np"], partFasten)
+        ).toEqual({
+            btType: "BTMPartStudioMateConnectorQuery-1324",
+            featureId: "mc",
+            path: ["np", "fp"]
+        });
+    });
+
+    it("uses a feature-occurrence query for a Feature mate in an assembly", () => {
+        expect(getFastenQuery(ElementType.ASSEMBLY, ["np"], fasten)).toEqual({
+            btType: "BTMFeatureQueryWithOccurrence-157",
+            path: ["np", "fp"],
+            queryData: "",
+            featureId: "mc"
+        });
     });
 });

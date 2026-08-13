@@ -20,14 +20,14 @@ import { MenuButton } from "../app-common/app-menu";
 import { InsertableMenuItems } from "../cards/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
 }
 
 export function openInsertMenu(props: OpenInsertMenuProps) {
@@ -57,7 +57,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
-    defaultConfiguration?: Configuration;
+    defaultConfiguration?: ParameterValues;
     onInsert: () => void;
 }
 
@@ -66,7 +66,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const favorites = useFavoritesQuery().data?.favorites;
 
     const [configuration, setConfiguration] = useState<
-        Configuration | undefined
+        ParameterValues | undefined
     >(props.defaultConfiguration);
 
     if (!favorites) {
@@ -94,7 +94,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configuration={configuration}
             />
             {parameters}
-            <Group justify="space-between" wrap="nowrap" mt="mt">
+            <Group justify="space-between" wrap="nowrap" mt="md">
                 <Group gap={4}>
                     <FavoriteButton
                         favorite={favorite}
@@ -122,7 +122,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
 interface InsertButtonsProps {
     insertable: InsertableOut;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
     isFavorite: boolean;
     onInsert: () => void;
 }
@@ -154,7 +154,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     }, [insertMutation, onInsert, canFasten, uiState.fasten]);
 
     return (
-        <Group gap="sm">
+        <Group gap="sm" align="center">
             {canFasten && (
                 <Checkbox
                     label="Fasten"
@@ -177,7 +177,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
 function showRestoreToast(
     insertable: InsertableOut,
-    configuration?: Configuration
+    configuration?: ParameterValues
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",

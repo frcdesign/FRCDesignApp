@@ -5,12 +5,20 @@ import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { insertables, configurations } from "../../shared/schema";
-import { bumpLibraryVersion } from "../library-data";
+import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
 import {
-    type Configuration,
-    type ParameterObj
+    type ParameterValues,
+    type ConfigurationParameter
 } from "../../shared/configuration-models";
+import {
+    NO_PART_NUMBERS,
+    PART_NUMBER_ISSUE_TYPES,
+    parsePartNumbers,
+    type PartNumberResult
+} from "../parse/parse-part-number";
+import { type OnshapeApi } from "../onshape-api/onshape-api";
+import { ElementType } from "../../shared/types";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -24,6 +32,7 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
+import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
 
@@ -114,6 +123,110 @@ insertableRoutes.post(
     }
 );
 
+/** POST /api/toggle-part-number-search/insertable/:insertableId */
+insertableRoutes.post(
+    "/toggle-part-number-search" + insertableRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const insertableId = getInsertableParam(c);
+        const body = await c.req.json<{ searchPartNumbers: boolean }>();
+
+        const row = await db
+            .select({
+                libraryId: insertables.libraryId,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
+                elementType: insertables.elementType,
+                isOpenComposite: insertables.isOpenComposite,
+                buildIssues: insertables.buildIssues
+            })
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+        if (!row)
+            throw new HTTPException(404, { message: "Insertable not found" });
+
+        // Index before committing anything: if this throws, the flag stays off
+        // rather than being enabled with nothing indexed behind it. The error
+        // reaches the client via the app's onError handler.
+        const indexed = body.searchPartNumbers
+            ? await indexPartNumbers(await c.var.getOnshapeApi(), db, {
+                  insertableId,
+                  ...row
+              })
+            : NO_PART_NUMBERS;
+
+        await db.batch([
+            db
+                .update(insertables)
+                .set({
+                    searchPartNumbers: body.searchPartNumbers,
+                    defaultPartNumber: indexed.defaultPartNumber,
+                    // Clear first, so an issue the reindex resolved (or that
+                    // disabling makes moot) doesn't stick around.
+                    buildIssues: addBuildIssue(
+                        clearBuildIssue(
+                            row.buildIssues,
+                            ...PART_NUMBER_ISSUE_TYPES
+                        ),
+                        ...indexed.buildIssues
+                    )
+                })
+                .where(eq(insertables.id, insertableId)),
+            // No-op when the insertable has no configuration row.
+            db
+                .update(configurations)
+                .set({ partNumbers: indexed.partNumbers })
+                .where(eq(configurations.id, insertableId))
+        ]);
+
+        await bumpLibraryVersion(db, row.libraryId);
+        // Part numbers live in the search index, so rebuild it now.
+        await rebuildSearchDb(db, row.libraryId);
+        return c.json({ success: true });
+    }
+);
+
+/**
+ * Indexes an insertable's part numbers for the toggle route, reading the
+ * parameters it needs. Runs in a request, so it uses the unbatched
+ * {@link parsePartNumbers} rather than the workflow's stepped loader.
+ */
+async function indexPartNumbers(
+    client: OnshapeApi,
+    db: Db,
+    insertable: {
+        insertableId: string;
+        documentId: string;
+        versionId: string;
+        elementId: string;
+        elementType: ElementType;
+        isOpenComposite: boolean;
+    }
+): Promise<PartNumberResult> {
+    const sourcePath: ElementPath = {
+        documentId: insertable.documentId,
+        instanceId: insertable.versionId,
+        instanceType: "v",
+        elementId: insertable.elementId
+    };
+    const configRow = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertable.insertableId))
+        .get();
+
+    return parsePartNumbers(
+        client,
+        sourcePath,
+        insertable.elementType,
+        configRow?.parameters ?? [],
+        insertable.isOpenComposite
+    );
+}
+
 /** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
 insertableRoutes.post(
     "/add-to-part-studio" +
@@ -123,7 +236,7 @@ insertableRoutes.post(
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
-            configuration: Configuration | undefined;
+            configuration: ParameterValues | undefined;
             useMateConnector: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;
@@ -156,7 +269,7 @@ insertableRoutes.post(
         }
 
         // Look up parsed configuration parameters from D1 if configuration is provided
-        let parameters: ParameterObj[] | undefined;
+        let parameters: ConfigurationParameter[] | undefined;
         if (body.configuration) {
             const configRow = await db
                 .select({ parameters: configurations.parameters })
@@ -193,7 +306,7 @@ insertableRoutes.post(
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
-            configuration: Configuration | undefined;
+            configuration: ParameterValues | undefined;
             fasten: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;
@@ -213,7 +326,7 @@ insertableRoutes.post(
         const row = await db
             .select({
                 documentId: insertables.documentId,
-                instanceId: insertables.instanceId,
+                versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 name: insertables.name,
                 elementType: insertables.elementType,
@@ -232,7 +345,7 @@ insertableRoutes.post(
 
         const sourcePath: ElementPath = {
             documentId: row.documentId,
-            instanceId: row.instanceId,
+            instanceId: row.versionId,
             instanceType: "v",
             elementId: row.elementId
         };
@@ -267,8 +380,7 @@ insertableRoutes.post(
             row.elementType as unknown as OnshapeElementType,
             {
                 configuration: encodedConfiguration,
-                partTypes,
-                useTransform: body.fasten
+                partTypes
             }
         );
 
@@ -284,7 +396,7 @@ insertableRoutes.post(
         }
 
         const instancePath: string[] =
-            result?.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
+            result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
         const builder = new FastenMateBuilder(row.name);
         builder.addQuery(
@@ -312,7 +424,7 @@ export async function getInsertableElementPath(
     const row = await db
         .select({
             documentId: insertables.documentId,
-            instanceId: insertables.instanceId,
+            versionId: insertables.versionId,
             elementId: insertables.elementId
         })
         .from(insertables)
@@ -327,7 +439,7 @@ export async function getInsertableElementPath(
 
     return {
         documentId: row.documentId,
-        instanceId: row.instanceId,
+        instanceId: row.versionId,
         instanceType: "v",
         elementId: row.elementId
     };

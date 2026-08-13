@@ -6,7 +6,7 @@ import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
-import { Configuration } from "../../shared/configuration-models";
+import { ParameterValues } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
@@ -28,7 +28,7 @@ function getHeightAndWidth(
 }
 
 interface CardThumbnailProps {
-    thumbnailUrls: ThumbnailUrls;
+    thumbnailUrls?: ThumbnailUrls;
 }
 
 /**
@@ -49,14 +49,14 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
         >
             <HoverCard.Target>
                 <Thumbnail
-                    url={thumbnailUrls[ThumbnailSize.TINY]}
+                    url={thumbnailUrls && thumbnailUrls[ThumbnailSize.TINY]}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.TINY, 0.8)}
                     spinnerSize={25}
                 />
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
-                    url={thumbnailUrls[ThumbnailSize.STANDARD]}
+                    url={thumbnailUrls && thumbnailUrls[ThumbnailSize.STANDARD]}
                     heightAndWidth={getHeightAndWidth(
                         ThumbnailSize.STANDARD,
                         0.6
@@ -125,7 +125,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
-    configuration?: Configuration;
+    configuration?: ParameterValues;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {

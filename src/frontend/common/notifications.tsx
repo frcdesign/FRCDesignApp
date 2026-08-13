@@ -33,8 +33,36 @@ export function renderNotification(
     );
 }
 
-export function showInfoToast(message: string, id?: string): string {
+interface ToastConfig {
+    id?: string;
+    color: string;
+    icon?: ReactNode;
+    message: ReactNode;
+    loading?: boolean;
+    autoClose?: number | false;
+    withCloseButton?: boolean;
+}
+
+/** Shows a toast, replacing any existing toast with the same id. */
+function showToast(config: ToastConfig): string {
+    // Mantine's `show` no-ops when a toast with this id already exists, so hide
+    // it first to replace it (e.g. a loading toast upgraded to success).
+    if (config.id) {
+        notifications.hide(config.id);
+    }
     return notifications.show({
+        id: config.id,
+        color: config.color,
+        icon: config.icon,
+        message: config.message,
+        loading: config.loading,
+        autoClose: config.autoClose,
+        withCloseButton: config.withCloseButton
+    });
+}
+
+export function showInfoToast(message: string, id?: string): string {
+    return showToast({
         id,
         color: "blue",
         icon: <IconInfoCircle size={IconSize.MEDIUM} />,
@@ -43,18 +71,18 @@ export function showInfoToast(message: string, id?: string): string {
 }
 
 export function showLoadingToast(message: string, id: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "blue",
         loading: true,
         message,
-        allowClose: false,
-        autoClose: false
+        autoClose: false,
+        withCloseButton: false
     });
 }
 
 export function showSuccessToast(message: string, id?: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "green",
         icon: <IconCircleCheck size={IconSize.MEDIUM} />,
@@ -63,7 +91,7 @@ export function showSuccessToast(message: string, id?: string): string {
 }
 
 export function showErrorToast(message: string, id?: string): string {
-    return notifications.show({
+    return showToast({
         id,
         color: "red",
         icon: <IconCircleX size={IconSize.MEDIUM} />,

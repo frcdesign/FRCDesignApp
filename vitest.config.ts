@@ -8,11 +8,14 @@ export default defineConfig({
     test: {
         projects: [
             {
-                // Pure logic (frontend) tests run in a fast Node environment.
+                // Pure logic (frontend + shared) tests run in a fast Node environment.
                 test: {
                     name: "node",
                     environment: "node",
-                    include: ["src/frontend/**/*.test.ts"]
+                    include: [
+                        "src/frontend/**/*.test.ts",
+                        "src/shared/**/*.test.ts"
+                    ]
                 }
             },
             {

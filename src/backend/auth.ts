@@ -5,7 +5,7 @@ import { type AppContext, getApp } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
-import { ping } from "./onshape-api/endpoints/users";
+import { getSessionInfo } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
@@ -21,7 +21,7 @@ export function getSessionId(c: AppContext): string {
     return sessionId;
 }
 
-export async function getOnshapeApiForSessionId(
+export async function getOnshapeApiFromSessionId(
     kv: KVNamespace,
     sessionId: string
 ): Promise<OAuthApi> {
@@ -31,7 +31,7 @@ export async function getOnshapeApiForSessionId(
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
             .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
-            .then(makeAuthTokens);
+            .then((refreshed) => makeAuthTokens(refreshed));
 
         void saveTokens(kv, sessionId, newTokens);
 
@@ -47,20 +47,32 @@ export async function getOnshapeApiForSessionId(
     return new OAuthApi(accessToken, refreshCallback);
 }
 
-export async function isAuthenticated(c: AppContext) {
+export function getSessionCompanyId(c: AppContext) {
+    return c.req.query("sessionCompanyId") ?? "cad";
+}
+
+export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
-        const onshapeApi = await getOnshapeApi(c);
-        return ping(onshapeApi);
+        const onshapeApi = await c.var.getOnshapeApi();
+        const sessionInfo = await getSessionInfo(onshapeApi);
+        const tokenCompanyId = sessionInfo.company?.id ?? "cad";
+        const requestCompanyId = getSessionCompanyId(c);
+        return requestCompanyId === tokenCompanyId;
     } catch {
         return false;
     }
 }
 
+/**
+ * Creates/caches an Onshape API instance from the AppContext.
+ *
+ * Note this function should not be called directly, as it is bound to the context directly.
+ */
 export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     const cached = c.get("onshapeApi");
     if (cached) return cached;
     const sessionId = getSessionId(c);
-    const api = await getOnshapeApiForSessionId(c.env.KV, sessionId);
+    const api = await getOnshapeApiFromSessionId(c.env.KV, sessionId);
     c.set("onshapeApi", api);
     return api;
 }
@@ -90,7 +102,8 @@ authRoutes.get("/sign-in", async (c) => {
         });
     }
 
-    const authorizationUrl = await doSignIn(c, redirectUrl);
+    const companyId = query.sessionCompanyId ?? "cad";
+    const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
 
@@ -105,18 +118,23 @@ authRoutes.get("/callback", async (c) => {
  */
 export async function doSignIn(
     c: AppContext,
-    redirectUrl: string
+    redirectUrl: string,
+    companyId: string
 ): Promise<string> {
     const oauthClient = getOauthClient();
 
     const state = generateState();
 
-    // Store the state and redirectUrl
+    // Store the state and redirectUrl so the callback can complete sign-in.
     await initSession(c, { state, redirectUrl });
 
-    return oauthClient
-        .createAuthorizationURL(AUTH_ENDPOINT, state, [])
-        .toString();
+    const authorizationUrl = oauthClient.createAuthorizationURL(
+        AUTH_ENDPOINT,
+        state,
+        []
+    );
+    authorizationUrl.searchParams.set("company_id", companyId);
+    return authorizationUrl.toString();
 }
 
 export async function doCallback(c: AppContext): Promise<Response> {
@@ -147,7 +165,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
 
     await oauthClient
         .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
-        .then(makeAuthTokens)
+        .then((tokens) => makeAuthTokens(tokens))
         .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
