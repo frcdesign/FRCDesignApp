@@ -1,5 +1,10 @@
 import { eq } from "drizzle-orm";
-import { getApp, setVersionedCacheHeaders, validateCacheVersion } from "../app";
+import {
+    getApp,
+    setNoStore,
+    setVersionedCacheHeaders,
+    validateCacheVersion
+} from "../app";
 import { getDb } from "../db";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
@@ -74,6 +79,8 @@ configurationRoutes.get("/unit-info", async (c) => {
         lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
         realPrecision: 3
     };
+    // Unversioned, and specific to the caller's document.
+    setNoStore(c);
     return c.json(result);
 });
 

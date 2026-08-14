@@ -3,6 +3,7 @@ import {
     getApp,
     getLibraryParam,
     libraryRoute,
+    setNoStore,
     validateLibraryParam
 } from "../app";
 import { getDb } from "../db";
@@ -67,6 +68,7 @@ groupRoutes.get(
     validateLibraryParam,
     async (c) => {
         const running = await isAnyJobRunning(c.env, getLibraryParam(c));
+        setNoStore(c);
         return c.json({ running });
     }
 );

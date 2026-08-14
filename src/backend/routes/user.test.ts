@@ -49,6 +49,8 @@ describe("user routes", () => {
                 [LibraryId.MKCAD]: 0
             }
         });
+        // Per-user, and Workers Cache keys ignore cookies.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 
     it("POST /user-data updates the user's settings", async () => {

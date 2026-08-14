@@ -3,6 +3,7 @@ import {
     getApp,
     getLibraryParam,
     libraryRoute,
+    setNoStore,
     validateLibraryParam
 } from "../app";
 import { type Db, getDb } from "../db";
@@ -55,6 +56,7 @@ favoriteRoutes.get(
         const userId = await c.var.getUserId();
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
+        setNoStore(c);
         return c.json(await getFavorites(db, userId, libraryId));
     }
 );

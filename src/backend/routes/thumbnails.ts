@@ -3,6 +3,7 @@ import {
     getApp,
     getInsertableParam,
     insertableRoute,
+    setNoStore,
     validateCacheVersion
 } from "../app";
 import { getInsertableElementPath } from "./insertables";
@@ -155,7 +156,9 @@ thumbnailRoutes.get("/thumbnail", async (c) => {
     return new Response(buffer, {
         headers: {
             "Content-Type": "image/gif",
-            "Cache-Control": `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+            // Private: a preview of the caller's own document, unlike the
+            // library thumbnails in R2 above.
+            "Cache-Control": `private, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
         }
     });
 });
@@ -177,6 +180,8 @@ thumbnailRoutes.get(
             elementPath,
             configuration
         );
+        // A live Onshape lookup for the caller's document.
+        setNoStore(c);
         return c.json({ thumbnailId });
     }
 );

@@ -1,4 +1,4 @@
-import { type Context, Hono } from "hono";
+import { type Context, type MiddlewareHandler, Hono } from "hono";
 import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
@@ -105,6 +105,24 @@ export function setVersionedCacheHeaders(
         `${visibility}, max-age=${VERSIONED_CACHE_TTL}, immutable`
     );
 }
+
+/**
+ * Opts a response out of every cache. Required on anything user-specific or
+ * live: Workers Cache sits in front of this Worker and its key ignores cookies,
+ * so an unmarked response would be replayed to whoever asks for the same url.
+ */
+export function setNoStore(c: AppContext): void {
+    c.header("Cache-Control", "private, no-store");
+}
+
+/** {@link setNoStore} for a whole route group. */
+export const noStoreMiddleware: MiddlewareHandler<AppContextEnv> = async (
+    c,
+    next
+) => {
+    await next();
+    setNoStore(c);
+};
 
 export function insertableRoute(): string {
     return "/insertable/:insertableId";

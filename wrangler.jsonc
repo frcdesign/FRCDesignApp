@@ -16,6 +16,16 @@
     "observability": {
         "enabled": true
     },
+    /**
+     * Serve cacheable responses from in front of the Worker, so a repeat request
+     * for versioned library data never runs it. Everything user-specific or live
+     * sends `no-store` (see `setNoStore`); leaving `cross_version_cache` off
+     * scopes entries to a Worker version, so a deploy starts clean.
+     * https://developers.cloudflare.com/workers/cache/
+     */
+    "cache": {
+        "enabled": true
+    },
     "upload_source_maps": true,
     "compatibility_flags": ["nodejs_compat"],
     /**
@@ -81,6 +91,9 @@
      */
     "env": {
         "cert": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",
@@ -124,6 +137,9 @@
             // }
         },
         "production": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",
