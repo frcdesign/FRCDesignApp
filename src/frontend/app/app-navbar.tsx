@@ -88,7 +88,7 @@ function FrcDesignBookIcon(): ReactNode {
 }
 
 function LibraryMenu(): ReactNode {
-    const libraryId = useLibraryId();
+    const currentLibraryId = useLibraryId();
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
@@ -99,27 +99,27 @@ function LibraryMenu(): ReactNode {
                     variant="default"
                     rightSection={<IconChevronDown size={IconSize.SMALL} />}
                 >
-                    {getLibraryName(libraryId)}
+                    {getLibraryName(currentLibraryId)}
                 </Button>
             </Menu.Target>
             <Menu.Dropdown>
-                {Object.values(LibraryId).map((lib) => (
+                {Object.values(LibraryId).map((libraryId) => (
                     <Menu.Item
-                        key={lib}
+                        key={libraryId}
                         onClick={() => {
-                            if (lib === libraryId) {
+                            if (libraryId === currentLibraryId) {
                                 return;
                             }
                             // The url drives the display; saving just makes the
                             // choice stick the next time the app is opened.
-                            saveSettings({ libraryId: lib });
+                            saveSettings({ libraryId });
                             void navigate({
-                                to: "/app/library/$libraryId/groups",
-                                params: { libraryId: lib }
+                                to: "/app/library/$libraryId",
+                                params: { libraryId }
                             });
                         }}
                     >
-                        {getLibraryName(lib)}
+                        {getLibraryName(libraryId)}
                     </Menu.Item>
                 ))}
             </Menu.Dropdown>

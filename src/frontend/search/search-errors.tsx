@@ -125,7 +125,7 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
             size={small ? "xs" : undefined}
             onClick={() => {
                 void navigate({
-                    to: "/app/library/$libraryId/groups",
+                    to: "/app/library/$libraryId",
                     params: { libraryId }
                 });
             }}

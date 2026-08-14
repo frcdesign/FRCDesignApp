@@ -5,24 +5,24 @@ import {
     BORDER,
     IconSize,
     PrimaryColor
-} from "../../../../../common/style-constants";
+} from "../../../../common/style-constants";
 import { ReactNode, useState } from "react";
-import { GroupCard } from "../../../../../groups/group-card";
-import { ItemTable } from "../../../../../cards/card-components";
-import { HeartIcon } from "../../../../../favorites/favorite-button";
-import { SearchResults } from "../../../../../search/search-results";
+import { GroupCard } from "../../../../groups/group-card";
+import { ItemTable } from "../../../../cards/card-components";
+import { HeartIcon } from "../../../../favorites/favorite-button";
+import { SearchResults } from "../../../../search/search-results";
 import {
     SectionError,
     SectionLoading
-} from "../../../../../app-common/app-zero-state";
-import { RequireAccessLevel } from "../../../../../api-utils/access-level";
-import { AddGroupButton } from "../../../../../groups/add-group-menu";
-import { FavoritesList } from "../../../../../favorites/favorites-list";
-import { useLibraryQuery } from "../../../../../queries";
-import { getLibraryName, useLibraryId } from "../../../../../api-utils/library";
-import { updateUiState, useUiState } from "../../../../../api-utils/ui-state";
+} from "../../../../app-common/app-zero-state";
+import { RequireAccessLevel } from "../../../../api-utils/access-level";
+import { AddGroupButton } from "../../../../groups/add-group-menu";
+import { FavoritesList } from "../../../../favorites/favorites-list";
+import { useLibraryQuery } from "../../../../queries";
+import { getLibraryName, useLibraryId } from "../../../../api-utils/library";
+import { updateUiState, useUiState } from "../../../../api-utils/ui-state";
 
-export const Route = createFileRoute("/app/library/$libraryId/groups/")({
+export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     onEnter: () => {
         updateUiState({ openGroupId: undefined });

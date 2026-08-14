@@ -1,7 +1,7 @@
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { PageError } from "../app-common/app-zero-state";
 import { ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useLoaderData, useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
@@ -47,11 +47,16 @@ export function RootCrash(): ReactNode {
 
 export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
+    // Root loader data, so this works even for urls that match nothing.
+    const { settings } = useLoaderData({ from: "__root__" });
     const homeButton = (
         <Button
             leftSection={<IconHome size={IconSize.MEDIUM} />}
             onClick={() => {
-                void navigate({ to: "/app" });
+                void navigate({
+                    to: "/app/library/$libraryId",
+                    params: { libraryId: settings.libraryId }
+                });
             }}
         >
             Go home

@@ -56,7 +56,7 @@ export async function patchQuery<T>(
 export function useIsHome(): boolean {
     return (
         useMatch({
-            from: "/app/library/$libraryId/groups/",
+            from: "/app/library/$libraryId/",
             shouldThrow: false
         }) !== undefined
     );
