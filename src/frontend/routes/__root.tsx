@@ -1,4 +1,9 @@
-import { createRootRoute, Outlet, useSearch } from "@tanstack/react-router";
+import {
+    createRootRoute,
+    Outlet,
+    useParams,
+    useSearch
+} from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
@@ -35,8 +40,11 @@ export const Route = createRootRoute({
 function RootComponent(): ReactNode {
     const { settings } = Route.useLoaderData();
     const search = useSearch({ strict: false });
+    // Theme off the url so it recolors the instant a library switch navigates;
+    // pages outside the app (errors, license) fall back to the saved setting.
+    const params = useParams({ strict: false });
 
-    const libraryId = settings.libraryId;
+    const libraryId = params.libraryId ?? settings.libraryId;
     const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
     const colorTheme = getColorTheme(settings.theme, search.systemTheme);
 

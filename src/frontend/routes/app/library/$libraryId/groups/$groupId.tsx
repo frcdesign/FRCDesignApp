@@ -16,39 +16,42 @@ import {
     FontWeight,
     IconColor,
     IconSize
-} from "../../../common/style-constants";
+} from "../../../../../common/style-constants";
 import { ReactNode } from "react";
-import { SearchResults } from "../../../search/search-results";
-import { GroupOut, Insertables } from "../../../../shared/api-models";
-import { hasEditorAccess } from "../../../../shared/types";
-import { filterInsertables } from "../../../search/filter";
-import { GroupMenuItems } from "../../../groups/group-card";
-import { InsertableCard } from "../../../cards/insertable-card";
-import { ItemTable } from "../../../cards/card-components";
-import { AppContextMenu, MenuButton } from "../../../app-common/app-menu";
-import { SearchCallout } from "../../../search/search-errors";
+import { SearchResults } from "../../../../../search/search-results";
+import { GroupOut, Insertables } from "../../../../../../shared/api-models";
+import { hasEditorAccess } from "../../../../../../shared/types";
+import { filterInsertables } from "../../../../../search/filter";
+import { GroupMenuItems } from "../../../../../groups/group-card";
+import { InsertableCard } from "../../../../../cards/insertable-card";
+import { ItemTable } from "../../../../../cards/card-components";
+import { AppContextMenu, MenuButton } from "../../../../../app-common/app-menu";
+import { SearchCallout } from "../../../../../search/search-errors";
 import {
     PageError,
     SectionError,
     SectionLoading
-} from "../../../app-common/app-zero-state";
-import { ClearFiltersButton } from "../../../settings/vendor-filters";
-import { useLibraryQuery } from "../../../queries";
-import { useUiState, updateUiState } from "../../../api-utils/ui-state";
+} from "../../../../../app-common/app-zero-state";
+import { ClearFiltersButton } from "../../../../../settings/vendor-filters";
+import { useLibraryQuery } from "../../../../../queries";
+import { useLibraryId } from "../../../../../api-utils/library";
+import { useUiState, updateUiState } from "../../../../../api-utils/ui-state";
 
-export const Route = createFileRoute("/app/groups/$groupId")({
-    component: GroupList,
-    onEnter: (match) => {
-        updateUiState({ openGroupId: match.params.groupId });
+export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
+    {
+        component: GroupList,
+        onEnter: (match) => {
+            updateUiState({ openGroupId: match.params.groupId });
+        }
     }
-});
+);
 
 function GroupList(): ReactNode {
     const navigate = useNavigate();
     const libraryQuery = useLibraryQuery();
-    const groupId = useParams({
-        from: "/app/groups/$groupId"
-    }).groupId;
+    const { libraryId, groupId } = useParams({
+        from: "/app/library/$libraryId/groups/$groupId"
+    });
 
     const uiState = useUiState()[0];
 
@@ -72,7 +75,10 @@ function GroupList(): ReactNode {
                     <Button
                         leftSection={<IconArrowBackUp size={IconSize.SMALL} />}
                         onClick={() => {
-                            void navigate({ to: "/app/groups" });
+                            void navigate({
+                                to: "/app/library/$libraryId/groups",
+                                params: { libraryId }
+                            });
                         }}
                     >
                         Go back
@@ -115,12 +121,18 @@ function GroupList(): ReactNode {
 
 function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
     const navigate = useNavigate();
+    const libraryId = useLibraryId();
     const menuItems = <GroupMenuItems group={group} />;
 
     const header = (
         <Box
             className="interactive"
-            onClick={() => void navigate({ to: "/app/groups" })}
+            onClick={() =>
+                void navigate({
+                    to: "/app/library/$libraryId/groups",
+                    params: { libraryId }
+                })
+            }
             p="sm"
         >
             <Group wrap="nowrap" justify="space-between">

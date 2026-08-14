@@ -107,8 +107,16 @@ function LibraryMenu(): ReactNode {
                     <Menu.Item
                         key={lib}
                         onClick={() => {
+                            if (lib === libraryId) {
+                                return;
+                            }
+                            // The url drives the display; saving just makes the
+                            // choice stick the next time the app is opened.
                             saveSettings({ libraryId: lib });
-                            void navigate({ to: "/app/groups" });
+                            void navigate({
+                                to: "/app/library/$libraryId/groups",
+                                params: { libraryId: lib }
+                            });
                         }}
                     >
                         {getLibraryName(lib)}

@@ -43,12 +43,13 @@ interface GroupCardProps extends PropsWithChildren {
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();
+    const libraryId = useLibraryId();
     return (
         <ItemRow
             onClick={() => {
                 void navigate({
-                    to: "/app/groups/$groupId",
-                    params: { groupId: group.id }
+                    to: "/app/library/$libraryId/groups/$groupId",
+                    params: { libraryId, groupId: group.id }
                 });
             }}
             left={

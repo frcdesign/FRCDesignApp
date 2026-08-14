@@ -11,13 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as InitRouteImport } from './routes/init'
 import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
-import { Route as AppGroupsIndexRouteImport } from './routes/app/groups/index'
-import { Route as AppGroupsGroupIdRouteImport } from './routes/app/groups/$groupId'
+import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
+import { Route as AppLibraryLibraryIdGroupsIndexRouteImport } from './routes/app/library/$libraryId/groups/index'
+import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
 
 const InitRoute = InitRouteImport.update({
   id: '/init',
@@ -28,6 +30,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -54,16 +61,24 @@ const PagesBetaCompleteRoute = PagesBetaCompleteRouteImport.update({
   path: '/beta-complete',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppGroupsIndexRoute = AppGroupsIndexRouteImport.update({
-  id: '/groups/',
-  path: '/groups/',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AppGroupsGroupIdRoute = AppGroupsGroupIdRouteImport.update({
-  id: '/groups/$groupId',
-  path: '/groups/$groupId',
-  getParentRoute: () => AppRouteRoute,
-} as any)
+const AppLibraryLibraryIdRouteRoute =
+  AppLibraryLibraryIdRouteRouteImport.update({
+    id: '/library/$libraryId',
+    path: '/library/$libraryId',
+    getParentRoute: () => AppRouteRoute,
+  } as any)
+const AppLibraryLibraryIdGroupsIndexRoute =
+  AppLibraryLibraryIdGroupsIndexRouteImport.update({
+    id: '/groups/',
+    path: '/groups/',
+    getParentRoute: () => AppLibraryLibraryIdRouteRoute,
+  } as any)
+const AppLibraryLibraryIdGroupsGroupIdRoute =
+  AppLibraryLibraryIdGroupsGroupIdRouteImport.update({
+    id: '/groups/$groupId',
+    path: '/groups/$groupId',
+    getParentRoute: () => AppLibraryLibraryIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
@@ -73,19 +88,22 @@ export interface FileRoutesByFullPath {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups/': typeof AppGroupsIndexRoute
+  '/app/': typeof AppIndexRoute
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups/': typeof AppLibraryLibraryIdGroupsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/app': typeof AppRouteRouteWithChildren
   '/init': typeof InitRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups': typeof AppGroupsIndexRoute
+  '/app': typeof AppIndexRoute
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups': typeof AppLibraryLibraryIdGroupsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,8 +114,10 @@ export interface FileRoutesById {
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
-  '/app/groups/$groupId': typeof AppGroupsGroupIdRoute
-  '/app/groups/': typeof AppGroupsIndexRoute
+  '/app/': typeof AppIndexRoute
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups/': typeof AppLibraryLibraryIdGroupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,19 +129,22 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups/'
+    | '/app/'
+    | '/app/library/$libraryId'
+    | '/app/library/$libraryId/groups/$groupId'
+    | '/app/library/$libraryId/groups/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/app'
     | '/init'
     | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
     | '/license'
     | '/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups'
+    | '/app'
+    | '/app/library/$libraryId'
+    | '/app/library/$libraryId/groups/$groupId'
+    | '/app/library/$libraryId/groups'
   id:
     | '__root__'
     | '/app'
@@ -131,8 +154,10 @@ export interface FileRouteTypes {
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
-    | '/app/groups/$groupId'
-    | '/app/groups/'
+    | '/app/'
+    | '/app/library/$libraryId'
+    | '/app/library/$libraryId/groups/$groupId'
+    | '/app/library/$libraryId/groups/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -160,6 +185,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -196,31 +228,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PagesBetaCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/groups/': {
-      id: '/app/groups/'
-      path: '/groups'
-      fullPath: '/app/groups/'
-      preLoaderRoute: typeof AppGroupsIndexRouteImport
+    '/app/library/$libraryId': {
+      id: '/app/library/$libraryId'
+      path: '/library/$libraryId'
+      fullPath: '/app/library/$libraryId'
+      preLoaderRoute: typeof AppLibraryLibraryIdRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/app/groups/$groupId': {
-      id: '/app/groups/$groupId'
+    '/app/library/$libraryId/groups/': {
+      id: '/app/library/$libraryId/groups/'
+      path: '/groups'
+      fullPath: '/app/library/$libraryId/groups/'
+      preLoaderRoute: typeof AppLibraryLibraryIdGroupsIndexRouteImport
+      parentRoute: typeof AppLibraryLibraryIdRouteRoute
+    }
+    '/app/library/$libraryId/groups/$groupId': {
+      id: '/app/library/$libraryId/groups/$groupId'
       path: '/groups/$groupId'
-      fullPath: '/app/groups/$groupId'
-      preLoaderRoute: typeof AppGroupsGroupIdRouteImport
-      parentRoute: typeof AppRouteRoute
+      fullPath: '/app/library/$libraryId/groups/$groupId'
+      preLoaderRoute: typeof AppLibraryLibraryIdGroupsGroupIdRouteImport
+      parentRoute: typeof AppLibraryLibraryIdRouteRoute
     }
   }
 }
 
+interface AppLibraryLibraryIdRouteRouteChildren {
+  AppLibraryLibraryIdGroupsGroupIdRoute: typeof AppLibraryLibraryIdGroupsGroupIdRoute
+  AppLibraryLibraryIdGroupsIndexRoute: typeof AppLibraryLibraryIdGroupsIndexRoute
+}
+
+const AppLibraryLibraryIdRouteRouteChildren: AppLibraryLibraryIdRouteRouteChildren =
+  {
+    AppLibraryLibraryIdGroupsGroupIdRoute:
+      AppLibraryLibraryIdGroupsGroupIdRoute,
+    AppLibraryLibraryIdGroupsIndexRoute: AppLibraryLibraryIdGroupsIndexRoute,
+  }
+
+const AppLibraryLibraryIdRouteRouteWithChildren =
+  AppLibraryLibraryIdRouteRoute._addFileChildren(
+    AppLibraryLibraryIdRouteRouteChildren,
+  )
+
 interface AppRouteRouteChildren {
-  AppGroupsGroupIdRoute: typeof AppGroupsGroupIdRoute
-  AppGroupsIndexRoute: typeof AppGroupsIndexRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppGroupsGroupIdRoute: AppGroupsGroupIdRoute,
-  AppGroupsIndexRoute: AppGroupsIndexRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

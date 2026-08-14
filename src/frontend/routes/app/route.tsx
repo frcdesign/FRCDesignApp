@@ -8,12 +8,7 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
-import {
-    getFavoritesQuery,
-    getContextDataQuery,
-    getLibraryQuery,
-    getSearchDbQuery
-} from "../../queries";
+import { getContextDataQuery } from "../../queries";
 import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
 import { useMessageListener } from "../../api-utils/messages";
@@ -37,20 +32,9 @@ export const Route = createFileRoute("/app")({
         );
         return contextData;
     },
-    loader: async ({ context }): Promise<ContextData> => {
-        const accessData = context.accessData;
-        const libraryId = context.settings.libraryId;
-        await Promise.all([
-            queryClient.prefetchQuery(
-                getLibraryQuery(libraryId, accessData.cacheVersion)
-            ),
-            queryClient.prefetchQuery(
-                getSearchDbQuery(libraryId, accessData.cacheVersion)
-            ),
-            queryClient.prefetchQuery(getFavoritesQuery(libraryId))
-        ]);
-        return context;
-    },
+    // Library data is fetched by the `/app/library/$libraryId` route instead, so
+    // the shell renders as soon as the context data is known.
+    loader: ({ context }): ContextData => context,
     errorComponent: RootAppError
 });
 
