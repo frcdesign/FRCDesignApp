@@ -193,19 +193,22 @@ describe("GET /job-status", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it.each([true, false])("reports running=%s", async (running) => {
-        vi.spyOn(JobTracker, "isAnyJobRunning").mockResolvedValue(running);
+    it.each([{ running: true, runningForMs: 4_000 }, { running: false }])(
+        "reports $running",
+        async (status) => {
+            vi.spyOn(JobTracker, "getJobStatus").mockResolvedValue(status);
 
-        const res = await createTestApp().request(
-            `/api/job-status/library/${TEST_LIBRARY_ID}`,
-            sessionRequest("GET"),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ running });
-        // Polled for live state, so it must never be served from a cache.
-        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
-    });
+            const res = await createTestApp().request(
+                `/api/job-status/library/${TEST_LIBRARY_ID}`,
+                sessionRequest("GET"),
+                env
+            );
+            expect(res.status).toBe(200);
+            expect(await res.json()).toEqual(status);
+            // Polled for live state, so it must never be served from a cache.
+            expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+        }
+    );
 });
 
 describe("POST /group", () => {

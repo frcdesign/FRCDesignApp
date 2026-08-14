@@ -36,15 +36,42 @@ export const ONSHAPE_STEP_RETRIES = {
     delay: onshapeRetryDelay
 };
 
+/** The first wait after a render isn't ready; each attempt doubles it. */
+const THUMBNAIL_BASE_DELAY_SECONDS = 4;
+
+/** The ceiling the doubling stops at. */
+const THUMBNAIL_MAX_DELAY_SECONDS = 15 * 60;
+
 /**
- * Retries for a step waiting on an Onshape render: wait out a rate limit,
- * otherwise poll, since Onshape renders thumbnails asynchronously.
+ * Retry delay for a step waiting on an Onshape render. Onshape renders
+ * thumbnails asynchronously and gives no signal when one lands, so the step
+ * polls: a plain doubling from four seconds up to a fifteen-minute ceiling.
+ *
+ * Starting tight is the point — most renders land within seconds, and a long
+ * first wait leaves them sitting finished but unnoticed.
+ *
+ * A rate limit still overrides the curve. Onshape says how long to wait, and
+ * asking again sooner only earns another 429.
  */
+function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
+    const rateLimited = rateLimitDelay(input.error);
+    if (rateLimited) {
+        return rateLimited;
+    }
+    const seconds = Math.min(
+        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
+        THUMBNAIL_MAX_DELAY_SECONDS
+    );
+    return `${seconds} seconds`;
+}
+
 export const THUMBNAIL_STEP_RETRIES = {
-    limit: 3,
-    delay: (retry: RetryDelayInput) =>
-        rateLimitDelay(retry.error) ??
-        (retry.ctx.attempt === 1 ? "10 seconds" : "5 minutes")
+    // 10 attempts: waits of 4s, 8s, 16s … 512s, then the 15 minute ceiling, for
+    // roughly half an hour of polling before a render is given up on. Chosen to
+    // hold that window steady against the starting delay: a longer first wait
+    // covers the same span in fewer attempts.
+    limit: 10,
+    delay: thumbnailRetryDelay
 };
 
 /**

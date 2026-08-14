@@ -18,13 +18,6 @@ import { LibraryId } from "../../shared/types";
 
 const db = getDb(env.DB);
 
-/** Inflates a gzip stream to text (the browser does this transparently). */
-async function inflate(body: ReadableStream): Promise<string> {
-    return new Response(
-        body.pipeThrough(new DecompressionStream("gzip"))
-    ).text();
-}
-
 describe("library routes", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -53,7 +46,7 @@ describe("library routes", () => {
         );
     });
 
-    it("GET /search-db streams the library's gzipped index from R2", async () => {
+    it("GET /search-db serves the library's index from R2 as plain JSON", async () => {
         await seedTestData(db);
         await seedConfiguration(db, TEST_PART_STUDIO_ID);
         await rebuildSearchDb(env.SEARCH_INDEX, db, TEST_LIBRARY_ID);
@@ -65,10 +58,15 @@ describe("library routes", () => {
             env
         );
         expect(res.status).toBe(200);
-        expect(res.headers.get("Content-Encoding")).toBe("gzip");
+        // Serving a pre-compressed body under a hand-set Content-Encoding gets
+        // it compressed a second time by the runtime, leaving the client with a
+        // gzip stream after it inflates once. Wire compression is the
+        // platform's job, so this response must claim no encoding of its own.
+        expect(res.headers.get("Content-Encoding")).toBeNull();
+        expect(res.headers.get("Content-Type")).toBe("application/json");
 
         // The body is the serialized MiniSearch index (a JSON object).
-        const parsed = JSON.parse(await inflate(res.body!));
+        const parsed: { documentCount: number } = await res.json();
         expect(parsed.documentCount).toBeGreaterThan(0);
     });
 

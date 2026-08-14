@@ -10,6 +10,7 @@ import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { jobStatusQueryKey } from "../queries";
+import { type JobStatus } from "../../shared/api-models";
 
 interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
@@ -29,10 +30,13 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
-            // Show the running spinner immediately rather than on the next poll;
-            // the navbar watcher refreshes and reports completion when it finishes.
-            void queryClient.invalidateQueries({
-                queryKey: jobStatusQueryKey(libraryId)
+            // Seeding the status (rather than invalidating) both shows the
+            // spinner immediately and starts the poll, which stays idle until
+            // something is known to be running. The navbar watcher refreshes
+            // and reports completion when it finishes.
+            queryClient.setQueryData<JobStatus>(jobStatusQueryKey(libraryId), {
+                running: true,
+                runningForMs: 0
             });
             showInfoToast(
                 data.status === "already-running"

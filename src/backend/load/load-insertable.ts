@@ -4,11 +4,7 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import {
-    addBuildIssue,
-    type BuildIssue,
-    BuildIssueType
-} from "../../shared/build-issues";
+import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
 import {
     ElementType,
     type FastenInfo,
@@ -79,13 +75,9 @@ export async function loadInsertable(
 
     const isOpenComposite = await computeOpenCompositeStep(ctx, target);
 
-    const { shouldIndex, manyConfigurations } = decideIndexing(
-        vendors,
-        parameters,
-        flags.forceIndex
-    );
+    const indexing = decideIndexing(vendors, parameters, flags.forceIndex);
 
-    const recordsResult = shouldIndex
+    const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(
               ctx,
               insertableId,
@@ -108,15 +100,11 @@ export async function loadInsertable(
             )
     );
 
-    let buildIssues = addBuildIssue(
+    const buildIssues = addBuildIssue(
         checkInsertable({ vendors, thumbnailUrls }),
-        ...recordsResult.buildIssues
+        ...recordsResult.buildIssues,
+        ...indexing.buildIssues
     );
-    if (manyConfigurations) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.MANY_CONFIGURATIONS
-        });
-    }
 
     const parsed: ParsedInsertable = {
         vendors,

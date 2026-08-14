@@ -59,9 +59,25 @@ export interface InsertableBuildStatus {
     lastLoadedAt: number | null;
 }
 
+/** Whether a library-load job is running, and how long it has been going. */
+export interface JobStatus {
+    running: boolean;
+    /**
+     * Milliseconds since the oldest running job started. Absent when nothing is
+     * running, or for jobs tracked before this was recorded.
+     */
+    runningForMs?: number;
+}
+
 export interface LibraryBuildStatus {
     groups: Record<string, GroupBuildStatus>;
     insertables: Record<string, InsertableBuildStatus>;
+    /**
+     * Whether a load job was running when this was fetched. Clients poll job
+     * status only once this says there is something to watch, so an idle
+     * library costs no polling at all.
+     */
+    jobRunning: boolean;
 }
 
 export type Insertables = Record<string, InsertableOut>;

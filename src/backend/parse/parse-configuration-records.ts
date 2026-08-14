@@ -25,8 +25,10 @@ import {
     BuildIssueType
 } from "../../shared/build-issues";
 import {
-    AUTO_INDEX_THRESHOLD,
-    enumerateConfigurations
+    countConfigurations,
+    enumerateConfigurations,
+    IndexingBand,
+    isIndexingEnabled
 } from "../../shared/configuration-combinations";
 import { canonicalizeConfiguration } from "../../shared/configuration-utils";
 import { getParts } from "../onshape-api/endpoints/parts";
@@ -69,32 +71,47 @@ export const INDEXING_ISSUE_TYPES = [
 
 /** Whether to index an insertable, and how to flag it if we don't. */
 export interface IndexingDecision {
-    /** Index when forced, or a vendor part below the auto threshold. */
+    /** Index when enabled by an admin, or a vendor part under the auto threshold. */
     shouldIndex: boolean;
-    /** Vendor part over the threshold and not forced: warrants a warning. */
-    manyConfigurations: boolean;
+    /** The limit issues this decision raises, if any. */
+    buildIssues: BuildIssue[];
 }
 
 /**
- * Decides whether an insertable's part numbers get indexed. A vendor part with
- * few enough combinations indexes on its own; anything else waits for the force
- * flag, and a vendor part held back only by its count is flagged so an admin can
- * trim it or force it.
+ * Decides whether an insertable's part numbers get indexed, by which limit its
+ * configuration count falls under. A vendor part with few enough combinations
+ * indexes on its own; past the auto threshold indexing waits to be enabled by
+ * hand; past the hard cap there is nothing to index at all, since enumeration
+ * stops there — so forcing it on cannot help.
+ *
+ * Only an indexing candidate is flagged: a vendor part, or one an admin has
+ * explicitly enabled and is owed an explanation for.
  */
 export function decideIndexing(
     vendors: Vendor[],
     parameters: ConfigurationParameter[],
     forceIndex: boolean
 ): IndexingDecision {
-    const { configurations, capped } = enumerateConfigurations(parameters);
-    const overThreshold =
-        capped || configurations.length >= AUTO_INDEX_THRESHOLD;
-    const autoEligible = vendors.length > 0 && !overThreshold;
-    const shouldIndex = forceIndex || autoEligible;
-    return {
-        shouldIndex,
-        manyConfigurations: vendors.length > 0 && overThreshold && !shouldIndex
-    };
+    const { band } = countConfigurations(parameters);
+    const isVendorPart = vendors.length > 0;
+    const isCandidate = isVendorPart || forceIndex;
+    const shouldIndex = isIndexingEnabled(isVendorPart, band, forceIndex);
+
+    if (band === IndexingBand.EXCEEDED) {
+        return {
+            shouldIndex,
+            buildIssues: isCandidate
+                ? [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }]
+                : []
+        };
+    }
+    if (band === IndexingBand.MANUAL && isVendorPart && !forceIndex) {
+        return {
+            shouldIndex,
+            buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }]
+        };
+    }
+    return { shouldIndex, buildIssues: [] };
 }
 
 /** Trims a raw metadata value; a missing or blank one becomes `null`. */

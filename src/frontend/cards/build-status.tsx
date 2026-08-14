@@ -46,6 +46,13 @@ import {
     ConfigurationParameter,
     ParameterType
 } from "../../shared/configuration-models";
+import {
+    AUTO_INDEX_THRESHOLD,
+    type ConfigurationCount,
+    countConfigurations,
+    IndexingBand,
+    MAX_PART_NUMBER_CONFIGURATIONS
+} from "../../shared/configuration-combinations";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
@@ -63,6 +70,7 @@ import {
  */
 export type StateRowValue =
     | { kind: "bool"; value: boolean }
+    | { kind: "text"; text: string; dimmed?: boolean }
     | { kind: "vendors"; vendors: Vendor[] };
 
 /**
@@ -539,12 +547,14 @@ function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     );
 }
 
-/** A label (+ description) and on/off Switch row for an editable admin flag. */
-function SwitchRow(props: {
+/**
+ * A label (+ description) and a right-aligned control. Usually a Switch, but a
+ * setting that isn't the admin's to make shows an icon saying why instead.
+ */
+function ControlRow(props: {
     label: string;
     description?: string;
-    checked: boolean;
-    onToggle: () => void;
+    control: ReactNode;
 }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="md" align="center">
@@ -554,13 +564,31 @@ function SwitchRow(props: {
                     {props.description}
                 </Text>
             </div>
-            <Switch
-                size="sm"
-                checked={props.checked}
-                onChange={props.onToggle}
-                withThumbIndicator={false}
-            />
+            {props.control}
         </Group>
+    );
+}
+
+/** A label (+ description) and on/off Switch row for an editable admin flag. */
+function SwitchRow(props: {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onToggle: () => void;
+}): ReactNode {
+    return (
+        <ControlRow
+            label={props.label}
+            description={props.description}
+            control={
+                <Switch
+                    size="sm"
+                    checked={props.checked}
+                    onChange={props.onToggle}
+                    withThumbIndicator={false}
+                />
+            }
+        />
     );
 }
 
@@ -583,10 +611,7 @@ function InsertableAdminSection({
                 insertableId={insertableId}
                 supportsFasten={status.supportsFasten}
             />
-            <PartNumberSwitch
-                insertableId={insertableId}
-                forceIndex={status.forceIndex}
-            />
+            <IndexingRow insertableId={insertableId} status={status} />
         </Stack>
     );
 }
@@ -626,21 +651,84 @@ function FastenSwitch({
     );
 }
 
-function PartNumberSwitch({
+/**
+ * The indexing control: a switch only where turning indexing on is the admin's
+ * call to make, and an icon saying why not otherwise.
+ *
+ * Indexing needs a vendor to attribute parts to and few enough configurations
+ * to enumerate. Past the hard cap it can't run at all, and under the auto
+ * threshold a vendor insertable already indexes on load, leaving nothing to
+ * decide. Only the band in between is a choice.
+ */
+function IndexingRow({
     insertableId,
-    forceIndex
+    status
 }: {
     insertableId: string;
-    forceIndex: boolean;
+    status: InsertableBuildStatus;
 }): ReactNode {
+    const { band } = useConfigurationCount(status);
     const mutation = useTogglePartNumberSearchMutation(insertableId);
+
+    let control: ReactNode;
+    if (band === IndexingBand.EXCEEDED) {
+        control = (
+            <IndexingIcon
+                severity={BuildIssueSeverity.ERROR}
+                tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
+            />
+        );
+    } else if (status.vendors.length === 0) {
+        control = (
+            <IndexingIcon
+                severity={BuildIssueSeverity.WARNING}
+                tooltip="No vendor was parsed, so there are no vendor part numbers to index."
+            />
+        );
+    } else if (band === IndexingBand.AUTOMATIC) {
+        control = (
+            <IndexingIcon
+                severity={null}
+                tooltip={`Indexed automatically: a vendor insertable under ${AUTO_INDEX_THRESHOLD} configurations indexes on every load.`}
+            />
+        );
+    } else {
+        control = (
+            <Switch
+                size="sm"
+                checked={status.forceIndex}
+                onChange={() => mutation.mutate(!status.forceIndex)}
+                withThumbIndicator={false}
+            />
+        );
+    }
+
     return (
-        <SwitchRow
-            label="Force part number indexing"
-            description="Index configurations even below the auto threshold"
-            checked={forceIndex}
-            onToggle={() => mutation.mutate(!forceIndex)}
+        <ControlRow
+            label="Enable indexing"
+            description="Index metadata for search"
+            control={control}
         />
+    );
+}
+
+/**
+ * Stands in for the indexing switch where there is nothing to toggle. Reuses the
+ * build-check severity icons, so the state reads the same as the callouts above
+ * it — a green check when indexing is already on, otherwise the severity of what
+ * is holding it back.
+ */
+function IndexingIcon({
+    severity,
+    tooltip
+}: {
+    severity: BuildIssueSeverity | null;
+    tooltip: string;
+}): ReactNode {
+    return (
+        <Tooltip label={tooltip} withArrow multiline w={260}>
+            <IssueIcon severity={severity} style={{ flexShrink: 0 }} />
+        </Tooltip>
     );
 }
 
@@ -666,12 +754,44 @@ function GroupAdminSection({
     );
 }
 
+/**
+ * An insertable's configuration count and which indexing limit it falls under.
+ * Enumerated here rather than stored: it's the same shared routine the load path
+ * uses, capped at {@link MAX_PART_NUMBER_CONFIGURATIONS}, and only runs when a
+ * hover card opens.
+ */
+function useConfigurationCount(
+    status: InsertableBuildStatus
+): ConfigurationCount {
+    const parameters = status.configuration?.parameters;
+    return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
+}
+
+/**
+ * Renders a configuration count: "None" for a non-configurable insertable,
+ * matching how the vendors row reads when there are none, and an open-ended
+ * label past the cap, where enumeration stops before reaching a total.
+ */
+function configurationCountValue(count: number | null): StateRowValue {
+    if (count === null) {
+        return {
+            kind: "text",
+            text: `Over ${MAX_PART_NUMBER_CONFIGURATIONS}`
+        };
+    }
+    if (count === 0) {
+        return { kind: "text", text: "None", dimmed: true };
+    }
+    return { kind: "text", text: count.toLocaleString() };
+}
+
 /** The read-only auto-detected facts for an insertable. */
 function InsertableParsedSection({
     status
 }: {
     status: InsertableBuildStatus;
 }): ReactNode {
+    const { count } = useConfigurationCount(status);
     return (
         <>
             <Divider />
@@ -682,15 +802,8 @@ function InsertableParsedSection({
                     value={{ kind: "vendors", vendors: status.vendors }}
                 />
                 <ParsedRow
-                    label="Configurable"
-                    // An indexed non-configurable insertable has a configuration
-                    // row with no parameters (just records), so "configurable"
-                    // keys on the parameters.
-                    value={{
-                        kind: "bool",
-                        value:
-                            (status.configuration?.parameters.length ?? 0) > 0
-                    }}
+                    label="Configurations"
+                    value={configurationCountValue(count)}
                 />
             </Stack>
         </>
@@ -785,6 +898,14 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
             <IconCheck size={IconSize.SMALL} color={IconColor.GREEN} />
         ) : (
             <IconX size={IconSize.SMALL} color={IconColor.RED} />
+        );
+    }
+
+    if (value.kind === "text") {
+        return (
+            <Text size="sm" c={value.dimmed ? "dimmed" : undefined}>
+                {value.text}
+            </Text>
         );
     }
 

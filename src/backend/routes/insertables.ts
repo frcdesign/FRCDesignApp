@@ -35,11 +35,7 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
-import {
-    addBuildIssue,
-    clearBuildIssue,
-    BuildIssueType
-} from "../../shared/build-issues";
+import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
 
@@ -138,15 +134,11 @@ insertableRoutes.post(
                     .get()
             )?.parameters ?? [];
         const vendors = parseVendors(row.name, parameters);
-        const { shouldIndex, manyConfigurations } = decideIndexing(
-            vendors,
-            parameters,
-            body.forceIndex
-        );
+        const indexing = decideIndexing(vendors, parameters, body.forceIndex);
 
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
-        const indexed = shouldIndex
+        const indexed = indexing.shouldIndex
             ? await indexRecords(await c.var.getOnshapeApi(), {
                   documentId: row.documentId,
                   versionId: row.versionId,
@@ -159,15 +151,11 @@ insertableRoutes.post(
 
         // Clear first, so an issue the reindex resolved (or that disabling makes
         // moot) doesn't stick around.
-        let buildIssues = addBuildIssue(
+        const buildIssues = addBuildIssue(
             clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
-            ...indexed.buildIssues
+            ...indexed.buildIssues,
+            ...indexing.buildIssues
         );
-        if (manyConfigurations) {
-            buildIssues = addBuildIssue(buildIssues, {
-                type: BuildIssueType.MANY_CONFIGURATIONS
-            });
-        }
 
         // Keep a configurations row while there's parameters or records to hold;
         // a non-configurable insertable that stops indexing loses its row.

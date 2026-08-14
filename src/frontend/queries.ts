@@ -9,6 +9,7 @@ import {
 import { apiGet, apiGetText } from "./api-utils/api";
 import {
     type FavoritesData,
+    type JobStatus,
     type LibraryBuildStatus,
     type LibraryOut
 } from "../shared/api-models";
@@ -205,13 +206,56 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
     return ["job-status", libraryId];
 }
 
-/** Whether a library-load job is running; polled so indicators stay live. */
-export function getJobStatusQuery(libraryId: LibraryId, enabled = true) {
-    return queryOptions<{ running: boolean }>({
+/**
+ * How often to re-check a running job, by how long it has been running. A
+ * just-started job is checked often so the UI reacts promptly, then the cadence
+ * backs off — a full reload runs for hours and doesn't warrant a request every
+ * few seconds for all of it.
+ */
+const FASTEST_POLL_MS = 3_000;
+const POLL_STEPS = [
+    { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },
+    { untilMs: 75_000, intervalMs: 5_000 }
+];
+const SLOWEST_POLL_MS = 10_000;
+
+function jobPollInterval(runningForMs: number): number {
+    const step = POLL_STEPS.find(({ untilMs }) => runningForMs < untilMs);
+    return step?.intervalMs ?? SLOWEST_POLL_MS;
+}
+
+/**
+ * Whether a library-load job is running, polled so indicators stay live.
+ *
+ * An idle library isn't polled at all. Polling starts when there's known to be
+ * something to watch — either the build status reported a job already running
+ * when the app loaded (`jobRunningAtLoad`), or starting one seeded `running`
+ * here directly — and stops again as soon as a check comes back not-running.
+ * `canPoll` is the caller's own gate: the route is editor-only.
+ */
+export function getJobStatusQuery(
+    libraryId: LibraryId,
+    jobRunningAtLoad: boolean,
+    canPoll: boolean
+) {
+    return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        refetchInterval: 10_000,
-        enabled
+        enabled: (query) =>
+            canPoll &&
+            (jobRunningAtLoad || (query.state.data?.running ?? false)),
+        // Every status badge observes this query, so rows mounting as the user
+        // scrolls would otherwise each trigger a fetch. The poll is the only
+        // thing that should set the pace.
+        staleTime: FASTEST_POLL_MS,
+        refetchInterval: (query) => {
+            const status = query.state.data;
+            if (!status?.running) {
+                return false;
+            }
+            // An unknown age means the job predates age tracking, so it is old.
+            return jobPollInterval(status.runningForMs ?? Infinity);
+        }
     });
 }
 
@@ -222,9 +266,13 @@ export function getJobStatusQuery(libraryId: LibraryId, enabled = true) {
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
+    // Already fetched by the build-status consumers; reused here rather than
+    // spending a separate request just to learn whether to start polling.
+    const jobRunningAtLoad = useBuildStatusQuery().data?.jobRunning ?? false;
     return useQuery(
         getJobStatusQuery(
             libraryId,
+            jobRunningAtLoad,
             signedIn && hasEditorAccess(currentAccessLevel)
         )
     );

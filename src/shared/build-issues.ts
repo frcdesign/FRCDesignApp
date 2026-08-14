@@ -4,6 +4,10 @@
  * workflow) and are stored on the group/insertable; a few are computed live in
  * the frontend when they depend on per-user state (e.g. access level).
  */
+import {
+    AUTO_INDEX_THRESHOLD,
+    MAX_PART_NUMBER_CONFIGURATIONS
+} from "./configuration-combinations";
 
 export enum BuildIssueSeverity {
     /** A potential issue that is usually fine, e.g. no vendors parsed. */
@@ -59,9 +63,9 @@ export function getIssueDescription(issue: BuildIssue): string {
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "No unhidden insertables";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-            return "Too many configurations to index part numbers";
+            return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so part numbers cannot be indexed`;
         case BuildIssueType.MANY_CONFIGURATIONS:
-            return "Too many configurations to index automatically";
+            return `Over ${AUTO_INDEX_THRESHOLD} configurations, so part number indexing must be enabled manually`;
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
         case BuildIssueType.UNSTABLE_COMPOSITE:

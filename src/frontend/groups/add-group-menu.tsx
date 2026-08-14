@@ -11,6 +11,7 @@ import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { jobStatusQueryKey } from "../queries";
+import { type JobStatus } from "../../shared/api-models";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({
@@ -48,8 +49,11 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
         ),
         onSuccess: () => {
             showInfoToast("Adding document...", "add-group");
-            void queryClient.invalidateQueries({
-                queryKey: jobStatusQueryKey(libraryId)
+            // Starts the job poll, which stays idle until something is known to
+            // be running, and shows the spinner without waiting for a request.
+            queryClient.setQueryData<JobStatus>(jobStatusQueryKey(libraryId), {
+                running: true,
+                runningForMs: 0
             });
         }
     });

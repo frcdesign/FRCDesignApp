@@ -43,56 +43,71 @@ function paramsWithConfigs(count: number): ConfigurationParameter[] {
     ];
 }
 
+const MANY = [{ type: BuildIssueType.MANY_CONFIGURATIONS }];
+const TOO_MANY = [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }];
+
 describe("decideIndexing", () => {
     it.each([
         // A vendor part below the auto line indexes on its own.
         {
             vendors: [Vendor.AM],
-            configs: 99,
+            configs: 127,
             force: false,
             index: true,
-            many: false
+            issues: []
         },
-        // At the line it waits, and is flagged so an admin can trim or force it.
+        // At the line it waits, flagged so an admin can trim or enable it.
         {
             vendors: [Vendor.AM],
-            configs: 100,
+            configs: 128,
             force: false,
             index: false,
-            many: true
+            issues: MANY
         },
-        // Force overrides the count, and clears the flag.
+        // Enabling it overrides the count, and clears the flag.
         {
             vendors: [Vendor.AM],
-            configs: 100,
+            configs: 128,
             force: true,
             index: true,
-            many: false
+            issues: []
         },
-        // Past the hard cap behaves like any over-threshold vendor part.
+        // Past the hard cap there is nothing to enumerate, so enabling it can't
+        // help — it stays unindexed and flagged either way.
         {
             vendors: [Vendor.AM],
             configs: 600,
             force: false,
             index: false,
-            many: true
+            issues: TOO_MANY
         },
         {
             vendors: [Vendor.AM],
             configs: 600,
             force: true,
-            index: true,
-            many: false
+            index: false,
+            issues: TOO_MANY
         },
-        // No vendor: never auto-eligible, never flagged, but still forceable.
-        { vendors: [], configs: 50, force: false, index: false, many: false },
-        { vendors: [], configs: 50, force: true, index: true, many: false }
+        // No vendor: never auto-eligible, never flagged, but still enableable.
+        { vendors: [], configs: 50, force: false, index: false, issues: [] },
+        { vendors: [], configs: 50, force: true, index: true, issues: [] },
+        // Nor flagged for a count it was never going to index against...
+        { vendors: [], configs: 200, force: false, index: false, issues: [] },
+        { vendors: [], configs: 600, force: false, index: false, issues: [] },
+        // ...unless an admin enabled it and is owed the reason it did nothing.
+        {
+            vendors: [],
+            configs: 600,
+            force: true,
+            index: false,
+            issues: TOO_MANY
+        }
     ])(
         "vendors=$vendors configs=$configs force=$force",
-        ({ vendors, configs, force, index, many }) => {
+        ({ vendors, configs, force, index, issues }) => {
             expect(
                 decideIndexing(vendors, paramsWithConfigs(configs), force)
-            ).toEqual({ shouldIndex: index, manyConfigurations: many });
+            ).toEqual({ shouldIndex: index, buildIssues: issues });
         }
     );
 });

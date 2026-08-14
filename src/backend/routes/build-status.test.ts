@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { group, insertables } from "../../shared/schema";
 import {
     TEST_GROUP_ID,
@@ -11,6 +11,7 @@ import {
     seedPartStudio
 } from "../../__test_utils__";
 import { getDb } from "../db";
+import * as JobTracker from "../load/job-tracker";
 import type { LibraryBuildStatus } from "../../shared/api-models";
 
 const db = getDb(env.DB);
@@ -20,6 +21,7 @@ const INSERTABLE_LOADED_AT = 2000;
 
 describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
 
     it("returns each group's and insertable's last-loaded time", async () => {
         await seedPartStudio(db);
@@ -72,5 +74,22 @@ describe("GET /build-status", () => {
 
         const body: LibraryBuildStatus = await res.json();
         expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBeNull();
+    });
+
+    // Clients start their job-status poll off this flag, so an idle library
+    // never polls at all.
+    it.each([true, false])("reports jobRunning=%s", async (running) => {
+        await seedPartStudio(db);
+        vi.spyOn(JobTracker, "getJobStatus").mockResolvedValue({ running });
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            { method: "GET" },
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const body: LibraryBuildStatus = await res.json();
+        expect(body.jobRunning).toBe(running);
     });
 });

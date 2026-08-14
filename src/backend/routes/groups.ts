@@ -8,11 +8,7 @@ import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { HttpStatus } from "http-status-ts";
-import {
-    isAnyJobRunning,
-    isReloadRunning,
-    trackJob
-} from "../load/job-tracker";
+import { getJobStatus, isReloadRunning, trackJob } from "../load/job-tracker";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -55,14 +51,18 @@ groupRoutes.post(
     }
 );
 
-/** GET /api/job-status/library/:libraryId */
+/**
+ * GET /api/job-status/library/:libraryId
+ *
+ * Only polled while a job is known to be running — the build status is what
+ * tells a freshly loaded client there's something to watch.
+ */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
     cacheMiddleware(),
     async (c) => {
-        const running = await isAnyJobRunning(c.env, getLibraryParam(c));
-        return c.json({ running });
+        return c.json(await getJobStatus(c.env, getLibraryParam(c)));
     }
 );
 

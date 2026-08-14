@@ -1,5 +1,6 @@
 import type { AppBindings } from "../app";
 import type { LibraryId } from "../../shared/types";
+import type { JobStatus } from "../../shared/api-models";
 
 /**
  * Backstop for a job that crashes before untracking itself; must outlast the
@@ -21,6 +22,11 @@ export type JobKind = "reload" | "add-group";
 interface TrackedJob {
     id: string;
     kind: JobKind;
+    /**
+     * Epoch ms the job was created. Absent on entries written before this was
+     * tracked, which are by definition old.
+     */
+    startedAt?: number;
 }
 
 function jobsKey(libraryId: LibraryId): string {
@@ -74,12 +80,31 @@ export async function isReloadRunning(
     return jobs.some((job) => job.kind === "reload");
 }
 
-/** Whether any load job (reload or add-group) is running for this library. */
-export async function isAnyJobRunning(
+/**
+ * Whether any load job (reload or add-group) is running for this library, and
+ * how long the oldest one has been going — clients use the age to decide how
+ * often to check back.
+ */
+export async function getJobStatus(
     env: AppBindings,
     libraryId: LibraryId
-): Promise<boolean> {
-    return (await activeJobs(env, libraryId)).length > 0;
+): Promise<JobStatus> {
+    const jobs = await activeJobs(env, libraryId);
+    if (jobs.length === 0) {
+        return { running: false };
+    }
+    const startTimes = jobs
+        .map((job) => job.startedAt)
+        .filter((startedAt): startedAt is number => startedAt !== undefined);
+    // An untimed entry predates start-time tracking, so its true age is unknown
+    // and certainly not recent; report no age and let the client poll slowly.
+    if (startTimes.length < jobs.length) {
+        return { running: true };
+    }
+    return {
+        running: true,
+        runningForMs: Date.now() - Math.min(...startTimes)
+    };
 }
 
 /** Records a newly-created job, pruning any that have since finished. */
@@ -90,7 +115,7 @@ export async function trackJob(
     instanceId: string
 ): Promise<void> {
     const jobs = await activeJobs(env, libraryId);
-    jobs.push({ id: instanceId, kind });
+    jobs.push({ id: instanceId, kind, startedAt: Date.now() });
     await env.KV.put(jobsKey(libraryId), JSON.stringify(jobs), {
         expirationTtl: JOB_TTL_SECONDS
     });

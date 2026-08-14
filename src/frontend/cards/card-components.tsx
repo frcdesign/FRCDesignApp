@@ -172,7 +172,9 @@ export function CardTitle(props: CardTitleProps) {
                 largeThumbnailUrl={largeThumbnailUrl}
                 target={thumbnailTarget}
             />
-            <Stack gap={0} miw={0} flex={1}>
+            {/* Shrinks to truncate, but never grows: the hidden tag and build
+                status badge belong beside the name, not at the row's edge. */}
+            <Stack gap={0} miw={0}>
                 <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                     {cardTitle}
                 </Text>

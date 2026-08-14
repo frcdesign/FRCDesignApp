@@ -9,6 +9,7 @@ import {
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { group, insertables, configurations } from "../../shared/schema";
+import { getJobStatus } from "../load/job-tracker";
 import {
     type LibraryBuildStatus,
     type GroupBuildStatus,
@@ -26,7 +27,10 @@ buildStatusRoutes.get(
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
 
-        const [allGroups, allInsertables] = await Promise.all([
+        const [jobStatus, allGroups, allInsertables] = await Promise.all([
+            // Piggybacked so an idle library never needs a job-status poll: this
+            // is what tells a loading client whether there's a job to watch.
+            getJobStatus(c.env, libraryId),
             db
                 .select({
                     id: group.id,
@@ -106,7 +110,8 @@ buildStatusRoutes.get(
 
         return c.json({
             groups: groupsOut,
-            insertables: insertablesOut
+            insertables: insertablesOut,
+            jobRunning: jobStatus.running
         } satisfies LibraryBuildStatus);
     }
 );
