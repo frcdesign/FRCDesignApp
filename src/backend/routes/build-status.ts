@@ -1,5 +1,12 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute } from "../app";
+import {
+    getApp,
+    getLibraryParam,
+    libraryRoute,
+    setVersionedCacheHeaders,
+    validateCacheVersion,
+    validateLibraryParam
+} from "../app";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { group, insertables, configurations } from "../../shared/schema";
@@ -11,10 +18,12 @@ import {
 
 export const buildStatusRoutes = getApp();
 
-/** GET /api/build-status/library/:libraryId */
+/** GET /api/build-status/library/:libraryId?v=:cacheVersion */
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
+    validateLibraryParam,
+    validateCacheVersion,
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -97,6 +106,8 @@ buildStatusRoutes.get(
             };
         }
 
+        // Private: editors only, so a shared cache must not hand it to anyone.
+        setVersionedCacheHeaders(c, "private");
         return c.json({
             groups: groupsOut,
             insertables: insertablesOut

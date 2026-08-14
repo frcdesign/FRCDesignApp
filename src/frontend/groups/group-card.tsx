@@ -6,7 +6,7 @@ import {
     IconTrash
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useLoaderData, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
@@ -30,7 +30,11 @@ import {
     useBuildStatusQuery,
     useLibraryQuery
 } from "../queries";
-import { toLibraryPath, useLibraryId } from "../api-utils/library";
+import {
+    toLibraryPath,
+    useCacheVersion,
+    useLibraryId
+} from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
 
 interface GroupCardProps extends PropsWithChildren {
@@ -192,8 +196,7 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
 
 function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     const refreshLibrary = useRefreshLibrary();
     const key = libraryQueryKey(libraryId, cacheVersion);
 

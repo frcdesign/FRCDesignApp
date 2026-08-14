@@ -1,5 +1,10 @@
 import { eq } from "drizzle-orm";
-import { getApp, getInsertableParam, insertableRoute } from "../app";
+import {
+    getApp,
+    getInsertableParam,
+    insertableRoute,
+    validateCacheVersion
+} from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -116,23 +121,27 @@ export async function uploadDocumentThumbnails(
 
 export const thumbnailRoutes = getApp();
 
-/** GET /api/thumbnail/:size/:elementId — serve static thumbnail from R2 */
-thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
-    const size = c.req.param("size");
-    const elementId = c.req.param("elementId");
+/** GET /api/thumbnail/:size/:elementId?v=:microversionId — static from R2 */
+thumbnailRoutes.get(
+    "/thumbnail/:size/:elementId",
+    validateCacheVersion,
+    async (c) => {
+        const size = c.req.param("size");
+        const elementId = c.req.param("elementId");
 
-    const obj = await c.env.THUMBNAILS.get(r2Key(size, elementId));
-    if (!obj) return c.notFound();
+        const obj = await c.env.THUMBNAILS.get(r2Key(size, elementId));
+        if (!obj) return c.notFound();
 
-    const headers = new Headers();
-    obj.writeHttpMetadata(headers);
-    headers.set(
-        "Cache-Control",
-        `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-    );
+        const headers = new Headers();
+        obj.writeHttpMetadata(headers);
+        headers.set(
+            "Cache-Control",
+            `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+        );
 
-    return new Response(obj.body, { headers });
-});
+        return new Response(obj.body, { headers });
+    }
+);
 
 /** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
 thumbnailRoutes.get("/thumbnail", async (c) => {

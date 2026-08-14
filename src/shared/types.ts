@@ -78,12 +78,17 @@ export interface Settings {
 export interface AccessData {
     maxAccessLevel: AccessLevel;
     currentAccessLevel: AccessLevel;
-    cacheVersion: number;
 }
 
 export interface ContextData {
     accessData: AccessData;
     settings: Settings;
+    /**
+     * Cache version per library, since the url (not the saved setting) decides
+     * which library is displayed. Requests key their `?v=` off the one for the
+     * library they're fetching.
+     */
+    cacheVersions: Record<LibraryId, number>;
 }
 export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;

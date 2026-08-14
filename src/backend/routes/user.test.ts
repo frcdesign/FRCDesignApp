@@ -36,12 +36,17 @@ describe("user routes", () => {
         expect(body).toEqual({
             accessData: {
                 maxAccessLevel: AccessLevel.ADMIN,
-                currentAccessLevel: AccessLevel.ADMIN,
-                cacheVersion: 0
+                currentAccessLevel: AccessLevel.ADMIN
             },
             settings: {
                 theme: Theme.SYSTEM,
                 libraryId: LibraryId.FRC_DESIGN_LIB
+            },
+            // Every library, so a switch keys its requests off the right version.
+            cacheVersions: {
+                [LibraryId.FRC_DESIGN_LIB]: 0,
+                [LibraryId.FTC_DESIGN_LIB]: 0,
+                [LibraryId.MKCAD]: 0
             }
         });
     });

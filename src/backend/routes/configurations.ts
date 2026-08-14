@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getApp } from "../app";
+import { getApp, setVersionedCacheHeaders, validateCacheVersion } from "../app";
 import { getDb } from "../db";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
@@ -13,33 +13,39 @@ import { HTTPException } from "hono/http-exception";
 
 export const configurationRoutes = getApp();
 
-/** GET /api/configuration/:configurationId */
-configurationRoutes.get("/configuration/:configurationId", async (c) => {
-    const configurationId = c.req.param("configurationId");
-    if (!configurationId) {
-        throw new HTTPException(400, {
-            message: "configurationId is required"
-        });
+/** GET /api/configuration/:configurationId?v=:microversionId */
+configurationRoutes.get(
+    "/configuration/:configurationId",
+    validateCacheVersion,
+    async (c) => {
+        const configurationId = c.req.param("configurationId");
+        if (!configurationId) {
+            throw new HTTPException(400, {
+                message: "configurationId is required"
+            });
+        }
+
+        const db = getDb(c.env.DB);
+        const config = await db
+            .select({ parameters: configurations.parameters })
+            .from(configurations)
+            .where(eq(configurations.id, configurationId))
+            .get();
+
+        if (!config) {
+            throw new HTTPException(404, {
+                message: "Failed to find configuration"
+            });
+        }
+
+        const result: ConfigurationResult = {
+            parameters: config.parameters
+        };
+        // Keyed by microversion, so this body can never change under its url.
+        setVersionedCacheHeaders(c);
+        return c.json(result);
     }
-
-    const db = getDb(c.env.DB);
-    const config = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, configurationId))
-        .get();
-
-    if (!config) {
-        throw new HTTPException(404, {
-            message: "Failed to find configuration"
-        });
-    }
-
-    const result: ConfigurationResult = {
-        parameters: config.parameters
-    };
-    return c.json(result);
-});
+);
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
 configurationRoutes.get("/unit-info", async (c) => {

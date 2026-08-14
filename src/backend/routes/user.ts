@@ -22,11 +22,18 @@ userRoutes.get("/context-data", async (c) => {
         };
     }
 
-    const lib = await db
-        .select({ cacheVersion: libraries.cacheVersion })
+    // Every library's version, not just the saved one: the url picks the library.
+    const libs = await db
+        .select({ id: libraries.id, cacheVersion: libraries.cacheVersion })
         .from(libraries)
-        .where(eq(libraries.id, user.libraryId))
-        .get();
+        .all();
+
+    const cacheVersions = Object.fromEntries(
+        Object.values(LibraryId).map((libraryId) => [
+            libraryId,
+            libs.find((lib) => lib.id === libraryId)?.cacheVersion ?? 0
+        ])
+    ) as Record<LibraryId, number>;
 
     // Always default to user in dev and the max in production
     const currentAccessLevel =
@@ -35,13 +42,13 @@ userRoutes.get("/context-data", async (c) => {
     return c.json({
         accessData: {
             maxAccessLevel,
-            currentAccessLevel,
-            cacheVersion: lib?.cacheVersion ?? 0
+            currentAccessLevel
         },
         settings: {
             theme: user.theme,
             libraryId: user.libraryId
-        }
+        },
+        cacheVersions
     } satisfies ContextData);
 });
 

@@ -6,7 +6,6 @@ import {
     queryOptions,
     useQuery
 } from "@tanstack/react-query";
-import { useLoaderData } from "@tanstack/react-router";
 import { apiGet } from "./api-utils/api";
 import {
     type FavoritesData,
@@ -15,7 +14,7 @@ import {
 } from "../shared/api-models";
 import { LibraryId } from "../shared/types";
 import { ContextData } from "../shared/types";
-import { useLibraryId } from "./api-utils/library";
+import { useCacheVersion, useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
@@ -54,8 +53,7 @@ export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
 
 export function useLibraryQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getLibraryQuery(libraryId, cacheVersion));
 }
 
@@ -111,8 +109,7 @@ export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
 
 export function useSearchDbQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getSearchDbQuery(libraryId, cacheVersion));
 }
 
@@ -158,8 +155,7 @@ export function getBuildStatusQuery(
 
 export function useBuildStatusQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getBuildStatusQuery(libraryId, cacheVersion));
 }
 

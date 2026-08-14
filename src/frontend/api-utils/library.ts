@@ -1,9 +1,15 @@
-import { useParams } from "@tanstack/react-router";
+import { useLoaderData, useParams } from "@tanstack/react-router";
 import { LibraryId } from "../../shared/types";
 
 /** Returns the library being displayed, which the url is the source of truth for. */
 export function useLibraryId(): LibraryId {
     return useParams({ from: "/app/library/$libraryId" }).libraryId;
+}
+
+/** The displayed library's cache version, which keys its immutable responses. */
+export function useCacheVersion(): number {
+    const libraryId = useLibraryId();
+    return useLoaderData({ from: "/app" }).cacheVersions[libraryId] ?? 0;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {

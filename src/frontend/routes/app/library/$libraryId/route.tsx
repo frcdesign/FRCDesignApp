@@ -39,7 +39,7 @@ export const Route = createFileRoute("/app/library/$libraryId")({
     },
     loader: ({ context, params }) => {
         const { libraryId } = params;
-        const cacheVersion = context.accessData.cacheVersion;
+        const cacheVersion = context.cacheVersions[libraryId] ?? 0;
         void queryClient.prefetchQuery(
             getLibraryQuery(libraryId, cacheVersion)
         );

@@ -13,6 +13,7 @@ import {
 import {
     toInsertablePath,
     toLibraryPath,
+    useCacheVersion,
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
@@ -24,8 +25,7 @@ import { useCloseBuildCard } from "./build-status";
 /** The build-status query key for the currently-viewed library. */
 function useBuildStatusKey() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return buildStatusQueryKey(libraryId, cacheVersion);
 }
 
