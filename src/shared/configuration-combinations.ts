@@ -5,7 +5,9 @@
  */
 import {
     ParameterValues,
+    BooleanParameter,
     ConfigurationParameter,
+    EnumParameter,
     ParameterType
 } from "./configuration-models";
 import { evaluateCondition, getVisibleOptions } from "./configuration-utils";
@@ -97,6 +99,29 @@ export function countConfigurations(
     };
 }
 
+/**
+ * Whether a parameter is varied when indexing part numbers, and so multiplies an
+ * insertable's configuration count.
+ *
+ * Only enum and boolean parameters are varied — quantity and text ones ride
+ * their Onshape defaults — and "exclude from properties" opts a parameter out,
+ * which is how an insertable is trimmed back under the auto-index threshold.
+ *
+ * Shared with the admin card, so what it reports can't drift from what
+ * {@link enumerateConfigurations} actually varies.
+ */
+export function isIndexedParameter(
+    parameter: ConfigurationParameter
+): parameter is EnumParameter | BooleanParameter {
+    if (
+        parameter.type !== ParameterType.ENUM &&
+        parameter.type !== ParameterType.BOOLEAN
+    ) {
+        return false;
+    }
+    return !parameter.isCosmetic;
+}
+
 export interface EnumerateResult {
     /** The enumerated configurations, or empty when `capped`. */
     configurations: ParameterValues[];
@@ -125,16 +150,7 @@ export function enumerateConfigurations(
     let configurations: ParameterValues[] = [{}];
 
     for (const parameter of parameters) {
-        if (
-            parameter.type !== ParameterType.ENUM &&
-            parameter.type !== ParameterType.BOOLEAN
-        ) {
-            // Quantity and string parameters ride on their Onshape defaults.
-            continue;
-        }
-        if (parameter.isCosmetic) {
-            // "Exclude from properties": doesn't change the part's identity, so
-            // it rides its default rather than multiplying the configuration count.
+        if (!isIndexedParameter(parameter)) {
             continue;
         }
 

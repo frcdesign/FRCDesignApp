@@ -4,6 +4,7 @@ import {
     countConfigurations,
     enumerateConfigurations,
     IndexingBand,
+    isIndexedParameter,
     isIndexingEnabled,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "./configuration-combinations";
@@ -222,4 +223,52 @@ describe("isIndexingEnabled", () => {
             expect(isIndexingEnabled(vendor, band, force)).toBe(on);
         }
     );
+});
+
+describe("isIndexedParameter", () => {
+    it("varies enum and boolean parameters", () => {
+        expect(isIndexedParameter(enumParam("a", ["x", "y"]))).toBe(true);
+        expect(isIndexedParameter(boolParam("b"))).toBe(true);
+    });
+
+    it("never varies quantity or text parameters", () => {
+        expect(isIndexedParameter(quantityParam("q"))).toBe(false);
+        const text: StringParameter = {
+            id: "s",
+            name: "s",
+            default: "",
+            isCosmetic: false,
+            type: ParameterType.STRING
+        };
+        expect(isIndexedParameter(text)).toBe(false);
+    });
+
+    it("does not vary a parameter excluded from properties", () => {
+        expect(
+            isIndexedParameter(enumParam("a", ["x", "y"], { isCosmetic: true }))
+        ).toBe(false);
+    });
+
+    // The card reports indexing off this helper, so it has to describe exactly
+    // what enumeration varies.
+    it("matches the keys enumeration actually varies", () => {
+        const parameters = [
+            enumParam("varied", ["x", "y"]),
+            boolParam("flag"),
+            enumParam("cosmetic", ["x", "y"], { isCosmetic: true }),
+            quantityParam("length")
+        ];
+        const { configurations } = enumerateConfigurations(parameters);
+        const enumeratedKeys = new Set(
+            configurations.flatMap((configuration) =>
+                Object.keys(configuration)
+            )
+        );
+        expect([...enumeratedKeys].sort()).toEqual(
+            parameters
+                .filter(isIndexedParameter)
+                .map((parameter) => parameter.id)
+                .sort()
+        );
+    });
 });

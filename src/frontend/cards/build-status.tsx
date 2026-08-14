@@ -51,6 +51,7 @@ import {
     type ConfigurationCount,
     countConfigurations,
     IndexingBand,
+    isIndexedParameter,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../../shared/configuration-combinations";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
@@ -811,9 +812,8 @@ function InsertableParsedSection({
 }
 
 /**
- * Lists the insertable's configuration parameters: each parameter's name, its
- * type, and whether it's excluded from properties (which keeps it from
- * multiplying the indexed configuration count). Renders nothing when the
+ * Lists the insertable's configuration parameters: each parameter's name, the
+ * type it takes, and whether indexing varies it. Renders nothing when the
  * insertable has no parameters.
  */
 function ConfigurationSection({
@@ -826,7 +826,7 @@ function ConfigurationSection({
         <>
             <Divider />
             <Stack gap={6}>
-                <SectionHeader>Configuration</SectionHeader>
+                <SectionHeader>Configurations</SectionHeader>
                 <ScrollArea.Autosize mah={220} type="auto">
                     <Stack gap={4}>
                         {parameters.map((parameter) => (
@@ -838,19 +838,8 @@ function ConfigurationSection({
                             >
                                 <Text size="sm">{parameter.name}</Text>
                                 <Group gap={4} wrap="nowrap">
-                                    {parameter.isCosmetic && (
-                                        <Badge
-                                            size="xs"
-                                            variant="light"
-                                            color="gray"
-                                            title="Excluded from configuration properties"
-                                        >
-                                            Excluded
-                                        </Badge>
-                                    )}
-                                    <Badge size="xs" variant="default">
-                                        {getParameterTypeLabel(parameter.type)}
-                                    </Badge>
+                                    <IndexedBadge parameter={parameter} />
+                                    <ParameterTypeBadge parameter={parameter} />
                                 </Group>
                             </Group>
                         ))}
@@ -858,6 +847,81 @@ function ConfigurationSection({
                 </ScrollArea.Autosize>
             </Stack>
         </>
+    );
+}
+
+/** Why a parameter is or isn't varied when indexing, shown on hover. */
+function getIndexedDescription(parameter: ConfigurationParameter): string {
+    if (isIndexedParameter(parameter)) {
+        return "Varied when indexing part numbers, so it multiplies this insertable's configuration count.";
+    }
+    if (
+        parameter.type === ParameterType.QUANTITY ||
+        parameter.type === ParameterType.STRING
+    ) {
+        return "Quantity and text parameters are never varied — they stay at their Onshape default.";
+    }
+    return "Excluded from properties, so it stays at its default instead of multiplying the configuration count.";
+}
+
+/** Whether indexing varies this parameter — the lever on the configuration count. */
+function IndexedBadge({
+    parameter
+}: {
+    parameter: ConfigurationParameter;
+}): ReactNode {
+    const isIndexed = isIndexedParameter(parameter);
+    return (
+        <Tooltip
+            label={getIndexedDescription(parameter)}
+            multiline
+            maw={260}
+            withArrow
+            events={{ hover: true, focus: true, touch: true }}
+        >
+            <Badge
+                size="xs"
+                variant="light"
+                color={isIndexed ? "blue" : "gray"}
+            >
+                {isIndexed ? "Indexed" : "Not indexed"}
+            </Badge>
+        </Tooltip>
+    );
+}
+
+/**
+ * The parameter's type. An enum also carries its option count, and lists the
+ * options on hover — the values that drive its share of the configuration count.
+ */
+function ParameterTypeBadge({
+    parameter
+}: {
+    parameter: ConfigurationParameter;
+}): ReactNode {
+    const isEnum = parameter.type === ParameterType.ENUM;
+    const label = isEnum
+        ? `${getParameterTypeLabel(parameter.type)} (${parameter.options.length})`
+        : getParameterTypeLabel(parameter.type);
+
+    const badge = (
+        <Badge size="xs" variant="light" color="gray">
+            {label}
+        </Badge>
+    );
+    if (!isEnum || parameter.options.length === 0) {
+        return badge;
+    }
+    return (
+        <Tooltip
+            label={parameter.options.map((option) => option.name).join(", ")}
+            multiline
+            maw={260}
+            withArrow
+            events={{ hover: true, focus: true, touch: true }}
+        >
+            {badge}
+        </Tooltip>
     );
 }
 
