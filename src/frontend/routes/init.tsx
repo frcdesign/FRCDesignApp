@@ -24,7 +24,7 @@ export const Route = createFileRoute("/init")({
         const uiState = getUiState();
         if (uiState.openGroupId) {
             throw redirect({
-                to: "/app/library/$libraryId/$groupId",
+                to: "/app/library/$libraryId/groups/$groupId",
                 params: { libraryId, groupId: uiState.openGroupId }
             });
         }
