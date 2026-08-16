@@ -1,5 +1,5 @@
+import { useAccessData } from "../api-utils/access-level";
 import { ReactNode } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import { Position, SearchFilters, SearchHit, doSearch } from "./search";
 import { InsertableCard } from "../cards/insertable-card";
 import { ItemTable } from "../cards/card-components";
@@ -21,7 +21,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading documents..." />;
@@ -38,7 +38,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         query,
         filters,
         undefined,
-        hasEditorAccess(loaderData.accessData.currentAccessLevel)
+        hasEditorAccess(accessData.currentAccessLevel)
     );
 
     if (searchResults.hits.length === 0) {

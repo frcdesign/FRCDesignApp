@@ -6,7 +6,7 @@ import {
     IconTrash
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useLoaderData, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
@@ -28,6 +28,7 @@ import { useRefreshLibrary } from "../api-utils/refresh";
 import {
     libraryQueryKey,
     useBuildStatusQuery,
+    useCacheVersion,
     useLibraryQuery
 } from "../queries";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
@@ -43,12 +44,13 @@ interface GroupCardProps extends PropsWithChildren {
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();
+    const libraryId = useLibraryId();
     return (
         <ItemRow
             onClick={() => {
                 void navigate({
-                    to: "/app/groups/$groupId",
-                    params: { groupId: group.id }
+                    to: "/app/library/$libraryId/groups/$groupId",
+                    params: { libraryId, groupId: group.id }
                 });
             }}
             left={
@@ -191,8 +193,7 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
 
 function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     const refreshLibrary = useRefreshLibrary();
     const key = libraryQueryKey(libraryId, cacheVersion);
 

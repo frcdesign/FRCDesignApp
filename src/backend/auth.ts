@@ -4,7 +4,7 @@ import { type AppContext, getApp } from "./app";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "cloudflare:workers";
-import { getSessionInfo } from "./onshape-api/endpoints/users";
+import { getSessionInfo, getUserId } from "./onshape-api/endpoints/users";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
@@ -18,6 +18,22 @@ export function getSessionId(c: AppContext): string {
         });
     }
     return sessionId;
+}
+
+function userIdKey(sessionId: string): string {
+    return `user-id:${sessionId}`;
+}
+
+/** Returns the caller's Onshape user id, memoized in KV by session. */
+export async function getCachedUserId(c: AppContext): Promise<string> {
+    const key = userIdKey(getSessionId(c));
+
+    const cached = await c.env.KV.get(key);
+    if (cached) return cached;
+
+    const userId = await getUserId(await getOnshapeApi(c));
+    await c.env.KV.put(key, userId, { expirationTtl: SESSION_TTL });
+    return userId;
 }
 
 export async function getOnshapeApiFromSessionId(

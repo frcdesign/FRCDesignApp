@@ -1,4 +1,4 @@
-import { type Context, Hono } from "hono";
+import { type Context, type MiddlewareHandler, Hono } from "hono";
 import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
@@ -23,6 +23,7 @@ interface AppVariables {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
+    isAuthenticated: () => Promise<boolean>;
 }
 
 export interface AppContextEnv {
@@ -39,6 +40,7 @@ export interface AppServices {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
+    isAuthenticated: () => Promise<boolean>;
 }
 
 export type AppServicesFactory = (c: AppContext) => AppServices;
@@ -58,6 +60,58 @@ export function getLibraryParam(c: AppContext): LibraryId {
         throw new HTTPException(400, { message: "Invalid libraryId" });
     }
     return parsed.data;
+}
+
+/** A year — a versioned url's content never changes, only its version does. */
+const IMMUTABLE_CACHE_TTL = 365 * 24 * 3600;
+
+const NO_STORE = "private, no-store";
+
+export enum CachePolicy {
+    /** Never stored, anywhere. */
+    NO_CACHE = "no-cache",
+    /** Immutable, but kept out of shared caches. */
+    PRIVATE_CACHE = "private",
+    /** Immutable and the same for every caller. */
+    PUBLIC_CACHE = "public"
+}
+
+export function immutableCacheControl(
+    policy: CachePolicy.PRIVATE_CACHE | CachePolicy.PUBLIC_CACHE
+): string {
+    return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
+}
+
+const cacheVersionSchema = z.object({ v: z.string().min(1) });
+
+interface CacheOptions {
+    /** Pass false only when the url is immutable without a `?v=`. */
+    versioned?: boolean;
+}
+
+/** Declares how a route's response may be cached, and enforces what that takes. */
+export function cacheMiddleware(
+    policy: CachePolicy = CachePolicy.NO_CACHE,
+    options: CacheOptions = {}
+): MiddlewareHandler<AppContextEnv> {
+    if (policy === CachePolicy.NO_CACHE) {
+        return async (c, next) => {
+            await next();
+            c.header("Cache-Control", NO_STORE);
+        };
+    }
+
+    const cacheControl = immutableCacheControl(policy);
+    const versioned = options.versioned ?? true;
+
+    return async (c, next) => {
+        if (versioned && !cacheVersionSchema.safeParse(c.req.query()).success) {
+            throw new HTTPException(400, { message: "Missing cache version" });
+        }
+        await next();
+        // A miss must stay retryable, so only store what succeeded.
+        c.header("Cache-Control", c.res.ok ? cacheControl : NO_STORE);
+    };
 }
 
 export function insertableRoute(): string {

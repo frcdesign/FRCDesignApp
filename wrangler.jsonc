@@ -16,6 +16,10 @@
     "observability": {
         "enabled": true
     },
+    // Use Workers Caching
+    "cache": {
+        "enabled": true
+    },
     "upload_source_maps": true,
     "compatibility_flags": ["nodejs_compat"],
     /**
@@ -81,6 +85,9 @@
      */
     "env": {
         "cert": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",
@@ -124,6 +131,9 @@
             // }
         },
         "production": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",

@@ -6,7 +6,6 @@ import {
     queryOptions,
     useQuery
 } from "@tanstack/react-query";
-import { useLoaderData } from "@tanstack/react-router";
 import { apiGet } from "./api-utils/api";
 import {
     type FavoritesData,
@@ -14,8 +13,8 @@ import {
     type LibraryOut
 } from "../shared/api-models";
 import { LibraryId } from "../shared/types";
-import { ContextData } from "../shared/types";
-import { useLibraryId } from "./api-utils/library";
+import { type AccessData } from "../shared/types";
+import { toLibraryPath, useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
@@ -54,20 +53,47 @@ export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
 
 export function useLibraryQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getLibraryQuery(libraryId, cacheVersion));
 }
 
-export function contextDataQueryKey() {
-    return ["context-data"];
+export function libraryVersionQueryMatchKey() {
+    return ["library-version"];
 }
 
-/** Returns core application context data needed to load most other endpoints. */
-export function getContextDataQuery() {
-    return queryOptions<ContextData>({
-        queryKey: contextDataQueryKey(),
-        queryFn: () => apiGet("/context-data")
+export function libraryVersionQueryKey(libraryId: LibraryId) {
+    return ["library-version", libraryId];
+}
+
+/** A library's cache version, which keys the `?v=` on every request for it. */
+export function getLibraryVersionQuery(libraryId: LibraryId) {
+    return queryOptions<number>({
+        queryKey: libraryVersionQueryKey(libraryId),
+        queryFn: () =>
+            apiGet("/library-version" + toLibraryPath(libraryId)).then(
+                (result: { version: number }) => result.version
+            ),
+        // Bumps arrive through the explicit refresh flows, which refetch this.
+        staleTime: Infinity
+    });
+}
+
+/** The displayed library's cache version, which keys its immutable responses. */
+export function useCacheVersion(): number {
+    const libraryId = useLibraryId();
+    // Loaded by the library route before anything reading this renders.
+    return useQuery(getLibraryVersionQuery(libraryId)).data ?? 0;
+}
+
+export function accessDataQueryKey() {
+    return ["access-data"];
+}
+
+/** The caller's access level, which gates editor-only affordances. */
+export function getAccessDataQuery() {
+    return queryOptions<AccessData>({
+        queryKey: accessDataQueryKey(),
+        queryFn: () => apiGet("/access-data")
     });
 }
 
@@ -111,8 +137,7 @@ export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
 
 export function useSearchDbQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getSearchDbQuery(libraryId, cacheVersion));
 }
 
@@ -158,8 +183,7 @@ export function getBuildStatusQuery(
 
 export function useBuildStatusQuery() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return useQuery(getBuildStatusQuery(libraryId, cacheVersion));
 }
 

@@ -1,29 +1,21 @@
-import { createRootRoute, Outlet, useSearch } from "@tanstack/react-router";
+import {
+    createRootRoute,
+    Outlet,
+    useParams,
+    useSearch
+} from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
 import { queryClient } from "../query-client";
-import { getContextDataQuery } from "../queries";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../api-utils/onshape-params";
-import { DEFAULT_SETTINGS, type Settings } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
 import { NotFoundError, RootCrash } from "../app/root-error";
 
 export const Route = createRootRoute({
-    // Fetch the user's settings to theme the single app-wide MantineProvider, but
-    // never throw: error/landing pages (e.g. unauthenticated) must still render.
-    loader: async (): Promise<{ settings: Settings }> => {
-        try {
-            const { settings } = await queryClient.ensureQueryData(
-                getContextDataQuery()
-            );
-            return { settings };
-        } catch {
-            return { settings: DEFAULT_SETTINGS };
-        }
-    },
     component: RootComponent,
     // notFoundComponent renders inside the root Outlet, so it has the provider.
     notFoundComponent: NotFoundError,
@@ -33,12 +25,17 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    const { settings } = Route.useLoaderData();
     const search = useSearch({ strict: false });
+    // Both come off the url — the entry redirect seeds them and a switch
+    // rewrites them — so the first paint is already the right colors.
+    const params = useParams({ strict: false });
 
-    const libraryId = settings.libraryId;
+    const libraryId = params.libraryId ?? DEFAULT_LIBRARY_ID;
     const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
-    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
+    const colorTheme = getColorTheme(
+        search.theme ?? DEFAULT_SETTINGS.theme,
+        search.systemTheme
+    );
 
     return (
         <QueryClientProvider client={queryClient}>

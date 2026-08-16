@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 import {
+    DEFAULT_LIBRARY_ID,
     DEFAULT_SETTINGS,
     ElementType,
     FastenInfo,
@@ -144,7 +145,7 @@ export const users = sqliteTable("users", {
     libraryId: text("library_id")
         .$type<LibraryId>()
         .notNull()
-        .default(DEFAULT_SETTINGS.libraryId)
+        .default(DEFAULT_LIBRARY_ID)
 });
 
 export const favorites = sqliteTable(

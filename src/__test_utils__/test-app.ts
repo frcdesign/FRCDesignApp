@@ -9,6 +9,8 @@ export interface TestAppOptions {
     accessLevel?: AccessLevel;
     /** Onshape mock returned by `c.var.getOnshapeApi()` (default a fresh mock). */
     onshapeApi?: MockOnshapeApi;
+    /** Whether the caller passes the auth gate (default true). */
+    isAuthenticated?: boolean;
 }
 
 /**
@@ -21,7 +23,8 @@ export function createTestApp(options: TestAppOptions = {}) {
         getOnshapeApi: () => Promise.resolve(MOCK_ONSHAPE_API),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
-            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN)
+            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN),
+        isAuthenticated: () => Promise.resolve(options.isAuthenticated ?? true)
     }));
 }
 
