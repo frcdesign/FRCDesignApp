@@ -36,35 +36,6 @@ import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
 
-/** POST /api/toggle-open-composite/insertable/:insertableId */
-insertableRoutes.post(
-    "/toggle-open-composite" + insertableRoute(),
-    requireEditorMiddleware,
-    async (c) => {
-        const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ isOpenComposite: boolean }>();
-
-        const db = getDb(c.env.DB);
-        const row = await db
-            .select({ libraryId: insertables.libraryId })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-        if (!row)
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
-
-        await db
-            .update(insertables)
-            .set({ isOpenComposite: body.isOpenComposite })
-            .where(eq(insertables.id, insertableId));
-
-        await bumpLibraryVersion(db, row.libraryId);
-        return c.json({ success: true });
-    }
-);
-
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
@@ -146,7 +117,9 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!row)
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
 
         // Index before committing anything: if this throws, the flag stays off
         // rather than being enabled with nothing indexed behind it. The error

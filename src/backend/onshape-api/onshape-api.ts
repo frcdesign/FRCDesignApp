@@ -1,3 +1,4 @@
+import { HttpStatus } from "http-status-ts";
 import {
     createSearchParams,
     type QueryOptions,
@@ -8,7 +9,6 @@ import {
 // rather than duplicated as a per-environment var in wrangler.jsonc.
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
 const ONSHAPE_API_VERSION = 16;
-import { HttpStatus } from "http-status-ts";
 
 export function getBaseUrl(): string {
     return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
@@ -37,7 +37,7 @@ export class OnshapeRateLimitError extends OnshapeApiError {
         message: string,
         public readonly retryAfterSeconds: number
     ) {
-        super(message, 429);
+        super(message, HttpStatus.TOO_MANY_REQUESTS);
         this.name = "OnshapeRateLimitError";
     }
 }
@@ -105,7 +105,7 @@ export abstract class OnshapeApi {
 
         if (!res.ok) {
             const text = await res.text();
-            if (res.status === 429) {
+            if (res.status === HttpStatus.TOO_MANY_REQUESTS) {
                 const retryAfter = parseInt(
                     res.headers.get("Retry-After") ?? "",
                     10

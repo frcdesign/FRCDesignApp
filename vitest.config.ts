@@ -36,8 +36,7 @@ export default defineConfig({
                 test: {
                     name: "backend",
                     include: ["src/backend/**/*.test.ts"],
-                    setupFiles: ["./src/__test_utils__/apply-migrations.ts"],
-                    maxWorkers: 1
+                    setupFiles: ["./src/__test_utils__/apply-migrations.ts"]
                 }
             }
         ]

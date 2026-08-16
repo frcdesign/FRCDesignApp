@@ -4,6 +4,7 @@ import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 
 export interface AppBindings {
     DB: D1Database;
@@ -55,7 +56,9 @@ export function getLibraryParam(c: AppContext): LibraryId {
     const libraryId = c.req.param("libraryId");
     const parsed = z.enum(LibraryId).safeParse(libraryId);
     if (!parsed.success) {
-        throw new HTTPException(400, { message: "Invalid libraryId" });
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
+            message: "Invalid libraryId"
+        });
     }
     return parsed.data;
 }
