@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { hasEditorAccess } from "../../shared/types";
 import { hasAdminAccess } from "../../shared/types";
 import { AccessLevel, type AccessData } from "../../shared/types";
-import { getContextDataQuery } from "../queries";
+import { getAccessDataQuery } from "../queries";
 
 /** What an unresolved caller gets: the least the app can show anyone. */
 const DEFAULT_ACCESS_DATA: AccessData = {
@@ -16,8 +16,7 @@ const DEFAULT_ACCESS_DATA: AccessData = {
  * paint, so editor-only affordances appear then rather than holding the app.
  */
 export function useAccessData(): AccessData {
-    const { data } = useQuery(getContextDataQuery());
-    return data?.accessData ?? DEFAULT_ACCESS_DATA;
+    return useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {

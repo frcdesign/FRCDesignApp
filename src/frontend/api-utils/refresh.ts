@@ -3,14 +3,14 @@ import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "../query-client";
 import {
     buildStatusQueryMatchKey,
-    contextDataQueryKey,
+    accessDataQueryKey,
     favoritesQueryKey,
     libraryQueryMatchKey,
     libraryVersionQueryMatchKey,
     useJobStatusQuery
 } from "../queries";
 import { useLibraryId } from "./library";
-import { type ContextData, type LibraryId } from "../../shared/types";
+import { type AccessData, type LibraryId } from "../../shared/types";
 import { getQueryUpdater } from "../common/utils";
 
 /** Refetches the current user's favorites, which aren't version-keyed. */
@@ -31,7 +31,7 @@ export function useRefreshLibrary(): () => Promise<void> {
         await queryClient.refetchQueries({
             queryKey: libraryVersionQueryMatchKey()
         });
-        await queryClient.refetchQueries({ queryKey: contextDataQueryKey() });
+        await queryClient.refetchQueries({ queryKey: accessDataQueryKey() });
         await queryClient.invalidateQueries({
             queryKey: libraryQueryMatchKey()
         });
@@ -69,12 +69,12 @@ export function useJobStatus(): boolean {
     return running;
 }
 
-type ContextDataUpdate = (data: ContextData) => void;
+type AccessDataUpdate = (data: AccessData) => void;
 
 /**
- * Optimistically patches the cached context data. No loader reads it, so the
+ * Optimistically patches the cached access data. No loader reads it, so the
  * patch alone re-renders everything showing it.
  */
-export function updateContextData(update: ContextDataUpdate): void {
-    queryClient.setQueryData(contextDataQueryKey(), getQueryUpdater(update));
+export function updateAccessData(update: AccessDataUpdate): void {
+    queryClient.setQueryData(accessDataQueryKey(), getQueryUpdater(update));
 }

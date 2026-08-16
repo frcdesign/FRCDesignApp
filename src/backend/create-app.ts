@@ -2,7 +2,7 @@ import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { users } from "../shared/schema";
-import { DEFAULT_LIBRARY_ID } from "../shared/types";
+import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../shared/types";
 import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
 import {
     getApp,
@@ -30,24 +30,24 @@ function getRelativeUrl(requestUrl: string) {
 }
 
 /**
- * Builds the url of the library the caller last used, carrying the Onshape
- * params through. Onshape sends the color scheme as `theme`, which the app
- * reads as `systemTheme`.
+ * Builds the url the caller resumes at, seeded with what the app has to know
+ * to render: the library and theme they last used. Onshape sends the system
+ * color scheme as `theme`, which the app reads as `systemTheme`.
  */
 async function getEntryUrl(c: AppContext): Promise<string> {
     const db = getDb(c.env.DB);
     const user = await db
-        .select({ libraryId: users.libraryId })
+        .select({ libraryId: users.libraryId, theme: users.theme })
         .from(users)
         .where(eq(users.id, await c.var.getUserId()))
         .get();
 
     const search = new URL(c.req.url).searchParams;
-    const theme = search.get("theme");
-    if (theme !== null) {
-        search.delete("theme");
-        search.set("systemTheme", theme);
+    const systemTheme = search.get("theme");
+    if (systemTheme !== null) {
+        search.set("systemTheme", systemTheme);
     }
+    search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
 
     const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
     return `/app/library/${libraryId}?${search.toString()}`;

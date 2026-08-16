@@ -70,7 +70,7 @@ export enum Theme {
     DARK = "dark"
 }
 
-/** The user settings the client renders; the library is read server-side. */
+/** User settings, which the entry redirect reads and seeds the app with. */
 export interface Settings {
     theme: Theme;
 }
@@ -83,11 +83,6 @@ export interface SettingsUpdate {
 export interface AccessData {
     maxAccessLevel: AccessLevel;
     currentAccessLevel: AccessLevel;
-}
-
-export interface ContextData {
-    accessData: AccessData;
-    settings: Settings;
 }
 
 export interface ThumbnailUrls {

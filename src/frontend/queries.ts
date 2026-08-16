@@ -13,7 +13,7 @@ import {
     type LibraryOut
 } from "../shared/api-models";
 import { LibraryId } from "../shared/types";
-import { type ContextData } from "../shared/types";
+import { type AccessData } from "../shared/types";
 import { toLibraryPath, useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
@@ -85,15 +85,15 @@ export function useCacheVersion(): number {
     return useQuery(getLibraryVersionQuery(libraryId)).data ?? 0;
 }
 
-export function contextDataQueryKey() {
-    return ["context-data"];
+export function accessDataQueryKey() {
+    return ["access-data"];
 }
 
-/** Returns core application context data needed to load most other endpoints. */
-export function getContextDataQuery() {
-    return queryOptions<ContextData>({
-        queryKey: contextDataQueryKey(),
-        queryFn: () => apiGet("/context-data")
+/** The caller's access level, which gates editor-only affordances. */
+export function getAccessDataQuery() {
+    return queryOptions<AccessData>({
+        queryKey: accessDataQueryKey(),
+        queryFn: () => apiGet("/access-data")
     });
 }
 

@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { users } from "../shared/schema";
-import { LibraryId } from "../shared/types";
+import { LibraryId, Theme } from "../shared/types";
 import {
     TEST_USER_ID,
     createTestApp,
@@ -53,18 +53,35 @@ describe("GET /init", () => {
         );
     });
 
-    it("renames Onshape's theme param to the one the app reads", async () => {
+    it("seeds the saved theme and forwards Onshape's color scheme", async () => {
         await seedUser(db);
+        await db
+            .update(users)
+            .set({ theme: Theme.DARK })
+            .where(eq(users.id, TEST_USER_ID));
 
         const res = await createTestApp().request(
-            "/init?theme=dark",
+            "/init?theme=light",
             jsonRequest("GET"),
             env
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.searchParams.get("systemTheme")).toBe("dark");
-        expect(location.searchParams.has("theme")).toBe(false);
+        // Onshape's scheme becomes systemTheme; theme carries the user's choice,
+        // so the app paints the right colors without asking the server.
+        expect(location.searchParams.get("systemTheme")).toBe("light");
+        expect(location.searchParams.get("theme")).toBe(Theme.DARK);
+    });
+
+    it("seeds the default theme for a user with no row", async () => {
+        const res = await createTestApp().request(
+            "/init",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.searchParams.get("theme")).toBe(Theme.SYSTEM);
     });
 
     it("never caches the gate's verdict", async () => {

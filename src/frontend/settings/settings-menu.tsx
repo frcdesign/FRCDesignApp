@@ -1,6 +1,5 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { DEFAULT_SETTINGS } from "../../shared/types";
-import { getContextDataQuery } from "../queries";
-import { useQuery } from "@tanstack/react-query";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { FontWeight } from "../common/style-constants";
@@ -13,7 +12,7 @@ import { capitalize } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel, useAccessData } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { updateContextData } from "../api-utils/refresh";
+import { updateAccessData } from "../api-utils/refresh";
 import { AppSelect } from "../app-common/app-select";
 import { makeSelectOption, useSelectOptions } from "./select-utils";
 import { ReloadGroupsButton } from "./reload-groups-button";
@@ -66,14 +65,20 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const { data } = useQuery(getContextDataQuery());
+    const search = useSearch({ from: "/app" });
+    const navigate = useNavigate({ from: "/app" });
     const saveSettings = useSaveSettings();
 
     return (
         <>
             <ThemeSelect
-                theme={data?.settings.theme ?? DEFAULT_SETTINGS.theme}
-                onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
+                theme={search.theme ?? DEFAULT_SETTINGS.theme}
+                onThemeSelect={(theme) => {
+                    // The url renders it; the write-behind decides what the
+                    // entry redirect seeds next time.
+                    saveSettings({ theme });
+                    void navigate({ search: (prev) => ({ ...prev, theme }) });
+                }}
             />
             <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
@@ -145,8 +150,8 @@ function AccessLevelSelect(): ReactNode {
             option={makeSelectOption(currentAccessLevel, capitalize)}
             options={accessLevels}
             onSelect={(value) => {
-                updateContextData((data) => {
-                    data.accessData.currentAccessLevel = value as AccessLevel;
+                updateAccessData((data) => {
+                    data.currentAccessLevel = value as AccessLevel;
                 });
             }}
         />

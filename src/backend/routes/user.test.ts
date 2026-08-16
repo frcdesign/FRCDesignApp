@@ -20,25 +20,21 @@ describe("user routes", () => {
         await resetDb(db);
     });
 
-    it("GET /context-data returns access level and settings", async () => {
+    it("GET /access-data returns the caller's access level", async () => {
         await seedLibrary(db);
         await seedUser(db);
         const app = createTestApp({ accessLevel: AccessLevel.ADMIN });
 
         const res = await app.request(
-            "/api/context-data",
+            "/api/access-data",
             jsonRequest("GET"),
             env
         );
         expect(res.status).toBe(200);
 
-        const body = await res.json();
-        expect(body).toEqual({
-            accessData: {
-                maxAccessLevel: AccessLevel.ADMIN,
-                currentAccessLevel: AccessLevel.ADMIN
-            },
-            settings: { theme: Theme.SYSTEM }
+        expect(await res.json()).toEqual({
+            maxAccessLevel: AccessLevel.ADMIN,
+            currentAccessLevel: AccessLevel.ADMIN
         });
         // Per-user, and Workers Cache keys ignore cookies.
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
