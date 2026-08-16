@@ -67,16 +67,30 @@ export function useJobStatus(): boolean {
 
 type ContextDataUpdate = (data: ContextData) => void;
 
+interface UpdateContextDataOptions {
+    /**
+     * Re-run the loaders. Costs a round of pending matches — which unmounts the
+     * app shell — so pass false when nothing rendered from loader data changed.
+     * @default true
+     */
+    reload?: boolean;
+}
+
 /** Optimistically patches the cached context data and re-runs the loaders. */
-export function useUpdateContextData(): (update: ContextDataUpdate) => void {
+export function useUpdateContextData(): (
+    update: ContextDataUpdate,
+    options?: UpdateContextDataOptions
+) => void {
     const router = useRouter();
     return useCallback(
-        (update: ContextDataUpdate) => {
+        (update: ContextDataUpdate, options?: UpdateContextDataOptions) => {
             queryClient.setQueryData(
                 contextDataQueryKey(),
                 getQueryUpdater(update)
             );
-            void router.invalidate();
+            if (options?.reload ?? true) {
+                void router.invalidate();
+            }
         },
         [router]
     );

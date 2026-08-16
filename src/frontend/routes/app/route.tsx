@@ -6,11 +6,13 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
+import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { queryClient } from "../../query-client";
 import { getContextDataQuery } from "../../queries";
 import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
+import { SectionLoading } from "../../app-common/app-zero-state";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
 import { PrimaryColor } from "../../common/style-constants";
@@ -56,7 +58,14 @@ function App() {
                 scrolls; the fixed header covers the top of this scrollbar,
                 keeping it within the body. */}
             <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
-                <Outlet />
+                {/* A pending match suspends, and the router's only other
+                    boundary is at the root — without one here, loading a
+                    library would unmount the navbar and blank the page. */}
+                <Suspense
+                    fallback={<SectionLoading title="Loading library..." />}
+                >
+                    <Outlet />
+                </Suspense>
                 <TanStackRouterDevtools />
             </AppShell.Main>
         </AppShell>

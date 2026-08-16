@@ -12,9 +12,14 @@ export function useSaveSettings() {
         mutationFn: (newSettings: { theme?: Theme; libraryId?: LibraryId }) =>
             apiPost("/user-data", { body: newSettings }),
         onMutate: (newSettings) => {
-            updateContextData((data) => {
-                data.settings = { ...data.settings, ...newSettings };
-            });
+            updateContextData(
+                (data) => {
+                    data.settings = { ...data.settings, ...newSettings };
+                },
+                // Only the theme is read from loader data; the library comes
+                // from the url, and reloading mid-switch flashes the shell.
+                { reload: newSettings.theme !== undefined }
+            );
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");
