@@ -1,6 +1,6 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
-import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
+import { ThumbnailUrls, ThumbnailSize, ElementType } from "../../shared/types";
 import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
@@ -10,6 +10,7 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
+import { useTargetElementType } from "./insert-hooks";
 
 interface HeightAndWidth {
     height: number;
@@ -133,11 +134,12 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const size = ThumbnailSize.SMALL;
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
+    const targetElementType = useTargetElementType();
 
     // Thumbnail id generation with queries is really unreliable
     // The standard Onshape API for it appears to be broken/bugged
     // So we use an undocumented alternate workflow where insertables returns an id
-    // However, the id can take a while to update, so we have to basically poll the endpoint while waiting for it to load
+    // However, the id can take a while to update, so we have to poll the endpoint while waiting for it to load
     const thumbnailIdQuery = useQuery({
         queryKey: ["thumbnail", "id", toElementApiPath(path), configuration],
         queryFn: async ({ signal }) => {
@@ -185,19 +187,23 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         enabled: !isFetchingConfiguration && thumbnailId !== undefined
     });
 
-    const heightAndWidth = getHeightAndWidth(size, 0.91);
+    const heightAndWidth = getHeightAndWidth(size, 0.7);
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
+        const action =
+            targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
-            <SectionError
-                title="Thumbnail generation timed out."
-                description="You can still insert the part normally."
-            />
+            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+                <SectionError
+                    title="The thumbnail timed out."
+                    description={`You can still ${action} the part.`}
+                />
+            </Center>
         );
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
-                <Loader size={3} />6
+                <Loader size={36} />
             </Center>
         );
     }

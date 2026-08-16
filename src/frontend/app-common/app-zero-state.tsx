@@ -21,6 +21,7 @@ interface ZeroStateProps {
  */
 function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
+
     return (
         <EmptyState
             icon={icon}
@@ -28,7 +29,8 @@ function ZeroState(props: ZeroStateProps): ReactNode {
             description={description}
             size="sm"
             className={className}
-            style={{ paddingTop: 24, paddingBottom: 24 }}
+            pt={24}
+            pb={24}
         >
             <EmptyState.Actions>{action}</EmptyState.Actions>
         </EmptyState>
