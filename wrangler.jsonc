@@ -16,13 +16,7 @@
     "observability": {
         "enabled": true
     },
-    /**
-     * Serve cacheable responses from in front of the Worker, so a repeat request
-     * for versioned library data never runs it. Everything user-specific or live
-     * sends `no-store` (see `setNoStore`); leaving `cross_version_cache` off
-     * scopes entries to a Worker version, so a deploy starts clean.
-     * https://developers.cloudflare.com/workers/cache/
-     */
+    // Use Workers Caching
     "cache": {
         "enabled": true
     },

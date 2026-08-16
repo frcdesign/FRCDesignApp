@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import {
     getApp,
-    setNoStore,
-    setVersionedCacheHeaders,
+    immutableCacheMiddleware,
+    noStoreMiddleware,
     validateCacheVersion
 } from "../app";
 import { getDb } from "../db";
@@ -22,6 +22,7 @@ export const configurationRoutes = getApp();
 configurationRoutes.get(
     "/configuration/:configurationId",
     validateCacheVersion,
+    immutableCacheMiddleware(),
     async (c) => {
         const configurationId = c.req.param("configurationId");
         if (!configurationId) {
@@ -46,14 +47,12 @@ configurationRoutes.get(
         const result: ConfigurationResult = {
             parameters: config.parameters
         };
-        // Keyed by microversion, so this body can never change under its url.
-        setVersionedCacheHeaders(c);
         return c.json(result);
     }
 );
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
-configurationRoutes.get("/unit-info", async (c) => {
+configurationRoutes.get("/unit-info", noStoreMiddleware, async (c) => {
     const onshapeApi = await c.var.getOnshapeApi();
     const instancePath = {
         documentId: c.req.query("documentId"),
@@ -79,8 +78,6 @@ configurationRoutes.get("/unit-info", async (c) => {
         lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
         realPrecision: 3
     };
-    // Unversioned, and specific to the caller's document.
-    setNoStore(c);
     return c.json(result);
 });
 

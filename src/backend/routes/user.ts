@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getApp, setNoStore } from "../app";
+import { getApp, noStoreMiddleware } from "../app";
 import { getDb } from "../db";
 import { users, libraries } from "../../shared/schema";
 import { LibraryId, ContextData, Theme, AccessLevel } from "../../shared/types";
@@ -8,7 +8,7 @@ import { env } from "process";
 export const userRoutes = getApp();
 
 /** GET /api/context-data */
-userRoutes.get("/context-data", async (c) => {
+userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
     const userId = await c.var.getUserId();
     const maxAccessLevel = await c.var.getAccessLevel();
     const db = getDb(c.env.DB);
@@ -39,7 +39,6 @@ userRoutes.get("/context-data", async (c) => {
     const currentAccessLevel =
         env.NODE_ENV === "production" ? AccessLevel.USER : maxAccessLevel;
 
-    setNoStore(c);
     return c.json({
         accessData: {
             maxAccessLevel,

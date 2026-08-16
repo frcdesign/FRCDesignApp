@@ -1,11 +1,6 @@
 import { HTTPException } from "hono/http-exception";
 import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
-import {
-    getApp,
-    noStoreMiddleware,
-    setNoStore,
-    type AppServicesFactory
-} from "./app";
+import { getApp, noStoreMiddleware, type AppServicesFactory } from "./app";
 import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
@@ -55,19 +50,14 @@ export function createApp(makeServices: AppServicesFactory) {
     app.route("/auth", authRoutes);
 
     // `/init` is the auth-gated entry point
-    app.on("GET", "/init", async (c) => {
+    app.on("GET", "/init", noStoreMiddleware, async (c) => {
         if (!(await isAuthenticated(c))) {
             const currentUrl = getRelativeUrl(c.req.url);
             const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
-            setNoStore(c);
             return c.redirect(signInUrl);
         }
-        // Forward to normal Cloudflare, copying the response so the gate's
-        // verdict can't be cached and replayed to a signed-out visitor.
-        const asset = await c.env.ASSETS.fetch(c.req.raw);
-        const response = new Response(asset.body, asset);
-        response.headers.set("Cache-Control", "private, no-store");
-        return response;
+        // Forward to normal Cloudflare
+        return c.env.ASSETS.fetch(c.req.raw);
     });
 
     app.onError((err, c) => {

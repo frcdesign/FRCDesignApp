@@ -73,43 +73,37 @@ export const validateCacheVersion = zValidator(
     z.object({ v: z.string().min(1) }),
     (result) => {
         if (!result.success) {
-            // Without one the caller would pin itself to whatever the immutable
-            // caches already hold, so refuse rather than serve it.
             throw new HTTPException(400, { message: "Missing cache version" });
         }
     }
 );
 
-/**
- * Caches a `?v=`-keyed response forever. Editor-only data must stay `private`
- * so a shared cache can't hand it to a user who isn't one.
- */
-export function setVersionedCacheHeaders(
-    c: AppContext,
-    visibility: "public" | "private" = "public"
-): void {
-    c.header(
-        "Cache-Control",
-        `${visibility}, max-age=${VERSIONED_CACHE_TTL}, immutable`
-    );
+type CacheVisibility = "public" | "private";
+
+export function immutableCacheControl(visibility: CacheVisibility): string {
+    return `${visibility}, max-age=${VERSIONED_CACHE_TTL}, immutable`;
 }
 
-/**
- * Opts a response out of every cache. Required on anything user-specific or
- * live: Workers Cache sits in front of this Worker and its key ignores cookies,
- * so an unmarked response would be replayed to whoever asks for the same url.
- */
-export function setNoStore(c: AppContext): void {
-    c.header("Cache-Control", "private, no-store");
+/** Caches a `?v=`-keyed response forever. */
+export function immutableCacheMiddleware(
+    visibility: CacheVisibility = "public"
+): MiddlewareHandler<AppContextEnv> {
+    return async (c, next) => {
+        await next();
+        // Only a response that succeeded — a miss must stay retryable.
+        if (c.res.ok) {
+            c.header("Cache-Control", immutableCacheControl(visibility));
+        }
+    };
 }
 
-/** {@link setNoStore} for a whole route group. */
+/** Opts a response out of every cache. */
 export const noStoreMiddleware: MiddlewareHandler<AppContextEnv> = async (
     c,
     next
 ) => {
     await next();
-    setNoStore(c);
+    c.header("Cache-Control", "private, no-store");
 };
 
 export function insertableRoute(): string {

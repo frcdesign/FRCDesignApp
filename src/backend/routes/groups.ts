@@ -1,5 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute, setNoStore } from "../app";
+import {
+    getApp,
+    getLibraryParam,
+    libraryRoute,
+    noStoreMiddleware
+} from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
 import { getDocument } from "../onshape-api/endpoints/documents";
@@ -58,9 +63,9 @@ groupRoutes.post(
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
+    noStoreMiddleware,
     async (c) => {
         const running = await isAnyJobRunning(c.env, getLibraryParam(c));
-        setNoStore(c);
         return c.json({ running });
     }
 );

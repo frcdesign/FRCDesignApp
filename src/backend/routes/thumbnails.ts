@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm";
 import {
     getApp,
     getInsertableParam,
+    immutableCacheControl,
+    immutableCacheMiddleware,
     insertableRoute,
-    setNoStore,
+    noStoreMiddleware,
     validateCacheVersion
 } from "../app";
 import { getInsertableElementPath } from "./insertables";
@@ -23,8 +25,6 @@ import { HTTPException } from "hono/http-exception";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
-
-const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
 function r2Key(size: string, elementId: string): string {
     return `thumbnails/${size}/${elementId}`;
@@ -63,7 +63,7 @@ export async function uploadThumbnails(
         await bucket.put(r2Key(size, elementPath.elementId), thumbnail, {
             httpMetadata: {
                 contentType: "image/gif",
-                cacheControl: `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+                cacheControl: immutableCacheControl("public")
             },
             customMetadata: { microversionId }
         });
@@ -126,6 +126,7 @@ export const thumbnailRoutes = getApp();
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
     validateCacheVersion,
+    immutableCacheMiddleware(),
     async (c) => {
         const size = c.req.param("size");
         const elementId = c.req.param("elementId");
@@ -135,37 +136,34 @@ thumbnailRoutes.get(
 
         const headers = new Headers();
         obj.writeHttpMetadata(headers);
-        headers.set(
-            "Cache-Control",
-            `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-        );
-
         return new Response(obj.body, { headers });
     }
 );
 
 /** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
-thumbnailRoutes.get("/thumbnail", async (c) => {
-    const onshapeApi = await c.var.getOnshapeApi();
-    const size =
-        (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
-    const thumbnailId = c.req.query("thumbnailId");
-    if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
+thumbnailRoutes.get(
+    "/thumbnail",
+    // Private: a preview of the caller's own document, unlike the library
+    // thumbnails in R2 above.
+    immutableCacheMiddleware("private"),
+    async (c) => {
+        const onshapeApi = await c.var.getOnshapeApi();
+        const size =
+            (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
+        const thumbnailId = c.req.query("thumbnailId");
+        if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
 
-    const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-    return new Response(buffer, {
-        headers: {
-            "Content-Type": "image/gif",
-            // Private: a preview of the caller's own document, unlike the
-            // library thumbnails in R2 above.
-            "Cache-Control": `private, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-        }
-    });
-});
+        const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
+        return new Response(buffer, {
+            headers: { "Content-Type": "image/gif" }
+        });
+    }
+);
 
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
+    noStoreMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {
@@ -180,8 +178,6 @@ thumbnailRoutes.get(
             elementPath,
             configuration
         );
-        // A live Onshape lookup for the caller's document.
-        setNoStore(c);
         return c.json({ thumbnailId });
     }
 );

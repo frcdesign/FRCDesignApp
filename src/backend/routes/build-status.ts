@@ -3,7 +3,7 @@ import {
     getApp,
     getLibraryParam,
     libraryRoute,
-    setVersionedCacheHeaders,
+    immutableCacheMiddleware,
     validateCacheVersion
 } from "../app";
 import { getDb } from "../db";
@@ -22,6 +22,7 @@ buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
     validateCacheVersion,
+    immutableCacheMiddleware("private"),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -104,8 +105,6 @@ buildStatusRoutes.get(
             };
         }
 
-        // Private: editors only, so a shared cache must not hand it to anyone.
-        setVersionedCacheHeaders(c, "private");
         return c.json({
             groups: groupsOut,
             insertables: insertablesOut

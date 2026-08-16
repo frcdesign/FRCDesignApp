@@ -31,6 +31,9 @@ describe("thumbnail serving", () => {
         );
         expect(res.status).toBe(200);
         expect(await res.text()).toBe("gif-bytes");
+        expect(res.headers.get("Cache-Control")).toBe(
+            "public, max-age=31536000, immutable"
+        );
     });
 
     it("GET /thumbnail/:size/:elementId 404s when the object is missing", async () => {
@@ -41,5 +44,7 @@ describe("thumbnail serving", () => {
             env
         );
         expect(res.status).toBe(404);
+        // A thumbnail uploaded later must not be shadowed by a cached miss.
+        expect(res.headers.get("Cache-Control")).toBeNull();
     });
 });

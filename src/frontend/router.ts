@@ -1,6 +1,6 @@
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { AppLoading } from "./app/app-loading";
+import { RootAppSpinner } from "./app/root-spinner";
 
 export const router = createRouter({
     routeTree,
@@ -8,9 +8,7 @@ export const router = createRouter({
     // Render misses at the root instead of inside `/app`, whose navbar needs a
     // library in the url to render at all.
     notFoundMode: "root",
-    // The root Suspense boundary falls back to nothing otherwise, so a pending
-    // match on the way in would paint a blank page.
-    defaultPendingComponent: AppLoading
+    defaultPendingComponent: RootAppSpinner
 });
 
 declare module "@tanstack/react-router" {

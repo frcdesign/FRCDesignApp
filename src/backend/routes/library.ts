@@ -3,7 +3,7 @@ import {
     getApp,
     getLibraryParam,
     libraryRoute,
-    setVersionedCacheHeaders,
+    immutableCacheMiddleware,
     validateCacheVersion
 } from "../app";
 import { getDb } from "../db";
@@ -17,13 +17,11 @@ export const libraryRoutes = getApp();
 libraryRoutes.get(
     "/library-data" + libraryRoute(),
     validateCacheVersion,
+    immutableCacheMiddleware(),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
-        // Only once the read succeeded, so a failure isn't cached forever.
-        const libraryOut = await getLibraryOut(db, libraryId);
-        setVersionedCacheHeaders(c);
-        return c.json(libraryOut);
+        return c.json(await getLibraryOut(db, libraryId));
     }
 );
 
@@ -31,6 +29,7 @@ libraryRoutes.get(
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
     validateCacheVersion,
+    immutableCacheMiddleware(),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -49,7 +48,6 @@ libraryRoutes.get(
             });
         }
 
-        setVersionedCacheHeaders(c);
         return c.json({ searchDb });
     }
 );
