@@ -69,15 +69,15 @@ const NO_STORE = "private, no-store";
 
 export enum CachePolicy {
     /** Never stored, anywhere. */
-    NoCache = "no-cache",
+    NO_CACHE = "no-cache",
     /** Immutable, but kept out of shared caches. */
-    PrivateCache = "private",
+    PRIVATE_CACHE = "private",
     /** Immutable and the same for every caller. */
-    PublicCache = "public"
+    PUBLIC_CACHE = "public"
 }
 
 export function immutableCacheControl(
-    policy: CachePolicy.PrivateCache | CachePolicy.PublicCache
+    policy: CachePolicy.PRIVATE_CACHE | CachePolicy.PUBLIC_CACHE
 ): string {
     return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
 }
@@ -91,10 +91,10 @@ interface CacheOptions {
 
 /** Declares how a route's response may be cached, and enforces what that takes. */
 export function cacheMiddleware(
-    policy: CachePolicy = CachePolicy.NoCache,
+    policy: CachePolicy = CachePolicy.NO_CACHE,
     options: CacheOptions = {}
 ): MiddlewareHandler<AppContextEnv> {
-    if (policy === CachePolicy.NoCache) {
+    if (policy === CachePolicy.NO_CACHE) {
         return async (c, next) => {
             await next();
             c.header("Cache-Control", NO_STORE);

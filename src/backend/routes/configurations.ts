@@ -16,7 +16,7 @@ export const configurationRoutes = getApp();
 /** GET /api/configuration/:configurationId?v=:microversionId */
 configurationRoutes.get(
     "/configuration/:configurationId",
-    cacheMiddleware(CachePolicy.PublicCache),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const configurationId = c.req.param("configurationId");
         if (!configurationId) {

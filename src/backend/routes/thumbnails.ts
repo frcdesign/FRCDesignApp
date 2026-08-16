@@ -62,7 +62,7 @@ export async function uploadThumbnails(
         await bucket.put(r2Key(size, elementPath.elementId), thumbnail, {
             httpMetadata: {
                 contentType: "image/gif",
-                cacheControl: immutableCacheControl(CachePolicy.PublicCache)
+                cacheControl: immutableCacheControl(CachePolicy.PUBLIC_CACHE)
             },
             customMetadata: { microversionId }
         });
@@ -124,7 +124,7 @@ export const thumbnailRoutes = getApp();
 /** GET /api/thumbnail/:size/:elementId?v=:microversionId — static from R2 */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
-    cacheMiddleware(CachePolicy.PublicCache),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const size = c.req.param("size");
         const elementId = c.req.param("elementId");
@@ -141,7 +141,7 @@ thumbnailRoutes.get(
 /** GET /api/thumbnail?size=X&thumbnailId=Y&v=:microversionId — live from Onshape */
 thumbnailRoutes.get(
     "/thumbnail",
-    cacheMiddleware(CachePolicy.PublicCache),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const size =
@@ -160,7 +160,7 @@ thumbnailRoutes.get(
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
     // Its url names an immutable version, so there is no `?v=` to bust.
-    cacheMiddleware(CachePolicy.PublicCache, { versioned: false }),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {

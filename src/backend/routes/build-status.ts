@@ -21,7 +21,7 @@ export const buildStatusRoutes = getApp();
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
-    cacheMiddleware(CachePolicy.PrivateCache),
+    cacheMiddleware(CachePolicy.PRIVATE_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);

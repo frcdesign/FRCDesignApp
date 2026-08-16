@@ -32,7 +32,7 @@ libraryRoutes.get(
 /** GET /api/library-data/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/library-data" + libraryRoute(),
-    cacheMiddleware(CachePolicy.PublicCache),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -43,7 +43,7 @@ libraryRoutes.get(
 /** GET /api/search-db/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
-    cacheMiddleware(CachePolicy.PublicCache),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
