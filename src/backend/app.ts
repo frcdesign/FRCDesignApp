@@ -52,17 +52,6 @@ export function libraryRoute(): string {
     return "/library/:libraryId";
 }
 
-/** Rejects unknown libraries before a handler runs. */
-export const validateLibraryParam = zValidator(
-    "param",
-    z.object({ libraryId: z.enum(LibraryId) }),
-    (result) => {
-        if (!result.success) {
-            throw new HTTPException(400, { message: "Invalid libraryId" });
-        }
-    }
-);
-
 export function getLibraryParam(c: AppContext): LibraryId {
     const libraryId = c.req.param("libraryId");
     const parsed = z.enum(LibraryId).safeParse(libraryId);
@@ -77,17 +66,16 @@ const VERSIONED_CACHE_TTL = 365 * 24 * 3600;
 
 /**
  * Validates the `?v=` cache version — a library's cache version or an element's
- * microversion, depending on the route. No handler reads it, but a request
- * without one pins itself to whatever the immutable caches below already hold,
- * so warn rather than fail.
+ * microversion, depending on the route.
  */
 export const validateCacheVersion = zValidator(
     "query",
-    z.object({ v: z.string().optional() }),
-    (result, c) => {
-        const version = result.success ? result.data.v : undefined;
-        if (!version) {
-            console.warn(`Missing cache version on ${c.req.path}`);
+    z.object({ v: z.string().min(1) }),
+    (result) => {
+        if (!result.success) {
+            // Without one the caller would pin itself to whatever the immutable
+            // caches already hold, so refuse rather than serve it.
+            throw new HTTPException(400, { message: "Missing cache version" });
         }
     }
 );

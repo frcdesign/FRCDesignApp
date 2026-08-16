@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
     TEST_GROUP_ID,
     TEST_PART_STUDIO_ID,
@@ -27,7 +27,7 @@ describe("library routes", () => {
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/library-data/library/${TEST_LIBRARY_ID}`,
+            `/api/library-data/library/${TEST_LIBRARY_ID}?v=1`,
             jsonRequest("GET"),
             env
         );
@@ -47,7 +47,7 @@ describe("library routes", () => {
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/search-db/library/${TEST_LIBRARY_ID}`,
+            `/api/search-db/library/${TEST_LIBRARY_ID}?v=1`,
             jsonRequest("GET"),
             env
         );
@@ -75,25 +75,20 @@ describe("library routes", () => {
         }
     });
 
-    it("warns when a request omits the cache version", async () => {
-        await seedTestData(db);
-        const app = createTestApp();
-        const warn = vi
-            .spyOn(console, "warn")
-            .mockImplementation(() => undefined);
+    it.each(["library-data", "search-db"])(
+        "rejects a %s request with no cache version",
+        async (path) => {
+            await seedTestData(db);
+            const app = createTestApp();
 
-        const res = await app.request(
-            `/api/library-data/library/${TEST_LIBRARY_ID}`,
-            jsonRequest("GET"),
-            env
-        );
-
-        expect(res.status).toBe(200);
-        expect(warn).toHaveBeenCalledWith(
-            expect.stringContaining("Missing cache version")
-        );
-        warn.mockRestore();
-    });
+            const res = await app.request(
+                `/api/${path}/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("GET"),
+                env
+            );
+            expect(res.status).toBe(400);
+        }
+    );
 
     it("rejects an unknown library", async () => {
         const app = createTestApp();

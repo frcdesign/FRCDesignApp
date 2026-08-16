@@ -4,8 +4,7 @@ import {
     getLibraryParam,
     libraryRoute,
     setVersionedCacheHeaders,
-    validateCacheVersion,
-    validateLibraryParam
+    validateCacheVersion
 } from "../app";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -22,7 +21,6 @@ export const buildStatusRoutes = getApp();
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     validateCacheVersion,
     async (c) => {
         const libraryId = getLibraryParam(c);

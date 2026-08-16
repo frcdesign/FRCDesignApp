@@ -33,7 +33,7 @@ describe("GET /build-status", () => {
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
         const res = await createTestApp().request(
-            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
             { method: "GET" },
             env
         );
@@ -64,7 +64,7 @@ describe("GET /build-status", () => {
         await seedPartStudio(db);
 
         const res = await createTestApp().request(
-            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
             { method: "GET" },
             env
         );

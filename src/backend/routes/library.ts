@@ -4,8 +4,7 @@ import {
     getLibraryParam,
     libraryRoute,
     setVersionedCacheHeaders,
-    validateCacheVersion,
-    validateLibraryParam
+    validateCacheVersion
 } from "../app";
 import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
@@ -17,7 +16,6 @@ export const libraryRoutes = getApp();
 /** GET /api/library-data/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/library-data" + libraryRoute(),
-    validateLibraryParam,
     validateCacheVersion,
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -32,7 +30,6 @@ libraryRoutes.get(
 /** GET /api/search-db/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
-    validateLibraryParam,
     validateCacheVersion,
     async (c) => {
         const libraryId = getLibraryParam(c);

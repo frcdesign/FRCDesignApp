@@ -1,11 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import {
-    getApp,
-    getLibraryParam,
-    libraryRoute,
-    setNoStore,
-    validateLibraryParam
-} from "../app";
+import { getApp, getLibraryParam, libraryRoute, setNoStore } from "../app";
 import { getDb } from "../db";
 import { getSessionId } from "../auth";
 import { getDocument } from "../onshape-api/endpoints/documents";
@@ -31,7 +25,6 @@ const reloadGroupsQuery = z.object({
 groupRoutes.post(
     "/reload-groups" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     zValidator("query", reloadGroupsQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -65,7 +58,6 @@ groupRoutes.post(
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const running = await isAnyJobRunning(c.env, getLibraryParam(c));
         setNoStore(c);
@@ -77,7 +69,6 @@ groupRoutes.get(
 groupRoutes.post(
     "/set-element-visibility" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = await c.req.json<{
@@ -117,7 +108,6 @@ groupRoutes.post(
 groupRoutes.post(
     "/sort-group-alphabetically" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = await c.req.json<{
@@ -142,7 +132,6 @@ groupRoutes.post(
 groupRoutes.post(
     "/group-order" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = await c.req.json<{ groupOrder: string[] }>();
@@ -168,7 +157,6 @@ groupRoutes.post(
 groupRoutes.post(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const libraryId = getLibraryParam(c);
@@ -239,7 +227,6 @@ groupRoutes.post(
 groupRoutes.delete(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
-    validateLibraryParam,
     async (c) => {
         const libraryId = getLibraryParam(c);
         const groupId = c.req.query("groupId");

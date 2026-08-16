@@ -1,11 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import {
-    getApp,
-    getLibraryParam,
-    libraryRoute,
-    setNoStore,
-    validateLibraryParam
-} from "../app";
+import { getApp, getLibraryParam, libraryRoute, setNoStore } from "../app";
 import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
@@ -49,62 +43,53 @@ async function getFavorites(
 /**
  * Gets the list of a user's favorites.
  */
-favoriteRoutes.get(
-    "/favorites" + libraryRoute(),
-    validateLibraryParam,
-    async (c) => {
-        const userId = await c.var.getUserId();
-        const libraryId = getLibraryParam(c);
-        const db = getDb(c.env.DB);
-        setNoStore(c);
-        return c.json(await getFavorites(db, userId, libraryId));
-    }
-);
+favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
+    const userId = await c.var.getUserId();
+    const libraryId = getLibraryParam(c);
+    const db = getDb(c.env.DB);
+    setNoStore(c);
+    return c.json(await getFavorites(db, userId, libraryId));
+});
 
 /**
  * Creates a new favorite.
  */
-favoriteRoutes.post(
-    "/favorites" + libraryRoute(),
-    validateLibraryParam,
-    async (c) => {
-        const libraryId = getLibraryParam(c);
-        const userId = await c.var.getUserId();
-        const insertableId = c.req.query("insertableId");
-        const favoriteId = c.req.query("id");
-        if (!insertableId)
-            return c.json({ error: "insertableId required" }, 400);
-        if (!favoriteId) return c.json({ error: "id required" }, 400);
+favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
+    const libraryId = getLibraryParam(c);
+    const userId = await c.var.getUserId();
+    const insertableId = c.req.query("insertableId");
+    const favoriteId = c.req.query("id");
+    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
+    if (!favoriteId) return c.json({ error: "id required" }, 400);
 
-        const db = getDb(c.env.DB);
+    const db = getDb(c.env.DB);
 
-        await db.insert(users).values({ id: userId }).onConflictDoNothing();
+    await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
-        const existingCount = await db
-            .select({ sortOrder: favorites.sortOrder })
-            .from(favorites)
-            .where(
-                and(
-                    eq(favorites.userId, userId),
-                    eq(favorites.libraryId, libraryId)
-                )
+    const existingCount = await db
+        .select({ sortOrder: favorites.sortOrder })
+        .from(favorites)
+        .where(
+            and(
+                eq(favorites.userId, userId),
+                eq(favorites.libraryId, libraryId)
             )
-            .all();
+        )
+        .all();
 
-        await db
-            .insert(favorites)
-            .values({
-                id: favoriteId,
-                userId,
-                libraryId,
-                insertableId,
-                sortOrder: existingCount.length
-            })
-            .onConflictDoNothing();
+    await db
+        .insert(favorites)
+        .values({
+            id: favoriteId,
+            userId,
+            libraryId,
+            insertableId,
+            sortOrder: existingCount.length
+        })
+        .onConflictDoNothing();
 
-        return c.json({ success: true });
-    }
-);
+    return c.json({ success: true });
+});
 
 /**
  * Deletes  a user's favorites.
@@ -126,25 +111,21 @@ favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
 });
 
 /** POST /api/favorite-order/library/:libraryId */
-favoriteRoutes.post(
-    "/favorite-order" + libraryRoute(),
-    validateLibraryParam,
-    async (c) => {
-        const body = await c.req.json<{ favoriteOrder: string[] }>();
+favoriteRoutes.post("/favorite-order" + libraryRoute(), async (c) => {
+    const body = await c.req.json<{ favoriteOrder: string[] }>();
 
-        const db = getDb(c.env.DB);
-        await Promise.all(
-            body.favoriteOrder.map((id, i) =>
-                db
-                    .update(favorites)
-                    .set({ sortOrder: i })
-                    .where(eq(favorites.id, id))
-            )
-        );
+    const db = getDb(c.env.DB);
+    await Promise.all(
+        body.favoriteOrder.map((id, i) =>
+            db
+                .update(favorites)
+                .set({ sortOrder: i })
+                .where(eq(favorites.id, id))
+        )
+    );
 
-        return c.json({ success: true });
-    }
-);
+    return c.json({ success: true });
+});
 
 /** POST /api/default-configuration/:favoriteId */
 favoriteRoutes.post("/default-configuration/:favoriteId", async (c) => {
