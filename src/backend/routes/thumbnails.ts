@@ -21,6 +21,7 @@ import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
 import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
@@ -147,7 +148,11 @@ thumbnailRoutes.get(
         const size =
             (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
         const thumbnailId = c.req.query("thumbnailId");
-        if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
+        if (!thumbnailId)
+            return c.json(
+                { error: "thumbnailId required" },
+                HttpStatus.BAD_REQUEST
+            );
 
         const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
         return new Response(buffer, {
@@ -201,7 +206,9 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
         }
 
         const thumbnails = await uploadThumbnails(
@@ -248,7 +255,9 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Group not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Group not found"
+            });
         }
 
         const instancePath: InstancePath = {

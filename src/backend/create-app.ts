@@ -1,4 +1,5 @@
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { users } from "../shared/schema";
@@ -99,14 +100,17 @@ export function createApp(makeServices: AppServicesFactory) {
                     error: "Onshape rate limit reached. Please try again shortly.",
                     retryAfterSeconds: err.retryAfterSeconds
                 },
-                429
+                HttpStatus.TOO_MANY_REQUESTS
             );
         }
         if (err instanceof HTTPException) {
             return err.getResponse();
         }
         console.error(err);
-        return c.json({ error: "Internal Server Error" }, 500);
+        return c.json(
+            { error: "Internal Server Error" },
+            HttpStatus.INTERNAL_SERVER_ERROR
+        );
     });
 
     return app;

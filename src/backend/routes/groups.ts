@@ -7,6 +7,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
+import { HttpStatus } from "http-status-ts";
 import {
     isAnyJobRunning,
     isReloadRunning,
@@ -178,7 +179,7 @@ groupRoutes.post(
                     message: "Failed to find the specified document.",
                     isError: true
                 },
-                422
+                HttpStatus.UNPROCESSABLE_ENTITY
             );
         }
 
@@ -202,7 +203,7 @@ groupRoutes.post(
                     message: "Document has already been added to library.",
                     isError: true
                 },
-                422
+                HttpStatus.UNPROCESSABLE_ENTITY
             );
         }
 
@@ -230,7 +231,11 @@ groupRoutes.delete(
     async (c) => {
         const libraryId = getLibraryParam(c);
         const groupId = c.req.query("groupId");
-        if (!groupId) return c.json({ error: "groupId required" }, 400);
+        if (!groupId)
+            return c.json(
+                { error: "groupId required" },
+                HttpStatus.BAD_REQUEST
+            );
 
         const db = getDb(c.env.DB);
 

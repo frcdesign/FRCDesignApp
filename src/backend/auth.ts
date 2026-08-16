@@ -1,3 +1,4 @@
+import { HttpStatus } from "http-status-ts";
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { OAuthApi } from "./onshape-api/onshape-api";
 import { type AppContext, getApp } from "./app";
@@ -13,7 +14,7 @@ const SESSION_TTL = 30 * 24 * 3600; // 30 days
 export function getSessionId(c: AppContext): string {
     const sessionId = getCookie(c, SESSION_COOKIE);
     if (!sessionId) {
-        throw new HTTPException(401, {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
             message: "Failed to find a valid session"
         });
     }
@@ -112,7 +113,7 @@ authRoutes.get("/sign-in", async (c) => {
     }
 
     if (!redirectUrl) {
-        throw new HTTPException(400, {
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
             message: "Failed to find valid redirectUrl"
         });
     }
@@ -171,7 +172,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
     }
 
     if (!search.code || session.state !== search.state) {
-        throw new HTTPException(401, {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
             message: "Invalid response from Onshape"
         });
     }
@@ -275,7 +276,7 @@ async function getTokens(
 ): Promise<AuthTokens> {
     const raw = await kv.get(`tokens:${sessionId}`);
     if (!raw) {
-        throw new HTTPException(401, {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
             message: "Failed to find valid auth tokens to use"
         });
     }
