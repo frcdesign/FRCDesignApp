@@ -71,10 +71,7 @@ export function useJobStatus(): boolean {
 
 type AccessDataUpdate = (data: AccessData) => void;
 
-/**
- * Optimistically patches the cached access data. No loader reads it, so the
- * patch alone re-renders everything showing it.
- */
+/** Optimistically patches the cached access data, which re-renders its readers. */
 export function updateAccessData(update: AccessDataUpdate): void {
     queryClient.setQueryData(accessDataQueryKey(), getQueryUpdater(update));
 }

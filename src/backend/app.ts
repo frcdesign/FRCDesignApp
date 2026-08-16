@@ -3,7 +3,6 @@ import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
-import { zValidator } from "@hono/zod-validator";
 import { HTTPException } from "hono/http-exception";
 
 export interface AppBindings {
@@ -24,6 +23,7 @@ interface AppVariables {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
+    isAuthenticated: () => Promise<boolean>;
 }
 
 export interface AppContextEnv {
@@ -40,6 +40,7 @@ export interface AppServices {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
+    isAuthenticated: () => Promise<boolean>;
 }
 
 export type AppServicesFactory = (c: AppContext) => AppServices;
@@ -62,49 +63,56 @@ export function getLibraryParam(c: AppContext): LibraryId {
 }
 
 /** A year — a versioned url's content never changes, only its version does. */
-const VERSIONED_CACHE_TTL = 365 * 24 * 3600;
+const IMMUTABLE_CACHE_TTL = 365 * 24 * 3600;
 
-/**
- * Validates the `?v=` cache version — a library's cache version or an element's
- * microversion, depending on the route.
- */
-export const validateCacheVersion = zValidator(
-    "query",
-    z.object({ v: z.string().min(1) }),
-    (result) => {
-        if (!result.success) {
+const NO_STORE = "private, no-store";
+
+export enum CachePolicy {
+    /** Never stored, anywhere. */
+    NoCache = "no-cache",
+    /** Immutable, but kept out of shared caches. */
+    PrivateCache = "private",
+    /** Immutable and the same for every caller. */
+    PublicCache = "public"
+}
+
+export function immutableCacheControl(
+    policy: CachePolicy.PrivateCache | CachePolicy.PublicCache
+): string {
+    return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
+}
+
+const cacheVersionSchema = z.object({ v: z.string().min(1) });
+
+interface CacheOptions {
+    /** Pass false only when the url is immutable without a `?v=`. */
+    versioned?: boolean;
+}
+
+/** Declares how a route's response may be cached, and enforces what that takes. */
+export function cacheMiddleware(
+    policy: CachePolicy = CachePolicy.NoCache,
+    options: CacheOptions = {}
+): MiddlewareHandler<AppContextEnv> {
+    if (policy === CachePolicy.NoCache) {
+        return async (c, next) => {
+            await next();
+            c.header("Cache-Control", NO_STORE);
+        };
+    }
+
+    const cacheControl = immutableCacheControl(policy);
+    const versioned = options.versioned ?? true;
+
+    return async (c, next) => {
+        if (versioned && !cacheVersionSchema.safeParse(c.req.query()).success) {
             throw new HTTPException(400, { message: "Missing cache version" });
         }
-    }
-);
-
-type CacheVisibility = "public" | "private";
-
-export function immutableCacheControl(visibility: CacheVisibility): string {
-    return `${visibility}, max-age=${VERSIONED_CACHE_TTL}, immutable`;
-}
-
-/** Caches a `?v=`-keyed response forever. */
-export function immutableCacheMiddleware(
-    visibility: CacheVisibility = "public"
-): MiddlewareHandler<AppContextEnv> {
-    return async (c, next) => {
         await next();
-        // Only a response that succeeded — a miss must stay retryable.
-        if (c.res.ok) {
-            c.header("Cache-Control", immutableCacheControl(visibility));
-        }
+        // A miss must stay retryable, so only store what succeeded.
+        c.header("Cache-Control", c.res.ok ? cacheControl : NO_STORE);
     };
 }
-
-/** Opts a response out of every cache. */
-export const noStoreMiddleware: MiddlewareHandler<AppContextEnv> = async (
-    c,
-    next
-) => {
-    await next();
-    c.header("Cache-Control", "private, no-store");
-};
 
 export function insertableRoute(): string {
     return "/insertable/:insertableId";

@@ -1,9 +1,6 @@
 import { ReactNode } from "react";
 
-/**
- * Router-wide fallback while a match loads. Like RootCrash it renders above the
- * root component, so it must not use Mantine — there is no provider yet.
- */
+/** Router-wide fallback. Renders above the root component, so it must not use Mantine. */
 export function RootAppSpinner(): ReactNode {
     return (
         <div

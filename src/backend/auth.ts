@@ -24,11 +24,7 @@ function userIdKey(sessionId: string): string {
     return `user-id:${sessionId}`;
 }
 
-/**
- * Returns the caller's Onshape user id, memoized in KV by session. A session
- * belongs to one user for its whole life, so the lookup — an Onshape round trip
- * — only has to happen once rather than on every user-scoped request.
- */
+/** Returns the caller's Onshape user id, memoized in KV by session. */
 export async function getCachedUserId(c: AppContext): Promise<string> {
     const key = userIdKey(getSessionId(c));
 

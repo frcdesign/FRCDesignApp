@@ -36,6 +36,18 @@ describe("thumbnail serving", () => {
         );
     });
 
+    it("does not demand a version from a url that is already immutable", async () => {
+        const app = createTestApp();
+        const res = await app.request(
+            "/api/thumbnail-id/d/doc/v/ver/e/elem",
+            jsonRequest("GET"),
+            env
+        );
+        // The mock refuses the Onshape call, so this only proves the request
+        // reached the handler rather than being rejected for a missing `?v=`.
+        expect(res.status).not.toBe(400);
+    });
+
     it("GET /thumbnail/:size/:elementId 404s when the object is missing", async () => {
         const app = createTestApp();
         const res = await app.request(
@@ -45,6 +57,6 @@ describe("thumbnail serving", () => {
         );
         expect(res.status).toBe(404);
         // A thumbnail uploaded later must not be shadowed by a cached miss.
-        expect(res.headers.get("Cache-Control")).toBeNull();
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 });

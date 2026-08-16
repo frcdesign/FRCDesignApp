@@ -1,11 +1,10 @@
 import { eq } from "drizzle-orm";
 import {
+    CachePolicy,
+    cacheMiddleware,
     getApp,
     getLibraryParam,
-    immutableCacheMiddleware,
-    libraryRoute,
-    noStoreMiddleware,
-    validateCacheVersion
+    libraryRoute
 } from "../app";
 import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
@@ -14,13 +13,10 @@ import { HTTPException } from "hono/http-exception";
 
 export const libraryRoutes = getApp();
 
-/**
- * GET /api/library-version/library/:libraryId — the version keying the `?v=` on
- * the routes below. Needs no user, so it stays off the per-user boot path.
- */
+/** GET /api/library-version/library/:libraryId — keys the `?v=` below. */
 libraryRoutes.get(
     "/library-version" + libraryRoute(),
-    noStoreMiddleware,
+    cacheMiddleware(),
     async (c) => {
         const db = getDb(c.env.DB);
         const library = await db
@@ -36,8 +32,7 @@ libraryRoutes.get(
 /** GET /api/library-data/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/library-data" + libraryRoute(),
-    validateCacheVersion,
-    immutableCacheMiddleware(),
+    cacheMiddleware(CachePolicy.PublicCache),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -48,8 +43,7 @@ libraryRoutes.get(
 /** GET /api/search-db/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
-    validateCacheVersion,
-    immutableCacheMiddleware(),
+    cacheMiddleware(CachePolicy.PublicCache),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);

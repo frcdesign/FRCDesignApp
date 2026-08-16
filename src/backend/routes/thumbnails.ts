@@ -1,12 +1,11 @@
 import { eq } from "drizzle-orm";
 import {
+    CachePolicy,
+    cacheMiddleware,
     getApp,
     getInsertableParam,
     immutableCacheControl,
-    immutableCacheMiddleware,
-    insertableRoute,
-    noStoreMiddleware,
-    validateCacheVersion
+    insertableRoute
 } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
@@ -63,7 +62,7 @@ export async function uploadThumbnails(
         await bucket.put(r2Key(size, elementPath.elementId), thumbnail, {
             httpMetadata: {
                 contentType: "image/gif",
-                cacheControl: immutableCacheControl("public")
+                cacheControl: immutableCacheControl(CachePolicy.PublicCache)
             },
             customMetadata: { microversionId }
         });
@@ -125,8 +124,7 @@ export const thumbnailRoutes = getApp();
 /** GET /api/thumbnail/:size/:elementId?v=:microversionId — static from R2 */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
-    validateCacheVersion,
-    immutableCacheMiddleware(),
+    cacheMiddleware(CachePolicy.PublicCache),
     async (c) => {
         const size = c.req.param("size");
         const elementId = c.req.param("elementId");
@@ -140,12 +138,10 @@ thumbnailRoutes.get(
     }
 );
 
-/** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
+/** GET /api/thumbnail?size=X&thumbnailId=Y&v=:microversionId — live from Onshape */
 thumbnailRoutes.get(
     "/thumbnail",
-    // Private: a preview of the caller's own document, unlike the library
-    // thumbnails in R2 above.
-    immutableCacheMiddleware("private"),
+    cacheMiddleware(CachePolicy.PublicCache),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const size =
@@ -163,7 +159,8 @@ thumbnailRoutes.get(
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
-    noStoreMiddleware,
+    // Its url names an immutable version, so there is no `?v=` to bust.
+    cacheMiddleware(CachePolicy.PublicCache, { versioned: false }),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {

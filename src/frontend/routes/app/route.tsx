@@ -44,9 +44,8 @@ function App() {
                 scrolls; the fixed header covers the top of this scrollbar,
                 keeping it within the body. */}
             <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
-                {/* A pending match suspends, and the router's only other
-                    boundary is at the root — without one here, loading a
-                    library would unmount the navbar and blank the page. */}
+                {/* Without a boundary here, a pending match suspends past
+                    the navbar to the root and blanks the page. */}
                 <Suspense
                     fallback={<SectionLoading title="Loading library..." />}
                 >

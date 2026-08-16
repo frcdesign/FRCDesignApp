@@ -125,11 +125,12 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
+    microversionId: string;
     configuration?: ParameterValues;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, configuration } = props;
+    const { path, microversionId, configuration } = props;
     const size = ThumbnailSize.SMALL;
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
@@ -163,10 +164,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 return;
             }
             return apiGetImage("/thumbnail", {
-                query: {
-                    size,
-                    thumbnailId
-                },
+                query: { size, thumbnailId },
+                cacheId: microversionId,
                 signal
             });
         },

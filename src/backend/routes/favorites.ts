@@ -1,10 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import {
-    getApp,
-    getLibraryParam,
-    libraryRoute,
-    noStoreMiddleware
-} from "../app";
+import { cacheMiddleware, getApp, getLibraryParam, libraryRoute } from "../app";
 import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
@@ -50,7 +45,7 @@ async function getFavorites(
  */
 favoriteRoutes.get(
     "/favorites" + libraryRoute(),
-    noStoreMiddleware,
+    cacheMiddleware(),
     async (c) => {
         const userId = await c.var.getUserId();
         const libraryId = getLibraryParam(c);

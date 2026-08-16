@@ -11,10 +11,7 @@ const DEFAULT_ACCESS_DATA: AccessData = {
     currentAccessLevel: AccessLevel.USER
 };
 
-/**
- * The caller's access, which nothing waits for. It arrives a beat after first
- * paint, so editor-only affordances appear then rather than holding the app.
- */
+/** The caller's access, which nothing waits for — editor affordances appear late. */
 export function useAccessData(): AccessData {
     return useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
 }

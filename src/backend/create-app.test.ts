@@ -67,8 +67,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        // Onshape's scheme becomes systemTheme; theme carries the user's choice,
-        // so the app paints the right colors without asking the server.
+        // Onshape's scheme becomes systemTheme; theme carries the user's choice.
         expect(location.searchParams.get("systemTheme")).toBe("light");
         expect(location.searchParams.get("theme")).toBe(Theme.DARK);
     });

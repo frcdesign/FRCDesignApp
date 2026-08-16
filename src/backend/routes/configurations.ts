@@ -1,10 +1,5 @@
 import { eq } from "drizzle-orm";
-import {
-    getApp,
-    immutableCacheMiddleware,
-    noStoreMiddleware,
-    validateCacheVersion
-} from "../app";
+import { CachePolicy, cacheMiddleware, getApp } from "../app";
 import { getDb } from "../db";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
@@ -21,8 +16,7 @@ export const configurationRoutes = getApp();
 /** GET /api/configuration/:configurationId?v=:microversionId */
 configurationRoutes.get(
     "/configuration/:configurationId",
-    validateCacheVersion,
-    immutableCacheMiddleware(),
+    cacheMiddleware(CachePolicy.PublicCache),
     async (c) => {
         const configurationId = c.req.param("configurationId");
         if (!configurationId) {
@@ -52,7 +46,7 @@ configurationRoutes.get(
 );
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
-configurationRoutes.get("/unit-info", noStoreMiddleware, async (c) => {
+configurationRoutes.get("/unit-info", cacheMiddleware(), async (c) => {
     const onshapeApi = await c.var.getOnshapeApi();
     const instancePath = {
         documentId: c.req.query("documentId"),

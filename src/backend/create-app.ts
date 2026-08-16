@@ -3,10 +3,10 @@ import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { users } from "../shared/schema";
 import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../shared/types";
-import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
+import { authRoutes, getSessionCompanyId } from "./auth";
 import {
+    cacheMiddleware,
     getApp,
-    noStoreMiddleware,
     type AppContext,
     type AppServicesFactory
 } from "./app";
@@ -29,11 +29,7 @@ function getRelativeUrl(requestUrl: string) {
     return pathname + search;
 }
 
-/**
- * Builds the url the caller resumes at, seeded with what the app has to know
- * to render: the library and theme they last used. Onshape sends the system
- * color scheme as `theme`, which the app reads as `systemTheme`.
- */
+/** Builds the url the caller resumes at, seeded with the library and theme they last used. */
 async function getEntryUrl(c: AppContext): Promise<string> {
     const db = getDb(c.env.DB);
     const user = await db
@@ -47,7 +43,8 @@ async function getEntryUrl(c: AppContext): Promise<string> {
     if (systemTheme !== null) {
         search.set("systemTheme", systemTheme);
     }
-    search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
+    const currentTheme = user?.theme ?? DEFAULT_SETTINGS.theme;
+    search.set("theme", currentTheme);
 
     const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
     return `/app/library/${libraryId}?${search.toString()}`;
@@ -66,6 +63,7 @@ export function createApp(makeServices: AppServicesFactory) {
         c.set("getOnshapeApi", services.getOnshapeApi);
         c.set("getUserId", services.getUserId);
         c.set("getAccessLevel", services.getAccessLevel);
+        c.set("isAuthenticated", services.isAuthenticated);
         await next();
     });
 
@@ -79,13 +77,12 @@ export function createApp(makeServices: AppServicesFactory) {
     app.route("/api", configurationRoutes);
     app.route("/api", buildStatusRoutes);
     // Per-request redirects carrying OAuth state; never reusable.
-    app.use("/auth/*", noStoreMiddleware);
+    app.use("/auth/*", cacheMiddleware());
     app.route("/auth", authRoutes);
 
-    // `/init` is the auth-gated entry point. It also picks the library to open,
-    // so the client never has to fetch a setting before it can route.
-    app.on("GET", "/init", noStoreMiddleware, async (c) => {
-        if (!(await isAuthenticated(c))) {
+    // `/init` is the auth-gated entry point.
+    app.on("GET", "/init", cacheMiddleware(), async (c) => {
+        if (!(await c.var.isAuthenticated())) {
             const currentUrl = getRelativeUrl(c.req.url);
             const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
             return c.redirect(signInUrl);

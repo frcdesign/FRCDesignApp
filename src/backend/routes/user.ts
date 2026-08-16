@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getApp, noStoreMiddleware } from "../app";
+import { cacheMiddleware, getApp } from "../app";
 import { getDb } from "../db";
 import { users } from "../../shared/schema";
 import {
@@ -12,7 +12,7 @@ import { env } from "process";
 export const userRoutes = getApp();
 
 /** GET /api/access-data */
-userRoutes.get("/access-data", noStoreMiddleware, async (c) => {
+userRoutes.get("/access-data", cacheMiddleware(), async (c) => {
     const maxAccessLevel = await c.var.getAccessLevel();
 
     // Always default to user in dev and the max in production

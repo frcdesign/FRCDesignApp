@@ -29,8 +29,7 @@ export const Route = createFileRoute("/app/library/$libraryId")({
                 params: { libraryId: DEFAULT_LIBRARY_ID }
             });
         }
-        // The group the user last had open is client state, so the entry
-        // redirect can't restore it; do it on the way into the library.
+        // Client state, so the entry redirect can't restore it.
         const { openGroupId } = getUiState();
         if (openGroupId && !restoredGroup) {
             restoredGroup = true;

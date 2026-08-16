@@ -94,8 +94,7 @@ function LibraryMenu(): ReactNode {
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
-    // Warm the versions the moment the menu opens, so picking one has nothing
-    // left to wait for.
+    // Warm the versions on open, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
         for (const libraryId of Object.values(LibraryId)) {
             void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
@@ -120,8 +119,8 @@ function LibraryMenu(): ReactNode {
                             if (libraryId === currentLibraryId) {
                                 return;
                             }
-                            // The url drives the display; the write-behind just
-                            // decides where `/init` sends the user next time.
+                            // Write-behind: the url displays it, this only
+                            // decides where `/init` lands next time.
                             saveSettings({ libraryId });
                             void navigate({
                                 to: "/app/library/$libraryId",

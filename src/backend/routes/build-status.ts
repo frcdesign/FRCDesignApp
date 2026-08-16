@@ -1,10 +1,10 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import {
+    CachePolicy,
+    cacheMiddleware,
     getApp,
     getLibraryParam,
-    libraryRoute,
-    immutableCacheMiddleware,
-    validateCacheVersion
+    libraryRoute
 } from "../app";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -21,8 +21,7 @@ export const buildStatusRoutes = getApp();
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
-    validateCacheVersion,
-    immutableCacheMiddleware("private"),
+    cacheMiddleware(CachePolicy.PrivateCache),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
