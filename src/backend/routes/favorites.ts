@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute } from "../app";
+import { cacheMiddleware, getApp, getLibraryParam, libraryRoute } from "../app";
 import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
@@ -44,12 +44,16 @@ async function getFavorites(
 /**
  * Gets the list of a user's favorites.
  */
-favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
-    const userId = await c.var.getUserId();
-    const libraryId = getLibraryParam(c);
-    const db = getDb(c.env.DB);
-    return c.json(await getFavorites(db, userId, libraryId));
-});
+favoriteRoutes.get(
+    "/favorites" + libraryRoute(),
+    cacheMiddleware(),
+    async (c) => {
+        const userId = await c.var.getUserId();
+        const libraryId = getLibraryParam(c);
+        const db = getDb(c.env.DB);
+        return c.json(await getFavorites(db, userId, libraryId));
+    }
+);
 
 /**
  * Creates a new favorite.

@@ -3,13 +3,14 @@ import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "../query-client";
 import {
     buildStatusQueryMatchKey,
-    contextDataQueryKey,
+    accessDataQueryKey,
     favoritesQueryKey,
     libraryQueryMatchKey,
+    libraryVersionQueryMatchKey,
     useJobStatusQuery
 } from "../queries";
 import { useLibraryId } from "./library";
-import { type ContextData, type LibraryId } from "../../shared/types";
+import { type AccessData, type LibraryId } from "../../shared/types";
 import { getQueryUpdater } from "../common/utils";
 
 /** Refetches the current user's favorites, which aren't version-keyed. */
@@ -27,7 +28,10 @@ export function useRefreshLibrary(): () => Promise<void> {
     const router = useRouter();
     const libraryId = useLibraryId();
     return useCallback(async () => {
-        await queryClient.refetchQueries({ queryKey: contextDataQueryKey() });
+        await queryClient.refetchQueries({
+            queryKey: libraryVersionQueryMatchKey()
+        });
+        await queryClient.refetchQueries({ queryKey: accessDataQueryKey() });
         await queryClient.invalidateQueries({
             queryKey: libraryQueryMatchKey()
         });
@@ -65,19 +69,9 @@ export function useJobStatus(): boolean {
     return running;
 }
 
-type ContextDataUpdate = (data: ContextData) => void;
+type AccessDataUpdate = (data: AccessData) => void;
 
-/** Optimistically patches the cached context data and re-runs the loaders. */
-export function useUpdateContextData(): (update: ContextDataUpdate) => void {
-    const router = useRouter();
-    return useCallback(
-        (update: ContextDataUpdate) => {
-            queryClient.setQueryData(
-                contextDataQueryKey(),
-                getQueryUpdater(update)
-            );
-            void router.invalidate();
-        },
-        [router]
-    );
+/** Optimistically patches the cached access data, which re-renders its readers. */
+export function updateAccessData(update: AccessDataUpdate): void {
+    queryClient.setQueryData(accessDataQueryKey(), getQueryUpdater(update));
 }

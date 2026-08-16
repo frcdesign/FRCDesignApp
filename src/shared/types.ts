@@ -70,21 +70,21 @@ export enum Theme {
     DARK = "dark"
 }
 
+/** User settings, which the entry redirect reads and seeds the app with. */
 export interface Settings {
     theme: Theme;
-    libraryId: LibraryId;
+}
+
+export interface SettingsUpdate {
+    theme?: Theme;
+    libraryId?: LibraryId;
 }
 
 export interface AccessData {
     maxAccessLevel: AccessLevel;
     currentAccessLevel: AccessLevel;
-    cacheVersion: number;
 }
 
-export interface ContextData {
-    accessData: AccessData;
-    settings: Settings;
-}
 export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;
     [ThumbnailSize.STANDARD]: string;
@@ -116,6 +116,8 @@ export enum MateLocation {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-    theme: Theme.SYSTEM,
-    libraryId: LibraryId.FRC_DESIGN_LIB
+    theme: Theme.SYSTEM
 };
+
+/** The library a user lands in before they have picked one. */
+export const DEFAULT_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;

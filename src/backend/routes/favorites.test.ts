@@ -49,6 +49,8 @@ describe("favorites routes", () => {
                 TEST_PART_STUDIO_ID,
                 TEST_ASSEMBLY_ID
             ]);
+            // Per-user, and Workers Cache keys ignore cookies.
+            expect(res.headers.get("Cache-Control")).toBe("private, no-store");
         });
 
         it("only returns the current user's favorites", async () => {

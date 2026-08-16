@@ -203,6 +203,8 @@ describe("GET /job-status", () => {
         );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ running });
+        // Polled for live state, so it must never be served from a cache.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 });
 

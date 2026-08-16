@@ -33,7 +33,7 @@ describe("GET /build-status", () => {
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
         const res = await createTestApp().request(
-            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
             { method: "GET" },
             env
         );
@@ -46,11 +46,25 @@ describe("GET /build-status", () => {
         );
     });
 
+    it("caches privately, since only editors may read it", async () => {
+        await seedPartStudio(db);
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=2`,
+            { method: "GET" },
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe(
+            "private, max-age=31536000, immutable"
+        );
+    });
+
     it("reports a never-loaded entity as null", async () => {
         await seedPartStudio(db);
 
         const res = await createTestApp().request(
-            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
             { method: "GET" },
             env
         );

@@ -29,7 +29,7 @@ describe("configuration routes", () => {
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/configuration/${TEST_PART_STUDIO_ID}`,
+            `/api/configuration/${TEST_PART_STUDIO_ID}?v=abc123`,
             jsonRequest("GET"),
             env
         );
@@ -42,7 +42,7 @@ describe("configuration routes", () => {
     it("GET /configuration/:id 404s for an unknown id", async () => {
         const app = createTestApp();
         const res = await app.request(
-            "/api/configuration/missing",
+            "/api/configuration/missing?v=abc123",
             jsonRequest("GET"),
             env
         );

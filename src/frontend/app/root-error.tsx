@@ -6,6 +6,7 @@ import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReloadGroupsButton } from "../settings/reload-groups-button";
+import { DEFAULT_LIBRARY_ID } from "../../shared/types";
 
 /**
  * Catch-all error state for when a route below the root fails to load.
@@ -51,7 +52,10 @@ export function NotFoundError(): ReactNode {
         <Button
             leftSection={<IconHome size={IconSize.MEDIUM} />}
             onClick={() => {
-                void navigate({ to: "/app" });
+                void navigate({
+                    to: "/app/library/$libraryId",
+                    params: { libraryId: DEFAULT_LIBRARY_ID }
+                });
             }}
         >
             Go home
