@@ -15,6 +15,7 @@ import { createAppTheme } from "../theme";
 import { getColorTheme } from "../api-utils/onshape-params";
 import { DEFAULT_SETTINGS, type Settings } from "../../shared/types";
 import { NotFoundError, RootCrash } from "../app/root-error";
+import { getUiState } from "../api-utils/ui-state";
 
 export const Route = createRootRoute({
     // Fetch the user's settings to theme the single app-wide MantineProvider, but
@@ -44,7 +45,7 @@ function RootComponent(): ReactNode {
     // pages outside the app (errors, license) fall back to the saved setting.
     const params = useParams({ strict: false });
 
-    const libraryId = params.libraryId ?? settings.libraryId;
+    const libraryId = params.libraryId ?? getUiState().libraryId;
     const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
     const colorTheme = getColorTheme(settings.theme, search.systemTheme);
 

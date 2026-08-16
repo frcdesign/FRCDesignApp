@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { users } from "../../shared/schema";
-import { AccessLevel, LibraryId, Theme } from "../../shared/types";
+import { AccessLevel, Theme } from "../../shared/types";
 import {
     TEST_USER_ID,
     createTestApp,
@@ -38,16 +38,7 @@ describe("user routes", () => {
                 maxAccessLevel: AccessLevel.ADMIN,
                 currentAccessLevel: AccessLevel.ADMIN
             },
-            settings: {
-                theme: Theme.SYSTEM,
-                libraryId: LibraryId.FRC_DESIGN_LIB
-            },
-            // Every library, so a switch keys its requests off the right version.
-            cacheVersions: {
-                [LibraryId.FRC_DESIGN_LIB]: 0,
-                [LibraryId.FTC_DESIGN_LIB]: 0,
-                [LibraryId.MKCAD]: 0
-            }
+            settings: { theme: Theme.SYSTEM }
         });
         // Per-user, and Workers Cache keys ignore cookies.
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
@@ -58,10 +49,7 @@ describe("user routes", () => {
 
         const res = await app.request(
             "/api/user-data",
-            jsonRequest("POST", {
-                theme: Theme.DARK,
-                libraryId: LibraryId.MKCAD
-            }),
+            jsonRequest("POST", { theme: Theme.DARK }),
             env
         );
         expect(res.status).toBe(200);
@@ -72,6 +60,5 @@ describe("user routes", () => {
             .where(eq(users.id, TEST_USER_ID))
             .get();
         expect(row?.theme).toBe(Theme.DARK);
-        expect(row?.libraryId).toBe(LibraryId.MKCAD);
     });
 });

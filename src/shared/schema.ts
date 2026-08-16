@@ -140,11 +140,7 @@ export const users = sqliteTable("users", {
     theme: text("theme")
         .$type<Theme>()
         .notNull()
-        .default(DEFAULT_SETTINGS.theme),
-    libraryId: text("library_id")
-        .$type<LibraryId>()
-        .notNull()
-        .default(DEFAULT_SETTINGS.libraryId)
+        .default(DEFAULT_SETTINGS.theme)
 });
 
 export const favorites = sqliteTable(

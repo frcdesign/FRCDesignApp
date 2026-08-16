@@ -3,9 +3,11 @@ import { queryClient } from "../../../../query-client";
 import {
     getFavoritesQuery,
     getLibraryQuery,
+    getLibraryVersionsQuery,
     getSearchDbQuery
 } from "../../../../queries";
 import { LibraryId } from "../../../../../shared/types";
+import { getUiState } from "../../../../api-utils/ui-state";
 
 function isLibraryId(libraryId: string): libraryId is LibraryId {
     return (Object.values(LibraryId) as string[]).includes(libraryId);
@@ -17,17 +19,21 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         parse: ({ libraryId }) => ({ libraryId: libraryId as LibraryId }),
         stringify: ({ libraryId }) => ({ libraryId })
     },
-    beforeLoad: ({ context, params }) => {
+    beforeLoad: ({ params }) => {
         if (!isLibraryId(params.libraryId)) {
             throw redirect({
                 to: "/app/library/$libraryId",
-                params: { libraryId: context.settings.libraryId }
+                params: { libraryId: getUiState().libraryId }
             });
         }
     },
-    loader: ({ context, params }) => {
+    loader: async ({ params }) => {
         const { libraryId } = params;
-        const cacheVersion = context.cacheVersions[libraryId] ?? 0;
+        // The only awaited fetch: everything below keys its url off the version.
+        const versions = await queryClient.ensureQueryData(
+            getLibraryVersionsQuery()
+        );
+        const cacheVersion = versions[libraryId] ?? 0;
         void queryClient.prefetchQuery(
             getLibraryQuery(libraryId, cacheVersion)
         );

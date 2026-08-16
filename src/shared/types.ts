@@ -72,7 +72,6 @@ export enum Theme {
 
 export interface Settings {
     theme: Theme;
-    libraryId: LibraryId;
 }
 
 export interface AccessData {
@@ -83,13 +82,10 @@ export interface AccessData {
 export interface ContextData {
     accessData: AccessData;
     settings: Settings;
-    /**
-     * Cache version per library, since the url (not the saved setting) decides
-     * which library is displayed. Requests key their `?v=` off the one for the
-     * library they're fetching.
-     */
-    cacheVersions: Record<LibraryId, number>;
 }
+
+/** Each library's cache version, which keys the `?v=` on its requests. */
+export type LibraryVersions = Record<LibraryId, number>;
 export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;
     [ThumbnailSize.STANDARD]: string;
@@ -121,6 +117,8 @@ export enum MateLocation {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-    theme: Theme.SYSTEM,
-    libraryId: LibraryId.FRC_DESIGN_LIB
+    theme: Theme.SYSTEM
 };
+
+/** The library shown until the user picks one; stored client-side. */
+export const DEFAULT_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;

@@ -13,6 +13,7 @@ import {
 } from "../../__test_utils__";
 import { getDb } from "../db";
 import { LibraryOut } from "../../shared/api-models";
+import { LibraryId } from "../../shared/types";
 
 const db = getDb(env.DB);
 
@@ -56,6 +57,27 @@ describe("library routes", () => {
         const body: { searchDb: string } = await res.json();
         expect(typeof body.searchDb).toBe("string");
         expect(body.searchDb.length).toBeGreaterThan(0);
+    });
+
+    it("GET /library-versions returns a version for every library", async () => {
+        await seedLibrary(db);
+        const app = createTestApp();
+
+        const res = await app.request(
+            "/api/library-versions",
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            versions: {
+                [LibraryId.FRC_DESIGN_LIB]: 0,
+                [LibraryId.FTC_DESIGN_LIB]: 0,
+                [LibraryId.MKCAD]: 0
+            }
+        });
+        // Must stay fresh: it is what busts every other library response.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 
     it("caches version-keyed responses immutably", async () => {

@@ -1,11 +1,12 @@
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { PageError } from "../app-common/app-zero-state";
 import { ReactNode } from "react";
-import { useLoaderData, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReloadGroupsButton } from "../settings/reload-groups-button";
+import { getUiState } from "../api-utils/ui-state";
 
 /**
  * Catch-all error state for when a route below the root fails to load.
@@ -47,15 +48,13 @@ export function RootCrash(): ReactNode {
 
 export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
-    // Root loader data, so this works even for urls that match nothing.
-    const { settings } = useLoaderData({ from: "__root__" });
     const homeButton = (
         <Button
             leftSection={<IconHome size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({
                     to: "/app/library/$libraryId",
-                    params: { libraryId: settings.libraryId }
+                    params: { libraryId: getUiState().libraryId }
                 });
             }}
         >

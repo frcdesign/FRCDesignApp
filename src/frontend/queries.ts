@@ -13,8 +13,8 @@ import {
     type LibraryOut
 } from "../shared/api-models";
 import { LibraryId } from "../shared/types";
-import { ContextData } from "../shared/types";
-import { useCacheVersion, useLibraryId } from "./api-utils/library";
+import { ContextData, type LibraryVersions } from "../shared/types";
+import { useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
@@ -55,6 +55,31 @@ export function useLibraryQuery() {
     const libraryId = useLibraryId();
     const cacheVersion = useCacheVersion();
     return useQuery(getLibraryQuery(libraryId, cacheVersion));
+}
+
+export function libraryVersionsQueryKey() {
+    return ["library-versions"];
+}
+
+/** Every library's cache version, which keys the `?v=` on library requests. */
+export function getLibraryVersionsQuery() {
+    return queryOptions<LibraryVersions>({
+        queryKey: libraryVersionsQueryKey(),
+        queryFn: () =>
+            apiGet("/library-versions").then(
+                (result: { versions: LibraryVersions }) => result.versions
+            ),
+        // Bumps arrive through the explicit refresh flows, which refetch this.
+        staleTime: Infinity
+    });
+}
+
+/** The displayed library's cache version, which keys its immutable responses. */
+export function useCacheVersion(): number {
+    const libraryId = useLibraryId();
+    // Loaded by the library route before anything reading this renders.
+    const { data } = useQuery(getLibraryVersionsQuery());
+    return data?.[libraryId] ?? 0;
 }
 
 export function contextDataQueryKey() {

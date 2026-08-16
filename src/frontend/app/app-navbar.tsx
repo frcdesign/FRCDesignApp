@@ -16,9 +16,8 @@ import { useNavigate } from "@tanstack/react-router";
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../settings/settings-menu";
 import { VendorMenu } from "../settings/vendor-filters";
-import { useUiState } from "../api-utils/ui-state";
+import { updateUiState, useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
-import { useSaveSettings } from "../settings/settings";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
@@ -89,7 +88,6 @@ function FrcDesignBookIcon(): ReactNode {
 
 function LibraryMenu(): ReactNode {
     const currentLibraryId = useLibraryId();
-    const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
     return (
@@ -110,9 +108,9 @@ function LibraryMenu(): ReactNode {
                             if (libraryId === currentLibraryId) {
                                 return;
                             }
-                            // The url drives the display; saving just makes the
-                            // choice stick the next time the app is opened.
-                            saveSettings({ libraryId });
+                            // The url drives the display; storing it just makes
+                            // the choice stick the next time the app is opened.
+                            updateUiState({ libraryId });
                             void navigate({
                                 to: "/app/library/$libraryId",
                                 params: { libraryId }

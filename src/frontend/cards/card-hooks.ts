@@ -13,11 +13,10 @@ import {
 import {
     toInsertablePath,
     toLibraryPath,
-    useCacheVersion,
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { buildStatusQueryKey } from "../queries";
+import { buildStatusQueryKey, useCacheVersion } from "../queries";
 import { useRefreshLibrary } from "../api-utils/refresh";
 import { patchQuery } from "../common/utils";
 import { useCloseBuildCard } from "./build-status";

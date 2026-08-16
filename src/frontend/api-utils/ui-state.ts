@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { Vendor } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, LibraryId, Vendor } from "../../shared/types";
 
 // Increment this when a breaking change is made to the schema
-const LATEST_VERSION = 2;
+const LATEST_VERSION = 3;
 
 const VendorType = z.enum(Object.values(Vendor));
 
@@ -13,6 +13,7 @@ const UiStateSchema = z.object({
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().default(""),
+    libraryId: z.enum(LibraryId).default(DEFAULT_LIBRARY_ID),
     openGroupId: z.string().optional(),
     fasten: z.boolean().default(true)
 });
@@ -37,8 +38,25 @@ function setUiState(uiState: UiState) {
         JSON.stringify(parsed) !== JSON.stringify(uiStateCache)
     ) {
         uiStateCache = parsed;
-        window.localStorage.setItem("uiState", JSON.stringify(parsed));
+        writeStorage(JSON.stringify(parsed));
         subscribers.forEach((callback) => callback());
+    }
+}
+
+/** Blocked or partitioned storage must not break the app, only its memory. */
+function readStorage(): string | null {
+    try {
+        return window.localStorage.getItem("uiState");
+    } catch {
+        return null;
+    }
+}
+
+function writeStorage(value: string): void {
+    try {
+        window.localStorage.setItem("uiState", value);
+    } catch {
+        // Nothing to do; the in-memory cache still serves this session.
     }
 }
 
@@ -48,7 +66,7 @@ function setUiState(uiState: UiState) {
 export function getUiState(): UiState {
     if (uiStateCache) return uiStateCache;
 
-    const raw = window.localStorage.getItem("uiState");
+    const raw = readStorage();
     // Nothing in storage, initialize with defaults
     if (!raw) {
         uiStateCache = UiStateSchema.parse({});
@@ -63,8 +81,7 @@ export function getUiState(): UiState {
     if (uiStateCache.version < LATEST_VERSION) {
         // Always reset to defaults for simplicity
         // Updated version will get set in the next version
-        window.localStorage.removeItem("uiState");
-        return UiStateSchema.parse({});
+        uiStateCache = UiStateSchema.parse({});
     }
     return uiStateCache;
 }

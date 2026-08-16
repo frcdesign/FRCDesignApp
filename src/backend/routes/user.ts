@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { getApp, noStoreMiddleware } from "../app";
 import { getDb } from "../db";
-import { users, libraries } from "../../shared/schema";
-import { LibraryId, ContextData, Theme, AccessLevel } from "../../shared/types";
+import { users } from "../../shared/schema";
+import { ContextData, Theme, AccessLevel } from "../../shared/types";
 import { env } from "process";
 
 export const userRoutes = getApp();
@@ -15,25 +15,8 @@ userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
 
     let user = await db.select().from(users).where(eq(users.id, userId)).get();
     if (!user) {
-        user = {
-            id: userId,
-            theme: Theme.SYSTEM,
-            libraryId: LibraryId.FRC_DESIGN_LIB
-        };
+        user = { id: userId, theme: Theme.SYSTEM };
     }
-
-    // Every library's version, not just the saved one: the url picks the library.
-    const libs = await db
-        .select({ id: libraries.id, cacheVersion: libraries.cacheVersion })
-        .from(libraries)
-        .all();
-
-    const cacheVersions = Object.fromEntries(
-        Object.values(LibraryId).map((libraryId) => [
-            libraryId,
-            libs.find((lib) => lib.id === libraryId)?.cacheVersion ?? 0
-        ])
-    ) as Record<LibraryId, number>;
 
     // Always default to user in dev and the max in production
     const currentAccessLevel =
@@ -44,11 +27,7 @@ userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
             maxAccessLevel,
             currentAccessLevel
         },
-        settings: {
-            theme: user.theme,
-            libraryId: user.libraryId
-        },
-        cacheVersions
+        settings: { theme: user.theme }
     } satisfies ContextData);
 });
 
@@ -56,7 +35,7 @@ userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
 userRoutes.post("/user-data", async (c) => {
     const userId = await c.var.getUserId();
 
-    const body = await c.req.json<{ theme?: Theme; libraryId?: LibraryId }>();
+    const body = await c.req.json<{ theme?: Theme }>();
 
     const db = getDb(c.env.DB);
 
