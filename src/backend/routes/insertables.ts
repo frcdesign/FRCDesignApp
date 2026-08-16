@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -31,36 +32,9 @@ import {
 import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
-import { addBuildIssue, clearBuildIssue } from "../../shared/build-checker";
+import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
 
 export const insertableRoutes = getApp();
-
-/** POST /api/toggle-open-composite/insertable/:insertableId */
-insertableRoutes.post(
-    "/toggle-open-composite" + insertableRoute(),
-    requireEditorMiddleware,
-    async (c) => {
-        const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ isOpenComposite: boolean }>();
-
-        const db = getDb(c.env.DB);
-        const row = await db
-            .select({ libraryId: insertables.libraryId })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-        if (!row)
-            throw new HTTPException(404, { message: "Insertable not found" });
-
-        await db
-            .update(insertables)
-            .set({ isOpenComposite: body.isOpenComposite })
-            .where(eq(insertables.id, insertableId));
-
-        await bumpLibraryVersion(db, row.libraryId);
-        return c.json({ success: true });
-    }
-);
 
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
 insertableRoutes.post(
@@ -78,7 +52,9 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!insertableRow)
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
 
         let fastenInfo = null;
         if (body.supportsFasten) {
@@ -96,7 +72,7 @@ insertableRoutes.post(
                 .get();
 
             if (!insertable) {
-                throw new HTTPException(404, {
+                throw new HTTPException(HttpStatus.NOT_FOUND, {
                     message: "Insertable not found"
                 });
             }
@@ -134,13 +110,16 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
+                isOpenComposite: insertables.isOpenComposite,
                 buildIssues: insertables.buildIssues
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
         if (!row)
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
 
         // Index before committing anything: if this throws, the flag stays off
         // rather than being enabled with nothing indexed behind it. The error
@@ -197,6 +176,7 @@ async function indexPartNumbers(
         versionId: string;
         elementId: string;
         elementType: ElementType;
+        isOpenComposite: boolean;
     }
 ): Promise<PartNumberResult> {
     const sourcePath: ElementPath = {
@@ -215,7 +195,8 @@ async function indexPartNumbers(
         client,
         sourcePath,
         insertable.elementType,
-        configRow?.parameters ?? []
+        configRow?.parameters ?? [],
+        insertable.isOpenComposite
     );
 }
 
@@ -255,7 +236,7 @@ insertableRoutes.post(
             .get();
 
         if (!insertable) {
-            throw new HTTPException(404, {
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
                 message: "Insertable not found"
             });
         }
@@ -330,7 +311,9 @@ insertableRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
         }
 
         const sourcePath: ElementPath = {
@@ -380,7 +363,7 @@ insertableRoutes.post(
 
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
-            throw new HTTPException(400, {
+            throw new HTTPException(HttpStatus.BAD_REQUEST, {
                 message: `${row.name} does not support insert and fasten.`
             });
         }
@@ -422,7 +405,9 @@ export async function getInsertableElementPath(
         .get();
 
     if (!row) {
-        throw new HTTPException(404, { message: "Insertable not found" });
+        throw new HTTPException(HttpStatus.NOT_FOUND, {
+            message: "Insertable not found"
+        });
     }
 
     return {

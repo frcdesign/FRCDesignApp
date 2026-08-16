@@ -1,8 +1,9 @@
-import { useLoaderData } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { LibraryId } from "../../shared/types";
 
-export function useLibraryId() {
-    return useLoaderData({ from: "/app" }).settings.libraryId;
+/** Returns the library being displayed, which the url is the source of truth for. */
+export function useLibraryId(): LibraryId {
+    return useParams({ from: "/app/library/$libraryId" }).libraryId;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {

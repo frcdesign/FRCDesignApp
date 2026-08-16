@@ -16,6 +16,10 @@
     "observability": {
         "enabled": true
     },
+    // Use Workers Caching
+    "cache": {
+        "enabled": true
+    },
     "upload_source_maps": true,
     "compatibility_flags": ["nodejs_compat"],
     /**
@@ -81,6 +85,9 @@
      */
     "env": {
         "cert": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",
@@ -117,8 +124,16 @@
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
                 "NODE_ENV": "development"
             }
+            // Requires the Standard Usage Model; rejected on the Free plan
+            // (error 100328). Re-enable once on a paid plan.
+            // "limits": {
+            //     "subrequests": 500000
+            // }
         },
         "production": {
+            "cache": {
+                "enabled": true
+            },
             "d1_databases": [
                 {
                     "binding": "DB",
@@ -155,6 +170,11 @@
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "production"
             }
+            // Requires the Standard Usage Model; rejected on the Free plan
+            // (error 100328). Re-enable once on a paid plan.
+            // "limits": {
+            //     "subrequests": 500000
+            // }
         }
     }
 }

@@ -3,8 +3,10 @@ import {
     Button,
     Group,
     Input,
+    Loader,
     Menu,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
 import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
 import { IconSize, PrimaryColor } from "../common/style-constants";
@@ -16,8 +18,12 @@ import { openSettingsMenu } from "../settings/settings-menu";
 import { VendorMenu } from "../settings/vendor-filters";
 import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
+import { RequireAccessLevel } from "../api-utils/access-level";
 import { useSaveSettings } from "../settings/settings";
+import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
+import { queryClient } from "../query-client";
+import { getLibraryVersionQuery } from "../queries";
 
 /**
  * Provides top-level navigation for the app. A single colored control row holds
@@ -37,8 +43,34 @@ export function AppNavbar(): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
             {leftGroup}
-            <SettingsButton />
+            <Group wrap="nowrap" gap="xs">
+                <JobIndicator />
+                <SettingsButton />
+            </Group>
         </Group>
+    );
+}
+
+/** Editor-only spinner shown while a library-load job is running. */
+function JobIndicator(): ReactNode {
+    return (
+        <RequireAccessLevel>
+            <RunningJobLoader />
+        </RequireAccessLevel>
+    );
+}
+
+function RunningJobLoader(): ReactNode {
+    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
+    const jobRunning = useJobStatus();
+    if (!jobRunning) return null;
+    return (
+        <Tooltip
+            withArrow
+            label="The library is being loaded from Onshape in the background"
+        >
+            <Loader size={IconSize.MEDIUM} color="white" />
+        </Tooltip>
     );
 }
 
@@ -58,30 +90,45 @@ function FrcDesignBookIcon(): ReactNode {
 }
 
 function LibraryMenu(): ReactNode {
-    const libraryId = useLibraryId();
+    const currentLibraryId = useLibraryId();
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
+    // Warm the versions on open, so picking one has nothing left to wait for.
+    const prefetchVersions = () => {
+        for (const libraryId of Object.values(LibraryId)) {
+            void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
+        }
+    };
+
     return (
-        <Menu position="bottom-start" withinPortal>
+        <Menu position="bottom-start" withinPortal onOpen={prefetchVersions}>
             <Menu.Target>
                 <Button
                     variant="default"
                     rightSection={<IconChevronDown size={IconSize.SMALL} />}
                 >
-                    {getLibraryName(libraryId)}
+                    {getLibraryName(currentLibraryId)}
                 </Button>
             </Menu.Target>
             <Menu.Dropdown>
-                {Object.values(LibraryId).map((lib) => (
+                {Object.values(LibraryId).map((libraryId) => (
                     <Menu.Item
-                        key={lib}
+                        key={libraryId}
                         onClick={() => {
-                            saveSettings({ libraryId: lib });
-                            void navigate({ to: "/app/groups" });
+                            if (libraryId === currentLibraryId) {
+                                return;
+                            }
+                            // Write-behind: the url displays it, this only
+                            // decides where `/init` lands next time.
+                            saveSettings({ libraryId });
+                            void navigate({
+                                to: "/app/library/$libraryId",
+                                params: { libraryId }
+                            });
                         }}
                     >
-                        {getLibraryName(lib)}
+                        {getLibraryName(libraryId)}
                     </Menu.Item>
                 ))}
             </Menu.Dropdown>

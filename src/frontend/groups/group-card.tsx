@@ -3,12 +3,10 @@ import {
     IconArrowRight,
     IconEye,
     IconEyeOff,
-    IconList,
-    IconSortAZ,
     IconTrash
 } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
-import { useLoaderData, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
@@ -26,15 +24,15 @@ import {
 } from "../cards/card-components";
 import { AddGroupItem } from "./add-group-menu";
 import { GroupStatusBadge } from "../cards/build-status";
+import { useRefreshLibrary } from "../api-utils/refresh";
 import {
     libraryQueryKey,
-    libraryQueryMatchKey,
     useBuildStatusQuery,
+    useCacheVersion,
     useLibraryQuery
 } from "../queries";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
-import { getAppErrorHandler } from "../api-utils/errors";
 
 interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
@@ -46,19 +44,25 @@ interface GroupCardProps extends PropsWithChildren {
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();
+    const libraryId = useLibraryId();
     return (
         <ItemRow
             onClick={() => {
                 void navigate({
-                    to: "/app/groups/$groupId",
-                    params: { groupId: group.id }
+                    to: "/app/library/$libraryId/groups/$groupId",
+                    params: { libraryId, groupId: group.id }
                 });
             }}
             left={
                 <CardTitle
                     title={group.name}
                     thumbnailUrls={group.thumbnailUrls}
-                    buildStatusBadge={<GroupStatusBadge groupId={group.id} />}
+                    buildStatusBadge={
+                        <GroupStatusBadge
+                            groupId={group.id}
+                            groupName={group.name}
+                        />
+                    }
                 />
             }
             rightSection={<IconArrowRight size={IconSize.SMALL} />}
@@ -78,10 +82,7 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
         <>
             <OpenDocumentItems path={group.path} />
             <AdminOptionsSubmenu>
-                <GroupAdminContextMenu
-                    groupId={group.id}
-                    groupName={group.name}
-                />
+                <GroupAdminContextMenu groupId={group.id} />
             </AdminOptionsSubmenu>
         </>
     );
@@ -89,12 +90,10 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
 
 interface GroupAdminContextMenuProps {
     groupId: string;
-    groupName: string;
 }
 
 export function GroupAdminContextMenu({
-    groupId,
-    groupName
+    groupId
 }: GroupAdminContextMenuProps): ReactNode {
     const isHome = useIsHome();
     const groupStatus = useBuildStatusQuery().data?.groups[groupId];
@@ -119,11 +118,6 @@ export function GroupAdminContextMenu({
             />
             <HideAllElementsMenuItem
                 insertableOrder={groupStatus.insertableOrder}
-            />
-            <ToggleSortOrderMenuItem
-                groupId={groupId}
-                groupName={groupName}
-                sortAlphabetically={groupStatus.sortAlphabetically}
             />
             <ReloadThumbnailMenuItem id={groupId} isGroup={true} />
             {isHome && (
@@ -171,51 +165,9 @@ function HideAllElementsMenuItem({
     );
 }
 
-interface ToggleSortOrderMenuItemProps {
-    groupId: string;
-    groupName: string;
-    sortAlphabetically: boolean;
-}
-
-function ToggleSortOrderMenuItem({
-    groupId,
-    groupName,
-    sortAlphabetically
-}: ToggleSortOrderMenuItemProps): ReactNode {
-    const libraryId = useLibraryId();
-
-    const mutation = useMutation({
-        mutationKey: ["sort-group-alphabetically"],
-        mutationFn: async () =>
-            apiPost("/sort-group-alphabetically" + toLibraryPath(libraryId), {
-                body: { groupId, sortAlphabetically: !sortAlphabetically }
-            }),
-        onError: getAppErrorHandler(`Failed to update group ${groupName}.`),
-        onSettled: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
-    });
-
-    return (
-        <Menu.Item
-            leftSection={
-                sortAlphabetically ? (
-                    <IconList size={IconSize.SMALL} />
-                ) : (
-                    <IconSortAZ size={IconSize.SMALL} />
-                )
-            }
-            onClick={() => mutation.mutate()}
-        >
-            {sortAlphabetically ? "Use tab order" : "Sort alphabetically"}
-        </Menu.Item>
-    );
-}
-
 function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
     const libraryId = useLibraryId();
+    const refreshLibrary = useRefreshLibrary();
 
     const mutation = useMutation({
         mutationKey: ["delete-group"],
@@ -223,11 +175,9 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
             apiDelete("/group" + toLibraryPath(libraryId), {
                 query: { groupId }
             }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
+        // Deleting cascade-removes insertables (and their favorites), so refresh
+        // the whole view, not just the library list.
+        onSuccess: refreshLibrary
     });
 
     return (
@@ -243,8 +193,9 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
 
 function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
+    const refreshLibrary = useRefreshLibrary();
+    const key = libraryQueryKey(libraryId, cacheVersion);
 
     return useMutation({
         mutationKey: ["group-order"],
@@ -252,9 +203,10 @@ function useSetGroupOrderMutation() {
             apiPost("/group-order" + toLibraryPath(libraryId), {
                 body: { groupOrder }
             }),
-        onMutate: (newOrder: string[]) => {
+        onMutate: async (newOrder: string[]) => {
+            await queryClient.cancelQueries({ queryKey: key });
             queryClient.setQueryData(
-                libraryQueryKey(libraryId, cacheVersion),
+                key,
                 getQueryUpdater((data: LibraryOut) => {
                     data.groupOrder = newOrder;
                     return data;
@@ -263,9 +215,8 @@ function useSetGroupOrderMutation() {
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
-            void queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-        }
+        },
+        // Reconciled (or rolled back on error) by the onSettled library refetch.
+        onSettled: refreshLibrary
     });
 }

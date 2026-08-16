@@ -1,7 +1,7 @@
+import { useAccessData } from "../api-utils/access-level";
 import { IconHeartBroken } from "@tabler/icons-react";
 import { HeartIconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import { filterInsertables } from "../search/filter";
 import {
     getFavoriteForInsertable,
@@ -26,7 +26,7 @@ import { hasEditorAccess } from "../../shared/types";
  */
 export function FavoritesList(): ReactNode {
     const uiState = useUiState()[0];
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
@@ -80,7 +80,7 @@ export function FavoritesList(): ReactNode {
                 isFavorite: true
             },
             favoriteInsertableIds,
-            hasEditorAccess(loaderData.accessData.currentAccessLevel)
+            hasEditorAccess(accessData.currentAccessLevel)
         );
 
         filteredInsertables = searchResults.hits

@@ -6,20 +6,14 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
+import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { queryClient } from "../../query-client";
-import {
-    getFavoritesQuery,
-    getContextDataQuery,
-    getLibraryQuery,
-    getSearchDbQuery
-} from "../../queries";
 import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
+import { SectionLoading } from "../../app-common/app-zero-state";
 import { useMessageListener } from "../../api-utils/messages";
 import { RootAppError } from "../../app/root-error";
 import { PrimaryColor } from "../../common/style-constants";
-import { type ContextData } from "../../../shared/types";
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -28,28 +22,6 @@ export const Route = createFileRoute("/app")({
     },
     search: {
         middlewares: [retainSearchParams(true)]
-    },
-    beforeLoad: async () => {
-        // The auth-gated entry redirect lives in the `/init` route; here we just
-        // expose the access level to child loaders/components.
-        const contextData = await queryClient.ensureQueryData(
-            getContextDataQuery()
-        );
-        return contextData;
-    },
-    loader: async ({ context }): Promise<ContextData> => {
-        const accessData = context.accessData;
-        const libraryId = context.settings.libraryId;
-        await Promise.all([
-            queryClient.prefetchQuery(
-                getLibraryQuery(libraryId, accessData.cacheVersion)
-            ),
-            queryClient.prefetchQuery(
-                getSearchDbQuery(libraryId, accessData.cacheVersion)
-            ),
-            queryClient.prefetchQuery(getFavoritesQuery(libraryId))
-        ]);
-        return context;
     },
     errorComponent: RootAppError
 });
@@ -72,7 +44,13 @@ function App() {
                 scrolls; the fixed header covers the top of this scrollbar,
                 keeping it within the body. */}
             <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
-                <Outlet />
+                {/* Without a boundary here, a pending match suspends past
+                    the navbar to the root and blanks the page. */}
+                <Suspense
+                    fallback={<SectionLoading title="Loading library..." />}
+                >
+                    <Outlet />
+                </Suspense>
                 <TanStackRouterDevtools />
             </AppShell.Main>
         </AppShell>

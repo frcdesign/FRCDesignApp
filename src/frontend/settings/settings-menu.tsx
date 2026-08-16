@@ -1,20 +1,20 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { DEFAULT_SETTINGS } from "../../shared/types";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { FontWeight } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { type ContextData, Theme } from "../../shared/types";
+import { Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { useSaveSettings } from "./settings";
-import { capitalize, getQueryUpdater } from "../common/utils";
+import { capitalize } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
-import { RequireAccessLevel } from "../api-utils/access-level";
+import { RequireAccessLevel, useAccessData } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { contextDataQueryKey } from "../queries";
+import { updateAccessData } from "../api-utils/refresh";
 import { AppSelect } from "../app-common/app-select";
 import { makeSelectOption, useSelectOptions } from "./select-utils";
-import { queryClient } from "../query-client";
 import { ReloadGroupsButton } from "./reload-groups-button";
 
 export function openSettingsMenu() {
@@ -40,11 +40,11 @@ function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
 }
 
 function SettingsMenuContent(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
 
     let adminSettings: ReactNode = null;
     // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
-    if (hasEditorAccess(loaderData.accessData.maxAccessLevel)) {
+    if (hasEditorAccess(accessData.maxAccessLevel)) {
         adminSettings = (
             <>
                 <Title order={6} mt="md">
@@ -65,14 +65,20 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
+    const search = useSearch({ from: "/app" });
+    const navigate = useNavigate({ from: "/app" });
     const saveSettings = useSaveSettings();
 
     return (
         <>
             <ThemeSelect
-                theme={loaderData.settings.theme}
-                onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
+                theme={search.theme ?? DEFAULT_SETTINGS.theme}
+                onThemeSelect={(theme) => {
+                    // The url renders it; the write-behind decides what the
+                    // entry redirect seeds next time.
+                    saveSettings({ theme });
+                    void navigate({ search: (prev) => ({ ...prev, theme }) });
+                }}
             />
             <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
@@ -123,10 +129,9 @@ function AdminSettings(): ReactNode {
 }
 
 function AccessLevelSelect(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
-    const router = useRouter();
+    const accessData = useAccessData();
 
-    const { maxAccessLevel, currentAccessLevel } = loaderData.accessData;
+    const { maxAccessLevel, currentAccessLevel } = accessData;
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
     const accessLevels = useSelectOptions(
         useMemo(
@@ -145,15 +150,9 @@ function AccessLevelSelect(): ReactNode {
             option={makeSelectOption(currentAccessLevel, capitalize)}
             options={accessLevels}
             onSelect={(value) => {
-                queryClient.setQueryData(
-                    contextDataQueryKey(),
-                    getQueryUpdater((data: ContextData) => {
-                        data.accessData.currentAccessLevel =
-                            value as AccessLevel;
-                        return data;
-                    })
-                );
-                void router.invalidate();
+                updateAccessData((data) => {
+                    data.currentAccessLevel = value as AccessLevel;
+                });
             }}
         />
     );

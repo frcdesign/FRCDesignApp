@@ -14,6 +14,7 @@ import {
 } from "../../__test_utils__";
 import { getDb } from "../db";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";
+import * as JobTracker from "../load/job-tracker";
 
 const db = getDb(env.DB);
 
@@ -141,6 +142,10 @@ describe("POST /reload-groups", () => {
         "triggers one library workflow with forceReload %s",
         async (_label, query, forceReload) => {
             await seedGroup(db, TEST_GROUP_ID);
+            vi.spyOn(JobTracker, "isReloadRunning").mockResolvedValue(false);
+            const trackSpy = vi
+                .spyOn(JobTracker, "trackJob")
+                .mockResolvedValue();
             const createSpy = vi
                 .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
                 .mockResolvedValue({ id: "wf" } as never);
@@ -158,8 +163,49 @@ describe("POST /reload-groups", () => {
                 sessionId: "test-session",
                 forceReload
             });
+            // The new run's instance id is tracked for the running-job checks.
+            expect(trackSpy).toHaveBeenCalledWith(
+                expect.anything(),
+                TEST_LIBRARY_ID,
+                "reload",
+                "wf"
+            );
         }
     );
+
+    it("skips creating a workflow when a reload is already running", async () => {
+        await seedGroup(db, TEST_GROUP_ID);
+        vi.spyOn(JobTracker, "isReloadRunning").mockResolvedValue(true);
+        const createSpy = vi.spyOn(env.LOAD_LIBRARY_WORKFLOW, "create");
+
+        const res = await createTestApp().request(
+            `/api/reload-groups/library/${TEST_LIBRARY_ID}`,
+            sessionRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ status: "already-running" });
+        expect(createSpy).not.toHaveBeenCalled();
+    });
+});
+
+describe("GET /job-status", () => {
+    beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
+
+    it.each([true, false])("reports running=%s", async (running) => {
+        vi.spyOn(JobTracker, "isAnyJobRunning").mockResolvedValue(running);
+
+        const res = await createTestApp().request(
+            `/api/job-status/library/${TEST_LIBRARY_ID}`,
+            sessionRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ running });
+        // Polled for live state, so it must never be served from a cache.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
 });
 
 describe("POST /group", () => {
@@ -175,6 +221,7 @@ describe("POST /group", () => {
         const createSpy = vi
             .spyOn(env.ADD_GROUP_WORKFLOW, "create")
             .mockResolvedValue({ id: "wf" } as never);
+        const trackSpy = vi.spyOn(JobTracker, "trackJob").mockResolvedValue();
 
         const res = await createTestApp().request(
             `/api/group/library/${TEST_LIBRARY_ID}`,
@@ -196,6 +243,12 @@ describe("POST /group", () => {
             sessionId: "test-session",
             selectedGroupId: TEST_GROUP_ID
         });
+        expect(trackSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            TEST_LIBRARY_ID,
+            "add-group",
+            "wf"
+        );
 
         // The route (the workflow is mocked here) doesn't compute or write sort
         // order itself anymore — only the existing group exists, untouched.

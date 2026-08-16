@@ -1,6 +1,8 @@
 import { useMatch } from "@tanstack/react-router";
 import { produce } from "immer";
 import { Dispatch, SyntheticEvent } from "react";
+import { queryClient } from "../query-client";
+import { QueryKey } from "@tanstack/react-query";
 
 export { createSearchParams } from "../../shared/url-params";
 export type {
@@ -37,8 +39,25 @@ export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
 }
 
 /**
+ * A helper which can be used to make an optimistic update to a query with the given queryKey.
+ */
+export async function patchQuery<T>(
+    queryKey: QueryKey,
+    recipe: (draft: T) => void
+): Promise<void> {
+    await queryClient.cancelQueries({ queryKey });
+    const queryUpdater = getQueryUpdater<T>(recipe);
+    queryClient.setQueryData(queryKey, queryUpdater);
+}
+
+/**
  * Returns true if the current route is the home route, and false if it is a document route.
  */
 export function useIsHome(): boolean {
-    return useMatch({ from: "/app/groups/", shouldThrow: false }) !== undefined;
+    return (
+        useMatch({
+            from: "/app/library/$libraryId/",
+            shouldThrow: false
+        }) !== undefined
+    );
 }

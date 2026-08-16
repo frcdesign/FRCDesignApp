@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { insertables } from "../../shared/schema";
-import { AccessLevel, ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
+import { ElementType } from "../../shared/types";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,
@@ -47,32 +47,6 @@ describe("insertable routes", () => {
     });
 
     afterEach(() => vi.restoreAllMocks());
-
-    it("POST /toggle-open-composite toggles the flag (admin only)", async () => {
-        await seedPartStudio(db);
-
-        const res = await createTestApp().request(
-            `/api/toggle-open-composite/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { isOpenComposite: true }),
-            env
-        );
-        expect(res.status).toBe(200);
-
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.isOpenComposite).toBe(true);
-    });
-
-    it("POST /toggle-open-composite is forbidden without admin access", async () => {
-        await seedPartStudio(db);
-        const res = await createTestApp({
-            accessLevel: AccessLevel.USER
-        }).request(
-            `/api/toggle-open-composite/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { isOpenComposite: true }),
-            env
-        );
-        expect(res.status).toBe(403);
-    });
 
     it("POST /toggle-insert-and-fasten can clear fasten support", async () => {
         await seedPartStudio(db);

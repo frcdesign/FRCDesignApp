@@ -36,6 +36,7 @@ export function createAppTheme(libraryId: LibraryId) {
     return createTheme({
         colors: { frcGreen },
         primaryColor: getLibraryColor(libraryId),
-        autoContrast: true
+        autoContrast: true,
+        cursorType: "pointer"
     });
 }

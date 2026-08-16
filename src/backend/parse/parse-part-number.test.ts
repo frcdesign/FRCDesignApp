@@ -12,8 +12,10 @@ import {
 } from "../../shared/configuration-models";
 import { enumParam } from "../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../shared/types";
-import { BuildIssueType } from "../../shared/build-checker";
+import { BuildIssueType } from "../../shared/build-issues";
 import {
+    computeOpenComposite,
+    evaluateParts,
     normalizePartNumber,
     parseAssemblyPartNumber,
     parsePartNumbers,
@@ -76,44 +78,115 @@ describe("normalizePartNumber", () => {
     });
 });
 
-describe("parsePartStudioParts", () => {
-    it("returns the part number of the studio's part", () => {
+describe("evaluateParts", () => {
+    it("indexes the sole part of a normal single-part studio", () => {
         expect(
-            parsePartStudioParts([{ partId: "JHD", partNumber: "217-2600" }])
-        ).toEqual({ partNumber: "217-2600", hasMultipleParts: false });
-    });
-
-    it("skips parts without a part number", () => {
-        expect(
-            parsePartStudioParts([
-                { partId: "JHD" },
-                { partId: "JHE", partNumber: "  217-2601  " }
-            ]).partNumber
-        ).toBe("217-2601");
-    });
-
-    it("reports the first part number and that there was more than one part", () => {
-        expect(
-            parsePartStudioParts([
-                { partId: "JHD", partNumber: "217-2600" },
-                { partId: "JHE", partNumber: "217-2601" }
+            evaluateParts([
+                { partId: "p", partNumber: "PN-1", bodyType: "solid" }
             ])
-        ).toEqual({ partNumber: "217-2600", hasMultipleParts: true });
+        ).toEqual({
+            hasMultipleParts: false,
+            isOpenComposite: false,
+            partToUse: { partId: "p", partNumber: "PN-1", bodyType: "solid" }
+        });
     });
 
-    it("returns null when no part carries a part number", () => {
+    it("flags multiple parts when a non-composite studio has more than one", () => {
         expect(
-            parsePartStudioParts([
-                { partId: "JHD" },
-                { partId: "JHE", partNumber: "  " }
-            ]).partNumber
-        ).toBeNull();
+            evaluateParts([
+                { partId: "p1", bodyType: "solid" },
+                { partId: "p2", bodyType: "solid" }
+            ])
+        ).toMatchObject({ hasMultipleParts: true, isOpenComposite: false });
     });
 
-    it("returns null for an empty response", () => {
-        expect(parsePartStudioParts([])).toEqual({
+    it("uses the composite and ignores the constituents of an open composite", () => {
+        expect(
+            evaluateParts([
+                { partId: "c", partNumber: "PN-C", bodyType: "composite" },
+                { partId: "p1", partNumber: "PN-1", bodyType: "solid" }
+            ])
+        ).toMatchObject({
+            hasMultipleParts: false,
+            isOpenComposite: true,
+            partToUse: { partId: "c" }
+        });
+    });
+
+    it("is not an open composite for a lone composite part", () => {
+        expect(
+            evaluateParts([{ partId: "c", bodyType: "composite" }])
+                .isOpenComposite
+        ).toBe(false);
+    });
+
+    it("flags multiple parts when more than one composite resolves", () => {
+        expect(
+            evaluateParts([
+                { partId: "c1", bodyType: "composite" },
+                { partId: "c2", bodyType: "composite" }
+            ])
+        ).toMatchObject({ hasMultipleParts: true, isOpenComposite: true });
+    });
+});
+
+describe("computeOpenComposite", () => {
+    it("reports whether the parts form an open composite", () => {
+        expect(
+            computeOpenComposite([
+                { partId: "c", bodyType: "composite" },
+                { partId: "p", bodyType: "solid" }
+            ])
+        ).toBe(true);
+        expect(computeOpenComposite([{ partId: "p", bodyType: "solid" }])).toBe(
+            false
+        );
+    });
+});
+
+describe("parsePartStudioParts", () => {
+    it("reads the sole part's number for a normal studio", () => {
+        expect(
+            parsePartStudioParts(
+                [{ partId: "JHD", partNumber: "  217-2600 " }],
+                false
+            )
+        ).toEqual({
+            partNumber: "217-2600",
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
+    });
+
+    it("reads the composite's number when the studio is an open composite", () => {
+        expect(
+            parsePartStudioParts(
+                [
+                    { partId: "c", partNumber: "PN-C", bodyType: "composite" },
+                    { partId: "p", partNumber: "PN-1", bodyType: "solid" }
+                ],
+                true
+            )
+        ).toEqual({
+            partNumber: "PN-C",
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
+    });
+
+    it("flags an unstable composite and indexes nothing when an expected composite is missing", () => {
+        expect(
+            parsePartStudioParts(
+                [
+                    { partId: "p1", partNumber: "PN-1", bodyType: "solid" },
+                    { partId: "p2", partNumber: "PN-2", bodyType: "solid" }
+                ],
+                true
+            )
+        ).toEqual({
             partNumber: null,
-            hasMultipleParts: false
+            hasMultipleParts: false,
+            isUnstableComposite: true
         });
     });
 });
@@ -144,7 +217,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            params
+            params,
+            false
         );
 
         expect(result.buildIssues).toEqual([]);
@@ -163,7 +237,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])]
+            [enumParam("A", ["a1", "a2"])],
+            false
         );
 
         expect(result.defaultPartNumber).toBe("PN-default");
@@ -178,7 +253,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])]
+            [enumParam("A", ["a1", "a2"])],
+            false
         );
 
         expect(result.partNumbers).toEqual({ "PN-a1": { A: "a1" } });
@@ -191,7 +267,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            []
+            [],
+            false
         );
 
         expect(result.defaultPartNumber).toBe("PN-default");
@@ -215,7 +292,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            params
+            params,
+            false
         );
 
         expect(Object.keys(result.partNumbers)).toHaveLength(49);
@@ -235,7 +313,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            params
+            params,
+            false
         );
 
         expect(result.buildIssues).toEqual([
@@ -259,7 +338,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])]
+            [enumParam("A", ["a1", "a2"])],
+            false
         );
 
         expect(result.buildIssues).toEqual([
@@ -274,10 +354,70 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])]
+            [enumParam("A", ["a1", "a2"])],
+            false
         );
 
         expect(result.buildIssues).toEqual([]);
+    });
+
+    it("indexes an open composite from its composite part alone", async () => {
+        mockParts((configuration) => [
+            {
+                partId: "c",
+                partNumber: `PN-${configuration.A ?? "default"}`,
+                bodyType: "composite"
+            },
+            { partId: "p1", partNumber: "loose-1", bodyType: "solid" },
+            { partId: "p2", partNumber: "loose-2", bodyType: "solid" }
+        ]);
+
+        const result = await parsePartNumbers(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [enumParam("A", ["a1", "a2"])],
+            true
+        );
+
+        expect(result.buildIssues).toEqual([]);
+        expect(result.defaultPartNumber).toBe("PN-default");
+        expect(result.partNumbers).toEqual({
+            "PN-a1": { A: "a1" },
+            "PN-a2": { A: "a2" }
+        });
+    });
+
+    it("flags an unstable composite when a configuration loses its composite", async () => {
+        mockParts((configuration) =>
+            configuration.A === "a2"
+                ? [
+                      { partId: "p1", partNumber: "PN-1", bodyType: "solid" },
+                      { partId: "p2", partNumber: "PN-2", bodyType: "solid" }
+                  ]
+                : [
+                      {
+                          partId: "c",
+                          partNumber: "PN-C",
+                          bodyType: "composite"
+                      },
+                      { partId: "p1", partNumber: "loose", bodyType: "solid" }
+                  ]
+        );
+
+        const result = await parsePartNumbers(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [enumParam("A", ["a1", "a2"])],
+            true
+        );
+
+        expect(result.buildIssues).toEqual([
+            { type: BuildIssueType.UNSTABLE_COMPOSITE }
+        ]);
+        // Only the composite's number is indexed; the a2 loose parts are ignored.
+        expect(result.partNumbers).toEqual({ "PN-C": { A: "a1" } });
     });
 
     it("indexes an assembly from its root part number", async () => {
@@ -289,7 +429,8 @@ describe("parsePartNumbers", () => {
             CLIENT,
             PATH,
             ElementType.ASSEMBLY,
-            [enumParam("A", ["a1", "a2"])]
+            [enumParam("A", ["a1", "a2"])],
+            false
         );
 
         expect(result.buildIssues).toEqual([]);

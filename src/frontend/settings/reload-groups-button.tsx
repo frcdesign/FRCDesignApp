@@ -3,14 +3,13 @@ import { modals } from "@mantine/modals";
 import { IconRefresh } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
-import { useRouter } from "@tanstack/react-router";
 import { showInfoToast } from "../common/notifications";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { contextDataQueryKey, libraryQueryMatchKey } from "../queries";
+import { jobStatusQueryKey } from "../queries";
 
 interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
@@ -20,29 +19,26 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     const reloadAll = props.reloadAll ?? false;
 
     const libraryId = useLibraryId();
-    const router = useRouter();
 
     const mutation = useMutation({
         mutationKey: ["reload-groups"],
-        mutationFn: async () => {
+        mutationFn: (): Promise<{ status: string }> => {
             return apiPost("/reload-groups" + toLibraryPath(libraryId), {
                 query: { forceReload: reloadAll }
             });
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
-        onSuccess: () => {
+        onSuccess: (data) => {
+            // Show the running spinner immediately rather than on the next poll;
+            // the navbar watcher refreshes and reports completion when it finishes.
+            void queryClient.invalidateQueries({
+                queryKey: jobStatusQueryKey(libraryId)
+            });
             showInfoToast(
-                "Initiated workflow, which can take up to 30 minutes."
+                data.status === "already-running"
+                    ? "A reload is already running."
+                    : "Reloading documents..."
             );
-        },
-        onSettled: async () => {
-            await queryClient.refetchQueries({
-                queryKey: contextDataQueryKey()
-            });
-            await queryClient.invalidateQueries({
-                queryKey: libraryQueryMatchKey()
-            });
-            void router.invalidate();
         }
     });
 

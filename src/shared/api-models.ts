@@ -4,7 +4,7 @@ import {
     ConfigurationParameter
 } from "./configuration-models";
 import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
-import { BuildIssue } from "./build-checker";
+import { BuildIssue } from "./build-issues";
 
 export interface InsertableOut {
     id: string;
@@ -41,16 +41,20 @@ export interface GroupBuildStatus {
     buildIssues: BuildIssue[];
     sortAlphabetically: boolean;
     insertableOrder: string[];
+    /** When this group was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
 export interface InsertableBuildStatus {
     buildIssues: BuildIssue[];
+    elementType: ElementType;
     isVisible: boolean;
-    isOpenComposite: boolean;
     supportsFasten: boolean;
     searchPartNumbers: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
+    /** When this insertable was last successfully loaded (epoch ms); null if never. */
+    lastLoadedAt: number | null;
 }
 
 export interface LibraryBuildStatus {

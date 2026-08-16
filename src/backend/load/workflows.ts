@@ -19,8 +19,11 @@ import { group, libraries } from "../../shared/schema";
 import {
     type GroupTarget,
     type LoadContext,
+    LOAD_CONCURRENCY,
+    createLimiter,
     getOnshapeApiFromContext
-} from "./load-context";
+} from "./load-common";
+import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
 
 export interface LoadLibraryParams {
@@ -29,7 +32,8 @@ export interface LoadLibraryParams {
     forceReload?: boolean;
 }
 
-export type GroupResult =
+/** The outcome of loading a single group within a run. */
+type GroupResult =
     | { groupId: string; status: "skipped" | "failed" }
     | {
           groupId: string;
@@ -52,7 +56,12 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<GroupResult[]> {
         const { libraryId, sessionId, forceReload = false } = event.payload;
-        const ctx: LoadContext = { env: this.env, sessionId, step };
+        const ctx: LoadContext = {
+            env: this.env,
+            sessionId,
+            step,
+            limit: createLimiter(LOAD_CONCURRENCY)
+        };
 
         const storedGroups = await step.do("list-groups", () =>
             getDb(ctx.env.DB)
@@ -90,6 +99,9 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         );
 
         await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
+        await step.do("untrack-job", () =>
+            untrackJob(ctx.env, libraryId, event.instanceId)
+        );
 
         return results;
     }
@@ -120,7 +132,8 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         const ctx: LoadContext = {
             env: this.env,
             sessionId: params.sessionId,
-            step
+            step,
+            limit: createLimiter(LOAD_CONCURRENCY)
         };
 
         let result: GroupResult;
@@ -139,6 +152,9 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
 
         await step.do("finalize", () =>
             finalizeLibrary(ctx.env, params.libraryId)
+        );
+        await step.do("untrack-job", () =>
+            untrackJob(ctx.env, params.libraryId, event.instanceId)
         );
         return result;
     }
