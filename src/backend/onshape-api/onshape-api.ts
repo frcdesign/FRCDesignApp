@@ -1,3 +1,4 @@
+import { HttpStatus } from "http-status-ts";
 import {
     createSearchParams,
     type QueryOptions,
@@ -36,7 +37,7 @@ export class OnshapeRateLimitError extends OnshapeApiError {
         message: string,
         public readonly retryAfterSeconds: number
     ) {
-        super(message, 429);
+        super(message, HttpStatus.TOO_MANY_REQUESTS);
         this.name = "OnshapeRateLimitError";
     }
 }
@@ -104,7 +105,7 @@ export abstract class OnshapeApi {
 
         if (!res.ok) {
             const text = await res.text();
-            if (res.status === 429) {
+            if (res.status === HttpStatus.TOO_MANY_REQUESTS) {
                 const retryAfter = parseInt(
                     res.headers.get("Retry-After") ?? "",
                     10
@@ -145,7 +146,7 @@ export class OAuthApi extends OnshapeApi {
             method,
             headers: this._makeHeaders(init.headers)
         });
-        if (res.status === 401) {
+        if (res.status === HttpStatus.UNAUTHORIZED) {
             this._accessToken = await this._refreshCallback();
             return fetch(url, {
                 ...init,

@@ -7,7 +7,10 @@ import { ElementPath } from "../../shared/onshape-path";
  */
 export interface OnshapeParams extends ElementPath {
     elementType: ElementType;
+    /** The color scheme Onshape is using, forwarded by the entry redirect. */
     systemTheme: ColorTheme;
+    /** The caller's saved theme, seeded by the entry redirect. */
+    theme: Theme;
     server: string;
 }
 

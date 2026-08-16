@@ -1,6 +1,6 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetImage, apiGetRawImage } from "../api-utils/api";
-import { ThumbnailUrls, ThumbnailSize } from "../../shared/types";
+import { ThumbnailUrls, ThumbnailSize, ElementType } from "../../shared/types";
 import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
@@ -10,6 +10,7 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
+import { useTargetElementType } from "./insert-hooks";
 import { useIsSignedIn } from "../api-utils/sign-in";
 
 interface HeightAndWidth {
@@ -126,22 +127,24 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
+    microversionId: string;
     configuration?: ParameterValues;
     /** Stored thumbnail, shown instead of the live preview when not signed in. */
     thumbnailUrls?: ThumbnailUrls;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, configuration, thumbnailUrls } = props;
+    const { path, microversionId, configuration, thumbnailUrls } = props;
     const size = ThumbnailSize.SMALL;
     const isSignedIn = useIsSignedIn();
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
+    const targetElementType = useTargetElementType();
 
     // Thumbnail id generation with queries is really unreliable
     // The standard Onshape API for it appears to be broken/bugged
     // So we use an undocumented alternate workflow where insertables returns an id
-    // However, the id can take a while to update, so we have to basically poll the endpoint while waiting for it to load
+    // However, the id can take a while to update, so we have to poll the endpoint while waiting for it to load
     const thumbnailIdQuery = useQuery({
         queryKey: ["thumbnail", "id", toElementApiPath(path), configuration],
         queryFn: async ({ signal }) => {
@@ -167,10 +170,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 return;
             }
             return apiGetImage("/thumbnail", {
-                query: {
-                    size,
-                    thumbnailId
-                },
+                query: { size, thumbnailId },
+                cacheId: microversionId,
                 signal
             });
         },
@@ -213,11 +214,15 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     }
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
+        const action =
+            targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
-            <SectionError
-                title="Thumbnail generation timed out."
-                description="You can still insert the part normally."
-            />
+            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+                <SectionError
+                    title="The thumbnail timed out."
+                    description={`You can still ${action} the part.`}
+                />
+            </Center>
         );
     } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
         return (

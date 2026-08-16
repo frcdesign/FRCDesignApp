@@ -1,10 +1,10 @@
+import { useAccessData } from "../api-utils/access-level";
 import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
 import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import {
     showErrorToast,
     showLoadingToast,
@@ -16,7 +16,7 @@ import {
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { buildStatusQueryKey } from "../queries";
+import { buildStatusQueryKey, useCacheVersion } from "../queries";
 import { useRefreshLibrary } from "../api-utils/refresh";
 import { patchQuery } from "../common/utils";
 import { useCloseBuildCard } from "./build-status";
@@ -24,8 +24,7 @@ import { useCloseBuildCard } from "./build-status";
 /** The build-status query key for the currently-viewed library. */
 function useBuildStatusKey() {
     const libraryId = useLibraryId();
-    const cacheVersion = useLoaderData({ from: "/app" }).accessData
-        .cacheVersion;
+    const cacheVersion = useCacheVersion();
     return buildStatusQueryKey(libraryId, cacheVersion);
 }
 
@@ -52,7 +51,7 @@ export function useSetVisibilityMutation(
                 }
             );
         },
-        onMutate: async () => {
+        onMutate: () => {
             showLoadingToast(
                 isVisible ? "Showing insertables..." : "Hiding insertables...",
                 "set-visibility"
@@ -102,13 +101,10 @@ export function useSetVisibilityMutation(
  * Note this is different from whether the insertable is visible since admins can always see hidden insertables.
  */
 export function useIsInsertableHidden(insertable: InsertableOut): boolean {
-    const loaderData = useLoaderData({ from: "/app" });
+    const { currentAccessLevel } = useAccessData();
     return useMemo(() => {
-        return (
-            !insertable.isVisible &&
-            hasUserAccess(loaderData.accessData.currentAccessLevel)
-        );
-    }, [insertable.isVisible, loaderData.accessData.currentAccessLevel]);
+        return !insertable.isVisible && hasUserAccess(currentAccessLevel);
+    }, [insertable.isVisible, currentAccessLevel]);
 }
 
 export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
@@ -127,34 +123,6 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
         onSuccess: () => {
             showSuccessToast("Successfully reloaded thumbnail.");
         },
-        onSettled: refreshLibrary
-    });
-}
-
-/** Toggles an insertable's "open composite" flag (part studios only). */
-export function useToggleOpenCompositeMutation(insertableId: string) {
-    const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
-    return useMutation({
-        mutationKey: ["toggle-open-composite", insertableId],
-        mutationFn: (isOpenComposite: boolean) =>
-            apiPost("/toggle-open-composite" + toInsertablePath(insertableId), {
-                body: { isOpenComposite }
-            }),
-        onMutate: (isOpenComposite) =>
-            patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable) insertable.isOpenComposite = isOpenComposite;
-            }),
-        onSuccess: (_result, isOpenComposite) =>
-            showSuccessToast(
-                isOpenComposite
-                    ? "Set open composite."
-                    : "Removed open composite."
-            ),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update open composite."
-        ),
         onSettled: refreshLibrary
     });
 }

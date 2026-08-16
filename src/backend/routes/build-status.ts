@@ -1,5 +1,11 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute } from "../app";
+import {
+    CachePolicy,
+    cacheMiddleware,
+    getApp,
+    getLibraryParam,
+    libraryRoute
+} from "../app";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { group, insertables, configurations } from "../../shared/schema";
@@ -11,10 +17,11 @@ import {
 
 export const buildStatusRoutes = getApp();
 
-/** GET /api/build-status/library/:libraryId */
+/** GET /api/build-status/library/:libraryId?v=:cacheVersion */
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
+    cacheMiddleware(CachePolicy.PRIVATE_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
@@ -39,7 +46,6 @@ buildStatusRoutes.get(
                     buildIssues: insertables.buildIssues,
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
-                    isOpenComposite: insertables.isOpenComposite,
                     supportsFasten: insertables.supportsFasten,
                     searchPartNumbers: insertables.searchPartNumbers,
                     vendors: insertables.vendors,
@@ -85,7 +91,6 @@ buildStatusRoutes.get(
                 buildIssues: ins.buildIssues,
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
-                isOpenComposite: ins.isOpenComposite,
                 supportsFasten: ins.supportsFasten,
                 searchPartNumbers: ins.searchPartNumbers,
                 vendors: ins.vendors,

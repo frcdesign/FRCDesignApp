@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getApp } from "../app";
+import { CachePolicy, cacheMiddleware, getApp } from "../app";
 import { getDb } from "../db";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";
@@ -10,39 +10,44 @@ import {
 import { QuantityType, type Unit } from "../../shared/configuration-enums";
 import { isInstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 
 export const configurationRoutes = getApp();
 
-/** GET /api/configuration/:configurationId */
-configurationRoutes.get("/configuration/:configurationId", async (c) => {
-    const configurationId = c.req.param("configurationId");
-    if (!configurationId) {
-        throw new HTTPException(400, {
-            message: "configurationId is required"
-        });
+/** GET /api/configuration/:configurationId?v=:microversionId */
+configurationRoutes.get(
+    "/configuration/:configurationId",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => {
+        const configurationId = c.req.param("configurationId");
+        if (!configurationId) {
+            throw new HTTPException(HttpStatus.BAD_REQUEST, {
+                message: "configurationId is required"
+            });
+        }
+
+        const db = getDb(c.env.DB);
+        const config = await db
+            .select({ parameters: configurations.parameters })
+            .from(configurations)
+            .where(eq(configurations.id, configurationId))
+            .get();
+
+        if (!config) {
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Failed to find configuration"
+            });
+        }
+
+        const result: ConfigurationResult = {
+            parameters: config.parameters
+        };
+        return c.json(result);
     }
-
-    const db = getDb(c.env.DB);
-    const config = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, configurationId))
-        .get();
-
-    if (!config) {
-        throw new HTTPException(404, {
-            message: "Failed to find configuration"
-        });
-    }
-
-    const result: ConfigurationResult = {
-        parameters: config.parameters
-    };
-    return c.json(result);
-});
+);
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
-configurationRoutes.get("/unit-info", async (c) => {
+configurationRoutes.get("/unit-info", cacheMiddleware(), async (c) => {
     const onshapeApi = await c.var.getOnshapeApi();
     const instancePath = {
         documentId: c.req.query("documentId"),
@@ -50,7 +55,7 @@ configurationRoutes.get("/unit-info", async (c) => {
         instanceType: c.req.query("instanceType")
     };
     if (!isInstancePath(instancePath)) {
-        throw new HTTPException(400, {
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
             message: "instancePath is required"
         });
     }

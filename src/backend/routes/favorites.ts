@@ -1,9 +1,10 @@
 import { and, asc, eq } from "drizzle-orm";
-import { getApp, getLibraryParam, libraryRoute } from "../app";
+import { cacheMiddleware, getApp, getLibraryParam, libraryRoute } from "../app";
 import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
 import { type Favorite, type FavoritesData } from "../../shared/api-models";
 import { type LibraryId } from "../../shared/types";
+import { HttpStatus } from "http-status-ts";
 import { type ParameterValues } from "../../shared/configuration-models";
 import { requireSignInMiddleware } from "../sign-in-utils";
 
@@ -47,12 +48,16 @@ async function getFavorites(
 /**
  * Gets the list of a user's favorites.
  */
-favoriteRoutes.get("/favorites" + libraryRoute(), async (c) => {
-    const userId = await c.var.getUserId();
-    const libraryId = getLibraryParam(c);
-    const db = getDb(c.env.DB);
-    return c.json(await getFavorites(db, userId, libraryId));
-});
+favoriteRoutes.get(
+    "/favorites" + libraryRoute(),
+    cacheMiddleware(),
+    async (c) => {
+        const userId = await c.var.getUserId();
+        const libraryId = getLibraryParam(c);
+        const db = getDb(c.env.DB);
+        return c.json(await getFavorites(db, userId, libraryId));
+    }
+);
 
 /**
  * Creates a new favorite.
@@ -62,8 +67,13 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
     const userId = await c.var.getUserId();
     const insertableId = c.req.query("insertableId");
     const favoriteId = c.req.query("id");
-    if (!insertableId) return c.json({ error: "insertableId required" }, 400);
-    if (!favoriteId) return c.json({ error: "id required" }, 400);
+    if (!insertableId)
+        return c.json(
+            { error: "insertableId required" },
+            HttpStatus.BAD_REQUEST
+        );
+    if (!favoriteId)
+        return c.json({ error: "id required" }, HttpStatus.BAD_REQUEST);
 
     const db = getDb(c.env.DB);
 
@@ -100,7 +110,10 @@ favoriteRoutes.post("/favorites" + libraryRoute(), async (c) => {
 favoriteRoutes.delete("/favorites/:favoriteId", async (c) => {
     const favoriteId = c.req.param("favoriteId");
     if (!favoriteId) {
-        return c.json({ error: "favoriteId is required" }, 400);
+        return c.json(
+            { error: "favoriteId is required" },
+            HttpStatus.BAD_REQUEST
+        );
     }
     const userId = await c.var.getUserId();
     const db = getDb(c.env.DB);

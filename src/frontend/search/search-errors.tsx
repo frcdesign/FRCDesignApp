@@ -6,6 +6,7 @@ import { ClearFiltersButton } from "../settings/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "./search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../app-common/app-zero-state";
+import { useLibraryId } from "../api-utils/library";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {
@@ -116,13 +117,17 @@ interface SearchAllButtonProps {
 
 function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const navigate = useNavigate();
+    const libraryId = useLibraryId();
     const small = props.small ?? false;
     return (
         <Button
             leftSection={<IconSearch size={IconSize.SMALL} />}
             size={small ? "xs" : undefined}
             onClick={() => {
-                void navigate({ to: "/app/groups" });
+                void navigate({
+                    to: "/app/library/$libraryId",
+                    params: { libraryId }
+                });
             }}
         >
             Search all documents

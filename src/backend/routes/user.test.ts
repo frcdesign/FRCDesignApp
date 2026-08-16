@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { users } from "../../shared/schema";
-import { AccessLevel, LibraryId, Theme } from "../../shared/types";
+import { AccessLevel, Theme } from "../../shared/types";
 import {
     TEST_USER_ID,
     createTestApp,
@@ -20,31 +20,25 @@ describe("user routes", () => {
         await resetDb(db);
     });
 
-    it("GET /context-data returns access level and settings", async () => {
+    it("GET /access-data returns the caller's access level", async () => {
         await seedLibrary(db);
         await seedUser(db);
         const app = createTestApp({ accessLevel: AccessLevel.ADMIN });
 
         const res = await app.request(
-            "/api/context-data",
+            "/api/access-data",
             jsonRequest("GET"),
             env
         );
         expect(res.status).toBe(200);
 
-        const body = await res.json();
-        expect(body).toEqual({
-            accessData: {
-                maxAccessLevel: AccessLevel.ADMIN,
-                currentAccessLevel: AccessLevel.ADMIN,
-                cacheVersion: 0
-            },
-            settings: {
-                theme: Theme.SYSTEM,
-                libraryId: LibraryId.FRC_DESIGN_LIB
-            },
+        expect(await res.json()).toEqual({
+            maxAccessLevel: AccessLevel.ADMIN,
+            currentAccessLevel: AccessLevel.ADMIN,
             signedIn: true
         });
+        // Per-user, and Workers Cache keys ignore cookies.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 
     it("POST /user-data updates the user's settings", async () => {
@@ -52,10 +46,7 @@ describe("user routes", () => {
 
         const res = await app.request(
             "/api/user-data",
-            jsonRequest("POST", {
-                theme: Theme.DARK,
-                libraryId: LibraryId.MKCAD
-            }),
+            jsonRequest("POST", { theme: Theme.DARK }),
             env
         );
         expect(res.status).toBe(200);
@@ -66,6 +57,5 @@ describe("user routes", () => {
             .where(eq(users.id, TEST_USER_ID))
             .get();
         expect(row?.theme).toBe(Theme.DARK);
-        expect(row?.libraryId).toBe(LibraryId.MKCAD);
     });
 });

@@ -1,9 +1,9 @@
 import { PropsWithChildren } from "react";
-import { useLoaderData } from "@tanstack/react-router";
+import { useAccessData } from "./access-level";
 
-/** Whether the caller is signed in to Onshape (from context-data). */
+/** Whether the caller is signed in to Onshape (from access-data). */
 export function useIsSignedIn(): boolean {
-    return useLoaderData({ from: "/app" }).signedIn;
+    return useAccessData().signedIn;
 }
 
 /**

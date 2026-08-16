@@ -1,6 +1,16 @@
 import { HTTPException } from "hono/http-exception";
-import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
-import { getApp, type AppServicesFactory } from "./app";
+import { HttpStatus } from "http-status-ts";
+import { eq } from "drizzle-orm";
+import { getDb } from "./db";
+import { users } from "../shared/schema";
+import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../shared/types";
+import { authRoutes, getSessionCompanyId } from "./auth";
+import {
+    cacheMiddleware,
+    getApp,
+    type AppContext,
+    type AppServicesFactory
+} from "./app";
 import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
@@ -20,6 +30,27 @@ function getRelativeUrl(requestUrl: string) {
     return pathname + search;
 }
 
+/** Builds the url the caller resumes at, seeded with the library and theme they last used. */
+async function getEntryUrl(c: AppContext): Promise<string> {
+    const db = getDb(c.env.DB);
+    const user = await db
+        .select({ libraryId: users.libraryId, theme: users.theme })
+        .from(users)
+        .where(eq(users.id, await c.var.getUserId()))
+        .get();
+
+    const search = new URL(c.req.url).searchParams;
+    const systemTheme = search.get("theme");
+    if (systemTheme !== null) {
+        search.set("systemTheme", systemTheme);
+    }
+    const currentTheme = user?.theme ?? DEFAULT_SETTINGS.theme;
+    search.set("theme", currentTheme);
+
+    const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
+    return `/app/library/${libraryId}?${search.toString()}`;
+}
+
 /**
  * Composition root for the Hono app. The injected `makeServices` factory is
  * bound onto each request's context so handlers can call `c.var.getOnshapeApi()`,
@@ -33,6 +64,7 @@ export function createApp(makeServices: AppServicesFactory) {
         c.set("getOnshapeApi", services.getOnshapeApi);
         c.set("getUserId", services.getUserId);
         c.set("getAccessLevel", services.getAccessLevel);
+        c.set("isAuthenticated", services.isAuthenticated);
         await next();
     });
 
@@ -45,17 +77,18 @@ export function createApp(makeServices: AppServicesFactory) {
     app.route("/api", insertableRoutes);
     app.route("/api", configurationRoutes);
     app.route("/api", buildStatusRoutes);
+    // Per-request redirects carrying OAuth state; never reusable.
+    app.use("/auth/*", cacheMiddleware());
     app.route("/auth", authRoutes);
 
-    // `/init` is the auth-gated entry point
-    app.on("GET", "/init", async (c) => {
-        if (!(await isAuthenticated(c))) {
+    // `/init` is the auth-gated entry point.
+    app.on("GET", "/init", cacheMiddleware(), async (c) => {
+        if (!(await c.var.isAuthenticated())) {
             const currentUrl = getRelativeUrl(c.req.url);
             const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
             return c.redirect(signInUrl);
         }
-        // Forward to normal Cloudflare
-        return c.env.ASSETS.fetch(c.req.raw);
+        return c.redirect(await getEntryUrl(c));
     });
 
     app.onError((err, c) => {
@@ -67,14 +100,17 @@ export function createApp(makeServices: AppServicesFactory) {
                     error: "Onshape rate limit reached. Please try again shortly.",
                     retryAfterSeconds: err.retryAfterSeconds
                 },
-                429
+                HttpStatus.TOO_MANY_REQUESTS
             );
         }
         if (err instanceof HTTPException) {
             return err.getResponse();
         }
         console.error(err);
-        return c.json({ error: "Internal Server Error" }, 500);
+        return c.json(
+            { error: "Internal Server Error" },
+            HttpStatus.INTERNAL_SERVER_ERROR
+        );
     });
 
     return app;

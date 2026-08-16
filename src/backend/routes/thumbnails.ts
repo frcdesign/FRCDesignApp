@@ -1,5 +1,12 @@
 import { eq } from "drizzle-orm";
-import { getApp, getInsertableParam, insertableRoute } from "../app";
+import {
+    CachePolicy,
+    cacheMiddleware,
+    getApp,
+    getInsertableParam,
+    immutableCacheControl,
+    insertableRoute
+} from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -15,11 +22,10 @@ import { getDocument, getContents } from "../onshape-api/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
 import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { ThumbnailUrls } from "../../shared/types";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
-
-const THUMBNAIL_CACHE_TTL = 30 * 24 * 3600;
 
 function r2Key(size: string, elementId: string): string {
     return `thumbnails/${size}/${elementId}`;
@@ -58,7 +64,7 @@ export async function uploadThumbnails(
         await bucket.put(r2Key(size, elementPath.elementId), thumbnail, {
             httpMetadata: {
                 contentType: "image/gif",
-                cacheControl: `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+                cacheControl: immutableCacheControl(CachePolicy.PUBLIC_CACHE)
             },
             customMetadata: { microversionId }
         });
@@ -117,45 +123,52 @@ export async function uploadDocumentThumbnails(
 
 export const thumbnailRoutes = getApp();
 
-/** GET /api/thumbnail/:size/:elementId — serve static thumbnail from R2 */
-thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
-    const size = c.req.param("size");
-    const elementId = c.req.param("elementId");
+/** GET /api/thumbnail/:size/:elementId?v=:microversionId — static from R2 */
+thumbnailRoutes.get(
+    "/thumbnail/:size/:elementId",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => {
+        const size = c.req.param("size");
+        const elementId = c.req.param("elementId");
 
-    const obj = await c.env.THUMBNAILS.get(r2Key(size, elementId));
-    if (!obj) return c.notFound();
+        const obj = await c.env.THUMBNAILS.get(r2Key(size, elementId));
+        if (!obj) return c.notFound();
 
-    const headers = new Headers();
-    obj.writeHttpMetadata(headers);
-    headers.set(
-        "Cache-Control",
-        `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-    );
+        const headers = new Headers();
+        obj.writeHttpMetadata(headers);
+        return new Response(obj.body, { headers });
+    }
+);
 
-    return new Response(obj.body, { headers });
-});
+/** GET /api/thumbnail?size=X&thumbnailId=Y&v=:microversionId — live from Onshape */
+thumbnailRoutes.get(
+    "/thumbnail",
+    requireSignInMiddleware,
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => {
+        const onshapeApi = await c.var.getOnshapeApi();
+        const size =
+            (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
+        const thumbnailId = c.req.query("thumbnailId");
+        if (!thumbnailId)
+            return c.json(
+                { error: "thumbnailId required" },
+                HttpStatus.BAD_REQUEST
+            );
 
-/** GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape */
-thumbnailRoutes.get("/thumbnail", requireSignInMiddleware, async (c) => {
-    const onshapeApi = await c.var.getOnshapeApi();
-    const size =
-        (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.STANDARD;
-    const thumbnailId = c.req.query("thumbnailId");
-    if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
-
-    const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-    return new Response(buffer, {
-        headers: {
-            "Content-Type": "image/gif",
-            "Cache-Control": `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-        }
-    });
-});
+        const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
+        return new Response(buffer, {
+            headers: { "Content-Type": "image/gif" }
+        });
+    }
+);
 
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
     requireSignInMiddleware,
+    // Its url names an immutable version, so there is no `?v=` to bust.
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const elementPath: ElementPath = {
@@ -196,7 +209,9 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Insertable not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Insertable not found"
+            });
         }
 
         const thumbnails = await uploadThumbnails(
@@ -243,7 +258,9 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(404, { message: "Group not found" });
+            throw new HTTPException(HttpStatus.NOT_FOUND, {
+                message: "Group not found"
+            });
         }
 
         const instancePath: InstancePath = {

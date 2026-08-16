@@ -100,49 +100,45 @@ export async function seedGroup(
     return id;
 }
 
-async function seedInsertable(
+/**
+ * Inserts an insertable row, defaulting to the standard part studio. Pass
+ * overrides to seed a row with the specific columns a test wants to manipulate.
+ */
+export async function seedInsertable(
     db: Db,
-    id: string,
-    path: ElementPath,
-    elementType: ElementType
+    overrides: Partial<typeof insertables.$inferInsert> = {}
 ): Promise<string> {
-    await db
-        .insert(insertables)
-        .values({
-            id,
-            groupId: TEST_GROUP_ID,
-            libraryId: TEST_LIBRARY_ID,
-            elementId: path.elementId,
-            documentId: path.documentId,
-            versionId: path.instanceId,
-            elementType,
-            name: `Test ${elementType}`,
-            microversionId: "mv-1"
-        })
-        .onConflictDoNothing();
-    return id;
+    const elementType = overrides.elementType ?? ElementType.PART_STUDIO;
+    const values = {
+        id: TEST_PART_STUDIO_ID,
+        groupId: TEST_GROUP_ID,
+        libraryId: TEST_LIBRARY_ID,
+        elementId: TEST_PART_STUDIO_PATH.elementId,
+        documentId: TEST_PART_STUDIO_PATH.documentId,
+        versionId: TEST_PART_STUDIO_PATH.instanceId,
+        elementType,
+        name: `Test ${elementType}`,
+        microversionId: "mv-1",
+        ...overrides
+    };
+    await db.insert(insertables).values(values).onConflictDoNothing();
+    return values.id;
 }
 
 /** Seeds the standard part-studio insertable (ensures library + group). */
 export async function seedPartStudio(db: Db): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(
-        db,
-        TEST_PART_STUDIO_ID,
-        TEST_PART_STUDIO_PATH,
-        ElementType.PART_STUDIO
-    );
+    return seedInsertable(db);
 }
 
 /** Seeds the standard assembly insertable (ensures library + group). */
 export async function seedAssembly(db: Db): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(
-        db,
-        TEST_ASSEMBLY_ID,
-        TEST_ASSEMBLY_PATH,
-        ElementType.ASSEMBLY
-    );
+    return seedInsertable(db, {
+        id: TEST_ASSEMBLY_ID,
+        elementId: TEST_ASSEMBLY_PATH.elementId,
+        elementType: ElementType.ASSEMBLY
+    });
 }
 
 export async function seedFavorite(

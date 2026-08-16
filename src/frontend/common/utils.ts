@@ -54,5 +54,10 @@ export async function patchQuery<T>(
  * Returns true if the current route is the home route, and false if it is a document route.
  */
 export function useIsHome(): boolean {
-    return useMatch({ from: "/app/groups/", shouldThrow: false }) !== undefined;
+    return (
+        useMatch({
+            from: "/app/library/$libraryId/",
+            shouldThrow: false
+        }) !== undefined
+    );
 }

@@ -1,5 +1,6 @@
 import { OnshapeApi, OnshapeApiError } from "../onshape-api";
 import { DocumentPath, toDocumentApiPath } from "../../../shared/onshape-path";
+import { HttpStatus } from "http-status-ts";
 import { apiPath } from "../api-path";
 
 export enum Permission {
@@ -32,7 +33,11 @@ export async function getPermissions(
         );
         return permissions.map((p: string) => p as Permission);
     } catch (error) {
-        if (error instanceof OnshapeApiError && error.status === 403) return [];
+        if (
+            error instanceof OnshapeApiError &&
+            error.status === HttpStatus.FORBIDDEN
+        )
+            return [];
         throw error;
     }
 }

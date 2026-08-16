@@ -92,6 +92,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
+                microversionId={insertable.microversionId}
                 configuration={configuration}
                 thumbnailUrls={insertable.thumbnailUrls}
             />

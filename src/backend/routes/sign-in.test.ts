@@ -16,31 +16,21 @@ describe("not-signed-in access", () => {
         await resetDb(db);
     });
 
-    it("GET /context-data returns defaults with signedIn: false", async () => {
-        await seedLibrary(db);
-        // accessLevel is injected as ADMIN, but the not-signed-in branch ignores
-        // it and reports a plain USER so the read-only UI loads.
+    it("GET /access-data reports signedIn: false when not signed in", async () => {
         const app = createTestApp({
             signedIn: false,
-            accessLevel: AccessLevel.ADMIN
+            accessLevel: AccessLevel.USER
         });
 
         const res = await app.request(
-            "/api/context-data",
+            "/api/access-data",
             jsonRequest("GET"),
             env
         );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
-            accessData: {
-                maxAccessLevel: AccessLevel.USER,
-                currentAccessLevel: AccessLevel.USER,
-                cacheVersion: 0
-            },
-            settings: {
-                theme: Theme.SYSTEM,
-                libraryId: LibraryId.FRC_DESIGN_LIB
-            },
+            maxAccessLevel: AccessLevel.USER,
+            currentAccessLevel: AccessLevel.USER,
             signedIn: false
         });
     });

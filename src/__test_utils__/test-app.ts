@@ -14,6 +14,8 @@ export interface TestAppOptions {
      * a not-signed-in caller). Default true.
      */
     signedIn?: boolean;
+    /** Whether the caller passes the auth gate (default true). */
+    isAuthenticated?: boolean;
 }
 
 /**
@@ -30,7 +32,8 @@ export function createTestApp(options: TestAppOptions = {}) {
                 : Promise.reject(new Error("Not signed in")),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
         getAccessLevel: () =>
-            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN)
+            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN),
+        isAuthenticated: () => Promise.resolve(options.isAuthenticated ?? true)
     }));
 }
 
