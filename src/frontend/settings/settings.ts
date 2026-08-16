@@ -1,19 +1,20 @@
 import { useMutation } from "@tanstack/react-query";
-import { Theme } from "../../shared/types";
+import { type SettingsUpdate } from "../../shared/types";
 import { showErrorToast } from "../common/notifications";
 import { apiPost } from "../api-utils/api";
-import { useUpdateContextData } from "../api-utils/refresh";
+import { updateContextData } from "../api-utils/refresh";
 
 export function useSaveSettings() {
-    const updateContextData = useUpdateContextData();
 
     const { mutate } = useMutation({
         mutationKey: ["user-data"],
-        mutationFn: (newSettings: { theme?: Theme }) =>
+        mutationFn: (newSettings: SettingsUpdate) =>
             apiPost("/user-data", { body: newSettings }),
-        onMutate: (newSettings) => {
+        onMutate: ({ theme }) => {
+            // The library is write-behind — only the theme is rendered from here.
+            if (theme === undefined) return;
             updateContextData((data) => {
-                data.settings = { ...data.settings, ...newSettings };
+                data.settings = { ...data.settings, theme };
             });
         },
         onError: () => {

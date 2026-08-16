@@ -1,8 +1,24 @@
 import { PropsWithChildren } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { hasEditorAccess } from "../../shared/types";
 import { hasAdminAccess } from "../../shared/types";
-import { AccessLevel } from "../../shared/types";
-import { useLoaderData } from "@tanstack/react-router";
+import { AccessLevel, type AccessData } from "../../shared/types";
+import { getContextDataQuery } from "../queries";
+
+/** What an unresolved caller gets: the least the app can show anyone. */
+const DEFAULT_ACCESS_DATA: AccessData = {
+    maxAccessLevel: AccessLevel.USER,
+    currentAccessLevel: AccessLevel.USER
+};
+
+/**
+ * The caller's access, which nothing waits for. It arrives a beat after first
+ * paint, so editor-only affordances appear then rather than holding the app.
+ */
+export function useAccessData(): AccessData {
+    const { data } = useQuery(getContextDataQuery());
+    return data?.accessData ?? DEFAULT_ACCESS_DATA;
+}
 
 interface RequireAccessLevelProps extends PropsWithChildren {
     /**
@@ -21,11 +37,11 @@ interface RequireAccessLevelProps extends PropsWithChildren {
  * Simple component which renders children only if the given accessLevel requirement is met.
  */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
     const currentAccessLevel = props.useMaxAccessLevel
-        ? loaderData.accessData.maxAccessLevel
-        : loaderData.accessData.currentAccessLevel;
+        ? accessData.maxAccessLevel
+        : accessData.currentAccessLevel;
 
     if (
         requiredAccessLevel === AccessLevel.ADMIN &&

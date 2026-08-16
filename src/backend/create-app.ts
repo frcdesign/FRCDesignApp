@@ -1,6 +1,15 @@
 import { HTTPException } from "hono/http-exception";
+import { eq } from "drizzle-orm";
+import { getDb } from "./db";
+import { users } from "../shared/schema";
+import { DEFAULT_LIBRARY_ID } from "../shared/types";
 import { authRoutes, getSessionCompanyId, isAuthenticated } from "./auth";
-import { getApp, noStoreMiddleware, type AppServicesFactory } from "./app";
+import {
+    getApp,
+    noStoreMiddleware,
+    type AppContext,
+    type AppServicesFactory
+} from "./app";
 import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";
@@ -18,6 +27,30 @@ import { buildStatusRoutes } from "./routes/build-status";
 function getRelativeUrl(requestUrl: string) {
     const { pathname, search } = new URL(requestUrl);
     return pathname + search;
+}
+
+/**
+ * Builds the url of the library the caller last used, carrying the Onshape
+ * params through. Onshape sends the color scheme as `theme`, which the app
+ * reads as `systemTheme`.
+ */
+async function getEntryUrl(c: AppContext): Promise<string> {
+    const db = getDb(c.env.DB);
+    const user = await db
+        .select({ libraryId: users.libraryId })
+        .from(users)
+        .where(eq(users.id, await c.var.getUserId()))
+        .get();
+
+    const search = new URL(c.req.url).searchParams;
+    const theme = search.get("theme");
+    if (theme !== null) {
+        search.delete("theme");
+        search.set("systemTheme", theme);
+    }
+
+    const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
+    return `/app/library/${libraryId}?${search.toString()}`;
 }
 
 /**
@@ -49,15 +82,15 @@ export function createApp(makeServices: AppServicesFactory) {
     app.use("/auth/*", noStoreMiddleware);
     app.route("/auth", authRoutes);
 
-    // `/init` is the auth-gated entry point
+    // `/init` is the auth-gated entry point. It also picks the library to open,
+    // so the client never has to fetch a setting before it can route.
     app.on("GET", "/init", noStoreMiddleware, async (c) => {
         if (!(await isAuthenticated(c))) {
             const currentUrl = getRelativeUrl(c.req.url);
             const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
             return c.redirect(signInUrl);
         }
-        // Forward to normal Cloudflare
-        return c.env.ASSETS.fetch(c.req.raw);
+        return c.redirect(await getEntryUrl(c));
     });
 
     app.onError((err, c) => {

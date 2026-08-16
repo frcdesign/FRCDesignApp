@@ -10,32 +10,28 @@ import {
 import { getDb } from "../db";
 import { libraries } from "../../shared/schema";
 import { getLibraryOut } from "../library-data";
-import { LibraryId, type LibraryVersions } from "../../shared/types";
 import { HTTPException } from "hono/http-exception";
 
 export const libraryRoutes = getApp();
 
 /**
- * GET /api/library-versions — the cache version of every library, which keys
- * the `?v=` on the routes below. Needs no user, so it stays off the per-user
- * path the rest of the app's boot data sits on.
+ * GET /api/library-version/library/:libraryId — the version keying the `?v=` on
+ * the routes below. Needs no user, so it stays off the per-user boot path.
  */
-libraryRoutes.get("/library-versions", noStoreMiddleware, async (c) => {
-    const db = getDb(c.env.DB);
-    const rows = await db
-        .select({ id: libraries.id, cacheVersion: libraries.cacheVersion })
-        .from(libraries)
-        .all();
+libraryRoutes.get(
+    "/library-version" + libraryRoute(),
+    noStoreMiddleware,
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const library = await db
+            .select({ cacheVersion: libraries.cacheVersion })
+            .from(libraries)
+            .where(eq(libraries.id, getLibraryParam(c)))
+            .get();
 
-    const versions = Object.fromEntries(
-        Object.values(LibraryId).map((libraryId) => [
-            libraryId,
-            rows.find((row) => row.id === libraryId)?.cacheVersion ?? 0
-        ])
-    ) as LibraryVersions;
-
-    return c.json({ versions });
-});
+        return c.json({ version: library?.cacheVersion ?? 0 });
+    }
+);
 
 /** GET /api/library-data/library/:libraryId?v=:cacheVersion */
 libraryRoutes.get(

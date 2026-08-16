@@ -70,8 +70,14 @@ export enum Theme {
     DARK = "dark"
 }
 
+/** The user settings the client renders; the library is read server-side. */
 export interface Settings {
     theme: Theme;
+}
+
+export interface SettingsUpdate {
+    theme?: Theme;
+    libraryId?: LibraryId;
 }
 
 export interface AccessData {
@@ -84,8 +90,6 @@ export interface ContextData {
     settings: Settings;
 }
 
-/** Each library's cache version, which keys the `?v=` on its requests. */
-export type LibraryVersions = Record<LibraryId, number>;
 export interface ThumbnailUrls {
     [ThumbnailSize.TINY]: string;
     [ThumbnailSize.STANDARD]: string;
@@ -120,5 +124,5 @@ export const DEFAULT_SETTINGS: Settings = {
     theme: Theme.SYSTEM
 };
 
-/** The library shown until the user picks one; stored client-side. */
+/** The library a user lands in before they have picked one. */
 export const DEFAULT_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;

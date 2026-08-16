@@ -59,25 +59,31 @@ describe("library routes", () => {
         expect(body.searchDb.length).toBeGreaterThan(0);
     });
 
-    it("GET /library-versions returns a version for every library", async () => {
+    it("GET /library-version returns the library's version", async () => {
         await seedLibrary(db);
         const app = createTestApp();
 
         const res = await app.request(
-            "/api/library-versions",
+            `/api/library-version/library/${TEST_LIBRARY_ID}`,
             jsonRequest("GET"),
             env
         );
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({
-            versions: {
-                [LibraryId.FRC_DESIGN_LIB]: 0,
-                [LibraryId.FTC_DESIGN_LIB]: 0,
-                [LibraryId.MKCAD]: 0
-            }
-        });
+        expect(await res.json()).toEqual({ version: 0 });
         // Must stay fresh: it is what busts every other library response.
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("GET /library-version reports 0 for a library with no row yet", async () => {
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/library-version/library/${LibraryId.MKCAD}`,
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ version: 0 });
     });
 
     it("caches version-keyed responses immutably", async () => {

@@ -4,7 +4,7 @@ import {
     useParams,
     useSearch
 } from "@tanstack/react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
@@ -13,23 +13,10 @@ import { queryClient } from "../query-client";
 import { getContextDataQuery } from "../queries";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../api-utils/onshape-params";
-import { DEFAULT_SETTINGS, type Settings } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
 import { NotFoundError, RootCrash } from "../app/root-error";
-import { getUiState } from "../api-utils/ui-state";
 
 export const Route = createRootRoute({
-    // Fetch the user's settings to theme the single app-wide MantineProvider, but
-    // never throw: error/landing pages (e.g. unauthenticated) must still render.
-    loader: async (): Promise<{ settings: Settings }> => {
-        try {
-            const { settings } = await queryClient.ensureQueryData(
-                getContextDataQuery()
-            );
-            return { settings };
-        } catch {
-            return { settings: DEFAULT_SETTINGS };
-        }
-    },
     component: RootComponent,
     // notFoundComponent renders inside the root Outlet, so it has the provider.
     notFoundComponent: NotFoundError,
@@ -39,30 +26,40 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    const { settings } = Route.useLoaderData();
-    const search = useSearch({ strict: false });
-    // Theme off the url so it recolors the instant a library switch navigates;
-    // pages outside the app (errors, license) fall back to the saved setting.
-    const params = useParams({ strict: false });
-
-    const libraryId = params.libraryId ?? getUiState().libraryId;
-    const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
-    const colorTheme = getColorTheme(settings.theme, search.systemTheme);
-
     return (
         <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={theme} forceColorScheme={colorTheme}>
-                <ModalsProvider
-                    labels={{ confirm: "Confirm", cancel: "Cancel" }}
-                >
-                    <Notifications
-                        position="bottom-center"
-                        limit={3}
-                        autoClose={4000}
-                    />
-                    <Outlet />
-                </ModalsProvider>
-            </MantineProvider>
+            <ThemedApp />
         </QueryClientProvider>
+    );
+}
+
+/** Inside the provider, so it can read the user's theme as it arrives. */
+function ThemedApp(): ReactNode {
+    const search = useSearch({ strict: false });
+    // Theme off the url so it recolors the instant a library switch navigates;
+    // pages outside the app (errors, license) use the default library's color.
+    const params = useParams({ strict: false });
+    // Not awaited anywhere: the app paints with Onshape's color scheme and
+    // resettles if the user has chosen their own.
+    const { data } = useQuery(getContextDataQuery());
+
+    const libraryId = params.libraryId ?? DEFAULT_LIBRARY_ID;
+    const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
+    const colorTheme = getColorTheme(
+        data?.settings.theme ?? DEFAULT_SETTINGS.theme,
+        search.systemTheme
+    );
+
+    return (
+        <MantineProvider theme={theme} forceColorScheme={colorTheme}>
+            <ModalsProvider labels={{ confirm: "Confirm", cancel: "Cancel" }}>
+                <Notifications
+                    position="bottom-center"
+                    limit={3}
+                    autoClose={4000}
+                />
+                <Outlet />
+            </ModalsProvider>
+        </MantineProvider>
     );
 }

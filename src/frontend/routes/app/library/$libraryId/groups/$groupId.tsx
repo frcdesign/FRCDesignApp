@@ -1,7 +1,7 @@
+import { useAccessData } from "../../../../../api-utils/access-level";
 import {
     createFileRoute,
     Outlet,
-    useLoaderData,
     useNavigate,
     useParams
 } from "@tanstack/react-router";
@@ -158,7 +158,7 @@ interface GroupListCardsProps {
 export function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
     const uiState = useUiState()[0];
 
     const groupInsertables = group.insertableOrder
@@ -176,7 +176,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     const filterResult = filterInsertables(groupInsertables, {
         vendors: uiState.vendorFilters,
-        isVisible: !hasEditorAccess(loaderData.accessData.currentAccessLevel)
+        isVisible: !hasEditorAccess(accessData.currentAccessLevel)
     });
 
     if (filterResult.insertables.length === 0) {

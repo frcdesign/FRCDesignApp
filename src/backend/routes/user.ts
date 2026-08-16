@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { getApp, noStoreMiddleware } from "../app";
 import { getDb } from "../db";
 import { users } from "../../shared/schema";
-import { ContextData, Theme, AccessLevel } from "../../shared/types";
+import {
+    AccessLevel,
+    DEFAULT_LIBRARY_ID,
+    Theme,
+    type ContextData,
+    type SettingsUpdate
+} from "../../shared/types";
 import { env } from "process";
 
 export const userRoutes = getApp();
@@ -15,7 +21,11 @@ userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
 
     let user = await db.select().from(users).where(eq(users.id, userId)).get();
     if (!user) {
-        user = { id: userId, theme: Theme.SYSTEM };
+        user = {
+            id: userId,
+            theme: Theme.SYSTEM,
+            libraryId: DEFAULT_LIBRARY_ID
+        };
     }
 
     // Always default to user in dev and the max in production
@@ -35,7 +45,7 @@ userRoutes.get("/context-data", noStoreMiddleware, async (c) => {
 userRoutes.post("/user-data", async (c) => {
     const userId = await c.var.getUserId();
 
-    const body = await c.req.json<{ theme?: Theme }>();
+    const body = await c.req.json<SettingsUpdate>();
 
     const db = getDb(c.env.DB);
 

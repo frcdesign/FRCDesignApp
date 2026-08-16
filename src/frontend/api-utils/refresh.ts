@@ -6,7 +6,7 @@ import {
     contextDataQueryKey,
     favoritesQueryKey,
     libraryQueryMatchKey,
-    libraryVersionsQueryKey,
+    libraryVersionQueryMatchKey,
     useJobStatusQuery
 } from "../queries";
 import { useLibraryId } from "./library";
@@ -29,7 +29,7 @@ export function useRefreshLibrary(): () => Promise<void> {
     const libraryId = useLibraryId();
     return useCallback(async () => {
         await queryClient.refetchQueries({
-            queryKey: libraryVersionsQueryKey()
+            queryKey: libraryVersionQueryMatchKey()
         });
         await queryClient.refetchQueries({ queryKey: contextDataQueryKey() });
         await queryClient.invalidateQueries({
@@ -71,17 +71,10 @@ export function useJobStatus(): boolean {
 
 type ContextDataUpdate = (data: ContextData) => void;
 
-/** Optimistically patches the cached context data and re-runs the loaders. */
-export function useUpdateContextData(): (update: ContextDataUpdate) => void {
-    const router = useRouter();
-    return useCallback(
-        (update: ContextDataUpdate) => {
-            queryClient.setQueryData(
-                contextDataQueryKey(),
-                getQueryUpdater(update)
-            );
-            void router.invalidate();
-        },
-        [router]
-    );
+/**
+ * Optimistically patches the cached context data. No loader reads it, so the
+ * patch alone re-renders everything showing it.
+ */
+export function updateContextData(update: ContextDataUpdate): void {
+    queryClient.setQueryData(contextDataQueryKey(), getQueryUpdater(update));
 }

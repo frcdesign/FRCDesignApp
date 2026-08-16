@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as InitRouteImport } from './routes/init'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
@@ -20,11 +19,6 @@ import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/libra
 import { Route as AppLibraryLibraryIdIndexRouteImport } from './routes/app/library/$libraryId/index'
 import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
 
-const InitRoute = InitRouteImport.update({
-  id: '/init',
-  path: '/init',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
@@ -76,7 +70,6 @@ const AppLibraryLibraryIdGroupsGroupIdRoute =
 
 export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
@@ -88,7 +81,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
@@ -100,7 +92,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/app': typeof AppRouteRouteWithChildren
-  '/init': typeof InitRoute
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
@@ -114,7 +105,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/app'
-    | '/init'
     | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
@@ -126,7 +116,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/app'
-    | '/init'
     | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
@@ -137,7 +126,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/app'
-    | '/init'
     | '/_pages/beta-complete'
     | '/_pages/cookie-error'
     | '/_pages/grant-denied'
@@ -150,7 +138,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
-  InitRoute: typeof InitRoute
   PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
@@ -160,13 +147,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/init': {
-      id: '/init'
-      path: '/init'
-      fullPath: '/init'
-      preLoaderRoute: typeof InitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -264,7 +244,6 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
-  InitRoute: InitRoute,
   PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,

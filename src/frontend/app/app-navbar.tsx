@@ -16,11 +16,14 @@ import { useNavigate } from "@tanstack/react-router";
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../settings/settings-menu";
 import { VendorMenu } from "../settings/vendor-filters";
-import { updateUiState, useUiState } from "../api-utils/ui-state";
+import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { RequireAccessLevel } from "../api-utils/access-level";
+import { useSaveSettings } from "../settings/settings";
 import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
+import { queryClient } from "../query-client";
+import { getLibraryVersionQuery } from "../queries";
 
 /**
  * Provides top-level navigation for the app. A single colored control row holds
@@ -88,10 +91,19 @@ function FrcDesignBookIcon(): ReactNode {
 
 function LibraryMenu(): ReactNode {
     const currentLibraryId = useLibraryId();
+    const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
+    // Warm the versions the moment the menu opens, so picking one has nothing
+    // left to wait for.
+    const prefetchVersions = () => {
+        for (const libraryId of Object.values(LibraryId)) {
+            void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
+        }
+    };
+
     return (
-        <Menu position="bottom-start" withinPortal>
+        <Menu position="bottom-start" withinPortal onOpen={prefetchVersions}>
             <Menu.Target>
                 <Button
                     variant="default"
@@ -108,9 +120,9 @@ function LibraryMenu(): ReactNode {
                             if (libraryId === currentLibraryId) {
                                 return;
                             }
-                            // The url drives the display; storing it just makes
-                            // the choice stick the next time the app is opened.
-                            updateUiState({ libraryId });
+                            // The url drives the display; the write-behind just
+                            // decides where `/init` sends the user next time.
+                            saveSettings({ libraryId });
                             void navigate({
                                 to: "/app/library/$libraryId",
                                 params: { libraryId }

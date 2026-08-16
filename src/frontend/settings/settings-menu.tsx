@@ -1,17 +1,19 @@
+import { DEFAULT_SETTINGS } from "../../shared/types";
+import { getContextDataQuery } from "../queries";
+import { useQuery } from "@tanstack/react-query";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { FontWeight } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import { Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { useSaveSettings } from "./settings";
 import { capitalize } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
-import { RequireAccessLevel } from "../api-utils/access-level";
+import { RequireAccessLevel, useAccessData } from "../api-utils/access-level";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { useUpdateContextData } from "../api-utils/refresh";
+import { updateContextData } from "../api-utils/refresh";
 import { AppSelect } from "../app-common/app-select";
 import { makeSelectOption, useSelectOptions } from "./select-utils";
 import { ReloadGroupsButton } from "./reload-groups-button";
@@ -39,11 +41,11 @@ function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
 }
 
 function SettingsMenuContent(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
+    const accessData = useAccessData();
 
     let adminSettings: ReactNode = null;
     // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
-    if (hasEditorAccess(loaderData.accessData.maxAccessLevel)) {
+    if (hasEditorAccess(accessData.maxAccessLevel)) {
         adminSettings = (
             <>
                 <Title order={6} mt="md">
@@ -64,13 +66,13 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
+    const { data } = useQuery(getContextDataQuery());
     const saveSettings = useSaveSettings();
 
     return (
         <>
             <ThemeSelect
-                theme={loaderData.settings.theme}
+                theme={data?.settings.theme ?? DEFAULT_SETTINGS.theme}
                 onThemeSelect={(newTheme) => saveSettings({ theme: newTheme })}
             />
             <SettingRow label="Submit feedback">
@@ -122,10 +124,9 @@ function AdminSettings(): ReactNode {
 }
 
 function AccessLevelSelect(): ReactNode {
-    const loaderData = useLoaderData({ from: "/app" });
-    const updateContextData = useUpdateContextData();
+    const accessData = useAccessData();
 
-    const { maxAccessLevel, currentAccessLevel } = loaderData.accessData;
+    const { maxAccessLevel, currentAccessLevel } = accessData;
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
     const accessLevels = useSelectOptions(
         useMemo(

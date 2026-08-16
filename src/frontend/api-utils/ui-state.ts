@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { DEFAULT_LIBRARY_ID, LibraryId, Vendor } from "../../shared/types";
+import { Vendor } from "../../shared/types";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 3;
@@ -13,7 +13,6 @@ const UiStateSchema = z.object({
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().default(""),
-    libraryId: z.enum(LibraryId).default(DEFAULT_LIBRARY_ID),
     openGroupId: z.string().optional(),
     fasten: z.boolean().default(true)
 });

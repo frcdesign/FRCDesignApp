@@ -6,7 +6,7 @@ import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../common/style-constants";
 import { ReloadGroupsButton } from "../settings/reload-groups-button";
-import { getUiState } from "../api-utils/ui-state";
+import { DEFAULT_LIBRARY_ID } from "../../shared/types";
 
 /**
  * Catch-all error state for when a route below the root fails to load.
@@ -54,7 +54,7 @@ export function NotFoundError(): ReactNode {
             onClick={() => {
                 void navigate({
                     to: "/app/library/$libraryId",
-                    params: { libraryId: getUiState().libraryId }
+                    params: { libraryId: DEFAULT_LIBRARY_ID }
                 });
             }}
         >

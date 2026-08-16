@@ -1,10 +1,10 @@
+import { useAccessData } from "../api-utils/access-level";
 import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
 import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
 import { hasUserAccess } from "../../shared/types";
 import { useCallback, useMemo } from "react";
-import { useLoaderData } from "@tanstack/react-router";
 import {
     showErrorToast,
     showLoadingToast,
@@ -101,13 +101,10 @@ export function useSetVisibilityMutation(
  * Note this is different from whether the insertable is visible since admins can always see hidden insertables.
  */
 export function useIsInsertableHidden(insertable: InsertableOut): boolean {
-    const loaderData = useLoaderData({ from: "/app" });
+    const { currentAccessLevel } = useAccessData();
     return useMemo(() => {
-        return (
-            !insertable.isVisible &&
-            hasUserAccess(loaderData.accessData.currentAccessLevel)
-        );
-    }, [insertable.isVisible, loaderData.accessData.currentAccessLevel]);
+        return !insertable.isVisible && hasUserAccess(currentAccessLevel);
+    }, [insertable.isVisible, currentAccessLevel]);
 }
 
 export function useReloadThumbnailMutation(id: string, isGroup: boolean) {

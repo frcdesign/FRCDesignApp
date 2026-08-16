@@ -1,7 +1,10 @@
 import { OAuthApi } from "../backend/onshape-api/onshape-api";
 
+export const MOCK_SESSION_INFO = { id: "test-user", company: { id: "cad" } };
+
 /**
- * A thin shell client extending OAuthApi.
+ * A thin shell client extending OAuthApi. Only session info is answered, since
+ * that is what the auth gate reads; anything else is an unexpected call.
  */
 export class MockOnshapeApi extends OAuthApi {
     constructor() {
@@ -10,6 +13,9 @@ export class MockOnshapeApi extends OAuthApi {
     }
 
     protected _request(_method: string, url: string): Promise<Response> {
+        if (url.includes("sessioninfo")) {
+            return Promise.resolve(Response.json(MOCK_SESSION_INFO));
+        }
         return Promise.reject(
             new Error(`MockOnshapeApi: unexpected request to "${url}"`)
         );
