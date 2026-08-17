@@ -9,10 +9,7 @@ export const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";
 
 /**
  * Production dependency wiring, memoizing the Onshape lookups in KV by session.
- *
- * `getUserId`/`getAccessLevel` also tolerate not-signed-in requests: `getUserId`
- * is only reached behind `requireSignInMiddleware`, and `getAccessLevel` falls
- * back to USER.
+ * getUserId only runs behind requireSignInMiddleware; getAccessLevel falls back to USER.
  */
 export const productionServices: AppServicesFactory = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),

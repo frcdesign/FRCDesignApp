@@ -71,11 +71,10 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     const search = useSearch({ from: "/app" });
-    // Fetching document units requires Onshape; when not signed in, fall back to
-    // default units so the configuration still renders.
+    // Document units need Onshape; when not signed in, skip the fetch and let
+    // each quantity render in its own unit (see getEvaluateOptions).
     const isSignedIn = useIsSignedIn();
     const unitInfoQuery = useUnitInfoQuery(search, isSignedIn);
-    // Not signed in: no document units, so each quantity renders in its own unit.
     const unitInfo = isSignedIn ? unitInfoQuery.data : undefined;
 
     useEffect(() => {
@@ -373,7 +372,6 @@ function getEvaluateOptions(
         min: valueWithUnits(parameter.min, parameter.unit),
         max: valueWithUnits(parameter.max, parameter.unit)
     };
-    // Without document units (not signed in), display each quantity in its own unit.
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,

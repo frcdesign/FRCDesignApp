@@ -3,9 +3,8 @@ import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
 import { readLocalSettings } from "../settings/local-settings";
 import { RootAppError } from "../app/root-error";
 
-// Direct (not-signed-in) entry point. Onshape launches the app through `/init`
-// (redirected server-side); a user opening the app directly lands here and is
-// forwarded into the library, seeded from their locally-saved settings.
+// Direct entry for not-signed-in users (Onshape launches via `/init` instead),
+// seeding the library and theme from locally-saved settings.
 export const Route = createFileRoute("/")({
     beforeLoad: () => {
         const local = readLocalSettings();

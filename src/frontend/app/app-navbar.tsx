@@ -54,8 +54,8 @@ export function AppNavbar(): ReactNode {
 }
 
 /**
- * Shown only when not signed in. Kicks off the Onshape OAuth flow and returns
- * the user to their current location; context-data then reports them signed in.
+ * Shown only when not signed in; starts the Onshape OAuth flow and returns to
+ * the current location, after which access-data reports the caller signed in.
  */
 function SignInButton(): ReactNode {
     const isSignedIn = useIsSignedIn();

@@ -4,10 +4,7 @@ import { type AppContext, type AppContextEnv } from "./app";
 
 /**
  * Whether the caller has a valid Onshape session, memoized on the request.
- *
- * Resolves through the injected `getOnshapeApi` (which needs a session cookie +
- * valid tokens), so it honors test/standalone wiring. `FORCE_SIGNED_IN` forces
- * it true for testing (see services.ts for the matching fake userId).
+ * `FORCE_SIGNED_IN` forces it true for testing (see services.ts).
  */
 export async function isSignedIn(c: AppContext): Promise<boolean> {
     const cached = c.get("signedIn");
