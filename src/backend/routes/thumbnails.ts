@@ -30,8 +30,7 @@ import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
     type ThumbnailParams,
     thumbnailKey,
-    thumbnailUrl,
-    thumbnailWorkflowId
+    thumbnailUrl
 } from "../../shared/thumbnails";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
@@ -106,6 +105,12 @@ export async function uploadThumbnails(
     };
 }
 
+/** Whether every key is already stored, so the render can be skipped. */
+async function allStored(bucket: R2Bucket, keys: string[]): Promise<boolean> {
+    const heads = await Promise.all(keys.map((key) => bucket.head(key)));
+    return heads.every((head) => head !== null);
+}
+
 /**
  * Both sizes, so a row and its hover never disagree. The two-stage id flow is the
  * only Onshape path taking a configuration; either call can fail mid-render.
@@ -117,31 +122,42 @@ export async function uploadConfigurationThumbnails(
     microversionId: string,
     canonicalConfiguration: string
 ): Promise<void> {
+    const configurationKey = canonicalConfigurationKey(canonicalConfiguration);
+    const { elementId } = elementPath;
+    const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({
+        size,
+        key: thumbnailKey(elementId, microversionId, size, configurationKey)
+    }));
+    const keys = targets.map((target) => target.key);
+
+    // Runs are no longer deduplicated by id, and Onshape is the expensive part.
+    if (await allStored(bucket, keys)) {
+        return;
+    }
+
     const thumbnailId = await getThumbnailId(
         onshapeApi,
         elementPath,
         canonicalConfiguration
     );
-    const [small, large] = await Promise.all([
-        getThumbnailFromId(onshapeApi, thumbnailId, ThumbnailSize.SMALL),
-        getThumbnailFromId(onshapeApi, thumbnailId, ThumbnailSize.LARGE)
-    ]);
+    const rendered = await Promise.all(
+        targets.map(async ({ size, key }) => ({
+            key,
+            thumbnail: await getThumbnailFromId(onshapeApi, thumbnailId, size)
+        }))
+    );
 
-    const configurationKey = canonicalConfigurationKey(canonicalConfiguration);
-    const { elementId } = elementPath;
+    // The render above takes minutes, long enough to have been beaten to it.
+    if (await allStored(bucket, keys)) {
+        return;
+    }
+
     await Promise.all(
-        (
-            [
-                [ThumbnailSize.SMALL, small],
-                [ThumbnailSize.LARGE, large]
-            ] as const
-        ).map(([size, thumbnail]) =>
-            putThumbnail(
-                bucket,
-                thumbnailKey(elementId, microversionId, size, configurationKey),
-                thumbnail,
-                { microversionId, canonicalConfiguration }
-            )
+        rendered.map(({ key, thumbnail }) =>
+            putThumbnail(bucket, key, thumbnail, {
+                microversionId,
+                canonicalConfiguration
+            })
         )
     );
 }
@@ -260,7 +276,10 @@ function thumbnailResponse(object: R2ObjectBody): Response {
     return new Response(object.body, { headers });
 }
 
-/** Concurrent requests collapse onto one run: Cloudflare rejects a duplicate id. */
+/**
+ * Concurrent requests can each start a run. Rare, and the workflow skips a
+ * render that is already stored, which a reused id would rule out permanently.
+ */
 async function warmConfigurationThumbnail(
     c: AppContext,
     params: ThumbnailParams
@@ -268,7 +287,6 @@ async function warmConfigurationThumbnail(
     try {
         // The render runs later, under this caller's Onshape tokens.
         await c.env.THUMBNAIL_WORKFLOW.create({
-            id: thumbnailWorkflowId(params),
             params: { ...params, sessionId: getSessionId(c) }
         });
     } catch {

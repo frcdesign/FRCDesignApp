@@ -5,13 +5,14 @@ import { ThumbnailSize } from "../../shared/types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
     thumbnailKey,
-    thumbnailUrl,
-    thumbnailWorkflowId
+    thumbnailUrl
 } from "../../shared/thumbnails";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
     canonicalConfigurationKey
 } from "../../shared/canonical-configuration";
+import { uploadConfigurationThumbnails } from "./thumbnails";
+import type { OnshapeApi } from "../onshape-api/onshape-api";
 
 const SIZE = ThumbnailSize.LARGE;
 const MICROVERSION = "mv-1";
@@ -189,13 +190,13 @@ describe("warming a configuration's thumbnail", () => {
         expect(res.status).toBe(200);
         expect(createSpy).toHaveBeenCalledWith(
             expect.objectContaining({
-                id: thumbnailWorkflowId({
+                params: {
                     elementId,
                     microversionId: MICROVERSION,
-                    canonicalConfiguration: CANONICAL_CONFIGURATION
-                }),
-                // The render runs later, so it needs a session to authenticate.
-                params: expect.objectContaining({ sessionId: SESSION_ID })
+                    canonicalConfiguration: CANONICAL_CONFIGURATION,
+                    // The render runs later, so it needs a session to authenticate.
+                    sessionId: SESSION_ID
+                }
             })
         );
     });
@@ -246,5 +247,101 @@ describe("warming a configuration's thumbnail", () => {
             `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&c=x&warm=maybe`
         );
         expect(res.status).toBe(400);
+    });
+});
+
+describe("uploadConfigurationThumbnails", () => {
+    const elementPath = {
+        documentId: "d",
+        instanceId: "v",
+        instanceType: "v" as const,
+        elementId: "upload-element"
+    };
+
+    /** Stands in for Onshape; only the calls matter, not the bytes. */
+    function fakeOnshapeApi() {
+        const getImage = vi.fn().mockResolvedValue(new ArrayBuffer(4));
+        const api = {
+            get: vi.fn().mockResolvedValue({
+                items: [{ predictableThumbnailId: "tid" }]
+            }),
+            getImage
+        } as unknown as OnshapeApi;
+        return { api, getImage };
+    }
+
+    it("renders and stores both sizes", async () => {
+        const { api } = fakeOnshapeApi();
+
+        await uploadConfigurationThumbnails(
+            env.BLOB,
+            api,
+            elementPath,
+            MICROVERSION,
+            CANONICAL_CONFIGURATION
+        );
+
+        const key = (size: ThumbnailSize) =>
+            thumbnailKey(
+                elementPath.elementId,
+                MICROVERSION,
+                size,
+                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+            );
+        expect(await env.BLOB.head(key(ThumbnailSize.SMALL))).not.toBeNull();
+        expect(await env.BLOB.head(key(ThumbnailSize.LARGE))).not.toBeNull();
+    });
+
+    // Runs are no longer deduplicated by instance id, so this is what keeps a
+    // second run from paying for a render Onshape already did.
+    it("skips Onshape entirely when both sizes are already stored", async () => {
+        const storedPath = { ...elementPath, elementId: "already-stored" };
+        for (const size of [ThumbnailSize.SMALL, ThumbnailSize.LARGE]) {
+            await env.BLOB.put(
+                thumbnailKey(
+                    storedPath.elementId,
+                    MICROVERSION,
+                    size,
+                    canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                ),
+                "bytes"
+            );
+        }
+        const { api, getImage } = fakeOnshapeApi();
+
+        await uploadConfigurationThumbnails(
+            env.BLOB,
+            api,
+            storedPath,
+            MICROVERSION,
+            CANONICAL_CONFIGURATION
+        );
+
+        expect(getImage).not.toHaveBeenCalled();
+    });
+
+    // One size present is a half-done render, not a reason to skip.
+    it("renders when only one size is stored", async () => {
+        const partialPath = { ...elementPath, elementId: "half-stored" };
+        await env.BLOB.put(
+            thumbnailKey(
+                partialPath.elementId,
+                MICROVERSION,
+                ThumbnailSize.SMALL,
+                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+            ),
+            "bytes"
+        );
+        const { api, getImage } = fakeOnshapeApi();
+
+        await uploadConfigurationThumbnails(
+            env.BLOB,
+            api,
+            partialPath,
+            MICROVERSION,
+            CANONICAL_CONFIGURATION
+        );
+
+        expect(getImage).toHaveBeenCalled();
     });
 });

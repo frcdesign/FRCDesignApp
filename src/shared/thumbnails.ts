@@ -1,8 +1,7 @@
 /** Thumbnail addressing, shared so the client builds the urls the worker serves. */
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
-    DEFAULT_CONFIGURATION_KEY,
-    canonicalConfigurationKey
+    DEFAULT_CONFIGURATION_KEY
 } from "./canonical-configuration";
 import { ThumbnailSize } from "./types";
 
@@ -56,11 +55,4 @@ export interface ThumbnailParams {
     microversionId: string;
     /** Never the default, which loads eagerly with the element. */
     canonicalConfiguration: string;
-}
-
-/** Deterministic, so duplicate requests collapse onto one run: Cloudflare
- * rejects a repeated instance id, which is the coalescing we want. */
-export function thumbnailWorkflowId(params: ThumbnailParams): string {
-    const key = canonicalConfigurationKey(params.canonicalConfiguration);
-    return `thumbnail-${params.elementId}-${params.microversionId}-${key}`;
 }
