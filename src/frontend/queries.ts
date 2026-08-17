@@ -15,10 +15,7 @@ import {
 import { LibraryId } from "../shared/types";
 import { type AccessData } from "../shared/types";
 import { toLibraryPath, useLibraryId } from "./api-utils/library";
-import {
-    DEFAULT_UNIT_INFO,
-    type UnitInfo
-} from "../shared/configuration-models";
+import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
 import { InstancePath } from "../shared/onshape-path";
@@ -102,8 +99,8 @@ export function getAccessDataQuery() {
 
 /**
  * Returns the current document's units for the Insert dialog. Hits Onshape, so
- * it's disabled when not connected to a document; a default placeholder lets the
- * dialog render immediately either way.
+ * it's disabled when not connected to a document; each quantity then falls back
+ * to its own default unit.
  */
 export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
     return useQuery<UnitInfo>({
@@ -116,8 +113,7 @@ export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
                     instanceType: instancePath.instanceType
                 }
             }),
-        enabled,
-        placeholderData: DEFAULT_UNIT_INFO
+        enabled
     });
 }
 

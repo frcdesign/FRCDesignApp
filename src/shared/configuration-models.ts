@@ -143,19 +143,15 @@ export interface Configuration {
 /**
  * Custom data collected from the current tab the user has open.
  */
+/**
+ * The current document's units. Fields are optional: when a unit is absent (not
+ * connected to a document, or units no longer fetched) each quantity falls back
+ * to its own default unit.
+ */
 export interface UnitInfo {
-    angleUnit: Unit;
-    lengthUnit: Unit;
-    lengthPrecision: number;
-    anglePrecision: number;
-    realPrecision: number;
+    angleUnit?: Unit;
+    lengthUnit?: Unit;
+    lengthPrecision?: number;
+    anglePrecision?: number;
+    realPrecision?: number;
 }
-
-/** Shown while the document's units load, or when not connected to a document. */
-export const DEFAULT_UNIT_INFO: UnitInfo = {
-    lengthUnit: Unit.MILLIMETER,
-    angleUnit: Unit.DEGREE,
-    lengthPrecision: 3,
-    anglePrecision: 3,
-    realPrecision: 3
-};
