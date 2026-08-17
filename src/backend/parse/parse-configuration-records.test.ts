@@ -88,15 +88,43 @@ describe("decideIndexing", () => {
             index: false,
             issues: TOO_MANY
         },
-        // No vendor: never auto-eligible, never flagged, but still enableable.
-        { vendors: [], configs: 50, force: false, index: false, issues: [] },
-        { vendors: [], configs: 50, force: true, index: true, issues: [] },
+        // No recognized vendor is not a reason to skip indexing: the heuristic
+        // misses plenty of real vendor parts, so these behave like any other.
+        { vendors: [], configs: 127, force: false, index: true, issues: [] },
+        { vendors: [], configs: 128, force: false, index: false, issues: MANY },
+        // Custom: never auto-eligible, never flagged, but still enableable.
+        {
+            vendors: [Vendor.CUSTOM],
+            configs: 50,
+            force: false,
+            index: false,
+            issues: []
+        },
+        {
+            vendors: [Vendor.CUSTOM],
+            configs: 50,
+            force: true,
+            index: true,
+            issues: []
+        },
         // Nor flagged for a count it was never going to index against...
-        { vendors: [], configs: 200, force: false, index: false, issues: [] },
-        { vendors: [], configs: 600, force: false, index: false, issues: [] },
+        {
+            vendors: [Vendor.CUSTOM],
+            configs: 200,
+            force: false,
+            index: false,
+            issues: []
+        },
+        {
+            vendors: [Vendor.CUSTOM],
+            configs: 600,
+            force: false,
+            index: false,
+            issues: []
+        },
         // ...unless an admin enabled it and is owed the reason it did nothing.
         {
-            vendors: [],
+            vendors: [Vendor.CUSTOM],
             configs: 600,
             force: true,
             index: false,

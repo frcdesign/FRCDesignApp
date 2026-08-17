@@ -236,9 +236,8 @@ async function finalizeLibrary(
 }
 
 /**
- * Renders and stores one configuration's thumbnails outside a request, since
- * Onshape can take minutes and a Worker request cannot wait that long. Until it
- * finishes, requests fall back to the element's default thumbnail.
+ * Outside a request, since Onshape can take minutes. Until it finishes,
+ * requests fall back to the element's default thumbnail.
  */
 export class ThumbnailWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -248,7 +247,8 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<ThumbnailParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { elementId, microversionId, configuration } = event.payload;
+        const { elementId, microversionId, canonicalConfiguration } =
+            event.payload;
 
         const elementPath = await step.do("resolve-element", async () => {
             const row = await getDb(this.env.DB)
@@ -284,7 +284,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                     }),
                     elementPath,
                     microversionId,
-                    configuration
+                    canonicalConfiguration
                 )
         );
     }

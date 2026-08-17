@@ -12,7 +12,10 @@ import {
     seedGroup,
     seedTestData
 } from "../../__test_utils__";
+import MiniSearch from "minisearch";
 import { getDb } from "../db";
+import { searchIndexKey } from "../library-data";
+import { SEARCH_OPTIONS, type SearchDocument } from "../../shared/search";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";
 import * as JobTracker from "../load/job-tracker";
 
@@ -66,6 +69,34 @@ describe("group admin routes", () => {
             .all();
         expect(remaining).toHaveLength(0);
     });
+
+    // Search reads isVisible out of the index, not the row, so leaving it stale
+    // drops the insertable from every result until the next full load.
+    it.each([false, true])(
+        "POST /set-element-visibility rebuilds the search index (isVisible=%s)",
+        async (isVisible) => {
+            await seedTestData(db);
+
+            const res = await createTestApp().request(
+                `/api/set-element-visibility/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", {
+                    insertableIds: [TEST_PART_STUDIO_ID],
+                    isVisible
+                }),
+                env
+            );
+            expect(res.status).toBe(200);
+
+            const object = await env.SEARCH_INDEX.get(
+                searchIndexKey(TEST_LIBRARY_ID)
+            );
+            const indexed = MiniSearch.loadJSON<SearchDocument>(
+                await object!.text(),
+                SEARCH_OPTIONS
+            ).getStoredFields(TEST_PART_STUDIO_ID);
+            expect(indexed?.isVisible).toBe(isVisible);
+        }
+    );
 
     it("POST /sort-group-alphabetically updates the flag", async () => {
         await seedTestData(db);

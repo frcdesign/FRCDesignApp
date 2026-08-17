@@ -41,7 +41,7 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "../../shared/api-models";
-import { getVendorName, Vendor } from "../../shared/types";
+import { getVendorName, isCustomPart, Vendor } from "../../shared/types";
 import {
     ConfigurationParameter,
     ParameterType
@@ -653,13 +653,8 @@ function FastenSwitch({
 }
 
 /**
- * The indexing control: a switch only where turning indexing on is the admin's
- * call to make, and an icon saying why not otherwise.
- *
- * Indexing needs a vendor to attribute parts to and few enough configurations
- * to enumerate. Past the hard cap it can't run at all, and under the auto
- * threshold a vendor insertable already indexes on load, leaving nothing to
- * decide. Only the band in between is a choice.
+ * A switch only where enabling indexing is the admin's call, an icon saying why
+ * not otherwise — past the cap it can't run, under the threshold it already has.
  */
 function IndexingRow({
     insertableId,
@@ -679,18 +674,18 @@ function IndexingRow({
                 tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
             />
         );
-    } else if (status.vendors.length === 0) {
+    } else if (isCustomPart(status.vendors)) {
         control = (
             <IndexingIcon
                 severity={BuildIssueSeverity.WARNING}
-                tooltip="No vendor was parsed, so there are no vendor part numbers to index."
+                tooltip="Custom parts are team-made, so there is no vendor metadata to parse."
             />
         );
     } else if (band === IndexingBand.AUTOMATIC) {
         control = (
             <IndexingIcon
                 severity={null}
-                tooltip={`Indexed automatically: a vendor insertable under ${AUTO_INDEX_THRESHOLD} configurations indexes on every load.`}
+                tooltip={`Indexed automatically: an insertable under ${AUTO_INDEX_THRESHOLD} configurations indexes on every load.`}
             />
         );
     } else {
@@ -714,10 +709,8 @@ function IndexingRow({
 }
 
 /**
- * Stands in for the indexing switch where there is nothing to toggle. Reuses the
- * build-check severity icons, so the state reads the same as the callouts above
- * it — a green check when indexing is already on, otherwise the severity of what
- * is holding it back.
+ * Stands in for the switch where there is nothing to toggle, reusing the
+ * build-check icons so the state reads the same as the callouts above it.
  */
 function IndexingIcon({
     severity,

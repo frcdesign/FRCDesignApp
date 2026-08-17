@@ -24,13 +24,13 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const accessData = useAccessData();
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
-        return <SectionLoading title="Loading documents..." />;
-    } else if (
-        searchDbQuery.isError ||
-        libraryQuery.isError ||
-        !searchDbQuery.data
-    ) {
+        return <SectionLoading title="Loading library..." />;
+    } else if (libraryQuery.isError) {
         return <SectionError title="Failed to load library." />;
+    } else if (searchDbQuery.isError) {
+        return <SectionError title="Failed to load search database." />;
+    } else if (!searchDbQuery.data) {
+        return <SectionError title="The search database is empty." />;
     }
     const insertables = libraryQuery.data.insertables;
     const searchResults = doSearch(

@@ -6,8 +6,7 @@ import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
-import { ParameterValues } from "../../shared/configuration-models";
-import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../../shared/canonical-configuration";
 import { thumbnailUrl } from "../../shared/thumbnails";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
@@ -31,20 +30,15 @@ function getHeightAndWidth(
     };
 }
 
-/**
- * Where to read a configuration's thumbnails from. Rows only know a
- * configuration, not whether it has been rendered yet — the route falls back to
- * the element's default thumbnail until it has.
- */
+/** Rows know a configuration, not whether it is rendered; the route falls back. */
 export interface ThumbnailTarget {
     elementId: string;
     microversionId: string;
-    /** The encoded canonical configuration; empty means the element default. */
-    configuration: string;
+    /** Empty means the element default. */
+    canonicalConfiguration: string;
     /**
-     * Whether a miss should start rendering this configuration. Surfaces where
-     * the user chose the configuration warm it; search results don't, since one
-     * cold search would otherwise kick off a render per row.
+     * Surfaces where the user picked the configuration warm it; a cold search
+     * would otherwise start a render per row.
      */
     warm: boolean;
 }
@@ -56,15 +50,15 @@ interface CardThumbnailProps {
     target?: ThumbnailTarget;
 }
 
-/**
- * Thumbnail component used in lists, with a larger one on hover. Both sizes come
- * from the same configuration, so the two never disagree.
- */
+/** Both sizes come from one configuration, so a row and its hover never disagree. */
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        target?.configuration ? thumbnailUrl({ ...target, size }) : stored;
+        target &&
+        target.canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
+            ? thumbnailUrl({ ...target, size })
+            : stored;
 
     return (
         <HoverCard
@@ -101,15 +95,12 @@ interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     heightAndWidth: HeightAndWidth;
 }
 
-/**
- * A generic thumbnail component.
- */
 function Thumbnail(props: ThumbnailProps): ReactNode {
     const { url, heightAndWidth, spinnerSize, ...centerProps } = props;
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
-        queryFn: async ({ signal }) => {
+        queryFn: ({ signal }) => {
             if (url === undefined) {
                 throw new Error("Tried to get thumbnail with no URL");
             }
@@ -151,22 +142,17 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
-    microversionId: string;
-    configuration?: ParameterValues;
+    /** The selection to preview; Onshape applies defaults for what it omits. */
+    canonicalConfiguration: string;
+    /** Lets the fetch also warm the R2 cache for this configuration. */
+    microversionId?: string;
     /** Stored thumbnail, shown instead of the live preview when not signed in. */
-    thumbnailUrls?: ThumbnailUrls;
-    /** With the canonical configuration, lets the fetch also warm the R2 cache. */
-    canonicalConfiguration?: string;
+    largeThumbnailUrl?: string;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const {
-        path,
-        microversionId,
-        configuration,
-        thumbnailUrls,
-        canonicalConfiguration
-    } = props;
+    const { path, canonicalConfiguration, microversionId, largeThumbnailUrl } =
+        props;
     // A stored size, so the bytes this fetch returns are worth caching.
     const size = ThumbnailSize.LARGE;
     const isSignedIn = useIsSignedIn();
@@ -175,17 +161,18 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
     const targetElementType = useTargetElementType();
 
-    // Thumbnail id generation with queries is really unreliable
-    // The standard Onshape API for it appears to be broken/bugged
-    // So we use an undocumented alternate workflow where insertables returns an id
-    // However, the id can take a while to update, so we have to poll the endpoint while waiting for it to load
+    // Onshape's configured-thumbnail query is broken, so we use the undocumented
+    // insertables id flow — and poll, since the id lags behind the configuration.
     const thumbnailIdQuery = useQuery({
-        queryKey: ["thumbnail", "id", toElementApiPath(path), configuration],
+        queryKey: [
+            "thumbnail",
+            "id",
+            toElementApiPath(path),
+            canonicalConfiguration
+        ],
         queryFn: async ({ signal }) => {
             return apiGet("/thumbnail-id" + toElementApiPath(path), {
-                query: {
-                    configuration: encodeConfigurationForQuery(configuration)
-                },
+                query: { configuration: canonicalConfiguration },
                 signal
             }).then((value) => value.thumbnailId as string);
         },
@@ -198,7 +185,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     const thumbnailQuery = useQuery({
         queryKey: ["thumbnail", thumbnailId],
-        queryFn: async ({ signal }) => {
+        queryFn: ({ signal }) => {
             if (!thumbnailId) {
                 // Shouldn't happen due to enabled guard
                 return;
@@ -207,9 +194,9 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 query: {
                     size,
                     thumbnailId,
-                    // Let the worker store what it proxies, so this render is
-                    // cached for the rows that show the same configuration.
-                    ...(canonicalConfiguration
+                    // Let the worker store what it proxies, warming matching rows.
+                    ...(microversionId &&
+                    canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
                         ? {
                               elementId: path.elementId,
                               v: microversionId,
@@ -244,7 +231,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     if (!isSignedIn) {
         return (
             <Thumbnail
-                url={thumbnailUrls?.large}
+                url={largeThumbnailUrl}
                 heightAndWidth={heightAndWidth}
                 spinnerSize={36}
             />

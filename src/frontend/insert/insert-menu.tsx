@@ -21,7 +21,7 @@ import { InsertableMenuItems } from "../cards/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
 import { ParameterValues } from "../../shared/configuration-models";
-import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
@@ -107,9 +107,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
-                microversionId={insertable.microversionId}
-                configuration={configuration}
-                thumbnailUrls={insertable.thumbnailUrls}
+                largeThumbnailUrl={insertable.largeThumbnailUrl}
                 microversionId={insertable.microversionId}
                 canonicalConfiguration={encodeCanonicalConfiguration(
                     canonicalConfiguration

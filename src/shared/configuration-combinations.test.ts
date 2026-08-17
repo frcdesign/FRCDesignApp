@@ -200,27 +200,23 @@ describe("countConfigurations", () => {
 
 describe("isIndexingEnabled", () => {
     it.each([
-        // A vendor insertable under the threshold indexes without being asked.
-        { vendor: true, band: IndexingBand.AUTOMATIC, force: false, on: true },
-        // A custom one never does, until an admin says so.
-        {
-            vendor: false,
-            band: IndexingBand.AUTOMATIC,
-            force: false,
-            on: false
-        },
-        { vendor: false, band: IndexingBand.AUTOMATIC, force: true, on: true },
-        // Past the threshold it waits to be enabled, vendor or not.
-        { vendor: true, band: IndexingBand.MANUAL, force: false, on: false },
-        { vendor: true, band: IndexingBand.MANUAL, force: true, on: true },
-        { vendor: false, band: IndexingBand.MANUAL, force: false, on: false },
+        // Any non-custom insertable under the threshold indexes without being
+        // asked — including one whose vendor the heuristic never recognized.
+        { custom: false, band: IndexingBand.AUTOMATIC, force: false, on: true },
+        // A custom part never does, until an admin says so.
+        { custom: true, band: IndexingBand.AUTOMATIC, force: false, on: false },
+        { custom: true, band: IndexingBand.AUTOMATIC, force: true, on: true },
+        // Past the threshold it waits to be enabled, custom or not.
+        { custom: false, band: IndexingBand.MANUAL, force: false, on: false },
+        { custom: false, band: IndexingBand.MANUAL, force: true, on: true },
+        { custom: true, band: IndexingBand.MANUAL, force: false, on: false },
         // Past the cap there is nothing to enumerate, so enabling changes nothing.
-        { vendor: true, band: IndexingBand.EXCEEDED, force: true, on: false },
-        { vendor: true, band: IndexingBand.EXCEEDED, force: false, on: false }
+        { custom: false, band: IndexingBand.EXCEEDED, force: true, on: false },
+        { custom: false, band: IndexingBand.EXCEEDED, force: false, on: false }
     ])(
-        "vendor=$vendor band=$band force=$force -> $on",
-        ({ vendor, band, force, on }) => {
-            expect(isIndexingEnabled(vendor, band, force)).toBe(on);
+        "custom=$custom band=$band force=$force -> $on",
+        ({ custom, band, force, on }) => {
+            expect(isIndexingEnabled(custom, band, force)).toBe(on);
         }
     );
 });

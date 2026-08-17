@@ -101,6 +101,8 @@ groupRoutes.post(
             );
 
         await bumpLibraryVersion(db, libraryId);
+        // Search filters on isVisible, so a stale index hides these from results.
+        await rebuildSearchDb(c.env.SEARCH_INDEX, db, libraryId);
         return c.json({ success: true });
     }
 );

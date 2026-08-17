@@ -33,13 +33,13 @@ import {
     SearchRecord
 } from "../../shared/configuration-models";
 import {
-    canonicalizeConfiguration,
     evaluateCondition,
     findRecordForConfiguration,
     getEvaluateOptions,
     getOption,
     getVisibleOptions
 } from "../../shared/configuration-utils";
+import { canonicalizeConfiguration } from "../../shared/canonical-configuration";
 import { handleBooleanChange } from "../common/utils";
 import {
     formatValueWithUnits,
@@ -57,11 +57,12 @@ interface ConfigurationWrapperProps {
     configuration?: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
     /**
-     * Reports the selection's canonical form, which addresses its thumbnail and
-     * is what a favorite stores. Only this component has the parameters and
-     * units needed to compute it.
+     * Reported here because only this component has the parameters and units
+     * canonicalizing needs.
      */
-    onCanonicalConfiguration?: (canonical: ParameterValues) => void;
+    onCanonicalConfiguration?: (
+        canonicalConfiguration: ParameterValues
+    ) => void;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -146,9 +147,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 }
 
 /**
- * The part number + name the currently-selected configuration produces.
- * Recomputes on every configuration change, so it updates live as the user
- * changes selections. Renders nothing when the selection has no indexed record.
+ * The part number + name the selection produces, live as it changes. Renders
+ * nothing when the selection has no indexed record.
  */
 function RecordSummary({
     records,
@@ -280,10 +280,8 @@ interface InputLabelProps {
 }
 
 /**
- * A label displayed to the left of a parameter input.
- *
- * The label is given the height of an input so it stays aligned with the input
- * itself rather than drifting when the input grows to show an error message.
+ * Given an input's height so it stays aligned rather than drifting when the
+ * input grows to show an error message.
  */
 function InputLabel(props: InputLabelProps) {
     const { label, htmlFor, children } = props;

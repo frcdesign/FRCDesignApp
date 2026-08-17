@@ -13,6 +13,8 @@ import {
     jsonRequest,
     resetDb,
     seedAssembly,
+    seedGroup,
+    seedInsertable,
     seedPartStudio
 } from "../../__test_utils__";
 import { getDb } from "../db";
@@ -183,10 +185,12 @@ describe("insertable routes", () => {
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    // Turning force off on a part with no vendor drops it below the auto-index
+    // Turning force off on a custom part drops it below the auto-index
     // heuristic, so its records and configuration row go away.
     it("POST /toggle-part-number-search clears the data when forcing off", async () => {
-        await seedPartStudio(db);
+        await seedGroup(db);
+        // The route re-parses vendors from the name, so that is what marks it custom.
+        await seedInsertable(db, { name: "Custom Bracket" });
         const spy = vi
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
@@ -203,7 +207,7 @@ describe("insertable routes", () => {
             env
         );
         expect(res.status).toBe(200);
-        // A part with no vendor isn't auto-eligible, so nothing is re-indexed.
+        // A custom part isn't auto-eligible, so nothing is re-indexed.
         expect(spy).not.toHaveBeenCalled();
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);

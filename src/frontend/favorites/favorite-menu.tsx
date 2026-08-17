@@ -13,7 +13,7 @@ import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import { ParameterValues } from "../../shared/configuration-models";
-import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import {
     favoritesQueryKey,
     useFavoritesQuery,
@@ -74,9 +74,8 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            // Store the canonical form: Onshape applies defaults for whatever
-            // it omits, so it inserts the same thing, and it addresses the same
-            // thumbnail the favorites row asks for.
+            // Canonical, so it addresses the thumbnail the favorites row asks
+            // for; Onshape applies defaults for what it omits.
             return apiPost("/default-configuration/" + favoriteId, {
                 body: { defaultConfiguration: canonicalConfiguration }
             });
@@ -126,8 +125,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
-                microversionId={insertable.microversionId}
-                configuration={configuration}
+                largeThumbnailUrl={insertable.largeThumbnailUrl}
                 microversionId={insertable.microversionId}
                 canonicalConfiguration={encodeCanonicalConfiguration(
                     canonicalConfiguration

@@ -172,8 +172,8 @@ export function CardTitle(props: CardTitleProps) {
                 largeThumbnailUrl={largeThumbnailUrl}
                 target={thumbnailTarget}
             />
-            {/* Shrinks to truncate, but never grows: the hidden tag and build
-                status badge belong beside the name, not at the row's edge. */}
+            {/* Shrinks to truncate, but never grows: the build status badge and
+                hidden tag belong beside the name, not at the row's edge. */}
             <Stack gap={0} miw={0}>
                 <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                     {cardTitle}
@@ -184,6 +184,9 @@ export function CardTitle(props: CardTitleProps) {
                     </Text>
                 )}
             </Stack>
+            {buildStatusBadge}
+            {/* After the badge: toggling visibility would otherwise shift the
+                badge, dragging its open hover card out from under the cursor. */}
             {isHidden && (
                 <IconEyeOff
                     size={IconSize.SMALL}
@@ -191,7 +194,6 @@ export function CardTitle(props: CardTitleProps) {
                     title="Hidden"
                 />
             )}
-            {buildStatusBadge}
         </Group>
     );
 }

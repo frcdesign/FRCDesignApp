@@ -189,9 +189,8 @@ export async function rebuildSearchDb(
         getRecordsMap(db, libraryId)
     ]);
     const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
-    await bucket.put(searchIndexKey(libraryId), searchDb, {
-        httpMetadata: { contentType: "application/json" }
-    });
+    // Store as a plain string in R2
+    await bucket.put(searchIndexKey(libraryId), searchDb);
     console.log(
         `Rebuilt search index for ${libraryId}: ` +
             `${searchDb.length} B, ${Date.now() - start} ms`

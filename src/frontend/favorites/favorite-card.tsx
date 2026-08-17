@@ -1,4 +1,4 @@
-import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { ReactNode } from "react";
 import { InsertableOut, Favorite } from "../../shared/api-models";
 import { useMutation } from "@tanstack/react-query";
@@ -77,7 +77,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     thumbnailTarget={{
                         elementId: insertable.elementId,
                         microversionId: insertable.microversionId,
-                        configuration: encodeCanonicalConfiguration(
+                        canonicalConfiguration: encodeCanonicalConfiguration(
                             favorite.defaultConfiguration ?? {}
                         ),
                         warm: true

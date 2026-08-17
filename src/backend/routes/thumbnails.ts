@@ -1,11 +1,14 @@
 import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import {
     CachePolicy,
     cacheMiddleware,
     getApp,
     getInsertableParam,
     immutableCacheControl,
-    insertableRoute
+    insertableRoute,
+    setCacheTtl
 } from "../app";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
@@ -24,15 +27,17 @@ import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 import { ThumbnailSize, ThumbnailUrls } from "../../shared/types";
 import {
-    THUMBNAIL_CACHE_TTL,
     THUMBNAIL_FALLBACK_CACHE_TTL,
     type ThumbnailParams,
-    thumbnailConfigurationKey,
     thumbnailKey,
     thumbnailUrl,
     thumbnailWorkflowId
 } from "../../shared/thumbnails";
-import { DEFAULT_CONFIGURATION_KEY } from "../../shared/configuration-utils";
+import {
+    DEFAULT_CANONICAL_CONFIGURATION,
+    DEFAULT_CONFIGURATION_KEY,
+    canonicalConfigurationKey
+} from "../../shared/canonical-configuration";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import type { AppBindings } from "../app";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
@@ -47,17 +52,13 @@ async function putThumbnail(
     await bucket.put(key, thumbnail, {
         httpMetadata: {
             contentType: "image/gif",
-            cacheControl: `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
+            cacheControl: immutableCacheControl(CachePolicy.PUBLIC_CACHE)
         },
         customMetadata: metadata
     });
 }
 
-/**
- * Renders and stores an element's default-configuration thumbnails, in both
- * sizes. Throws if Onshape hasn't rendered them yet, which is what drives the
- * load step's retries.
- */
+/** Throws until Onshape has rendered them, which drives the load step's retries. */
 export async function uploadThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
@@ -92,40 +93,40 @@ export async function uploadThumbnails(
         small: thumbnailUrl({
             elementId,
             microversionId,
-            size: ThumbnailSize.SMALL
+            size: ThumbnailSize.SMALL,
+            canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
         }),
         large: thumbnailUrl({
             elementId,
             microversionId,
-            size: ThumbnailSize.LARGE
+            size: ThumbnailSize.LARGE,
+            canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
         })
     };
 }
 
 /**
- * Renders and stores one configuration's thumbnails, in both sizes, so a row and
- * its hover never disagree. Uses the two-stage id flow, the only Onshape path
- * that takes a configuration; both calls can fail while Onshape renders, which
- * is what the caller's retries are for.
+ * Both sizes, so a row and its hover never disagree. The two-stage id flow is the
+ * only Onshape path taking a configuration; either call can fail mid-render.
  */
 export async function uploadConfigurationThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     microversionId: string,
-    configuration: string
+    canonicalConfiguration: string
 ): Promise<void> {
     const thumbnailId = await getThumbnailId(
         onshapeApi,
         elementPath,
-        configuration
+        canonicalConfiguration
     );
     const [small, large] = await Promise.all([
         getThumbnailFromId(onshapeApi, thumbnailId, ThumbnailSize.SMALL),
         getThumbnailFromId(onshapeApi, thumbnailId, ThumbnailSize.LARGE)
     ]);
 
-    const configurationKey = thumbnailConfigurationKey(configuration);
+    const configurationKey = canonicalConfigurationKey(canonicalConfiguration);
     const { elementId } = elementPath;
     await Promise.all(
         (
@@ -138,15 +139,13 @@ export async function uploadConfigurationThumbnails(
                 bucket,
                 thumbnailKey(elementId, microversionId, size, configurationKey),
                 thumbnail,
-                { microversionId, configuration }
+                { microversionId, canonicalConfiguration }
             )
         )
     );
 }
 
-/**
- * Uploads document-level thumbnails using the document's designated thumbnail element.
- */
+/** Falls back to the first element when the document designates no thumbnail. */
 export async function uploadDocumentThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
@@ -185,72 +184,82 @@ export async function uploadDocumentThumbnails(
 
 export const thumbnailRoutes = getApp();
 
-/**
- * GET /api/thumbnail/:size/:elementId?v=&c=&warm=
- *
- * Serves a stored thumbnail. `c` is the encoded canonical configuration (absent
- * for the default), `v` the microversion — both are part of the key, so a hit is
- * immutable. A configuration we haven't rendered falls back to the element's
- * default thumbnail, cached only briefly so the real one can take over as soon
- * as it lands; with `warm=1` the miss also kicks off that render.
- */
-thumbnailRoutes.get("/thumbnail/:size/:elementId", async (c) => {
-    const size = c.req.param("size") as ThumbnailSize;
-    const elementId = c.req.param("elementId");
-    const microversionId = c.req.query("v");
-    if (!microversionId) {
-        return c.json({ error: "v (microversionId) required" }, 400);
-    }
-    const configuration = c.req.query("c");
-    const configurationKey = thumbnailConfigurationKey(configuration);
-
-    const object = await c.env.THUMBNAILS.get(
-        thumbnailKey(elementId, microversionId, size, configurationKey)
-    );
-    if (object) {
-        return thumbnailResponse(object, THUMBNAIL_CACHE_TTL);
-    }
-
-    if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
-        return c.notFound();
-    }
-
-    if (c.req.query("warm") === "1" && configuration) {
-        await warmConfigurationThumbnail(c.env, {
-            elementId,
-            microversionId,
-            configuration
-        });
-    }
-
-    // Stand in with the default configuration until the real render lands.
-    const fallback = await c.env.THUMBNAILS.get(
-        thumbnailKey(elementId, microversionId, size)
-    );
-    if (!fallback) {
-        return c.notFound();
-    }
-    return thumbnailResponse(fallback, THUMBNAIL_FALLBACK_CACHE_TTL);
+const storedThumbnailParams = z.object({
+    size: z.enum(ThumbnailSize),
+    elementId: z.string().min(1)
 });
 
-function thumbnailResponse(object: R2ObjectBody, maxAge: number): Response {
+/** Absent means the element default, which is what `""` encodes. */
+const canonicalConfigurationQuery = z
+    .string()
+    .default(DEFAULT_CANONICAL_CONFIGURATION);
+
+const storedThumbnailQuery = z.object({
+    /** The microversion, part of the key — which is what makes a hit immutable. */
+    v: z.string().min(1),
+    c: canonicalConfigurationQuery,
+    warm: z.stringbool().default(false)
+});
+
+/**
+ * GET /api/thumbnail/:size/:elementId?v=&c=&warm= — an unrendered configuration
+ * falls back to the element default, and `warm` kicks off the real render.
+ */
+thumbnailRoutes.get(
+    "/thumbnail/:size/:elementId",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    zValidator("param", storedThumbnailParams),
+    zValidator("query", storedThumbnailQuery),
+    async (c) => {
+        const { size, elementId } = c.req.valid("param");
+        const {
+            v: microversionId,
+            c: canonicalConfiguration,
+            warm
+        } = c.req.valid("query");
+        const configurationKey = canonicalConfigurationKey(
+            canonicalConfiguration
+        );
+
+        const object = await c.env.THUMBNAILS.get(
+            thumbnailKey(elementId, microversionId, size, configurationKey)
+        );
+        if (object) {
+            return thumbnailResponse(object);
+        }
+
+        if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
+            return c.notFound();
+        }
+
+        if (warm) {
+            await warmConfigurationThumbnail(c.env, {
+                elementId,
+                microversionId,
+                canonicalConfiguration
+            });
+        }
+
+        // Stand in with the default configuration until the real render lands.
+        const fallback = await c.env.THUMBNAILS.get(
+            thumbnailKey(elementId, microversionId, size)
+        );
+        if (!fallback) {
+            return c.notFound();
+        }
+        // Unlike a hit, this url does not pin these bytes.
+        setCacheTtl(c, THUMBNAIL_FALLBACK_CACHE_TTL);
+        return thumbnailResponse(fallback);
+    }
+);
+
+function thumbnailResponse(object: R2ObjectBody): Response {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
-    headers.set(
-        "Cache-Control",
-        maxAge === THUMBNAIL_CACHE_TTL
-            ? `public, max-age=${maxAge}, immutable`
-            : `public, max-age=${maxAge}`
-    );
     return new Response(object.body, { headers });
 }
 
-/**
- * Starts rendering a configuration's thumbnails, if nobody already is. The
- * configuration key doubles as the workflow instance id, so concurrent requests
- * for the same configuration collapse onto one run — a duplicate id is rejected,
- * which is exactly the outcome we want.
- */
+/** Concurrent requests collapse onto one run: Cloudflare rejects a duplicate id. */
 async function warmConfigurationThumbnail(
     env: AppBindings,
     params: ThumbnailParams
@@ -261,52 +270,66 @@ async function warmConfigurationThumbnail(
             params
         });
     } catch {
-        // Already rendering (or the workflow couldn't start) — the caller still
-        // has the default thumbnail to serve, so this is never fatal.
+        // Never fatal: the caller still has the default thumbnail to serve.
     }
 }
 
-/**
- * GET /api/thumbnail?size=X&thumbnailId=Y — live preview thumbnail from Onshape.
- *
- * With `elementId`, `v`, and `c`, the bytes are also stored under that
- * configuration's key on the way out: the insert menu keeps its responsive
- * two-stage flow and warms the cache for free, with no added latency.
- */
-thumbnailRoutes.get("/thumbnail", requireSignInMiddleware, async (c) => {
-    const onshapeApi = await c.var.getOnshapeApi();
-    const size = (c.req.query("size") as ThumbnailSize) ?? ThumbnailSize.LARGE;
-    const thumbnailId = c.req.query("thumbnailId");
-    if (!thumbnailId) return c.json({ error: "thumbnailId required" }, 400);
-
-    const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-
-    const elementId = c.req.query("elementId");
-    const microversionId = c.req.query("v");
-    const configuration = c.req.query("c");
-    if (elementId && microversionId && configuration) {
-        c.executionCtx.waitUntil(
-            putThumbnail(
-                c.env.THUMBNAILS,
-                thumbnailKey(
-                    elementId,
-                    microversionId,
-                    size,
-                    thumbnailConfigurationKey(configuration)
-                ),
-                buffer,
-                { microversionId, configuration }
-            )
-        );
-    }
-
-    return new Response(buffer, {
-        headers: {
-            "Content-Type": "image/gif",
-            "Cache-Control": `public, max-age=${THUMBNAIL_CACHE_TTL}, immutable`
-        }
-    });
+const liveThumbnailQuery = z.object({
+    thumbnailId: z.string().min(1),
+    size: z.enum(ThumbnailSize).default(ThumbnailSize.LARGE),
+    /** With `v` and `c`, the bytes are stored under that configuration's key. */
+    elementId: z.string().optional(),
+    v: z.string().optional(),
+    c: canonicalConfigurationQuery
 });
+
+/**
+ * GET /api/thumbnail?size=X&thumbnailId=Y — live from Onshape. With `elementId`,
+ * `v`, and `c` it also stores the bytes, warming the cache at no added latency.
+ */
+thumbnailRoutes.get(
+    "/thumbnail",
+    requireSignInMiddleware,
+    // The thumbnailId names immutable content, so there is no `?v=` to bust.
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
+    zValidator("query", liveThumbnailQuery),
+    async (c) => {
+        const onshapeApi = await c.var.getOnshapeApi();
+        const {
+            thumbnailId,
+            size,
+            elementId,
+            v: microversionId,
+            c: canonicalConfiguration
+        } = c.req.valid("query");
+
+        const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
+
+        if (
+            elementId &&
+            microversionId &&
+            canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
+        ) {
+            c.executionCtx.waitUntil(
+                putThumbnail(
+                    c.env.THUMBNAILS,
+                    thumbnailKey(
+                        elementId,
+                        microversionId,
+                        size,
+                        canonicalConfigurationKey(canonicalConfiguration)
+                    ),
+                    buffer,
+                    { microversionId, canonicalConfiguration }
+                )
+            );
+        }
+
+        return new Response(buffer, {
+            headers: { "Content-Type": "image/gif" }
+        });
+    }
+);
 
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(

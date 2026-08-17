@@ -1,4 +1,4 @@
-import { encodeCanonicalConfiguration } from "../../shared/configuration-utils";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -82,7 +82,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     thumbnailTarget={{
                         elementId: insertable.elementId,
                         microversionId: insertable.microversionId,
-                        configuration: encodeCanonicalConfiguration(
+                        canonicalConfiguration: encodeCanonicalConfiguration(
                             searchHit?.configuration ?? {}
                         ),
                         // A cold search would otherwise start a render per row.

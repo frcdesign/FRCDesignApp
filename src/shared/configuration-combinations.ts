@@ -20,16 +20,14 @@ import { evaluateCondition, getVisibleOptions } from "./configuration-utils";
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
 /**
- * Below this many combinations, a vendor insertable is indexed automatically on
- * load. At or above it, indexing waits for an admin to turn it on (after
- * trimming the count via "exclude from properties"); see the `MANY_CONFIGURATIONS`
- * build issue.
+ * At or above this, indexing waits for an admin, who can trim the count back
+ * with "exclude from properties"; see the `MANY_CONFIGURATIONS` build issue.
  */
 export const AUTO_INDEX_THRESHOLD = 128;
 
 /** Where a configuration count sits relative to the two indexing limits. */
 export enum IndexingBand {
-    /** Under {@link AUTO_INDEX_THRESHOLD}: a vendor insertable indexes on load. */
+    /** Under {@link AUTO_INDEX_THRESHOLD}: a non-custom insertable indexes on load. */
     AUTOMATIC = "automatic",
     /** Up to {@link MAX_PART_NUMBER_CONFIGURATIONS}: an admin must enable it. */
     MANUAL = "manual",
@@ -38,16 +36,11 @@ export enum IndexingBand {
 }
 
 /**
- * Whether an insertable's part numbers end up indexed: automatically for a
- * vendor insertable under the auto threshold, by hand wherever an admin enables
- * it, and never past the cap — enumeration stops there, so there is nothing to
- * index however the flag is set.
- *
- * Shared with the admin card, so what it reports can't drift from what the load
- * path actually does.
+ * Shared with the admin card, so it can't drift from what the load path does.
+ * Custom parts are the one exclusion: team-made, so there is no metadata to parse.
  */
 export function isIndexingEnabled(
-    hasVendor: boolean,
+    isCustom: boolean,
     band: IndexingBand,
     forceIndex: boolean
 ): boolean {
@@ -57,7 +50,7 @@ export function isIndexingEnabled(
         case IndexingBand.MANUAL:
             return forceIndex;
         case IndexingBand.AUTOMATIC:
-            return hasVendor || forceIndex;
+            return !isCustom || forceIndex;
     }
 }
 
@@ -82,9 +75,8 @@ export function countConfigurations(
     if (capped) {
         return { count: null, band: IndexingBand.EXCEEDED };
     }
-    // An insertable with nothing to vary enumerates to the single default
-    // configuration, which isn't a configuration of its own: a non-configurable
-    // insertable has none.
+    // The lone default that nothing-to-vary enumerates to is not a configuration
+    // of its own: a non-configurable insertable has none.
     const count = configurations.some(
         (configuration) => Object.keys(configuration).length > 0
     )

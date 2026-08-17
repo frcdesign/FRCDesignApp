@@ -138,6 +138,21 @@ describe("doSearch part-number matching", () => {
         expect(hits[0].configuration).toEqual({ length: "long" });
     });
 
+    // "Bracket 217" matches the part-number field on "217", but no single record
+    // matches the whole query — the row must still show a part number.
+    it("falls back to the default record when no one record matches the query", () => {
+        const searchDb = buildSearchDb(library(), recordsMap);
+        const { hits } = doSearch(
+            searchDb,
+            "Bracket 217",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits).toHaveLength(1);
+        expect(hits[0].partNumber).toBe("217-2600");
+    });
+
     it("attaches the default (first) record for a title match", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = doSearch(

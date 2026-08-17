@@ -152,14 +152,15 @@ function matchedRecord(
     query: string
 ): SearchRecord | undefined {
     const matchedFields = Object.values(result.match).flat();
-    if (matchedFields.includes("partNumbers")) {
-        return findBestRecord(query, document.records, (r) => r.partNumber);
-    }
-    if (matchedFields.includes("partNames")) {
-        return findBestRecord(query, document.records, (r) => r.name);
-    }
-    // Pure title (or group) match: show the default configuration's record.
-    return document.records[0];
+    const byNumber = matchedFields.includes("partNumbers")
+        ? findBestRecord(query, document.records, (r) => r.partNumber)
+        : undefined;
+    const byName = matchedFields.includes("partNames")
+        ? findBestRecord(query, document.records, (r) => r.name)
+        : undefined;
+    // A multi-term query can match the field without any one record matching the
+    // whole query, so fall back rather than leaving the row with no record.
+    return byNumber ?? byName ?? document.records[0];
 }
 
 /**

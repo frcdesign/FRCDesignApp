@@ -120,14 +120,15 @@ export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
         queryKey: searchDbQueryKey(libraryId, cacheVersion),
         queryFn: async () => {
             const searchDb = await apiGetText(
-                "/search-db/library/" + libraryId,
+                "/search-db" + toLibraryPath(libraryId),
                 {
                     cacheId: cacheVersion
                 }
             );
-            return searchDb
-                ? MiniSearch.loadJSON(searchDb, SEARCH_OPTIONS)
-                : null;
+            if (!searchDb) {
+                return null;
+            }
+            return MiniSearch.loadJSON(searchDb, SEARCH_OPTIONS);
         },
         staleTime: Infinity,
         gcTime: Infinity

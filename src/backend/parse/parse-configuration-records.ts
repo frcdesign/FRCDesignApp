@@ -13,7 +13,7 @@
  */
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
-import { ElementType, type Vendor } from "../../shared/types";
+import { ElementType, type Vendor, isCustomPart } from "../../shared/types";
 import {
     ParameterValues,
     ConfigurationParameter,
@@ -30,7 +30,7 @@ import {
     IndexingBand,
     isIndexingEnabled
 } from "../../shared/configuration-combinations";
-import { canonicalizeConfiguration } from "../../shared/configuration-utils";
+import { canonicalizeConfiguration } from "../../shared/canonical-configuration";
 import { getParts } from "../onshape-api/endpoints/parts";
 import { getElementMetadata } from "../onshape-api/endpoints/metadata";
 import type {
@@ -71,21 +71,15 @@ export const INDEXING_ISSUE_TYPES = [
 
 /** Whether to index an insertable, and how to flag it if we don't. */
 export interface IndexingDecision {
-    /** Index when enabled by an admin, or a vendor part under the auto threshold. */
+    /** Index when enabled by an admin, or a non-custom part under the threshold. */
     shouldIndex: boolean;
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
 }
 
 /**
- * Decides whether an insertable's part numbers get indexed, by which limit its
- * configuration count falls under. A vendor part with few enough combinations
- * indexes on its own; past the auto threshold indexing waits to be enabled by
- * hand; past the hard cap there is nothing to index at all, since enumeration
- * stops there — so forcing it on cannot help.
- *
- * Only an indexing candidate is flagged: a vendor part, or one an admin has
- * explicitly enabled and is owed an explanation for.
+ * Past the hard cap forcing it on cannot help, since enumeration stops there.
+ * Only a candidate is flagged — an admin who enabled it is owed the reason.
  */
 export function decideIndexing(
     vendors: Vendor[],
@@ -93,9 +87,9 @@ export function decideIndexing(
     forceIndex: boolean
 ): IndexingDecision {
     const { band } = countConfigurations(parameters);
-    const isVendorPart = vendors.length > 0;
-    const isCandidate = isVendorPart || forceIndex;
-    const shouldIndex = isIndexingEnabled(isVendorPart, band, forceIndex);
+    const isCustom = isCustomPart(vendors);
+    const isCandidate = !isCustom || forceIndex;
+    const shouldIndex = isIndexingEnabled(isCustom, band, forceIndex);
 
     if (band === IndexingBand.EXCEEDED) {
         return {
@@ -105,7 +99,7 @@ export function decideIndexing(
                 : []
         };
     }
-    if (band === IndexingBand.MANUAL && isVendorPart && !forceIndex) {
+    if (band === IndexingBand.MANUAL && !isCustom && !forceIndex) {
         return {
             shouldIndex,
             buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }]
@@ -417,10 +411,8 @@ function toResult(
     capped: boolean,
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
-    // Store the canonical configuration, so a record addresses the same thumbnail
-    // the insert menu does for the same selection. Enumeration already omits
-    // cosmetic, quantity, and string parameters, and canonicalizing drops the
-    // ones left at their default.
+    // Canonical, so a record addresses the same thumbnail the insert menu does
+    // for the same selection.
     const records = [defaultRecord, ...batches.flat()].map((record) => ({
         ...record,
         configuration: canonicalizeConfiguration(

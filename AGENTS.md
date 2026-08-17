@@ -2,12 +2,12 @@
 
 ## Comments
 
-Keep comments short. Prefer one line; three or more long lines is a smell, and
-four is out. Explain _why_ something is done, not _what_ the code does — the what
+Keep comments short. Prefer one line, with two lines as an absolute maximum.
+Explain _why_ something is done, not _what_ the code does — the what
 should be inferable from the code. Don't restate a function's behavior in its
 doc comment when the signature already says it (e.g. write "returns the access
-level, respecting the cache" — not a paragraph re-deriving the caching). Delete
-comments that narrate obvious implementation details.
+level, respecting the cache" — not a paragraph re-deriving the caching).
+Aggressively delete comments that narrate obvious implementation details.
 
 # Cloudflare Workers
 

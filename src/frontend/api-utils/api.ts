@@ -5,6 +5,7 @@ import {
     type PostOptions
 } from "../common/utils";
 import { HandledError } from "./errors";
+import { HttpStatus } from "http-status-ts";
 
 function getUrl(
     path: string,
@@ -50,9 +51,7 @@ export async function apiGet(
 }
 
 /**
- * Gets a plain-text body from a backend /api route (e.g. the search index blob,
- * served pre-gzipped and decompressed transparently by the browser). Returns
- * null on 404 so a missing resource is a graceful empty state, not an error.
+ * Gets a response formatted as a raw string from a backend /api route.
  */
 export async function apiGetText(
     path: string,
@@ -62,13 +61,13 @@ export async function apiGetText(
         getUrl(path, options?.query, options?.cacheId),
         { signal: options?.signal }
     );
-    if (response.status === 404) {
+    if (response.status === HttpStatus.NOT_FOUND) {
         return null;
     }
     if (!response.ok) {
         throw new Error("Network response failed.");
     }
-    return response.text();
+    return await response.text();
 }
 
 /**

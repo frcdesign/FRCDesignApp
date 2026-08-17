@@ -64,8 +64,10 @@ export function FavoritesList(): ReactNode {
     if (uiState.searchQuery) {
         if (searchDbQuery.isLoading) {
             return <SectionLoading title="Searching..." />;
-        } else if (!searchDbQuery.data) {
+        } else if (searchDbQuery.isError) {
             return <SectionError title="Failed to load search database." />;
+        } else if (!searchDbQuery.data) {
+            return <SectionError title="The search database is empty." />;
         }
         const favoriteInsertableIds = new Set(
             Object.values(favoritesQuery.data.favorites).map(
