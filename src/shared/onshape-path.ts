@@ -2,6 +2,8 @@ import { ParameterValues } from "./configuration-models";
 
 export type InstanceType = "w" | "v" | "m";
 
+const INSTANCE_TYPES: readonly InstanceType[] = ["w", "v", "m"];
+
 export interface DocumentPath {
     documentId: string;
 }
@@ -35,14 +37,17 @@ export function isDocumentPath(path: any): path is DocumentPath {
 export function isInstancePath(path: any): path is InstancePath {
     return (
         isDocumentPath(path) &&
-        (path as InstancePath).instanceId !== undefined &&
-        (path as InstancePath).instanceType !== undefined
+        typeof (path as InstancePath).instanceId === "string" &&
+        // Checked against the literals: an unrecognized instance type builds a
+        // path Onshape rejects, which is worth catching at the boundary.
+        INSTANCE_TYPES.includes((path as InstancePath).instanceType)
     );
 }
 
 export function isElementPath(path: any): path is ElementPath {
     return (
-        isInstancePath(path) && (path as ElementPath).elementId !== undefined
+        isInstancePath(path) &&
+        typeof (path as ElementPath).elementId === "string"
     );
 }
 

@@ -169,6 +169,19 @@ async function saveGroup(
     const writes: BatchItem<"sqlite">[] = [
         db.update(group).set(parsed).where(eq(group.id, target.groupId))
     ];
+    if (!hasFailedInsertables) {
+        // A tab whose microversion didn't change is skipped, so it never went
+        // through saveInsertable and still points at the previous version.
+        // Its geometry is identical, but the stale id is what insertion and
+        // every document link are built from, so move the whole group forward
+        // together with the group row.
+        writes.push(
+            db
+                .update(insertables)
+                .set({ versionId: target.versionPath.instanceId })
+                .where(eq(insertables.groupId, target.groupId))
+        );
+    }
     if (removedInsertableIds.length > 0) {
         // Configurations and favorites follow deleted insertables via their
         // cascading foreign keys.

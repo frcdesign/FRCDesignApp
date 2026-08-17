@@ -7,7 +7,7 @@ import { requireEditorMiddleware } from "../access-level-utils";
 import { requireSignInMiddleware } from "../sign-in-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
-import { type ElementPath } from "../../shared/onshape-path";
+import { type ElementPath, isElementPath } from "../../shared/onshape-path";
 import {
     type ParameterValues,
     type ConfigurationParameter
@@ -222,29 +222,40 @@ function indexRecords(
     );
 }
 
-/** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
+/**
+ * Reads the tab being inserted into out of the request body.
+ *
+ * It rides in the body rather than the URL so the whole path — including which
+ * kind of instance the id refers to — arrives as one typed object. Validated
+ * here because a half-built path (a missing id, or an instance type Onshape
+ * doesn't know) otherwise reaches Onshape as a nonsense URL and comes back as
+ * an opaque failure.
+ */
+function readTargetPath(targetPath: unknown): ElementPath {
+    if (!isElementPath(targetPath)) {
+        throw new HTTPException(HttpStatus.BAD_REQUEST, {
+            message: "A valid target path is required"
+        });
+    }
+    return targetPath;
+}
+
+/** POST /api/add-to-part-studio/insertable/:insertableId */
 insertableRoutes.post(
-    "/add-to-part-studio" +
-        insertableRoute() +
-        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    "/add-to-part-studio" + insertableRoute(),
     requireSignInMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
+            targetPath: unknown;
             configuration: ParameterValues | undefined;
             useMateConnector: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;
         }>();
 
-        // Target part studio — from URL
-        const targetPath: ElementPath = {
-            documentId: c.req.param("documentId")!,
-            instanceId: c.req.param("instanceId")!,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")!
-        };
+        const targetPath = readTargetPath(body.targetPath);
 
         const db = getDb(c.env.DB);
         const sourcePath = await getInsertableElementPath(db, insertableId);
@@ -293,29 +304,22 @@ insertableRoutes.post(
     }
 );
 
-/** POST /api/add-to-assembly/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
+/** POST /api/add-to-assembly/insertable/:insertableId */
 insertableRoutes.post(
-    "/add-to-assembly" +
-        insertableRoute() +
-        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    "/add-to-assembly" + insertableRoute(),
     requireSignInMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
         const body = await c.req.json<{
+            targetPath: unknown;
             configuration: ParameterValues | undefined;
             fasten: boolean;
             isFavorite: boolean;
             isQuickInsert: boolean;
         }>();
 
-        // Target assembly — from URL
-        const targetPath: ElementPath = {
-            documentId: c.req.param("documentId")!,
-            instanceId: c.req.param("instanceId")!,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")!
-        };
+        const targetPath = readTargetPath(body.targetPath);
 
         const db = getDb(c.env.DB);
 

@@ -189,8 +189,12 @@ export async function rebuildSearchDb(
         getRecordsMap(db, libraryId)
     ]);
     const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
-    // Store as a plain string in R2
-    await bucket.put(searchIndexKey(libraryId), searchDb);
+    // Stored as a plain, uncompressed string: encoding it here would leave the
+    // runtime compressing an already-compressed body. The type still travels
+    // with the object, so the serving route reports it via writeHttpMetadata.
+    await bucket.put(searchIndexKey(libraryId), searchDb, {
+        httpMetadata: { contentType: "application/json" }
+    });
     console.log(
         `Rebuilt search index for ${libraryId}: ` +
             `${searchDb.length} B, ${Date.now() - start} ms`

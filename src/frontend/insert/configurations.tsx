@@ -63,6 +63,8 @@ interface ConfigurationWrapperProps {
     onCanonicalConfiguration?: (
         canonicalConfiguration: ParameterValues
     ) => void;
+    /** Reports the record the selection produces, for the menu's header. */
+    onRecord?: (record: SearchRecord | undefined) => void;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -71,7 +73,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         microversionId,
         configuration,
         setConfiguration,
-        onCanonicalConfiguration
+        onCanonicalConfiguration,
+        onRecord
     } = props;
 
     const query = useQuery<ConfigurationResult>({
@@ -120,6 +123,14 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
     }, [parameters, unitInfo, configuration, onCanonicalConfiguration]);
 
+    const records = query.data?.records;
+    useEffect(() => {
+        if (!records || !configuration) {
+            return;
+        }
+        onRecord?.(findRecordForConfiguration(configuration, records));
+    }, [records, configuration, onRecord]);
+
     if (query.isPending || !configuration) {
         return (
             <Center my="md">
@@ -132,10 +143,6 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
     return (
         <>
-            <RecordSummary
-                records={query.data.records}
-                configuration={configuration}
-            />
             <ConfigurationParameters
                 configurationResult={query.data}
                 configuration={configuration}
@@ -143,35 +150,6 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
                 unitInfo={unitInfo}
             />
         </>
-    );
-}
-
-/**
- * The part number + name the selection produces, live as it changes. Renders
- * nothing when the selection has no indexed record.
- */
-function RecordSummary({
-    records,
-    configuration
-}: {
-    records: SearchRecord[];
-    configuration: ParameterValues;
-}): ReactNode {
-    const record = findRecordForConfiguration(configuration, records);
-    const details = record
-        ? [record.partNumber, record.name].filter(
-              (value): value is string => !!value
-          )
-        : [];
-    if (details.length === 0) {
-        return null;
-    }
-    return (
-        <Group gap="xs" wrap="nowrap" justify="center" mb="xs">
-            <Text size="sm" fw={500} ta="center">
-                {details.join(" · ")}
-            </Text>
-        </Group>
     );
 }
 

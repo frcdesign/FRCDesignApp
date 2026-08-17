@@ -44,7 +44,6 @@ function readConfig(insertableId: string) {
 }
 
 // The target element to insert into — must be an editable workspace ("w").
-const target = "/d/doc-target/w/w-target/e/target-element";
 const targetPath = {
     documentId: "doc-target",
     instanceType: "w",
@@ -81,8 +80,9 @@ describe("insertable routes", () => {
             .mockResolvedValue({ feature: { featureId: "feat-1" } });
 
         const res = await createTestApp().request(
-            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}${target}`,
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", {
+                targetPath,
                 configuration: undefined,
                 useMateConnector: false,
                 isFavorite: false,
@@ -102,6 +102,37 @@ describe("insertable routes", () => {
         );
     });
 
+    // A half-built target used to reach Onshape as a nonsense URL and fail
+    // opaquely; the boundary rejects it instead.
+    it.each([
+        ["a missing instance id", { documentId: "d", elementId: "e" }],
+        [
+            "an unknown instance type",
+            {
+                documentId: "d",
+                instanceId: "i",
+                instanceType: "x",
+                elementId: "e"
+            }
+        ],
+        ["no target at all", undefined]
+    ])("POST /add-to-part-studio rejects %s", async (_label, targetPath) => {
+        await seedPartStudio(db);
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                configuration: undefined,
+                useMateConnector: false,
+                isFavorite: false,
+                isQuickInsert: false
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+    });
+
     it("POST /add-to-assembly inserts via the Onshape API", async () => {
         await seedAssembly(db);
         const spy = vi
@@ -109,8 +140,9 @@ describe("insertable routes", () => {
             .mockResolvedValue({});
 
         const res = await createTestApp().request(
-            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}${target}`,
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
             jsonRequest("POST", {
+                targetPath,
                 configuration: undefined,
                 fasten: false,
                 isFavorite: false,
