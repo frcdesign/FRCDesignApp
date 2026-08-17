@@ -100,9 +100,10 @@ groupRoutes.post(
                 )
             );
 
-        await bumpLibraryVersion(db, libraryId);
-        // Search filters on isVisible, so a stale index hides these from results.
+        // Rebuild before bumping: the new version makes /search-db immutable,
+        // so a client fetching in between would pin the stale index for a year.
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
+        await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
 );
@@ -246,8 +247,8 @@ groupRoutes.delete(
             .delete(group)
             .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
 
-        await bumpLibraryVersion(db, libraryId);
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
+        await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
 );

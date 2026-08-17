@@ -235,19 +235,24 @@ async function finalizeLibrary(
     await bumpLibraryVersion(db, libraryId);
 }
 
+/** The render to run, plus the session whose Onshape tokens it runs under. */
+export interface ThumbnailWorkflowParams extends ThumbnailParams {
+    sessionId: string;
+}
+
 /**
  * Outside a request, since Onshape can take minutes. Until it finishes,
  * requests fall back to the element's default thumbnail.
  */
 export class ThumbnailWorkflow extends WorkflowEntrypoint<
     AppBindings,
-    ThumbnailParams
+    ThumbnailWorkflowParams
 > {
     async run(
-        event: WorkflowEvent<ThumbnailParams>,
+        event: WorkflowEvent<ThumbnailWorkflowParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { elementId, microversionId, canonicalConfiguration } =
+        const { elementId, microversionId, canonicalConfiguration, sessionId } =
             event.payload;
 
         const elementPath = await step.do("resolve-element", async () => {
@@ -278,7 +283,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                     this.env.BLOB,
                     await getOnshapeApiFromContext({
                         env: this.env,
-                        sessionId: "",
+                        sessionId,
                         step,
                         limit: createLimiter(1)
                     }),

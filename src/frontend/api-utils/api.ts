@@ -71,13 +71,9 @@ export async function apiGetText(
 }
 
 /**
- * Checks that an image URL resolves, and returns it to render.
- *
- * Fetching it here both surfaces failures as a rejected query (so callers keep
- * their loading, error, and retry behavior) and puts the response in the browser
- * cache, so the `<img>` that follows is served from it. Returning the URL rather
- * than an object URL matters: a blob URL lives until the page unloads, and
- * nothing can safely revoke one that a cached query may still be sharing.
+ * Checks that an image url resolves, returning it to render. Fetching here
+ * surfaces failures as a rejected query and warms the browser cache. Returns the
+ * url, not an object url: a shared blob url has no safe moment to be revoked.
  */
 export async function loadImage(
     url: string,

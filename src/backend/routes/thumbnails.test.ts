@@ -18,8 +18,17 @@ const MICROVERSION = "mv-1";
 /** A configuration whose key differs from the default's. */
 const CANONICAL_CONFIGURATION = "size=l";
 
-function get(url: string) {
-    return createTestApp().request(url, jsonRequest("GET"), env);
+const SESSION_ID = "test-session";
+
+function get(url: string, sessionId?: string) {
+    const init = jsonRequest("GET");
+    if (sessionId) {
+        init.headers = {
+            ...init.headers,
+            Cookie: `frc-design-app-cookie=${sessionId}`
+        };
+    }
+    return createTestApp().request(url, init, env);
 }
 
 describe("thumbnail serving", () => {
@@ -173,7 +182,8 @@ describe("warming a configuration's thumbnail", () => {
                 size: SIZE,
                 canonicalConfiguration: CANONICAL_CONFIGURATION,
                 warm: true
-            })
+            }),
+            SESSION_ID
         );
 
         expect(res.status).toBe(200);
@@ -183,9 +193,32 @@ describe("warming a configuration's thumbnail", () => {
                     elementId,
                     microversionId: MICROVERSION,
                     canonicalConfiguration: CANONICAL_CONFIGURATION
-                })
+                }),
+                // The render runs later, so it needs a session to authenticate.
+                params: expect.objectContaining({ sessionId: SESSION_ID })
             })
         );
+    });
+
+    // The bytes still have to be served; only the render is given up on.
+    it("still serves the fallback when there is no session to render under", async () => {
+        const elementId = "sessionless-element";
+        await seedDefaultOnly(elementId);
+        const createSpy = vi.spyOn(env.THUMBNAIL_WORKFLOW, "create");
+
+        const res = await get(
+            thumbnailUrl({
+                elementId,
+                microversionId: MICROVERSION,
+                size: SIZE,
+                canonicalConfiguration: CANONICAL_CONFIGURATION,
+                warm: true
+            })
+        );
+
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe("default-bytes");
+        expect(createSpy).not.toHaveBeenCalled();
     });
 
     // Search results show many configurations at once; one cold search must not

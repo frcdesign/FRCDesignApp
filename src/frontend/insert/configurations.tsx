@@ -197,7 +197,8 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
 interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
-    value: string;
+    /** Absent when the configuration omits it, which means the default. */
+    value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
     configuration: ParameterValues;
     parameters: ConfigurationParameter[];
@@ -285,13 +286,15 @@ function InputLabel(props: InputLabelProps) {
 
 function getFirstVisibleOption(
     visibleOptions: EnumOption[],
-    currentOptionId: string,
+    currentOptionId: string | undefined,
     defaultOptionId: string
 ): EnumOption | undefined {
     if (visibleOptions.length === 0) {
         return undefined;
     }
-    const currentOption = getOption(visibleOptions, currentOptionId);
+    const currentOption = currentOptionId
+        ? getOption(visibleOptions, currentOptionId)
+        : undefined;
     if (currentOption) {
         return currentOption;
     }
@@ -364,7 +367,7 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
         <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <Checkbox
                 id={parameter.id}
-                checked={value === "true"}
+                checked={(value ?? parameter.default) === "true"}
                 // The checkbox is shorter than an input, so center it against the label
                 style={{ alignSelf: "center" }}
                 styles={{
@@ -384,7 +387,7 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
         <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
-                value={value}
+                value={value ?? parameter.default}
                 style={{ flex: 1 }}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />

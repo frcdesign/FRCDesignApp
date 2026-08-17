@@ -1,6 +1,9 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
-import type { ThumbnailParams } from "../shared/thumbnails";
+import type {
+    AddGroupParams,
+    LoadLibraryParams,
+    ThumbnailWorkflowParams
+} from "./load/workflows";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
@@ -20,7 +23,7 @@ export interface AppBindings {
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     /** Renders a configuration's thumbnails outside a request; see ThumbnailWorkflow. */
-    THUMBNAIL_WORKFLOW: Workflow<ThumbnailParams>;
+    THUMBNAIL_WORKFLOW: Workflow<ThumbnailWorkflowParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */

@@ -92,15 +92,9 @@ export function countConfigurations(
 }
 
 /**
- * Whether a parameter is varied when indexing part numbers, and so multiplies an
- * insertable's configuration count.
- *
- * Only enum and boolean parameters are varied — quantity and text ones ride
- * their Onshape defaults — and "exclude from properties" opts a parameter out,
- * which is how an insertable is trimmed back under the auto-index threshold.
- *
- * Shared with the admin card, so what it reports can't drift from what
- * {@link enumerateConfigurations} actually varies.
+ * Whether indexing varies this parameter, and so multiplies an insertable's
+ * configuration count. Shared with the admin card so what it reports cannot
+ * drift from what {@link enumerateConfigurations} does.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter
@@ -122,18 +116,11 @@ export interface EnumerateResult {
 }
 
 /**
- * Returns the cartesian product of an insertable's enum and boolean parameter
- * values, pruning combinations hidden by visibility conditions.
- *
- * Parameters are folded in list order, and each parameter's values are appended
- * in the order Onshape declares them (first option first). That order is
- * load-bearing: part-number search dedupes configurations first-wins, so a part
- * number shared across an enum's options resolves to the first-listed — the
- * latest revision, by Onshape convention.
- *
- * Each parameter's (and each enum option's) visibility is evaluated against the
- * partial configuration built so far, matching how Onshape structures
- * configurations top-to-bottom.
+ * The cartesian product of an insertable's enum and boolean values, minus
+ * combinations their visibility conditions hide. Declaration order is
+ * load-bearing: search dedupes first-wins, so a part number shared across an
+ * enum's options resolves to the first-listed, the latest revision by Onshape
+ * convention.
  */
 export function enumerateConfigurations(
     parameters: ConfigurationParameter[],

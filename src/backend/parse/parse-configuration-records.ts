@@ -158,13 +158,9 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
 }
 
 /**
- * Builds a record from a part studio's parts for one configuration.
- *
- * The part to read is the studio's single part, or its composite when it's an
- * open composite; more than one candidate means that choice was arbitrary, which
- * `hasMultipleParts` flags. `isOpenComposite` is the studio's expected state
- * (from its default configuration): a configuration that loses its composite is
- * an `UNSTABLE_COMPOSITE`, and we store no part for it rather than a stray one.
+ * The part read is the studio's single part, or its composite when open; more
+ * candidates mean an arbitrary choice, which `hasMultipleParts` flags. A
+ * configuration losing the composite its default has stores no part at all.
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
@@ -278,13 +274,9 @@ export async function parseConfigurationRecords(
 }
 
 /**
- * Indexes an insertable's configuration records as part of its load, one durable
- * step per batch of configurations, so a rate-limited retry re-fetches only that
- * batch. Batches run sequentially — insertables already load in parallel, which
- * is where the concurrency comes from.
- *
- * A batch that exhausts its retries throws, failing the insertable rather than
- * saving a half-built list; the stored row keeps its previous records.
+ * One durable step per batch, so a rate-limited retry re-fetches only that
+ * batch; batches run sequentially since insertables already load in parallel. An
+ * exhausted batch throws rather than saving a half-built list.
  */
 export async function loadConfigurationRecords(
     ctx: LoadContext,

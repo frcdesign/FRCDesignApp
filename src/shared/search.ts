@@ -38,12 +38,9 @@ export function processTerm(term: string): string[] {
 const NUMERIC_PATTERN = /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*/g;
 
 /**
- * Rewrites numbers/fractions to a single 2-dp decimal so `.5`, `1/2`, and `0.50`
- * all become `"0.5"`. Applied at both index and query time (via `tokenize`), so
- * the canonical form matches on both sides without keeping the raw fragments —
- * which would only add noise (`2` weakly matching `1/2`) and index size. Thread
- * specs and part numbers (`10-32`, `217-2600`) contain no fraction/decimal and
- * are left untouched.
+ * Rewrites numbers and fractions to one 2-dp decimal, so `.5`, `1/2`, and `0.50`
+ * all become `"0.5"`. Applied at index and query time alike, which is what lets
+ * the raw fragments go unstored. Thread specs like `10-32` are left alone.
  */
 function canonicalizeNumbers(text: string): string {
     return text.replace(

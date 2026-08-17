@@ -230,14 +230,10 @@ function matchedPrefixLength(term: string, queryTerms: string[]): number {
 }
 
 /**
- * Where a field's matched terms appear in a piece of text, for underlining it.
- * Based on approach from https://github.com/lucaong/minisearch/issues/37
- *
- * `match` is keyed by the document terms that matched, `queryTerms` by what was
- * typed: searching "mot" matches the term "motor", and we underline just its
- * "mot". Overlapping ranges are merged when they're applied. A term the index
- * rewrote (a fraction canonicalized to a decimal) has no literal place in the
- * text, so it simply contributes nothing.
+ * Where a field's matched terms appear, for underlining. `match` is keyed by
+ * matched document terms and `queryTerms` by what was typed, so "mot" against
+ * "motor" underlines only the prefix.
+ * Based on https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(
     result: MiniSearchResult,

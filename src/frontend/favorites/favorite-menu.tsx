@@ -100,8 +100,10 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         ParameterValues | undefined
     >(defaultConfiguration);
     // Reported by ConfigurationWrapper; addresses this selection's thumbnail.
-    const [canonicalConfiguration, setCanonicalConfiguration] =
-        useState<ParameterValues>({});
+    // Undefined until it reports, which is what gates saving.
+    const [canonicalConfiguration, setCanonicalConfiguration] = useState<
+        ParameterValues | undefined
+    >(undefined);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
 
     const favorite = favoritesData?.favorites[favoriteId];
@@ -130,6 +132,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 body: { defaultConfiguration: canonicalConfiguration }
             });
         },
+
         onMutate: async () => {
             const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
@@ -173,7 +176,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 largeThumbnailUrl={insertable.largeThumbnailUrl}
                 microversionId={insertable.microversionId}
                 canonicalConfiguration={encodeCanonicalConfiguration(
-                    canonicalConfiguration
+                    canonicalConfiguration ?? {}
                 )}
             />
             <ConfigurationWrapper
@@ -187,6 +190,9 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
             <Group justify="flex-end" mt="md">
                 <Button
                     leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
+                    // Saving before the wrapper reports would store {}, wiping
+                    // the favorite's configuration.
+                    disabled={!canonicalConfiguration}
                     onClick={() => {
                         setDefaultConfigurationMutation.mutate();
                         modals.closeAll();

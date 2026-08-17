@@ -12,7 +12,13 @@ export function getElementMetadata(
     configuration: ParameterValues
 ): Promise<OnshapeMetadataObject> {
     const encoded = encodeConfigurationForQuery(configuration);
+    // Computed properties are expensive and unused, and indexing probes this
+    // once per configuration.
+    const query: Record<string, string> = {
+        includeComputedProperties: "false"
+    };
+    if (encoded) query.configuration = encoded;
     return client.get(apiPath("metadata", elementPath, toElementApiPath), {
-        query: encoded ? { configuration: encoded } : {}
+        query
     });
 }

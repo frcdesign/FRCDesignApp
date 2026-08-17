@@ -39,7 +39,8 @@ import {
     canonicalConfigurationKey
 } from "../../shared/canonical-configuration";
 import { OnshapeApi } from "../onshape-api/onshape-api";
-import type { AppBindings } from "../app";
+import type { AppContext } from "../app";
+import { getSessionId } from "../auth";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
 
 /** Stores one rendered thumbnail, tagging it with what produced it. */
@@ -233,7 +234,7 @@ thumbnailRoutes.get(
         }
 
         if (warm) {
-            await warmConfigurationThumbnail(c.env, {
+            await warmConfigurationThumbnail(c, {
                 elementId,
                 microversionId,
                 canonicalConfiguration
@@ -261,13 +262,14 @@ function thumbnailResponse(object: R2ObjectBody): Response {
 
 /** Concurrent requests collapse onto one run: Cloudflare rejects a duplicate id. */
 async function warmConfigurationThumbnail(
-    env: AppBindings,
+    c: AppContext,
     params: ThumbnailParams
 ): Promise<void> {
     try {
-        await env.THUMBNAIL_WORKFLOW.create({
+        // The render runs later, under this caller's Onshape tokens.
+        await c.env.THUMBNAIL_WORKFLOW.create({
             id: thumbnailWorkflowId(params),
-            params
+            params: { ...params, sessionId: getSessionId(c) }
         });
     } catch {
         // Never fatal: the caller still has the default thumbnail to serve.

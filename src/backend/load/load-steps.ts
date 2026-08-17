@@ -43,15 +43,9 @@ const THUMBNAIL_BASE_DELAY_SECONDS = 4;
 const THUMBNAIL_MAX_DELAY_SECONDS = 15 * 60;
 
 /**
- * Retry delay for a step waiting on an Onshape render. Onshape renders
- * thumbnails asynchronously and gives no signal when one lands, so the step
- * polls: a plain doubling from four seconds up to a fifteen-minute ceiling.
- *
- * Starting tight is the point — most renders land within seconds, and a long
- * first wait leaves them sitting finished but unnoticed.
- *
- * A rate limit still overrides the curve. Onshape says how long to wait, and
- * asking again sooner only earns another 429.
+ * Onshape gives no signal when a render lands, so the step polls: doubling from
+ * four seconds to a fifteen-minute ceiling. Starting tight is the point, since
+ * most renders land within seconds. A rate limit overrides the curve.
  */
 function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);

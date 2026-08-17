@@ -183,9 +183,10 @@ insertableRoutes.post(
             configWrite
         ]);
 
-        await bumpLibraryVersion(db, row.libraryId);
-        // Records feed the search index, so rebuild it now.
+        // Records feed the search index; rebuild before the bump makes the
+        // /search-db url immutable, or a stale index gets pinned for a year.
         await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
