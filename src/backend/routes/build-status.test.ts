@@ -83,7 +83,7 @@ describe("GET /build-status", () => {
         vi.spyOn(JobTracker, "getJobStatus").mockResolvedValue({ running });
 
         const res = await createTestApp().request(
-            `/api/build-status/library/${TEST_LIBRARY_ID}`,
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
             { method: "GET" },
             env
         );

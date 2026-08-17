@@ -3,7 +3,7 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { AppBindings } from "../app";
 import { getDb } from "../db";
 import type { LibraryId } from "../../shared/types";
@@ -255,9 +255,9 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         const { elementId, microversionId, canonicalConfiguration, sessionId } =
             event.payload;
 
-        // A tab may back several insertables (shared across libraries), so this
-        // resolves the element rather than an insertable: every row matching
-        // both ids describes the same tab at the same content.
+        // An element id is unique within its document, and a group is a
+        // document, so any row for it names the document to render from. The
+        // microversion is only a reload marker, and a url outlives it.
         const elementPath = await step.do("resolve-element", async () => {
             const row = await getDb(this.env.DB)
                 .select({
@@ -265,17 +265,10 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                     versionId: insertables.versionId
                 })
                 .from(insertables)
-                .where(
-                    and(
-                        eq(insertables.elementId, elementId),
-                        eq(insertables.microversionId, microversionId)
-                    )
-                )
+                .where(eq(insertables.elementId, elementId))
                 .get();
             if (!row) {
-                throw new Error(
-                    `No insertable for element ${elementId} at ${microversionId}`
-                );
+                throw new Error(`No insertable for element ${elementId}`);
             }
             return {
                 documentId: row.documentId,

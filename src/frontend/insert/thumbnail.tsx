@@ -1,6 +1,6 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet, loadApiImage, loadImage } from "../api-utils/api";
-import { ThumbnailUrls, ThumbnailSize, ElementType } from "../../shared/types";
+import { ThumbnailSize, ElementType } from "../../shared/types";
 import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";

@@ -75,7 +75,7 @@ describe("library routes", () => {
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/search-db/library/${TEST_LIBRARY_ID}`,
+            `/api/search-db/library/${TEST_LIBRARY_ID}?v=1`,
             jsonRequest("GET"),
             env
         );
