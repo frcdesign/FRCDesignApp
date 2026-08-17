@@ -9,10 +9,10 @@ import {
 } from "@tabler/icons-react";
 import { IconColor, IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import { PropsWithChildren, ReactNode, useCallback } from "react";
+import { Fragment, PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../app-common/app-menu";
-import { SearchHit } from "../search/search";
-import { SearchHitTitle } from "../search/search-results";
+import { type Position, SearchHit } from "../search/search";
+import { HighlightedText, SearchHitTitle } from "../search/search-results";
 import { CardThumbnail, type ThumbnailTarget } from "../insert/thumbnail";
 import { ConfigurablePath, InstancePath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
@@ -157,11 +157,17 @@ export function CardTitle(props: CardTitleProps) {
     }
 
     // The part number + name of the hit's best-matching configuration, dropping
-    // a name that just repeats the title.
+    // a name that just repeats the title. Each carries its own match positions,
+    // so a query that hit the part number underlines it there too.
     const details = searchHit
-        ? [searchHit.partNumber, searchHit.partName].filter(
-              (value): value is string =>
-                  !!value && value.toLowerCase() !== title.toLowerCase()
+        ? (
+              [
+                  [searchHit.partNumber, searchHit.partNumberPositions],
+                  [searchHit.partName, searchHit.partNamePositions]
+              ] as const
+          ).filter(
+              (detail): detail is [string, Position[] | undefined] =>
+                  !!detail[0] && detail[0].toLowerCase() !== title.toLowerCase()
           )
         : [];
 
@@ -180,7 +186,15 @@ export function CardTitle(props: CardTitleProps) {
                 </Text>
                 {details.length > 0 && (
                     <Text size="xs" c="dimmed" truncate>
-                        {details.join(" · ")}
+                        {details.map(([text, positions], index) => (
+                            <Fragment key={text}>
+                                {index > 0 && " · "}
+                                <HighlightedText
+                                    text={text}
+                                    positions={positions}
+                                />
+                            </Fragment>
+                        ))}
                     </Text>
                 )}
             </Stack>

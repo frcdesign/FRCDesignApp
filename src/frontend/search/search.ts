@@ -40,6 +40,9 @@ export interface SearchHit {
     configuration?: ParameterValues;
     partNumber?: string;
     partName?: string;
+    /** Where the query matched inside `partNumber` / `partName`, for underlining. */
+    partNumberPositions?: Position[];
+    partNamePositions?: Position[];
 }
 
 export interface FilterResult {
@@ -121,18 +124,33 @@ export function doSearch(
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
-            const positions = generateHighlightPositions(
-                miniSearchResult,
-                document
-            );
-
             const record = matchedRecord(miniSearchResult, document, query);
+            const partNumber = record?.partNumber ?? undefined;
+            const partName = record?.name ?? undefined;
             return {
                 id: document.id,
-                positions,
+                positions: generateHighlightPositions(
+                    miniSearchResult,
+                    document.name,
+                    "name"
+                ),
                 configuration: record?.configuration,
-                partNumber: record?.partNumber ?? undefined,
-                partName: record?.name ?? undefined
+                partNumber,
+                partName,
+                partNumberPositions: partNumber
+                    ? generateHighlightPositions(
+                          miniSearchResult,
+                          partNumber,
+                          "partNumbers"
+                      )
+                    : undefined,
+                partNamePositions: partName
+                    ? generateHighlightPositions(
+                          miniSearchResult,
+                          partName,
+                          "partNames"
+                      )
+                    : undefined
             };
         })
         .slice(0, 50); // Limit to 50 results
@@ -212,35 +230,33 @@ function matchedPrefixLength(term: string, queryTerms: string[]): number {
 }
 
 /**
- * Generate highlight positions for matched terms in the document.
+ * Where a field's matched terms appear in a piece of text, for underlining it.
  * Based on approach from https://github.com/lucaong/minisearch/issues/37
+ *
+ * `match` is keyed by the document terms that matched, `queryTerms` by what was
+ * typed: searching "mot" matches the term "motor", and we underline just its
+ * "mot". Overlapping ranges are merged when they're applied. A term the index
+ * rewrote (a fraction canonicalized to a decimal) has no literal place in the
+ * text, so it simply contributes nothing.
  */
 function generateHighlightPositions(
     result: MiniSearchResult,
-    document: SearchDocument
+    text: string,
+    field: string
 ): Position[] {
-    // `match` is keyed by the document terms that matched, `queryTerms` by what
-    // was typed: searching "mot" matches the term "motor", and we underline just
-    // its "mot". Overlapping ranges are merged when they're applied.
-
-    const name = document.name.toLowerCase();
-
+    const haystack = text.toLowerCase();
     const positions: Position[] = [];
 
     for (const [term, matchedFields] of Object.entries(result.match)) {
-        // Only include terms that matched something in the name field
-        if (!matchedFields.includes("name")) {
+        if (!matchedFields.includes(field)) {
             continue;
         }
         const length = matchedPrefixLength(term, result.queryTerms);
-        const matchedLocations = name.matchAll(
+        const matchedLocations = haystack.matchAll(
             new RegExp(escapeRegExp(term), "g")
         );
         for (const match of matchedLocations) {
-            positions.push({
-                start: match.index,
-                length
-            });
+            positions.push({ start: match.index, length });
         }
     }
 

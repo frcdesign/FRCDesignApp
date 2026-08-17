@@ -233,6 +233,51 @@ describe("doSearch highlighting", () => {
         // An unescaped "1.5" would also underline the "125".
         expect(highlightFor("1.5 x 125 Spacer", "1.5")).toBe("1.5");
     });
+
+    // The row shows the matched configuration's part number and name beneath
+    // the title, so the query has to be underlined there too.
+    describe("of the matched record", () => {
+        const recordsMap: Record<string, ConfigurationRecord[]> = {
+            i1: [record("217-2600", { length: "short" }, "Long Bearing")]
+        };
+
+        function hitFor(query: string) {
+            const { hits } = doSearch(
+                buildSearchDb(library(), recordsMap),
+                query,
+                undefined,
+                undefined,
+                true
+            );
+            expect(hits).toHaveLength(1);
+            return hits[0];
+        }
+
+        it("underlines the typed prefix of the part number", () => {
+            const hit = hitFor("217");
+            expect(
+                highlighted(hit.partNumber!, hit.partNumberPositions ?? [])
+            ).toBe("217");
+        });
+
+        it("underlines the typed prefix of the part name", () => {
+            const hit = hitFor("bear");
+            expect(
+                highlighted(hit.partName!, hit.partNamePositions ?? [])
+            ).toBe("Bear");
+        });
+
+        // A title match shows the default record, but nothing in it matched.
+        it("underlines nothing when only the title matched", () => {
+            const hit = hitFor("bracket");
+            expect(
+                highlighted(hit.partNumber!, hit.partNumberPositions ?? [])
+            ).toBe("");
+            expect(
+                highlighted(hit.partName!, hit.partNamePositions ?? [])
+            ).toBe("");
+        });
+    });
 });
 
 describe("doSearch name matching", () => {

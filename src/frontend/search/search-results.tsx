@@ -89,7 +89,18 @@ interface SearchHitTitleProps {
  */
 export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
     const { title, searchHit } = props;
-    return <>{applyRanges(title, searchHit.positions)}</>;
+    return <HighlightedText text={title} positions={searchHit.positions} />;
+}
+
+/** Underlines wherever the query matched inside `text`. */
+export function HighlightedText({
+    text,
+    positions
+}: {
+    text: string;
+    positions?: Position[];
+}): ReactNode {
+    return <>{applyRanges(text, positions ?? [])}</>;
 }
 
 function applyRanges(str: string, ranges: Position[]) {
