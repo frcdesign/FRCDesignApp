@@ -1,8 +1,10 @@
 import { ParameterValues } from "./configuration-models";
 
-export type InstanceType = "w" | "v" | "m";
+/** The instance kinds an Onshape path can address, as one definition: the type
+ * and the runtime list validators check against both derive from it. */
+export const INSTANCE_TYPES = ["w", "v", "m"] as const;
 
-const INSTANCE_TYPES: readonly InstanceType[] = ["w", "v", "m"];
+export type InstanceType = (typeof INSTANCE_TYPES)[number];
 
 export interface DocumentPath {
     documentId: string;
