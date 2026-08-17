@@ -25,7 +25,7 @@ import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import { useFavoritesQuery } from "../queries";
-import { RequireSignIn } from "../api-utils/sign-in";
+import { RequireSignIn } from "../api-utils/access-level";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;

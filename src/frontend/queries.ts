@@ -149,6 +149,8 @@ export function favoritesQueryKey(libraryId: LibraryId) {
     return ["favorites", libraryId];
 }
 
+const EMPTY_FAVORITES: FavoritesData = { favorites: {}, favoriteOrder: [] };
+
 export function getFavoritesQuery(libraryId: LibraryId) {
     return queryOptions<FavoritesData>({
         queryKey: favoritesQueryKey(libraryId),
@@ -193,7 +195,13 @@ export function useBuildStatusQuery() {
 
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
-    return useQuery(getFavoritesQuery(libraryId));
+    // Favorites require sign-in; the endpoint 401s otherwise, so present none.
+    const signedIn = useQuery(getAccessDataQuery()).data?.signedIn ?? false;
+    const query = useQuery({
+        ...getFavoritesQuery(libraryId),
+        enabled: signedIn
+    });
+    return signedIn ? query : { ...query, data: EMPTY_FAVORITES };
 }
 
 export function jobStatusQueryMatchKey() {

@@ -10,7 +10,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "../../shared/onshape-path";
 import { useCallback, useEffect } from "react";
-import { useIsSignedIn } from "./sign-in";
+import { useIsSignedIn } from "./access-level";
 
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });

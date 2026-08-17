@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
 import { type AppContext, type AppContextEnv } from "./app";
 
 /**
@@ -34,7 +35,7 @@ export const requireSignInMiddleware: MiddlewareHandler<AppContextEnv> = async (
     next
 ) => {
     if (!(await isSignedIn(c))) {
-        throw new HTTPException(401, {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
             message:
                 "You must be signed in to Onshape to use this functionality"
         });

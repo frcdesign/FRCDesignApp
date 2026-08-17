@@ -11,7 +11,7 @@ import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
 import { useTargetElementType } from "./insert-hooks";
-import { useIsSignedIn } from "../api-utils/sign-in";
+import { useIsSignedIn } from "../api-utils/access-level";
 
 interface HeightAndWidth {
     height: number;
@@ -193,20 +193,12 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
 
-    // Not signed in: no live Onshape preview, so show the stored thumbnail.
+    // Not signed in: no live Onshape preview, so show the stored thumbnail
+    // (Thumbnail falls back to a placeholder when there's none).
     if (!isSignedIn) {
-        const url = thumbnailUrls?.[ThumbnailSize.STANDARD];
-        if (!url) {
-            return (
-                <SectionError
-                    title="Sign in to preview this part."
-                    description={null}
-                />
-            );
-        }
         return (
             <Thumbnail
-                url={url}
+                url={thumbnailUrls?.[ThumbnailSize.STANDARD]}
                 heightAndWidth={heightAndWidth}
                 spinnerSize={36}
             />

@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { type SettingsUpdate } from "../../shared/types";
 import { showErrorToast } from "../common/notifications";
 import { apiPost } from "../api-utils/api";
-import { useIsSignedIn } from "../api-utils/sign-in";
+import { useIsSignedIn } from "../api-utils/access-level";
 import { writeLocalSettings } from "./local-settings";
 
 export function useSaveSettings() {

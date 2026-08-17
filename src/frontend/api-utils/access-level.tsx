@@ -17,6 +17,11 @@ export function useAccessData(): AccessData {
     return useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
 }
 
+/** Whether the caller is signed in to Onshape (from access-data). */
+export function useIsSignedIn(): boolean {
+    return useAccessData().signedIn;
+}
+
 interface RequireAccessLevelProps extends PropsWithChildren {
     /**
      * @optional
@@ -52,4 +57,9 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
         return props.children;
     }
     return null;
+}
+
+/** Renders children only when the caller is signed in to Onshape. */
+export function RequireSignIn(props: PropsWithChildren) {
+    return useIsSignedIn() ? props.children : null;
 }

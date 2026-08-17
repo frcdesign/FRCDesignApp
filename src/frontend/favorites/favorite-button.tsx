@@ -21,7 +21,7 @@ import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { favoritesQueryKey } from "../queries";
 import { useRefreshFavorites } from "../api-utils/refresh";
-import { RequireSignIn } from "../api-utils/sign-in";
+import { RequireSignIn } from "../api-utils/access-level";
 
 enum Operation {
     ADD,

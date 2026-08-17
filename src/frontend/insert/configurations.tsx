@@ -46,7 +46,7 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
-import { useIsSignedIn } from "../api-utils/sign-in";
+import { useIsSignedIn } from "../api-utils/access-level";
 
 interface ConfigurationWrapperProps {
     configurationId: string;

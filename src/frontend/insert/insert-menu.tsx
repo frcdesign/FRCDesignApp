@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import {
     getFavoriteForInsertable,
     InsertableOut
@@ -14,7 +14,8 @@ import { PreviewImageCard } from "./thumbnail";
 import { FavoriteButton } from "../favorites/favorite-button";
 import {
     NotificationAction,
-    renderNotification
+    renderNotification,
+    showInfoToast
 } from "../common/notifications";
 import { MenuButton } from "../app-common/app-menu";
 import { InsertableMenuItems } from "../cards/insertable-card";
@@ -24,7 +25,7 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
-import { RequireSignIn } from "../api-utils/sign-in";
+import { useIsSignedIn } from "../api-utils/access-level";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
@@ -65,10 +66,20 @@ interface InsertMenuContentProps {
 function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
+    const isSignedIn = useIsSignedIn();
 
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(props.defaultConfiguration);
+
+    useEffect(() => {
+        if (!isSignedIn) {
+            showInfoToast(
+                "Sign in to Onshape to see the configuration preview.",
+                "sign-in-preview"
+            );
+        }
+    }, [isSignedIn]);
 
     if (!favorites) {
         return null;
@@ -112,14 +123,12 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         />
                     </MenuButton>
                 </Group>
-                <RequireSignIn>
-                    <InsertButtons
-                        insertable={insertable}
-                        configuration={configuration}
-                        isFavorite={favorite !== undefined}
-                        onInsert={onInsert}
-                    />
-                </RequireSignIn>
+                <InsertButtons
+                    insertable={insertable}
+                    configuration={configuration}
+                    isFavorite={favorite !== undefined}
+                    onInsert={onInsert}
+                />
             </Group>
         </>
     );
@@ -139,6 +148,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { insertable, configuration, isFavorite, onInsert } = props;
 
     const search = useSearch({ from: "/app" });
+    // Inserting needs Onshape; the button stays visible but disabled otherwise.
+    const isSignedIn = useIsSignedIn();
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
@@ -170,6 +181,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             <Button
                 leftSection={<IconPlus size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
+                disabled={!isSignedIn}
                 onClick={handleClick}
             >
                 {search.elementType === ElementType.ASSEMBLY

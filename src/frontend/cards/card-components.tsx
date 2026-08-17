@@ -26,7 +26,7 @@ import { ThumbnailUrls } from "../../shared/types";
 import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { RequireSignIn } from "../api-utils/sign-in";
+import { RequireSignIn } from "../api-utils/access-level";
 import { useReloadThumbnailMutation } from "./card-hooks";
 
 interface OpenDocumentItemsProps {

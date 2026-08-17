@@ -21,7 +21,7 @@ import { FavoritesList } from "../../../../favorites/favorites-list";
 import { useLibraryQuery } from "../../../../queries";
 import { getLibraryName, useLibraryId } from "../../../../api-utils/library";
 import { updateUiState, useUiState } from "../../../../api-utils/ui-state";
-import { useIsSignedIn } from "../../../../api-utils/sign-in";
+import { useIsSignedIn } from "../../../../api-utils/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
