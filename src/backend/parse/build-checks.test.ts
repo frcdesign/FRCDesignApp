@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { ThumbnailUrls, Vendor } from "../../shared/types";
+import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../../shared/canonical-configuration";
+import { thumbnailUrl } from "../../shared/thumbnails";
 import { checkGroup, checkInsertable } from "./build-checks";
 
+/** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
-    small: "/api/thumbnail/70x40/x",
-    large: "/api/thumbnail/300x300/x"
+    small: defaultThumbnailUrl(ThumbnailSize.SMALL),
+    large: defaultThumbnailUrl(ThumbnailSize.LARGE)
 };
+
+function defaultThumbnailUrl(size: ThumbnailSize): string {
+    return thumbnailUrl({
+        elementId: "element",
+        microversionId: "microversion",
+        size,
+        canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+    });
+}
 
 /** A group with nothing wrong; each test spreads in the one fault it checks. */
 const HEALTHY_GROUP = {
