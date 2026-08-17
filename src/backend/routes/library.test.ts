@@ -22,7 +22,7 @@ describe("library routes", () => {
     beforeEach(async () => {
         await resetDb(db);
         // The R2 bucket persists across tests in this file; clear the index.
-        await env.SEARCH_INDEX.delete(searchIndexKey(TEST_LIBRARY_ID));
+        await env.BLOB.delete(searchIndexKey(TEST_LIBRARY_ID));
     });
 
     it("GET /library-data returns groups and insertables", async () => {
@@ -49,7 +49,7 @@ describe("library routes", () => {
     it("GET /search-db serves the library's index from R2 as plain JSON", async () => {
         await seedTestData(db);
         await seedConfiguration(db, TEST_PART_STUDIO_ID);
-        await rebuildSearchDb(env.SEARCH_INDEX, db, TEST_LIBRARY_ID);
+        await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
         const app = createTestApp();
 
         const res = await app.request(
@@ -111,6 +111,7 @@ describe("library routes", () => {
 
     it("caches version-keyed responses immutably", async () => {
         await seedTestData(db);
+        await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
         const app = createTestApp();
 
         for (const path of ["library-data", "search-db"]) {

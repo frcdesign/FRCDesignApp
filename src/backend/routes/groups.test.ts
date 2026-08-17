@@ -87,9 +87,7 @@ describe("group admin routes", () => {
             );
             expect(res.status).toBe(200);
 
-            const object = await env.SEARCH_INDEX.get(
-                searchIndexKey(TEST_LIBRARY_ID)
-            );
+            const object = await env.BLOB.get(searchIndexKey(TEST_LIBRARY_ID));
             const indexed = MiniSearch.loadJSON<SearchDocument>(
                 await object!.text(),
                 SEARCH_OPTIONS

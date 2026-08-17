@@ -3,8 +3,7 @@
 // Runtime types generated with workerd@1.20260714.1 2026-05-14 nodejs_compat
 interface __BaseEnv_Env {
     KV: KVNamespace;
-    THUMBNAILS: R2Bucket;
-    SEARCH_INDEX: R2Bucket;
+    BLOB: R2Bucket;
     DB: D1Database;
     ASSETS: Fetcher;
     ADMIN_TEAM: "6a62e6efcc21741bea57362c" | "5b620150b2190f0fca90ec10";
@@ -37,8 +36,7 @@ declare namespace Cloudflare {
     }
     interface CertEnv {
         KV: KVNamespace;
-        THUMBNAILS: R2Bucket;
-        SEARCH_INDEX: R2Bucket;
+        BLOB: R2Bucket;
         DB: D1Database;
         ASSETS: Fetcher;
         ADMIN_TEAM: "6a62e6efcc21741bea57362c";
@@ -67,8 +65,7 @@ declare namespace Cloudflare {
     }
     interface ProductionEnv {
         KV: KVNamespace;
-        THUMBNAILS: R2Bucket;
-        SEARCH_INDEX: R2Bucket;
+        BLOB: R2Bucket;
         DB: D1Database;
         ASSETS: Fetcher;
         ADMIN_TEAM: "5b620150b2190f0fca90ec10";

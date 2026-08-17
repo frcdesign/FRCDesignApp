@@ -231,7 +231,7 @@ async function finalizeLibrary(
     libraryId: LibraryId
 ): Promise<void> {
     const db = getDb(env.DB);
-    await rebuildSearchDb(env.SEARCH_INDEX, db, libraryId);
+    await rebuildSearchDb(env.BLOB, db, libraryId);
     await bumpLibraryVersion(db, libraryId);
 }
 
@@ -275,7 +275,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
             { retries: THUMBNAIL_STEP_RETRIES },
             async () =>
                 uploadConfigurationThumbnails(
-                    this.env.THUMBNAILS,
+                    this.env.BLOB,
                     await getOnshapeApiFromContext({
                         env: this.env,
                         sessionId: "",

@@ -102,7 +102,7 @@ groupRoutes.post(
 
         await bumpLibraryVersion(db, libraryId);
         // Search filters on isVisible, so a stale index hides these from results.
-        await rebuildSearchDb(c.env.SEARCH_INDEX, db, libraryId);
+        await rebuildSearchDb(c.env.BLOB, db, libraryId);
         return c.json({ success: true });
     }
 );
@@ -247,7 +247,7 @@ groupRoutes.delete(
             .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
 
         await bumpLibraryVersion(db, libraryId);
-        await rebuildSearchDb(c.env.SEARCH_INDEX, db, libraryId);
+        await rebuildSearchDb(c.env.BLOB, db, libraryId);
         return c.json({ success: true });
     }
 );

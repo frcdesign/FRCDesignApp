@@ -11,9 +11,12 @@ export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
     ASSETS: Fetcher;
-    THUMBNAILS: R2Bucket;
-    /** Serialized MiniSearch index per library, keyed by {@link searchIndexKey}. */
-    SEARCH_INDEX: R2Bucket;
+    /**
+     * Everything we store as a blob: thumbnails under `thumbnails/`, each
+     * library's serialized search index under `search-index/`. One bucket, since
+     * the prefixes already keep them apart and lifecycle rules are per-prefix.
+     */
+    BLOB: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     /** Renders a configuration's thumbnails outside a request; see ThumbnailWorkflow. */

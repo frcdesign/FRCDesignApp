@@ -27,7 +27,7 @@ describe("thumbnail serving", () => {
 
     it("serves a stored thumbnail, cached immutably", async () => {
         const elementId = "stored-element";
-        await env.THUMBNAILS.put(
+        await env.BLOB.put(
             thumbnailKey(elementId, MICROVERSION, SIZE),
             "gif-bytes"
         );
@@ -87,7 +87,7 @@ describe("thumbnail serving", () => {
     // cached briefly so the real render can take over as soon as it lands.
     it("falls back to the default thumbnail, cached only briefly", async () => {
         const elementId = "fallback-element";
-        await env.THUMBNAILS.put(
+        await env.BLOB.put(
             thumbnailKey(elementId, MICROVERSION, SIZE),
             "default-bytes"
         );
@@ -109,11 +109,11 @@ describe("thumbnail serving", () => {
 
     it("prefers the configuration's own thumbnail once it exists", async () => {
         const elementId = "configured-element";
-        await env.THUMBNAILS.put(
+        await env.BLOB.put(
             thumbnailKey(elementId, MICROVERSION, SIZE),
             "default-bytes"
         );
-        await env.THUMBNAILS.put(
+        await env.BLOB.put(
             thumbnailKey(
                 elementId,
                 MICROVERSION,
@@ -142,7 +142,7 @@ describe("warming a configuration's thumbnail", () => {
 
     /** Seeds only the default, so a configuration request always misses. */
     async function seedDefaultOnly(elementId: string) {
-        await env.THUMBNAILS.put(
+        await env.BLOB.put(
             thumbnailKey(elementId, MICROVERSION, SIZE),
             "default-bytes"
         );

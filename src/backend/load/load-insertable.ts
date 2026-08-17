@@ -93,7 +93,7 @@ export async function loadInsertable(
         `thumbnail-${insertableId}`,
         async () =>
             uploadThumbnails(
-                ctx.env.THUMBNAILS,
+                ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
                 target.microversionId

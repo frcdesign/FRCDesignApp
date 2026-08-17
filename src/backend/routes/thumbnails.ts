@@ -221,7 +221,7 @@ thumbnailRoutes.get(
             canonicalConfiguration
         );
 
-        const object = await c.env.THUMBNAILS.get(
+        const object = await c.env.BLOB.get(
             thumbnailKey(elementId, microversionId, size, configurationKey)
         );
         if (object) {
@@ -241,7 +241,7 @@ thumbnailRoutes.get(
         }
 
         // Stand in with the default configuration until the real render lands.
-        const fallback = await c.env.THUMBNAILS.get(
+        const fallback = await c.env.BLOB.get(
             thumbnailKey(elementId, microversionId, size)
         );
         if (!fallback) {
@@ -312,7 +312,7 @@ thumbnailRoutes.get(
         ) {
             c.executionCtx.waitUntil(
                 putThumbnail(
-                    c.env.THUMBNAILS,
+                    c.env.BLOB,
                     thumbnailKey(
                         elementId,
                         microversionId,
@@ -383,7 +383,7 @@ thumbnailRoutes.post(
         }
 
         const thumbnails = await uploadThumbnails(
-            c.env.THUMBNAILS,
+            c.env.BLOB,
             onshapeApi,
             elementPath,
             row.microversionId
@@ -439,7 +439,7 @@ thumbnailRoutes.post(
         };
 
         const thumbnails = await uploadDocumentThumbnails(
-            c.env.THUMBNAILS,
+            c.env.BLOB,
             onshapeApi,
             instancePath
         );

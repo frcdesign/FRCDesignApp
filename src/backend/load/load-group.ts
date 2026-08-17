@@ -84,7 +84,7 @@ export async function loadGroup(
         `document-thumbnail-${groupId}`,
         async () =>
             uploadDocumentThumbnails(
-                ctx.env.THUMBNAILS,
+                ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
                 versionPath
             )

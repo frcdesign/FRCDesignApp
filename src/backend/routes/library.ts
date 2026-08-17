@@ -54,7 +54,7 @@ libraryRoutes.get(
     async (c) => {
         const libraryId = getLibraryParam(c);
 
-        const object = await c.env.SEARCH_INDEX.get(searchIndexKey(libraryId));
+        const object = await c.env.BLOB.get(searchIndexKey(libraryId));
         if (!object) {
             return c.notFound();
         }
