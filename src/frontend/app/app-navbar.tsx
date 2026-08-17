@@ -21,6 +21,7 @@ import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useSaveSettings } from "../settings/settings";
 import { useIsSignedIn } from "../api-utils/access-level";
+import { startSignIn } from "../api-utils/sign-in";
 import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
 import { queryClient } from "../query-client";
@@ -62,16 +63,7 @@ function SignInButton(): ReactNode {
     if (isSignedIn) return null;
 
     return (
-        <Button
-            variant="white"
-            onClick={() => {
-                const redirectUrl =
-                    window.location.pathname + window.location.search;
-                window.location.href =
-                    "/auth/sign-in?redirectUrl=" +
-                    encodeURIComponent(redirectUrl);
-            }}
-        >
+        <Button variant="white" onClick={startSignIn}>
             Sign in
         </Button>
     );

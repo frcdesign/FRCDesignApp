@@ -26,6 +26,7 @@ import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
 import { useFavoritesQuery } from "../queries";
 import { RequireSignIn } from "../api-utils/access-level";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
@@ -86,7 +87,12 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 />
             }
             rightSection={
-                <FavoriteButton favorite={favorite} insertable={insertable} />
+                <RequireSignIn>
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                    />
+                </RequireSignIn>
             }
             menuItems={
                 <InsertableMenuItems
@@ -109,23 +115,26 @@ export function InsertableMenuItems(
     props: InsertableMenuItemsProps
 ): ReactNode {
     const { favorite, insertable, inInsertMenu, configuration } = props;
+    const isConnected = useIsConnectedToOnshape();
 
     return (
         <>
-            {!inInsertMenu && (
-                <RequireSignIn>
+            {!inInsertMenu && isConnected && (
+                <>
                     <QuickInsertItems
                         insertable={insertable}
                         isFavorite={favorite !== undefined}
                     />
                     <Menu.Divider />
-                </RequireSignIn>
+                </>
             )}
-            <FavoriteInsertableItem
-                favorite={favorite}
-                insertable={insertable}
-            />
-            <Menu.Divider />
+            <RequireSignIn>
+                <FavoriteInsertableItem
+                    favorite={favorite}
+                    insertable={insertable}
+                />
+                <Menu.Divider />
+            </RequireSignIn>
             <OpenDocumentItems path={{ ...insertable.path, configuration }} />
             <AdminOptionsSubmenu>
                 <ReloadThumbnailMenuItem id={insertable.id} isGroup={false} />

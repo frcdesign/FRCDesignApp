@@ -28,7 +28,8 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption
+    EnumOption,
+    DEFAULT_UNIT_INFO
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
@@ -46,7 +47,7 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
-import { useIsSignedIn } from "../api-utils/access-level";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -71,11 +72,11 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     const search = useSearch({ from: "/app" });
-    // Document units need Onshape; when not signed in, skip the fetch and let
-    // each quantity render in its own unit (see getEvaluateOptions).
-    const isSignedIn = useIsSignedIn();
-    const unitInfoQuery = useUnitInfoQuery(search, isSignedIn);
-    const unitInfo = isSignedIn ? unitInfoQuery.data : undefined;
+    // Units come from the current document; use the default placeholder when not
+    // connected to one, so the dialog still renders.
+    const isConnected = useIsConnectedToOnshape();
+    const unitInfoQuery = useUnitInfoQuery(search, isConnected);
+    const unitInfo = unitInfoQuery.data ?? DEFAULT_UNIT_INFO;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -93,11 +94,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
 
-    if (
-        query.isPending ||
-        (isSignedIn && unitInfoQuery.isPending) ||
-        !configuration
-    ) {
+    if (query.isPending || !configuration) {
         return (
             <Center my="md">
                 <Loader />
@@ -105,8 +102,6 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
     } else if (query.isError) {
         return <SectionError title="Failed to load configuration." />;
-    } else if (isSignedIn && unitInfoQuery.isError) {
-        return <SectionError title="Failed to fetch document units." />;
     }
 
     return (
@@ -123,7 +118,7 @@ interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
     configuration: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
-    unitInfo?: UnitInfo;
+    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
@@ -167,7 +162,7 @@ interface ParameterProps<T extends ConfigurationParameter> {
     onValueChange: (newValue: string | undefined) => void;
     configuration: ParameterValues;
     parameters: ConfigurationParameter[];
-    unitInfo?: UnitInfo;
+    unitInfo: UnitInfo;
 }
 
 function ParameterInput(
@@ -360,12 +355,9 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     );
 }
 
-/** Fallback display precision when document units aren't available (not signed in). */
-const DEFAULT_QUANTITY_PRECISION = 3;
-
 function getEvaluateOptions(
     parameter: QuantityParameter,
-    unitInfo?: UnitInfo
+    unitInfo: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
@@ -375,24 +367,21 @@ function getEvaluateOptions(
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo?.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo?.lengthUnit ?? parameter.unit,
+            displayPrecision: unitInfo.lengthPrecision,
+            displayUnit: unitInfo.lengthUnit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo?.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo?.angleUnit ?? parameter.unit,
+            displayPrecision: unitInfo.anglePrecision,
+            displayUnit: unitInfo.angleUnit,
             ...minAndMax
         };
     } else if (quantityType == QuantityType.REAL) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo?.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayPrecision: unitInfo.realPrecision,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };

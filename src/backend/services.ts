@@ -1,7 +1,7 @@
 import { type AppServicesFactory } from "./app";
 import { getCachedUserId, getOnshapeApi, isAuthenticated } from "./auth";
 import { getCachedAccessLevel } from "./access-level-utils";
-import { isSignedIn } from "./sign-in-utils";
+import { isForceSignedIn, isSignedIn } from "./sign-in-utils";
 import { AccessLevel } from "../shared/types";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
@@ -15,7 +15,7 @@ export const productionServices: AppServicesFactory = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),
     getUserId: () => {
         // FORCE_SIGNED_IN has no real Onshape session; use a stable fake id.
-        if (c.env.FORCE_SIGNED_IN) {
+        if (isForceSignedIn(c)) {
             return Promise.resolve(FORCE_SIGNED_IN_USER_ID);
         }
         return getCachedUserId(c);
@@ -25,7 +25,7 @@ export const productionServices: AppServicesFactory = (c) => ({
         if (override) return override as AccessLevel;
         // getCachedAccessLevel needs a real Onshape session, so only call it
         // for a genuinely signed-in caller (not FORCE_SIGNED_IN).
-        if (!c.env.FORCE_SIGNED_IN && (await isSignedIn(c))) {
+        if (!isForceSignedIn(c) && (await isSignedIn(c))) {
             return getCachedAccessLevel(c);
         }
         return AccessLevel.USER;

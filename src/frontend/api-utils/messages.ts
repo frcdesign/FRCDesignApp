@@ -10,18 +10,18 @@
 import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "../../shared/onshape-path";
 import { useCallback, useEffect } from "react";
-import { useIsSignedIn } from "./access-level";
+import { useIsConnectedToOnshape } from "./onshape-params";
 
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });
-    // Not signed in means no Onshape iframe parent to message.
-    const isSignedIn = useIsSignedIn();
+    // Nothing to message unless embedded in an Onshape document.
+    const isConnected = useIsConnectedToOnshape();
 
     useEffect(() => {
-        if (isSignedIn) {
+        if (isConnected) {
             sendInitMessage(search);
         }
-    }, [search, isSignedIn]);
+    }, [search, isConnected]);
 
     useEffect(() => {
         const handlePostMessage = (event: MessageEvent) => {
@@ -43,13 +43,13 @@ export function useMessageListener() {
 
 export function useMessageSender() {
     const search = useSearch({ from: "/app" });
-    const isSignedIn = useIsSignedIn();
+    const isConnected = useIsConnectedToOnshape();
     return useCallback(
         (message: Message) => {
-            if (!isSignedIn) return;
+            if (!isConnected) return;
             sendMessage(search, message);
         },
-        [search, isSignedIn]
+        [search, isConnected]
     );
 }
 

@@ -1,3 +1,4 @@
+import { useSearch } from "@tanstack/react-router";
 import { ElementType } from "../../shared/types";
 import { Theme } from "../../shared/types";
 import { ElementPath } from "../../shared/onshape-path";
@@ -29,4 +30,13 @@ export function getColorTheme(
         return systemTheme;
     }
     return theme;
+}
+
+/**
+ * Whether the app is embedded in an Onshape document, i.e. the url carries a
+ * full element path. A signed-in caller opening the app directly is not.
+ */
+export function useIsConnectedToOnshape(): boolean {
+    const search = useSearch({ strict: false });
+    return Boolean(search.documentId && search.instanceId && search.elementId);
 }

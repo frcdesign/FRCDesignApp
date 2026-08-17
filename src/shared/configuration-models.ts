@@ -150,3 +150,12 @@ export interface UnitInfo {
     anglePrecision: number;
     realPrecision: number;
 }
+
+/** Shown while the document's units load, or when not connected to a document. */
+export const DEFAULT_UNIT_INFO: UnitInfo = {
+    lengthUnit: Unit.MILLIMETER,
+    angleUnit: Unit.DEGREE,
+    lengthPrecision: 3,
+    anglePrecision: 3,
+    realPrecision: 3
+};

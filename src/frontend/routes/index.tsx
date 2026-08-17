@@ -1,17 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
 import { readLocalSettings } from "../settings/local-settings";
 import { RootAppError } from "../app/root-error";
 
-// Direct entry for not-signed-in users (Onshape launches via `/init` instead),
-// seeding the library and theme from locally-saved settings.
+// Direct entry for a user opening the app outside Onshape. Onshape's own launch
+// is handled server-side, so it never reaches this route.
 export const Route = createFileRoute("/")({
     beforeLoad: () => {
-        const local = readLocalSettings();
+        const { libraryId, theme } = readLocalSettings();
         throw redirect({
             to: "/app/library/$libraryId",
-            params: { libraryId: local.libraryId ?? DEFAULT_LIBRARY_ID },
-            search: { theme: local.theme ?? DEFAULT_SETTINGS.theme }
+            params: { libraryId },
+            search: { theme }
         });
     },
     errorComponent: RootAppError

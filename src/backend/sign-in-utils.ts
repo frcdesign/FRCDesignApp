@@ -1,7 +1,13 @@
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
+import { env } from "process";
 import { type AppContext, type AppContextEnv } from "./app";
+
+/** FORCE_SIGNED_IN is a dev-only escape hatch, ignored in production. */
+export function isForceSignedIn(c: AppContext): boolean {
+    return !!c.env.FORCE_SIGNED_IN && env.NODE_ENV !== "production";
+}
 
 /**
  * Whether the caller has a valid Onshape session, memoized on the request.
@@ -12,7 +18,7 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
     if (cached !== undefined) return cached;
 
     let signedIn: boolean;
-    if (c.env.FORCE_SIGNED_IN) {
+    if (isForceSignedIn(c)) {
         signedIn = true;
     } else {
         try {
