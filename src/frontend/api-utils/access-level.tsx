@@ -7,18 +7,20 @@ import { AccessLevel, type AccessData } from "../../shared/types";
 import { apiGet } from "./api";
 import { useUiState } from "./ui-state";
 
-/** What an unresolved caller gets: the least the app can show anyone. */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: AccessLevel.USER,
-    currentAccessLevel: AccessLevel.USER,
     signedIn: false
 };
+
+/** The level the app is viewed as by default; overridable in dev via a Vite var. */
+const DEFAULT_ACCESS_LEVEL =
+    (import.meta.env.VITE_DEFAULT_ACCESS_LEVEL as AccessLevel | undefined) ??
+    AccessLevel.USER;
 
 export function accessDataQueryKey() {
     return ["access-data"];
 }
 
-/** The caller's access level, which gates editor-only affordances. */
 export function getAccessDataQuery() {
     return queryOptions<AccessData>({
         queryKey: accessDataQueryKey(),
@@ -26,25 +28,29 @@ export function getAccessDataQuery() {
     });
 }
 
+/** Server access plus the level the app is currently viewed as. */
+export interface ResolvedAccessData extends AccessData {
+    currentAccessLevel: AccessLevel;
+}
+
 /**
- * The caller's access, which nothing waits for — editor affordances appear late.
- * The settings menu can view the app as a lower level (or a higher one, up to
- * the granted max); that choice is local state, so refetching the query — which
- * every navigation does — can't revert it.
+ * The caller's access. The viewed level is a local choice (the settings menu can
+ * drop below the granted max), so it survives the query refetching on navigation.
  */
-export function useAccessData(): AccessData {
-    const serverData = useQuery(getAccessDataQuery()).data;
+export function useAccessData(): ResolvedAccessData {
+    const serverData =
+        useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
     const chosenLevel = useUiState()[0].accessLevel;
     return useMemo(() => {
-        const accessData = serverData ?? DEFAULT_ACCESS_DATA;
-        // A stored choice can outlive the access that allowed it.
-        if (
-            !chosenLevel ||
-            !isWithinAccessLevel(chosenLevel, accessData.maxAccessLevel)
-        ) {
-            return accessData;
-        }
-        return { ...accessData, currentAccessLevel: chosenLevel };
+        const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
+        // A stored choice can outlive the access that allowed it; clamp to max.
+        const currentAccessLevel = isWithinAccessLevel(
+            desired,
+            serverData.maxAccessLevel
+        )
+            ? desired
+            : serverData.maxAccessLevel;
+        return { ...serverData, currentAccessLevel };
     }, [serverData, chosenLevel]);
 }
 
@@ -54,21 +60,13 @@ export function useIsSignedIn(): boolean {
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {
-    /**
-     * @optional
-     * @default AccessLevel.EDITOR
-     */
+    /** @default AccessLevel.EDITOR */
     accessLevel?: AccessLevel;
-    /**
-     * If specified, this will check against the maxAccessLevel instead of currentAccessLevel.
-     * @default false
-     */
+    /** Check against maxAccessLevel instead of the viewed level. @default false */
     useMaxAccessLevel?: boolean;
 }
 
-/**
- * Simple component which renders children only if the given accessLevel requirement is met.
- */
+/** Renders children only when the access-level requirement is met. */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
     const accessData = useAccessData();
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;

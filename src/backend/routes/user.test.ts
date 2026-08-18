@@ -34,7 +34,6 @@ describe("user routes", () => {
 
         expect(await res.json()).toEqual({
             maxAccessLevel: AccessLevel.ADMIN,
-            currentAccessLevel: AccessLevel.ADMIN,
             signedIn: true
         });
         // Per-user, and Workers Cache keys ignore cookies.

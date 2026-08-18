@@ -192,12 +192,11 @@ interface HeartIconProps {
     /**
      * @default IconSize.SMALL
      */
-    size?: number;
+    size?: IconSize;
 }
 
 export function HeartIcon(props: HeartIconProps): ReactNode {
-    const full = props.full ?? true;
-    const size = props.size ?? IconSize.SMALL;
+    const { full = true, size = IconSize.SMALL } = props;
     return full ? (
         <IconHeartFilled size={size} color={HeartIconColor} />
     ) : (
@@ -205,11 +204,14 @@ export function HeartIcon(props: HeartIconProps): ReactNode {
     );
 }
 
-export function HeartBrokenIcon(props: { size?: number }): ReactNode {
-    return (
-        <IconHeartBroken
-            size={props.size ?? IconSize.SMALL}
-            color={HeartIconColor}
-        />
-    );
+interface HeartBrokenIconProps {
+    /**
+     * @default IconSize.SMALL
+     */
+    size?: IconSize;
+}
+
+export function HeartBrokenIcon(props: HeartBrokenIconProps): ReactNode {
+    const { size = IconSize.SMALL } = props;
+    return <IconHeartBroken size={size} color={HeartIconColor} />;
 }

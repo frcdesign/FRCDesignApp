@@ -141,9 +141,6 @@ export interface Configuration {
 }
 
 /**
- * Custom data collected from the current tab the user has open.
- */
-/**
  * The current document's units. Fields are optional: when a unit is absent (not
  * connected to a document, or units no longer fetched) each quantity falls back
  * to its own default unit.
@@ -155,3 +152,6 @@ export interface UnitInfo {
     anglePrecision?: number;
     realPrecision?: number;
 }
+
+/** No document units available; each quantity falls back to its own unit. */
+export const EMPTY_UNIT_INFO: UnitInfo = {};

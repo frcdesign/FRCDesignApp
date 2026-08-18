@@ -94,10 +94,12 @@ export interface SettingsUpdate {
     libraryId?: LibraryId;
 }
 
+/**
+ * Server-provided access: the highest level granted plus sign-in state. The
+ * level the app is currently viewed as is client-side (see useAccessData).
+ */
 export interface AccessData {
     maxAccessLevel: AccessLevel;
-    currentAccessLevel: AccessLevel;
-    /** Whether the caller has a valid Onshape session (see backend isSignedIn). */
     signedIn: boolean;
 }
 

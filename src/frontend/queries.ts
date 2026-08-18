@@ -15,7 +15,7 @@ import {
 import { hasEditorAccess, LibraryId } from "../shared/types";
 import { useAccessData } from "./api-utils/access-level";
 import { toLibraryPath, useLibraryId } from "./api-utils/library";
-import { type UnitInfo } from "../shared/configuration-models";
+import { EMPTY_UNIT_INFO, type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
 import { InstancePath } from "../shared/onshape-path";
@@ -101,7 +101,8 @@ export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
                     instanceType: instancePath.instanceType
                 }
             }),
-        enabled
+        enabled,
+        placeholderData: EMPTY_UNIT_INFO
     });
 }
 
@@ -140,10 +141,13 @@ export function favoritesQueryKey(libraryId: LibraryId) {
 
 const EMPTY_FAVORITES: FavoritesData = { favorites: {}, favoriteOrder: [] };
 
-export function getFavoritesQuery(libraryId: LibraryId) {
+export function getFavoritesQuery(libraryId: LibraryId, enabled = true) {
     return queryOptions<FavoritesData>({
         queryKey: favoritesQueryKey(libraryId),
-        queryFn: () => apiGet("/favorites/library/" + libraryId)
+        queryFn: () => apiGet("/favorites/library/" + libraryId),
+        enabled,
+        // Not signed in: the endpoint 401s, so present no favorites.
+        placeholderData: EMPTY_FAVORITES
     });
 }
 
@@ -184,13 +188,9 @@ export function useBuildStatusQuery() {
 
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
-    // Favorites require sign-in; the endpoint 401s otherwise, so present none.
+    // Favorites require sign-in; don't fetch (or display) them otherwise.
     const signedIn = useAccessData().signedIn;
-    const query = useQuery({
-        ...getFavoritesQuery(libraryId),
-        enabled: signedIn
-    });
-    return signedIn ? query : { ...query, data: EMPTY_FAVORITES };
+    return useQuery(getFavoritesQuery(libraryId, signedIn));
 }
 
 export function jobStatusQueryMatchKey() {
@@ -202,11 +202,12 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
 }
 
 /** Whether a library-load job is running; polled so indicators stay live. */
-export function getJobStatusQuery(libraryId: LibraryId) {
+export function getJobStatusQuery(libraryId: LibraryId, enabled = true) {
     return queryOptions<{ running: boolean }>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        refetchInterval: 10_000
+        refetchInterval: 10_000,
+        enabled
     });
 }
 
@@ -217,6 +218,10 @@ export function getJobStatusQuery(libraryId: LibraryId) {
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
-    const enabled = signedIn && hasEditorAccess(currentAccessLevel);
-    return useQuery({ ...getJobStatusQuery(libraryId), enabled });
+    return useQuery(
+        getJobStatusQuery(
+            libraryId,
+            signedIn && hasEditorAccess(currentAccessLevel)
+        )
+    );
 }

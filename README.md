@@ -27,8 +27,11 @@ OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 SESSION_SECRET=gNSzdRbs4dJYz0obHfeRwaD+u5QbZgJx+V8/rgUH6AiOdoppP3wjeaM97nZmxeJa
 
-# One of admin, editor, or user, depending on desired access to the app. Does nothing in production.
+# One of admin, editor, or user. Sets the max access level granted. Does nothing in production.
 ACCESS_LEVEL_OVERRIDE=admin
+
+# One of admin, editor, or user. The level the app is viewed as by default (client-side).
+VITE_DEFAULT_ACCESS_LEVEL=admin
 ```
 
 ## Onshape OAuth App Setup

@@ -28,7 +28,8 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption
+    EnumOption,
+    EMPTY_UNIT_INFO
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
@@ -71,10 +72,11 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     const search = useSearch({ from: "/app" });
-    // Units come from the current document; absent when not connected to one, in
+    // Units come from the current document; empty when not connected to one, in
     // which case each quantity renders in its own unit (see getEvaluateOptions).
     const isConnected = useIsConnectedToOnshape();
-    const unitInfo = useUnitInfoQuery(search, isConnected).data;
+    const unitInfo =
+        useUnitInfoQuery(search, isConnected).data ?? EMPTY_UNIT_INFO;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -116,7 +118,7 @@ interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
     configuration: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
-    unitInfo?: UnitInfo;
+    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
@@ -160,7 +162,7 @@ interface ParameterProps<T extends ConfigurationParameter> {
     onValueChange: (newValue: string | undefined) => void;
     configuration: ParameterValues;
     parameters: ConfigurationParameter[];
-    unitInfo?: UnitInfo;
+    unitInfo: UnitInfo;
 }
 
 function ParameterInput(
@@ -358,7 +360,7 @@ const DEFAULT_QUANTITY_PRECISION = 3;
 
 function getEvaluateOptions(
     parameter: QuantityParameter,
-    unitInfo?: UnitInfo
+    unitInfo: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
@@ -370,23 +372,23 @@ function getEvaluateOptions(
         return {
             quantityType,
             displayPrecision:
-                unitInfo?.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo?.lengthUnit ?? parameter.unit,
+                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
             displayPrecision:
-                unitInfo?.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo?.angleUnit ?? parameter.unit,
+                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.angleUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType == QuantityType.REAL) {
         return {
             quantityType,
             displayPrecision:
-                unitInfo?.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
+                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };

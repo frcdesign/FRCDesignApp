@@ -6,6 +6,7 @@ import { FontWeight } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { Theme } from "../../shared/types";
 import { hasEditorAccess } from "../../shared/types";
+import { isWithinAccessLevel } from "../../shared/types";
 import { AccessLevel } from "../../shared/types";
 import { useSaveSettings } from "./settings";
 import { capitalize } from "../common/utils";
@@ -143,9 +144,11 @@ function AccessLevelSelect(): ReactNode {
     const accessLevels = useSelectOptions(
         useMemo(
             () =>
-                maxAccessLevel === AccessLevel.ADMIN
-                    ? [AccessLevel.ADMIN, AccessLevel.EDITOR, AccessLevel.USER]
-                    : [AccessLevel.EDITOR, AccessLevel.USER],
+                [
+                    AccessLevel.ADMIN,
+                    AccessLevel.EDITOR,
+                    AccessLevel.USER
+                ].filter((level) => isWithinAccessLevel(level, maxAccessLevel)),
             [maxAccessLevel]
         ),
         capitalize

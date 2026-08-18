@@ -30,7 +30,6 @@ describe("not-signed-in access", () => {
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
             maxAccessLevel: AccessLevel.USER,
-            currentAccessLevel: AccessLevel.USER,
             signedIn: false
         });
     });
