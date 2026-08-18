@@ -20,6 +20,7 @@ import { useIsInsertableHidden } from "../cards/card-hooks";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { ChangeOrderItems } from "../common/change-order";
 import { useUiState } from "../api-utils/ui-state";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
     openCannotEditDefaultConfigurationAlert,
@@ -96,18 +97,23 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
     const uiState = useUiState()[0];
+    const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
 
     return (
         <>
-            <QuickInsertItems
-                insertable={insertable}
-                configuration={favorite.defaultConfiguration}
-                isFavorite
-            />
-            <Menu.Divider />
+            {isConnected && (
+                <>
+                    <QuickInsertItems
+                        insertable={insertable}
+                        configuration={favorite.defaultConfiguration}
+                        isFavorite
+                    />
+                    <Menu.Divider />
+                </>
+            )}
             <Menu.Item
                 leftSection={<IconPencil size={IconSize.SMALL} />}
                 onClick={() => {

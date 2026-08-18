@@ -1,6 +1,6 @@
 import { ActionIcon, Button, Menu } from "@mantine/core";
 import { IconFilter, IconFilterOff } from "@tabler/icons-react";
-import { IconSize, PrimaryColor } from "../common/style-constants";
+import { HEADER_CONTROL_COLOR, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "../../shared/types";
 import { Vendor } from "../../shared/types";
@@ -82,10 +82,12 @@ export function VendorMenu(): ReactNode {
         <AppContextMenu wideMenu menuItems={menuItems} controlledByButton>
             <ActionIcon
                 variant={hasFilters ? "light" : "subtle"}
-                color={PrimaryColor.PRIMARY}
+                color={HEADER_CONTROL_COLOR}
+                // Match the height of the buttons and search input beside it.
+                size="input-sm"
                 title="Filter vendors"
             >
-                <IconFilter size={IconSize.MEDIUM} />
+                <IconFilter size={IconSize.CONTROL} />
             </ActionIcon>
         </AppContextMenu>
     );

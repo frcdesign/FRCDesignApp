@@ -10,6 +10,7 @@ import {
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
+import { requireSignInMiddleware } from "../sign-in-utils";
 import { bumpLibraryVersion } from "../library-data";
 import {
     getElementThumbnail,
@@ -142,6 +143,7 @@ thumbnailRoutes.get(
 /** GET /api/thumbnail?size=X&thumbnailId=Y&v=:microversionId — live from Onshape */
 thumbnailRoutes.get(
     "/thumbnail",
+    requireSignInMiddleware,
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
@@ -164,6 +166,7 @@ thumbnailRoutes.get(
 /** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
 thumbnailRoutes.get(
     "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
+    requireSignInMiddleware,
     // Its url names an immutable version, so there is no `?v=` to bust.
     cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
     async (c) => {

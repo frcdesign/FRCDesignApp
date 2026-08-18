@@ -9,7 +9,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
-import { IconSize, PrimaryColor } from "../common/style-constants";
+import { HEADER_CONTROL_COLOR, IconSize } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -20,6 +20,8 @@ import { useUiState } from "../api-utils/ui-state";
 import { getLibraryName, useLibraryId } from "../api-utils/library";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useSaveSettings } from "../settings/settings";
+import { useIsSignedIn } from "../api-utils/access-level";
+import { startSignIn } from "../api-utils/sign-in";
 import { useJobStatus } from "../api-utils/refresh";
 import { LibraryId } from "../../shared/types";
 import { queryClient } from "../query-client";
@@ -45,9 +47,29 @@ export function AppNavbar(): ReactNode {
             {leftGroup}
             <Group wrap="nowrap" gap="xs">
                 <JobIndicator />
+                <SignInButton />
                 <SettingsButton />
             </Group>
         </Group>
+    );
+}
+
+/**
+ * Shown only when not signed in; starts the Onshape OAuth flow and returns to
+ * the current location, after which access-data reports the caller signed in.
+ */
+function SignInButton(): ReactNode {
+    const isSignedIn = useIsSignedIn();
+    if (isSignedIn) return null;
+
+    return (
+        <Button
+            variant="outline"
+            color={HEADER_CONTROL_COLOR}
+            onClick={startSignIn}
+        >
+            Sign in
+        </Button>
     );
 }
 
@@ -69,7 +91,7 @@ function RunningJobLoader(): ReactNode {
             withArrow
             label="The library is being loaded from Onshape in the background"
         >
-            <Loader size={IconSize.MEDIUM} color="white" />
+            <Loader size="md" color="white" />
         </Tooltip>
     );
 }
@@ -140,11 +162,13 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color={PrimaryColor.PRIMARY}
+            color={HEADER_CONTROL_COLOR}
+            // Match the height of the buttons and search input beside it.
+            size="input-sm"
             title="Settings"
             onClick={() => openSettingsMenu()}
         >
-            <IconSettings size={IconSize.MEDIUM} />
+            <IconSettings size={IconSize.CONTROL} />
         </ActionIcon>
     );
 }

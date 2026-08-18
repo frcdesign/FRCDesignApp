@@ -28,7 +28,8 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption
+    EnumOption,
+    EMPTY_UNIT_INFO
 } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
@@ -46,6 +47,7 @@ import {
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
 interface ConfigurationWrapperProps {
     configurationId: string;
@@ -70,7 +72,11 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     });
 
     const search = useSearch({ from: "/app" });
-    const unitInfoQuery = useUnitInfoQuery(search);
+    // Units come from the current document; empty when not connected to one, in
+    // which case each quantity renders in its own unit (see getEvaluateOptions).
+    const isConnected = useIsConnectedToOnshape();
+    const unitInfo =
+        useUnitInfoQuery(search, isConnected).data ?? EMPTY_UNIT_INFO;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -88,7 +94,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
 
-    if (query.isPending || unitInfoQuery.isPending || !configuration) {
+    if (query.isPending || !configuration) {
         return (
             <Center my="md">
                 <Loader />
@@ -96,8 +102,6 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
     } else if (query.isError) {
         return <SectionError title="Failed to load configuration." />;
-    } else if (unitInfoQuery.isError) {
-        return <SectionError title="Failed to fetch document units." />;
     }
 
     return (
@@ -105,7 +109,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
             configurationResult={query.data}
             configuration={configuration}
             setConfiguration={setConfiguration}
-            unitInfo={unitInfoQuery.data}
+            unitInfo={unitInfo}
         />
     );
 }
@@ -351,33 +355,40 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     );
 }
 
+/** Display precision used when the document's units aren't available. */
+const DEFAULT_QUANTITY_PRECISION = 3;
+
 function getEvaluateOptions(
     parameter: QuantityParameter,
-    contextData: UnitInfo
+    unitInfo: UnitInfo
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
         min: valueWithUnits(parameter.min, parameter.unit),
         max: valueWithUnits(parameter.max, parameter.unit)
     };
+    // Fall back to the parameter's own unit when the document's isn't available.
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,
-            displayPrecision: contextData.lengthPrecision,
-            displayUnit: contextData.lengthUnit,
+            displayPrecision:
+                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
-            displayPrecision: contextData.anglePrecision,
-            displayUnit: contextData.angleUnit,
+            displayPrecision:
+                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.angleUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType == QuantityType.REAL) {
         return {
             quantityType,
-            displayPrecision: contextData.realPrecision,
+            displayPrecision:
+                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };

@@ -209,7 +209,7 @@ export function useCloseBuildCard(): () => void {
  * given admin menu. Only rendered for editors and admins.
  */
 export function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    // Gate first so only editors mount the child (and thus poll job status).
+    // Gate first so the card and its admin controls only exist for editors.
     return (
         <RequireAccessLevel>
             <BuildStatusHoverCard {...props} />

@@ -1,9 +1,15 @@
 import { useParams } from "@tanstack/react-router";
-import { LibraryId } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, LibraryId } from "../../shared/types";
 
 /** Returns the library being displayed, which the url is the source of truth for. */
 export function useLibraryId(): LibraryId {
-    return useParams({ from: "/app/library/$libraryId" }).libraryId;
+    // Callers can sit outside the library route — modals mount at the root and
+    // error components replace the match — so fall back instead of throwing.
+    const params = useParams({
+        from: "/app/library/$libraryId",
+        shouldThrow: false
+    });
+    return params?.libraryId ?? DEFAULT_LIBRARY_ID;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {

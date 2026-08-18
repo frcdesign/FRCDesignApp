@@ -10,13 +10,18 @@
 import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "../../shared/onshape-path";
 import { useCallback, useEffect } from "react";
+import { useIsConnectedToOnshape } from "./onshape-params";
 
 export function useMessageListener() {
     const search = useSearch({ from: "/app" });
+    // Nothing to message unless embedded in an Onshape document.
+    const isConnected = useIsConnectedToOnshape();
 
     useEffect(() => {
-        sendInitMessage(search);
-    }, [search]);
+        if (isConnected) {
+            sendInitMessage(search);
+        }
+    }, [search, isConnected]);
 
     useEffect(() => {
         const handlePostMessage = (event: MessageEvent) => {
@@ -38,11 +43,13 @@ export function useMessageListener() {
 
 export function useMessageSender() {
     const search = useSearch({ from: "/app" });
+    const isConnected = useIsConnectedToOnshape();
     return useCallback(
         (message: Message) => {
+            if (!isConnected) return;
             sendMessage(search, message);
         },
-        [search]
+        [search, isConnected]
     );
 }
 

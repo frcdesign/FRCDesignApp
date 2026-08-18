@@ -1,6 +1,7 @@
+import { useSearch } from "@tanstack/react-router";
 import { ElementType } from "../../shared/types";
 import { Theme } from "../../shared/types";
-import { ElementPath } from "../../shared/onshape-path";
+import { ElementPath, isElementPath } from "../../shared/onshape-path";
 
 /**
  * Documents search parameter values received from Onshape.
@@ -12,6 +13,8 @@ export interface OnshapeParams extends ElementPath {
     /** The caller's saved theme, seeded by the entry redirect. */
     theme: Theme;
     server: string;
+    /** Set on the sign-in redirect so the app confirms success once. */
+    justSignedIn?: string;
 }
 
 /**
@@ -29,4 +32,12 @@ export function getColorTheme(
         return systemTheme;
     }
     return theme;
+}
+
+/**
+ * Whether the app is embedded in an Onshape document, i.e. the url carries a
+ * full element path. A signed-in caller opening the app directly is not.
+ */
+export function useIsConnectedToOnshape(): boolean {
+    return isElementPath(useSearch({ strict: false }));
 }

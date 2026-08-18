@@ -12,6 +12,7 @@ import { OnshapeParams } from "../../api-utils/onshape-params";
 import { AppNavbar } from "../../app/app-navbar";
 import { SectionLoading } from "../../app-common/app-zero-state";
 import { useMessageListener } from "../../api-utils/messages";
+import { useSignInToast } from "../../api-utils/sign-in";
 import { RootAppError } from "../../app/root-error";
 import { PrimaryColor } from "../../common/style-constants";
 
@@ -32,6 +33,7 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
+    useSignInToast();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>

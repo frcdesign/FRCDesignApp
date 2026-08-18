@@ -1,37 +1,72 @@
-import { PropsWithChildren } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { PropsWithChildren, useMemo } from "react";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { hasEditorAccess } from "../../shared/types";
 import { hasAdminAccess } from "../../shared/types";
+import { isWithinAccessLevel } from "../../shared/types";
 import { AccessLevel, type AccessData } from "../../shared/types";
-import { getAccessDataQuery } from "../queries";
+import { apiGet } from "./api";
+import { useUiState } from "./ui-state";
 
-/** What an unresolved caller gets: the least the app can show anyone. */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: AccessLevel.USER,
-    currentAccessLevel: AccessLevel.USER
+    signedIn: false
 };
 
-/** The caller's access, which nothing waits for — editor affordances appear late. */
-export function useAccessData(): AccessData {
-    return useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
+/** The level the app is viewed as by default; overridable in dev via a Vite var. */
+const DEFAULT_ACCESS_LEVEL =
+    (import.meta.env.VITE_DEFAULT_ACCESS_LEVEL as AccessLevel | undefined) ??
+    AccessLevel.USER;
+
+export function accessDataQueryKey() {
+    return ["access-data"];
 }
 
-interface RequireAccessLevelProps extends PropsWithChildren {
-    /**
-     * @optional
-     * @default AccessLevel.EDITOR
-     */
-    accessLevel?: AccessLevel;
-    /**
-     * If specified, this will check against the maxAccessLevel instead of currentAccessLevel.
-     * @default false
-     */
-    useMaxAccessLevel?: boolean;
+export function getAccessDataQuery() {
+    return queryOptions<AccessData>({
+        queryKey: accessDataQueryKey(),
+        queryFn: () => apiGet("/access-data")
+    });
+}
+
+/** Server access plus the level the app is currently viewed as. */
+export interface ResolvedAccessData extends AccessData {
+    currentAccessLevel: AccessLevel;
 }
 
 /**
- * Simple component which renders children only if the given accessLevel requirement is met.
+ * The caller's access. The viewed level is a local choice (the settings menu can
+ * drop below the granted max), so it survives the query refetching on navigation.
  */
+export function useAccessData(): ResolvedAccessData {
+    const serverData =
+        useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
+    const chosenLevel = useUiState()[0].accessLevel;
+    return useMemo(() => {
+        const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
+        // A stored choice can outlive the access that allowed it; clamp to max.
+        const currentAccessLevel = isWithinAccessLevel(
+            desired,
+            serverData.maxAccessLevel
+        )
+            ? desired
+            : serverData.maxAccessLevel;
+        return { ...serverData, currentAccessLevel };
+    }, [serverData, chosenLevel]);
+}
+
+/** Whether the caller is signed in to Onshape (from access-data). */
+export function useIsSignedIn(): boolean {
+    return useAccessData().signedIn;
+}
+
+interface RequireAccessLevelProps extends PropsWithChildren {
+    /** @default AccessLevel.EDITOR */
+    accessLevel?: AccessLevel;
+    /** Check against maxAccessLevel instead of the viewed level. @default false */
+    useMaxAccessLevel?: boolean;
+}
+
+/** Renders children only when the access-level requirement is met. */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
     const accessData = useAccessData();
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
@@ -51,4 +86,9 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
         return props.children;
     }
     return null;
+}
+
+/** Renders children only when the caller is signed in to Onshape. */
+export function RequireSignIn(props: PropsWithChildren) {
+    return useIsSignedIn() ? props.children : null;
 }

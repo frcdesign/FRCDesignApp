@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import {
     getFavoriteForInsertable,
     InsertableOut
@@ -24,6 +24,9 @@ import { ParameterValues } from "../../shared/configuration-models";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
+import { RequireSignIn, useIsSignedIn } from "../api-utils/access-level";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
+import { startSignIn } from "../api-utils/sign-in";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
@@ -64,10 +67,17 @@ interface InsertMenuContentProps {
 function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
+    const isSignedIn = useIsSignedIn();
 
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(props.defaultConfiguration);
+
+    useEffect(() => {
+        if (!isSignedIn) {
+            showSignInPreviewToast();
+        }
+    }, [isSignedIn]);
 
     if (!favorites) {
         return null;
@@ -93,15 +103,19 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 path={insertable.path}
                 microversionId={insertable.microversionId}
                 configuration={configuration}
+                thumbnailUrls={insertable.thumbnailUrls}
             />
             {parameters}
             <Group justify="space-between" wrap="nowrap" mt="md">
                 <Group gap={4}>
-                    <FavoriteButton
-                        favorite={favorite}
-                        insertable={insertable}
-                    />
-                    <MenuButton>
+                    <RequireSignIn>
+                        <FavoriteButton
+                            favorite={favorite}
+                            insertable={insertable}
+                            large
+                        />
+                    </RequireSignIn>
+                    <MenuButton large>
                         <InsertableMenuItems
                             favorite={favorite}
                             insertable={insertable}
@@ -135,6 +149,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { insertable, configuration, isFavorite, onInsert } = props;
 
     const search = useSearch({ from: "/app" });
+    // Inserting targets the current Onshape document; there's nothing to insert
+    // into when the app is open standalone.
+    const isConnected = useIsConnectedToOnshape();
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
@@ -153,6 +170,10 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         insertMutation.mutate(canFasten && uiState.fasten);
         onInsert();
     }, [insertMutation, onInsert, canFasten, uiState.fasten]);
+
+    if (!isConnected) {
+        return null;
+    }
 
     return (
         <Group gap="sm" align="center">
@@ -174,6 +195,20 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             </Button>
         </Group>
     );
+}
+
+/** Prompts a not-signed-in viewer that the live preview needs Onshape. */
+function showSignInPreviewToast() {
+    notifications.hide("sign-in-preview");
+    notifications.show({
+        id: "sign-in-preview",
+        color: "blue",
+        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
+        message: renderNotification(
+            "Sign in to Onshape to see the configuration preview.",
+            { text: "Sign in", onClick: startSignIn }
+        )
+    });
 }
 
 function showRestoreToast(

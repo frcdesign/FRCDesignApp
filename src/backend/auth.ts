@@ -118,7 +118,9 @@ authRoutes.get("/sign-in", async (c) => {
         });
     }
 
-    const companyId = query.sessionCompanyId ?? "cad";
+    // Standalone sign-in omits sessionCompanyId; leave companyId undefined so the
+    // user can pick their account on Onshape.
+    const companyId = query.sessionCompanyId;
     const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
@@ -135,7 +137,7 @@ authRoutes.get("/callback", async (c) => {
 export async function doSignIn(
     c: AppContext,
     redirectUrl: string,
-    companyId: string
+    companyId?: string
 ): Promise<string> {
     const oauthClient = getOauthClient();
 
@@ -149,7 +151,11 @@ export async function doSignIn(
         state,
         []
     );
-    authorizationUrl.searchParams.set("company_id", companyId);
+    // Onshape-launched sign-in scopes to a company; standalone sign-in omits it
+    // so the user picks their account.
+    if (companyId) {
+        authorizationUrl.searchParams.set("company_id", companyId);
+    }
     return authorizationUrl.toString();
 }
 

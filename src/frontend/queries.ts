@@ -12,10 +12,10 @@ import {
     type LibraryBuildStatus,
     type LibraryOut
 } from "../shared/api-models";
-import { LibraryId } from "../shared/types";
-import { type AccessData } from "../shared/types";
+import { hasEditorAccess, LibraryId } from "../shared/types";
+import { useAccessData } from "./api-utils/access-level";
 import { toLibraryPath, useLibraryId } from "./api-utils/library";
-import { type UnitInfo } from "../shared/configuration-models";
+import { EMPTY_UNIT_INFO, type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
 import { SEARCH_OPTIONS } from "../shared/search";
 import { InstancePath } from "../shared/onshape-path";
@@ -85,20 +85,12 @@ export function useCacheVersion(): number {
     return useQuery(getLibraryVersionQuery(libraryId)).data ?? 0;
 }
 
-export function accessDataQueryKey() {
-    return ["access-data"];
-}
-
-/** The caller's access level, which gates editor-only affordances. */
-export function getAccessDataQuery() {
-    return queryOptions<AccessData>({
-        queryKey: accessDataQueryKey(),
-        queryFn: () => apiGet("/access-data")
-    });
-}
-
-/** Returns information needed to format unit expressions in the Insert dialog. */
-export function useUnitInfoQuery(instancePath: InstancePath) {
+/**
+ * Returns the current document's units for the Insert dialog. Hits Onshape, so
+ * it's disabled when not connected to a document; each quantity then falls back
+ * to its own default unit.
+ */
+export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
     return useQuery<UnitInfo>({
         queryKey: ["unit-info", instancePath],
         queryFn: () =>
@@ -108,7 +100,9 @@ export function useUnitInfoQuery(instancePath: InstancePath) {
                     instanceId: instancePath.instanceId,
                     instanceType: instancePath.instanceType
                 }
-            })
+            }),
+        enabled,
+        placeholderData: EMPTY_UNIT_INFO
     });
 }
 
@@ -145,10 +139,15 @@ export function favoritesQueryKey(libraryId: LibraryId) {
     return ["favorites", libraryId];
 }
 
-export function getFavoritesQuery(libraryId: LibraryId) {
+const EMPTY_FAVORITES: FavoritesData = { favorites: {}, favoriteOrder: [] };
+
+export function getFavoritesQuery(libraryId: LibraryId, enabled = true) {
     return queryOptions<FavoritesData>({
         queryKey: favoritesQueryKey(libraryId),
-        queryFn: () => apiGet("/favorites/library/" + libraryId)
+        queryFn: () => apiGet("/favorites/library/" + libraryId),
+        enabled,
+        // Not signed in: the endpoint 401s, so present no favorites.
+        placeholderData: EMPTY_FAVORITES
     });
 }
 
@@ -189,7 +188,9 @@ export function useBuildStatusQuery() {
 
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
-    return useQuery(getFavoritesQuery(libraryId));
+    // Favorites require sign-in; don't fetch (or display) them otherwise.
+    const signedIn = useAccessData().signedIn;
+    return useQuery(getFavoritesQuery(libraryId, signedIn));
 }
 
 export function jobStatusQueryMatchKey() {
@@ -201,16 +202,26 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
 }
 
 /** Whether a library-load job is running; polled so indicators stay live. */
-export function getJobStatusQuery(libraryId: LibraryId) {
+export function getJobStatusQuery(libraryId: LibraryId, enabled = true) {
     return queryOptions<{ running: boolean }>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        refetchInterval: 10_000
+        refetchInterval: 10_000,
+        enabled
     });
 }
 
-/** Only mounted by editor-gated components, so only editors poll. */
+/**
+ * Job status for the current library. The endpoint is editor-only and needs an
+ * Onshape session, so callers who have neither don't poll it at all.
+ */
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
-    return useQuery(getJobStatusQuery(libraryId));
+    const { signedIn, currentAccessLevel } = useAccessData();
+    return useQuery(
+        getJobStatusQuery(
+            libraryId,
+            signedIn && hasEditorAccess(currentAccessLevel)
+        )
+    );
 }

@@ -4,6 +4,7 @@ import { HttpStatus } from "http-status-ts";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
+import { requireSignInMiddleware } from "../sign-in-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath } from "../../shared/onshape-path";
@@ -205,6 +206,7 @@ insertableRoutes.post(
     "/add-to-part-studio" +
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    requireSignInMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -275,6 +277,7 @@ insertableRoutes.post(
     "/add-to-assembly" +
         insertableRoute() +
         "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    requireSignInMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);

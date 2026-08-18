@@ -11,6 +11,8 @@ import { encodeConfigurationForQuery } from "../../shared/configuration-utils";
 import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
 import { useTargetElementType } from "./insert-hooks";
+import { useIsSignedIn } from "../api-utils/access-level";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
 interface HeightAndWidth {
     height: number;
@@ -128,11 +130,15 @@ interface PreviewImageProps {
     path: ElementPath;
     microversionId: string;
     configuration?: ParameterValues;
+    /** Stored thumbnail, shown instead of the live preview when not signed in. */
+    thumbnailUrls?: ThumbnailUrls;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, microversionId, configuration } = props;
+    const { path, microversionId, configuration, thumbnailUrls } = props;
     const size = ThumbnailSize.SMALL;
+    const isSignedIn = useIsSignedIn();
+    const isConnected = useIsConnectedToOnshape();
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
     const targetElementType = useTargetElementType();
@@ -153,7 +159,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         },
         // Don't retry since failures are almost certainly due to an invalid configuration
         retry: false,
-        enabled: !isFetchingConfiguration
+        enabled: !isFetchingConfiguration && isSignedIn
     });
 
     const thumbnailId = thumbnailIdQuery.data;
@@ -183,10 +189,23 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             return 15000;
         },
         retry: 5,
-        enabled: !isFetchingConfiguration && thumbnailId !== undefined
+        enabled:
+            !isFetchingConfiguration && thumbnailId !== undefined && isSignedIn
     });
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
+
+    // Not signed in: no live Onshape preview, so show the stored thumbnail
+    // (Thumbnail falls back to a placeholder when there's none).
+    if (!isSignedIn) {
+        return (
+            <Thumbnail
+                url={thumbnailUrls?.[ThumbnailSize.STANDARD]}
+                heightAndWidth={heightAndWidth}
+                spinnerSize={36}
+            />
+        );
+    }
 
     if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
         const action =
@@ -195,7 +214,11 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
                 <SectionError
                     title="The thumbnail timed out."
-                    description={`You can still ${action} the part.`}
+                    // Standalone has no insert button to fall back on, and
+                    // null suppresses the generic "contact the developers".
+                    description={
+                        isConnected ? `You can still ${action} the part.` : null
+                    }
                 />
             </Center>
         );

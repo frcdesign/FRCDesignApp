@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { Vendor } from "../../shared/types";
+import { AccessLevel, Vendor } from "../../shared/types";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 3;
 
 const VendorType = z.enum(Object.values(Vendor));
+const AccessLevelType = z.enum(Object.values(AccessLevel));
 
 const UiStateSchema = z.object({
     version: z.number().default(1), // We can't default the parsed version to LATEST_VERSION because of old versions floating around
@@ -14,7 +15,9 @@ const UiStateSchema = z.object({
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().default(""),
     openGroupId: z.string().optional(),
-    fasten: z.boolean().default(true)
+    fasten: z.boolean().default(true),
+    /** The access level to view the app as; absent means the granted default. */
+    accessLevel: AccessLevelType.optional()
 });
 
 type UiState = z.infer<typeof UiStateSchema>;
