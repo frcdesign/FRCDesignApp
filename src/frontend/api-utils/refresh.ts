@@ -3,15 +3,14 @@ import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "../query-client";
 import {
     buildStatusQueryMatchKey,
-    accessDataQueryKey,
     favoritesQueryKey,
     libraryQueryMatchKey,
     libraryVersionQueryMatchKey,
     useJobStatusQuery
 } from "../queries";
+import { accessDataQueryKey } from "./access-level";
 import { useLibraryId } from "./library";
-import { type AccessData, type LibraryId } from "../../shared/types";
-import { getQueryUpdater } from "../common/utils";
+import { type LibraryId } from "../../shared/types";
 
 /** Refetches the current user's favorites, which aren't version-keyed. */
 function refetchFavorites(libraryId: LibraryId): Promise<void> {
@@ -67,11 +66,4 @@ export function useJobStatus(): boolean {
         wasRunning.current = running;
     }, [running, refreshLibrary]);
     return running;
-}
-
-type AccessDataUpdate = (data: AccessData) => void;
-
-/** Optimistically patches the cached access data, which re-renders its readers. */
-export function updateAccessData(update: AccessDataUpdate): void {
-    queryClient.setQueryData(accessDataQueryKey(), getQueryUpdater(update));
 }

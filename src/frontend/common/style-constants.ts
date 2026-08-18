@@ -8,6 +8,8 @@ export enum IconSize {
     SMALL = 16,
     /** Buttons */
     MEDIUM = 18,
+    /** Input-height controls, which sit next to full-height buttons */
+    CONTROL = 24,
     /** In-line error states */
     LARGE = 36,
     /** Full-page error states */
@@ -30,12 +32,6 @@ export const BORDER = "1px solid var(--mantine-color-default-border)";
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
     /**
-     * The current primary color, typically white.
-     *
-     * Used to color the buttons that go over the colored app header.
-     */
-    PRIMARY = "var(--mantine-primary-color)",
-    /**
      * The current library color, e.g., green for FRCDesign.
      */
     FILLED = "var(--mantine-primary-color-filled)",
@@ -44,6 +40,14 @@ export enum PrimaryColor {
      */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }
+
+/**
+ * The `color` for Mantine controls sitting on the filled header. Hex, and not
+ * {@link PrimaryColor.CONTRAST} or `"white"`: Mantine derives each variant's
+ * border and hover tint by parsing `color`, and its parser understands only
+ * hex/rgb/hsl — a css var or a named color silently resolves to black.
+ */
+export const HEADER_CONTROL_COLOR = "#fff";
 
 /** Red used for heart/favorite icons. */
 export const HeartIconColor = "var(--mantine-color-red-6)";

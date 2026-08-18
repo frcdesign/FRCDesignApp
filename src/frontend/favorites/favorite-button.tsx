@@ -103,20 +103,30 @@ function useUpdateFavoritesMutation() {
 interface FavoriteButtonProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
+    /**
+     * Sizes the button to sit beside a full-height button rather than in a card row.
+     * @default false
+     */
+    large?: boolean;
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { favorite, insertable } = props;
+    const { favorite, insertable, large } = props;
     const isFavorite = favorite !== undefined;
 
     const [isHovered, setIsHovered] = useState(false);
     const mutation = useUpdateFavoritesMutation();
 
+    const iconSize = large ? IconSize.CONTROL : IconSize.SMALL;
     let favoriteIcon;
     if (isHovered) {
-        favoriteIcon = isFavorite ? <HeartBrokenIcon /> : <HeartIcon />;
+        favoriteIcon = isFavorite ? (
+            <HeartBrokenIcon size={iconSize} />
+        ) : (
+            <HeartIcon size={iconSize} />
+        );
     } else {
-        favoriteIcon = <HeartIcon full={isFavorite} />;
+        favoriteIcon = <HeartIcon full={isFavorite} size={iconSize} />;
     }
 
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
@@ -125,6 +135,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
         <ActionIcon
             variant="subtle"
             color="gray"
+            size={large ? "input-sm" : undefined}
             onClick={(event) => {
                 event.stopPropagation();
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
@@ -178,17 +189,27 @@ interface HeartIconProps {
      * @default true
      */
     full?: boolean;
+    /**
+     * @default IconSize.SMALL
+     */
+    size?: number;
 }
 
 export function HeartIcon(props: HeartIconProps): ReactNode {
     const full = props.full ?? true;
+    const size = props.size ?? IconSize.SMALL;
     return full ? (
-        <IconHeartFilled size={IconSize.SMALL} color={HeartIconColor} />
+        <IconHeartFilled size={size} color={HeartIconColor} />
     ) : (
-        <IconHeart size={IconSize.SMALL} />
+        <IconHeart size={size} />
     );
 }
 
-export function HeartBrokenIcon(): ReactNode {
-    return <IconHeartBroken size={IconSize.SMALL} color={HeartIconColor} />;
+export function HeartBrokenIcon(props: { size?: number }): ReactNode {
+    return (
+        <IconHeartBroken
+            size={props.size ?? IconSize.SMALL}
+            color={HeartIconColor}
+        />
+    );
 }

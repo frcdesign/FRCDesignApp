@@ -18,6 +18,20 @@ export function hasUserAccess(accessLevel: AccessLevel) {
     return accessLevel === AccessLevel.USER;
 }
 
+const ACCESS_LEVEL_RANK: Record<AccessLevel, number> = {
+    [AccessLevel.USER]: 0,
+    [AccessLevel.EDITOR]: 1,
+    [AccessLevel.ADMIN]: 2
+};
+
+/** Whether `accessLevel` grants no more than `maxAccessLevel` does. */
+export function isWithinAccessLevel(
+    accessLevel: AccessLevel,
+    maxAccessLevel: AccessLevel
+): boolean {
+    return ACCESS_LEVEL_RANK[accessLevel] <= ACCESS_LEVEL_RANK[maxAccessLevel];
+}
+
 export enum Vendor {
     AM = "AM",
     LAI = "LAI",

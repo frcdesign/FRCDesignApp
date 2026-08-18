@@ -112,9 +112,10 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         <FavoriteButton
                             favorite={favorite}
                             insertable={insertable}
+                            large
                         />
                     </RequireSignIn>
-                    <MenuButton>
+                    <MenuButton large>
                         <InsertableMenuItems
                             favorite={favorite}
                             insertable={insertable}
@@ -148,7 +149,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const { insertable, configuration, isFavorite, onInsert } = props;
 
     const search = useSearch({ from: "/app" });
-    // Inserting targets the current Onshape document; disabled when not in one.
+    // Inserting targets the current Onshape document; there's nothing to insert
+    // into when the app is open standalone.
     const isConnected = useIsConnectedToOnshape();
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
@@ -169,6 +171,10 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         onInsert();
     }, [insertMutation, onInsert, canFasten, uiState.fasten]);
 
+    if (!isConnected) {
+        return null;
+    }
+
     return (
         <Group gap="sm" align="center">
             {canFasten && (
@@ -181,7 +187,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             <Button
                 leftSection={<IconPlus size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
-                disabled={!isConnected}
                 onClick={handleClick}
             >
                 {search.elementType === ElementType.ASSEMBLY

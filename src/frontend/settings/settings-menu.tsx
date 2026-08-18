@@ -1,4 +1,4 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DEFAULT_SETTINGS } from "../../shared/types";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
@@ -11,8 +11,8 @@ import { useSaveSettings } from "./settings";
 import { capitalize } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";
 import { RequireAccessLevel, useAccessData } from "../api-utils/access-level";
+import { useUiState } from "../api-utils/ui-state";
 import { FEEDBACK_FORM_URL } from "../common/url";
-import { updateAccessData } from "../api-utils/refresh";
 import { AppSelect } from "../app-common/app-select";
 import { makeSelectOption, useSelectOptions } from "./select-utils";
 import { ReloadGroupsButton } from "./reload-groups-button";
@@ -65,19 +65,25 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const search = useSearch({ from: "/app" });
-    const navigate = useNavigate({ from: "/app" });
+    // The modal renders at the root, outside the route matches, so read the
+    // location instead of a route-scoped hook and navigate back to the exact
+    // path — a bare navigate would resolve to the route the `from` names.
+    const location = useRouterState({ select: (state) => state.location });
+    const navigate = useNavigate();
     const saveSettings = useSaveSettings();
 
     return (
         <>
             <ThemeSelect
-                theme={search.theme ?? DEFAULT_SETTINGS.theme}
+                theme={location.search.theme ?? DEFAULT_SETTINGS.theme}
                 onThemeSelect={(theme) => {
                     // The url renders it; the write-behind decides what the
                     // entry redirect seeds next time.
                     saveSettings({ theme });
-                    void navigate({ search: (prev) => ({ ...prev, theme }) });
+                    void navigate({
+                        to: location.pathname,
+                        search: (prev) => ({ ...prev, theme })
+                    });
                 }}
             />
             <SettingRow label="Submit feedback">
@@ -130,6 +136,7 @@ function AdminSettings(): ReactNode {
 
 function AccessLevelSelect(): ReactNode {
     const accessData = useAccessData();
+    const setUiState = useUiState()[1];
 
     const { maxAccessLevel, currentAccessLevel } = accessData;
     // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
@@ -150,9 +157,7 @@ function AccessLevelSelect(): ReactNode {
             option={makeSelectOption(currentAccessLevel, capitalize)}
             options={accessLevels}
             onSelect={(value) => {
-                updateAccessData((data) => {
-                    data.currentAccessLevel = value as AccessLevel;
-                });
+                setUiState({ accessLevel: value as AccessLevel });
             }}
         />
     );

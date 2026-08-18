@@ -12,6 +12,7 @@ import { getConfigurationMatchKey } from "../queries";
 import { SectionError } from "../app-common/app-zero-state";
 import { useTargetElementType } from "./insert-hooks";
 import { useIsSignedIn } from "../api-utils/access-level";
+import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
 interface HeightAndWidth {
     height: number;
@@ -137,6 +138,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const { path, microversionId, configuration, thumbnailUrls } = props;
     const size = ThumbnailSize.SMALL;
     const isSignedIn = useIsSignedIn();
+    const isConnected = useIsConnectedToOnshape();
     const isFetchingConfiguration =
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
     const targetElementType = useTargetElementType();
@@ -212,7 +214,11 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
                 <SectionError
                     title="The thumbnail timed out."
-                    description={`You can still ${action} the part.`}
+                    // Standalone has no insert button to fall back on, and
+                    // null suppresses the generic "contact the developers".
+                    description={
+                        isConnected ? `You can still ${action} the part.` : null
+                    }
                 />
             </Center>
         );

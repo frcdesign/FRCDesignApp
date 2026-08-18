@@ -12,8 +12,8 @@ import {
     type LibraryBuildStatus,
     type LibraryOut
 } from "../shared/api-models";
-import { LibraryId } from "../shared/types";
-import { type AccessData } from "../shared/types";
+import { hasEditorAccess, LibraryId } from "../shared/types";
+import { useAccessData } from "./api-utils/access-level";
 import { toLibraryPath, useLibraryId } from "./api-utils/library";
 import { type UnitInfo } from "../shared/configuration-models";
 import MiniSearch from "minisearch";
@@ -83,18 +83,6 @@ export function useCacheVersion(): number {
     const libraryId = useLibraryId();
     // Loaded by the library route before anything reading this renders.
     return useQuery(getLibraryVersionQuery(libraryId)).data ?? 0;
-}
-
-export function accessDataQueryKey() {
-    return ["access-data"];
-}
-
-/** The caller's access level, which gates editor-only affordances. */
-export function getAccessDataQuery() {
-    return queryOptions<AccessData>({
-        queryKey: accessDataQueryKey(),
-        queryFn: () => apiGet("/access-data")
-    });
 }
 
 /**
@@ -197,7 +185,7 @@ export function useBuildStatusQuery() {
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
     // Favorites require sign-in; the endpoint 401s otherwise, so present none.
-    const signedIn = useQuery(getAccessDataQuery()).data?.signedIn ?? false;
+    const signedIn = useAccessData().signedIn;
     const query = useQuery({
         ...getFavoritesQuery(libraryId),
         enabled: signedIn
@@ -222,8 +210,13 @@ export function getJobStatusQuery(libraryId: LibraryId) {
     });
 }
 
-/** Only mounted by editor-gated components, so only editors poll. */
+/**
+ * Job status for the current library. The endpoint is editor-only and needs an
+ * Onshape session, so callers who have neither don't poll it at all.
+ */
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
-    return useQuery(getJobStatusQuery(libraryId));
+    const { signedIn, currentAccessLevel } = useAccessData();
+    const enabled = signedIn && hasEditorAccess(currentAccessLevel);
+    return useQuery({ ...getJobStatusQuery(libraryId), enabled });
 }

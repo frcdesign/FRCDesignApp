@@ -10,8 +10,11 @@ import { requireSignInMiddleware } from "../sign-in-utils";
 
 export const favoriteRoutes = getApp();
 
-// Favorites are per-user and require a signed-in Onshape session.
-favoriteRoutes.use(requireSignInMiddleware);
+// Favorites are per-user and require a signed-in Onshape session. Scoped by
+// path: a bare use() would apply to every route mounted at /api, not just these.
+favoriteRoutes.use("/favorites/*", requireSignInMiddleware);
+favoriteRoutes.use("/favorite-order/*", requireSignInMiddleware);
+favoriteRoutes.use("/default-configuration/*", requireSignInMiddleware);
 
 async function getFavorites(
     db: Db,

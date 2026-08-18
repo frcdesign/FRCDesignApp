@@ -63,16 +63,26 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
  * An explicit button which opens a menu with the given items. Used alongside
  * the right-click context menu so the menu is reachable without a right-click.
  */
-export function MenuButton(props: PropsWithChildren): ReactNode {
+interface MenuButtonProps extends PropsWithChildren {
+    /**
+     * Sizes the button to sit beside a full-height button rather than in a card row.
+     * @default false
+     */
+    large?: boolean;
+}
+
+export function MenuButton(props: MenuButtonProps): ReactNode {
+    const { large, children } = props;
     return (
-        <AppContextMenu controlledByButton menuItems={props.children}>
+        <AppContextMenu controlledByButton menuItems={children}>
             <ActionIcon
                 variant="subtle"
                 color="gray"
+                size={large ? "input-sm" : undefined}
                 title="View options"
                 onClick={(e) => e.stopPropagation()}
             >
-                <IconDots size={IconSize.MEDIUM} />
+                <IconDots size={large ? IconSize.CONTROL : IconSize.MEDIUM} />
             </ActionIcon>
         </AppContextMenu>
     );

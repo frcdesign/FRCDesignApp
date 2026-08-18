@@ -9,7 +9,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
-import { IconSize, PrimaryColor } from "../common/style-constants";
+import { HEADER_CONTROL_COLOR, IconSize } from "../common/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -63,7 +63,11 @@ function SignInButton(): ReactNode {
     if (isSignedIn) return null;
 
     return (
-        <Button variant="white" onClick={startSignIn}>
+        <Button
+            variant="outline"
+            color={HEADER_CONTROL_COLOR}
+            onClick={startSignIn}
+        >
             Sign in
         </Button>
     );
@@ -87,7 +91,7 @@ function RunningJobLoader(): ReactNode {
             withArrow
             label="The library is being loaded from Onshape in the background"
         >
-            <Loader size={IconSize.MEDIUM} color="white" />
+            <Loader size="md" color="white" />
         </Tooltip>
     );
 }
@@ -158,11 +162,13 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color={PrimaryColor.PRIMARY}
+            color={HEADER_CONTROL_COLOR}
+            // Match the height of the buttons and search input beside it.
+            size="input-sm"
             title="Settings"
             onClick={() => openSettingsMenu()}
         >
-            <IconSettings size={IconSize.MEDIUM} />
+            <IconSettings size={IconSize.CONTROL} />
         </ActionIcon>
     );
 }
