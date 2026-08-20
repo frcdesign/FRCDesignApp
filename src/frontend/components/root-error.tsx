@@ -6,7 +6,7 @@ import { Button } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { IconSize } from "../lib/style-constants";
 import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
-import { DEFAULT_LIBRARY_ID } from "../../backend/features/library/library-id";
+import { DEFAULT_LIBRARY_ID } from "@backend/features/library/library-id";
 
 /**
  * Catch-all error state for when a route below the root fails to load.

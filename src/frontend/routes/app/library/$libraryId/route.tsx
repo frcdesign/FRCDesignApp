@@ -10,7 +10,7 @@ import { getSearchDbQuery } from "../../../../features/search/queries";
 import {
     DEFAULT_LIBRARY_ID,
     LibraryId
-} from "../../../../../backend/features/library/library-id";
+} from "@backend/features/library/library-id";
 import { getUiState } from "../../../../lib/ui-state";
 
 /** Restoring the last group is an entry behavior, so it happens once per load. */

@@ -2,9 +2,9 @@ import { useAccessData } from "../auth/access-level";
 import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../../lib/api-client";
-import { LibraryBuildStatus } from "../../../backend/features/build-checker/dto";
-import { InsertableOut } from "../../../backend/features/library/dto";
-import { hasUserAccess } from "../../../backend/features/auth/access-level";
+import { LibraryBuildStatus } from "@backend/features/build-checker/dto";
+import { InsertableOut } from "@backend/features/library/dto";
+import { hasUserAccess } from "@backend/features/auth/access-level";
 import { useCallback, useMemo } from "react";
 import {
     showErrorToast,

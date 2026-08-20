@@ -1,14 +1,14 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { loadImage, loadImageResult } from "../../../lib/api-client";
-import { ElementType } from "../../../../backend/lib/onshape/element-type";
-import { ThumbnailSize } from "../../../../backend/features/thumbnails/types";
-import { ElementPath } from "../../../../backend/lib/onshape/path";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { ThumbnailSize } from "@backend/features/thumbnails/types";
+import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../../../../backend/features/configurations/canonical";
-import { thumbnailUrl } from "../../../../backend/features/thumbnails/keys";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { configurationQueryMatchKey } from "../../../lib/query-keys";
 import { SectionError } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";

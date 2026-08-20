@@ -36,19 +36,16 @@ import {
     getIssueDescription,
     getIssueSeverity,
     getMaxSeverity
-} from "../../../../backend/features/build-checker/issues";
+} from "@backend/features/build-checker/issues";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
-} from "../../../../backend/features/build-checker/dto";
-import {
-    getVendorName,
-    Vendor
-} from "../../../../backend/features/library/vendors";
+} from "@backend/features/build-checker/dto";
+import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import {
     ConfigurationParameter,
     ParameterType
-} from "../../../../backend/features/configurations/models";
+} from "@backend/features/configurations/models";
 import {
     AUTO_INDEX_THRESHOLD,
     type ConfigurationCount,
@@ -56,7 +53,7 @@ import {
     IndexingBand,
     isIndexedParameter,
     MAX_PART_NUMBER_CONFIGURATIONS
-} from "../../../../backend/features/configurations/combinations";
+} from "@backend/features/configurations/combinations";
 import { FontWeight, IconColor, IconSize } from "../../../lib/style-constants";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";

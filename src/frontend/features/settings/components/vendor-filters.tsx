@@ -2,8 +2,8 @@ import { ActionIcon, Button, Menu } from "@mantine/core";
 import { IconFilter, IconFilterOff } from "@tabler/icons-react";
 import { HEADER_CONTROL_COLOR, IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import { getVendorName } from "../../../../backend/features/library/vendors";
-import { Vendor } from "../../../../backend/features/library/vendors";
+import { getVendorName } from "@backend/features/library/vendors";
+import { Vendor } from "@backend/features/library/vendors";
 import { useUiState } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 

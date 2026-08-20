@@ -1,12 +1,12 @@
 import {
     DEFAULT_LIBRARY_ID,
     type LibraryId
-} from "../../../backend/features/library/library-id";
+} from "@backend/features/library/library-id";
 import {
     DEFAULT_SETTINGS,
     type SettingsUpdate,
     type Theme
-} from "../../../backend/features/users/settings";
+} from "@backend/features/users/settings";
 
 const SETTINGS_STORAGE_KEY = "frc-design-app-settings";
 

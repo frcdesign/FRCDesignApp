@@ -5,7 +5,7 @@ import {
     type PostOptions
 } from "./utils";
 import { HandledError } from "./errors";
-import { THUMBNAIL_FALLBACK_HEADER } from "../../backend/features/thumbnails/keys";
+import { THUMBNAIL_FALLBACK_HEADER } from "@backend/features/thumbnails/keys";
 import { HttpStatus } from "http-status-ts";
 
 function getUrl(

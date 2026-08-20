@@ -3,14 +3,14 @@ import {
     buildSearchDb,
     processTerm,
     tokenize
-} from "../../../backend/features/search/search-index";
+} from "@backend/features/search/search-index";
 import { doSearch, type Position } from "./search";
-import { LibraryOut } from "../../../backend/features/library/dto";
-import { ElementType } from "../../../backend/lib/onshape/element-type";
+import { LibraryOut } from "@backend/features/library/dto";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     ConfigurationRecord,
     ParameterValues
-} from "../../../backend/features/configurations/models";
+} from "@backend/features/configurations/models";
 
 /** Builds a configuration record carrying a part number, name, + configuration. */
 function record(

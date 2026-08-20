@@ -1,5 +1,5 @@
-import { InsertableOut } from "../../../backend/features/library/dto";
-import { Vendor } from "../../../backend/features/library/vendors";
+import { InsertableOut } from "@backend/features/library/dto";
+import { Vendor } from "@backend/features/library/vendors";
 import { FilterResult } from "./search";
 
 export interface FilterArgs {

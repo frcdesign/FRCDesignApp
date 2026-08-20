@@ -8,12 +8,9 @@ import { HeartIconColor, IconSize } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../../../lib/api-client";
-import type {
-    Favorite,
-    FavoritesData
-} from "../../../../backend/features/favorites/dto";
-import type { InsertableOut } from "../../../../backend/features/library/dto";
-import { LibraryId } from "../../../../backend/features/library/library-id";
+import type { Favorite, FavoritesData } from "@backend/features/favorites/dto";
+import type { InsertableOut } from "@backend/features/library/dto";
+import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../../../lib/errors";

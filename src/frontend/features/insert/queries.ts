@@ -3,8 +3,8 @@ import { apiGet } from "../../lib/api-client";
 import {
     EMPTY_UNIT_INFO,
     type UnitInfo
-} from "../../../backend/features/configurations/models";
-import { InstancePath } from "../../../backend/lib/onshape/path";
+} from "@backend/features/configurations/models";
+import { InstancePath } from "@backend/lib/onshape/path";
 import { unitInfoQueryKey } from "../../lib/query-keys";
 
 /**

@@ -2,7 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import {
     DEFAULT_LIBRARY_ID,
     LibraryId
-} from "../../../backend/features/library/library-id";
+} from "@backend/features/library/library-id";
 
 /** Returns the library being displayed, which the url is the source of truth for. */
 export function useLibraryId(): LibraryId {

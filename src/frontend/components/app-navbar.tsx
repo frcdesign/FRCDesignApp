@@ -23,7 +23,7 @@ import { useSaveSettings } from "../features/settings/settings";
 import { useIsSignedIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
-import { LibraryId } from "../../backend/features/library/library-id";
+import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 

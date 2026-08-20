@@ -10,7 +10,7 @@ import {
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
-import { hasEditorAccess } from "../../../../backend/features/auth/access-level";
+import { hasEditorAccess } from "@backend/features/auth/access-level";
 
 interface SearchResultsProps {
     query: string;

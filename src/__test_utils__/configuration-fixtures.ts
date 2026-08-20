@@ -8,8 +8,8 @@ import {
     type EnumParameter,
     type QuantityParameter,
     type UnitInfo
-} from "../backend/features/configurations/models";
-import { QuantityType, Unit } from "../backend/features/configurations/enums";
+} from "@backend/features/configurations/models";
+import { QuantityType, Unit } from "@backend/features/configurations/enums";
 
 /** Builds an enum parameter whose options are named after their ids. */
 export function enumParam(

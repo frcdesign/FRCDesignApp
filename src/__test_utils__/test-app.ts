@@ -1,5 +1,5 @@
-import { createApp } from "../backend/app";
-import { AccessLevel } from "../backend/features/auth/access-level";
+import { createApp } from "@backend/app";
+import { AccessLevel } from "@backend/features/auth/access-level";
 import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 
 export interface TestAppOptions {

@@ -2,8 +2,8 @@
  * Every query key in one place: features read their own keys here, and the
  * cross-feature refresh flows invalidate by the match keys.
  */
-import { LibraryId } from "../../backend/features/library/library-id";
-import { InstancePath } from "../../backend/lib/onshape/path";
+import { LibraryId } from "@backend/features/library/library-id";
+import { InstancePath } from "@backend/lib/onshape/path";
 
 export function accessDataQueryKey() {
     return ["access-data"];

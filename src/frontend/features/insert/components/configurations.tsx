@@ -31,21 +31,21 @@ import {
     EnumOption,
     EMPTY_UNIT_INFO,
     SearchRecord
-} from "../../../../backend/features/configurations/models";
+} from "@backend/features/configurations/models";
 import {
     evaluateCondition,
     findRecordForConfiguration,
     getEvaluateOptions,
     getOption,
     getVisibleOptions
-} from "../../../../backend/features/configurations/utils";
-import { canonicalizeConfiguration } from "../../../../backend/features/configurations/canonical";
+} from "@backend/features/configurations/utils";
+import { canonicalizeConfiguration } from "@backend/features/configurations/canonical";
 import { handleBooleanChange } from "../../../lib/utils";
 import {
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "../../../../backend/features/configurations/input-parser";
+} from "@backend/features/configurations/input-parser";
 import { useUnitInfoQuery } from "../queries";
 import { configurationQueryKey } from "../../../lib/query-keys";
 import { showErrorToast } from "../../../lib/notifications";

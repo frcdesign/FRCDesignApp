@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { AccessLevel } from "../../backend/features/auth/access-level";
-import { Vendor } from "../../backend/features/library/vendors";
+import { AccessLevel } from "@backend/features/auth/access-level";
+import { Vendor } from "@backend/features/library/vendors";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 3;

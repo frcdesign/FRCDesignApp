@@ -20,19 +20,16 @@ import {
     CardThumbnail,
     type ThumbnailTarget
 } from "../../thumbnails/components/thumbnail";
-import {
-    ConfigurablePath,
-    InstancePath
-} from "../../../../backend/lib/onshape/path";
+import { ConfigurablePath, InstancePath } from "@backend/lib/onshape/path";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../../insert/insert-hooks";
-import { InsertableOut } from "../../../../backend/features/library/dto";
-import { ElementType } from "../../../../backend/lib/onshape/element-type";
+import { InsertableOut } from "@backend/features/library/dto";
+import { ElementType } from "@backend/lib/onshape/element-type";
 
-import { ParameterValues } from "../../../../backend/features/configurations/models";
+import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useReloadThumbnailMutation } from "../card-hooks";

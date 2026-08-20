@@ -3,8 +3,8 @@ import { IconHeartBroken } from "@tabler/icons-react";
 import { HeartIconColor, IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../../search/filter";
-import { getFavoriteForInsertable } from "../../../../backend/features/favorites/dto";
-import { InsertableOut } from "../../../../backend/features/library/dto";
+import { getFavoriteForInsertable } from "@backend/features/favorites/dto";
+import { InsertableOut } from "@backend/features/library/dto";
 import { useUiState } from "../../../lib/ui-state";
 import {
     SectionError,
@@ -20,7 +20,7 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
 import { doSearch, FilterResult, SearchHit } from "../../search/search";
-import { hasEditorAccess } from "../../../../backend/features/auth/access-level";
+import { hasEditorAccess } from "@backend/features/auth/access-level";
 
 /**
  * A list of current favorite cards.

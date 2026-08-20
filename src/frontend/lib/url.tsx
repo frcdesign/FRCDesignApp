@@ -7,8 +7,8 @@ import {
     InstanceType,
     ConfigurablePath,
     isConfigurablePath
-} from "../../backend/lib/onshape/path";
-import { encodeConfigurationForQuery } from "../../backend/features/configurations/utils";
+} from "@backend/lib/onshape/path";
+import { encodeConfigurationForQuery } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
 import { IconLink } from "@tabler/icons-react";
 import { IconSize } from "./style-constants";

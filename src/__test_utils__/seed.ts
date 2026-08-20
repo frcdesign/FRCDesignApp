@@ -1,4 +1,4 @@
-import { type Db } from "../backend/db/client";
+import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
@@ -6,17 +6,14 @@ import {
     insertables,
     libraries,
     users
-} from "../backend/db/schema";
+} from "@backend/db/schema";
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../backend/features/configurations/models";
-import {
-    type ElementPath,
-    type InstancePath
-} from "../backend/lib/onshape/path";
-import { ElementType } from "../backend/lib/onshape/element-type";
-import { LibraryId } from "../backend/features/library/library-id";
+} from "@backend/features/configurations/models";
+import { type ElementPath, type InstancePath } from "@backend/lib/onshape/path";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { LibraryId } from "@backend/features/library/library-id";
 
 export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
 export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId

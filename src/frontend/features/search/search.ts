@@ -1,13 +1,13 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
-import { Vendor } from "../../../backend/features/library/vendors";
+import { Vendor } from "@backend/features/library/vendors";
 import {
     SearchDocument,
     normalizeForMatch
-} from "../../../backend/features/search/search-index";
+} from "@backend/features/search/search-index";
 import {
     ParameterValues,
     SearchRecord
-} from "../../../backend/features/configurations/models";
+} from "@backend/features/configurations/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.

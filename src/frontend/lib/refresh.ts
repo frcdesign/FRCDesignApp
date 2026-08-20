@@ -10,7 +10,7 @@ import {
 } from "./query-keys";
 import { accessDataQueryKey } from "./query-keys";
 import { useLibraryId } from "../features/library/library-path";
-import type { LibraryId } from "../../backend/features/library/library-id";
+import type { LibraryId } from "@backend/features/library/library-id";
 
 /** Refetches the current user's favorites, which aren't version-keyed. */
 function refetchFavorites(libraryId: LibraryId): Promise<void> {

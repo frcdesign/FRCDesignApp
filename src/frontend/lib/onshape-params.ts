@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
-import { ElementType } from "../../backend/lib/onshape/element-type";
-import { Theme } from "../../backend/features/users/settings";
-import { ElementPath, isElementPath } from "../../backend/lib/onshape/path";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { Theme } from "@backend/features/users/settings";
+import { ElementPath, isElementPath } from "@backend/lib/onshape/path";
 
 /**
  * Documents search parameter values received from Onshape.

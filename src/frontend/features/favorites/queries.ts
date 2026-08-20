@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
-import { type FavoritesData } from "../../../backend/features/favorites/dto";
-import { LibraryId } from "../../../backend/features/library/library-id";
+import { type FavoritesData } from "@backend/features/favorites/dto";
+import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";
 import { useLibraryId } from "../library/library-path";
 import { favoritesQueryKey } from "../../lib/query-keys";

@@ -6,7 +6,7 @@ import {
     hasAdminAccess,
     hasEditorAccess,
     isWithinAccessLevel
-} from "../../../backend/features/auth/access-level";
+} from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
 import { useUiState } from "../../lib/ui-state";

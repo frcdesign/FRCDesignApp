@@ -1,12 +1,12 @@
-import { encodeCanonicalConfiguration } from "../../../../backend/features/configurations/canonical";
+import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import {
     Favorite,
     getFavoriteForInsertable
-} from "../../../../backend/features/favorites/dto";
-import { InsertableOut } from "../../../../backend/features/library/dto";
-import { ParameterValues } from "../../../../backend/features/configurations/models";
+} from "@backend/features/favorites/dto";
+import { InsertableOut } from "@backend/features/library/dto";
+import { ParameterValues } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,

@@ -4,13 +4,13 @@ import { Dispatch, SyntheticEvent } from "react";
 import { queryClient } from "./query-client";
 import { QueryKey } from "@tanstack/react-query";
 
-export { createSearchParams } from "../../backend/lib/query-params";
+export { createSearchParams } from "@backend/lib/query-params";
 export type {
     URLSearchParamsInit,
     ParamKeyValuePair,
     QueryOptions,
     PostOptions
-} from "../../backend/lib/query-params";
+} from "@backend/lib/query-params";
 
 /**
  * Capitalizes the first letter of a string and lower cases everything else.

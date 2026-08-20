@@ -1,4 +1,4 @@
-import { OAuthApi } from "../backend/lib/onshape/client";
+import { OAuthApi } from "@backend/lib/onshape/client";
 
 /**
  * A thin shell client extending OAuthApi.

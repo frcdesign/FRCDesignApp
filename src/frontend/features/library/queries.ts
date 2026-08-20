@@ -1,12 +1,9 @@
 /** Queries for the library snapshot, its cache version, and its load jobs. */
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
-import {
-    type JobStatus,
-    type LibraryOut
-} from "../../../backend/features/library/dto";
-import { hasEditorAccess } from "../../../backend/features/auth/access-level";
-import { LibraryId } from "../../../backend/features/library/library-id";
+import { type JobStatus, type LibraryOut } from "@backend/features/library/dto";
+import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";
 import { toLibraryPath, useLibraryId } from "./library-path";
 import {

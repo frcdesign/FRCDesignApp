@@ -4,7 +4,7 @@
  */
 
 import { useSearch } from "@tanstack/react-router";
-import { type ElementPath } from "../../backend/lib/onshape/path";
+import { type ElementPath } from "@backend/lib/onshape/path";
 import { useCallback, useEffect } from "react";
 import { useIsConnectedToOnshape } from "./onshape-params";
 

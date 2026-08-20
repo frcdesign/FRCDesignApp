@@ -1,8 +1,8 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { getFavoriteForInsertable } from "../../../../backend/features/favorites/dto";
-import { InsertableOut } from "../../../../backend/features/library/dto";
-import { ElementType } from "../../../../backend/lib/onshape/element-type";
+import { getFavoriteForInsertable } from "@backend/features/favorites/dto";
+import { InsertableOut } from "@backend/features/library/dto";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
@@ -21,8 +21,8 @@ import { useInsertMutation } from "../insert-hooks";
 import {
     ParameterValues,
     SearchRecord
-} from "../../../../backend/features/configurations/models";
-import { encodeCanonicalConfiguration } from "../../../../backend/features/configurations/canonical";
+} from "@backend/features/configurations/models";
+import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { useUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";

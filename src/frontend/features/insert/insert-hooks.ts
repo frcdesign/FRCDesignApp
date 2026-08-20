@@ -1,14 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../../lib/api-client";
-import { InsertableOut } from "../../../backend/features/library/dto";
-import { ElementType } from "../../../backend/lib/onshape/element-type";
-import { type ElementPath } from "../../../backend/lib/onshape/path";
+import { InsertableOut } from "@backend/features/library/dto";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { type ElementPath } from "@backend/lib/onshape/path";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useMemo } from "react";
-import { ParameterValues } from "../../../backend/features/configurations/models";
+import { ParameterValues } from "@backend/features/configurations/models";
 import { toInsertablePath } from "../library/library-path";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 
