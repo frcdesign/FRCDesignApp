@@ -15,12 +15,8 @@ import { LogicalOp, QuantityType, Unit } from "./configuration-enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
 /**
- * Finds the record a (full) configuration selection produces. Records are keyed
- * only by the enumerated parameters (enum/boolean, non-cosmetic — see
- * `enumerateConfigurations`), so a record matches when every value in its
- * `configuration` equals the user's selection for that key. When several match
- * (a parameter hidden in some configs yields shorter key-sets), the most
- * specific — the record with the most keys — wins.
+ * The record a selection produces. Records key only on enumerated parameters, so
+ * several can match; the most specific (most keys) wins.
  */
 export function findRecordForConfiguration(
     configuration: ParameterValues,

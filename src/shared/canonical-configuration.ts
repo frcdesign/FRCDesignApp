@@ -83,26 +83,6 @@ export function encodeCanonicalConfiguration(
 }
 
 /**
- * The inverse of {@link encodeCanonicalConfiguration}. Only the first `=` splits,
- * so a value may hold one; neither side escapes `;`, which no value contains.
- */
-export function decodeCanonicalConfiguration(
-    canonicalConfiguration: string
-): ParameterValues {
-    const values: ParameterValues = {};
-    if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
-        return values;
-    }
-    for (const entry of canonicalConfiguration.split(";")) {
-        const separator = entry.indexOf("=");
-        if (separator !== -1) {
-            values[entry.slice(0, separator)] = entry.slice(separator + 1);
-        }
-    }
-    return values;
-}
-
-/**
  * A short, stable key for a url or R2 key, since a configuration is unbounded.
  * Only avoids collisions within one element, so a fast sync hash is plenty.
  */

@@ -74,11 +74,6 @@ describe("thumbnail serving", () => {
         expect(res.status).not.toBe(400);
     });
 
-    it("requires the microversion, which is part of the key", async () => {
-        const res = await get(`/api/thumbnail/${SIZE}/some-element`);
-        expect(res.status).toBe(400);
-    });
-
     it("404s when neither the configuration nor the default exists", async () => {
         const res = await get(
             thumbnailUrl({

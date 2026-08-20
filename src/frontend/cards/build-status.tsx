@@ -674,14 +674,10 @@ function IndexingRow({
                 tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
             />
         );
-    } else if (isCustomPart(status.vendors)) {
-        control = (
-            <IndexingIcon
-                severity={BuildIssueSeverity.WARNING}
-                tooltip="Custom parts are team-made, so there is no vendor metadata to parse."
-            />
-        );
-    } else if (band === IndexingBand.AUTOMATIC) {
+    } else if (
+        band === IndexingBand.AUTOMATIC &&
+        !isCustomPart(status.vendors)
+    ) {
         control = (
             <IndexingIcon
                 severity={null}
@@ -689,13 +685,26 @@ function IndexingRow({
             />
         );
     } else {
-        control = (
+        // Custom parts index only when forced, so they need the switch too.
+        const toggle = (
             <Switch
                 size="sm"
                 checked={status.forceIndex}
                 onChange={() => mutation.mutate(!status.forceIndex)}
                 withThumbIndicator={false}
             />
+        );
+        control = isCustomPart(status.vendors) ? (
+            <Tooltip
+                label="Custom parts are team-made, so there is no vendor metadata to parse."
+                withArrow
+                multiline
+                w={260}
+            >
+                {toggle}
+            </Tooltip>
+        ) : (
+            toggle
         );
     }
 

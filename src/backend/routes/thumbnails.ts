@@ -296,16 +296,13 @@ async function warmConfigurationThumbnail(
 
 const liveThumbnailQuery = z.object({
     thumbnailId: z.string().min(1),
-    size: z.enum(ThumbnailSize).default(ThumbnailSize.LARGE),
-    /** With `v` and `c`, the bytes are stored under that configuration's key. */
-    elementId: z.string().optional(),
-    v: z.string().optional(),
-    c: canonicalConfigurationQuery
+    size: z.enum(ThumbnailSize).default(ThumbnailSize.LARGE)
 });
 
 /**
- * GET /api/thumbnail?size=X&thumbnailId=Y — live from Onshape. With `elementId`,
- * `v`, and `c` it also stores the bytes, warming the cache at no added latency.
+ * GET /api/thumbnail?size=X&thumbnailId=Y — live from Onshape, for the insert
+ * menu preview. Proxy only: see the note on why it no longer stores what it
+ * proxies.
  */
 thumbnailRoutes.get(
     "/thumbnail",
@@ -315,36 +312,9 @@ thumbnailRoutes.get(
     zValidator("query", liveThumbnailQuery),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
-        const {
-            thumbnailId,
-            size,
-            elementId,
-            v: microversionId,
-            c: canonicalConfiguration
-        } = c.req.valid("query");
+        const { thumbnailId, size } = c.req.valid("query");
 
         const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-
-        if (
-            elementId &&
-            microversionId &&
-            canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
-        ) {
-            c.executionCtx.waitUntil(
-                putThumbnail(
-                    c.env.BLOB,
-                    thumbnailKey(
-                        elementId,
-                        microversionId,
-                        size,
-                        canonicalConfigurationKey(canonicalConfiguration)
-                    ),
-                    buffer,
-                    { microversionId, canonicalConfiguration }
-                )
-            );
-        }
-
         return new Response(buffer, {
             headers: { "Content-Type": "image/gif" }
         });

@@ -142,14 +142,12 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }
 
     return (
-        <>
-            <ConfigurationParameters
-                configurationResult={query.data}
-                configuration={configuration}
-                setConfiguration={setConfiguration}
-                unitInfo={unitInfo}
-            />
-        </>
+        <ConfigurationParameters
+            configurationResult={query.data}
+            configuration={configuration}
+            setConfiguration={setConfiguration}
+            unitInfo={unitInfo}
+        />
     );
 }
 

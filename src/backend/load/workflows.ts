@@ -255,9 +255,8 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         const { elementId, microversionId, canonicalConfiguration, sessionId } =
             event.payload;
 
-        // An element id is unique within its document, and a group is a
-        // document, so any row for it names the document to render from. The
-        // microversion is only a reload marker, and a url outlives it.
+        // An element id is unique within its document, so any row for it names
+        // the document to render from.
         const elementPath = await step.do("resolve-element", async () => {
             const row = await getDb(this.env.DB)
                 .select({

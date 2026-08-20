@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { type Db } from "./db";
 import {
     libraries,
@@ -44,22 +44,24 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
+        // A row can exist just to hold records for a non-configurable
+        // insertable, so "configurable" keys on having parameters, not on the
+        // row existing. Tested in SQL to keep every parameter list out of the
+        // Worker just to check whether it is empty.
         db
-            .select({
-                id: configurations.id,
-                parameters: configurations.parameters
-            })
+            .select({ id: configurations.id })
             .from(configurations)
+            .innerJoin(insertables, eq(configurations.id, insertables.id))
+            .where(
+                and(
+                    eq(insertables.libraryId, libraryId),
+                    sql`json_array_length(${configurations.parameters}) > 0`
+                )
+            )
             .all()
     ]);
 
-    // A row can exist just to hold records for a non-configurable insertable, so
-    // "configurable" keys on having parameters, not on the row existing.
-    const configSet = new Set(
-        allConfigurations
-            .filter((c) => c.parameters.length > 0)
-            .map((c) => c.id)
-    );
+    const configSet = new Set(allConfigurations.map((c) => c.id));
 
     const groupsOut: Groups = {};
     for (const group of allGroups) {

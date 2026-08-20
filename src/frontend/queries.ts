@@ -207,12 +207,7 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
     return ["job-status", libraryId];
 }
 
-/**
- * How often to re-check a running job, by how long it has been running. A
- * just-started job is checked often so the UI reacts promptly, then the cadence
- * backs off — a full reload runs for hours and doesn't warrant a request every
- * few seconds for all of it.
- */
+/** Poll a fresh job often, then back off: a full reload runs for hours. */
 const FASTEST_POLL_MS = 3_000;
 const POLL_STEPS = [
     { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },

@@ -4,7 +4,6 @@ import {
     DEFAULT_CONFIGURATION_KEY,
     canonicalConfigurationKey,
     canonicalizeConfiguration,
-    decodeCanonicalConfiguration,
     encodeCanonicalConfiguration
 } from "./canonical-configuration";
 import { ParameterValues, VisibilityType } from "./configuration-models";
@@ -143,47 +142,16 @@ describe("canonicalConfigurationKey", () => {
     });
 });
 
-describe("decodeCanonicalConfiguration", () => {
-    it("round-trips an encoded configuration", () => {
-        const canonicalConfiguration: ParameterValues = {
-            size: "l",
-            flag: "true"
-        };
-        expect(
-            decodeCanonicalConfiguration(
-                encodeCanonicalConfiguration(canonicalConfiguration)
-            )
-        ).toEqual(canonicalConfiguration);
-    });
-
-    it("reads the default as an empty selection", () => {
-        expect(
-            decodeCanonicalConfiguration(DEFAULT_CANONICAL_CONFIGURATION)
-        ).toEqual({});
-    });
-
-    it("keeps a value containing the separator character", () => {
-        // Only the first `=` splits, so an expression-ish value survives.
-        const canonicalConfiguration: ParameterValues = { expr: "a=b" };
-        expect(
-            decodeCanonicalConfiguration(
-                encodeCanonicalConfiguration(canonicalConfiguration)
-            )
-        ).toEqual(canonicalConfiguration);
-    });
-
-    it("round-trips a canonicalized selection", () => {
-        const size = enumParam("size", ["s", "l"]);
-        const length = quantityParam("length");
-        const canonicalConfiguration = canonicalizeConfiguration(
-            { size: "l", length: "2 in" },
-            [size, length],
-            TEST_UNIT_INFO
+describe("encodeCanonicalConfiguration", () => {
+    it("encodes the default as the empty string", () => {
+        expect(encodeCanonicalConfiguration({})).toBe(
+            DEFAULT_CANONICAL_CONFIGURATION
         );
-        expect(
-            decodeCanonicalConfiguration(
-                encodeCanonicalConfiguration(canonicalConfiguration)
-            )
-        ).toEqual(canonicalConfiguration);
+    });
+
+    it("joins values in the order canonicalizing emitted them", () => {
+        expect(encodeCanonicalConfiguration({ size: "l", flag: "true" })).toBe(
+            "size=l;flag=true"
+        );
     });
 });

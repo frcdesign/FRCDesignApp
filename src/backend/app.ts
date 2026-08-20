@@ -14,11 +14,7 @@ export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
     ASSETS: Fetcher;
-    /**
-     * Everything we store as a blob: thumbnails under `thumbnails/`, each
-     * library's serialized search index under `search-index/`. One bucket, since
-     * the prefixes already keep them apart and lifecycle rules are per-prefix.
-     */
+    /** Thumbnails and search indexes; prefixes keep them apart. */
     BLOB: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;

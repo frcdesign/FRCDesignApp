@@ -144,15 +144,12 @@ interface PreviewImageProps {
     path: ElementPath;
     /** The selection to preview; Onshape applies defaults for what it omits. */
     canonicalConfiguration: string;
-    /** Lets the fetch also warm the R2 cache for this configuration. */
-    microversionId?: string;
     /** Stored thumbnail, shown instead of the live preview when not signed in. */
     largeThumbnailUrl?: string;
 }
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, canonicalConfiguration, microversionId, largeThumbnailUrl } =
-        props;
+    const { path, canonicalConfiguration, largeThumbnailUrl } = props;
     // A stored size, so the bytes this fetch returns are worth caching.
     const size = ThumbnailSize.LARGE;
     const isSignedIn = useIsSignedIn();
@@ -190,21 +187,9 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 // Shouldn't happen due to enabled guard
                 return;
             }
+            // No cacheId: the thumbnailId already names immutable content.
             return loadApiImage("/thumbnail", {
-                query: {
-                    size,
-                    thumbnailId,
-                    // Let the worker store what it proxies, warming matching rows.
-                    ...(microversionId &&
-                    canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
-                        ? {
-                              elementId: path.elementId,
-                              v: microversionId,
-                              c: canonicalConfiguration
-                          }
-                        : {})
-                },
-                cacheId: microversionId,
+                query: { size, thumbnailId },
                 signal
             });
         },

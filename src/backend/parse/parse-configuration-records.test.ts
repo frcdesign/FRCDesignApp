@@ -281,10 +281,30 @@ describe("parseConfigurationRecords", () => {
         );
 
         expect(result.buildIssues).toEqual([]);
+        // "a1" is A's default, so that combination is the default probe under
+        // another name and is not probed again.
         expect(result.records.map((r) => r.partNumber)).toEqual([
             "PN-default",
-            "PN-a1",
             "PN-a2"
+        ]);
+    });
+
+    it("probes every combination when none of them is the default", async () => {
+        mockParts((configuration) => [
+            { partId: "p", partNumber: `PN-${configuration.A ?? "default"}` }
+        ]);
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [{ ...enumParam("A", ["a1", "a2"]), default: "a2" }],
+            false
+        );
+
+        expect(result.records.map((r) => r.partNumber)).toEqual([
+            "PN-default",
+            "PN-a1"
         ]);
     });
 

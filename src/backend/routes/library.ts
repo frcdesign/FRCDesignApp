@@ -40,13 +40,9 @@ libraryRoutes.get(
 );
 
 /**
- * GET /api/search-db/library/:libraryId?v=:cacheVersion
- *
- * Streams the library's serialized MiniSearch index from R2 as a plain string.
- *
- * Never serve this pre-compressed with a hand-set `Content-Encoding`: the
- * runtime treats any body it did not encode itself as identity and compresses
- * it again, so the client inflates once and is left holding a gzip stream.
+ * GET /api/search-db/library/:libraryId?v=:cacheVersion — the serialized
+ * MiniSearch index. Never set `Content-Encoding` here: the runtime compresses
+ * again on top, leaving the client a gzip stream after one inflate.
  */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),

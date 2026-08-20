@@ -336,8 +336,13 @@ function planBatches(parameters: ConfigurationParameter[]): {
     if (capped) {
         return { batches: [], capped: true };
     }
+    // The default is probed separately, and anything canonicalizing to it would
+    // land on the same record — so drop every all-defaults combination, not just
+    // the literally empty one.
     const toFetch = configurations.filter(
-        (configuration) => Object.keys(configuration).length > 0
+        (configuration) =>
+            Object.keys(canonicalizeConfiguration(configuration, parameters))
+                .length > 0
     );
 
     const batches: ParameterValues[][] = [];
