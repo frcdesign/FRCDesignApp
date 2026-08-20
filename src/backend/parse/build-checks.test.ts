@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
+import { ThumbnailSize, ThumbnailUrls } from "../../shared/thumbnail-types";
+import { Vendor } from "../../shared/vendors";
 import { BuildIssueType } from "../../shared/build-issues";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "../../shared/canonical-configuration";
 import { thumbnailUrl } from "../../shared/thumbnails";

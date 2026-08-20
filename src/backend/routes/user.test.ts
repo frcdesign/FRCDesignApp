@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { users } from "../../shared/schema";
-import { AccessLevel, Theme } from "../../shared/types";
+import { AccessLevel } from "../../shared/access-level";
+import { Theme } from "../../shared/settings";
 import {
     TEST_USER_ID,
     createTestApp,

@@ -2,8 +2,9 @@ import { useAccessData } from "../api-utils/access-level";
 import { useMutation } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { apiPost } from "../api-utils/api";
-import { InsertableOut, LibraryBuildStatus } from "../../shared/api-models";
-import { hasUserAccess } from "../../shared/types";
+import { LibraryBuildStatus } from "../../shared/build-status-dto";
+import { InsertableOut } from "../../shared/library-dto";
+import { hasUserAccess } from "../../shared/access-level";
 import { useCallback, useMemo } from "react";
 import {
     showErrorToast,
@@ -16,7 +17,8 @@ import {
     useLibraryId
 } from "../api-utils/library";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { buildStatusQueryKey, useCacheVersion } from "../queries";
+import { useCacheVersion } from "../library-queries";
+import { buildStatusQueryKey } from "../query-keys";
 import { useRefreshLibrary } from "../api-utils/refresh";
 import { patchQuery } from "../common/utils";
 import { useCloseBuildCard } from "./build-status";

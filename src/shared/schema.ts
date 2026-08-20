@@ -1,13 +1,9 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
-import {
-    DEFAULT_LIBRARY_ID,
-    DEFAULT_SETTINGS,
-    ElementType,
-    FastenInfo,
-    LibraryId,
-    Theme,
-    Vendor
-} from "./types";
+import { ElementType } from "./element-type";
+import { FastenInfo } from "./fasten";
+import { DEFAULT_LIBRARY_ID, LibraryId } from "./library-id";
+import { DEFAULT_SETTINGS, Theme } from "./settings";
+import { Vendor } from "./vendors";
 import {
     ParameterValues,
     ConfigurationParameter,

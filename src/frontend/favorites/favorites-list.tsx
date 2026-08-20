@@ -3,22 +3,18 @@ import { IconHeartBroken } from "@tabler/icons-react";
 import { HeartIconColor, IconSize } from "../common/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../search/filter";
-import {
-    getFavoriteForInsertable,
-    InsertableOut
-} from "../../shared/api-models";
+import { getFavoriteForInsertable } from "../../shared/favorites-dto";
+import { InsertableOut } from "../../shared/library-dto";
 import { useUiState } from "../api-utils/ui-state";
 import { SectionError, SectionLoading } from "../app-common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "../search/search-errors";
 import { FavoriteCard } from "./favorite-card";
 import { ItemTable } from "../cards/card-components";
-import {
-    useFavoritesQuery,
-    useLibraryQuery,
-    useSearchDbQuery
-} from "../queries";
+import { useFavoritesQuery } from "../favorites-queries";
+import { useLibraryQuery } from "../library-queries";
+import { useSearchDbQuery } from "../search-queries";
 import { doSearch, FilterResult, SearchHit } from "../search/search";
-import { hasEditorAccess } from "../../shared/types";
+import { hasEditorAccess } from "../../shared/access-level";
 
 /**
  * A list of current favorite cards.

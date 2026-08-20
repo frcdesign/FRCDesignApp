@@ -19,8 +19,8 @@ import {
 } from "../../../../../common/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../search/search-results";
-import { GroupOut, Insertables } from "../../../../../../shared/api-models";
-import { hasEditorAccess } from "../../../../../../shared/types";
+import { GroupOut, Insertables } from "../../../../../../shared/library-dto";
+import { hasEditorAccess } from "../../../../../../shared/access-level";
 import { filterInsertables } from "../../../../../search/filter";
 import { GroupMenuItems } from "../../../../../groups/group-card";
 import { InsertableCard } from "../../../../../cards/insertable-card";
@@ -33,7 +33,7 @@ import {
     SectionLoading
 } from "../../../../../app-common/app-zero-state";
 import { ClearFiltersButton } from "../../../../../settings/vendor-filters";
-import { useLibraryQuery } from "../../../../../queries";
+import { useLibraryQuery } from "../../../../../library-queries";
 import { useLibraryId } from "../../../../../api-utils/library";
 import { useUiState, updateUiState } from "../../../../../api-utils/ui-state";
 

@@ -1,6 +1,7 @@
 import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { ReactNode } from "react";
-import { InsertableOut, Favorite } from "../../shared/api-models";
+import { Favorite } from "../../shared/favorites-dto";
+import { InsertableOut } from "../../shared/library-dto";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
 import { queryClient } from "../query-client";
@@ -28,7 +29,8 @@ import {
     openCannotReorderAlert
 } from "../app/alerts";
 import { getAppErrorHandler } from "../api-utils/errors";
-import { favoritesQueryKey, useFavoritesQuery } from "../queries";
+import { useFavoritesQuery } from "../favorites-queries";
+import { favoritesQueryKey } from "../query-keys";
 import { useRefreshFavorites } from "../api-utils/refresh";
 import { produce } from "immer";
 import { SearchHit } from "../search/search";

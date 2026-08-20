@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
-import { InsertableOut } from "../../shared/api-models";
-import { ElementType } from "../../shared/types";
+import { InsertableOut } from "../../shared/library-dto";
+import { ElementType } from "../../shared/element-type";
 import { type ElementPath } from "../../shared/onshape-path";
 import { showLoadingToast, showSuccessToast } from "../common/notifications";
 import { queryClient } from "../query-client";

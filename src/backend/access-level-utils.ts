@@ -1,10 +1,11 @@
 import { HttpStatus } from "http-status-ts";
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { type AppContext, type AppContextEnv } from "./app";
-import { getOnshapeApi, getSessionId } from "./auth";
+import type { AppContext, AppContextEnv } from "./context";
+import { getOnshapeApi } from "./auth-oauth";
+import { getSessionId } from "./auth-session";
 import { getAccessLevel } from "./onshape-api/endpoints/users";
-import { hasEditorAccess, type AccessLevel } from "../shared/types";
+import { hasEditorAccess, type AccessLevel } from "../shared/access-level";
 
 /** How long a resolved access level is cached in KV. */
 const ACCESS_LEVEL_TTL_SECONDS = 60 * 60;

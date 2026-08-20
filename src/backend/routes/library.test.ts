@@ -13,8 +13,8 @@ import {
 } from "../../__test_utils__";
 import { getDb } from "../db";
 import { rebuildSearchDb, searchIndexKey } from "../library-data";
-import { LibraryOut } from "../../shared/api-models";
-import { LibraryId } from "../../shared/types";
+import { LibraryOut } from "../../shared/library-dto";
+import { LibraryId } from "../../shared/library-id";
 
 const db = getDb(env.DB);
 

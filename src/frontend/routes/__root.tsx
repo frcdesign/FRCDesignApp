@@ -12,7 +12,8 @@ import { ReactNode, useMemo } from "react";
 import { queryClient } from "../query-client";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../api-utils/onshape-params";
-import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID } from "../../shared/library-id";
+import { DEFAULT_SETTINGS } from "../../shared/settings";
 import { NotFoundError, RootCrash } from "../app/root-error";
 
 export const Route = createRootRoute({

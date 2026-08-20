@@ -1,4 +1,5 @@
-import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import { FastenInfo, MateLocation } from "../../shared/fasten";
 import { type ElementPath } from "../../shared/onshape-path";
 import { getAssembly } from "../onshape-api/endpoints/assemblies";
 import { getFeatures } from "../onshape-api/endpoints/part-studios";

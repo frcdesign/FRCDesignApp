@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../__test_utils__";
-import { ThumbnailSize } from "../../shared/types";
+import { ThumbnailSize } from "../../shared/thumbnail-types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
     THUMBNAIL_FALLBACK_HEADER,

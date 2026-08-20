@@ -1,5 +1,5 @@
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
-import { LibraryId } from "../shared/types";
+import { LibraryId } from "../shared/library-id";
 
 /**
  * FRCDesign brand green ramp (index 6 = #4cae4f, the brand color).

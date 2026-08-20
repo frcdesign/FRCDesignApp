@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ElementType, FastenInfo, MateLocation } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import { FastenInfo, MateLocation } from "../../shared/fasten";
 import {
     getFastenQuery,
     parseFastenInfoFromPartStudio,

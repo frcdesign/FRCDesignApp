@@ -3,14 +3,12 @@ import { HttpStatus } from "http-status-ts";
 import { eq } from "drizzle-orm";
 import { getDb } from "./db";
 import { users } from "../shared/schema";
-import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../shared/types";
-import { authRoutes, getSessionCompanyId } from "./auth";
-import {
-    cacheMiddleware,
-    getApp,
-    type AppContext,
-    type AppServicesFactory
-} from "./app";
+import { DEFAULT_LIBRARY_ID } from "../shared/library-id";
+import { DEFAULT_SETTINGS } from "../shared/settings";
+import { authRoutes } from "./auth-routes";
+import { getSessionCompanyId } from "./auth-session";
+import { cacheMiddleware } from "./cache";
+import { getApp, type AppContext, type AppServicesFactory } from "./context";
 import { OnshapeRateLimitError } from "./onshape-api/onshape-api";
 import { userRoutes } from "./routes/user";
 import { libraryRoutes } from "./routes/library";

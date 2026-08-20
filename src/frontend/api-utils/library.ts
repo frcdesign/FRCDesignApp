@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { DEFAULT_LIBRARY_ID, LibraryId } from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, LibraryId } from "../../shared/library-id";
 
 /** Returns the library being displayed, which the url is the source of truth for. */
 export function useLibraryId(): LibraryId {

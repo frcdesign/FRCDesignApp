@@ -3,8 +3,8 @@
  * deserializes it with the same options.
  */
 import MiniSearch, { Options } from "minisearch";
-import { LibraryOut } from "./api-models";
-import { Vendor } from "./types";
+import { LibraryOut } from "./library-dto";
+import { Vendor } from "./vendors";
 import { ConfigurationRecord, SearchRecord } from "./configuration-models";
 
 const deliminator = "^";

@@ -2,7 +2,8 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { users } from "../shared/schema";
-import { LibraryId, Theme } from "../shared/types";
+import { LibraryId } from "../shared/library-id";
+import { Theme } from "../shared/settings";
 import {
     TEST_USER_ID,
     createTestApp,

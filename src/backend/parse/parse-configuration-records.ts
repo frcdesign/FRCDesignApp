@@ -4,7 +4,7 @@
  */
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
-import { ElementType } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
 import {
     ParameterValues,
     ConfigurationParameter,

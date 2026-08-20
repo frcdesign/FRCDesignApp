@@ -46,7 +46,8 @@ import {
     valueWithUnits,
     evaluateExpression
 } from "../../shared/input-parser";
-import { getConfigurationKey, useUnitInfoQuery } from "../queries";
+import { useUnitInfoQuery } from "../configuration-queries";
+import { configurationQueryKey } from "../query-keys";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
 import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
@@ -78,7 +79,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     } = props;
 
     const query = useQuery<ConfigurationResult>({
-        queryKey: getConfigurationKey(configurationId, microversionId),
+        queryKey: configurationQueryKey(configurationId, microversionId),
         queryFn: async () => {
             return apiGet("/configuration/" + configurationId, {
                 cacheId: microversionId

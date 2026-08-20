@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
-import { cacheMiddleware, getApp } from "../app";
+import { cacheMiddleware } from "../cache";
+import { getApp } from "../context";
 import { getDb } from "../db";
 import { users } from "../../shared/schema";
-import { type AccessData, type SettingsUpdate } from "../../shared/types";
+import type { AccessData } from "../../shared/access-level";
+import type { SettingsUpdate } from "../../shared/settings";
 import { isSignedIn, requireSignInMiddleware } from "../sign-in-utils";
 
 export const userRoutes = getApp();

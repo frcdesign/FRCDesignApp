@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { CachePolicy, cacheMiddleware, getApp } from "../app";
+import { CachePolicy, cacheMiddleware } from "../cache";
+import { getApp } from "../context";
 import { getDb } from "../db";
 import { getUnitInfo } from "../onshape-api/endpoints/documents";
 import { configurations } from "../../shared/schema";

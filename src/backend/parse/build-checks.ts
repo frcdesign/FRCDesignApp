@@ -1,4 +1,5 @@
-import { ThumbnailUrls, Vendor, isCustomPart } from "../../shared/types";
+import { ThumbnailUrls } from "../../shared/thumbnail-types";
+import { Vendor, isCustomPart } from "../../shared/vendors";
 import {
     addBuildIssue,
     BuildIssue,

@@ -1,7 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { cacheMiddleware, getApp, getLibraryParam, libraryRoute } from "../app";
+import { cacheMiddleware } from "../cache";
+import { getApp } from "../context";
+import { getLibraryParam, libraryRoute } from "../route-params";
 import { getDb } from "../db";
-import { getSessionId } from "../auth";
+import { getSessionId } from "../auth-session";
 import { getDocument } from "../onshape-api/endpoints/documents";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { type DocumentPath } from "../../shared/onshape-path";

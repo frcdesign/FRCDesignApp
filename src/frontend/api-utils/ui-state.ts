@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { AccessLevel, Vendor } from "../../shared/types";
+import { AccessLevel } from "../../shared/access-level";
+import { Vendor } from "../../shared/vendors";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 3;

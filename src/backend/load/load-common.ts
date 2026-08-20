@@ -1,8 +1,9 @@
 import type { WorkflowStep } from "cloudflare:workers";
-import type { AppBindings } from "../app";
-import { getOnshapeApiFromSessionId } from "../auth";
+import type { AppBindings } from "../context";
+import { getOnshapeApiFromSessionId } from "../auth-oauth";
 import type { OnshapeApi } from "../onshape-api/onshape-api";
-import type { ElementType, LibraryId } from "../../shared/types";
+import type { ElementType } from "../../shared/element-type";
+import type { LibraryId } from "../../shared/library-id";
 import type { ElementPath, InstancePath } from "../../shared/onshape-path";
 
 /** How many insertables a load reads from Onshape at once. */

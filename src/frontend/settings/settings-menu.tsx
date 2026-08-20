@@ -1,13 +1,13 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { DEFAULT_SETTINGS } from "../../shared/types";
+import { DEFAULT_SETTINGS } from "../../shared/settings";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { FontWeight } from "../common/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { Theme } from "../../shared/types";
-import { hasEditorAccess } from "../../shared/types";
-import { isWithinAccessLevel } from "../../shared/types";
-import { AccessLevel } from "../../shared/types";
+import { Theme } from "../../shared/settings";
+import { hasEditorAccess } from "../../shared/access-level";
+import { isWithinAccessLevel } from "../../shared/access-level";
+import { AccessLevel } from "../../shared/access-level";
 import { useSaveSettings } from "./settings";
 import { capitalize } from "../common/utils";
 import { OpenUrlButton } from "../common/open-url-button";

@@ -1,6 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
-import { ElementType } from "../../shared/types";
-import { Theme } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import { Theme } from "../../shared/settings";
 import { ElementPath, isElementPath } from "../../shared/onshape-path";
 
 /**

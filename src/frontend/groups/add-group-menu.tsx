@@ -10,8 +10,8 @@ import { getAppErrorHandler, HandledError } from "../api-utils/errors";
 import { showInfoToast, showLoadingToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { jobStatusQueryKey } from "../queries";
-import { type JobStatus } from "../../shared/api-models";
+import { jobStatusQueryKey } from "../query-keys";
+import type { JobStatus } from "../../shared/library-dto";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({

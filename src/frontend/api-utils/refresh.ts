@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "../query-client";
-import {
-    buildStatusQueryMatchKey,
-    favoritesQueryKey,
-    libraryQueryMatchKey,
-    libraryVersionQueryMatchKey,
-    useJobStatusQuery
-} from "../queries";
-import { accessDataQueryKey } from "./access-level";
+import { useJobStatusQuery } from "../library-queries";
+import { buildStatusQueryMatchKey, favoritesQueryKey, libraryQueryMatchKey, libraryVersionQueryMatchKey } from "../query-keys";
+import { accessDataQueryKey } from "../query-keys";
 import { useLibraryId } from "./library";
-import { type LibraryId } from "../../shared/types";
+import type { LibraryId } from "../../shared/library-id";
 
 /** Refetches the current user's favorites, which aren't version-keyed. */
 function refetchFavorites(libraryId: LibraryId): Promise<void> {

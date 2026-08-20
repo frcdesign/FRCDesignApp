@@ -12,7 +12,8 @@ import {
     type ConfigurationParameter
 } from "../shared/configuration-models";
 import { type ElementPath, type InstancePath } from "../shared/onshape-path";
-import { ElementType, LibraryId } from "../shared/types";
+import { ElementType } from "../shared/element-type";
+import { LibraryId } from "../shared/library-id";
 
 export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
 export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId

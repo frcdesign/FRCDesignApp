@@ -1,5 +1,5 @@
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
-import type { ThumbnailUrls } from "../../shared/types";
+import type { ThumbnailUrls } from "../../shared/thumbnail-types";
 import { NoSuchConfigurationError } from "../onshape-api/endpoints/thumbnails";
 import type { LoadContext } from "./load-common";
 

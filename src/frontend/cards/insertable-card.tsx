@@ -1,11 +1,8 @@
 import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
-import {
-    Favorite,
-    getFavoriteForInsertable,
-    InsertableOut
-} from "../../shared/api-models";
+import { Favorite, getFavoriteForInsertable } from "../../shared/favorites-dto";
+import { InsertableOut } from "../../shared/library-dto";
 import { ParameterValues } from "../../shared/configuration-models";
 import { SearchHit } from "../search/search";
 import {
@@ -25,7 +22,7 @@ import {
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import { useIsAssemblyInPartStudio } from "../insert/insert-hooks";
 import { openInsertMenu } from "../insert/insert-menu";
-import { useFavoritesQuery } from "../queries";
+import { useFavoritesQuery } from "../favorites-queries";
 import { RequireSignIn } from "../api-utils/access-level";
 import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 

@@ -9,7 +9,7 @@ import { apiPost } from "../api-utils/api";
 import { showErrorToast, showSuccessToast } from "../common/notifications";
 import { PreviewImageCard } from "../insert/thumbnail";
 import { ConfigurationWrapper } from "../insert/configurations";
-import { type FavoritesData } from "../../shared/api-models";
+import type { FavoritesData } from "../../shared/favorites-dto";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
 import {
@@ -17,11 +17,9 @@ import {
     SearchRecord
 } from "../../shared/configuration-models";
 import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
-import {
-    favoritesQueryKey,
-    useFavoritesQuery,
-    useLibraryQuery
-} from "../queries";
+import { useFavoritesQuery } from "../favorites-queries";
+import { useLibraryQuery } from "../library-queries";
+import { favoritesQueryKey } from "../query-keys";
 import { getQueryUpdater } from "../common/utils";
 import { useLibraryId } from "../api-utils/library";
 import { useRefreshFavorites } from "../api-utils/refresh";

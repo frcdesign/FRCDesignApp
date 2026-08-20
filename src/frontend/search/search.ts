@@ -1,5 +1,5 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
-import { Vendor } from "../../shared/types";
+import { Vendor } from "../../shared/vendors";
 import { SearchDocument, normalizeForMatch } from "../../shared/search";
 import {
     ParameterValues,

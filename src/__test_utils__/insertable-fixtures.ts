@@ -4,7 +4,7 @@
  */
 import type { InsertableTarget } from "../backend/load/load-common";
 import type { ParsedInsertable } from "../backend/load/load-insertable";
-import { ElementType } from "../shared/types";
+import { ElementType } from "../shared/element-type";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,

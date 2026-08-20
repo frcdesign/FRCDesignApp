@@ -1,9 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
-import { cacheMiddleware, getApp, getLibraryParam, libraryRoute } from "../app";
+import { cacheMiddleware } from "../cache";
+import { getApp } from "../context";
+import { getLibraryParam, libraryRoute } from "../route-params";
 import { type Db, getDb } from "../db";
 import { users, favorites } from "../../shared/schema";
-import { type Favorite, type FavoritesData } from "../../shared/api-models";
-import { type LibraryId } from "../../shared/types";
+import type { Favorite, FavoritesData } from "../../shared/favorites-dto";
+import type { LibraryId } from "../../shared/library-id";
 import { HttpStatus } from "http-status-ts";
 import { type ParameterValues } from "../../shared/configuration-models";
 import { requireSignInMiddleware } from "../sign-in-utils";

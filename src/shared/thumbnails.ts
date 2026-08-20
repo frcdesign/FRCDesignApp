@@ -3,7 +3,7 @@ import {
     DEFAULT_CANONICAL_CONFIGURATION,
     DEFAULT_CONFIGURATION_KEY
 } from "./canonical-configuration";
-import { ThumbnailSize } from "./types";
+import { ThumbnailSize } from "./thumbnail-types";
 
 /** Short on purpose: the real render can land at any moment and must take over. */
 export const THUMBNAIL_FALLBACK_CACHE_TTL = 60;

@@ -7,7 +7,7 @@ import {
     toInstanceApiPath
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
-import { ThumbnailSize } from "../../../shared/types";
+import { ThumbnailSize } from "../../../shared/thumbnail-types";
 
 /** Returns the thumbnail of a given document instance. */
 export function getInstanceThumbnail(

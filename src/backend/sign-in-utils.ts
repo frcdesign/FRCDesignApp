@@ -2,7 +2,7 @@ import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 import { env } from "process";
-import { type AppContext, type AppContextEnv } from "./app";
+import type { AppContext, AppContextEnv } from "./context";
 
 /** FORCE_SIGNED_IN is a dev-only escape hatch, ignored in production. */
 export function isForceSignedIn(c: AppContext): boolean {

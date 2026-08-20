@@ -3,7 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
-import { getApp, getInsertableParam, insertableRoute } from "../app";
+import { getApp } from "../context";
+import { getInsertableParam, insertableRoute } from "../route-params";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { requireSignInMiddleware } from "../sign-in-utils";
@@ -22,7 +23,7 @@ import {
     type ConfigurationRecordsResult
 } from "../parse/parse-configuration-records";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
-import { ElementType } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {

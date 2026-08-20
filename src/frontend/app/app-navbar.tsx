@@ -23,9 +23,9 @@ import { useSaveSettings } from "../settings/settings";
 import { useIsSignedIn } from "../api-utils/access-level";
 import { startSignIn } from "../api-utils/sign-in";
 import { useJobStatus } from "../api-utils/refresh";
-import { LibraryId } from "../../shared/types";
+import { LibraryId } from "../../shared/library-id";
 import { queryClient } from "../query-client";
-import { getLibraryVersionQuery } from "../queries";
+import { getLibraryVersionQuery } from "../library-queries";
 
 /**
  * Provides top-level navigation for the app. A single colored control row holds

@@ -14,7 +14,7 @@ import {
 } from "../../__test_utils__";
 import MiniSearch from "minisearch";
 import { getDb } from "../db";
-import type { JobStatus } from "../../shared/api-models";
+import type { JobStatus } from "../../shared/library-dto";
 import { searchIndexKey } from "../library-data";
 import { SEARCH_OPTIONS, type SearchDocument } from "../../shared/search";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";

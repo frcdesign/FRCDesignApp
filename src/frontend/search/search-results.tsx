@@ -5,8 +5,9 @@ import { InsertableCard } from "../cards/insertable-card";
 import { ItemTable } from "../cards/card-components";
 import { SectionError, SectionLoading } from "../app-common/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
-import { useLibraryQuery, useSearchDbQuery } from "../queries";
-import { hasEditorAccess } from "../../shared/types";
+import { useLibraryQuery } from "../library-queries";
+import { useSearchDbQuery } from "../search-queries";
+import { hasEditorAccess } from "../../shared/access-level";
 
 interface SearchResultsProps {
     query: string;

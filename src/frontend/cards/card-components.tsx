@@ -20,8 +20,8 @@ import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../insert/insert-hooks";
-import { InsertableOut } from "../../shared/api-models";
-import { ElementType } from "../../shared/types";
+import { InsertableOut } from "../../shared/library-dto";
+import { ElementType } from "../../shared/element-type";
 
 import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";

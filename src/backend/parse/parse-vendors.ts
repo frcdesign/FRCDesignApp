@@ -1,4 +1,4 @@
-import { Vendor, getVendorName } from "../../shared/types";
+import { Vendor, getVendorName } from "../../shared/vendors";
 import {
     ParameterType,
     type ConfigurationParameter

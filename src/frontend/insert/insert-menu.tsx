@@ -1,10 +1,8 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import {
-    getFavoriteForInsertable,
-    InsertableOut
-} from "../../shared/api-models";
-import { ElementType } from "../../shared/types";
+import { getFavoriteForInsertable } from "../../shared/favorites-dto";
+import { InsertableOut } from "../../shared/library-dto";
+import { ElementType } from "../../shared/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
 import { FontWeight, IconSize } from "../common/style-constants";
@@ -25,7 +23,7 @@ import {
     SearchRecord
 } from "../../shared/configuration-models";
 import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
-import { useFavoritesQuery } from "../queries";
+import { useFavoritesQuery } from "../favorites-queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../api-utils/access-level";

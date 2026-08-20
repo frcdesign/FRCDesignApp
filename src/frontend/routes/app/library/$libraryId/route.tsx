@@ -1,13 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { queryClient } from "../../../../query-client";
 import { getAccessDataQuery } from "../../../../api-utils/access-level";
-import {
-    getFavoritesQuery,
-    getLibraryQuery,
-    getLibraryVersionQuery,
-    getSearchDbQuery
-} from "../../../../queries";
-import { DEFAULT_LIBRARY_ID, LibraryId } from "../../../../../shared/types";
+import { getFavoritesQuery } from "../../../../favorites-queries";
+import { getLibraryQuery, getLibraryVersionQuery } from "../../../../library-queries";
+import { getSearchDbQuery } from "../../../../search-queries";
+import { DEFAULT_LIBRARY_ID, LibraryId } from "../../../../../shared/library-id";
 import { getUiState } from "../../../../api-utils/ui-state";
 
 /** Restoring the last group is an entry behavior, so it happens once per load. */

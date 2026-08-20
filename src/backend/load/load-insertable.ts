@@ -9,12 +9,10 @@ import {
     type BuildIssue,
     BuildIssueType
 } from "../../shared/build-issues";
-import {
-    ElementType,
-    type FastenInfo,
-    type ThumbnailUrls,
-    type Vendor
-} from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import type { FastenInfo } from "../../shared/fasten";
+import type { ThumbnailUrls } from "../../shared/thumbnail-types";
+import type { Vendor } from "../../shared/vendors";
 import { configurations, insertables } from "../../shared/schema";
 import { uploadThumbnails } from "../routes/thumbnails";
 import { getConfiguration } from "../onshape-api/endpoints/configurations";

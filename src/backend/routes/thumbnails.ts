@@ -1,15 +1,9 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import {
-    CachePolicy,
-    cacheMiddleware,
-    getApp,
-    getInsertableParam,
-    immutableCacheControl,
-    insertableRoute,
-    setCacheTtl
-} from "../app";
+import { CachePolicy, cacheMiddleware, immutableCacheControl, setCacheTtl } from "../cache";
+import { getApp } from "../context";
+import { getInsertableParam, insertableRoute } from "../route-params";
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
@@ -24,7 +18,7 @@ import { type ElementPath, type InstancePath } from "../../shared/onshape-path";
 import { group, insertables } from "../../shared/schema";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
-import { ThumbnailSize, ThumbnailUrls } from "../../shared/types";
+import { ThumbnailSize, ThumbnailUrls } from "../../shared/thumbnail-types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
     THUMBNAIL_FALLBACK_HEADER,
@@ -37,9 +31,9 @@ import {
     canonicalConfigurationKey
 } from "../../shared/canonical-configuration";
 import { OnshapeApi } from "../onshape-api/onshape-api";
-import type { AppContext } from "../app";
+import type { AppContext } from "../context";
 import type { ThumbnailWorkflowParams } from "../load/workflows";
-import { getSessionId } from "../auth";
+import { getSessionId } from "../auth-session";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
 
 /** Stores one rendered thumbnail, tagging it with what produced it. */

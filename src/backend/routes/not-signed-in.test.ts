@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { AccessLevel, LibraryId, Theme } from "../../shared/types";
+import { AccessLevel } from "../../shared/access-level";
+import { LibraryId } from "../../shared/library-id";
+import { Theme } from "../../shared/settings";
 import {
     createTestApp,
     jsonRequest,

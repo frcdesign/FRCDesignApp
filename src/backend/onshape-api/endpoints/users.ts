@@ -1,7 +1,7 @@
 import { OnshapeApi } from "../onshape-api";
 import { OAuthApi } from "../onshape-api";
 import { apiPath } from "../api-path";
-import { AccessLevel } from "../../../shared/types";
+import { AccessLevel } from "../../../shared/access-level";
 
 export interface SessionInfo {
     id: string;

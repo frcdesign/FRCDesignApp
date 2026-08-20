@@ -6,13 +6,8 @@ import {
     insertables,
     configurations
 } from "../shared/schema";
-import { LibraryId } from "../shared/types";
-import {
-    InsertableOut,
-    LibraryOut,
-    Insertables,
-    Groups
-} from "../shared/api-models";
+import { LibraryId } from "../shared/library-id";
+import { InsertableOut, LibraryOut, Insertables, Groups } from "../shared/library-dto";
 import { ConfigurationRecord } from "../shared/configuration-models";
 import { buildSearchDb } from "../shared/search";
 

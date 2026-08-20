@@ -8,7 +8,7 @@ import {
 import { IconSize } from "../common/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { GroupOut, LibraryOut } from "../../shared/api-models";
+import { GroupOut, LibraryOut } from "../../shared/library-dto";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, apiDelete } from "../api-utils/api";
 import { showErrorToast } from "../common/notifications";
@@ -25,12 +25,9 @@ import {
 import { AddGroupItem } from "./add-group-menu";
 import { GroupStatusBadge } from "../cards/build-status";
 import { useRefreshLibrary } from "../api-utils/refresh";
-import {
-    libraryQueryKey,
-    useBuildStatusQuery,
-    useCacheVersion,
-    useLibraryQuery
-} from "../queries";
+import { useBuildStatusQuery } from "../build-status-queries";
+import { useCacheVersion, useLibraryQuery } from "../library-queries";
+import { libraryQueryKey } from "../query-keys";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
 import { getQueryUpdater, useIsHome } from "../common/utils";
 

@@ -37,11 +37,8 @@ import {
     getIssueSeverity,
     getMaxSeverity
 } from "../../shared/build-issues";
-import {
-    GroupBuildStatus,
-    InsertableBuildStatus
-} from "../../shared/api-models";
-import { getVendorName, Vendor } from "../../shared/types";
+import { GroupBuildStatus, InsertableBuildStatus } from "../../shared/build-status-dto";
+import { getVendorName, Vendor } from "../../shared/vendors";
 import {
     ConfigurationParameter,
     ParameterType
@@ -56,7 +53,8 @@ import {
 } from "../../shared/configuration-combinations";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
-import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
+import { useBuildStatusQuery } from "../build-status-queries";
+import { useJobStatusQuery } from "../library-queries";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,

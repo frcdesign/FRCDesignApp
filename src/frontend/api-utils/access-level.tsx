@@ -1,9 +1,13 @@
 import { PropsWithChildren, useMemo } from "react";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { hasEditorAccess } from "../../shared/types";
-import { hasAdminAccess } from "../../shared/types";
-import { isWithinAccessLevel } from "../../shared/types";
-import { AccessLevel, type AccessData } from "../../shared/types";
+import {
+    AccessLevel,
+    type AccessData,
+    hasAdminAccess,
+    hasEditorAccess,
+    isWithinAccessLevel
+} from "../../shared/access-level";
+import { accessDataQueryKey } from "../query-keys";
 import { apiGet } from "./api";
 import { useUiState } from "./ui-state";
 
@@ -16,10 +20,6 @@ const DEFAULT_ACCESS_DATA: AccessData = {
 const DEFAULT_ACCESS_LEVEL =
     (import.meta.env.VITE_DEFAULT_ACCESS_LEVEL as AccessLevel | undefined) ??
     AccessLevel.USER;
-
-export function accessDataQueryKey() {
-    return ["access-data"];
-}
 
 export function getAccessDataQuery() {
     return queryOptions<AccessData>({

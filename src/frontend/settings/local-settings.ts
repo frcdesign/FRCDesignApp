@@ -1,10 +1,5 @@
-import {
-    DEFAULT_LIBRARY_ID,
-    DEFAULT_SETTINGS,
-    type LibraryId,
-    type SettingsUpdate,
-    type Theme
-} from "../../shared/types";
+import { DEFAULT_LIBRARY_ID, type LibraryId } from "../../shared/library-id";
+import { DEFAULT_SETTINGS, type SettingsUpdate, type Theme } from "../../shared/settings";
 
 const SETTINGS_STORAGE_KEY = "frc-design-app-settings";
 

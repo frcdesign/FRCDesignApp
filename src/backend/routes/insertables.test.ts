@@ -2,7 +2,8 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../shared/schema";
-import { ElementType, Vendor } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import { Vendor } from "../../shared/vendors";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
     MOCK_ONSHAPE_API,

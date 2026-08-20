@@ -18,7 +18,7 @@ import {
 import { RequireAccessLevel } from "../../../../api-utils/access-level";
 import { AddGroupButton } from "../../../../groups/add-group-menu";
 import { FavoritesList } from "../../../../favorites/favorites-list";
-import { useLibraryQuery } from "../../../../queries";
+import { useLibraryQuery } from "../../../../library-queries";
 import { getLibraryName, useLibraryId } from "../../../../api-utils/library";
 import { updateUiState, useUiState } from "../../../../api-utils/ui-state";
 import { useIsSignedIn } from "../../../../api-utils/access-level";

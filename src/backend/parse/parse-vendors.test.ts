@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Vendor } from "../../shared/types";
+import { Vendor } from "../../shared/vendors";
 import { ParameterType } from "../../shared/configuration-models";
 import { QuantityType, Unit } from "../../shared/configuration-enums";
 import { parseNameVendor, parseVendors } from "./parse-vendors";

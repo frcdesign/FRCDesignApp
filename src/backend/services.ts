@@ -1,8 +1,8 @@
-import { type AppServicesFactory } from "./app";
-import { getCachedUserId, getOnshapeApi, isAuthenticated } from "./auth";
+import type { AppServicesFactory } from "./context";
+import { getCachedUserId, getOnshapeApi, isAuthenticated } from "./auth-oauth";
 import { getCachedAccessLevel } from "./access-level-utils";
 import { isForceSignedIn, isSignedIn } from "./sign-in-utils";
-import { AccessLevel } from "../shared/types";
+import { AccessLevel } from "../shared/access-level";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
 export const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";

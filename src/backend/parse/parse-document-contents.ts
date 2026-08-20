@@ -1,7 +1,7 @@
 /**
  * Extracts the insertable tabs from a document's contents listing.
  */
-import { ElementType } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
 import {
     type OnshapeDocumentContents,
     type OnshapeElement,

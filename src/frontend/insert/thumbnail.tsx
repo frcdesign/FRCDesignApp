@@ -1,6 +1,7 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { loadImage, loadImageResult } from "../api-utils/api";
-import { ThumbnailSize, ElementType } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import { ThumbnailSize } from "../../shared/thumbnail-types";
 import { ElementPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
@@ -8,7 +9,7 @@ import { IconHelp } from "@tabler/icons-react";
 import { ComponentPropsWithRef, ReactNode } from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "../../shared/canonical-configuration";
 import { thumbnailUrl } from "../../shared/thumbnails";
-import { getConfigurationMatchKey } from "../queries";
+import { configurationQueryMatchKey } from "../query-keys";
 import { SectionError } from "../app-common/app-zero-state";
 import { useTargetElementType } from "./insert-hooks";
 import { useIsSignedIn } from "../api-utils/access-level";
@@ -183,7 +184,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const isSignedIn = useIsSignedIn();
     const isConnected = useIsConnectedToOnshape();
     const isFetchingConfiguration =
-        useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
+        useIsFetching({ queryKey: configurationQueryMatchKey() }) > 0;
     const targetElementType = useTargetElementType();
 
     const url = thumbnailUrl({

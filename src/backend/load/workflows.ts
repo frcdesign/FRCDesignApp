@@ -4,9 +4,9 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import type { AppBindings } from "../app";
+import type { AppBindings } from "../context";
 import { getDb } from "../db";
-import type { LibraryId } from "../../shared/types";
+import type { LibraryId } from "../../shared/library-id";
 import {
     bumpLibraryVersion,
     placeNewGroup,

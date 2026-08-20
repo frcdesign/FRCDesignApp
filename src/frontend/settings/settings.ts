@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { type SettingsUpdate } from "../../shared/types";
+import type { SettingsUpdate } from "../../shared/settings";
 import { showErrorToast } from "../common/notifications";
 import { apiPost } from "../api-utils/api";
 import { useIsSignedIn } from "../api-utils/access-level";

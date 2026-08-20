@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildSearchDb, processTerm, tokenize } from "../../shared/search";
 import { doSearch, type Position } from "./search";
-import { LibraryOut } from "../../shared/api-models";
-import { ElementType } from "../../shared/types";
+import { LibraryOut } from "../../shared/library-dto";
+import { ElementType } from "../../shared/element-type";
 import {
     ConfigurationRecord,
     ParameterValues

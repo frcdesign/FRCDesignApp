@@ -1,8 +1,8 @@
 import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../db";
-import { ElementType } from "../../shared/types";
-import type { ThumbnailUrls } from "../../shared/types";
+import { ElementType } from "../../shared/element-type";
+import type { ThumbnailUrls } from "../../shared/thumbnail-types";
 import {
     addBuildIssue,
     type BuildIssue,

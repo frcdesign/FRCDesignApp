@@ -8,18 +8,15 @@ import { HeartIconColor, IconSize } from "../common/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../api-utils/api";
-import {
-    type Favorite,
-    type FavoritesData,
-    type InsertableOut
-} from "../../shared/api-models";
-import { LibraryId } from "../../shared/types";
+import type { Favorite, FavoritesData } from "../../shared/favorites-dto";
+import type { InsertableOut } from "../../shared/library-dto";
+import { LibraryId } from "../../shared/library-id";
 import { queryClient } from "../query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../api-utils/errors";
 import { getQueryUpdater } from "../common/utils";
 import { toLibraryPath, useLibraryId } from "../api-utils/library";
-import { favoritesQueryKey } from "../queries";
+import { favoritesQueryKey } from "../query-keys";
 import { useRefreshFavorites } from "../api-utils/refresh";
 
 enum Operation {
