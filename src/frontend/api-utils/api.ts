@@ -5,6 +5,7 @@ import {
     type PostOptions
 } from "../common/utils";
 import { HandledError } from "./errors";
+import { THUMBNAIL_FALLBACK_HEADER } from "../../shared/thumbnails";
 import { HttpStatus } from "http-status-ts";
 
 function getUrl(
@@ -79,11 +80,28 @@ export async function loadImage(
     url: string,
     signal?: AbortSignal
 ): Promise<string> {
+    return (await loadImageResult(url, signal)).url;
+}
+
+export interface LoadedImage {
+    url: string;
+    /** True when the worker served a stand-in rather than what was asked for. */
+    isFallback: boolean;
+}
+
+/** {@link loadImage}, also reporting whether the worker stood something in. */
+export async function loadImageResult(
+    url: string,
+    signal?: AbortSignal
+): Promise<LoadedImage> {
     const response = await fetch(url, { signal });
     if (!response.ok) {
         throw new Error("Network response failed.");
     }
-    return url;
+    return {
+        url,
+        isFallback: response.headers.has(THUMBNAIL_FALLBACK_HEADER)
+    };
 }
 
 /** {@link loadImage} for a backend /api route. */

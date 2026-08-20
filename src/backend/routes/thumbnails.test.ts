@@ -4,6 +4,7 @@ import { createTestApp, jsonRequest } from "../../__test_utils__";
 import { ThumbnailSize } from "../../shared/types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
+    THUMBNAIL_FALLBACK_HEADER,
     thumbnailKey,
     thumbnailUrl
 } from "../../shared/thumbnails";
@@ -67,11 +68,47 @@ describe("thumbnail serving", () => {
         expect(res.status).toBe(400);
     });
 
-    it("does not demand a version from a url that is already immutable", async () => {
-        const res = await get("/api/thumbnail-id/d/doc/v/ver/e/elem");
-        // The mock refuses the Onshape call, so this only proves the request
-        // reached the handler rather than being rejected for a missing `?v=`.
-        expect(res.status).not.toBe(400);
+    it("marks a stood-in default so the client keeps waiting", async () => {
+        const elementId = "fallback-flagged";
+        await env.BLOB.put(
+            thumbnailKey(elementId, MICROVERSION, SIZE),
+            "default-bytes"
+        );
+
+        const res = await get(
+            thumbnailUrl({
+                elementId,
+                microversionId: MICROVERSION,
+                size: SIZE,
+                canonicalConfiguration: CANONICAL_CONFIGURATION
+            })
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get(THUMBNAIL_FALLBACK_HEADER)).toBe("1");
+    });
+
+    it("does not mark a real hit as a fallback", async () => {
+        const elementId = "exact-hit";
+        await env.BLOB.put(
+            thumbnailKey(
+                elementId,
+                MICROVERSION,
+                SIZE,
+                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+            ),
+            "config-bytes"
+        );
+
+        const res = await get(
+            thumbnailUrl({
+                elementId,
+                microversionId: MICROVERSION,
+                size: SIZE,
+                canonicalConfiguration: CANONICAL_CONFIGURATION
+            })
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get(THUMBNAIL_FALLBACK_HEADER)).toBeNull();
     });
 
     it("404s when neither the configuration nor the default exists", async () => {

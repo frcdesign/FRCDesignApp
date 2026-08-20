@@ -1,7 +1,7 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query";
-import { apiGet, loadApiImage, loadImage } from "../api-utils/api";
+import { loadImage, loadImageResult } from "../api-utils/api";
 import { ThumbnailSize, ElementType } from "../../shared/types";
-import { ElementPath, toElementApiPath } from "../../shared/onshape-path";
+import { ElementPath } from "../../shared/onshape-path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { IconHelp } from "@tabler/icons-react";
 
@@ -144,12 +144,18 @@ interface PreviewImageProps {
     path: ElementPath;
     /** The selection to preview; Onshape applies defaults for what it omits. */
     canonicalConfiguration: string;
+    /** Part of the thumbnail key, so an updated document renders again. */
+    microversionId: string;
     /** Stored thumbnail, shown instead of the live preview when not signed in. */
     largeThumbnailUrl?: string;
 }
 
+/** How often to re-check while the worker is still standing in the default. */
+const PREVIEW_POLL_MS = 4000;
+
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, canonicalConfiguration, largeThumbnailUrl } = props;
+    const { path, microversionId, canonicalConfiguration, largeThumbnailUrl } =
+        props;
     // A stored size, so the bytes this fetch returns are worth caching.
     const size = ThumbnailSize.LARGE;
     const isSignedIn = useIsSignedIn();
@@ -158,55 +164,24 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         useIsFetching({ queryKey: getConfigurationMatchKey() }) > 0;
     const targetElementType = useTargetElementType();
 
-    // Onshape's configured-thumbnail query is broken, so we use the undocumented
-    // insertables id flow — and poll, since the id lags behind the configuration.
-    const thumbnailIdQuery = useQuery({
-        queryKey: [
-            "thumbnail",
-            "id",
-            toElementApiPath(path),
-            canonicalConfiguration
-        ],
-        queryFn: async ({ signal }) => {
-            return apiGet("/thumbnail-id" + toElementApiPath(path), {
-                query: { configuration: canonicalConfiguration },
-                signal
-            }).then((value) => value.thumbnailId as string);
-        },
-        // Don't retry since failures are almost certainly due to an invalid configuration
-        retry: false,
-        enabled: !isFetchingConfiguration && isSignedIn
+    const url = thumbnailUrl({
+        elementId: path.elementId,
+        microversionId,
+        size,
+        canonicalConfiguration,
+        warm: true
     });
 
-    const thumbnailId = thumbnailIdQuery.data;
-
+    // The worker renders configurations in a workflow, so the first request
+    // starts one and stands in the element default until it lands.
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", thumbnailId],
-        queryFn: ({ signal }) => {
-            if (!thumbnailId) {
-                // Shouldn't happen due to enabled guard
-                return;
-            }
-            // No cacheId: the thumbnailId already names immutable content.
-            return loadApiImage("/thumbnail", {
-                query: { size, thumbnailId },
-                signal
-            });
-        },
+        queryKey: ["thumbnail", url],
+        queryFn: ({ signal }) => loadImageResult(url, signal),
         placeholderData: (previousData) => previousData,
-        // Cap max time between retries at 15 seconds with exponential backoff
-        retryDelay: (attempt) => {
-            // Try again after 3 seconds, 5 seconds, and then 15 seconds
-            if (attempt === 1) {
-                return 3000;
-            } else if (attempt === 2) {
-                return 5000;
-            }
-            return 15000;
-        },
-        retry: 5,
-        enabled:
-            !isFetchingConfiguration && thumbnailId !== undefined && isSignedIn
+        refetchInterval: (query) =>
+            query.state.data?.isFallback ? PREVIEW_POLL_MS : false,
+        retry: 2,
+        enabled: !isFetchingConfiguration && isSignedIn
     });
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
@@ -223,13 +198,13 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
-    if (thumbnailIdQuery.isError || thumbnailQuery.isError) {
+    if (thumbnailQuery.isError) {
         const action =
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
                 <SectionError
-                    title="The thumbnail timed out."
+                    title="The thumbnail could not be loaded."
                     // Standalone has no insert button to fall back on, and
                     // null suppresses the generic "contact the developers".
                     description={
@@ -253,9 +228,9 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 w={heightAndWidth.width}
                 h={heightAndWidth.height}
             >
-                <img src={thumbnailQuery.data} {...heightAndWidth} />
+                <img src={thumbnailQuery.data.url} {...heightAndWidth} />
             </Box>
-            {(thumbnailQuery.isFetching || thumbnailIdQuery.isFetching) && (
+            {thumbnailQuery.data.isFallback && (
                 <Loader pos="absolute" bottom={15} right={15} size={18} />
             )}
         </>

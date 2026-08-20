@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../shared/schema";
-import { ElementType, Vendor } from "../../shared/types";
+import { ElementType } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
     MOCK_ONSHAPE_API,
@@ -221,12 +221,9 @@ describe("insertable routes", () => {
     // heuristic, so its records and configuration row go away.
     it("POST /toggle-part-number-search clears the data when forcing off", async () => {
         await seedGroup(db);
-        // No vendor parsed out of the name is what makes it custom; the load
-        // path stores that, and the route reads it.
-        await seedInsertable(db, {
-            name: "Custom Bracket",
-            vendors: [Vendor.CUSTOM]
-        });
+        // No vendor recognized is what makes it custom; the load path stores
+        // that, and the route reads it.
+        await seedInsertable(db, { name: "Custom Bracket", vendors: [] });
         const spy = vi
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);

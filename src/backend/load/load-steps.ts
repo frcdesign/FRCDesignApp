@@ -1,5 +1,6 @@
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 import type { ThumbnailUrls } from "../../shared/types";
+import { NoSuchConfigurationError } from "../onshape-api/endpoints/thumbnails";
 import type { LoadContext } from "./load-common";
 
 /** The retry input a Workflow `delay` callback receives. */
@@ -40,17 +41,21 @@ export const ONSHAPE_STEP_RETRIES = {
 const THUMBNAIL_BASE_DELAY_SECONDS = 4;
 
 /** The ceiling the doubling stops at. */
-const THUMBNAIL_MAX_DELAY_SECONDS = 15 * 60;
+const THUMBNAIL_MAX_DELAY_SECONDS = 5 * 60;
 
 /**
  * Onshape gives no signal when a render lands, so the step polls: doubling from
- * four seconds to a fifteen-minute ceiling. Starting tight is the point, since
+ * four seconds to a five-minute ceiling. Starting tight is the point, since
  * most renders land within seconds. A rate limit overrides the curve.
  */
 function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
     if (rateLimited) {
         return rateLimited;
+    }
+    // Nothing to wait for; burn the remaining attempts immediately.
+    if (input.error instanceof NoSuchConfigurationError) {
+        return "0 seconds";
     }
     const seconds = Math.min(
         THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
@@ -60,11 +65,9 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
 }
 
 export const THUMBNAIL_STEP_RETRIES = {
-    // 10 attempts: waits of 4s, 8s, 16s … 512s, then the 15 minute ceiling, for
-    // roughly half an hour of polling before a render is given up on. Chosen to
-    // hold that window steady against the starting delay: a longer first wait
-    // covers the same span in fewer attempts.
-    limit: 10,
+    // 8 attempts: 4s, 8s … 256s, about eight and a half minutes. A tab Onshape
+    // never renders holds its library's reload open for that whole budget.
+    limit: 8,
     delay: thumbnailRetryDelay
 };
 

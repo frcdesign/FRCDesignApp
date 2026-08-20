@@ -112,16 +112,14 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     const parameters = query.data?.parameters;
-    // Reruns when the document's units arrive, so an early canonical form
-    // computed against the fallback units is replaced rather than kept.
     useEffect(() => {
         if (!parameters || !configuration) {
             return;
         }
         onCanonicalConfiguration?.(
-            canonicalizeConfiguration(configuration, parameters, unitInfo)
+            canonicalizeConfiguration(configuration, parameters)
         );
-    }, [parameters, unitInfo, configuration, onCanonicalConfiguration]);
+    }, [parameters, configuration, onCanonicalConfiguration]);
 
     const records = query.data?.records;
     useEffect(() => {

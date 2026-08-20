@@ -745,6 +745,32 @@ export interface EvaluateOptions {
 /**
  * Evaluates a string expression.
  */
+/**
+ * The expression's value in base units — meters, radians, or unitless. A bare
+ * number takes `defaultUnit`, as it does in the input. Undefined if it does not
+ * parse, which leaves the caller its raw text.
+ */
+export function evaluateBaseValue(
+    input: string,
+    quantityType: QuantityType,
+    defaultUnit: Unit
+): number | undefined {
+    let value: ValueWithUnits;
+    try {
+        value = evaluateExpressionValue(parseExpression(input), quantityType);
+    } catch {
+        return undefined;
+    }
+    if (
+        (quantityType === QuantityType.LENGTH ||
+            quantityType === QuantityType.ANGLE) &&
+        value.type === "number"
+    ) {
+        value = applyDefaultUnit(value, defaultUnit);
+    }
+    return value.value;
+}
+
 export function evaluateExpression(
     input: string,
     options: EvaluateOptions

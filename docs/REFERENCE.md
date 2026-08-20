@@ -39,19 +39,50 @@ KV is a key-value store (like a global dictionary). The app uses it exclusively 
 
 KV serves as a cheap, lightweight way to persist user data across multiple Cloudflare Workers (which Cloudflare automatically scales and provisions based on the app's current traffic). Because Workers are stateless — there is no in-memory session that persists between requests — KV is the right place to stash tokens between requests.
 
-### R2 — Thumbnail Storage (`c.env.THUMBNAILS`)
+### R2 — Blob Storage (`c.env.BLOB`)
 
-R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. The app uses it to store and cache thumbnails in order to improve reliability.
+R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. One bucket holds everything the app stores as a blob, kept apart by key prefix:
 
-Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits. Instead, we fetch a thumbnail from Onshape the first time it's needed, store it in R2, and serve it from R2 on all subsequent requests. Thumbnails are served via `/api/thumbnail/:size/:elementId`.
+| Prefix          | What it holds                                     | Lifetime                         |
+| --------------- | ------------------------------------------------- | -------------------------------- |
+| `thumbnails/`   | Rendered thumbnails, by element and configuration | See below                        |
+| `search-index/` | Each library's serialized MiniSearch index        | Rewritten on every index rebuild |
 
-### Workflows — Document Sync (`c.env.LOAD_DOCUMENT_WORKFLOW`)
+Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit.
+Thumbnails are keyed by whether they are the element's default or a specific configuration:
 
-When a user adds a new group (a new Onshape document) to the library, the app needs to walk the entire document structure, download metadata for every part and assembly, generate thumbnails, and write everything to D1. This can take many seconds — too long to do in a single HTTP request without timing out.
+```
+thumbnails/default/{elementId}/{microversionId}/{size}                 # never expires
+thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}      # ~90 day lifecycle rule
+```
 
-The `LoadDocumentWorkflow` class (defined in `src/backend/parse/load-document.ts`) handles this process as a background job. The HTTP request just kicks it off and returns immediately; the workflow runs to completion independently.
+The default is what everything else falls back to, so it must never be reclaimed. Configuration thumbnails expire under an R2 **lifecycle rule on the `config/` prefix**, which is configured on the bucket through the dashboard or API — it is not expressible in `wrangler.jsonc`, and it has to be set up before deploying. Per-prefix rules are what let `thumbnails/default/` and `search-index/` live in the same bucket without expiring.
+
+`{configKey}` is a short hash of the _canonical_ configuration — the one spelling every equivalent selection shares, with hidden and default-valued parameters dropped and quantities expressed in meters and radians. That is what makes two equivalent selections resolve to one cached image. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
+
+Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&c={canonicalConfiguration}&warm={bool}`:
+
+- **Hit** — streamed from R2 as immutable, cacheable for a year.
+- **Miss** — the element's default is served instead, for 60 seconds only, with an `X-Thumbnail-Fallback` header so the client knows to keep checking. An immutable fallback would pin the wrong image long after the real one landed.
+- **Miss with `warm=true`** — the miss also starts a `ThumbnailWorkflow` to render the configuration. Surfaces where the user picked the configuration (the insert menu, favorites) warm; search rows do not, so one cold search cannot start a render per row.
+- **Neither exists** — 404, and the client renders a placeholder.
+
+All rendering happens inside the workflow, which keeps Onshape's thumbnail id server-side. There is no HTTP path that proxies an Onshape thumbnail directly.
+
+### Workflows — Background Jobs
+
+Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. All three are defined in `src/backend/load/workflows.ts`:
+
+| Binding                 | Class                 | What it does                                                                         |
+| ----------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| `LOAD_LIBRARY_WORKFLOW` | `LoadLibraryWorkflow` | Reloads every group whose document has a new version, then rebuilds the search index |
+| `ADD_GROUP_WORKFLOW`    | `AddGroupWorkflow`    | Adds an Onshape document to a library and loads it                                   |
+| `THUMBNAIL_WORKFLOW`    | `ThumbnailWorkflow`   | Renders one configuration's thumbnails and stores them in R2                         |
+
+Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
+
+Each workflow carries the requesting user's `sessionId`, since it calls Onshape under their tokens after the request has ended.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 
@@ -94,13 +125,13 @@ Once the backend confirms authentication and serves the React app, the frontend 
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                          | Lifetime                                  | Who reads/writes it                                     |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)      | Backend Worker on every API request                     |
-| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days. | Backend Worker in `src/backend/auth.ts`                 |
-| **R2**             | Part and group thumbnail images                                                        | Indefinite (30-day browser cache-control) | Backend Worker in `src/backend/routes/thumbnails.ts`    |
-| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions          | Frontend only, via `src/frontend/api-utils/ui-state.ts` |
-| **sessionStorage** | Not used                                                                               | —                                         | —                                                       |
+| Store              | What it holds                                                                          | Lifetime                                                          | Who reads/writes it                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                    |
+| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/auth.ts`                                                |
+| **R2**             | Thumbnail images and per-library search indexes                                        | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/routes/thumbnails.ts` and `src/backend/library-data.ts` |
+| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions                                  | Frontend only, via `src/frontend/api-utils/ui-state.ts`                                |
+| **sessionStorage** | Not used                                                                               | —                                                                 | —                                                                                      |
 
 ## Codebase Map
 
@@ -125,7 +156,9 @@ The Cloudflare Worker. Key files and folders:
 - `library-data.ts` — assembles the full library response (groups + insertables + configurations)
 - `routes/` — endpoints callable by the frontend
 - `onshape-api/` — all code that communicates with Onshape's REST API (`onshape-api.ts` for the client class, `api-path.ts` for URL construction, `endpoints/` for per-category wrappers)
-- `parse/` — `load-document.ts` runs the Cloudflare Workflow that syncs an Onshape document into D1
+- `load/` — the Workflows and what they run: `workflows.ts` defines all three, `load-group.ts` and `load-insertable.ts` do the work, `load-steps.ts` holds the retry policies, `job-tracker.ts` tracks what is running
+- `parse/` — pure functions turning Onshape responses into what we store: configurations, configuration records, vendors, document contents, build checks
+- `sign-in-utils.ts` / `access-level-utils.ts` — the two authorization gates: signed in to Onshape at all, versus on the admin team
 
 ### `src/frontend/`
 

@@ -8,6 +8,9 @@ import { ThumbnailSize } from "./types";
 /** Short on purpose: the real render can land at any moment and must take over. */
 export const THUMBNAIL_FALLBACK_CACHE_TTL = 60;
 
+/** Marks a response as the element default standing in for an unrendered configuration. */
+export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
+
 /** Defaults get their own prefix: everything falls back to them, so they never expire. */
 export function thumbnailKey(
     elementId: string,

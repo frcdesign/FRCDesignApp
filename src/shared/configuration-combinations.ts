@@ -61,6 +61,8 @@ export interface ConfigurationCount {
      */
     count: number | null;
     band: IndexingBand;
+    /** The combinations counted, so the load path need not enumerate again. */
+    configurations: ParameterValues[];
 }
 
 /**
@@ -73,7 +75,7 @@ export function countConfigurations(
 ): ConfigurationCount {
     const { configurations, capped } = enumerateConfigurations(parameters);
     if (capped) {
-        return { count: null, band: IndexingBand.EXCEEDED };
+        return { count: null, band: IndexingBand.EXCEEDED, configurations: [] };
     }
     // The lone default that nothing-to-vary enumerates to is not a configuration
     // of its own: a non-configurable insertable has none.
@@ -87,7 +89,8 @@ export function countConfigurations(
         band:
             count >= AUTO_INDEX_THRESHOLD
                 ? IndexingBand.MANUAL
-                : IndexingBand.AUTOMATIC
+                : IndexingBand.AUTOMATIC,
+        configurations
     };
 }
 

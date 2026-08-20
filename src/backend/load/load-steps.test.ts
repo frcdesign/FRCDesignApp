@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
+import { NoSuchConfigurationError } from "../onshape-api/endpoints/thumbnails";
 import { ONSHAPE_STEP_RETRIES, THUMBNAIL_STEP_RETRIES } from "./load-steps";
 
 /** The delay before the retry that follows attempt `attempt`. */
@@ -22,21 +23,29 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
         ]);
     });
 
-    it("stops doubling at fifteen minutes", () => {
-        expect(thumbnailDelay(8)).toEqual("512 seconds");
-        expect(thumbnailDelay(9)).toEqual("900 seconds");
-        expect(thumbnailDelay(50)).toEqual("900 seconds");
+    it("stops doubling at five minutes", () => {
+        expect(thumbnailDelay(7)).toEqual("256 seconds");
+        expect(thumbnailDelay(8)).toEqual("300 seconds");
+        expect(thumbnailDelay(50)).toEqual("300 seconds");
     });
 
-    // The waits sum to a little over half an hour, which is how long a render
-    // gets before it's recorded as a build issue instead.
-    it("polls for about half an hour before giving up", () => {
+    // A tab Onshape never renders holds its library's reload open for this
+    // long, so the budget is a load-time cost, not just a thumbnail one.
+    it("polls for about eight minutes before giving up", () => {
         const total = Array.from(
             { length: THUMBNAIL_STEP_RETRIES.limit - 1 },
             (_, i) => Number.parseInt(thumbnailDelay(i + 1), 10)
         ).reduce((sum, seconds) => sum + seconds, 0);
 
-        expect(total).toBe(1920);
+        expect(total).toBe(508);
+    });
+
+    // A warm request naming a configuration that matches nothing would
+    // otherwise hold a workflow instance for the whole budget.
+    it("does not wait on a configuration that matches nothing", () => {
+        const error = new NoSuchConfigurationError("no insertable");
+        expect(thumbnailDelay(1, error)).toEqual("0 seconds");
+        expect(thumbnailDelay(6, error)).toEqual("0 seconds");
     });
 
     // Polling sooner than Onshape asked only earns another 429.

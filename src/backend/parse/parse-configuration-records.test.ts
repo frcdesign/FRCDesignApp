@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { countConfigurations } from "../../shared/configuration-combinations";
 import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import * as MetadataEndpoints from "../onshape-api/endpoints/metadata";
 import { OnshapeApi } from "../onshape-api/onshape-api";
@@ -88,20 +89,17 @@ describe("decideIndexing", () => {
             index: false,
             issues: TOO_MANY
         },
-        // No recognized vendor is not a reason to skip indexing: the heuristic
-        // misses plenty of real vendor parts, so these behave like any other.
-        { vendors: [], configs: 127, force: false, index: true, issues: [] },
-        { vendors: [], configs: 128, force: false, index: false, issues: MANY },
-        // Custom: never auto-eligible, never flagged, but still enableable.
+        // No recognized vendor means team-made: never auto-eligible, never
+        // flagged, but still enableable by an admin.
         {
-            vendors: [Vendor.CUSTOM],
+            vendors: [],
             configs: 50,
             force: false,
             index: false,
             issues: []
         },
         {
-            vendors: [Vendor.CUSTOM],
+            vendors: [],
             configs: 50,
             force: true,
             index: true,
@@ -109,14 +107,14 @@ describe("decideIndexing", () => {
         },
         // Nor flagged for a count it was never going to index against...
         {
-            vendors: [Vendor.CUSTOM],
+            vendors: [],
             configs: 200,
             force: false,
             index: false,
             issues: []
         },
         {
-            vendors: [Vendor.CUSTOM],
+            vendors: [],
             configs: 600,
             force: false,
             index: false,
@@ -124,7 +122,7 @@ describe("decideIndexing", () => {
         },
         // ...unless an admin enabled it and is owed the reason it did nothing.
         {
-            vendors: [Vendor.CUSTOM],
+            vendors: [],
             configs: 600,
             force: true,
             index: false,
@@ -133,9 +131,15 @@ describe("decideIndexing", () => {
     ])(
         "vendors=$vendors configs=$configs force=$force",
         ({ vendors, configs, force, index, issues }) => {
-            expect(
-                decideIndexing(vendors, paramsWithConfigs(configs), force)
-            ).toEqual({ shouldIndex: index, buildIssues: issues });
+            const { shouldIndex, buildIssues } = decideIndexing(
+                vendors,
+                paramsWithConfigs(configs),
+                force
+            );
+            expect({ shouldIndex, buildIssues }).toEqual({
+                shouldIndex: index,
+                buildIssues: issues
+            });
         }
     );
 });
@@ -277,6 +281,7 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             [enumParam("A", ["a1", "a2"])],
+            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
             false
         );
 
@@ -299,6 +304,9 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             [{ ...enumParam("A", ["a1", "a2"]), default: "a2" }],
+            countConfigurations([
+                { ...enumParam("A", ["a1", "a2"]), default: "a2" }
+            ]).configurations,
             false
         );
 
@@ -323,6 +331,7 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             [enumParam("A", ["a1", "a2"])],
+            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
             false
         );
 
@@ -350,6 +359,7 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             [enumParam("A", ["a1", "a2"])],
+            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
             true
         );
 
@@ -358,7 +368,9 @@ describe("parseConfigurationRecords", () => {
         ]);
     });
 
-    it("flags capped enumeration but still records the default", async () => {
+    // Past the cap decideIndexing turns indexing off and raises the issue, so
+    // this only ever runs with nothing to enumerate.
+    it("records just the default when there are no combinations", async () => {
         const spy = mockParts(() => [
             { partId: "p", partNumber: "PN-default" }
         ]);
@@ -368,15 +380,13 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             paramsWithConfigs(600),
+            countConfigurations(paramsWithConfigs(600)).configurations,
             false
         );
 
-        expect(result.buildIssues).toEqual([
-            { type: BuildIssueType.TOO_MANY_CONFIGURATIONS }
-        ]);
+        expect(result.buildIssues).toEqual([]);
         expect(result.records).toHaveLength(1);
         expect(result.records[0].partNumber).toBe("PN-default");
-        // Only the default probe; the combinations are never fetched.
         expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -392,6 +402,7 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.ASSEMBLY,
             [],
+            countConfigurations([]).configurations,
             false
         );
 

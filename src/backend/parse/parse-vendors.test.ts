@@ -89,13 +89,11 @@ describe("parseVendors", () => {
         expect(parseVendors("Generic Part", parameters)).toEqual([]);
     });
 
-    // Custom is the one vendor that blocks indexing, so the name has to reach it.
-    it("reads Custom out of a name, whatever its case", () => {
-        expect(parseVendors("Custom Bracket", [])).toEqual([Vendor.CUSTOM]);
-        expect(parseVendors("CUSTOM gusset", [])).toEqual([Vendor.CUSTOM]);
-    });
-
-    it("does not read Custom out of an unrelated word", () => {
+    // "Custom" is not a vendor: a team-made part is one nothing matched, which
+    // is what isCustomPart tests for.
+    it("reads no vendor out of a team-made part's name", () => {
+        expect(parseVendors("Custom Bracket", [])).toEqual([]);
+        expect(parseVendors("CUSTOM gusset", [])).toEqual([]);
         expect(parseVendors("Customizable Spacer", [])).toEqual([]);
     });
 });

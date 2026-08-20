@@ -13,7 +13,6 @@ import {
 import { getInsertableElementPath } from "./insertables";
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
-import { requireSignInMiddleware } from "../sign-in-utils";
 import { bumpLibraryVersion } from "../library-data";
 import {
     getElementThumbnail,
@@ -28,6 +27,7 @@ import { HttpStatus } from "http-status-ts";
 import { ThumbnailSize, ThumbnailUrls } from "../../shared/types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
+    THUMBNAIL_FALLBACK_HEADER,
     type ThumbnailParams,
     thumbnailKey,
     thumbnailUrl
@@ -266,7 +266,9 @@ thumbnailRoutes.get(
         }
         // Unlike a hit, this url does not pin these bytes.
         setCacheTtl(c, THUMBNAIL_FALLBACK_CACHE_TTL);
-        return thumbnailResponse(fallback);
+        const response = thumbnailResponse(fallback);
+        response.headers.set(THUMBNAIL_FALLBACK_HEADER, "1");
+        return response;
     }
 );
 
@@ -293,57 +295,6 @@ async function warmConfigurationThumbnail(
         // Never fatal: the caller still has the default thumbnail to serve.
     }
 }
-
-const liveThumbnailQuery = z.object({
-    thumbnailId: z.string().min(1),
-    size: z.enum(ThumbnailSize).default(ThumbnailSize.LARGE)
-});
-
-/**
- * GET /api/thumbnail?size=X&thumbnailId=Y — live from Onshape, for the insert
- * menu preview. Proxy only: see the note on why it no longer stores what it
- * proxies.
- */
-thumbnailRoutes.get(
-    "/thumbnail",
-    requireSignInMiddleware,
-    // The thumbnailId names immutable content, so there is no `?v=` to bust.
-    cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
-    zValidator("query", liveThumbnailQuery),
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const { thumbnailId, size } = c.req.valid("query");
-
-        const buffer = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-        return new Response(buffer, {
-            headers: { "Content-Type": "image/gif" }
-        });
-    }
-);
-
-/** GET /api/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId */
-thumbnailRoutes.get(
-    "/thumbnail-id/d/:docId/:instanceType/:instanceId/e/:elementId",
-    requireSignInMiddleware,
-    // Its url names an immutable version, so there is no `?v=` to bust.
-    cacheMiddleware(CachePolicy.PUBLIC_CACHE, { versioned: false }),
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const elementPath: ElementPath = {
-            documentId: c.req.param("docId"),
-            instanceId: c.req.param("instanceId"),
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")
-        };
-        const configuration = c.req.query("configuration");
-        const thumbnailId = await getThumbnailId(
-            onshapeApi,
-            elementPath,
-            configuration
-        );
-        return c.json({ thumbnailId });
-    }
-);
 
 /** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
 thumbnailRoutes.post(

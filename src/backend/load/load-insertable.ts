@@ -84,6 +84,7 @@ export async function loadInsertable(
               elementPath,
               target.elementType,
               parameters,
+              indexing.configurations,
               isOpenComposite
           )
         : NO_RECORDS;

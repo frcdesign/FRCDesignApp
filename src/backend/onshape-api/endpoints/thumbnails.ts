@@ -53,6 +53,9 @@ export function getThumbnailFromWorkspace(
     });
 }
 
+/** The configuration matches no insertable, so retrying can only fail again. */
+export class NoSuchConfigurationError extends Error {}
+
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
@@ -75,7 +78,9 @@ export async function getThumbnailId(
     // A configuration matching nothing comes back with no items at all.
     const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
     if (!thumbnailId) {
-        throw new Error("Onshape returned no insertable for the configuration");
+        throw new NoSuchConfigurationError(
+            "Onshape returned no insertable for the configuration"
+        );
     }
     return thumbnailId;
 }

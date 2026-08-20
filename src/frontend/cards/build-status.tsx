@@ -500,18 +500,39 @@ export function InsertableStatusBadge({
             issues={getInsertableBuildIssues(insertable)}
             lastLoadedAt={insertable.lastLoadedAt}
             hoverMenu={
-                <>
-                    <InsertableAdminSection
-                        insertableId={insertableId}
-                        status={insertable}
-                    />
-                    <InsertableParsedSection status={insertable} />
-                    <ConfigurationSection
-                        parameters={insertable.configuration?.parameters}
-                    />
-                </>
+                <InsertableHoverMenu
+                    insertableId={insertableId}
+                    status={insertable}
+                />
             }
         />
+    );
+}
+
+/** Enumerates configurations once, for every row of the card that needs it. */
+function InsertableHoverMenu({
+    insertableId,
+    status
+}: {
+    insertableId: string;
+    status: InsertableBuildStatus;
+}): ReactNode {
+    const configurationCount = useConfigurationCount(status);
+    return (
+        <>
+            <InsertableAdminSection
+                insertableId={insertableId}
+                status={status}
+                configurationCount={configurationCount}
+            />
+            <InsertableParsedSection
+                status={status}
+                count={configurationCount.count}
+            />
+            <ConfigurationSection
+                parameters={status.configuration?.parameters}
+            />
+        </>
     );
 }
 
@@ -596,10 +617,12 @@ function SwitchRow(props: {
 /** The editable admin toggles for an insertable. */
 function InsertableAdminSection({
     insertableId,
-    status
+    status,
+    configurationCount
 }: {
     insertableId: string;
     status: InsertableBuildStatus;
+    configurationCount: ConfigurationCount;
 }): ReactNode {
     return (
         <Stack gap="sm">
@@ -612,7 +635,11 @@ function InsertableAdminSection({
                 insertableId={insertableId}
                 supportsFasten={status.supportsFasten}
             />
-            <IndexingRow insertableId={insertableId} status={status} />
+            <IndexingRow
+                insertableId={insertableId}
+                status={status}
+                band={configurationCount.band}
+            />
         </Stack>
     );
 }
@@ -658,12 +685,13 @@ function FastenSwitch({
  */
 function IndexingRow({
     insertableId,
-    status
+    status,
+    band
 }: {
     insertableId: string;
     status: InsertableBuildStatus;
+    band: IndexingBand;
 }): ReactNode {
-    const { band } = useConfigurationCount(status);
     const mutation = useTogglePartNumberSearchMutation(insertableId);
 
     let control: ReactNode;
@@ -790,11 +818,12 @@ function configurationCountValue(count: number | null): StateRowValue {
 
 /** The read-only auto-detected facts for an insertable. */
 function InsertableParsedSection({
-    status
+    status,
+    count
 }: {
     status: InsertableBuildStatus;
+    count: number | null;
 }): ReactNode {
-    const { count } = useConfigurationCount(status);
     return (
         <>
             <Divider />

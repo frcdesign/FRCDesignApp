@@ -26,7 +26,6 @@ import {
 } from "../../shared/build-issues";
 import {
     countConfigurations,
-    enumerateConfigurations,
     IndexingBand,
     isIndexingEnabled
 } from "../../shared/configuration-combinations";
@@ -75,6 +74,8 @@ export interface IndexingDecision {
     shouldIndex: boolean;
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
+    /** The combinations to probe, already enumerated by the count. */
+    configurations: ParameterValues[];
 }
 
 /**
@@ -86,7 +87,7 @@ export function decideIndexing(
     parameters: ConfigurationParameter[],
     forceIndex: boolean
 ): IndexingDecision {
-    const { band } = countConfigurations(parameters);
+    const { band, configurations } = countConfigurations(parameters);
     const isCustom = isCustomPart(vendors);
     const isCandidate = !isCustom || forceIndex;
     const shouldIndex = isIndexingEnabled(isCustom, band, forceIndex);
@@ -96,16 +97,18 @@ export function decideIndexing(
             shouldIndex,
             buildIssues: isCandidate
                 ? [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }]
-                : []
+                : [],
+            configurations
         };
     }
     if (band === IndexingBand.MANUAL && !isCustom && !forceIndex) {
         return {
             shouldIndex,
-            buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }]
+            buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }],
+            configurations
         };
     }
-    return { shouldIndex, buildIssues: [] };
+    return { shouldIndex, buildIssues: [], configurations };
 }
 
 /** Trims a raw metadata value; a missing or blank one becomes `null`. */
@@ -247,6 +250,7 @@ export async function parseConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
+    configurations: ParameterValues[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await probeConfiguration(
@@ -256,7 +260,7 @@ export async function parseConfigurationRecords(
         {},
         isOpenComposite
     );
-    const { batches, capped } = planBatches(parameters);
+    const batches = planBatches(configurations, parameters);
 
     const batchRecords: ConfigurationRecord[][] = [];
     for (const batch of batches) {
@@ -270,7 +274,7 @@ export async function parseConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, capped, parameters);
+    return toResult(defaultRecord, batchRecords, parameters);
 }
 
 /**
@@ -284,6 +288,7 @@ export async function loadConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
+    configurations: ParameterValues[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await ctx.step.do(
@@ -298,7 +303,7 @@ export async function loadConfigurationRecords(
                 isOpenComposite
             )
     );
-    const { batches, capped } = planBatches(parameters);
+    const batches = planBatches(configurations, parameters);
 
     const batchRecords: ConfigurationRecord[][] = [];
     for (const [index, batch] of batches.entries()) {
@@ -317,7 +322,7 @@ export async function loadConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, capped, parameters);
+    return toResult(defaultRecord, batchRecords, parameters);
 }
 
 /**
@@ -328,14 +333,10 @@ export async function loadConfigurationRecords(
  * probe already asked for. Dropping it leaves no batches rather than probing the
  * defaults twice.
  */
-function planBatches(parameters: ConfigurationParameter[]): {
-    batches: ParameterValues[][];
-    capped: boolean;
-} {
-    const { configurations, capped } = enumerateConfigurations(parameters);
-    if (capped) {
-        return { batches: [], capped: true };
-    }
+function planBatches(
+    configurations: ParameterValues[],
+    parameters: ConfigurationParameter[]
+): ParameterValues[][] {
     // The default is probed separately, and anything canonicalizing to it would
     // land on the same record — so drop every all-defaults combination, not just
     // the literally empty one.
@@ -349,7 +350,7 @@ function planBatches(parameters: ConfigurationParameter[]): {
     for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
         batches.push(toFetch.slice(i, i + BATCH_SIZE));
     }
-    return { batches, capped: false };
+    return batches;
 }
 
 /** Reads the record Onshape reports for an element in a given configuration. */
@@ -405,7 +406,6 @@ async function fetchBatch(
 function toResult(
     defaultRecord: ConfigurationRecord,
     batches: ConfigurationRecord[][],
-    capped: boolean,
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
     // Canonical, so a record addresses the same thumbnail the insert menu does
@@ -418,12 +418,9 @@ function toResult(
         )
     }));
 
+    // A capped insertable never reaches here: decideIndexing turns indexing off
+    // past the cap, and raises TOO_MANY_CONFIGURATIONS itself.
     let buildIssues: BuildIssue[] = [];
-    if (capped) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.TOO_MANY_CONFIGURATIONS
-        });
-    }
     if (records.some((record) => record.hasMultipleParts)) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.MULTIPLE_PARTS

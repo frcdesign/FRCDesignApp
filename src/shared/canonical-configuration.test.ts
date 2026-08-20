@@ -7,11 +7,11 @@ import {
     encodeCanonicalConfiguration
 } from "./canonical-configuration";
 import { ParameterValues, VisibilityType } from "./configuration-models";
+import { QuantityType, Unit } from "./configuration-enums";
 import {
     boolParam,
     enumParam,
-    quantityParam,
-    TEST_UNIT_INFO
+    quantityParam
 } from "../__test_utils__/configuration-fixtures";
 
 /** The key of an already-canonical selection, which is what callers compare. */
@@ -30,11 +30,7 @@ describe("canonicalizeConfiguration", () => {
         configuration: Record<string, string>,
         parameters = [size, flag, length]
     ) {
-        return canonicalizeConfiguration(
-            configuration,
-            parameters,
-            TEST_UNIT_INFO
-        );
+        return canonicalizeConfiguration(configuration, parameters);
     }
 
     it("drops values that match the parameter default", () => {
@@ -104,8 +100,7 @@ describe("canonical keys agree across surfaces", () => {
         // What the insert menu holds: everything, including the defaults.
         const selection = canonicalizeConfiguration(
             { size: "l", flag: "false", finish: "matte", length: "1 in" },
-            parameters,
-            TEST_UNIT_INFO
+            parameters
         );
         expect(keyOf(record)).toBe(keyOf(selection));
     });
@@ -120,15 +115,54 @@ describe("canonical keys agree across surfaces", () => {
         ];
         for (const selection of selections) {
             expect(
-                keyOf(
-                    canonicalizeConfiguration(
-                        selection,
-                        parameters,
-                        TEST_UNIT_INFO
-                    )
-                )
+                keyOf(canonicalizeConfiguration(selection, parameters))
             ).not.toBe(keyOf(record));
         }
+    });
+});
+
+describe("quantity canonicalization", () => {
+    const length = quantityParam("length");
+    const angle = quantityParam("angle", {
+        quantityType: QuantityType.ANGLE,
+        unit: Unit.DEGREE,
+        default: "0 deg",
+        defaultValue: 0,
+        max: 360
+    });
+
+    it("spells a length in meters, whatever unit was typed", () => {
+        for (const value of ["2 in", "50.8 mm", "5.08 cm", "(1 + 1) in"]) {
+            expect(
+                canonicalizeConfiguration({ length: value }, [length])
+            ).toEqual({ length: "0.0508 m" });
+        }
+    });
+
+    it("spells an angle in radians", () => {
+        expect(
+            canonicalizeConfiguration({ angle: "180 deg" }, [angle])
+        ).toEqual({ angle: `${Number(Math.PI.toFixed(7))} rad` });
+    });
+
+    // The document's display units used to decide the spelling, so the same
+    // selection keyed differently for two users.
+    it("does not depend on the document's units", () => {
+        expect(canonicalizeConfiguration({ length: "1 in" }, [length])).toEqual(
+            canonicalizeConfiguration({ length: "25.4 mm" }, [length])
+        );
+    });
+
+    it("drops a value equal to the default in another unit", () => {
+        expect(
+            canonicalizeConfiguration({ length: "25.4 mm" }, [length])
+        ).toEqual({});
+    });
+
+    it("keeps an unparseable value as typed", () => {
+        expect(
+            canonicalizeConfiguration({ length: "#value" }, [length])
+        ).toEqual({ length: "#value" });
     });
 });
 

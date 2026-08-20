@@ -156,7 +156,7 @@ describe("countConfigurations", () => {
     }
 
     it("counts an insertable with nothing to vary as having none", () => {
-        expect(countConfigurations([])).toEqual({
+        expect(countConfigurations([])).toMatchObject({
             count: 0,
             band: IndexingBand.AUTOMATIC
         });
@@ -166,7 +166,7 @@ describe("countConfigurations", () => {
     // multiplying the count, so they leave nothing to vary either.
     it("ignores parameters that don't vary the build", () => {
         const cosmetic = { ...enumParam("A", ["x", "y"]), isCosmetic: true };
-        expect(countConfigurations([cosmetic])).toEqual({
+        expect(countConfigurations([cosmetic])).toMatchObject({
             count: 0,
             band: IndexingBand.AUTOMATIC
         });
@@ -182,7 +182,9 @@ describe("countConfigurations", () => {
     ])(
         "puts $configs configurations in the $band band",
         ({ configs, band }) => {
-            expect(countConfigurations(paramsWithConfigs(configs))).toEqual({
+            expect(
+                countConfigurations(paramsWithConfigs(configs))
+            ).toMatchObject({
                 count: configs,
                 band
             });
@@ -194,7 +196,7 @@ describe("countConfigurations", () => {
             countConfigurations(
                 paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS + 1)
             )
-        ).toEqual({ count: null, band: IndexingBand.EXCEEDED });
+        ).toMatchObject({ count: null, band: IndexingBand.EXCEEDED });
     });
 });
 

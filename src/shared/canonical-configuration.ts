@@ -5,11 +5,11 @@
 import {
     type ConfigurationParameter,
     ParameterType,
-    type ParameterValues,
-    type UnitInfo
+    type ParameterValues
 } from "./configuration-models";
-import { evaluateCondition, getEvaluateOptions } from "./configuration-utils";
-import { evaluateExpression } from "./input-parser";
+import { QuantityType, Unit, getUnitDisplayStr } from "./configuration-enums";
+import { evaluateCondition } from "./configuration-utils";
+import { evaluateBaseValue } from "./input-parser";
 
 /** The element default, which is what an empty canonical configuration encodes. */
 export const DEFAULT_CANONICAL_CONFIGURATION = "";
@@ -17,20 +17,36 @@ export const DEFAULT_CANONICAL_CONFIGURATION = "";
 /** The key for an element's default configuration (what everything falls back to). */
 export const DEFAULT_CONFIGURATION_KEY = "default";
 
+/** Decimals kept on a base-unit value: 0.1 µm, past any real CAD tolerance. */
+const BASE_UNIT_PRECISION = 7;
+
+/** Base units, so the spelling never depends on the document's display units. */
+function baseUnit(quantityType: QuantityType): Unit {
+    if (quantityType === QuantityType.LENGTH) return Unit.METER;
+    if (quantityType === QuantityType.ANGLE) return Unit.RADIAN;
+    return Unit.UNITLESS;
+}
+
 /** Normalizes one parameter's raw value to its canonical spelling. */
 function canonicalizeValue(
     parameter: ConfigurationParameter,
-    value: string,
-    unitInfo?: UnitInfo
+    value: string
 ): string {
-    if (parameter.type === ParameterType.QUANTITY && unitInfo) {
-        // "1in", "1 in", and "(0.5 + 0.5) in" are one configuration; the rounded
-        // display form is its single spelling. Unparseable values ride as-is.
-        const result = evaluateExpression(
+    if (parameter.type === ParameterType.QUANTITY) {
+        // "1in", "1 in", "(0.5 + 0.5) in" and "25.4 mm" are one configuration.
+        // Unparseable values ride as-is.
+        const base = evaluateBaseValue(
             value,
-            getEvaluateOptions(parameter, unitInfo)
+            parameter.quantityType,
+            parameter.unit
         );
-        return result.hasError ? value.trim() : result.displayExpression;
+        if (base === undefined) {
+            return value.trim();
+        }
+        const unit = baseUnit(parameter.quantityType);
+        const rounded = Number(base.toFixed(BASE_UNIT_PRECISION));
+        const suffix = getUnitDisplayStr(unit);
+        return suffix ? `${rounded} ${suffix}` : `${rounded}`;
     }
     if (parameter.type === ParameterType.BOOLEAN) {
         return value.trim().toLowerCase();
@@ -44,8 +60,7 @@ function canonicalizeValue(
  */
 export function canonicalizeConfiguration(
     configuration: ParameterValues,
-    parameters: ConfigurationParameter[],
-    unitInfo?: UnitInfo
+    parameters: ConfigurationParameter[]
 ): ParameterValues {
     const canonicalConfiguration: ParameterValues = {};
     for (const parameter of parameters) {
@@ -59,11 +74,10 @@ export function canonicalizeConfiguration(
         ) {
             continue;
         }
-        const canonicalValue = canonicalizeValue(parameter, value, unitInfo);
+        const canonicalValue = canonicalizeValue(parameter, value);
         const canonicalDefault = canonicalizeValue(
             parameter,
-            parameter.default,
-            unitInfo
+            parameter.default
         );
         if (canonicalValue === canonicalDefault) {
             continue;

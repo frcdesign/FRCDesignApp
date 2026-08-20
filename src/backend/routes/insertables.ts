@@ -10,7 +10,10 @@ import { requireSignInMiddleware } from "../sign-in-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { type ElementPath, INSTANCE_TYPES } from "../../shared/onshape-path";
-import { type ConfigurationParameter } from "../../shared/configuration-models";
+import {
+    type ConfigurationParameter,
+    type ParameterValues
+} from "../../shared/configuration-models";
 import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
@@ -148,7 +151,8 @@ insertableRoutes.post(
                   elementId: row.elementId,
                   elementType: row.elementType,
                   isOpenComposite: row.isOpenComposite,
-                  parameters
+                  parameters,
+                  configurations: indexing.configurations
               })
             : NO_RECORDS;
 
@@ -209,6 +213,7 @@ function indexRecords(
         elementType: ElementType;
         isOpenComposite: boolean;
         parameters: ConfigurationParameter[];
+        configurations: ParameterValues[];
     }
 ): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
@@ -222,6 +227,7 @@ function indexRecords(
         sourcePath,
         insertable.elementType,
         insertable.parameters,
+        insertable.configurations,
         insertable.isOpenComposite
     );
 }
