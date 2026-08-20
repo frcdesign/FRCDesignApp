@@ -7,8 +7,8 @@ import type { SettingsUpdate } from "./settings";
 
 export const settingsRoutes = getApp();
 
-/** POST /api/user-data — update the caller's stored settings */
-settingsRoutes.post("/user-data", requireSignInMiddleware, async (c) => {
+/** POST /api/settings — update the caller's stored settings */
+settingsRoutes.post("/settings", requireSignInMiddleware, async (c) => {
     const userId = await c.var.getUserId();
 
     const body = await c.req.json<SettingsUpdate>();

@@ -9,14 +9,14 @@ export function useSaveSettings() {
     const isSignedIn = useIsSignedIn();
 
     const { mutate } = useMutation({
-        mutationKey: ["user-data"],
+        mutationKey: ["settings"],
         mutationFn: async (newSettings: SettingsUpdate) => {
             // Not signed in: no server-side user row; persist locally instead.
             if (!isSignedIn) {
                 writeLocalSettings(newSettings);
                 return;
             }
-            return apiPost("/user-data", { body: newSettings });
+            return apiPost("/settings", { body: newSettings });
         },
         onError: () => {
             showErrorToast("Unexpectedly failed to update settings.");

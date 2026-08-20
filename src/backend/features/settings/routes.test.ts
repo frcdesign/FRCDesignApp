@@ -19,11 +19,11 @@ describe("settings routes", () => {
         await resetDb(db);
     });
 
-    it("POST /user-data updates the user's settings", async () => {
+    it("POST /settings updates the caller's settings", async () => {
         const app = createTestApp();
 
         const res = await app.request(
-            "/api/user-data",
+            "/api/settings",
             jsonRequest("POST", { theme: Theme.DARK }),
             env
         );

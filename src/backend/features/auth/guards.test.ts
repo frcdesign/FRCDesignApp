@@ -28,7 +28,7 @@ describe("requireSignInMiddleware", () => {
         expect(favorites.status).toBe(401);
 
         const userData = await app.request(
-            "/api/user-data",
+            "/api/settings",
             jsonRequest("POST", { theme: Theme.DARK }),
             env
         );
