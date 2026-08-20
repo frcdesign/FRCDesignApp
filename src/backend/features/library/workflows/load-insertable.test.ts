@@ -152,7 +152,7 @@ describe("saveInsertable", () => {
         expect(config?.records).toEqual([record("PN-default")]);
     });
 
-    // library-data reads `records` without re-checking that the insertable is
+    // features/library/db.ts reads `records` without re-checking that the insertable is
     // still indexed, so an empty reload must drop the row, not blank it.
     it("drops the configuration row when there are no parameters or records", async () => {
         await saveInsertable(
