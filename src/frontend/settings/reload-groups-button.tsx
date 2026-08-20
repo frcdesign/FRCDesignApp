@@ -30,10 +30,8 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         },
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
-            // Seeding the status (rather than invalidating) both shows the
-            // spinner immediately and starts the poll, which stays idle until
-            // something is known to be running. The navbar watcher refreshes
-            // and reports completion when it finishes.
+            // Seeding rather than invalidating shows the spinner without waiting
+            // for a round trip.
             const justStarted: JobStatus = { running: true, runningForMs: 0 };
             queryClient.setQueryData<JobStatus>(
                 jobStatusQueryKey(libraryId),

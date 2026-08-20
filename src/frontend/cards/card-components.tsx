@@ -156,9 +156,8 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
-    // The part number + name of the hit's best-matching configuration, dropping
-    // a name that just repeats the title. Each carries its own match positions,
-    // so a query that hit the part number underlines it there too.
+    // The hit's best-matching configuration, minus a name repeating the title.
+    // Each carries its own positions, so a part-number hit underlines there too.
     const details = searchHit
         ? (
               [

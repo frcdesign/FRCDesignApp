@@ -1,10 +1,6 @@
 /**
- * Plain-object factories for the load pipeline's insertable shapes, so a test can
- * build a target or a parsed result and override only the fields under test.
- *
- * Import this module directly rather than through `__test_utils__/index.ts`: it
- * reaches into the backend load modules, and the barrel also re-exports the
- * Workers-only test-app helpers.
+ * Factories for the load pipeline's insertable shapes. Import directly: the
+ * barrel re-exports Workers-only helpers these tests cannot resolve.
  */
 import type { InsertableTarget } from "../backend/load/load-common";
 import type { ParsedInsertable } from "../backend/load/load-insertable";

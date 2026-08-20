@@ -24,9 +24,6 @@ export enum FontWeight {
     BOLD = 700
 }
 
-/**
- * Creates a Mantine-style border.
- */
 export const BORDER = "1px solid var(--mantine-color-default-border)";
 
 /** The app's primary color as a filled background. */
@@ -42,10 +39,8 @@ export enum PrimaryColor {
 }
 
 /**
- * The `color` for Mantine controls sitting on the filled header. Hex, and not
- * {@link PrimaryColor.CONTRAST} or `"white"`: Mantine derives each variant's
- * border and hover tint by parsing `color`, and its parser understands only
- * hex/rgb/hsl — a css var or a named color silently resolves to black.
+ * Hex, not a css var or a named color: Mantine parses `color` to derive border
+ * and hover tints, and anything else silently resolves to black.
  */
 export const HEADER_CONTROL_COLOR = "#fff";
 

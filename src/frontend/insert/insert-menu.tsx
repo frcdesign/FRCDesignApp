@@ -68,9 +68,8 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 }
 
 /**
- * The menu's header: the element's name, and under it what the selected
- * configuration actually produces. Both are shown — the element name is how the
- * part was found, the part number and name are what gets inserted.
+ * Both are shown: the element name is how the part was found, the part number
+ * and name are what gets inserted.
  */
 function InsertMenuTitle({
     name,

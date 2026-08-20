@@ -105,9 +105,8 @@ export async function trackJob(
 }
 
 /**
- * Removes a job's entry as it finishes — the workflow calls this in a final step
- * so the running-job state clears promptly instead of waiting out the TTL. Only
- * its own entry is touched, so concurrent jobs are unaffected.
+ * Called in the workflow's final step so running state clears promptly rather
+ * than waiting out the TTL. Touches only its own entry.
  */
 export async function untrackJob(
     env: AppBindings,

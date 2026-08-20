@@ -135,26 +135,6 @@ function applyRanges(str: string, ranges: Position[]) {
     return result;
 }
 
-// function remapRanges(str: string, ranges: Position[]): Position[] {
-//     let offsetCount = 0;
-
-//     // Build mapping from original index → index in "clean" string
-//     const indexMap: number[] = [];
-//     for (let i = 0; i < str.length; i++) {
-//         if (str[i] === DELIMINATOR) {
-//             offsetCount++;
-//         } else {
-//             indexMap[i] = i - offsetCount;
-//         }
-//     }
-
-//     // Adjust ranges
-//     return ranges.map(({ start, length }) => {
-//         const newStart = indexMap[start];
-//         return { start: newStart, length };
-//     });
-// }
-
 function deduplicateRanges(ranges: Position[]): Position[] {
     // Mapping where indexMap[i] = true means i is in a range.
     const indexMap: boolean[] = [];

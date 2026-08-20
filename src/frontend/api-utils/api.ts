@@ -20,9 +20,6 @@ function getUrl(
     return "/api" + path + `?${searchParams}`;
 }
 
-/**
- * Makes a post request to a backend /api route.
- */
 export async function apiPost(
     path: string,
     options?: PostOptions
@@ -39,9 +36,6 @@ interface QueryOptionsWithCacheId extends QueryOptions {
     cacheId?: string | number;
 }
 
-/**
- * Makes a get request to a backend /api route.
- */
 export async function apiGet(
     path: string,
     options?: QueryOptionsWithCacheId
@@ -72,9 +66,8 @@ export async function apiGetText(
 }
 
 /**
- * Checks that an image url resolves, returning it to render. Fetching here
- * surfaces failures as a rejected query and warms the browser cache. Returns the
- * url, not an object url: a shared blob url has no safe moment to be revoked.
+ * Fetching here surfaces failures as a rejected query and warms the browser
+ * cache. Returns the url, not a blob url, which has no safe moment to revoke.
  */
 export async function loadImage(
     url: string,
@@ -115,9 +108,6 @@ export async function loadApiImage(
     );
 }
 
-/**
- * Makes a delete request to a backend /api route.
- */
 export async function apiDelete(
     path: string,
     options?: QueryOptions

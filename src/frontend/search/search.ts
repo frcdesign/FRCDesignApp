@@ -11,9 +11,6 @@ import {
  */
 export type ObjectLabel = "element" | "favorite" | "search result";
 
-/**
- * Returns the plural form of an object label.
- */
 export function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
 }
@@ -159,10 +156,8 @@ export function doSearch(
 }
 
 /**
- * Picks the single best-matching record for a hit: the one whose part number
- * matched (when the hit matched the part-number field), else whose name matched
- * (part-name field), else the default record (`records[0]`) for a pure title
- * match — so every result row can show a part number + name.
+ * The single best record for a hit: matched by part number, else by name, else
+ * the default — so every row can show a part number and name.
  */
 function matchedRecord(
     result: MiniSearchResult,
@@ -182,10 +177,8 @@ function matchedRecord(
 }
 
 /**
- * Picks the record whose selected value (part number or name) best matches the
- * query, preferring an exact match, then a prefix, then a substring. First-wins
- * on ties; records are in enumeration order, so a tie resolves to the latest
- * option (the first the insertable declares).
+ * Prefers an exact match, then a prefix, then a substring. Ties go first-wins,
+ * which in enumeration order is the latest option.
  */
 function findBestRecord(
     query: string,
@@ -215,9 +208,8 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * How much of a matched term to underline: the longest query term it starts
- * with — what the user actually typed — so a prefix search underlines only the
- * typed prefix. Falls back to the whole term if none is a prefix.
+ * Underlines the longest query term the match starts with, so a prefix search
+ * underlines only what was typed. Falls back to the whole term.
  */
 function matchedPrefixLength(term: string, queryTerms: string[]): number {
     let length = 0;
@@ -230,9 +222,7 @@ function matchedPrefixLength(term: string, queryTerms: string[]): number {
 }
 
 /**
- * Where a field's matched terms appear, for underlining. `match` is keyed by
- * matched document terms and `queryTerms` by what was typed, so "mot" against
- * "motor" underlines only the prefix.
+ * `match` is keyed by matched document terms and `queryTerms` by what was typed.
  * Based on https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(

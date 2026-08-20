@@ -68,11 +68,6 @@ export type JobStatus =
 export interface LibraryBuildStatus {
     groups: Record<string, GroupBuildStatus>;
     insertables: Record<string, InsertableBuildStatus>;
-    /**
-     * Whether a load job was running when this was fetched. Clients poll job
-     * status only once this says there is something to watch, so an idle
-     * library costs no polling at all.
-     */
 }
 
 export type Insertables = Record<string, InsertableOut>;

@@ -9,9 +9,8 @@ function thumbnailDelay(attempt: number, error = new Error("not rendered")) {
 }
 
 describe("THUMBNAIL_STEP_RETRIES", () => {
-    // Onshape gives no signal when a render lands, so the step polls. Doubling
-    // from four seconds keeps the common case — a render that finishes in a few
-    // seconds — from sitting unnoticed behind a long first wait.
+    // Onshape gives no signal when a render lands, so the step polls. Starting
+    // at four seconds keeps a quick render from waiting on a long first delay.
     it("doubles from four seconds", () => {
         expect([1, 2, 3, 4, 5, 6].map((a) => thumbnailDelay(a))).toEqual([
             "4 seconds",

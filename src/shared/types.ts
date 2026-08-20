@@ -52,9 +52,6 @@ export function isCustomPart(vendors: Vendor[]): boolean {
     return vendors.includes(Vendor.CUSTOM);
 }
 
-/**
- * Gets the full name of a vendor.
- */
 export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AM:

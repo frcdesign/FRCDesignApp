@@ -46,12 +46,8 @@ export const TEST_PARAMETERS: ConfigurationParameter[] = [
 ];
 
 /**
- * Truncates every table these helpers touch, in FK-safe order.
- *
- * `@cloudflare/vitest-pool-workers` isolates D1 storage per test *file*, not per
- * test, and there is no built-in per-test reset (`reset()` from `cloudflare:test`
- * only clears Durable Objects). Call this in `beforeEach` to isolate tests that
- * share a database.
+ * Truncates every table these helpers touch, in FK-safe order. D1 storage is
+ * isolated per test *file*, so call this in `beforeEach` to isolate tests.
  */
 export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);

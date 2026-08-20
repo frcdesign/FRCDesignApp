@@ -62,7 +62,6 @@ export function getAssemblyFeatures(
     );
 }
 
-/** Constructs an assembly with the given name. */
 export function createAssembly(
     client: OnshapeApi,
     workspacePath: InstancePath,
@@ -78,10 +77,8 @@ export function createAssembly(
 }
 
 /**
- * Adds the contents of an element tab to an assembly.
- *
- * @param elementType The type of the element being inserted (part studio or assembly).
- * @param options.partTypes If inserting a part studio, the types of parts to include. Defaults to PARTS and COMPOSITE_PARTS.
+ * Adds the contents of an element tab to an assembly. For a part studio,
+ * `options.partTypes` defaults to PARTS and COMPOSITE_PARTS.
  */
 export function addElementToAssembly(
     client: OnshapeApi,
@@ -137,10 +134,8 @@ export function addElementToAssembly(
 }
 
 /**
- * Applies a transform to an instance in an assembly.
- *
- * @param isRelative True to apply the transform relative to the instance's existing location,
- * false to apply it relative to the assembly origin.
+ * `isRelative` transforms from the instance's existing location rather than the
+ * assembly origin.
  */
 export function transformInstance(
     client: OnshapeApi,
@@ -185,7 +180,6 @@ export function addAssemblyFeature(
     );
 }
 
-/** Deletes a feature from an assembly. */
 export function deleteFeature(
     client: OnshapeApi,
     assemblyPath: ElementPath,

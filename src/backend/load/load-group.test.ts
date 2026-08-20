@@ -220,9 +220,8 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.elementId).sort()).toEqual(["e1", "e2"]);
     });
 
-    // A tab whose microversion is unchanged is skipped, so it never reaches
-    // saveInsertable. Its stored version still has to move with the group's:
-    // that id is what insertion and every document link are built from.
+    // A skipped tab never reaches saveInsertable, but its version still has to
+    // move: that id is what insertion and every document link are built from.
     it("advances a skipped insertable's version along with the group's", async () => {
         mockContents([tab("e1")]);
         // Same microversion as the tab, so the load skips it entirely.

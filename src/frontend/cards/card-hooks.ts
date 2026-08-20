@@ -39,10 +39,10 @@ export function useSetVisibilityMutation(
     const closeCard = useCloseBuildCard();
 
     const mutation = useMutation({
-        mutationKey: ["set-element-visibility", ...insertableIds],
+        mutationKey: ["set-insertable-visibility", ...insertableIds],
         mutationFn: async () => {
             return apiPost(
-                "/set-element-visibility" + toLibraryPath(libraryId),
+                "/set-insertable-visibility" + toLibraryPath(libraryId),
                 {
                     body: {
                         insertableIds,

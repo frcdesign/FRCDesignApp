@@ -170,11 +170,8 @@ async function saveGroup(
         db.update(group).set(parsed).where(eq(group.id, target.groupId))
     ];
     if (!hasFailedInsertables) {
-        // A tab whose microversion didn't change is skipped, so it never went
-        // through saveInsertable and still points at the previous version.
-        // Its geometry is identical, but the stale id is what insertion and
-        // every document link are built from, so move the whole group forward
-        // together with the group row.
+        // A skipped tab never reaches saveInsertable, so move the whole group
+        // forward: the stale id is what insertion and document links use.
         writes.push(
             db
                 .update(insertables)
@@ -199,9 +196,8 @@ async function saveGroup(
 }
 
 /**
- * Adds `LOAD_FAILED` to each failed insertable's stored issues, keeping the ones
- * its last good load recorded. A brand-new insertable has no row yet, so it gets
- * no write — the group's `INSERTABLES_FAILED` covers it.
+ * Keeps the issues the last good load recorded. A brand-new insertable has no
+ * row yet, so the group's `INSERTABLES_FAILED` covers it instead.
  */
 async function flagFailedInsertables(
     db: Db,
@@ -251,9 +247,6 @@ export interface StoredInsertable {
     microversionId: string;
 }
 
-/**
- * Fetches the group's stored insertables.
- */
 async function fetchStoredInsertables(
     ctx: LoadContext,
     groupId: string
@@ -269,9 +262,8 @@ async function fetchStoredInsertables(
 }
 
 /**
- * Selects the tabs to reload: new ones, and stored ones whose microversion
- * changed (or all of them, on `forceReload`). A stored insertable keeps its id;
- * a new one gets a fresh one.
+ * New tabs, and stored ones whose microversion changed. A stored insertable
+ * keeps its id so favorites and links survive.
  */
 export function selectInsertablesToLoad(
     target: GroupTarget,

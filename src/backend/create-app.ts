@@ -52,9 +52,8 @@ async function getEntryUrl(c: AppContext): Promise<string> {
 }
 
 /**
- * Composition root for the Hono app. The injected `makeServices` factory is
- * bound onto each request's context so handlers can call `c.var.getOnshapeApi()`,
- * `c.var.getUserId()`, and `c.var.getAccessLevel()` directly.
+ * Composition root. `makeServices` is bound onto each request's context, so
+ * handlers reach Onshape and access level through `c.var`.
  */
 export function createApp(makeServices: AppServicesFactory) {
     const app = getApp();

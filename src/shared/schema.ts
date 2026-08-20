@@ -47,9 +47,8 @@ export const group = sqliteTable(
             .$type<BuildIssue[]>()
             .notNull()
             .default([]),
-        // When this group was last successfully loaded (epoch ms). Null until the
-        // group's first load. Written by the load path; failures are conveyed by
-        // buildIssues, not here.
+        // Epoch ms of the last successful load; null before the first. Failures
+        // are conveyed by buildIssues, not here.
         lastLoadedAt: integer("last_loaded_at")
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
@@ -103,9 +102,8 @@ export const insertables = sqliteTable("insertables", {
         .$type<BuildIssue[]>()
         .notNull()
         .default([]),
-    // When this insertable was last successfully loaded (epoch ms). Null until the
-    // insertable's first load. Written by the load path; failures are conveyed by
-    // buildIssues, not here.
+    // Epoch ms of the last successful load; null before the first. Failures are
+    // conveyed by buildIssues, not here.
     lastLoadedAt: integer("last_loaded_at")
 });
 

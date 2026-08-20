@@ -1,7 +1,6 @@
 /**
- * Shared search-index definitions used by both the backend (which builds the
- * index when a document is loaded) and the frontend (which deserializes it with
- * the same options to run queries).
+ * Shared index definitions: the backend builds the index, the frontend
+ * deserializes it with the same options.
  */
 import MiniSearch, { Options } from "minisearch";
 import { LibraryOut } from "./api-models";
@@ -38,9 +37,8 @@ export function processTerm(term: string): string[] {
 const NUMERIC_PATTERN = /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*/g;
 
 /**
- * Rewrites numbers and fractions to one 2-dp decimal, so `.5`, `1/2`, and `0.50`
- * all become `"0.5"`. Applied at index and query time alike, which is what lets
- * the raw fragments go unstored. Thread specs like `10-32` are left alone.
+ * Rewrites numbers and fractions to one 2-dp decimal, at index and query time
+ * alike — which is what lets the raw fragments go unstored.
  */
 function canonicalizeNumbers(text: string): string {
     return text.replace(
@@ -64,20 +62,16 @@ function canonicalizeNumbers(text: string): string {
 }
 
 /**
- * Canonicalizes a string for direct (non-tokenized) comparison — same number
- * canonicalization as the index, lowercased — so exact/prefix/substring checks
- * against a stored part number or name agree with what the index matched (e.g. a
- * `.5` query lines up with a stored `"1/2 Bearing"`).
+ * For direct, non-tokenized comparison: the index's number canonicalization,
+ * lowercased, so a `.5` query lines up with a stored `"1/2 Bearing"`.
  */
 export function normalizeForMatch(text: string): string {
     return canonicalizeNumbers(text).toLowerCase();
 }
 
 export function tokenize(text: string): string[] {
-    // Canonicalize fractions/decimals before splitting (they span `/` and `-`,
-    // which the split would otherwise break apart). Don't lowercase — casing is
-    // needed by processTerm's camelCase splitting.
-    // Remove -, (, ), ", ', #, &, /, and whitespace
+    // Canonicalize before splitting: fractions span `/` and `-`. Casing stays,
+    // since processTerm splits on camelCase.
     return canonicalizeNumbers(text)
         .split(/[-()"'#&\s^/]+/)
         .filter(Boolean);
@@ -96,9 +90,8 @@ export interface SearchDocument {
     // Space-joined, deduped configuration (part) names (a searchable field);
     // empty when the insertable has no indexed records.
     partNames: string;
-    // One entry per distinct (part number, name) the insertable produces, in
-    // enumeration order. Stored, not indexed — used to pick the best-matching
-    // configuration for a hit and to launch it in the insert menu.
+    // Stored, not indexed: picks the best-matching configuration for a hit and
+    // launches it in the insert menu.
     records: SearchRecord[];
 }
 
@@ -132,11 +125,8 @@ function uniqueJoin(values: (string | null)[]): string {
 }
 
 /**
- * Distills an insertable's records to the slice search needs, in enumeration
- * order (default-first, latest-option-first), keeping the first occurrence of
- * each distinct (part number, name) pair and dropping records with neither.
- * First-wins keeps the latest revision, as {@link ConfigurationRecord} ordering
- * intends.
+ * Keeps the first of each distinct (part number, name) in enumeration order and
+ * drops records with neither. First-wins is what keeps the latest revision.
  */
 export function toSearchRecords(
     records: ConfigurationRecord[]

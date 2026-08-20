@@ -12,13 +12,7 @@ export async function getSetting(
     return result[0]?.value ?? null;
 }
 
-/**
- * Returns a list of company or user-level settings with the given keys.
- *
- * Each entry in the result has `key` and `value` fields.
- *
- * @param keys If omitted, all settings are returned.
- */
+/** Company or user-level settings; omitting `keys` returns all of them. */
 export async function getSettings(
     client: OAuthApi,
     clientId: string,

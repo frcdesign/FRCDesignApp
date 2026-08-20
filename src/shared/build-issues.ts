@@ -1,8 +1,6 @@
 /**
- * Build checker: a small framework for flagging data-quality issues with groups
- * and insertables. Most checks run at build time (during the load-document
- * workflow) and are stored on the group/insertable; a few are computed live in
- * the frontend when they depend on per-user state (e.g. access level).
+ * Data-quality issues for groups and insertables. Most are stored at load time;
+ * a few are computed live where they depend on per-user state.
  */
 import {
     AUTO_INDEX_THRESHOLD,

@@ -1,7 +1,6 @@
 /**
- * Enumerates the configuration combinations of an insertable for part-number
- * indexing. Only enum and boolean parameters are varied; quantity and string
- * parameters are held at their Onshape defaults (omitted from the record).
+ * Enumerates an insertable's configuration combinations. Only enum and boolean
+ * parameters vary; quantity and string ones ride their Onshape defaults.
  */
 import {
     ParameterValues,
@@ -13,9 +12,8 @@ import {
 import { evaluateCondition, getVisibleOptions } from "./configuration-utils";
 
 /**
- * The most configuration combinations we enumerate for a single insertable.
- * Beyond this the insertable is flagged and its part numbers are not indexed,
- * protecting load time and Onshape API usage.
+ * The most combinations we enumerate for one insertable; beyond it nothing is
+ * indexed, which is what bounds load time and Onshape usage.
  */
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
@@ -36,9 +34,8 @@ export enum IndexingBand {
 }
 
 /**
- * Shared with the admin card, so it can't drift from what the load path does.
- * The count is the only gate: past the cap nothing can be enumerated, and past
- * the threshold an admin decides.
+ * Shared with the admin card so the two cannot disagree. The count is the only
+ * gate: past the cap nothing enumerates, past the threshold an admin decides.
  */
 export function isIndexingEnabled(
     band: IndexingBand,
@@ -65,11 +62,7 @@ export interface ConfigurationCount {
     configurations: ParameterValues[];
 }
 
-/**
- * Counts an insertable's configuration combinations and classifies what that
- * count means for part-number indexing. Shared so the load path and the admin
- * UI can't disagree about which limit an insertable falls under.
- */
+/** Shared, so the load path and the admin UI agree on which limit applies. */
 export function countConfigurations(
     parameters: ConfigurationParameter[]
 ): ConfigurationCount {
@@ -95,9 +88,8 @@ export function countConfigurations(
 }
 
 /**
- * Whether indexing varies this parameter, and so multiplies an insertable's
- * configuration count. Shared with the admin card so what it reports cannot
- * drift from what {@link enumerateConfigurations} does.
+ * Whether indexing varies this parameter, and so multiplies the count. Shared
+ * with the admin card so it cannot drift from {@link enumerateConfigurations}.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter
@@ -119,11 +111,8 @@ export interface EnumerateResult {
 }
 
 /**
- * The cartesian product of an insertable's enum and boolean values, minus
- * combinations their visibility conditions hide. Declaration order is
- * load-bearing: search dedupes first-wins, so a part number shared across an
- * enum's options resolves to the first-listed, the latest revision by Onshape
- * convention.
+ * The cartesian product of enum and boolean values, minus what visibility hides.
+ * Declaration order is load-bearing: search dedupes first-wins.
  */
 export function enumerateConfigurations(
     parameters: ConfigurationParameter[],

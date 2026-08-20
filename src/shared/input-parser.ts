@@ -347,95 +347,6 @@ EXP.setPattern(
     )
 );
 
-// PRIMARY.setPattern(
-//     alt(
-//         // number with optional unit
-//         apply(
-//             seq(tok(TokenKind.Number), opt(tok(TokenKind.Identifier))),
-//             ([numTok, unitTok]) => {
-//                 const unit = unitTok
-//                     ? classifyUnit(unitTok.text)
-//                     : Unit.UNITLESS;
-
-//                 const valueLiteral: ValueLiteral = {
-//                     value: parseFloat(numTok.text) * getUnitFactor(unit),
-//                     type: getUnitType(unit),
-//                     rawValue: numTok.text,
-//                     unit
-//                 };
-
-//                 return { kind: "value", value: valueLiteral };
-//             }
-//         ),
-//         // (expr) with optional unit
-//         apply(
-//             seq(
-//                 kmid(tok(TokenKind.LParen), EXP, tok(TokenKind.RParen)),
-//                 opt(tok(TokenKind.Identifier))
-//             ),
-//             ([expr, unitTok]) => {
-//                 if (unitTok) {
-//                     const unit = classifyUnit(unitTok.text);
-//                     // Wrap parens in unit-application
-//                     return {
-//                         kind: "unit-application",
-//                         expr: { kind: "paren", expr },
-//                         unit,
-//                         type: getUnitType(unit)
-//                     };
-//                 }
-//                 return { kind: "paren", expr };
-//             }
-//         )
-//     )
-// );
-
-// FACTOR.setPattern(
-//     alt(
-//         apply(seq(tok(TokenKind.PlusMinus), FACTOR), ([opTok, expr]) => {
-//             return { kind: "unary", op: opTok.text as "+" | "-", expr };
-//         }),
-//         PRIMARY
-//     )
-// );
-
-// TERM.setPattern(
-//     apply(
-//         seq(FACTOR, rep_sc(seq(tok(TokenKind.MulDivide), FACTOR))),
-//         ([first, rest]) =>
-//             rest.reduce<Expr>(
-//                 (acc, [opTok, rhs]) => ({
-//                     kind: "binary",
-//                     // Should always be a valid operator due to regex
-//                     op: opTok.text as unknown as Operator,
-//                     left: acc,
-//                     right: rhs
-//                 }),
-//                 first
-//             )
-//     )
-// );
-
-// EXP.setPattern(
-//     apply(
-//         seq(TERM, rep_sc(seq(tok(TokenKind.PlusMinus), TERM))),
-//         ([first, rest]) =>
-//             rest.reduce<Expr>(
-//                 (acc, [opTok, rhs]) => ({
-//                     kind: "binary",
-//                     // Should always be a valid operator due to regex
-//                     op: opTok.text as unknown as Operator,
-//                     left: acc,
-//                     right: rhs
-//                 }),
-//                 first
-//             )
-//     )
-// );
-
-/**
- * Parses an expression into a valid Expr AST.
- */
 function parseExpression(input: string): Expr {
     const tokens = lexer.parse(input);
     const result = EXP.parse(tokens);
@@ -461,9 +372,8 @@ function getOpName(op: Operator): string {
 }
 
 /**
- * Recursively checks the type of an expression.
- * To match Onshape, type assumption is only done on the final result, so unitless + unit is always invalid.
- * We also disallow units if quantityType is a unitless type.
+ * Matching Onshape, a type is only assumed for the final result — so unitless +
+ * unit is always invalid, as are units on a unitless quantityType.
  */
 function evaluateExpressionValue(
     expr: Expr,
@@ -594,9 +504,6 @@ function applyDefaultUnit(
     return valueWithUnits(value.value, defaultUnit);
 }
 
-/**
- * Converts an expression AST back into a string.
- */
 function stringify(expr: Expr): string {
     switch (expr.kind) {
         case "value": {
@@ -746,9 +653,8 @@ export interface EvaluateOptions {
  * Evaluates a string expression.
  */
 /**
- * The expression's value in base units — meters, radians, or unitless. A bare
- * number takes `defaultUnit`, as it does in the input. Undefined if it does not
- * parse, which leaves the caller its raw text.
+ * The value in base units: meters, radians, or unitless. A bare number takes
+ * `defaultUnit`, as in the input; undefined when it does not parse.
  */
 export function evaluateBaseValue(
     input: string,

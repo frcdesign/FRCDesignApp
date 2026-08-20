@@ -200,9 +200,8 @@ insertableRoutes.post(
 );
 
 /**
- * Indexes an insertable's configuration records for the toggle route. Runs in a
- * request, so it uses the unbatched {@link parseConfigurationRecords} rather than
- * the workflow's stepped loader.
+ * Runs in a request, so it uses the unbatched {@link parseConfigurationRecords}
+ * rather than the workflow's stepped loader.
  */
 function indexRecords(
     client: OnshapeApi,
@@ -233,10 +232,8 @@ function indexRecords(
 }
 
 /**
- * The tab being inserted into. It rides in the body rather than the URL so the
- * whole path — including which kind of instance the id refers to — arrives as
- * one object, and a half-built one is rejected here rather than reaching
- * Onshape as a nonsense URL.
+ * The tab being inserted into, in the body so the whole path arrives as one
+ * object. A half-built one is rejected here, not as a nonsense Onshape URL.
  */
 const targetPathSchema = z.object({
     documentId: z.string().min(1),
@@ -422,11 +419,7 @@ insertableRoutes.post(
         return c.json({ featureId: fastenResult.feature.featureId });
     }
 );
-/**
- * Returns the ElementPath for an insertable looked up by its ID.
- * Throws 404 if the insertable does not exist.
- * Insertable elements are always version-pinned (instanceType "v").
- */
+/** Always version-pinned; throws 404 when the insertable does not exist. */
 
 export async function getInsertableElementPath(
     db: Db,

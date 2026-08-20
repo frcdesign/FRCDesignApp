@@ -51,12 +51,7 @@ groupRoutes.post(
     }
 );
 
-/**
- * GET /api/job-status/library/:libraryId
- *
- * Only polled while a job is known to be running — the build status is what
- * tells a freshly loaded client there's something to watch.
- */
+/** GET /api/job-status/library/:libraryId — checked on load, then polled. */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
@@ -66,9 +61,9 @@ groupRoutes.get(
     }
 );
 
-/** POST /api/set-element-visibility/library/:libraryId */
+/** POST /api/set-insertable-visibility/library/:libraryId */
 groupRoutes.post(
-    "/set-element-visibility" + libraryRoute(),
+    "/set-insertable-visibility" + libraryRoute(),
     requireEditorMiddleware,
     async (c) => {
         const libraryId = getLibraryParam(c);

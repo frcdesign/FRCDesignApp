@@ -58,10 +58,8 @@ describe("library routes", () => {
             env
         );
         expect(res.status).toBe(200);
-        // Serving a pre-compressed body under a hand-set Content-Encoding gets
-        // it compressed a second time by the runtime, leaving the client with a
-        // gzip stream after it inflates once. Wire compression is the
-        // platform's job, so this response must claim no encoding of its own.
+        // A hand-set Content-Encoding gets compressed again by the runtime,
+        // leaving the client a gzip stream after one inflate.
         expect(res.headers.get("Content-Encoding")).toBeNull();
         expect(res.headers.get("Content-Type")).toBe("application/json");
 

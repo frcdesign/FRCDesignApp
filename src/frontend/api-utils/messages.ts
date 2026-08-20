@@ -1,10 +1,6 @@
 /**
- * Code for working with the Onshape Client Messaging API.
- *
- * See also:
+ * The Onshape Client Messaging API, for a right-panel extension (not a tab one).
  * https://onshape-public.github.io/docs/app-dev/clientmessaging/
- *
- * (Note we are an Element right panel extension and not an Element tab extension).
  */
 
 import { useSearch } from "@tanstack/react-router";

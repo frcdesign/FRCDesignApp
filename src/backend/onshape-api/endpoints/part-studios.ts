@@ -12,7 +12,6 @@ import {
     OnshapeFeatureListResponse
 } from "../onshape-types";
 
-/** Creates a part studio in a document. */
 export function createPartStudio(
     client: OnshapeApi,
     instancePath: InstancePath,
@@ -46,7 +45,6 @@ export async function evaluateFeatureScript(
     return JSON.parse(result.console);
 }
 
-/** Adds a feature to a part studio. */
 export function addPartStudioFeature(
     client: OnshapeApi,
     partStudioPath: ElementPath,
@@ -61,7 +59,6 @@ export function addPartStudioFeature(
     );
 }
 
-/** Returns the features in a part studio. */
 export function getFeatures(
     client: OnshapeApi,
     partStudioPath: ElementPath

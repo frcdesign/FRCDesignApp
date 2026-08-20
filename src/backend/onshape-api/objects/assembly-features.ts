@@ -57,7 +57,6 @@ export class FastenMateBuilder {
         this.queries = [...queries];
     }
 
-    /** Adds a query to the fasten mate. */
     addQuery(query: object): this {
         this.queries.push(query);
         return this;
@@ -80,11 +79,8 @@ export class FastenMateBuilder {
 }
 
 /**
- * Constructs a fasten mate feature.
- *
- * @param queries Up to two queries to fasten. Note Onshape has a tendency to preserve the location
- * of the second query in cases where neither instance is constrained.
- * @param mateConnectors Implicit mate connectors owned by the feature.
+ * Takes up to two queries. With neither instance constrained, Onshape tends to
+ * preserve the second one's location.
  */
 export function fastenMate(
     name: string,
@@ -135,7 +131,6 @@ export function primaryAxisParameter(
     };
 }
 
-/** Constructs a group mate feature. */
 export function groupMate(name: string, queries: Iterable<object>): object {
     return {
         btType: "BTMMateGroup-65",
@@ -145,7 +140,6 @@ export function groupMate(name: string, queries: Iterable<object>): object {
     };
 }
 
-/** Constructs a mate connector feature. */
 export function mateConnector(
     name: string,
     originQuery: object,

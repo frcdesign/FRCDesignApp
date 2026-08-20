@@ -1,15 +1,6 @@
 /**
- * Configuration records: probing an insertable's configurations for the metadata
- * we store (part number, name, description, material, vendor), and folding the
- * probes into the `ConfigurationRecord[]` a load persists.
- *
- * A part studio reads the typed `/parts` response; an assembly reads the element
- * metadata property bag. Either way, one probe produces one `ConfigurationRecord`.
- * Every probed configuration is kept — search dedupes to a per-part-number map
- * itself (`buildSearchDb`), and build checks may want the ones search drops.
- *
- * Like `parseFastenInfo`, the entry points take a client and call Onshape
- * themselves, so the extraction rules and the walk that uses them live together.
+ * Probes an insertable's configurations for the metadata we store. Every probe
+ * is kept: search dedupes itself, and build checks read the ones it drops.
  */
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
@@ -121,12 +112,8 @@ export interface PartsEvaluation {
 }
 
 /**
- * The one place that reads meaning out of a `/parts` response: whether the
- * studio is an open composite, and which part carries the record to store. An
- * indexed part studio is meant to be a single part; an open composite is the
- * exception, where only the composite matters and the loose constituents are
- * ignored. More than one candidate (part, or composite) is the arbitrary-choice
- * case that `MULTIPLE_PARTS` flags.
+ * The one place that reads meaning out of a `/parts` response. A studio holds
+ * one part; an open composite is the exception, and its constituents are ignored.
  */
 export function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
     const composites = parts.filter((part) => part.bodyType === "composite");
@@ -144,19 +131,14 @@ export function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
     };
 }
 
-/**
- * Whether a part studio is an open composite: it resolves to more than one part
- * and one of them is the composite. Stable across configurations, so it's
- * computed once from the default configuration.
- */
+/** Stable across configurations, so it is computed once from the default. */
 export function computeOpenComposite(parts: OnshapePart[]): boolean {
     return evaluateParts(parts).isOpenComposite;
 }
 
 /**
- * The part read is the studio's single part, or its composite when open; more
- * candidates mean an arbitrary choice, which `hasMultipleParts` flags. A
- * configuration losing the composite its default has stores no part at all.
+ * Reads the studio's single part, or its composite when open. A configuration
+ * that loses the composite its default has stores no part at all.
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
@@ -272,8 +254,7 @@ export async function parseConfigurationRecords(
 
 /**
  * One durable step per batch, so a rate-limited retry re-fetches only that
- * batch; batches run sequentially since insertables already load in parallel. An
- * exhausted batch throws rather than saving a half-built list.
+ * batch. An exhausted batch throws rather than saving a half-built list.
  */
 export async function loadConfigurationRecords(
     ctx: LoadContext,
@@ -319,20 +300,15 @@ export async function loadConfigurationRecords(
 }
 
 /**
- * Splits an insertable's configuration combinations into the batches to fetch.
- *
- * An insertable with nothing to vary — no parameters, or only cosmetic, quantity,
- * and string ones — enumerates to a single empty configuration, which the default
- * probe already asked for. Dropping it leaves no batches rather than probing the
- * defaults twice.
+ * Splits the combinations to fetch into batches, minus anything the separate
+ * default probe already covers.
  */
 function planBatches(
     configurations: ParameterValues[],
     parameters: ConfigurationParameter[]
 ): ParameterValues[][] {
-    // The default is probed separately, and anything canonicalizing to it would
-    // land on the same record — so drop every all-defaults combination, not just
-    // the literally empty one.
+    // Canonicalizing to the default means landing on the default probe's record,
+    // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
         (configuration) =>
             Object.keys(canonicalizeConfiguration(configuration, parameters))
@@ -390,12 +366,7 @@ async function fetchBatch(
     return records;
 }
 
-/**
- * Folds the default probe and every batch into the stored result, in enumeration
- * order (the default first). `MULTIPLE_PARTS` is raised when any configuration
- * resolved to more than one part, `UNSTABLE_COMPOSITE` when an open composite
- * lost its composite in some configuration.
- */
+/** Folds the default probe and every batch together, the default first. */
 function toResult(
     defaultRecord: ConfigurationRecord,
     batches: ConfigurationRecord[][],

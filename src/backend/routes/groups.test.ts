@@ -23,9 +23,8 @@ import * as JobTracker from "../load/job-tracker";
 const db = getDb(env.DB);
 
 /**
- * `jsonRequest` plus a session cookie — needed by routes that call `getSessionId`
- * (unlike `c.var.getOnshapeApi()`, session lookup isn't part of `createTestApp`'s
- * mocked services, since it's read directly from the request).
+ * `jsonRequest` plus a session cookie, for routes calling `getSessionId` — which
+ * reads the request directly rather than going through the mocked services.
  */
 function sessionRequest(method: string, body?: unknown): RequestInit {
     const init = jsonRequest(method, body);
@@ -43,11 +42,11 @@ describe("group admin routes", () => {
         await resetDb(db);
     });
 
-    it("POST /set-element-visibility hides an insertable and drops its favorites", async () => {
+    it("POST /set-insertable-visibility hides an insertable and drops its favorites", async () => {
         await seedTestData(db);
 
         const res = await createTestApp().request(
-            `/api/set-element-visibility/library/${TEST_LIBRARY_ID}`,
+            `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
             jsonRequest("POST", {
                 insertableIds: [TEST_PART_STUDIO_ID],
                 isVisible: false
@@ -74,12 +73,12 @@ describe("group admin routes", () => {
     // Search reads isVisible out of the index, not the row, so leaving it stale
     // drops the insertable from every result until the next full load.
     it.each([false, true])(
-        "POST /set-element-visibility rebuilds the search index (isVisible=%s)",
+        "POST /set-insertable-visibility rebuilds the search index (isVisible=%s)",
         async (isVisible) => {
             await seedTestData(db);
 
             const res = await createTestApp().request(
-                `/api/set-element-visibility/library/${TEST_LIBRARY_ID}`,
+                `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
                 jsonRequest("POST", {
                     insertableIds: [TEST_PART_STUDIO_ID],
                     isVisible
@@ -158,12 +157,8 @@ describe("POST /reload-groups", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    // The route no longer checks document versions itself — it just spawns one
-    // LoadLibrary workflow, which owns the per-group skip decision.
-    // The "false" case is a regression test: z.coerce.boolean() coerces the
-    // *string* "false" to `true` (any non-empty string is truthy), so an
-    // explicit forceReload=false used to force a reload just by being present.
-    // z.stringbool() fixes this.
+    // The "false" case is a regression test: z.coerce.boolean() reads the string
+    // "false" as true, so passing forceReload=false used to force a reload.
     it.each([
         ["omitted", "", false],
         ["false", "?forceReload=false", false],

@@ -42,9 +42,7 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
-/**
- * Gets the list of a user's favorites.
- */
+/** GET /api/favorites/library/:libraryId */
 favoriteRoutes.get(
     "/favorites" + libraryRoute(),
     requireSignInMiddleware,
@@ -57,9 +55,7 @@ favoriteRoutes.get(
     }
 );
 
-/**
- * Creates a new favorite.
- */
+/** POST /api/favorites/library/:libraryId */
 favoriteRoutes.post(
     "/favorites" + libraryRoute(),
     requireSignInMiddleware,
@@ -106,9 +102,7 @@ favoriteRoutes.post(
     }
 );
 
-/**
- * Deletes  a user's favorites.
- */
+/** DELETE /api/favorites/:favoriteId */
 favoriteRoutes.delete(
     "/favorites/:favoriteId",
     requireSignInMiddleware,

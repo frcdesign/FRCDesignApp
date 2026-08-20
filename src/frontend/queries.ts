@@ -87,9 +87,8 @@ export function useCacheVersion(): number {
 }
 
 /**
- * Returns the current document's units for the Insert dialog. Hits Onshape, so
- * it's disabled when not connected to a document; each quantity then falls back
- * to its own default unit.
+ * The current document's units. Disabled when not connected to a document, and
+ * each quantity then falls back to its own unit.
  */
 export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
     return useQuery<UnitInfo>({
@@ -221,20 +220,16 @@ function jobPollInterval(runningForMs: number): number {
 }
 
 /**
- * Whether a library-load job is running, polled so indicators stay live.
- *
- * Checked once when the app loads, then polled while something is running and
- * left alone once a check comes back idle. `canPoll` is the caller's own gate:
- * the route is editor-only.
+ * Checked once on load, then polled while something runs and left alone when a
+ * check comes back idle. `canPoll` is the caller's gate: the route is editor-only.
  */
 export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
         enabled: canPoll,
-        // Every status badge observes this query, so rows mounting as the user
-        // scrolls would otherwise each trigger a fetch. The poll is the only
-        // thing that should set the pace.
+        // Every status badge observes this, so rows mounting as the user scrolls
+        // would each trigger a fetch. Only the poll should set the pace.
         staleTime: FASTEST_POLL_MS,
         refetchInterval: (query) => {
             const status = query.state.data;

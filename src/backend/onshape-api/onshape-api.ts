@@ -28,9 +28,8 @@ export class OnshapeApiError extends Error {
 const DEFAULT_RETRY_AFTER_SECONDS = 60;
 
 /**
- * Thrown on a 429 response. Carries the Onshape `Retry-After` value (seconds)
- * so callers can wait it out. Extends {@link OnshapeApiError} (status 429) so
- * existing `status`-based handling keeps working.
+ * Thrown on a 429, carrying Onshape's `Retry-After` seconds so callers can wait
+ * it out. Extends {@link OnshapeApiError}, so `status` handling still works.
  */
 export class OnshapeRateLimitError extends OnshapeApiError {
     constructor(

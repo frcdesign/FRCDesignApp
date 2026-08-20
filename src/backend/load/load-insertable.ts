@@ -37,9 +37,8 @@ import {
 import { uploadThumbnailsStep } from "./load-steps";
 
 /**
- * Everything a load computes for an insertable by reading Onshape. Exactly the
- * set of columns a reload overwrites — the rest of the row is either identity or
- * owned by the user.
+ * Exactly the columns a reload overwrites; the rest of the row is identity or
+ * user-owned.
  */
 export interface ParsedInsertable {
     vendors: Vendor[];
@@ -58,9 +57,6 @@ interface InsertableFlags {
     indexConfigurations: boolean;
 }
 
-/**
- * Loads and persists a single insertable to the database.
- */
 export async function loadInsertable(
     ctx: LoadContext,
     target: InsertableTarget
@@ -156,9 +152,6 @@ function readFlagsStep(
     });
 }
 
-/**
- * Fetches and parses the element's configuration.
- */
 function parseConfigurationStep(
     ctx: LoadContext,
     { insertableId, elementPath }: InsertableTarget
@@ -179,9 +172,8 @@ interface PartsSummary {
 }
 
 /**
- * Reads a part studio's default configuration once. Runs on every load, not
- * just under indexing, so the insert path always requests the right part types.
- * Assemblies always have something to render, so they skip the fetch.
+ * Runs on every load, not just under indexing, so the insert path always asks
+ * for the right part types. Assemblies have nothing to read, so they skip it.
  */
 function readPartsStep(
     ctx: LoadContext,
@@ -203,9 +195,6 @@ function readPartsStep(
     });
 }
 
-/**
- * Fetches and parses the element's fasten info.
- */
 function parseFastenInfoStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
@@ -220,10 +209,7 @@ function parseFastenInfoStep(
 }
 
 /**
- * Writes a single insertable (plus its configuration) to the database.
- *
- * The reloaded columns come from `parsed` plus the tab facts on `target`;
- * everything else is written only on insert, so a reload preserves the row's
+ * Everything outside `parsed` is written only on insert, so a reload preserves
  * sort order and the user's flags.
  */
 export async function saveInsertable(
@@ -267,9 +253,8 @@ export async function saveInsertable(
             set: reloaded
         });
 
-    // Keep a configurations row whenever there's config data to store — the
-    // parameters a configurable insertable exposes, the records an indexed one
-    // produced, or both. A non-configurable, non-indexed insertable needs neither.
+    // Keep the row while it holds either parameters or records; an insertable
+    // that is neither configurable nor indexed needs none.
     let configurationWrite;
     if (
         configuration.parameters.length > 0 ||

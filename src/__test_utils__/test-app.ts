@@ -19,9 +19,8 @@ export interface TestAppOptions {
 }
 
 /**
- * Builds the real Hono app via `createApp`, but with the Onshape API, userId, and
- * access level injected as mocks. Returns a plain Hono app — drive it with
- * `app.request(path, init, env)` (pass `env` from `cloudflare:workers`).
+ * The real app from `createApp`, with Onshape, userId and access level mocked.
+ * Drive it with `app.request(path, init, env)`.
  */
 export function createTestApp(options: TestAppOptions = {}) {
     const signedIn = options.signedIn ?? true;

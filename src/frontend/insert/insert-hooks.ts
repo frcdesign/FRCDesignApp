@@ -17,9 +17,6 @@ export interface InsertArgs {
     isQuickInsert?: boolean;
 }
 
-/**
- * Creates a mutation for inserting an insertable.
- */
 export function useInsertMutation(
     insertable: InsertableOut,
     configuration: ParameterValues | undefined,

@@ -44,10 +44,8 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        // A row can exist just to hold records for a non-configurable
-        // insertable, so "configurable" keys on having parameters, not on the
-        // row existing. Tested in SQL to keep every parameter list out of the
-        // Worker just to check whether it is empty.
+        // A row can exist just to hold records, so "configurable" keys on
+        // having parameters. Tested in SQL to leave the payload in D1.
         db
             .select({ id: configurations.id })
             .from(configurations)
@@ -121,9 +119,8 @@ export async function getLibraryOut(
 }
 
 /**
- * Renumbers a library's groups to open a slot for a new group — directly after
- * `selectedGroupId`, or at the end — and returns the sort order to write it with.
- * The caller creates the row itself, since it also decides create vs. update.
+ * Renumbers a library's groups to open a slot and returns its sort order. The
+ * caller writes the row, since it also decides create vs. update.
  */
 export async function placeNewGroup(
     db: Db,
@@ -175,11 +172,7 @@ export function searchIndexKey(libraryId: LibraryId): string {
     return `search-index/${libraryId}.json`;
 }
 
-/**
- * Rebuilds the serialized MiniSearch index for a library from its current
- * groups/insertables and stores it in R2 as plain JSON. Bump `cacheVersion`
- * alongside so clients refetch under a new URL.
- */
+/** Rebuilds a library's search index into R2; bump `cacheVersion` alongside. */
 export async function rebuildSearchDb(
     bucket: R2Bucket,
     db: Db,
@@ -191,9 +184,8 @@ export async function rebuildSearchDb(
         getRecordsMap(db, libraryId)
     ]);
     const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
-    // Stored as a plain, uncompressed string: encoding it here would leave the
-    // runtime compressing an already-compressed body. The type still travels
-    // with the object, so the serving route reports it via writeHttpMetadata.
+    // Uncompressed: encoding here would leave the runtime compressing an
+    // already-compressed body.
     await bucket.put(searchIndexKey(libraryId), searchDb, {
         httpMetadata: { contentType: "application/json" }
     });

@@ -64,11 +64,7 @@ import {
     useToggleSortOrderMutation
 } from "./card-hooks";
 
-/**
- * The value of a read-only "parsed" row. A discriminated union so `StateValue`
- * can render each kind appropriately (a check/cross for booleans, badges for
- * vendors).
- */
+/** Discriminated so `StateValue` renders each kind its own way. */
 export type StateRowValue =
     | { kind: "bool"; value: boolean }
     | { kind: "text"; text: string; dimmed?: boolean }
@@ -86,9 +82,8 @@ function getInsertableBuildIssues(
 }
 
 /**
- * Returns the build issues for a group, combining stored build-time issues with
- * the live "no unhidden insertables" check (computed here since visibility is
- * per-insertable state in the same build-status response).
+ * Stored issues plus the live "no unhidden insertables" check, which needs the
+ * per-insertable visibility in the same response.
  */
 function useGroupBuildIssues(
     groupStatus: GroupBuildStatus | undefined,
@@ -207,9 +202,8 @@ interface BuildStatusBadgeProps {
 }
 
 /**
- * Dismisses the surrounding build-status hover card. Used by controls that open
- * a modal, since `HoverCard` only closes on mouse-leave — never fired when a
- * modal overlay simply covers the dropdown, leaving it stranded behind.
+ * For controls that open a modal: `HoverCard` closes on mouse-leave, which never
+ * fires when an overlay covers the dropdown, stranding it behind.
  */
 const CloseCardContext = createContext<() => void>(() => undefined);
 
@@ -770,10 +764,8 @@ function GroupAdminSection({
 }
 
 /**
- * An insertable's configuration count and which indexing limit it falls under.
- * Enumerated here rather than stored: it's the same shared routine the load path
- * uses, capped at {@link MAX_PART_NUMBER_CONFIGURATIONS}, and only runs when a
- * hover card opens.
+ * Enumerated rather than stored: the same shared routine the load path uses,
+ * and it only runs when a hover card opens.
  */
 function useConfigurationCount(
     status: InsertableBuildStatus
@@ -782,11 +774,7 @@ function useConfigurationCount(
     return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
 }
 
-/**
- * Renders a configuration count: "None" for a non-configurable insertable,
- * matching how the vendors row reads when there are none, and an open-ended
- * label past the cap, where enumeration stops before reaching a total.
- */
+/** Open-ended past the cap, where enumeration stops before reaching a total. */
 function configurationCountValue(count: number | null): StateRowValue {
     if (count === null) {
         return {
@@ -826,11 +814,7 @@ function InsertableParsedSection({
     );
 }
 
-/**
- * Lists the insertable's configuration parameters: each parameter's name, the
- * type it takes, and whether indexing varies it. Renders nothing when the
- * insertable has no parameters.
- */
+/** Each parameter's name, the type it takes, and whether indexing varies it. */
 function ConfigurationSection({
     parameters
 }: {

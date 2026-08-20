@@ -36,7 +36,6 @@ function readInsertable(insertableId: string) {
         .get();
 }
 
-/** Reads back an insertable's configuration row, if any. */
 function readConfig(insertableId: string) {
     return db
         .select()

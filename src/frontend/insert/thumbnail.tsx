@@ -14,6 +14,13 @@ import { useTargetElementType } from "./insert-hooks";
 import { useIsSignedIn } from "../api-utils/access-level";
 import { useIsConnectedToOnshape } from "../api-utils/onshape-params";
 
+/** Letterbox rather than stretch, in case the render is not the size we asked for. */
+const FIT_INSIDE_BOX = {
+    objectFit: "contain",
+    maxWidth: "100%",
+    maxHeight: "100%"
+} as const;
+
 interface HeightAndWidth {
     height: number;
     width: number;
@@ -118,7 +125,13 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     } else if (imageQuery.isPending) {
         content = <Loader size={spinnerSize} />;
     } else {
-        content = <img src={imageQuery.data} {...heightAndWidth} />;
+        content = (
+            <img
+                src={imageQuery.data}
+                {...heightAndWidth}
+                style={FIT_INSIDE_BOX}
+            />
+        );
     }
 
     return (
@@ -238,7 +251,11 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 w={heightAndWidth.width}
                 h={heightAndWidth.height}
             >
-                <img src={thumbnailQuery.data.url} {...heightAndWidth} />
+                <img
+                    src={thumbnailQuery.data.url}
+                    {...heightAndWidth}
+                    style={FIT_INSIDE_BOX}
+                />
             </Box>
             {thumbnailQuery.data.isFallback && (
                 <Loader pos="absolute" bottom={15} right={15} size={18} />

@@ -1,10 +1,6 @@
 /**
- * Configuration-parameter builders for tests.
- *
- * Import this module directly rather than through `__test_utils__/index.ts`.
- * `src/shared` tests run in vitest's `node` project (see vitest.config.ts), and
- * the barrel re-exports `test-app.ts`, which reaches `cloudflare:workers` —
- * unresolvable outside the Workers pool.
+ * Import directly, not through `__test_utils__/index.ts`: the barrel reaches
+ * `cloudflare:workers`, which `src/shared`'s node-project tests cannot resolve.
  */
 import {
     ParameterType,

@@ -77,10 +77,8 @@ export interface ConfigurationResult {
 }
 
 /**
- * The slice of a {@link ConfigurationRecord} search needs: what a configuration
- * produces (part number + name) and the configuration that produces it. Kept
- * MiniSearch-free so both the search index and the `/configuration` route can
- * share it.
+ * The slice of a {@link ConfigurationRecord} search needs. MiniSearch-free, so
+ * the index and the `/configuration` route can share it.
  */
 export interface SearchRecord {
     partNumber: string | null;
@@ -138,9 +136,8 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 export type ParameterValues = Record<string, string>;
 
 /**
- * Everything a single checked configuration resolves to. One is stored per
- * configuration we probe, so search, the UI, and future build checks can read
- * back what each configuration produces without re-querying Onshape.
+ * What one probed configuration resolves to. Stored per probe, so search and the
+ * UI can read it back without re-querying Onshape.
  */
 export interface ConfigurationRecord {
     /** The parameter values that produce it; empty means the element's defaults. */
@@ -167,9 +164,8 @@ export interface Configuration {
 }
 
 /**
- * The current document's units. Fields are optional: when a unit is absent (not
- * connected to a document, or units no longer fetched) each quantity falls back
- * to its own default unit.
+ * The current document's units. Every field is optional: an absent one leaves
+ * the quantity on its own default unit.
  */
 export interface UnitInfo {
     angleUnit?: Unit;

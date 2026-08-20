@@ -12,13 +12,6 @@ export interface ApiPathOptions {
 }
 
 /**
- * Constructs a path suitable for the Onshape REST API.
- *
- * @param route - The Onshape service name, e.g. `"documents"` or `"assemblies"`.
- * @param path - A path object to embed in the URL.
- * @param serialize - Converts `path` to its URL segment, e.g. `toInstanceApiPath`.
- * @param options - Optional tail segments and flags.
- *
  * @example
  * apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" })
  * // → "/documents/d/{did}/w/{wid}/elements"

@@ -42,8 +42,7 @@ const THUMBNAIL_BASE_DELAY_SECONDS = 4;
 
 /**
  * Onshape gives no signal when a render lands, so the step polls, doubling from
- * four seconds. Starting tight is the point: most renders land within seconds.
- * A rate limit overrides the curve.
+ * four seconds. A rate limit overrides the curve.
  */
 function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
@@ -66,9 +65,8 @@ export const THUMBNAIL_STEP_RETRIES = {
 };
 
 /**
- * Uploads thumbnails in a single step with retrying, returning `null` when they
- * never showed up — the caller records that as a build issue rather than failing
- * the load.
+ * Returns `null` when the thumbnails never showed up, which the caller records
+ * as a build issue rather than failing the whole load.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,
