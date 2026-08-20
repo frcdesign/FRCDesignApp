@@ -182,19 +182,18 @@ describe("insertable routes", () => {
         const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(true);
 
-        const config = await readConfig(TEST_PART_STUDIO_ID);
-        expect(config?.records).toEqual([
-            {
-                configuration: {},
-                partNumber: "PN-123",
-                name: null,
-                description: null,
-                material: null,
-                vendor: null,
-                hasMultipleParts: false,
-                isUnstableComposite: false
-            }
-        ]);
+        // Nothing to configure, so the part data lands on the insertable and
+        // no configurations row is manufactured to hold it.
+        expect(row?.partData).toEqual({
+            partNumber: "PN-123",
+            name: null,
+            description: null,
+            material: null,
+            vendor: null,
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
+        expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
     it("POST /index-configurations leaves the flag off when indexing fails", async () => {
@@ -280,10 +279,9 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const config = await readConfig(TEST_PART_STUDIO_ID);
-        expect(config?.records).toHaveLength(1);
-        // Nobody sells it, so a missing part number is not worth flagging.
         const row = await readInsertable(TEST_PART_STUDIO_ID);
+        expect(row?.partData).not.toBeNull();
+        // Nobody sells it, so a missing part number is not worth flagging.
         expect(row?.buildIssues).toEqual([]);
     });
 

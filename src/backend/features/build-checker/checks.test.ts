@@ -74,7 +74,7 @@ describe("checkInsertable", () => {
     const HEALTHY_INSERTABLE = {
         vendors: [Vendor.REV],
         thumbnailUrls: THUMBNAILS,
-        records: [record("217-2600")]
+        probed: [record("217-2600")]
     };
 
     it("returns no issues when vendors are parsed and thumbnails generated", () => {
@@ -100,7 +100,7 @@ describe("checkInsertable", () => {
     it("warns when a vendor part indexed without a part number", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
-            records: [record(null), record(null)]
+            probed: [record(null), record(null)]
         });
         expect(issues).toEqual([{ type: BuildIssueType.NO_PART_NUMBER }]);
     });
@@ -108,7 +108,7 @@ describe("checkInsertable", () => {
     it("does not warn when only some configurations lack one", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
-            records: [record(null), record("217-2600")]
+            probed: [record(null), record("217-2600")]
         });
         expect(issues).toEqual([]);
     });
@@ -118,14 +118,14 @@ describe("checkInsertable", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
             vendors: [Vendor.CUSTOM],
-            records: [record(null)]
+            probed: [record(null)]
         });
         expect(issues).toEqual([]);
     });
 
     // Nothing was probed, so there is nothing to conclude.
     it("does not warn when the insertable is not indexed", () => {
-        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, records: [] });
+        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, probed: [] });
         expect(issues).toEqual([]);
     });
 });

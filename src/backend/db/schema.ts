@@ -7,7 +7,8 @@ import { Vendor } from "../features/library/vendors";
 import {
     ParameterValues,
     ConfigurationParameter,
-    ConfigurationRecord
+    ConfigurationRecord,
+    PartData
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
 
@@ -93,6 +94,9 @@ export const insertables = sqliteTable("insertables", {
     fastenInfo: text("fasten_info", {
         mode: "json"
     }).$type<FastenInfo | null>(),
+    // The element's own part identity, probed from its defaults. Null until a
+    // probe succeeds; a configurable insertable left unindexed never gets one.
+    partData: text("part_data", { mode: "json" }).$type<PartData | null>(),
     // Build-time issues flagged by the build checker, recomputed on reload.
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
@@ -112,8 +116,8 @@ export const configurations = sqliteTable("configurations", {
         .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
-    // One record per configuration we probed (part number + metadata). Empty
-    // unless the insertable is indexed. Search dedupes these to a part-number map.
+    // One record per indexed configuration. Empty unless the insertable is
+    // indexed; the element's own part data lives on `insertables.partData`.
     records: text("records", { mode: "json" })
         .$type<ConfigurationRecord[]>()
         .notNull()

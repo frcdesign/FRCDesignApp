@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
-import type { ConfigurationRecord } from "../configurations/models";
+import type { ConfigurationRecord, PartData } from "../configurations/models";
 import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
@@ -26,13 +26,9 @@ function readInsertable() {
         .get();
 }
 
-/** Builds a configuration record with the given part number and defaults. */
-function record(
-    partNumber: string | null,
-    configuration: Record<string, string> = {}
-): ConfigurationRecord {
+/** Builds an element's own part data with the given part number and defaults. */
+function partData(partNumber: string | null): PartData {
     return {
-        configuration,
         partNumber,
         name: null,
         description: null,
@@ -41,6 +37,14 @@ function record(
         hasMultipleParts: false,
         isUnstableComposite: false
     };
+}
+
+/** Builds a configuration record with the given part number and defaults. */
+function record(
+    partNumber: string | null,
+    configuration: Record<string, string> = {}
+): ConfigurationRecord {
+    return { ...partData(partNumber), configuration };
 }
 
 describe("saveInsertable", () => {
@@ -129,32 +133,30 @@ describe("saveInsertable", () => {
         expect(config?.records).toEqual(records);
     });
 
-    // An indexed insertable with no varying parameters still needs its records
-    // stored, so a configurations row is kept even when `parameters` is empty.
-    it("keeps a configuration row for a non-configurable indexed insertable", async () => {
+    // The element's own part number is not a configuration of it, so probing an
+    // unconfigurable element must not manufacture a configurations row.
+    it("stores part data on the insertable without a configuration row", async () => {
         await saveInsertable(
             db,
             insertableTarget(),
             parsedInsertable({
-                configuration: {
-                    parameters: [],
-                    records: [record("PN-default")]
-                }
+                partData: partData("PN-default"),
+                configuration: { parameters: [], records: [] }
             })
         );
 
-        const config = await db
+        const insertable = await db
             .select()
-            .from(configurations)
-            .where(eq(configurations.id, TEST_PART_STUDIO_ID))
+            .from(insertables)
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID))
             .get();
-        expect(config?.parameters).toEqual([]);
-        expect(config?.records).toEqual([record("PN-default")]);
+        expect(insertable?.partData).toEqual(partData("PN-default"));
+        expect(await db.select().from(configurations).all()).toHaveLength(0);
     });
 
-    // features/library/db.ts reads `records` without re-checking that the insertable is
-    // still indexed, so an empty reload must drop the row, not blank it.
-    it("drops the configuration row when there are no parameters or records", async () => {
+    // features/library/db.ts treats the row's existence as "configurable", so an
+    // insertable that stops being configurable must lose the row, not blank it.
+    it("drops the configuration row when there are no parameters", async () => {
         await saveInsertable(
             db,
             insertableTarget(),

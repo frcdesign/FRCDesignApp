@@ -156,6 +156,8 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `library/` — the library response (`db.ts`), its DTOs, and the groups and insertables endpoints
     - `load/` — everything that turns Onshape into what we store: the `parse-*` modules (document contents, configurations, configuration records, vendors, fasten info), the per-group and per-insertable loaders, the Workflows that drive them, their retry policies, and the job tracker
     - `configurations/` — the configuration domain the frontend shares: models, canonicalization, combination enumeration, and the input parser
+
+    An element's own part number and material live on `insertables.part_data`; a `configurations` row exists exactly when the element has parameters to configure.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
     - `favorites/`, `search/`

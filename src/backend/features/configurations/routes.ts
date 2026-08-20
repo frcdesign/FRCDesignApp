@@ -3,9 +3,10 @@ import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
-import { configurations } from "../../db/schema";
+import { configurations, insertables } from "../../db/schema";
 import { type ConfigurationResult, type UnitInfo } from "./models";
 import { toSearchRecords } from "../search/search-index";
+import { toRecords } from "./utils";
 import { QuantityType, type Unit } from "./enums";
 import { isInstancePath } from "../../lib/onshape/path";
 import { HTTPException } from "hono/http-exception";
@@ -26,13 +27,17 @@ configurationRoutes.get(
         }
 
         const db = getDb(c.env.DB);
+        // Left join: the element's own part data is the fallback record, and it
+        // lives on the insertable whether or not it is configurable.
         const config = await db
             .select({
+                partData: insertables.partData,
                 parameters: configurations.parameters,
                 records: configurations.records
             })
-            .from(configurations)
-            .where(eq(configurations.id, insertableId))
+            .from(insertables)
+            .leftJoin(configurations, eq(configurations.id, insertables.id))
+            .where(eq(insertables.id, insertableId))
             .get();
 
         if (!config) {
@@ -42,8 +47,10 @@ configurationRoutes.get(
         }
 
         const result: ConfigurationResult = {
-            parameters: config.parameters,
-            records: toSearchRecords(config.records)
+            parameters: config.parameters ?? [],
+            records: toSearchRecords(
+                toRecords(config.partData, config.records ?? [])
+            )
         };
         return c.json(result);
     }

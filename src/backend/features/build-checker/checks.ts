@@ -1,7 +1,7 @@
 import { ThumbnailUrls } from "../thumbnails/types";
 import { Vendor, isCustomPart } from "../library/vendors";
 import { addBuildIssue, BuildIssue, BuildIssueType } from "./issues";
-import type { ConfigurationRecord } from "../configurations/models";
+import type { PartData } from "../configurations/models";
 
 interface GroupCheckInput {
     /** Whether the Onshape document has a designated thumbnail tab/element. */
@@ -42,8 +42,8 @@ interface InsertableCheckInput {
     vendors: Vendor[];
     /** The uploaded thumbnail URLs, or `null` when generation failed. */
     thumbnailUrls: ThumbnailUrls | null;
-    /** Indexed configuration records; empty when the insertable isn't indexed. */
-    records: ConfigurationRecord[];
+    /** The element's own part data, plus one per indexed configuration. */
+    probed: (PartData | null)[];
 }
 
 /**
@@ -65,7 +65,7 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
 
     issues = addBuildIssue(
         issues,
-        ...checkIndexedPartNumber(input.vendors, input.records)
+        ...checkIndexedPartNumber(input.vendors, input.probed)
     );
 
     return issues;
@@ -75,14 +75,16 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
  * A custom part is expected to have no part number; anything a vendor sells
  * should have one in at least one configuration.
  */
+/** `probed` is the element's own part data plus any indexed configuration's. */
 export function checkIndexedPartNumber(
     vendors: Vendor[],
-    records: ConfigurationRecord[]
+    probed: (PartData | null)[]
 ): BuildIssue[] {
-    if (isCustomPart(vendors) || records.length === 0) {
+    const found = probed.filter((data) => data !== null);
+    if (isCustomPart(vendors) || found.length === 0) {
         return [];
     }
-    return records.some((record) => record.partNumber)
+    return found.some((data) => data.partNumber)
         ? []
         : [{ type: BuildIssueType.NO_PART_NUMBER }];
 }

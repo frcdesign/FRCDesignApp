@@ -6,11 +6,12 @@ import { group } from "../../db/schema";
 import {
     resetDb,
     seedGroup,
+    seedInsertable,
     seedLibrary,
     TEST_GROUP_ID,
     TEST_LIBRARY_ID
 } from "../../../__test_utils__";
-import { placeNewGroup } from "./db";
+import { placeNewGroup, rebuildSearchDb } from "./db";
 
 const db = getDb(env.DB);
 
@@ -66,5 +67,32 @@ describe("placeNewGroup", () => {
             .all();
         expect(rows.map((r) => r.id)).toEqual(["g1", "g2", "g3"]);
         expect(rows.map((r) => r.sortOrder)).toEqual([0, 2, 3]);
+    });
+});
+
+describe("rebuildSearchDb", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+    });
+
+    // An unconfigurable insertable has no configurations row, so its part
+    // number reaches search only through the insertable's own part data.
+    it("indexes an unconfigurable insertable's part number", async () => {
+        await seedGroup(db);
+        await seedInsertable(db, {
+            partData: {
+                partNumber: "WCP-0405",
+                name: "2x1 Tube",
+                description: null,
+                material: null,
+                vendor: null,
+                hasMultipleParts: false,
+                isUnstableComposite: false
+            }
+        });
+
+        const searchDb = await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
+
+        expect(searchDb).toContain("WCP-0405");
     });
 });

@@ -120,9 +120,12 @@ export async function seedInsertable(
 }
 
 /** Seeds the standard part-studio insertable (ensures library + group). */
-export async function seedPartStudio(db: Db): Promise<string> {
+export async function seedPartStudio(
+    db: Db,
+    overrides: Partial<typeof insertables.$inferInsert> = {}
+): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(db);
+    return seedInsertable(db, overrides);
 }
 
 /** Seeds the standard assembly insertable (ensures library + group). */

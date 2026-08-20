@@ -8,6 +8,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     ParameterValues,
     ConfigurationParameter,
+    PartData,
     ConfigurationRecord
 } from "../configurations/models";
 import {
@@ -35,12 +36,16 @@ const BATCH_SIZE = 20;
 
 /** An insertable's configuration records, and the issues indexing them raised. */
 export interface ConfigurationRecordsResult {
+    /** The element's own part data; null when nothing was probed. */
+    partData: PartData | null;
+    /** One per indexed configuration; the element's own is `partData`. */
     records: ConfigurationRecord[];
     buildIssues: BuildIssue[];
 }
 
 /** The result for an insertable that isn't indexed. */
 export const NO_RECORDS: ConfigurationRecordsResult = {
+    partData: null,
     records: [],
     buildIssues: []
 };
@@ -369,9 +374,21 @@ function toResult(
     batches: ConfigurationRecord[][],
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
+    // The element's own probe describes the element, not a configuration of it,
+    // so it sheds the (empty) configuration that produced it.
+    const partData: PartData = {
+        partNumber: defaultRecord.partNumber,
+        name: defaultRecord.name,
+        description: defaultRecord.description,
+        material: defaultRecord.material,
+        vendor: defaultRecord.vendor,
+        hasMultipleParts: defaultRecord.hasMultipleParts,
+        isUnstableComposite: defaultRecord.isUnstableComposite
+    };
+
     // Canonical, so a record addresses the same thumbnail the insert menu does
     // for the same selection.
-    const records = [defaultRecord, ...batches.flat()].map((record) => ({
+    const records = batches.flat().map((record) => ({
         ...record,
         configuration: canonicalizeConfiguration(
             record.configuration,
@@ -381,17 +398,18 @@ function toResult(
 
     // A capped insertable never reaches here: decideIndexing turns indexing off
     // past the cap, and raises TOO_MANY_CONFIGURATIONS itself.
+    const probed: PartData[] = [partData, ...records];
     let buildIssues: BuildIssue[] = [];
-    if (records.some((record) => record.hasMultipleParts)) {
+    if (probed.some((record) => record.hasMultipleParts)) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.MULTIPLE_PARTS
         });
     }
-    if (records.some((record) => record.isUnstableComposite)) {
+    if (probed.some((record) => record.isUnstableComposite)) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.UNSTABLE_COMPOSITE
         });
     }
 
-    return { records, buildIssues };
+    return { partData, records, buildIssues };
 }

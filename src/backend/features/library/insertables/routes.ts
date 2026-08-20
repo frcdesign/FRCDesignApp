@@ -160,13 +160,15 @@ insertableRoutes.post(
             ...indexed.buildIssues,
             ...indexing.buildIssues,
             // Vendors are read, not re-derived: the load path wrote them.
-            ...checkIndexedPartNumber(row.vendors, indexed.records)
+            ...checkIndexedPartNumber(row.vendors, [
+                indexed.partData,
+                ...indexed.records
+            ])
         );
 
-        // Keep a configurations row while there's parameters or records to hold;
-        // a non-configurable insertable that stops indexing loses its row.
+        // A configurations row exists exactly when the insertable is configurable.
         const configWrite =
-            parameters.length > 0 || indexed.records.length > 0
+            parameters.length > 0
                 ? db
                       .insert(configurations)
                       .values({
@@ -187,6 +189,7 @@ insertableRoutes.post(
                 .update(insertables)
                 .set({
                     indexConfigurations: body.indexConfigurations,
+                    partData: indexed.partData,
                     buildIssues
                 })
                 .where(eq(insertables.id, insertableId)),

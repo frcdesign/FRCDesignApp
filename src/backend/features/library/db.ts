@@ -1,9 +1,10 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { libraries, group, insertables, configurations } from "../../db/schema";
 import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./dto";
 import { ConfigurationRecord } from "../configurations/models";
+import { toRecords } from "../configurations/utils";
 import { buildSearchDb } from "../search/search-index";
 
 /**
@@ -34,19 +35,14 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        // Which insertables are configurable. A row can exist just to hold
-        // records, so this keys on having parameters — tested in SQL so the
-        // payload stays in D1 and is fetched per insertable when needed.
+        // Which insertables are configurable: a configurations row exists
+        // exactly when there are parameters. Only the ids — the payload stays
+        // in D1 and is fetched per insertable when one is actually opened.
         db
             .select({ id: configurations.id })
             .from(configurations)
             .innerJoin(insertables, eq(configurations.id, insertables.id))
-            .where(
-                and(
-                    eq(insertables.libraryId, libraryId),
-                    sql`json_array_length(${configurations.parameters}) > 0`
-                )
-            )
+            .where(eq(insertables.libraryId, libraryId))
             .all()
     ]);
 
@@ -188,8 +184,10 @@ export async function rebuildSearchDb(
 }
 
 /**
- * Assembles the per-insertable configuration records `buildSearchDb` dedupes into
- * the part-number search map. Only indexed insertables have records.
+ * Assembles the per-insertable records `buildSearchDb` dedupes into the
+ * part-number search map: the element's own part data, plus one per indexed
+ * configuration. A left join, since an unconfigurable element still has both a
+ * part number and no configurations row.
  */
 async function getRecordsMap(
     db: Db,
@@ -198,17 +196,19 @@ async function getRecordsMap(
     const rows = await db
         .select({
             id: insertables.id,
+            partData: insertables.partData,
             records: configurations.records
         })
         .from(insertables)
-        .innerJoin(configurations, eq(configurations.id, insertables.id))
+        .leftJoin(configurations, eq(configurations.id, insertables.id))
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
     const recordsMap: Record<string, ConfigurationRecord[]> = {};
     for (const row of rows) {
-        if (row.records.length > 0) {
-            recordsMap[row.id] = row.records;
+        const records = toRecords(row.partData, row.records ?? []);
+        if (records.length > 0) {
+            recordsMap[row.id] = records;
         }
     }
     return recordsMap;

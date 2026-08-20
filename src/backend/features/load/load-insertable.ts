@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../../db/client";
 import type {
     Configuration,
+    PartData,
     ConfigurationParameter
 } from "../configurations/models";
 import {
@@ -45,6 +46,8 @@ export interface ParsedInsertable {
     /** Whether the part studio resolves to an open composite. */
     isOpenComposite: boolean;
     buildIssues: BuildIssue[];
+    /** The element's own part data; null when nothing was probed. */
+    partData: PartData | null;
     configuration: Configuration;
 }
 
@@ -108,7 +111,7 @@ export async function loadInsertable(
             ? checkInsertable({
                   vendors,
                   thumbnailUrls,
-                  records: recordsResult.records
+                  probed: [recordsResult.partData, ...recordsResult.records]
               })
             : [{ type: BuildIssueType.NO_PARTS }],
         ...recordsResult.buildIssues,
@@ -121,6 +124,7 @@ export async function loadInsertable(
         fastenInfo,
         isOpenComposite,
         buildIssues,
+        partData: recordsResult.partData,
         configuration: { parameters, records: recordsResult.records }
     };
 
@@ -226,6 +230,7 @@ export async function saveInsertable(
         largeThumbnailUrl: parsed.thumbnailUrls?.large ?? null,
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
+        partData: parsed.partData,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: Date.now()
     };
@@ -251,13 +256,9 @@ export async function saveInsertable(
             set: reloaded
         });
 
-    // Keep the row while it holds either parameters or records; an insertable
-    // that is neither configurable nor indexed needs none.
+    // A configurations row exists exactly when the insertable is configurable.
     let configurationWrite;
-    if (
-        configuration.parameters.length > 0 ||
-        configuration.records.length > 0
-    ) {
+    if (configuration.parameters.length > 0) {
         configurationWrite = db
             .insert(configurations)
             .values({ id: target.insertableId, ...configuration })

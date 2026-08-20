@@ -39,6 +39,41 @@ describe("configuration routes", () => {
         expect(body).toEqual({ parameters: TEST_PARAMETERS, records: [] });
     });
 
+    // The element's own part data is the record an unset configuration falls
+    // back to, and it lives on the insertable, not in a configurations row.
+    it("GET /configuration/:id serves the element's own part data as a record", async () => {
+        await seedPartStudio(db, {
+            partData: {
+                partNumber: "WCP-0405",
+                name: "2x1 Tube",
+                description: null,
+                material: null,
+                vendor: null,
+                hasMultipleParts: false,
+                isUnstableComposite: false
+            }
+        });
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/configuration/${TEST_PART_STUDIO_ID}?v=abc123`,
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        expect(await res.json()).toEqual({
+            parameters: [],
+            records: [
+                {
+                    partNumber: "WCP-0405",
+                    name: "2x1 Tube",
+                    configuration: {}
+                }
+            ]
+        });
+    });
+
     it("GET /configuration/:id 404s for an unknown id", async () => {
         const app = createTestApp();
         const res = await app.request(

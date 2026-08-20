@@ -199,7 +199,7 @@ function mockParts(
 }
 
 describe("parseConfigurationRecords", () => {
-    it("returns a record per configuration, default first, in enumeration order", async () => {
+    it("returns the element's part data plus a record per configuration", async () => {
         mockParts((configuration) => [
             { partId: "p", partNumber: `PN-${configuration.A ?? "default"}` }
         ]);
@@ -214,12 +214,10 @@ describe("parseConfigurationRecords", () => {
         );
 
         expect(result.buildIssues).toEqual([]);
-        // "a1" is A's default, so that combination is the default probe under
-        // another name and is not probed again.
-        expect(result.records.map((r) => r.partNumber)).toEqual([
-            "PN-default",
-            "PN-a2"
-        ]);
+        // "a1" is A's default, so that combination is the element's own probe
+        // under another name and is not probed again.
+        expect(result.partData?.partNumber).toBe("PN-default");
+        expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
     });
 
     it("probes every combination when none of them is the default", async () => {
@@ -238,10 +236,8 @@ describe("parseConfigurationRecords", () => {
             false
         );
 
-        expect(result.records.map((r) => r.partNumber)).toEqual([
-            "PN-default",
-            "PN-a1"
-        ]);
+        expect(result.partData?.partNumber).toBe("PN-default");
+        expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a1"]);
     });
 
     it("flags a studio with more than one part in any configuration", async () => {
@@ -313,8 +309,8 @@ describe("parseConfigurationRecords", () => {
         );
 
         expect(result.buildIssues).toEqual([]);
-        expect(result.records).toHaveLength(1);
-        expect(result.records[0].partNumber).toBe("PN-default");
+        expect(result.records).toHaveLength(0);
+        expect(result.partData?.partNumber).toBe("PN-default");
         expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -334,18 +330,16 @@ describe("parseConfigurationRecords", () => {
             false
         );
 
-        expect(result.records).toEqual([
-            {
-                configuration: {},
-                partNumber: "AM-1",
-                name: null,
-                description: null,
-                material: null,
-                vendor: null,
-                hasMultipleParts: false,
-                isUnstableComposite: false
-            }
-        ]);
+        expect(result.records).toEqual([]);
+        expect(result.partData).toEqual({
+            partNumber: "AM-1",
+            name: null,
+            description: null,
+            material: null,
+            vendor: null,
+            hasMultipleParts: false,
+            isUnstableComposite: false
+        });
         expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
     });
 });

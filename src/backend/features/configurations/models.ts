@@ -139,9 +139,12 @@ export type ParameterValues = Record<string, string>;
  * What one probed configuration resolves to. Stored per probe, so search and the
  * UI can read it back without re-querying Onshape.
  */
-export interface ConfigurationRecord {
-    /** The parameter values that produce it; empty means the element's defaults. */
-    configuration: ParameterValues;
+/**
+ * What a probe reads off an element. Probed from the element's own defaults it
+ * describes the element itself; probed from a configuration it describes that
+ * configuration (see {@link ConfigurationRecord}).
+ */
+export interface PartData {
     partNumber: string | null;
     name: string | null;
     description: string | null;
@@ -150,8 +153,14 @@ export interface ConfigurationRecord {
     vendor: string | null;
     /** True when a part studio resolved to more than one part. */
     hasMultipleParts: boolean;
-    /** True when an open composite lost its composite in this configuration. */
+    /** True when an open composite lost its composite here. */
     isUnstableComposite: boolean;
+}
+
+/** One configuration's part data, stored only for an indexed insertable. */
+export interface ConfigurationRecord extends PartData {
+    /** The parameter values that produce it. */
+    configuration: ParameterValues;
 }
 
 /**

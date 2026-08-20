@@ -1,4 +1,6 @@
 import {
+    type ConfigurationRecord,
+    type PartData,
     ParameterValues,
     EnumOption,
     EnumParameter,
@@ -186,4 +188,16 @@ export function getEvaluateOptions(
         displayUnit: Unit.UNITLESS,
         ...minAndMax
     };
+}
+
+/**
+ * An insertable's full record list: its own part data first — the record an
+ * unset configuration falls back to — then one per indexed configuration.
+ */
+export function toRecords(
+    partData: PartData | null,
+    records: ConfigurationRecord[]
+): ConfigurationRecord[] {
+    if (!partData) return records;
+    return [{ ...partData, configuration: {} }, ...records];
 }
