@@ -13,15 +13,15 @@ import { HttpStatus } from "http-status-ts";
 
 export const configurationRoutes = getApp();
 
-/** GET /api/configuration/:configurationId?v=:microversionId */
+/** GET /api/configuration/:insertableId?v=:microversionId — parameters and records */
 configurationRoutes.get(
-    "/configuration/:configurationId",
+    "/configuration/:insertableId",
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
-        const configurationId = c.req.param("configurationId");
-        if (!configurationId) {
+        const insertableId = c.req.param("insertableId");
+        if (!insertableId) {
             throw new HTTPException(HttpStatus.BAD_REQUEST, {
-                message: "configurationId is required"
+                message: "insertableId is required"
             });
         }
 
@@ -32,7 +32,7 @@ configurationRoutes.get(
                 records: configurations.records
             })
             .from(configurations)
-            .where(eq(configurations.id, configurationId))
+            .where(eq(configurations.id, insertableId))
             .get();
 
         if (!config) {

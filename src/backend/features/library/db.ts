@@ -34,8 +34,9 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        // A row can exist just to hold records, so "configurable" keys on
-        // having parameters. Tested in SQL to leave the payload in D1.
+        // Which insertables are configurable. A row can exist just to hold
+        // records, so this keys on having parameters — tested in SQL so the
+        // payload stays in D1 and is fetched per insertable when needed.
         db
             .select({ id: configurations.id })
             .from(configurations)
@@ -49,7 +50,7 @@ export async function getLibraryOut(
             .all()
     ]);
 
-    const configSet = new Set(allConfigurations.map((c) => c.id));
+    const configurableIds = new Set(allConfigurations.map((c) => c.id));
 
     const groupsOut: Groups = {};
     for (const group of allGroups) {
@@ -96,7 +97,7 @@ export async function getLibraryOut(
             elementType: ins.elementType,
             smallThumbnailUrl: ins.smallThumbnailUrl ?? undefined,
             largeThumbnailUrl: ins.largeThumbnailUrl ?? undefined,
-            configurationId: configSet.has(ins.id) ? ins.id : undefined,
+            isConfigurable: configurableIds.has(ins.id),
             vendors: ins.vendors
         } satisfies InsertableOut;
     }

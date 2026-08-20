@@ -53,7 +53,7 @@ import { SectionError } from "../../../components/app-zero-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
 interface ConfigurationWrapperProps {
-    configurationId: string;
+    insertableId: string;
     microversionId: string;
     configuration?: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
@@ -70,7 +70,7 @@ interface ConfigurationWrapperProps {
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const {
-        configurationId,
+        insertableId,
         microversionId,
         configuration,
         setConfiguration,
@@ -79,9 +79,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     } = props;
 
     const query = useQuery<ConfigurationResult>({
-        queryKey: configurationQueryKey(configurationId, microversionId),
+        queryKey: configurationQueryKey(insertableId, microversionId),
         queryFn: async () => {
-            return apiGet("/configuration/" + configurationId, {
+            return apiGet("/configuration/" + insertableId, {
                 cacheId: microversionId
             });
         },

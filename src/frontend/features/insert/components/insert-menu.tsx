@@ -8,6 +8,7 @@ import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { modals } from "@mantine/modals";
 import { useIsFetching } from "@tanstack/react-query";
+import { insertableConfigurationQueryMatchKey } from "../../../lib/query-keys";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import {
@@ -137,10 +138,10 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
     let parameters: ReactNode = null;
-    if (insertable.configurationId) {
+    if (insertable.isConfigurable) {
         parameters = (
             <ConfigurationWrapper
-                configurationId={insertable.configurationId}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
@@ -215,7 +216,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const isLoadingConfiguration =
         useIsFetching({
-            queryKey: ["configuration", insertable.configurationId]
+            queryKey: insertableConfigurationQueryMatchKey(insertable.id)
         }) > 0;
 
     const canFasten =

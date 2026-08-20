@@ -130,7 +130,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             <Menu.Item
                 leftSection={<IconPencil size={IconSize.SMALL} />}
                 onClick={() => {
-                    if (insertable.configurationId === undefined) {
+                    if (!insertable.isConfigurable) {
                         openCannotEditDefaultConfigurationAlert();
                         return;
                     }

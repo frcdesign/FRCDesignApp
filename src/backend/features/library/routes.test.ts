@@ -9,6 +9,7 @@ import {
     resetDb,
     seedTestData,
     seedConfiguration,
+    TEST_PARAMETERS,
     seedLibrary
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -41,9 +42,42 @@ describe("library routes", () => {
 
         expect(body.groupOrder).toContain(TEST_GROUP_ID);
         expect(Object.keys(body.insertables)).toContain(TEST_PART_STUDIO_ID);
-        expect(body.insertables[TEST_PART_STUDIO_ID].configurationId).toBe(
-            TEST_PART_STUDIO_ID
+        expect(body.insertables[TEST_PART_STUDIO_ID].isConfigurable).toBe(true);
+    });
+
+    it("marks an insertable with no parameters as not configurable", async () => {
+        await seedTestData(db);
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/library-data/library/${TEST_LIBRARY_ID}?v=1`,
+            jsonRequest("GET"),
+            env
         );
+        const body: LibraryOut = await res.json();
+
+        expect(body.insertables[TEST_PART_STUDIO_ID].isConfigurable).toBe(
+            false
+        );
+    });
+
+    it("carries no configuration payload; it is fetched per insertable", async () => {
+        await seedTestData(db);
+        await seedConfiguration(db, TEST_PART_STUDIO_ID);
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/library-data/library/${TEST_LIBRARY_ID}?v=1`,
+            jsonRequest("GET"),
+            env
+        );
+        const body = await res.text();
+
+        // The seeded parameter's name is distinctive; the payload stays in D1
+        // and is fetched from /api/configuration/:insertableId when needed.
+        expect(body).not.toContain(TEST_PARAMETERS[0].name);
+        expect(body).not.toContain("parameters");
+        expect(body).not.toContain("records");
     });
 
     it("GET /search-db serves the library's index from R2 as plain JSON", async () => {

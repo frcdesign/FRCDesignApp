@@ -114,6 +114,7 @@ function library(name = "Bracket"): LibraryOut {
                 isVisible: true,
                 supportsFasten: false,
                 elementType: ElementType.PART_STUDIO,
+                isConfigurable: false,
                 vendors: []
             }
         }

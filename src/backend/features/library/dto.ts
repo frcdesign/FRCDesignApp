@@ -16,7 +16,8 @@ export interface InsertableOut {
     elementType: ElementType;
     smallThumbnailUrl?: string;
     largeThumbnailUrl?: string;
-    configurationId?: string;
+    /** Whether it has configuration parameters; they are fetched by `id`. */
+    isConfigurable: boolean;
     vendors: Vendor[];
 }
 

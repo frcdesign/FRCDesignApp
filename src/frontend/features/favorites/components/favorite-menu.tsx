@@ -158,7 +158,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     if (!insertable) {
         return null;
     }
-    if (!insertable.configurationId) {
+    if (!insertable.isConfigurable) {
         return (
             <PageError
                 title="Cannot edit unconfigurable favorite"
@@ -183,7 +183,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 onRecord={setRecord}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
-                configurationId={insertable.configurationId}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
             />
             <Group justify="flex-end" mt="md">
