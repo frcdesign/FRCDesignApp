@@ -20,7 +20,6 @@ import {
 } from "../parse/parse-configuration-records";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementType } from "../../shared/types";
-import { parseVendors } from "../parse/parse-vendors";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
 import { addPartStudioFeature } from "../onshape-api/endpoints/part-studios";
 import {
@@ -112,7 +111,7 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
-                name: insertables.name,
+                vendors: insertables.vendors,
                 isOpenComposite: insertables.isOpenComposite,
                 buildIssues: insertables.buildIssues
             })
@@ -132,8 +131,13 @@ insertableRoutes.post(
                     .where(eq(configurations.id, insertableId))
                     .get()
             )?.parameters ?? [];
-        const vendors = parseVendors(row.name, parameters);
-        const indexing = decideIndexing(vendors, parameters, body.forceIndex);
+        // Read, not re-derived: the load path already wrote these, and two
+        // copies of the derivation would have to stay in lockstep.
+        const indexing = decideIndexing(
+            row.vendors,
+            parameters,
+            body.forceIndex
+        );
 
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
