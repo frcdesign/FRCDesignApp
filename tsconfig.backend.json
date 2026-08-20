@@ -4,6 +4,6 @@
         "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.backend.tsbuildinfo",
         "types": ["node", "./worker-configuration.d.ts"]
     },
-    "include": ["src/backend", "src/shared"],
-    "exclude": ["src/backend/**/*.test.ts", "src/shared/**/*.test.ts"]
+    "include": ["src/backend"],
+    "exclude": ["src/backend/**/*.test.ts"]
 }

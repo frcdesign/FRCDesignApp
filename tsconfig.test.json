@@ -18,10 +18,5 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true
     },
-    "include": [
-        "src/**/*.test.ts",
-        "src/**/*.test.tsx",
-        "src/__test_utils__",
-        "src/shared"
-    ]
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__test_utils__"]
 }

@@ -1,0 +1,118 @@
+import { HTTPException } from "hono/http-exception";
+import { HttpStatus } from "http-status-ts";
+import { eq } from "drizzle-orm";
+import { getDb } from "./db/client";
+import { users } from "./db/schema";
+import { DEFAULT_LIBRARY_ID } from "./features/library/library-id";
+import { DEFAULT_SETTINGS } from "./features/users/settings";
+import { authRoutes } from "./features/auth/routes";
+import { getSessionCompanyId } from "./features/auth/session";
+import { cacheMiddleware } from "./lib/cache";
+import {
+    getApp,
+    type AppContext,
+    type AppServicesFactory
+} from "./lib/context";
+import { OnshapeRateLimitError } from "./lib/onshape/client";
+import { userRoutes } from "./features/users/routes";
+import { libraryRoutes } from "./features/library/routes";
+import { favoriteRoutes } from "./features/favorites/routes";
+import { thumbnailRoutes } from "./features/thumbnails/routes";
+import { insertableRoutes } from "./features/library/insertables/routes";
+import { groupRoutes } from "./features/library/groups/routes";
+import { configurationRoutes } from "./features/configurations/routes";
+import { buildStatusRoutes } from "./features/build-checker/routes";
+
+/**
+ * Returns the relative URL of the given requestUrl.
+ * Used as a workaround to get the current URL without breaking in local dev due to Cloudflare stripping the port number.
+ */
+function getRelativeUrl(requestUrl: string) {
+    const { pathname, search } = new URL(requestUrl);
+    return pathname + search;
+}
+
+/** Builds the url the caller resumes at, seeded with the library and theme they last used. */
+async function getEntryUrl(c: AppContext): Promise<string> {
+    const db = getDb(c.env.DB);
+    const user = await db
+        .select({ libraryId: users.libraryId, theme: users.theme })
+        .from(users)
+        .where(eq(users.id, await c.var.getUserId()))
+        .get();
+
+    const search = new URL(c.req.url).searchParams;
+    const systemTheme = search.get("theme");
+    if (systemTheme !== null) {
+        search.set("systemTheme", systemTheme);
+    }
+    const currentTheme = user?.theme ?? DEFAULT_SETTINGS.theme;
+    search.set("theme", currentTheme);
+
+    const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
+    return `/app/library/${libraryId}?${search.toString()}`;
+}
+
+/**
+ * Composition root. `makeServices` is bound onto each request's context, so
+ * handlers reach Onshape and access level through `c.var`.
+ */
+export function createApp(makeServices: AppServicesFactory) {
+    const app = getApp();
+
+    app.use("*", async (c, next) => {
+        const services = makeServices(c);
+        c.set("getOnshapeApi", services.getOnshapeApi);
+        c.set("getUserId", services.getUserId);
+        c.set("getAccessLevel", services.getAccessLevel);
+        c.set("isAuthenticated", services.isAuthenticated);
+        await next();
+    });
+
+    // Mount all API routes
+    app.route("/api", userRoutes);
+    app.route("/api", libraryRoutes);
+    app.route("/api", favoriteRoutes);
+    app.route("/api", thumbnailRoutes);
+    app.route("/api", groupRoutes);
+    app.route("/api", insertableRoutes);
+    app.route("/api", configurationRoutes);
+    app.route("/api", buildStatusRoutes);
+    // Per-request redirects carrying OAuth state; never reusable.
+    app.use("/auth/*", cacheMiddleware());
+    app.route("/auth", authRoutes);
+
+    // `/init` is the auth-gated entry point.
+    app.on("GET", "/init", cacheMiddleware(), async (c) => {
+        if (!(await c.var.isAuthenticated())) {
+            const currentUrl = getRelativeUrl(c.req.url);
+            const signInUrl = `/auth/sign-in?redirectUrl=${encodeURIComponent(currentUrl)}&sessionCompanyId=${getSessionCompanyId(c)}`;
+            return c.redirect(signInUrl);
+        }
+        return c.redirect(await getEntryUrl(c));
+    });
+
+    app.onError((err, c) => {
+        // Surface an Onshape rate limit as a 429 the client can retry, rather
+        // than blocking the request thread waiting it out.
+        if (err instanceof OnshapeRateLimitError) {
+            return c.json(
+                {
+                    error: "Onshape rate limit reached. Please try again shortly.",
+                    retryAfterSeconds: err.retryAfterSeconds
+                },
+                HttpStatus.TOO_MANY_REQUESTS
+            );
+        }
+        if (err instanceof HTTPException) {
+            return err.getResponse();
+        }
+        console.error(err);
+        return c.json(
+            { error: "Internal Server Error" },
+            HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    });
+
+    return app;
+}

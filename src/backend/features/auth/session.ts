@@ -1,0 +1,94 @@
+/** Session cookie plus the KV records it keys: OAuth tokens and login state. */
+import { HttpStatus } from "http-status-ts";
+import { HTTPException } from "hono/http-exception";
+import { getCookie, setCookie } from "hono/cookie";
+import { type AppContext } from "../../lib/context";
+
+const SESSION_COOKIE = "frc-design-app-cookie";
+const LOGIN_TTL = 600; // 10 minutes
+export const SESSION_TTL = 30 * 24 * 3600; // 30 days
+
+export function getSessionId(c: AppContext): string {
+    const sessionId = getCookie(c, SESSION_COOKIE);
+    if (!sessionId) {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
+            message: "Failed to find a valid session"
+        });
+    }
+    return sessionId;
+}
+
+export function getSessionCompanyId(c: AppContext) {
+    return c.req.query("sessionCompanyId") ?? "cad";
+}
+
+export interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+}
+
+export async function saveTokens(
+    kv: KVNamespace,
+    sessionId: string,
+    tokens: AuthTokens
+) {
+    await kv.put(`tokens:${sessionId}`, JSON.stringify(tokens), {
+        expirationTtl: SESSION_TTL
+    });
+}
+
+export async function getTokens(
+    kv: KVNamespace,
+    sessionId: string
+): Promise<AuthTokens> {
+    const raw = await kv.get(`tokens:${sessionId}`);
+    if (!raw) {
+        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
+            message: "Failed to find valid auth tokens to use"
+        });
+    }
+    return JSON.parse(raw) as AuthTokens;
+}
+
+/** What the callback needs to finish a sign-in it did not start. */
+export interface LoginSession {
+    state: string;
+    redirectUrl: string;
+}
+
+/** Single-use: reading it also clears it, so a state cannot be replayed. */
+export async function takeLoginSession(
+    c: AppContext
+): Promise<(LoginSession & { sessionId: string }) | null> {
+    const sessionId = getCookie(c, SESSION_COOKIE);
+    if (!sessionId) return null;
+    const raw = await c.env.KV.get(`login-session:${sessionId}`);
+    if (!raw) return null;
+
+    const session = JSON.parse(raw);
+    session.sessionId = sessionId;
+
+    void c.env.KV.delete(`login-session:${sessionId}`);
+    return session;
+}
+
+export async function startLoginSession(
+    c: AppContext,
+    data: LoginSession
+): Promise<string> {
+    const sessionId = crypto.randomUUID();
+    // SameSite=none + secure required because the app runs embedded in an Onshape iframe
+    setCookie(c, SESSION_COOKIE, sessionId, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        path: "/",
+        maxAge: SESSION_TTL
+    });
+
+    await c.env.KV.put(`login-session:${sessionId}`, JSON.stringify(data), {
+        expirationTtl: LOGIN_TTL
+    });
+    return sessionId;
+}

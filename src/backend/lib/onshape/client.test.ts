@@ -1,0 +1,43 @@
+import { describe, expect, it } from "vitest";
+import { OnshapeApi, OnshapeApiError, OnshapeRateLimitError } from "./client";
+
+/** Minimal concrete client whose `_request` returns a canned response. */
+class TestApi extends OnshapeApi {
+    constructor(private readonly response: Response) {
+        super();
+    }
+    protected _request(): Promise<Response> {
+        return Promise.resolve(this.response.clone());
+    }
+}
+
+describe("OnshapeApi error handling", () => {
+    it("throws OnshapeRateLimitError with the Retry-After seconds on 429", async () => {
+        const api = new TestApi(
+            new Response("rate limited", {
+                status: 429,
+                headers: { "Retry-After": "450" }
+            })
+        );
+        await expect(api.get("/x")).rejects.toMatchObject({
+            name: "OnshapeRateLimitError",
+            retryAfterSeconds: 450,
+            status: 429
+        });
+    });
+
+    it("falls back to a default when Retry-After is missing", async () => {
+        const api = new TestApi(new Response("rate limited", { status: 429 }));
+        await expect(api.get("/x")).rejects.toMatchObject({
+            retryAfterSeconds: 60
+        });
+    });
+
+    it("throws a plain OnshapeApiError for non-429 failures", async () => {
+        const api = new TestApi(new Response("boom", { status: 500 }));
+        const request = api.get("/x");
+        await expect(request).rejects.toBeInstanceOf(OnshapeApiError);
+        await expect(request).rejects.not.toBeInstanceOf(OnshapeRateLimitError);
+        await expect(request).rejects.toMatchObject({ status: 500 });
+    });
+});

@@ -2,8 +2,8 @@ export {
     AddGroupWorkflow,
     LoadLibraryWorkflow,
     ThumbnailWorkflow
-} from "./load/workflows";
-import { createApp } from "./create-app";
-import { productionServices } from "./services";
+} from "./features/library/workflows";
+import { createApp } from "./app";
+import { productionServices } from "./features/auth/services";
 
 export default createApp(productionServices);

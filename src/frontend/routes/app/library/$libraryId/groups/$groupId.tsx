@@ -1,4 +1,4 @@
-import { useAccessData } from "../../../../../api-utils/access-level";
+import { useAccessData } from "../../../../../features/auth/access-level";
 import {
     createFileRoute,
     Outlet,
@@ -16,26 +16,29 @@ import {
     FontWeight,
     IconColor,
     IconSize
-} from "../../../../../common/style-constants";
+} from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
-import { SearchResults } from "../../../../../search/search-results";
-import { GroupOut, Insertables } from "../../../../../../shared/library-dto";
-import { hasEditorAccess } from "../../../../../../shared/access-level";
-import { filterInsertables } from "../../../../../search/filter";
-import { GroupMenuItems } from "../../../../../groups/group-card";
-import { InsertableCard } from "../../../../../cards/insertable-card";
-import { ItemTable } from "../../../../../cards/card-components";
-import { AppContextMenu, MenuButton } from "../../../../../app-common/app-menu";
-import { SearchCallout } from "../../../../../search/search-errors";
+import { SearchResults } from "../../../../../features/search/components/search-results";
+import {
+    GroupOut,
+    Insertables
+} from "../../../../../../backend/features/library/dto";
+import { hasEditorAccess } from "../../../../../../backend/features/auth/access-level";
+import { filterInsertables } from "../../../../../features/search/filter";
+import { GroupMenuItems } from "../../../../../features/library/components/group-card";
+import { InsertableCard } from "../../../../../features/library/components/insertable-card";
+import { ItemTable } from "../../../../../features/library/components/card-components";
+import { AppContextMenu, MenuButton } from "../../../../../components/app-menu";
+import { SearchCallout } from "../../../../../features/search/components/search-errors";
 import {
     PageError,
     SectionError,
     SectionLoading
-} from "../../../../../app-common/app-zero-state";
-import { ClearFiltersButton } from "../../../../../settings/vendor-filters";
-import { useLibraryQuery } from "../../../../../library-queries";
-import { useLibraryId } from "../../../../../api-utils/library";
-import { useUiState, updateUiState } from "../../../../../api-utils/ui-state";
+} from "../../../../../components/app-zero-state";
+import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
+import { useLibraryQuery } from "../../../../../features/library/queries";
+import { useLibraryId } from "../../../../../features/library/library-path";
+import { useUiState, updateUiState } from "../../../../../lib/ui-state";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {

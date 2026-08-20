@@ -1,11 +1,17 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { queryClient } from "../../../../query-client";
-import { getAccessDataQuery } from "../../../../api-utils/access-level";
-import { getFavoritesQuery } from "../../../../favorites-queries";
-import { getLibraryQuery, getLibraryVersionQuery } from "../../../../library-queries";
-import { getSearchDbQuery } from "../../../../search-queries";
-import { DEFAULT_LIBRARY_ID, LibraryId } from "../../../../../shared/library-id";
-import { getUiState } from "../../../../api-utils/ui-state";
+import { queryClient } from "../../../../lib/query-client";
+import { getAccessDataQuery } from "../../../../features/auth/access-level";
+import { getFavoritesQuery } from "../../../../features/favorites/queries";
+import {
+    getLibraryQuery,
+    getLibraryVersionQuery
+} from "../../../../features/library/queries";
+import { getSearchDbQuery } from "../../../../features/search/queries";
+import {
+    DEFAULT_LIBRARY_ID,
+    LibraryId
+} from "../../../../../backend/features/library/library-id";
+import { getUiState } from "../../../../lib/ui-state";
 
 /** Restoring the last group is an entry behavior, so it happens once per load. */
 let restoredGroup = false;

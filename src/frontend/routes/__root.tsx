@@ -9,12 +9,12 @@ import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
-import { queryClient } from "../query-client";
+import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
-import { getColorTheme } from "../api-utils/onshape-params";
-import { DEFAULT_LIBRARY_ID } from "../../shared/library-id";
-import { DEFAULT_SETTINGS } from "../../shared/settings";
-import { NotFoundError, RootCrash } from "../app/root-error";
+import { getColorTheme } from "../lib/onshape-params";
+import { DEFAULT_LIBRARY_ID } from "../../backend/features/library/library-id";
+import { DEFAULT_SETTINGS } from "../../backend/features/users/settings";
+import { NotFoundError, RootCrash } from "../components/root-error";
 
 export const Route = createRootRoute({
     component: RootComponent,

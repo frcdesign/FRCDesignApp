@@ -5,23 +5,26 @@ import {
     BORDER,
     IconSize,
     PrimaryColor
-} from "../../../../common/style-constants";
+} from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
-import { GroupCard } from "../../../../groups/group-card";
-import { ItemTable } from "../../../../cards/card-components";
-import { HeartIcon } from "../../../../favorites/favorite-button";
-import { SearchResults } from "../../../../search/search-results";
+import { GroupCard } from "../../../../features/library/components/group-card";
+import { ItemTable } from "../../../../features/library/components/card-components";
+import { HeartIcon } from "../../../../features/favorites/components/favorite-button";
+import { SearchResults } from "../../../../features/search/components/search-results";
 import {
     SectionError,
     SectionLoading
-} from "../../../../app-common/app-zero-state";
-import { RequireAccessLevel } from "../../../../api-utils/access-level";
-import { AddGroupButton } from "../../../../groups/add-group-menu";
-import { FavoritesList } from "../../../../favorites/favorites-list";
-import { useLibraryQuery } from "../../../../library-queries";
-import { getLibraryName, useLibraryId } from "../../../../api-utils/library";
-import { updateUiState, useUiState } from "../../../../api-utils/ui-state";
-import { useIsSignedIn } from "../../../../api-utils/access-level";
+} from "../../../../components/app-zero-state";
+import { RequireAccessLevel } from "../../../../features/auth/access-level";
+import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
+import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
+import { useLibraryQuery } from "../../../../features/library/queries";
+import {
+    getLibraryName,
+    useLibraryId
+} from "../../../../features/library/library-path";
+import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import { useIsSignedIn } from "../../../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,

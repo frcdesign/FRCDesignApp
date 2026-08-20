@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { readLocalSettings } from "../settings/local-settings";
-import { RootAppError } from "../app/root-error";
+import { readLocalSettings } from "../features/settings/local-settings";
+import { RootAppError } from "../components/root-error";
 
 // Direct entry for a user opening the app outside Onshape. Onshape's own launch
 // is handled server-side, so it never reaches this route.
