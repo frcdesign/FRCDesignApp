@@ -11,7 +11,6 @@ import {
     seedPartStudio
 } from "../../__test_utils__";
 import { getDb } from "../db";
-import * as JobTracker from "../load/job-tracker";
 import type { LibraryBuildStatus } from "../../shared/api-models";
 
 const db = getDb(env.DB);
@@ -76,11 +75,9 @@ describe("GET /build-status", () => {
         expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBeNull();
     });
 
-    // Clients start their job-status poll off this flag, so an idle library
-    // never polls at all.
-    it.each([true, false])("reports jobRunning=%s", async (running) => {
+    // Job state lives on /job-status, which is what lets this be cached.
+    it("caches the response privately and immutably", async () => {
         await seedPartStudio(db);
-        vi.spyOn(JobTracker, "getJobStatus").mockResolvedValue({ running });
 
         const res = await createTestApp().request(
             `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
@@ -88,8 +85,8 @@ describe("GET /build-status", () => {
             env
         );
         expect(res.status).toBe(200);
-
-        const body: LibraryBuildStatus = await res.json();
-        expect(body.jobRunning).toBe(running);
+        expect(res.headers.get("Cache-Control")).toBe(
+            "private, max-age=31536000, immutable"
+        );
     });
 });

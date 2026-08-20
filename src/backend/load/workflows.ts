@@ -16,7 +16,6 @@ import { getDocument } from "../onshape-api/endpoints/documents";
 import { getLatestVersionId } from "../onshape-api/endpoints/versions";
 import type { InstancePath } from "../../shared/onshape-path";
 import { group, insertables, libraries } from "../../shared/schema";
-import type { ThumbnailParams } from "../../shared/thumbnails";
 import { uploadConfigurationThumbnails } from "../routes/thumbnails";
 import {
     type GroupTarget,
@@ -236,7 +235,12 @@ async function finalizeLibrary(
 }
 
 /** The render to run, plus the session whose Onshape tokens it runs under. */
-export interface ThumbnailWorkflowParams extends ThumbnailParams {
+export interface ThumbnailWorkflowParams {
+    insertableId: string;
+    /** Part of the key, so a render lands where the request looked for it. */
+    microversionId: string;
+    /** Never the default, which loads eagerly with the element. */
+    canonicalConfiguration: string;
     sessionId: string;
 }
 
@@ -252,28 +256,31 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<ThumbnailWorkflowParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { elementId, microversionId, canonicalConfiguration, sessionId } =
-            event.payload;
+        const {
+            insertableId,
+            microversionId,
+            canonicalConfiguration,
+            sessionId
+        } = event.payload;
 
-        // An element id is unique within its document, so any row for it names
-        // the document to render from.
         const elementPath = await step.do("resolve-element", async () => {
             const row = await getDb(this.env.DB)
                 .select({
                     documentId: insertables.documentId,
-                    versionId: insertables.versionId
+                    versionId: insertables.versionId,
+                    elementId: insertables.elementId
                 })
                 .from(insertables)
-                .where(eq(insertables.elementId, elementId))
+                .where(eq(insertables.id, insertableId))
                 .get();
             if (!row) {
-                throw new Error(`No insertable for element ${elementId}`);
+                throw new Error(`No insertable ${insertableId}`);
             }
             return {
                 documentId: row.documentId,
                 instanceId: row.versionId,
                 instanceType: "v" as const,
-                elementId
+                elementId: row.elementId
             };
         });
 

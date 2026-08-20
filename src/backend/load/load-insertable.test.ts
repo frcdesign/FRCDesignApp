@@ -60,7 +60,7 @@ describe("saveInsertable", () => {
             // User-owned flags start off.
             isVisible: false,
             supportsFasten: false,
-            forceIndex: false,
+            indexConfigurations: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
             lastLoadedAt: expect.any(Number)
@@ -79,7 +79,7 @@ describe("saveInsertable", () => {
             .set({
                 isVisible: true,
                 supportsFasten: true,
-                forceIndex: true,
+                indexConfigurations: true,
                 sortOrder: 5
             })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
@@ -99,7 +99,7 @@ describe("saveInsertable", () => {
             // Preserved.
             isVisible: true,
             supportsFasten: true,
-            forceIndex: true,
+            indexConfigurations: true,
             sortOrder: 5,
             // Overwritten.
             name: "Renamed",

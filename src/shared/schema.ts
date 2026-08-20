@@ -82,9 +82,9 @@ export const insertables = sqliteTable("insertables", {
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Forces part-number indexing on, overriding the vendor + configuration-count
-    // heuristic. User-owned; preserved across reloads.
-    forceIndex: integer("force_index", { mode: "boolean" })
+    // Indexes this insertable's configurations even above the auto threshold.
+    // User-owned; preserved across reloads.
+    indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()
         .default(false),
     versionId: text("version_id").notNull(),

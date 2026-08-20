@@ -28,7 +28,6 @@ import { ThumbnailSize, ThumbnailUrls } from "../../shared/types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
     THUMBNAIL_FALLBACK_HEADER,
-    type ThumbnailParams,
     thumbnailKey,
     thumbnailUrl
 } from "../../shared/thumbnails";
@@ -39,6 +38,7 @@ import {
 } from "../../shared/canonical-configuration";
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import type { AppContext } from "../app";
+import type { ThumbnailWorkflowParams } from "../load/workflows";
 import { getSessionId } from "../auth";
 import { BuildIssueType, clearBuildIssue } from "../../shared/build-issues";
 
@@ -215,7 +215,9 @@ const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
     c: canonicalConfigurationQuery,
-    warm: z.stringbool().default(false)
+    warm: z.stringbool().default(false),
+    /** The insertable to render from; only sent with `warm`. */
+    i: z.string().optional()
 });
 
 /**
@@ -232,7 +234,8 @@ thumbnailRoutes.get(
         const {
             v: microversionId,
             c: canonicalConfiguration,
-            warm
+            warm,
+            i: insertableId
         } = c.req.valid("query");
         const configurationKey = canonicalConfigurationKey(
             canonicalConfiguration
@@ -249,9 +252,9 @@ thumbnailRoutes.get(
             return c.notFound();
         }
 
-        if (warm) {
+        if (warm && insertableId) {
             await warmConfigurationThumbnail(c, {
-                elementId,
+                insertableId,
                 microversionId,
                 canonicalConfiguration
             });
@@ -284,7 +287,7 @@ function thumbnailResponse(object: R2ObjectBody): Response {
  */
 async function warmConfigurationThumbnail(
     c: AppContext,
-    params: ThumbnailParams
+    params: Omit<ThumbnailWorkflowParams, "sessionId">
 ): Promise<void> {
     try {
         // The render runs later, under this caller's Onshape tokens.

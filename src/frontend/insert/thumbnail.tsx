@@ -41,6 +41,8 @@ export interface ThumbnailTarget {
      * would otherwise start a render per row.
      */
     warm: boolean;
+    /** Only needed to warm: what the render resolves the element from. */
+    insertableId?: string;
 }
 
 interface CardThumbnailProps {
@@ -146,6 +148,8 @@ interface PreviewImageProps {
     canonicalConfiguration: string;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;
+    /** What the render resolves the element from. */
+    insertableId: string;
     /** Stored thumbnail, shown instead of the live preview when not signed in. */
     largeThumbnailUrl?: string;
 }
@@ -154,8 +158,13 @@ interface PreviewImageProps {
 const PREVIEW_POLL_MS = 4000;
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const { path, microversionId, canonicalConfiguration, largeThumbnailUrl } =
-        props;
+    const {
+        path,
+        insertableId,
+        microversionId,
+        canonicalConfiguration,
+        largeThumbnailUrl
+    } = props;
     // A stored size, so the bytes this fetch returns are worth caching.
     const size = ThumbnailSize.LARGE;
     const isSignedIn = useIsSignedIn();
@@ -169,7 +178,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         microversionId,
         size,
         canonicalConfiguration,
-        warm: true
+        warm: true,
+        insertableId
     });
 
     // The worker renders configurations in a workflow, so the first request

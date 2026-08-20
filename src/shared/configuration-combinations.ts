@@ -42,13 +42,13 @@ export enum IndexingBand {
  */
 export function isIndexingEnabled(
     band: IndexingBand,
-    forceIndex: boolean
+    indexConfigurations: boolean
 ): boolean {
     switch (band) {
         case IndexingBand.EXCEEDED:
             return false;
         case IndexingBand.MANUAL:
-            return forceIndex;
+            return indexConfigurations;
         case IndexingBand.AUTOMATIC:
             return true;
     }

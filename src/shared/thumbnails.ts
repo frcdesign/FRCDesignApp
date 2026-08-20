@@ -32,6 +32,8 @@ export interface ThumbnailUrlOptions {
     canonicalConfiguration: string;
     /** Whether a miss should kick off generating this configuration. */
     warm?: boolean;
+    /** Only needed to warm: it is what the render resolves the element from. */
+    insertableId?: string;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -40,22 +42,16 @@ export function thumbnailUrl({
     microversionId,
     size,
     canonicalConfiguration,
-    warm
+    warm,
+    insertableId
 }: ThumbnailUrlOptions): string {
     const query = new URLSearchParams({ v: microversionId });
     if (canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION) {
         query.set("c", canonicalConfiguration);
-        if (warm) {
+        if (warm && insertableId) {
             query.set("warm", "true");
+            query.set("i", insertableId);
         }
     }
     return `/api/thumbnail/${size}/${elementId}?${query}`;
-}
-
-/** What identifies one configuration's thumbnails to render. */
-export interface ThumbnailParams {
-    elementId: string;
-    microversionId: string;
-    /** Never the default, which loads eagerly with the element. */
-    canonicalConfiguration: string;
 }

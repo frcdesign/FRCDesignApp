@@ -80,7 +80,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                         canonicalConfiguration: encodeCanonicalConfiguration(
                             favorite.defaultConfiguration ?? {}
                         ),
-                        warm: true
+                        warm: true,
+                        insertableId: insertable.id
                     }}
                     searchHit={searchHit}
                 />

@@ -157,6 +157,7 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
                 largeThumbnailUrl={insertable.largeThumbnailUrl}
                 canonicalConfiguration={encodeCanonicalConfiguration(

@@ -60,7 +60,7 @@ import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
-    useTogglePartNumberSearchMutation,
+    useIndexConfigurationsMutation,
     useToggleSortOrderMutation
 } from "./card-hooks";
 
@@ -692,7 +692,7 @@ function IndexingRow({
     status: InsertableBuildStatus;
     band: IndexingBand;
 }): ReactNode {
-    const mutation = useTogglePartNumberSearchMutation(insertableId);
+    const mutation = useIndexConfigurationsMutation(insertableId);
 
     let control: ReactNode;
     if (band === IndexingBand.EXCEEDED) {
@@ -713,8 +713,8 @@ function IndexingRow({
         control = (
             <Switch
                 size="sm"
-                checked={status.forceIndex}
-                onChange={() => mutation.mutate(!status.forceIndex)}
+                checked={status.indexConfigurations}
+                onChange={() => mutation.mutate(!status.indexConfigurations)}
                 withThumbIndicator={false}
             />
         );

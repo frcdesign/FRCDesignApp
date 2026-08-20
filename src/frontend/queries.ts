@@ -223,23 +223,15 @@ function jobPollInterval(runningForMs: number): number {
 /**
  * Whether a library-load job is running, polled so indicators stay live.
  *
- * An idle library isn't polled at all. Polling starts when there's known to be
- * something to watch — either the build status reported a job already running
- * when the app loaded (`jobRunningAtLoad`), or starting one seeded `running`
- * here directly — and stops again as soon as a check comes back not-running.
- * `canPoll` is the caller's own gate: the route is editor-only.
+ * Checked once when the app loads, then polled while something is running and
+ * left alone once a check comes back idle. `canPoll` is the caller's own gate:
+ * the route is editor-only.
  */
-export function getJobStatusQuery(
-    libraryId: LibraryId,
-    jobRunningAtLoad: boolean,
-    canPoll: boolean
-) {
+export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        enabled: (query) =>
-            canPoll &&
-            (jobRunningAtLoad || (query.state.data?.running ?? false)),
+        enabled: canPoll,
         // Every status badge observes this query, so rows mounting as the user
         // scrolls would otherwise each trigger a fetch. The poll is the only
         // thing that should set the pace.
@@ -249,8 +241,7 @@ export function getJobStatusQuery(
             if (!status?.running) {
                 return false;
             }
-            // An unknown age means the job predates age tracking, so it is old.
-            return jobPollInterval(status.runningForMs ?? Infinity);
+            return jobPollInterval(status.runningForMs);
         }
     });
 }
@@ -262,13 +253,9 @@ export function getJobStatusQuery(
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
-    // Already fetched by the build-status consumers; reused here rather than
-    // spending a separate request just to learn whether to start polling.
-    const jobRunningAtLoad = useBuildStatusQuery().data?.jobRunning ?? false;
     return useQuery(
         getJobStatusQuery(
             libraryId,
-            jobRunningAtLoad,
             signedIn && hasEditorAccess(currentAccessLevel)
         )
     );

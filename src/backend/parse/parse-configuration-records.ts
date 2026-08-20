@@ -82,10 +82,10 @@ export interface IndexingDecision {
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
 export function decideIndexing(
     parameters: ConfigurationParameter[],
-    forceIndex: boolean
+    indexConfigurations: boolean
 ): IndexingDecision {
     const { band, configurations } = countConfigurations(parameters);
-    const shouldIndex = isIndexingEnabled(band, forceIndex);
+    const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
     if (band === IndexingBand.EXCEEDED) {
         return {
@@ -94,7 +94,7 @@ export function decideIndexing(
             configurations
         };
     }
-    if (band === IndexingBand.MANUAL && !forceIndex) {
+    if (band === IndexingBand.MANUAL && !indexConfigurations) {
         return {
             shouldIndex,
             buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }],

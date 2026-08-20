@@ -166,21 +166,21 @@ describe("insertable routes", () => {
         );
     });
 
-    it("POST /toggle-part-number-search indexes and forces the flag on", async () => {
+    it("POST /index-configurations indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p", partNumber: "PN-123" }
         ]);
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         expect(res.status).toBe(200);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.forceIndex).toBe(true);
+        expect(row?.indexConfigurations).toBe(true);
 
         const config = await readConfig(TEST_PART_STUDIO_ID);
         expect(config?.records).toEqual([
@@ -197,15 +197,15 @@ describe("insertable routes", () => {
         ]);
     });
 
-    it("POST /toggle-part-number-search leaves the flag off when indexing fails", async () => {
+    it("POST /index-configurations leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
             new OnshapeRateLimitError("rate limited", 450)
         );
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         // Surfaced to the client rather than silently enabling.
@@ -214,14 +214,14 @@ describe("insertable routes", () => {
         expect(body.retryAfterSeconds).toBe(450);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.forceIndex).toBe(false);
+        expect(row?.indexConfigurations).toBe(false);
         // Nothing was written, so no records survive.
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
     // Over the auto-index threshold nothing indexes unless an admin asks, so
     // turning force off there drops the records and the configuration row.
-    it("POST /toggle-part-number-search clears the data when forcing off", async () => {
+    it("POST /index-configurations clears the data when forcing off", async () => {
         await seedGroup(db);
         await seedInsertable(db);
         await db.insert(configurations).values({
@@ -240,15 +240,15 @@ describe("insertable routes", () => {
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
         await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         spy.mockClear();
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: false }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: false }),
             env
         );
         expect(res.status).toBe(200);
@@ -256,14 +256,14 @@ describe("insertable routes", () => {
         expect(spy).not.toHaveBeenCalled();
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.forceIndex).toBe(false);
+        expect(row?.indexConfigurations).toBe(false);
         // The row stays to hold the parameters; only the records go.
         expect((await readConfig(TEST_PART_STUDIO_ID))?.records).toEqual([]);
     });
 
     // Nothing gates on vendors any more, so a part below the threshold indexes
     // whether or not anyone sells it.
-    it("POST /toggle-part-number-search keeps indexing a custom part", async () => {
+    it("POST /index-configurations keeps indexing a custom part", async () => {
         await seedGroup(db);
         await seedInsertable(db, {
             name: "Custom Bracket",
@@ -274,8 +274,8 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: false }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: false }),
             env
         );
         expect(res.status).toBe(200);
@@ -289,7 +289,7 @@ describe("insertable routes", () => {
 
     // The route merges into the row's stored issues, so it has to clear the ones
     // indexing owns first, or a resolved issue would stick around forever.
-    it("POST /toggle-part-number-search replaces stale part-number issues", async () => {
+    it("POST /index-configurations replaces stale part-number issues", async () => {
         await seedPartStudio(db);
         await db
             .update(insertables)
@@ -305,8 +305,8 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { forceIndex: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         expect(res.status).toBe(200);

@@ -21,6 +21,7 @@ const MICROVERSION = "mv-1";
 const CANONICAL_CONFIGURATION = "size=l";
 
 const SESSION_ID = "test-session";
+const INSERTABLE_ID = "test-insertable";
 
 function get(url: string, sessionId?: string) {
     const init = jsonRequest("GET");
@@ -196,9 +197,23 @@ describe("warming a configuration's thumbnail", () => {
             microversionId: MICROVERSION,
             size: SIZE,
             canonicalConfiguration: CANONICAL_CONFIGURATION,
-            warm: true
+            warm: true,
+            insertableId: INSERTABLE_ID
         });
         expect(new URL(url, "http://x").searchParams.get("warm")).toBe("true");
+    });
+
+    // Without one there is nothing to resolve the element from, so warming is
+    // simply not requested.
+    it("omits warm when no insertable is named", () => {
+        const url = thumbnailUrl({
+            elementId: "any",
+            microversionId: MICROVERSION,
+            size: SIZE,
+            canonicalConfiguration: CANONICAL_CONFIGURATION,
+            warm: true
+        });
+        expect(new URL(url, "http://x").searchParams.get("warm")).toBeNull();
     });
 
     it("starts the render on a miss", async () => {
@@ -214,7 +229,8 @@ describe("warming a configuration's thumbnail", () => {
                 microversionId: MICROVERSION,
                 size: SIZE,
                 canonicalConfiguration: CANONICAL_CONFIGURATION,
-                warm: true
+                warm: true,
+                insertableId: INSERTABLE_ID
             }),
             SESSION_ID
         );
@@ -223,7 +239,7 @@ describe("warming a configuration's thumbnail", () => {
         expect(createSpy).toHaveBeenCalledWith(
             expect.objectContaining({
                 params: {
-                    elementId,
+                    insertableId: INSERTABLE_ID,
                     microversionId: MICROVERSION,
                     canonicalConfiguration: CANONICAL_CONFIGURATION,
                     // The render runs later, so it needs a session to authenticate.
@@ -245,7 +261,8 @@ describe("warming a configuration's thumbnail", () => {
                 microversionId: MICROVERSION,
                 size: SIZE,
                 canonicalConfiguration: CANONICAL_CONFIGURATION,
-                warm: true
+                warm: true,
+                insertableId: INSERTABLE_ID
             })
         );
 

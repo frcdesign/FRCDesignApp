@@ -4,7 +4,11 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-issues";
 import {
     ElementType,
     type FastenInfo,
@@ -51,7 +55,7 @@ export interface ParsedInsertable {
 interface InsertableFlags {
     supportsFasten: boolean;
     /** Forces part-number indexing on, overriding the auto heuristic. */
-    forceIndex: boolean;
+    indexConfigurations: boolean;
 }
 
 /**
@@ -73,9 +77,9 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
-    const isOpenComposite = await computeOpenCompositeStep(ctx, target);
+    const { isOpenComposite, hasParts } = await readPartsStep(ctx, target);
 
-    const indexing = decideIndexing(parameters, flags.forceIndex);
+    const indexing = decideIndexing(parameters, flags.indexConfigurations);
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(
@@ -89,24 +93,30 @@ export async function loadInsertable(
           )
         : NO_RECORDS;
 
-    const thumbnailUrls = await uploadThumbnailsStep(
-        ctx,
-        `thumbnail-${insertableId}`,
-        async () =>
-            uploadThumbnails(
-                ctx.env.BLOB,
-                await getOnshapeApiFromContext(ctx),
-                elementPath,
-                target.microversionId
-            )
-    );
+    // Onshape renders nothing for an empty studio, so asking would only spend
+    // the whole retry budget waiting for a thumbnail that cannot exist.
+    const thumbnailUrls = hasParts
+        ? await uploadThumbnailsStep(
+              ctx,
+              `thumbnail-${insertableId}`,
+              async () =>
+                  uploadThumbnails(
+                      ctx.env.BLOB,
+                      await getOnshapeApiFromContext(ctx),
+                      elementPath,
+                      target.microversionId
+                  )
+          )
+        : null;
 
     const buildIssues = addBuildIssue(
-        checkInsertable({
-            vendors,
-            thumbnailUrls,
-            records: recordsResult.records
-        }),
+        hasParts
+            ? checkInsertable({
+                  vendors,
+                  thumbnailUrls,
+                  records: recordsResult.records
+              })
+            : [{ type: BuildIssueType.NO_PARTS }],
         ...recordsResult.buildIssues,
         ...indexing.buildIssues
     );
@@ -137,12 +147,12 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                forceIndex: insertables.forceIndex
+                indexConfigurations: insertables.indexConfigurations
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, forceIndex: false };
+        return row ?? { supportsFasten: false, indexConfigurations: false };
     });
 }
 
@@ -162,24 +172,35 @@ function parseConfigurationStep(
     });
 }
 
+/** What one look at a part studio's default parts tells the rest of the load. */
+interface PartsSummary {
+    isOpenComposite: boolean;
+    hasParts: boolean;
+}
+
 /**
- * Determines whether a part studio is an open composite from its default
- * configuration. Runs on every load, not just under indexing, so the insert
- * path always requests the right part types. Assemblies are never composites,
- * so they skip the fetch.
+ * Reads a part studio's default configuration once. Runs on every load, not
+ * just under indexing, so the insert path always requests the right part types.
+ * Assemblies always have something to render, so they skip the fetch.
  */
-function computeOpenCompositeStep(
+function readPartsStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
-): Promise<boolean> {
+): Promise<PartsSummary> {
     if (elementType !== ElementType.PART_STUDIO) {
-        return Promise.resolve(false);
+        return Promise.resolve({ isOpenComposite: false, hasParts: true });
     }
-    return ctx.step.do(`open-composite-${insertableId}`, async () =>
-        computeOpenComposite(
-            await getParts(await getOnshapeApiFromContext(ctx), elementPath, {})
-        )
-    );
+    return ctx.step.do(`open-composite-${insertableId}`, async () => {
+        const parts = await getParts(
+            await getOnshapeApiFromContext(ctx),
+            elementPath,
+            {}
+        );
+        return {
+            isOpenComposite: computeOpenComposite(parts),
+            hasParts: parts.length > 0
+        };
+    });
 }
 
 /**
@@ -238,7 +259,7 @@ export async function saveInsertable(
             // one keeps the user's choices, since `set` omits these.
             isVisible: false,
             supportsFasten: false,
-            forceIndex: false,
+            indexConfigurations: false,
             ...reloaded
         })
         .onConflictDoUpdate({

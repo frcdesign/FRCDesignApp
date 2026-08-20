@@ -23,21 +23,18 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
         ]);
     });
 
-    it("stops doubling at five minutes", () => {
+    it("keeps doubling rather than settling on a ceiling", () => {
         expect(thumbnailDelay(7)).toEqual("256 seconds");
-        expect(thumbnailDelay(8)).toEqual("300 seconds");
-        expect(thumbnailDelay(50)).toEqual("300 seconds");
+        expect(thumbnailDelay(8)).toEqual("512 seconds");
     });
 
-    // A tab Onshape never renders holds its library's reload open for this
-    // long, so the budget is a load-time cost, not just a thumbnail one.
-    it("polls for about eight minutes before giving up", () => {
+    it("polls for about seventeen minutes before giving up", () => {
         const total = Array.from(
             { length: THUMBNAIL_STEP_RETRIES.limit - 1 },
             (_, i) => Number.parseInt(thumbnailDelay(i + 1), 10)
         ).reduce((sum, seconds) => sum + seconds, 0);
 
-        expect(total).toBe(508);
+        expect(total).toBe(1020);
     });
 
     // A warm request naming a configuration that matches nothing would

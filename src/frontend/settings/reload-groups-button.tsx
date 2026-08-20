@@ -34,10 +34,11 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
             // spinner immediately and starts the poll, which stays idle until
             // something is known to be running. The navbar watcher refreshes
             // and reports completion when it finishes.
-            queryClient.setQueryData<JobStatus>(jobStatusQueryKey(libraryId), {
-                running: true,
-                runningForMs: 0
-            });
+            const justStarted: JobStatus = { running: true, runningForMs: 0 };
+            queryClient.setQueryData<JobStatus>(
+                jobStatusQueryKey(libraryId),
+                justStarted
+            );
             showInfoToast(
                 data.status === "already-running"
                     ? "A reload is already running."

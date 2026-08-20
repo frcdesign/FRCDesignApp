@@ -52,7 +52,7 @@ export interface InsertableBuildStatus {
     elementType: ElementType;
     isVisible: boolean;
     supportsFasten: boolean;
-    forceIndex: boolean;
+    indexConfigurations: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When this insertable was last successfully loaded (epoch ms); null if never. */
@@ -60,14 +60,10 @@ export interface InsertableBuildStatus {
 }
 
 /** Whether a library-load job is running, and how long it has been going. */
-export interface JobStatus {
-    running: boolean;
-    /**
-     * Milliseconds since the oldest running job started. Absent when nothing is
-     * running, or for jobs tracked before this was recorded.
-     */
-    runningForMs?: number;
-}
+/** Milliseconds since the oldest running job started paces the client's polling. */
+export type JobStatus =
+    | { running: false }
+    | { running: true; runningForMs: number };
 
 export interface LibraryBuildStatus {
     groups: Record<string, GroupBuildStatus>;
@@ -77,7 +73,6 @@ export interface LibraryBuildStatus {
      * status only once this says there is something to watch, so an idle
      * library costs no polling at all.
      */
-    jobRunning: boolean;
 }
 
 export type Insertables = Record<string, InsertableOut>;

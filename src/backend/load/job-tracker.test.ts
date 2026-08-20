@@ -83,15 +83,9 @@ describe("job-tracker", () => {
 
         const status = await getJobStatus(env, TEST_LIBRARY_ID);
         expect(status.running).toBe(true);
+        if (!status.running) return;
         expect(status.runningForMs).toBeGreaterThanOrEqual(30_000);
         expect(status.runningForMs).toBeLessThan(40_000);
-    });
-
-    it("reports no age when a job predates start-time tracking", async () => {
-        mockJobs([{ id: "r1", kind: "reload" }], "running");
-        expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-            running: true
-        });
     });
 
     it("appends a tracked job under the library key with a TTL", async () => {

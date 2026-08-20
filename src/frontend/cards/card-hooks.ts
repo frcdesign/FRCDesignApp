@@ -167,32 +167,32 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
 }
 
 /** Forces part-number indexing for an insertable (a slow Onshape call). */
-export function useTogglePartNumberSearchMutation(insertableId: string) {
+export function useIndexConfigurationsMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
-    const toastId = `part-number-search-${insertableId}`;
+    const toastId = `index-configurations-${insertableId}`;
     return useMutation({
-        mutationKey: ["toggle-part-number-search", insertableId],
-        mutationFn: (forceIndex: boolean) =>
-            apiPost(
-                "/toggle-part-number-search" + toInsertablePath(insertableId),
-                { body: { forceIndex } }
-            ),
-        onMutate: (forceIndex) => {
+        mutationKey: ["index-configurations", insertableId],
+        mutationFn: (indexConfigurations: boolean) =>
+            apiPost("/index-configurations" + toInsertablePath(insertableId), {
+                body: { indexConfigurations }
+            }),
+        onMutate: (indexConfigurations) => {
             showLoadingToast(
-                forceIndex
+                indexConfigurations
                     ? "Forcing part number indexing..."
                     : "Disabling forced part number indexing...",
                 toastId
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
-                if (insertable) insertable.forceIndex = forceIndex;
+                if (insertable)
+                    insertable.indexConfigurations = indexConfigurations;
             });
         },
-        onSuccess: (_result, forceIndex) =>
+        onSuccess: (_result, indexConfigurations) =>
             showSuccessToast(
-                forceIndex
+                indexConfigurations
                     ? "Forced part number indexing."
                     : "Disabled forced part number indexing.",
                 toastId

@@ -99,14 +99,14 @@ insertableRoutes.post(
     }
 );
 
-/** POST /api/toggle-part-number-search/insertable/:insertableId */
+/** POST /api/index-configurations/insertable/:insertableId */
 insertableRoutes.post(
-    "/toggle-part-number-search" + insertableRoute(),
+    "/index-configurations" + insertableRoute(),
     requireEditorMiddleware,
     async (c) => {
         const db = getDb(c.env.DB);
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ forceIndex: boolean }>();
+        const body = await c.req.json<{ indexConfigurations: boolean }>();
 
         const row = await db
             .select({
@@ -135,7 +135,7 @@ insertableRoutes.post(
                     .where(eq(configurations.id, insertableId))
                     .get()
             )?.parameters ?? [];
-        const indexing = decideIndexing(parameters, body.forceIndex);
+        const indexing = decideIndexing(parameters, body.indexConfigurations);
 
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
@@ -183,7 +183,10 @@ insertableRoutes.post(
         await db.batch([
             db
                 .update(insertables)
-                .set({ forceIndex: body.forceIndex, buildIssues })
+                .set({
+                    indexConfigurations: body.indexConfigurations,
+                    buildIssues
+                })
                 .where(eq(insertables.id, insertableId)),
             configWrite
         ]);

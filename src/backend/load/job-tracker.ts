@@ -22,11 +22,8 @@ export type JobKind = "reload" | "add-group";
 interface TrackedJob {
     id: string;
     kind: JobKind;
-    /**
-     * Epoch ms the job was created. Absent on entries written before this was
-     * tracked, which are by definition old.
-     */
-    startedAt?: number;
+    /** Epoch ms the job was created. */
+    startedAt: number;
 }
 
 function jobsKey(libraryId: LibraryId): string {
@@ -80,11 +77,7 @@ export async function isReloadRunning(
     return jobs.some((job) => job.kind === "reload");
 }
 
-/**
- * Whether any load job (reload or add-group) is running for this library, and
- * how long the oldest one has been going — clients use the age to decide how
- * often to check back.
- */
+/** Reports the oldest running job's age, which paces the client's polling. */
 export async function getJobStatus(
     env: AppBindings,
     libraryId: LibraryId
@@ -93,18 +86,8 @@ export async function getJobStatus(
     if (jobs.length === 0) {
         return { running: false };
     }
-    const startTimes = jobs
-        .map((job) => job.startedAt)
-        .filter((startedAt): startedAt is number => startedAt !== undefined);
-    // An untimed entry predates start-time tracking, so its true age is unknown
-    // and certainly not recent; report no age and let the client poll slowly.
-    if (startTimes.length < jobs.length) {
-        return { running: true };
-    }
-    return {
-        running: true,
-        runningForMs: Date.now() - Math.min(...startTimes)
-    };
+    const startedAt = Math.min(...jobs.map((job) => job.startedAt));
+    return { running: true, runningForMs: Date.now() - startedAt };
 }
 
 /** Records a newly-created job, pruning any that have since finished. */

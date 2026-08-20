@@ -173,6 +173,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
                 largeThumbnailUrl={insertable.largeThumbnailUrl}
                 canonicalConfiguration={encodeCanonicalConfiguration(

@@ -40,13 +40,10 @@ export const ONSHAPE_STEP_RETRIES = {
 /** The first wait after a render isn't ready; each attempt doubles it. */
 const THUMBNAIL_BASE_DELAY_SECONDS = 4;
 
-/** The ceiling the doubling stops at. */
-const THUMBNAIL_MAX_DELAY_SECONDS = 5 * 60;
-
 /**
- * Onshape gives no signal when a render lands, so the step polls: doubling from
- * four seconds to a five-minute ceiling. Starting tight is the point, since
- * most renders land within seconds. A rate limit overrides the curve.
+ * Onshape gives no signal when a render lands, so the step polls, doubling from
+ * four seconds. Starting tight is the point: most renders land within seconds.
+ * A rate limit overrides the curve.
  */
 function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
@@ -57,17 +54,14 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     if (input.error instanceof NoSuchConfigurationError) {
         return "0 seconds";
     }
-    const seconds = Math.min(
-        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
-        THUMBNAIL_MAX_DELAY_SECONDS
-    );
+    const seconds = THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1);
     return `${seconds} seconds`;
 }
 
 export const THUMBNAIL_STEP_RETRIES = {
-    // 8 attempts: 4s, 8s … 256s, about eight and a half minutes. A tab Onshape
-    // never renders holds its library's reload open for that whole budget.
-    limit: 8,
+    // 4s, 8s … 512s: a bit over seventeen minutes of polling, which a slow
+    // Onshape render is worth waiting out.
+    limit: 9,
     delay: thumbnailRetryDelay
 };
 

@@ -9,7 +9,6 @@ import {
 import { getDb } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { group, insertables, configurations } from "../../shared/schema";
-import { getJobStatus } from "../load/job-tracker";
 import {
     type LibraryBuildStatus,
     type GroupBuildStatus,
@@ -27,10 +26,7 @@ buildStatusRoutes.get(
         const libraryId = getLibraryParam(c);
         const db = getDb(c.env.DB);
 
-        const [jobStatus, allGroups, allInsertables] = await Promise.all([
-            // Piggybacked so an idle library never needs a job-status poll: this
-            // is what tells a loading client whether there's a job to watch.
-            getJobStatus(c.env, libraryId),
+        const [allGroups, allInsertables] = await Promise.all([
             db
                 .select({
                     id: group.id,
@@ -51,7 +47,7 @@ buildStatusRoutes.get(
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
-                    forceIndex: insertables.forceIndex,
+                    indexConfigurations: insertables.indexConfigurations,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     lastLoadedAt: insertables.lastLoadedAt
@@ -96,7 +92,7 @@ buildStatusRoutes.get(
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
-                forceIndex: ins.forceIndex,
+                indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
                 configuration: config
                     ? {
@@ -110,8 +106,7 @@ buildStatusRoutes.get(
 
         return c.json({
             groups: groupsOut,
-            insertables: insertablesOut,
-            jobRunning: jobStatus.running
+            insertables: insertablesOut
         } satisfies LibraryBuildStatus);
     }
 );

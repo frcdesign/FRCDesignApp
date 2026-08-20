@@ -24,6 +24,7 @@ export enum BuildIssueType {
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
     NO_PART_NUMBER = "no-part-number",
+    NO_PARTS = "no-parts",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     TOO_MANY_CONFIGURATIONS = "too-many-configurations",
     MANY_CONFIGURATIONS = "many-configurations",
@@ -45,6 +46,7 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
     | BuildIssueOf<BuildIssueType.NO_PART_NUMBER>
+    | BuildIssueOf<BuildIssueType.NO_PARTS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
     | BuildIssueOf<BuildIssueType.MANY_CONFIGURATIONS>
@@ -64,12 +66,14 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "No vendors could be parsed";
         case BuildIssueType.NO_PART_NUMBER:
             return "No part number in any configuration, though a vendor sells this";
+        case BuildIssueType.NO_PARTS:
+            return "This part studio has no parts";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "No unhidden insertables";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-            return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so part numbers cannot be indexed`;
+            return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so its configurations cannot be indexed`;
         case BuildIssueType.MANY_CONFIGURATIONS:
-            return `Over ${AUTO_INDEX_THRESHOLD} configurations, so part number indexing must be enabled manually`;
+            return `Over ${AUTO_INDEX_THRESHOLD} configurations, so indexing must be enabled manually`;
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
         case BuildIssueType.UNSTABLE_COMPOSITE:
@@ -87,6 +91,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
         case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.NO_PARTS:
         case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
