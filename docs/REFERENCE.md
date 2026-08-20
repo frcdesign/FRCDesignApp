@@ -28,7 +28,7 @@ The app uses five Cloudflare products. Each one is declared as a **binding** in 
 
 D1 is Cloudflare's managed SQLite database. It is the app's primary persistent store — everything about libraries, groups, parts, users, and favorites lives here.
 
-Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. The schema is defined in `src/shared/schema.ts`. SQL migration files live in `drizzle/` and are applied automatically on deploy.
+Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. The schema is defined in `src/backend/db/schema.ts`. SQL migration files live in `drizzle/` and are applied automatically on deploy.
 
 ### KV — Session & Token Storage (`c.env.KV`)
 
@@ -72,7 +72,7 @@ All rendering happens inside the workflow, which keeps Onshape's thumbnail id se
 
 ### Workflows — Background Jobs
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. All three are defined in `src/backend/load/workflows.ts`:
+Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. All three are defined in `src/backend/features/library/workflows/`:
 
 | Binding                 | Class                 | What it does                                                                         |
 | ----------------------- | --------------------- | ------------------------------------------------------------------------------------ |
@@ -125,51 +125,46 @@ Once the backend confirms authentication and serves the React app, the frontend 
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                          | Lifetime                                                          | Who reads/writes it                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                    |
-| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/auth.ts`                                                |
-| **R2**             | Thumbnail images and per-library search indexes                                        | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/routes/thumbnails.ts` and `src/backend/library-data.ts` |
-| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions                                  | Frontend only, via `src/frontend/api-utils/ui-state.ts`                                |
-| **sessionStorage** | Not used                                                                               | —                                                                 | —                                                                                      |
+| Store              | What it holds                                                                          | Lifetime                                                          | Who reads/writes it                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                           |
+| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/features/auth/session.ts`                                      |
+| **R2**             | Thumbnail images and per-library search indexes                                        | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
+| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions                                  | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
+| **sessionStorage** | Not used                                                                               | —                                                                 | —                                                                                             |
 
 ## Codebase Map
 
-The source code lives in three directories under `src/`:
+The source lives in two directories under `src/`: `backend/` (the Cloudflare
+Worker) and `frontend/` (the React SPA). There is no shared directory — the
+backend owns the contract, and the frontend imports it through `@backend/*`.
 
-### `src/shared/`
-
-Code used by both the frontend and backend. Key files:
-
-- `schema.ts` — Drizzle table definitions (the database schema)
-- `types.ts` — shared enums (`AccessLevel`, `Vendor`, `Theme`) and core interfaces
-- `api-models.ts` — TypeScript types for API request/response shapes
-- `onshape-path.ts` — `ElementPath`, `InstancePath` types and the serialization helpers used to build Onshape REST URLs
+Both sides use the same shape: `features/<feature>/` for everything one feature
+owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 ### `src/backend/`
 
-The Cloudflare Worker. Key files and folders:
-
-- `index.ts` — Worker entry point; exports the Hono app and the Workflow class
-- `auth.ts` — OAuth flow, session cookie management, token storage/retrieval
-- `services.ts` — provides `getOnshapeApi()`, `getUserId()`, `getAccessLevel()` to route handlers
-- `library-data.ts` — assembles the full library response (groups + insertables + configurations)
-- `routes/` — endpoints callable by the frontend
-- `onshape-api/` — all code that communicates with Onshape's REST API (`onshape-api.ts` for the client class, `api-path.ts` for URL construction, `endpoints/` for per-category wrappers)
-- `load/` — the Workflows and what they run: `workflows.ts` defines all three, `load-group.ts` and `load-insertable.ts` do the work, `load-steps.ts` holds the retry policies, `job-tracker.ts` tracks what is running
-- `parse/` — pure functions turning Onshape responses into what we store: configurations, configuration records, vendors, document contents, build checks
-- `sign-in-utils.ts` / `access-level-utils.ts` — the two authorization gates: signed in to Onshape at all, versus on the admin team
+- `index.ts` — Worker entry point; exports the default app and the three Workflow classes
+- `app.ts` — composition root: injects per-request services, mounts every feature's routes, and handles errors
+- `db/` — `client.ts` (the Drizzle client) and `schema.ts` (table definitions)
+- `lib/` — request plumbing shared by every feature: `context.ts` (bindings and typed context), `cache.ts` (cache-control middleware), `route-params.ts`, `query-params.ts`
+- `lib/onshape/` — everything that talks to Onshape's REST API: `client.ts` (the client class), `api-path.ts`, `path.ts` (`ElementPath`/`InstancePath` and their serializers), `endpoints/` (per-category wrappers), `objects/` (feature and query builders)
+- `features/` — one directory per feature, each holding its own `routes.ts` plus whatever it owns:
+    - `auth/` — OAuth flow (`onshape-oauth.ts`), session storage (`session.ts`), and the two authorization gates: `sign-in.ts` (signed in to Onshape at all) and `access-control.ts` (on the admin team)
+    - `users/` — user preferences and the `Settings` model
+    - `library/` — the library response (`db.ts`), its DTOs, groups and insertables, and `workflows/` (the three Workflows, their retry policies, and the job tracker)
+    - `configurations/` — configuration models, canonicalization, combination enumeration, and the Onshape parsers
+    - `thumbnails/` — thumbnail routes plus the R2 key and URL scheme the client shares
+    - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
+    - `favorites/`, `search/`
 
 ### `src/frontend/`
 
-The React SPA. Key files and folders:
-
 - `main.tsx` — React root; wraps the app in `QueryClientProvider` and `MantineProvider`
-- `queries.ts` — React Query query definitions shared across the app
-- `routes/` — file-based routes (`__root.tsx`, `init.tsx`, `app/route.tsx`, `app/groups/index.tsx`, `app/groups/$groupId.tsx`)
-- `api-utils/` — helpers for talking to the backend (`api.ts` for fetch wrappers, `ui-state.ts` for localStorage state, `library.ts` for library ID helpers)
-
-Everything else under `src/frontend/` is organized by feature: `cards/`, `insert/`, `favorites/`, `groups/`, `search/`, `settings/`.
+- `routes/` — file-based TanStack Router routes
+- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (localStorage state), `refresh.ts`, `notifications.tsx`
+- `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
+- `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `auth/`, each with a `queries.ts` and a `components/` directory
 
 Other top-level files:
 
@@ -180,6 +175,6 @@ Other top-level files:
 
 The app has three access levels, checked on every protected API call: **ADMIN**, **EDITOR**, and **USER**. Admin and editor access currently grant the same permissions (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
 
-The Worker determines a user's access level in `src/backend/services.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/access-level-utils.ts`.
+The Worker determines a user's access level in `src/backend/features/auth/services.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/features/auth/access-control.ts`.
 
 During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.

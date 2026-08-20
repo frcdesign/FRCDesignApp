@@ -9,6 +9,24 @@ doc comment when the signature already says it (e.g. write "returns the access
 level, respecting the cache" — not a paragraph re-deriving the caching).
 Aggressively delete comments that narrate obvious implementation details.
 
+## Layout
+
+`src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There
+is no shared directory: the backend owns the contract, and the frontend imports
+it through the `@backend/*` alias. Imports within a side stay relative.
+
+Both sides are organized the same way:
+
+- `features/<feature>/` — everything one feature owns. Backend features hold
+  `routes.ts` plus their storage, models and DTOs; frontend features hold
+  `queries.ts` and `components/`.
+- `lib/` — cross-cutting plumbing that belongs to no single feature.
+- `components/` (frontend only) — UI used by more than one feature.
+
+Anything the frontend imports from a backend feature must be a leaf module —
+pure types and functions, no Worker-only imports — or it lands in the client
+bundle.
+
 # Cloudflare Workers
 
 STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
