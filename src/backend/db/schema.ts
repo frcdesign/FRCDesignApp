@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY_ID, LibraryId } from "../features/library/library-id";
-import { DEFAULT_SETTINGS, Theme } from "../features/users/settings";
+import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
     ParameterValues,

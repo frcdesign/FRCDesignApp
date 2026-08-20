@@ -6,7 +6,7 @@ import {
     DEFAULT_SETTINGS,
     type SettingsUpdate,
     type Theme
-} from "@backend/features/users/settings";
+} from "@backend/features/settings/settings";
 
 const SETTINGS_STORAGE_KEY = "frc-design-app-settings";
 

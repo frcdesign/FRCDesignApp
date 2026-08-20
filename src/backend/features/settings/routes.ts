@@ -1,24 +1,14 @@
 import { eq } from "drizzle-orm";
-import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { users } from "../../db/schema";
-import type { AccessData } from "../auth/access-level";
+import { requireSignInMiddleware } from "../auth/guards";
 import type { SettingsUpdate } from "./settings";
-import { isSignedIn, requireSignInMiddleware } from "../auth/sign-in";
 
-export const userRoutes = getApp();
+export const settingsRoutes = getApp();
 
-/** GET /api/access-data */
-userRoutes.get("/access-data", cacheMiddleware(), async (c) => {
-    return c.json({
-        maxAccessLevel: await c.var.getAccessLevel(),
-        signedIn: await isSignedIn(c)
-    } satisfies AccessData);
-});
-
-/** POST /api/user-data — update settings */
-userRoutes.post("/user-data", requireSignInMiddleware, async (c) => {
+/** POST /api/user-data — update the caller's stored settings */
+settingsRoutes.post("/user-data", requireSignInMiddleware, async (c) => {
     const userId = await c.var.getUserId();
 
     const body = await c.req.json<SettingsUpdate>();

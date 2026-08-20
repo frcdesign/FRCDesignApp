@@ -1,8 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { AccessLevel } from "./access-level";
 import { LibraryId } from "../library/library-id";
-import { Theme } from "../users/settings";
+import { Theme } from "../settings/settings";
 import {
     createTestApp,
     jsonRequest,
@@ -13,27 +12,9 @@ import { getDb } from "../../db/client";
 
 const db = getDb(env.DB);
 
-describe("not-signed-in access", () => {
+describe("requireSignInMiddleware", () => {
     beforeEach(async () => {
         await resetDb(db);
-    });
-
-    it("GET /access-data reports signedIn: false when not signed in", async () => {
-        const app = createTestApp({
-            signedIn: false,
-            accessLevel: AccessLevel.USER
-        });
-
-        const res = await app.request(
-            "/api/access-data",
-            jsonRequest("GET"),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({
-            maxAccessLevel: AccessLevel.USER,
-            signedIn: false
-        });
     });
 
     it("blocks sign-in-only routes with 401 when not signed in", async () => {

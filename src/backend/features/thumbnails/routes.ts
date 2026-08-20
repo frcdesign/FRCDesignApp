@@ -6,7 +6,7 @@ import { getApp } from "../../lib/context";
 import { getInsertableParam, insertableRoute } from "../../lib/route-params";
 import { getInsertableElementPath } from "../library/insertables/routes";
 import { getDb } from "../../db/client";
-import { requireEditorMiddleware } from "../auth/access-control";
+import { requireEditorMiddleware } from "../auth/guards";
 import { bumpLibraryVersion } from "../library/db";
 
 import { type InstancePath } from "../../lib/onshape/path";

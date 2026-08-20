@@ -13,7 +13,7 @@ import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
 import { DEFAULT_LIBRARY_ID } from "@backend/features/library/library-id";
-import { DEFAULT_SETTINGS } from "@backend/features/users/settings";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { NotFoundError, RootCrash } from "../components/root-error";
 
 export const Route = createRootRoute({

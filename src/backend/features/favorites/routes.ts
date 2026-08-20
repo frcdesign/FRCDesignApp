@@ -8,7 +8,7 @@ import type { Favorite, FavoritesData } from "./dto";
 import type { LibraryId } from "../library/library-id";
 import { HttpStatus } from "http-status-ts";
 import { type ParameterValues } from "../configurations/models";
-import { requireSignInMiddleware } from "../auth/sign-in";
+import { requireSignInMiddleware } from "../auth/guards";
 
 export const favoriteRoutes = getApp();
 

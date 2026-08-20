@@ -1,6 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { Theme } from "@backend/features/users/settings";
+import { Theme } from "@backend/features/settings/settings";
 import { ElementPath, isElementPath } from "@backend/lib/onshape/path";
 
 /**

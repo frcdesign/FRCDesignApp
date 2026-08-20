@@ -3,7 +3,7 @@ import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
-import { requireEditorMiddleware } from "../auth/access-control";
+import { requireEditorMiddleware } from "../auth/guards";
 import { group, insertables, configurations } from "../../db/schema";
 import type {
     LibraryBuildStatus,

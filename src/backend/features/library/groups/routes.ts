@@ -5,7 +5,7 @@ import { getLibraryParam, libraryRoute } from "../../../lib/route-params";
 import { getDb } from "../../../db/client";
 import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
-import { requireEditorMiddleware } from "../../auth/access-control";
+import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
 import { group, insertables, libraries, favorites } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";

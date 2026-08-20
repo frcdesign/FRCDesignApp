@@ -1,4 +1,4 @@
-import { type Context, Hono } from "hono";
+import { type Context, type MiddlewareHandler, Hono } from "hono";
 import type {
     AddGroupParams,
     LoadLibraryParams
@@ -24,13 +24,13 @@ export interface AppBindings {
 }
 
 interface AppVariables {
-    /** Internal cache for {@link getOnshapeApi} in features/auth/onshape-oauth.ts. */
+    /** Internal cache for `getOnshapeApi` in features/auth/caller.ts. */
     onshapeApi?: OAuthApi;
-    /** Internal cache for isSignedIn in features/auth/sign-in.ts. */
+    /** Internal cache for `isSignedIn` in features/auth/caller.ts. */
     signedIn?: boolean;
     /** Set by `setCacheTtl`; read by `cacheMiddleware`. */
     cacheTtl?: number;
-    /** Injected getters — see {@link AppServices} / `createApp`. */
+    /** Injected by {@link bindCaller}; see {@link Caller}. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
@@ -45,16 +45,31 @@ export interface AppContextEnv {
 export type AppContext = Context<AppContextEnv>;
 
 /**
- * Per-request dependencies injected into the app.
+ * Who is making the request, injected per request so tests can substitute a
+ * caller without an Onshape session. `productionCaller` is the real one.
  */
-export interface AppServices {
+export interface Caller {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 
-export type AppServicesFactory = (c: AppContext) => AppServices;
+export type CallerFactory = (c: AppContext) => Caller;
+
+/** Binds the caller's lookups onto each request, behind `c.var`. */
+export function bindCaller(
+    makeCaller: CallerFactory
+): MiddlewareHandler<AppContextEnv> {
+    return async (c, next) => {
+        const caller = makeCaller(c);
+        c.set("getOnshapeApi", caller.getOnshapeApi);
+        c.set("getUserId", caller.getUserId);
+        c.set("getAccessLevel", caller.getAccessLevel);
+        c.set("isAuthenticated", caller.isAuthenticated);
+        await next();
+    };
+}
 
 export function getApp() {
     return new Hono<AppContextEnv>();

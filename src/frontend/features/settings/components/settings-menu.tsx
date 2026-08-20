@@ -1,10 +1,10 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { DEFAULT_SETTINGS } from "@backend/features/users/settings";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { Divider, Group, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { FontWeight } from "../../../lib/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
-import { Theme } from "@backend/features/users/settings";
+import { Theme } from "@backend/features/settings/settings";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { isWithinAccessLevel } from "@backend/features/auth/access-level";
 import { AccessLevel } from "@backend/features/auth/access-level";

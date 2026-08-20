@@ -145,13 +145,14 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 ### `src/backend/`
 
 - `index.ts` — Worker entry point; exports the default app and the three Workflow classes
-- `app.ts` — composition root: injects per-request services, mounts every feature's routes, and handles errors
+- `app.ts` — composition root, and nothing else: binds the caller onto each request, mounts every feature's routes, and installs the error handler
 - `db/` — `client.ts` (the Drizzle client) and `schema.ts` (table definitions)
-- `lib/` — request plumbing shared by every feature: `context.ts` (bindings and typed context), `cache.ts` (cache-control middleware), `route-params.ts`, `query-params.ts`
+- `lib/` — request plumbing shared by every feature: `context.ts` (bindings, typed context, and the caller binding), `cache.ts` (cache-control middleware), `errors.ts`, `route-params.ts`, `query-params.ts`
 - `lib/onshape/` — everything that talks to Onshape's REST API: `client.ts` (the client class), `api-path.ts`, `path.ts` (`ElementPath`/`InstancePath` and their serializers), `endpoints/` (per-category wrappers), `objects/` (feature and query builders)
 - `features/` — one directory per feature, each holding its own `routes.ts` plus whatever it owns:
-    - `auth/` — OAuth flow (`onshape-oauth.ts`), session storage (`session.ts`), and the two authorization gates: `sign-in.ts` (signed in to Onshape at all) and `access-control.ts` (on the admin team)
-    - `users/` — user preferences and the `Settings` model
+    - `auth/` — split by role: `session.ts` stores the session cookie and its KV records, `onshape-oauth.ts` runs the handshake, `caller.ts` resolves who is calling (and exports `productionCaller`, the wiring `createApp` binds), `guards.ts` holds both gates, and `routes.ts` serves the OAuth redirects plus `/access-data`
+    - `entry/` — `/init`, where Onshape lands: gates on auth, then resumes the caller in the library and theme they last used
+    - `settings/` — the caller's stored preferences and the `Settings` model
     - `library/` — the library response (`db.ts`), its DTOs, and the groups and insertables endpoints
     - `load/` — everything that turns Onshape into what we store: the `parse-*` modules (document contents, configurations, configuration records, vendors, fasten info), the per-group and per-insertable loaders, the Workflows that drive them, their retry policies, and the job tracker
     - `configurations/` — the configuration domain the frontend shares: models, canonicalization, combination enumeration, and the input parser
@@ -176,6 +177,6 @@ Other top-level files:
 
 The app has three access levels, checked on every protected API call: **ADMIN**, **EDITOR**, and **USER**. Admin and editor access currently grant the same permissions (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
 
-The Worker determines a user's access level in `src/backend/features/auth/services.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/features/auth/access-control.ts`.
+The Worker determines a user's access level in `src/backend/features/auth/caller.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/features/auth/guards.ts`.
 
 During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.

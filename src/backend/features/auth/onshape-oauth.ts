@@ -1,101 +1,29 @@
-/** The Onshape OAuth flow, and the API client a stored session produces. */
+/** The Onshape OAuth handshake: where we send the user, and what comes back. */
 import { HttpStatus } from "http-status-ts";
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { HTTPException } from "hono/http-exception";
 import { env } from "cloudflare:workers";
-import { OAuthApi } from "../../lib/onshape/client";
-import { getSessionInfo, getUserId } from "../../lib/onshape/endpoints/users";
 import { type AppContext } from "../../lib/context";
 import {
     type AuthTokens,
-    SESSION_TTL,
-    getSessionCompanyId,
-    getSessionId,
-    getTokens,
     saveTokens,
     startLoginSession,
     takeLoginSession
 } from "./session";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
-const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
+export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-function getOauthClient(): OAuth2Client {
+export function getOauthClient(): OAuth2Client {
     return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
 }
 
-function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
+export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
     return {
         accessToken: tokens.accessToken(),
         refreshToken: tokens.refreshToken(),
         expiresAt: tokens.accessTokenExpiresAt().getTime()
     };
-}
-
-export async function getOnshapeApiFromSessionId(
-    kv: KVNamespace,
-    sessionId: string
-): Promise<OAuthApi> {
-    const tokens = await getTokens(kv, sessionId);
-
-    const refreshCallback = async () => {
-        const oauthClient = getOauthClient();
-        const newTokens = await oauthClient
-            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
-            .then((refreshed) => makeAuthTokens(refreshed));
-
-        void saveTokens(kv, sessionId, newTokens);
-
-        return newTokens.accessToken;
-    };
-
-    let accessToken = tokens.accessToken;
-    // If the token expired in the past, refresh immediately
-    if (tokens.expiresAt <= Date.now()) {
-        accessToken = await refreshCallback();
-    }
-
-    return new OAuthApi(accessToken, refreshCallback);
-}
-
-/**
- * Creates/caches an Onshape API instance from the AppContext.
- *
- * Note this function should not be called directly, as it is bound to the context directly.
- */
-export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
-    const cached = c.get("onshapeApi");
-    if (cached) return cached;
-    const api = await getOnshapeApiFromSessionId(c.env.KV, getSessionId(c));
-    c.set("onshapeApi", api);
-    return api;
-}
-
-function userIdKey(sessionId: string): string {
-    return `user-id:${sessionId}`;
-}
-
-/** Returns the caller's Onshape user id, memoized in KV by session. */
-export async function getCachedUserId(c: AppContext): Promise<string> {
-    const key = userIdKey(getSessionId(c));
-
-    const cached = await c.env.KV.get(key);
-    if (cached) return cached;
-
-    const userId = await getUserId(await getOnshapeApi(c));
-    await c.env.KV.put(key, userId, { expirationTtl: SESSION_TTL });
-    return userId;
-}
-
-export async function isAuthenticated(c: AppContext): Promise<boolean> {
-    try {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const sessionInfo = await getSessionInfo(onshapeApi);
-        const tokenCompanyId = sessionInfo.company?.id ?? "cad";
-        return getSessionCompanyId(c) === tokenCompanyId;
-    } catch {
-        return false;
-    }
 }
 
 /**

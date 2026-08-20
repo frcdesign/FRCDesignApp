@@ -1,17 +1,17 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { users } from "./db/schema";
-import { LibraryId } from "./features/library/library-id";
-import { Theme } from "./features/users/settings";
+import { users } from "../../db/schema";
+import { LibraryId } from "../library/library-id";
+import { Theme } from "../settings/settings";
 import {
     TEST_USER_ID,
     createTestApp,
     jsonRequest,
     resetDb,
     seedUser
-} from "../__test_utils__";
-import { getDb } from "./db/client";
+} from "../../../__test_utils__";
+import { getDb } from "../../db/client";
 
 const db = getDb(env.DB);
 

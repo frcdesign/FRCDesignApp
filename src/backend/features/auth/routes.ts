@@ -1,9 +1,24 @@
 import { HttpStatus } from "http-status-ts";
 import { HTTPException } from "hono/http-exception";
 import { getApp } from "../../lib/context";
+import { cacheMiddleware } from "../../lib/cache";
+import { type AccessData } from "./access-level";
+import { isSignedIn } from "./caller";
 import { doCallback, doSignIn } from "./onshape-oauth";
 
+/** The OAuth redirects, mounted at /auth. */
 export const authRoutes = getApp();
+
+/** What the app needs to know about the caller, mounted at /api. */
+export const accessRoutes = getApp();
+
+/** GET /api/access-data */
+accessRoutes.get("/access-data", cacheMiddleware(), async (c) => {
+    return c.json({
+        maxAccessLevel: await c.var.getAccessLevel(),
+        signedIn: await isSignedIn(c)
+    } satisfies AccessData);
+});
 
 authRoutes.get("/sign-in", async (c) => {
     const query = c.req.query();
