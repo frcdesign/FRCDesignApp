@@ -71,6 +71,20 @@ interface AlwaysShownVisibilityCondition {
 export interface ConfigurationResult {
     // defaultConfiguration: string;
     parameters: ConfigurationParameter[];
+    /** The insertable's search records, so the insert menu can show the part
+     * number + name of the selected configuration. Empty when not indexed. */
+    records: SearchRecord[];
+}
+
+/**
+ * The slice of a {@link ConfigurationRecord} search needs. MiniSearch-free, so
+ * the index and the `/configuration` route can share it.
+ */
+export interface SearchRecord {
+    partNumber: string | null;
+    name: string | null;
+    /** The (enumerated) parameter values that produce it; empty for the default. */
+    configuration: ParameterValues;
 }
 
 export type ConfigurationParameter =
@@ -122,28 +136,36 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 export type ParameterValues = Record<string, string>;
 
 /**
- * Maps a part number to the single (canonical) parameter values which produce
- * it.
- *
- * Keyed by part number because search looks parts up by number, and because
- * many parameter values can resolve to the same part number (e.g. parameters
- * that don't affect the part); keying by number dedupes them inherently.
+ * What one probed configuration resolves to. Stored per probe, so search and the
+ * UI can read it back without re-querying Onshape.
  */
-export type PartNumberMap = Record<string, ParameterValues>;
-
-/**
- * An insertable's configuration: the parameters it exposes and the part numbers
- * they resolve to. Mirrors the `configurations` row.
- */
-export interface Configuration {
-    parameters: ConfigurationParameter[];
-    partNumbers: PartNumberMap;
+export interface ConfigurationRecord {
+    /** The parameter values that produce it; empty means the element's defaults. */
+    configuration: ParameterValues;
+    partNumber: string | null;
+    name: string | null;
+    description: string | null;
+    /** Material display name, e.g. "6061 Aluminum". */
+    material: string | null;
+    vendor: string | null;
+    /** True when a part studio resolved to more than one part. */
+    hasMultipleParts: boolean;
+    /** True when an open composite lost its composite in this configuration. */
+    isUnstableComposite: boolean;
 }
 
 /**
- * The current document's units. Fields are optional: when a unit is absent (not
- * connected to a document, or units no longer fetched) each quantity falls back
- * to its own default unit.
+ * An insertable's configuration: the parameters it exposes and a record for each
+ * configuration we probed. Mirrors the `configurations` row.
+ */
+export interface Configuration {
+    parameters: ConfigurationParameter[];
+    records: ConfigurationRecord[];
+}
+
+/**
+ * The current document's units. Every field is optional: an absent one leaves
+ * the quantity on its own default unit.
  */
 export interface UnitInfo {
     angleUnit?: Unit;

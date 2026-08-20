@@ -1,5 +1,6 @@
 import type { AppBindings } from "../app";
 import type { LibraryId } from "../../shared/types";
+import type { JobStatus } from "../../shared/api-models";
 
 /**
  * Backstop for a job that crashes before untracking itself; must outlast the
@@ -21,6 +22,8 @@ export type JobKind = "reload" | "add-group";
 interface TrackedJob {
     id: string;
     kind: JobKind;
+    /** Epoch ms the job was created. */
+    startedAt: number;
 }
 
 function jobsKey(libraryId: LibraryId): string {
@@ -74,12 +77,17 @@ export async function isReloadRunning(
     return jobs.some((job) => job.kind === "reload");
 }
 
-/** Whether any load job (reload or add-group) is running for this library. */
-export async function isAnyJobRunning(
+/** Reports the oldest running job's age, which paces the client's polling. */
+export async function getJobStatus(
     env: AppBindings,
     libraryId: LibraryId
-): Promise<boolean> {
-    return (await activeJobs(env, libraryId)).length > 0;
+): Promise<JobStatus> {
+    const jobs = await activeJobs(env, libraryId);
+    if (jobs.length === 0) {
+        return { running: false };
+    }
+    const startedAt = Math.min(...jobs.map((job) => job.startedAt));
+    return { running: true, runningForMs: Date.now() - startedAt };
 }
 
 /** Records a newly-created job, pruning any that have since finished. */
@@ -90,16 +98,15 @@ export async function trackJob(
     instanceId: string
 ): Promise<void> {
     const jobs = await activeJobs(env, libraryId);
-    jobs.push({ id: instanceId, kind });
+    jobs.push({ id: instanceId, kind, startedAt: Date.now() });
     await env.KV.put(jobsKey(libraryId), JSON.stringify(jobs), {
         expirationTtl: JOB_TTL_SECONDS
     });
 }
 
 /**
- * Removes a job's entry as it finishes — the workflow calls this in a final step
- * so the running-job state clears promptly instead of waiting out the TTL. Only
- * its own entry is touched, so concurrent jobs are unaffected.
+ * Called in the workflow's final step so running state clears promptly rather
+ * than waiting out the TTL. Touches only its own entry.
  */
 export async function untrackJob(
     env: AppBindings,

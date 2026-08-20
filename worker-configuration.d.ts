@@ -3,7 +3,7 @@
 // Runtime types generated with workerd@1.20260714.1 2026-05-14 nodejs_compat
 interface __BaseEnv_Env {
     KV: KVNamespace;
-    THUMBNAILS: R2Bucket;
+    BLOB: R2Bucket;
     DB: D1Database;
     ASSETS: Fetcher;
     ADMIN_TEAM: "6a62e6efcc21741bea57362c" | "5b620150b2190f0fca90ec10";
@@ -24,6 +24,11 @@ interface __BaseEnv_Env {
             import("./src/backend/index").AddGroupWorkflow["run"]
         >[0]["payload"]
     >;
+    THUMBNAIL_WORKFLOW: Workflow<
+        Parameters<
+            import("./src/backend/index").ThumbnailWorkflow["run"]
+        >[0]["payload"]
+    >;
 }
 declare namespace Cloudflare {
     interface GlobalProps {
@@ -31,7 +36,7 @@ declare namespace Cloudflare {
     }
     interface CertEnv {
         KV: KVNamespace;
-        THUMBNAILS: R2Bucket;
+        BLOB: R2Bucket;
         DB: D1Database;
         ASSETS: Fetcher;
         ADMIN_TEAM: "6a62e6efcc21741bea57362c";
@@ -52,10 +57,15 @@ declare namespace Cloudflare {
                 import("./src/backend/index").AddGroupWorkflow["run"]
             >[0]["payload"]
         >;
+        THUMBNAIL_WORKFLOW: Workflow<
+            Parameters<
+                import("./src/backend/index").ThumbnailWorkflow["run"]
+            >[0]["payload"]
+        >;
     }
     interface ProductionEnv {
         KV: KVNamespace;
-        THUMBNAILS: R2Bucket;
+        BLOB: R2Bucket;
         DB: D1Database;
         ASSETS: Fetcher;
         ADMIN_TEAM: "5b620150b2190f0fca90ec10";
@@ -74,6 +84,11 @@ declare namespace Cloudflare {
         ADD_GROUP_WORKFLOW: Workflow<
             Parameters<
                 import("./src/backend/index").AddGroupWorkflow["run"]
+            >[0]["payload"]
+        >;
+        THUMBNAIL_WORKFLOW: Workflow<
+            Parameters<
+                import("./src/backend/index").ThumbnailWorkflow["run"]
             >[0]["payload"]
         >;
     }

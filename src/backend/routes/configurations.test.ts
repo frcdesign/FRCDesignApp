@@ -36,7 +36,7 @@ describe("configuration routes", () => {
         expect(res.status).toBe(200);
 
         const body = await res.json();
-        expect(body).toEqual({ parameters: TEST_PARAMETERS });
+        expect(body).toEqual({ parameters: TEST_PARAMETERS, records: [] });
     });
 
     it("GET /configuration/:id 404s for an unknown id", async () => {

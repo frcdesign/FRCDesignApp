@@ -66,9 +66,8 @@ function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    // The modal renders at the root, outside the route matches, so read the
-    // location instead of a route-scoped hook and navigate back to the exact
-    // path — a bare navigate would resolve to the route the `from` names.
+    // The modal renders at the root, outside the route matches, so navigate by
+    // exact path: a bare navigate would resolve to the route `from` names.
     const location = useRouterState({ select: (state) => state.location });
     const navigate = useNavigate();
     const saveSettings = useSaveSettings();

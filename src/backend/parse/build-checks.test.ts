@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls, Vendor } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../../shared/canonical-configuration";
+import { thumbnailUrl } from "../../shared/thumbnails";
 import { checkGroup, checkInsertable } from "./build-checks";
+import type { ConfigurationRecord } from "../../shared/configuration-models";
 
+/** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
-    [ThumbnailSize.TINY]: "/api/thumbnail/tiny/x",
-    [ThumbnailSize.STANDARD]: "/api/thumbnail/standard/x"
+    small: defaultThumbnailUrl(ThumbnailSize.SMALL),
+    large: defaultThumbnailUrl(ThumbnailSize.LARGE)
 };
+
+function defaultThumbnailUrl(size: ThumbnailSize): string {
+    return thumbnailUrl({
+        elementId: "element",
+        microversionId: "microversion",
+        size,
+        canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+    });
+}
 
 /** A group with nothing wrong; each test spreads in the one fault it checks. */
 const HEALTHY_GROUP = {
@@ -42,29 +55,76 @@ describe("checkGroup", () => {
     });
 });
 
+/** An indexed record; only its part number matters to these checks. */
+function record(partNumber: string | null): ConfigurationRecord {
+    return {
+        configuration: {},
+        partNumber,
+        name: null,
+        description: null,
+        material: null,
+        vendor: null,
+        hasMultipleParts: false,
+        isUnstableComposite: false
+    };
+}
+
 describe("checkInsertable", () => {
+    const HEALTHY_INSERTABLE = {
+        vendors: [Vendor.REV],
+        thumbnailUrls: THUMBNAILS,
+        records: [record("217-2600")]
+    };
+
     it("returns no issues when vendors are parsed and thumbnails generated", () => {
-        expect(
-            checkInsertable({
-                vendors: [Vendor.REV],
-                thumbnailUrls: THUMBNAILS
-            })
-        ).toEqual([]);
+        expect(checkInsertable(HEALTHY_INSERTABLE)).toEqual([]);
     });
 
     it("infos when no vendors are parsed", () => {
         const issues = checkInsertable({
-            vendors: [],
-            thumbnailUrls: THUMBNAILS
+            ...HEALTHY_INSERTABLE,
+            vendors: []
         });
         expect(issues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 
     it("errors when the thumbnail failed to generate", () => {
         const issues = checkInsertable({
-            vendors: [Vendor.REV],
+            ...HEALTHY_INSERTABLE,
             thumbnailUrls: null
         });
         expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_FAILED }]);
+    });
+
+    it("warns when a vendor part indexed without a part number", () => {
+        const issues = checkInsertable({
+            ...HEALTHY_INSERTABLE,
+            records: [record(null), record(null)]
+        });
+        expect(issues).toEqual([{ type: BuildIssueType.NO_PART_NUMBER }]);
+    });
+
+    it("does not warn when only some configurations lack one", () => {
+        const issues = checkInsertable({
+            ...HEALTHY_INSERTABLE,
+            records: [record(null), record("217-2600")]
+        });
+        expect(issues).toEqual([]);
+    });
+
+    // Nobody sells it, so having no part number is the expected state.
+    it("does not warn about a custom part", () => {
+        const issues = checkInsertable({
+            ...HEALTHY_INSERTABLE,
+            vendors: [Vendor.CUSTOM],
+            records: [record(null)]
+        });
+        expect(issues).toEqual([]);
+    });
+
+    // Nothing was probed, so there is nothing to conclude.
+    it("does not warn when the insertable is not indexed", () => {
+        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, records: [] });
+        expect(issues).toEqual([]);
     });
 });

@@ -1,6 +1,10 @@
 import { ParameterValues } from "./configuration-models";
 
-export type InstanceType = "w" | "v" | "m";
+/** The instance kinds an Onshape path can address, as one definition: the type
+ * and the runtime list validators check against both derive from it. */
+export const INSTANCE_TYPES = ["w", "v", "m"] as const;
+
+export type InstanceType = (typeof INSTANCE_TYPES)[number];
 
 export interface DocumentPath {
     documentId: string;
@@ -35,14 +39,17 @@ export function isDocumentPath(path: any): path is DocumentPath {
 export function isInstancePath(path: any): path is InstancePath {
     return (
         isDocumentPath(path) &&
-        (path as InstancePath).instanceId !== undefined &&
-        (path as InstancePath).instanceType !== undefined
+        typeof (path as InstancePath).instanceId === "string" &&
+        // Checked against the literals: an unrecognized instance type builds a
+        // path Onshape rejects, which is worth catching at the boundary.
+        INSTANCE_TYPES.includes((path as InstancePath).instanceType)
     );
 }
 
 export function isElementPath(path: any): path is ElementPath {
     return (
-        isInstancePath(path) && (path as ElementPath).elementId !== undefined
+        isInstancePath(path) &&
+        typeof (path as ElementPath).elementId === "string"
     );
 }
 

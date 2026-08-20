@@ -3,7 +3,7 @@ import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../api-utils/api";
 import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import { toElementApiPath } from "../../shared/onshape-path";
+import { type ElementPath } from "../../shared/onshape-path";
 import { showLoadingToast, showSuccessToast } from "../common/notifications";
 import { queryClient } from "../query-client";
 import { getAppErrorHandler } from "../api-utils/errors";
@@ -17,9 +17,6 @@ export interface InsertArgs {
     isQuickInsert?: boolean;
 }
 
-/**
- * Creates a mutation for inserting an insertable.
- */
 export function useInsertMutation(
     insertable: InsertableOut,
     configuration: ParameterValues | undefined,
@@ -35,9 +32,19 @@ export function useInsertMutation(
             let endpoint: string;
             let body: Record<string, unknown>;
 
+            // The tab being inserted into, sent whole so the instance type
+            // travels with its id rather than being reassembled from the URL.
+            const targetPath: ElementPath = {
+                documentId: search.documentId,
+                instanceId: search.instanceId,
+                instanceType: search.instanceType,
+                elementId: search.elementId
+            };
+
             if (search.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
                 body = {
+                    targetPath,
                     configuration,
                     isFavorite: insertArgs.isFavorite,
                     isQuickInsert: insertArgs.isQuickInsert ?? false,
@@ -47,6 +54,7 @@ export function useInsertMutation(
             } else {
                 endpoint = "/add-to-part-studio";
                 body = {
+                    targetPath,
                     configuration,
                     isFavorite: insertArgs.isFavorite,
                     isQuickInsert: insertArgs.isQuickInsert ?? false,
@@ -56,12 +64,9 @@ export function useInsertMutation(
             await queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
             showLoadingToast(`Inserting ${insertable.name}...`, toastId);
-            return apiPost(
-                endpoint +
-                    toInsertablePath(insertable.id) +
-                    toElementApiPath(search),
-                { body }
-            );
+            return apiPost(endpoint + toInsertablePath(insertable.id), {
+                body
+            });
         },
         onError: getAppErrorHandler(
             `Unexpectedly failed to insert ${insertable.name}.`,

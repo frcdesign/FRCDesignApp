@@ -1,5 +1,6 @@
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
 import type { ThumbnailUrls } from "../../shared/types";
+import { NoSuchConfigurationError } from "../onshape-api/endpoints/thumbnails";
 import type { LoadContext } from "./load-common";
 
 /** The retry input a Workflow `delay` callback receives. */
@@ -36,10 +37,36 @@ export const ONSHAPE_STEP_RETRIES = {
     delay: onshapeRetryDelay
 };
 
+/** The first wait after a render isn't ready; each attempt doubles it. */
+const THUMBNAIL_BASE_DELAY_SECONDS = 4;
+
 /**
- * Uploads thumbnails in a single step with retrying, returning `null` when they
- * never showed up — the caller records that as a build issue rather than failing
- * the load.
+ * Onshape gives no signal when a render lands, so the step polls, doubling from
+ * four seconds. A rate limit overrides the curve.
+ */
+function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
+    const rateLimited = rateLimitDelay(input.error);
+    if (rateLimited) {
+        return rateLimited;
+    }
+    // Nothing to wait for; burn the remaining attempts immediately.
+    if (input.error instanceof NoSuchConfigurationError) {
+        return "0 seconds";
+    }
+    const seconds = THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1);
+    return `${seconds} seconds`;
+}
+
+export const THUMBNAIL_STEP_RETRIES = {
+    // 4s, 8s … 512s: a bit over seventeen minutes of polling, which a slow
+    // Onshape render is worth waiting out.
+    limit: 9,
+    delay: thumbnailRetryDelay
+};
+
+/**
+ * Returns `null` when the thumbnails never showed up, which the caller records
+ * as a build issue rather than failing the whole load.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,
@@ -50,14 +77,7 @@ export async function uploadThumbnailsStep(
         return await ctx.step.do(
             name,
             {
-                retries: {
-                    limit: 3,
-                    // Wait out a rate limit; otherwise poll for the thumbnail,
-                    // which Onshape renders asynchronously.
-                    delay: (retry: RetryDelayInput) =>
-                        rateLimitDelay(retry.error) ??
-                        (retry.ctx.attempt === 1 ? "10 seconds" : "5 minutes")
-                }
+                retries: THUMBNAIL_STEP_RETRIES
             },
             async () => {
                 const thumbnails = await uploadFn();

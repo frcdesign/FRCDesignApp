@@ -47,7 +47,7 @@ buildStatusRoutes.get(
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
-                    searchPartNumbers: insertables.searchPartNumbers,
+                    indexConfigurations: insertables.indexConfigurations,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     lastLoadedAt: insertables.lastLoadedAt
@@ -92,7 +92,7 @@ buildStatusRoutes.get(
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
-                searchPartNumbers: ins.searchPartNumbers,
+                indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
                 configuration: config
                     ? {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { QuantityType, Unit } from "../../shared/configuration-enums";
+import { QuantityType, Unit } from "./configuration-enums";
 import {
     evaluateExpression,
     EvaluateOptions,

@@ -53,7 +53,6 @@ export function getWorkspaces(
     );
 }
 
-/** Creates a new workspace in a given document. */
 export function createWorkspace(
     client: OnshapeApi,
     documentPath: DocumentPath,
@@ -100,7 +99,6 @@ export function createWorkspaceFromVersion(
     );
 }
 
-/** Deletes a workspace. */
 export function deleteWorkspace(
     client: OnshapeApi,
     workspacePath: InstancePath
@@ -114,7 +112,6 @@ export function deleteWorkspace(
     );
 }
 
-/** Deletes an entire document. */
 export function deleteDocument(
     client: OnshapeApi,
     documentPath: DocumentPath
@@ -163,10 +160,8 @@ export async function getDocumentElement(
 }
 
 /**
- * Fetches the latest microversion id of a given workspace.
- *
- * Note this is the microversion associated with the workspace as a whole.
- * Individual elements also have their own microversion ids which are unrelated to the workspace's.
+ * The workspace's own microversion — unrelated to the per-element microversions
+ * the load path compares.
  */
 export function getWorkspaceMicroversionId(
     client: OnshapeApi,
@@ -351,10 +346,8 @@ export function getUnitInfo(
 }
 
 /**
- * Updates all features in `elementPath` which reference `oldReferencePath` to the latest version.
- *
- * Specifically, all features in `elementPath` which reference objects in `oldReferencePath`
- * are updated to use the latest version of that reference.
+ * Updates every feature in `elementPath` referencing `oldReferencePath` to that
+ * reference's latest version.
  */
 export async function updateToLatestVersion(
     onshapeApi: OnshapeApi,

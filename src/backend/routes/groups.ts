@@ -8,11 +8,7 @@ import { type DocumentPath } from "../../shared/onshape-path";
 import { group, insertables, libraries, favorites } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
 import { HttpStatus } from "http-status-ts";
-import {
-    isAnyJobRunning,
-    isReloadRunning,
-    trackJob
-} from "../load/job-tracker";
+import { getJobStatus, isReloadRunning, trackJob } from "../load/job-tracker";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -55,20 +51,19 @@ groupRoutes.post(
     }
 );
 
-/** GET /api/job-status/library/:libraryId */
+/** GET /api/job-status/library/:libraryId — checked on load, then polled. */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
     cacheMiddleware(),
     async (c) => {
-        const running = await isAnyJobRunning(c.env, getLibraryParam(c));
-        return c.json({ running });
+        return c.json(await getJobStatus(c.env, getLibraryParam(c)));
     }
 );
 
-/** POST /api/set-element-visibility/library/:libraryId */
+/** POST /api/set-insertable-visibility/library/:libraryId */
 groupRoutes.post(
-    "/set-element-visibility" + libraryRoute(),
+    "/set-insertable-visibility" + libraryRoute(),
     requireEditorMiddleware,
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -100,6 +95,9 @@ groupRoutes.post(
                 )
             );
 
+        // Rebuild before bumping: the new version makes /search-db immutable,
+        // so a client fetching in between would pin the stale index for a year.
+        await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
@@ -244,8 +242,8 @@ groupRoutes.delete(
             .delete(group)
             .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
 
+        await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);
-        await rebuildSearchDb(db, libraryId);
         return c.json({ success: true });
     }
 );

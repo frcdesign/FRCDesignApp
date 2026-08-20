@@ -24,13 +24,13 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const accessData = useAccessData();
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
-        return <SectionLoading title="Loading documents..." />;
-    } else if (
-        searchDbQuery.isError ||
-        libraryQuery.isError ||
-        !searchDbQuery.data
-    ) {
+        return <SectionLoading title="Loading library..." />;
+    } else if (libraryQuery.isError) {
         return <SectionError title="Failed to load library." />;
+    } else if (searchDbQuery.isError) {
+        return <SectionError title="Failed to load search database." />;
+    } else if (!searchDbQuery.data) {
+        return <SectionError title="The search database is empty." />;
     }
     const insertables = libraryQuery.data.insertables;
     const searchResults = doSearch(
@@ -89,7 +89,18 @@ interface SearchHitTitleProps {
  */
 export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
     const { title, searchHit } = props;
-    return <>{applyRanges(title, searchHit.positions)}</>;
+    return <HighlightedText text={title} positions={searchHit.positions} />;
+}
+
+/** Underlines wherever the query matched inside `text`. */
+export function HighlightedText({
+    text,
+    positions
+}: {
+    text: string;
+    positions?: Position[];
+}): ReactNode {
+    return <>{applyRanges(text, positions ?? [])}</>;
 }
 
 function applyRanges(str: string, ranges: Position[]) {
@@ -123,26 +134,6 @@ function applyRanges(str: string, ranges: Position[]) {
 
     return result;
 }
-
-// function remapRanges(str: string, ranges: Position[]): Position[] {
-//     let offsetCount = 0;
-
-//     // Build mapping from original index → index in "clean" string
-//     const indexMap: number[] = [];
-//     for (let i = 0; i < str.length; i++) {
-//         if (str[i] === DELIMINATOR) {
-//             offsetCount++;
-//         } else {
-//             indexMap[i] = i - offsetCount;
-//         }
-//     }
-
-//     // Adjust ranges
-//     return ranges.map(({ start, length }) => {
-//         const newStart = indexMap[start];
-//         return { start: newStart, length };
-//     });
-// }
 
 function deduplicateRanges(ranges: Position[]): Position[] {
     // Mapping where indexMap[i] = true means i is in a range.

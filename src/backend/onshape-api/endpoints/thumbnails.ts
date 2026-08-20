@@ -7,20 +7,13 @@ import {
     toInstanceApiPath
 } from "../../../shared/onshape-path";
 import { apiPath } from "../api-path";
-
-/** Represents the possible sizes of a thumbnail. */
-export enum ThumbnailSize {
-    STANDARD = "300x300",
-    LARGE = "600x340",
-    SMALL = "300x170",
-    TINY = "70x40"
-}
+import { ThumbnailSize } from "../../../shared/types";
 
 /** Returns the thumbnail of a given document instance. */
 export function getInstanceThumbnail(
     client: OnshapeApi,
     instancePath: InstancePath,
-    size = ThumbnailSize.STANDARD
+    size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(instancePath, "w", "v");
     const path =
@@ -32,7 +25,7 @@ export function getInstanceThumbnail(
 export function getElementThumbnail(
     client: OnshapeApi,
     elementPath: ElementPath,
-    size = ThumbnailSize.STANDARD
+    size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(elementPath, "w", "v");
     const path =
@@ -48,7 +41,7 @@ export function getElementThumbnail(
 export function getThumbnailFromWorkspace(
     client: OnshapeApi,
     elementPath: ElementPath,
-    size = ThumbnailSize.STANDARD,
+    size = ThumbnailSize.LARGE,
     configuration?: string
 ): Promise<ArrayBuffer> {
     assertWorkspace(elementPath);
@@ -59,6 +52,9 @@ export function getThumbnailFromWorkspace(
         query: { rejectEmpty: "true", requireConfigMatch: "true" }
     });
 }
+
+/** The configuration matches no insertable, so retrying can only fail again. */
+export class NoSuchConfigurationError extends Error {}
 
 export async function getThumbnailId(
     client: OnshapeApi,
@@ -79,7 +75,14 @@ export async function getThumbnailId(
         }),
         { query }
     );
-    return insertables.items[0].predictableThumbnailId;
+    // A configuration matching nothing comes back with no items at all.
+    const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
+    if (!thumbnailId) {
+        throw new NoSuchConfigurationError(
+            "Onshape returned no insertable for the configuration"
+        );
+    }
+    return thumbnailId;
 }
 
 /**
@@ -90,7 +93,7 @@ export async function getThumbnailId(
 export function getThumbnailFromId(
     client: OnshapeApi,
     thumbnailId: string,
-    size = ThumbnailSize.STANDARD
+    size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     const path =
         apiPath("thumbnails", undefined, undefined, { endId: thumbnailId }) +

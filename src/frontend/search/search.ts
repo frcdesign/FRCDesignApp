@@ -1,9 +1,9 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "../../shared/types";
-import { SearchDocument } from "../../shared/search";
+import { SearchDocument, normalizeForMatch } from "../../shared/search";
 import {
     ParameterValues,
-    PartNumberMap
+    SearchRecord
 } from "../../shared/configuration-models";
 
 /**
@@ -11,9 +11,6 @@ import {
  */
 export type ObjectLabel = "element" | "favorite" | "search result";
 
-/**
- * Returns the plural form of an object label.
- */
 export function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
 }
@@ -34,10 +31,15 @@ export interface SearchHit {
     id: string;
     positions: Position[];
     /**
-     * When the hit matched on a part number, the configuration that produces
-     * that part number, used to pre-fill the insert menu.
+     * The best-matching configuration for this hit, used to pre-fill the insert
+     * menu — its part number, name, and the parameter values that produce it.
      */
     configuration?: ParameterValues;
+    partNumber?: string;
+    partName?: string;
+    /** Where the query matched inside `partNumber` / `partName`, for underlining. */
+    partNumberPositions?: Position[];
+    partNamePositions?: Position[];
 }
 
 export interface FilterResult {
@@ -119,19 +121,33 @@ export function doSearch(
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
-            const positions = generateHighlightPositions(
-                miniSearchResult,
-                document
-            );
-
+            const record = matchedRecord(miniSearchResult, document, query);
+            const partNumber = record?.partNumber ?? undefined;
+            const partName = record?.name ?? undefined;
             return {
                 id: document.id,
-                positions,
-                configuration: matchedConfiguration(
+                positions: generateHighlightPositions(
                     miniSearchResult,
-                    document,
-                    query
-                )
+                    document.name,
+                    "name"
+                ),
+                configuration: record?.configuration,
+                partNumber,
+                partName,
+                partNumberPositions: partNumber
+                    ? generateHighlightPositions(
+                          miniSearchResult,
+                          partNumber,
+                          "partNumbers"
+                      )
+                    : undefined,
+                partNamePositions: partName
+                    ? generateHighlightPositions(
+                          miniSearchResult,
+                          partName,
+                          "partNames"
+                      )
+                    : undefined
             };
         })
         .slice(0, 50); // Limit to 50 results
@@ -140,72 +156,93 @@ export function doSearch(
 }
 
 /**
- * If the result matched on the part-number field, returns the configuration
- * that produces the best-matching part number so the insert menu can launch it.
+ * The single best record for a hit: matched by part number, else by name, else
+ * the default — so every row can show a part number and name.
  */
-function matchedConfiguration(
+function matchedRecord(
     result: MiniSearchResult,
     document: SearchDocument,
     query: string
-): ParameterValues | undefined {
-    const matchedPartNumber = Object.values(result.match).some((fields) =>
-        fields.includes("partNumbers")
-    );
-    if (!matchedPartNumber) {
-        return undefined;
-    }
-    return findPartNumberConfig(query, document.partNumberConfigs);
+): SearchRecord | undefined {
+    const matchedFields = Object.values(result.match).flat();
+    const byNumber = matchedFields.includes("partNumbers")
+        ? findBestRecord(query, document.records, (r) => r.partNumber)
+        : undefined;
+    const byName = matchedFields.includes("partNames")
+        ? findBestRecord(query, document.records, (r) => r.name)
+        : undefined;
+    // A multi-term query can match the field without any one record matching the
+    // whole query, so fall back rather than leaving the row with no record.
+    return byNumber ?? byName ?? document.records[0];
 }
 
 /**
- * Picks the configuration whose part number best matches the query, preferring
- * an exact match, then a prefix, then a substring. First-wins on ties (the map
- * is ordered default-first).
+ * Prefers an exact match, then a prefix, then a substring. Ties go first-wins,
+ * which in enumeration order is the latest option.
  */
-function findPartNumberConfig(
+function findBestRecord(
     query: string,
-    partNumberConfigs: PartNumberMap
-): ParameterValues | undefined {
-    const keys = Object.keys(partNumberConfigs);
-    const normalizedQuery = query.trim().toLowerCase();
-    if (keys.length === 0 || normalizedQuery === "") {
+    records: SearchRecord[],
+    selector: (record: SearchRecord) => string | null
+): SearchRecord | undefined {
+    const normalizedQuery = normalizeForMatch(query.trim());
+    if (records.length === 0 || normalizedQuery === "") {
         return undefined;
     }
 
-    const match =
-        keys.find((key) => key.toLowerCase() === normalizedQuery) ??
-        keys.find((key) => key.toLowerCase().startsWith(normalizedQuery)) ??
-        keys.find((key) => key.toLowerCase().includes(normalizedQuery));
+    // Canonicalize the same way the index did, so a fraction/decimal query lines
+    // up with the stored original (e.g. `.5` matches a `"1/2 Bearing"` name).
+    const value = (record: SearchRecord) =>
+        normalizeForMatch(selector(record) ?? "");
 
-    return match ? partNumberConfigs[match] : undefined;
+    return (
+        records.find((r) => value(r) === normalizedQuery) ??
+        records.find((r) => value(r).startsWith(normalizedQuery)) ??
+        records.find((r) => value(r).includes(normalizedQuery))
+    );
+}
+
+/** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Generate highlight positions for matched terms in the document.
- * Based on approach from https://github.com/lucaong/minisearch/issues/37
+ * Underlines the longest query term the match starts with, so a prefix search
+ * underlines only what was typed. Falls back to the whole term.
+ */
+function matchedPrefixLength(term: string, queryTerms: string[]): number {
+    let length = 0;
+    for (const queryTerm of queryTerms) {
+        if (term.startsWith(queryTerm) && queryTerm.length > length) {
+            length = queryTerm.length;
+        }
+    }
+    return length || term.length;
+}
+
+/**
+ * `match` is keyed by matched document terms and `queryTerms` by what was typed.
+ * Based on https://github.com/lucaong/minisearch/issues/37
  */
 function generateHighlightPositions(
     result: MiniSearchResult,
-    document: SearchDocument
+    text: string,
+    field: string
 ): Position[] {
-    // Terms is an array of values in name (or spacedName) which matched
-    // e.g., if search is "mot w", then terms could be ["motor", "WCP"]
-
-    const name = document.name.toLowerCase();
-
+    const haystack = text.toLowerCase();
     const positions: Position[] = [];
 
     for (const [term, matchedFields] of Object.entries(result.match)) {
-        // Only include terms that matched something in the name field
-        if (!matchedFields.includes("name")) {
+        if (!matchedFields.includes(field)) {
             continue;
         }
-        const matchedLocations = name.matchAll(new RegExp(`(${term})`, "gi"));
+        const length = matchedPrefixLength(term, result.queryTerms);
+        const matchedLocations = haystack.matchAll(
+            new RegExp(escapeRegExp(term), "g")
+        );
         for (const match of matchedLocations) {
-            positions.push({
-                start: match.index,
-                length: term.length
-            });
+            positions.push({ start: match.index, length });
         }
     }
 

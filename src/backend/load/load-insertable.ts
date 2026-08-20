@@ -4,7 +4,11 @@ import type {
     Configuration,
     ConfigurationParameter
 } from "../../shared/configuration-models";
-import { addBuildIssue, type BuildIssue } from "../../shared/build-issues";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType
+} from "../../shared/build-issues";
 import {
     ElementType,
     type FastenInfo,
@@ -20,10 +24,11 @@ import { parseOnshapeConfiguration } from "../parse/parse-configuration";
 import { parseVendors } from "../parse/parse-vendors";
 import { parseFastenInfo } from "../parse/insert-and-fasten";
 import {
-    NO_PART_NUMBERS,
+    NO_RECORDS,
     computeOpenComposite,
-    loadPartNumbers
-} from "../parse/parse-part-number";
+    decideIndexing,
+    loadConfigurationRecords
+} from "../parse/parse-configuration-records";
 import {
     type InsertableTarget,
     type LoadContext,
@@ -32,16 +37,13 @@ import {
 import { uploadThumbnailsStep } from "./load-steps";
 
 /**
- * Everything a load computes for an insertable by reading Onshape. Exactly the
- * set of columns a reload overwrites — the rest of the row is either identity or
- * owned by the user.
+ * Exactly the columns a reload overwrites; the rest of the row is identity or
+ * user-owned.
  */
 export interface ParsedInsertable {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
     fastenInfo: FastenInfo | null;
-    /** Part number of the default configuration; null when not indexed. */
-    defaultPartNumber: string | null;
     /** Whether the part studio resolves to an open composite. */
     isOpenComposite: boolean;
     buildIssues: BuildIssue[];
@@ -51,12 +53,10 @@ export interface ParsedInsertable {
 /** The user-owned flags that decide how much of a load runs. */
 interface InsertableFlags {
     supportsFasten: boolean;
-    searchPartNumbers: boolean;
+    /** Forces part-number indexing on, overriding the auto heuristic. */
+    indexConfigurations: boolean;
 }
 
-/**
- * Loads and persists a single insertable to the database.
- */
 export async function loadInsertable(
     ctx: LoadContext,
     target: InsertableTarget
@@ -73,45 +73,57 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
-    const isOpenComposite = await computeOpenCompositeStep(ctx, target);
+    const { isOpenComposite, hasParts } = await readPartsStep(ctx, target);
 
-    const partNumberResult = flags.searchPartNumbers
-        ? await loadPartNumbers(
+    const indexing = decideIndexing(parameters, flags.indexConfigurations);
+
+    const recordsResult = indexing.shouldIndex
+        ? await loadConfigurationRecords(
               ctx,
               insertableId,
               elementPath,
               target.elementType,
               parameters,
+              indexing.configurations,
               isOpenComposite
           )
-        : NO_PART_NUMBERS;
+        : NO_RECORDS;
 
-    const thumbnailUrls = await uploadThumbnailsStep(
-        ctx,
-        `thumbnail-${insertableId}`,
-        async () =>
-            uploadThumbnails(
-                ctx.env.THUMBNAILS,
-                await getOnshapeApiFromContext(ctx),
-                elementPath,
-                target.microversionId
-            )
+    // Onshape renders nothing for an empty studio, so asking would only spend
+    // the whole retry budget waiting for a thumbnail that cannot exist.
+    const thumbnailUrls = hasParts
+        ? await uploadThumbnailsStep(
+              ctx,
+              `thumbnail-${insertableId}`,
+              async () =>
+                  uploadThumbnails(
+                      ctx.env.BLOB,
+                      await getOnshapeApiFromContext(ctx),
+                      elementPath,
+                      target.microversionId
+                  )
+          )
+        : null;
+
+    const buildIssues = addBuildIssue(
+        hasParts
+            ? checkInsertable({
+                  vendors,
+                  thumbnailUrls,
+                  records: recordsResult.records
+              })
+            : [{ type: BuildIssueType.NO_PARTS }],
+        ...recordsResult.buildIssues,
+        ...indexing.buildIssues
     );
 
     const parsed: ParsedInsertable = {
         vendors,
         thumbnailUrls,
         fastenInfo,
-        defaultPartNumber: partNumberResult.defaultPartNumber,
         isOpenComposite,
-        buildIssues: addBuildIssue(
-            checkInsertable({ vendors, thumbnailUrls }),
-            ...partNumberResult.buildIssues
-        ),
-        configuration: {
-            parameters,
-            partNumbers: partNumberResult.partNumbers
-        }
+        buildIssues,
+        configuration: { parameters, records: recordsResult.records }
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -131,18 +143,15 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                searchPartNumbers: insertables.searchPartNumbers
+                indexConfigurations: insertables.indexConfigurations
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, searchPartNumbers: false };
+        return row ?? { supportsFasten: false, indexConfigurations: false };
     });
 }
 
-/**
- * Fetches and parses the element's configuration.
- */
 function parseConfigurationStep(
     ctx: LoadContext,
     { insertableId, elementPath }: InsertableTarget
@@ -156,29 +165,36 @@ function parseConfigurationStep(
     });
 }
 
-/**
- * Determines whether a part studio is an open composite from its default
- * configuration. Runs on every load, not just under part-number search, so the
- * insert path always requests the right part types. Assemblies are never
- * composites, so they skip the fetch.
- */
-function computeOpenCompositeStep(
-    ctx: LoadContext,
-    { insertableId, elementPath, elementType }: InsertableTarget
-): Promise<boolean> {
-    if (elementType !== ElementType.PART_STUDIO) {
-        return Promise.resolve(false);
-    }
-    return ctx.step.do(`open-composite-${insertableId}`, async () =>
-        computeOpenComposite(
-            await getParts(await getOnshapeApiFromContext(ctx), elementPath, {})
-        )
-    );
+/** What one look at a part studio's default parts tells the rest of the load. */
+interface PartsSummary {
+    isOpenComposite: boolean;
+    hasParts: boolean;
 }
 
 /**
- * Fetches and parses the element's fasten info.
+ * Runs on every load, not just under indexing, so the insert path always asks
+ * for the right part types. Assemblies have nothing to read, so they skip it.
  */
+function readPartsStep(
+    ctx: LoadContext,
+    { insertableId, elementPath, elementType }: InsertableTarget
+): Promise<PartsSummary> {
+    if (elementType !== ElementType.PART_STUDIO) {
+        return Promise.resolve({ isOpenComposite: false, hasParts: true });
+    }
+    return ctx.step.do(`open-composite-${insertableId}`, async () => {
+        const parts = await getParts(
+            await getOnshapeApiFromContext(ctx),
+            elementPath,
+            {}
+        );
+        return {
+            isOpenComposite: computeOpenComposite(parts),
+            hasParts: parts.length > 0
+        };
+    });
+}
+
 function parseFastenInfoStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
@@ -193,10 +209,7 @@ function parseFastenInfoStep(
 }
 
 /**
- * Writes a single insertable (plus its configuration) to the database.
- *
- * The reloaded columns come from `parsed` plus the tab facts on `target`;
- * everything else is written only on insert, so a reload preserves the row's
+ * Everything outside `parsed` is written only on insert, so a reload preserves
  * sort order and the user's flags.
  */
 export async function saveInsertable(
@@ -211,9 +224,9 @@ export async function saveInsertable(
         microversionId: target.microversionId,
         versionId: target.elementPath.instanceId,
         vendors: parsed.vendors,
-        thumbnailUrls: parsed.thumbnailUrls,
+        smallThumbnailUrl: parsed.thumbnailUrls?.small ?? null,
+        largeThumbnailUrl: parsed.thumbnailUrls?.large ?? null,
         fastenInfo: parsed.fastenInfo,
-        defaultPartNumber: parsed.defaultPartNumber,
         isOpenComposite: parsed.isOpenComposite,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: Date.now()
@@ -232,7 +245,7 @@ export async function saveInsertable(
             // one keeps the user's choices, since `set` omits these.
             isVisible: false,
             supportsFasten: false,
-            searchPartNumbers: false,
+            indexConfigurations: false,
             ...reloaded
         })
         .onConflictDoUpdate({
@@ -240,12 +253,13 @@ export async function saveInsertable(
             set: reloaded
         });
 
+    // Keep the row while it holds either parameters or records; an insertable
+    // that is neither configurable nor indexed needs none.
     let configurationWrite;
-    if (configuration.parameters.length === 0) {
-        configurationWrite = db
-            .delete(configurations)
-            .where(eq(configurations.id, target.insertableId));
-    } else {
+    if (
+        configuration.parameters.length > 0 ||
+        configuration.records.length > 0
+    ) {
         configurationWrite = db
             .insert(configurations)
             .values({ id: target.insertableId, ...configuration })
@@ -253,6 +267,10 @@ export async function saveInsertable(
                 target: configurations.id,
                 set: configuration
             });
+    } else {
+        configurationWrite = db
+            .delete(configurations)
+            .where(eq(configurations.id, target.insertableId));
     }
 
     await db.batch([insertableWrite, configurationWrite]);

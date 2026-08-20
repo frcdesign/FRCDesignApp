@@ -7,6 +7,7 @@ import {
     type ConfigurationResult,
     type UnitInfo
 } from "../../shared/configuration-models";
+import { toSearchRecords } from "../../shared/search";
 import { QuantityType, type Unit } from "../../shared/configuration-enums";
 import { isInstancePath } from "../../shared/onshape-path";
 import { HTTPException } from "hono/http-exception";
@@ -28,7 +29,10 @@ configurationRoutes.get(
 
         const db = getDb(c.env.DB);
         const config = await db
-            .select({ parameters: configurations.parameters })
+            .select({
+                parameters: configurations.parameters,
+                records: configurations.records
+            })
             .from(configurations)
             .where(eq(configurations.id, configurationId))
             .get();
@@ -40,7 +44,8 @@ configurationRoutes.get(
         }
 
         const result: ConfigurationResult = {
-            parameters: config.parameters
+            parameters: config.parameters,
+            records: toSearchRecords(config.records)
         };
         return c.json(result);
     }

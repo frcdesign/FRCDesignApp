@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-    isAnyJobRunning,
+    getJobStatus,
     isReloadRunning,
     trackJob,
     untrackJob
@@ -11,6 +11,7 @@ import { TEST_LIBRARY_ID } from "../../__test_utils__";
 interface Job {
     id: string;
     kind: "reload" | "add-group";
+    startedAt?: number;
 }
 
 /** Stubs the stored jobs array and every instance's live status. */
@@ -27,7 +28,9 @@ describe("job-tracker", () => {
     it("reports nothing running when no jobs are stored", async () => {
         vi.spyOn(env.KV, "get").mockResolvedValue(null as never);
         expect(await isReloadRunning(env, TEST_LIBRARY_ID)).toBe(false);
-        expect(await isAnyJobRunning(env, TEST_LIBRARY_ID)).toBe(false);
+        expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+            running: false
+        });
     });
 
     it.each(["queued", "running", "waiting", "paused", "waitingForPause"])(
@@ -35,7 +38,9 @@ describe("job-tracker", () => {
         async (status) => {
             mockJobs([{ id: "r1", kind: "reload" }], status);
             expect(await isReloadRunning(env, TEST_LIBRARY_ID)).toBe(true);
-            expect(await isAnyJobRunning(env, TEST_LIBRARY_ID)).toBe(true);
+            expect((await getJobStatus(env, TEST_LIBRARY_ID)).running).toBe(
+                true
+            );
         }
     );
 
@@ -44,14 +49,16 @@ describe("job-tracker", () => {
         async (status) => {
             mockJobs([{ id: "r1", kind: "reload" }], status);
             expect(await isReloadRunning(env, TEST_LIBRARY_ID)).toBe(false);
-            expect(await isAnyJobRunning(env, TEST_LIBRARY_ID)).toBe(false);
+            expect((await getJobStatus(env, TEST_LIBRARY_ID)).running).toBe(
+                false
+            );
         }
     );
 
     it("a running add-group counts as any-job but not as a reload", async () => {
         mockJobs([{ id: "a1", kind: "add-group" }], "running");
         expect(await isReloadRunning(env, TEST_LIBRARY_ID)).toBe(false);
-        expect(await isAnyJobRunning(env, TEST_LIBRARY_ID)).toBe(true);
+        expect((await getJobStatus(env, TEST_LIBRARY_ID)).running).toBe(true);
     });
 
     it("treats an aged-out instance as finished", async () => {
@@ -61,7 +68,24 @@ describe("job-tracker", () => {
         vi.spyOn(env.LOAD_LIBRARY_WORKFLOW, "get").mockRejectedValue(
             new Error("not found")
         );
-        expect(await isAnyJobRunning(env, TEST_LIBRARY_ID)).toBe(false);
+        expect((await getJobStatus(env, TEST_LIBRARY_ID)).running).toBe(false);
+    });
+
+    it("reports how long the oldest running job has been going", async () => {
+        const now = Date.now();
+        mockJobs(
+            [
+                { id: "r1", kind: "reload", startedAt: now - 30_000 },
+                { id: "a1", kind: "add-group", startedAt: now - 5_000 }
+            ],
+            "running"
+        );
+
+        const status = await getJobStatus(env, TEST_LIBRARY_ID);
+        expect(status.running).toBe(true);
+        if (!status.running) return;
+        expect(status.runningForMs).toBeGreaterThanOrEqual(30_000);
+        expect(status.runningForMs).toBeLessThan(40_000);
     });
 
     it("appends a tracked job under the library key with a TTL", async () => {
@@ -70,9 +94,12 @@ describe("job-tracker", () => {
 
         await trackJob(env, TEST_LIBRARY_ID, "reload", "r1");
 
-        expect(putSpy).toHaveBeenCalledWith(
-            `library-jobs:${TEST_LIBRARY_ID}`,
-            JSON.stringify([{ id: "r1", kind: "reload" }]),
+        const [key, value, options] = putSpy.mock.calls[0];
+        expect(key).toBe(`library-jobs:${TEST_LIBRARY_ID}`);
+        expect(JSON.parse(value as string)).toEqual([
+            { id: "r1", kind: "reload", startedAt: expect.any(Number) }
+        ]);
+        expect(options).toEqual(
             expect.objectContaining({ expirationTtl: expect.any(Number) })
         );
     });

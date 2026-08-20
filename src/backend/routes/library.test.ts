@@ -12,6 +12,7 @@ import {
     seedLibrary
 } from "../../__test_utils__";
 import { getDb } from "../db";
+import { rebuildSearchDb, searchIndexKey } from "../library-data";
 import { LibraryOut } from "../../shared/api-models";
 import { LibraryId } from "../../shared/types";
 
@@ -20,6 +21,8 @@ const db = getDb(env.DB);
 describe("library routes", () => {
     beforeEach(async () => {
         await resetDb(db);
+        // The R2 bucket persists across tests in this file; clear the index.
+        await env.BLOB.delete(searchIndexKey(TEST_LIBRARY_ID));
     });
 
     it("GET /library-data returns groups and insertables", async () => {
@@ -43,8 +46,10 @@ describe("library routes", () => {
         );
     });
 
-    it("GET /search-db returns a serialized search index", async () => {
-        await seedLibrary(db);
+    it("GET /search-db serves the library's index from R2 as plain JSON", async () => {
+        await seedTestData(db);
+        await seedConfiguration(db, TEST_PART_STUDIO_ID);
+        await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
         const app = createTestApp();
 
         const res = await app.request(
@@ -53,10 +58,26 @@ describe("library routes", () => {
             env
         );
         expect(res.status).toBe(200);
+        // A hand-set Content-Encoding gets compressed again by the runtime,
+        // leaving the client a gzip stream after one inflate.
+        expect(res.headers.get("Content-Encoding")).toBeNull();
+        expect(res.headers.get("Content-Type")).toBe("application/json");
 
-        const body: { searchDb: string } = await res.json();
-        expect(typeof body.searchDb).toBe("string");
-        expect(body.searchDb.length).toBeGreaterThan(0);
+        // The body is the serialized MiniSearch index (a JSON object).
+        const parsed: { documentCount: number } = await res.json();
+        expect(parsed.documentCount).toBeGreaterThan(0);
+    });
+
+    it("GET /search-db 404s when the library has no index", async () => {
+        await seedLibrary(db);
+        const app = createTestApp();
+
+        const res = await app.request(
+            `/api/search-db/library/${TEST_LIBRARY_ID}?v=1`,
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(404);
     });
 
     it("GET /library-version returns the library's version", async () => {
@@ -88,6 +109,7 @@ describe("library routes", () => {
 
     it("caches version-keyed responses immutably", async () => {
         await seedTestData(db);
+        await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
         const app = createTestApp();
 
         for (const path of ["library-data", "search-db"]) {

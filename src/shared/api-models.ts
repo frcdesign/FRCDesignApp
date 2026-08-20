@@ -3,7 +3,7 @@ import {
     ParameterValues,
     ConfigurationParameter
 } from "./configuration-models";
-import { ElementType, LibraryId, ThumbnailUrls, Vendor } from "./types";
+import { ElementType, LibraryId, Vendor } from "./types";
 import { BuildIssue } from "./build-issues";
 
 export interface InsertableOut {
@@ -18,7 +18,8 @@ export interface InsertableOut {
     isVisible: boolean;
     supportsFasten: boolean;
     elementType: ElementType;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
     configurationId?: string;
     vendors: Vendor[];
 }
@@ -28,7 +29,8 @@ export interface GroupOut {
     documentId: string;
     path: InstancePath;
     name: string;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
     insertableOrder: string[];
 }
 
@@ -50,12 +52,18 @@ export interface InsertableBuildStatus {
     elementType: ElementType;
     isVisible: boolean;
     supportsFasten: boolean;
-    searchPartNumbers: boolean;
+    indexConfigurations: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When this insertable was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
 }
+
+/** Whether a library-load job is running, and how long it has been going. */
+/** Milliseconds since the oldest running job started paces the client's polling. */
+export type JobStatus =
+    | { running: false }
+    | { running: true; runningForMs: number };
 
 export interface LibraryBuildStatus {
     groups: Record<string, GroupBuildStatus>;

@@ -34,6 +34,8 @@ export function isWithinAccessLevel(
 
 export enum Vendor {
     AM = "AM",
+    /** Marks a part the team made, so nobody sells it and it has no part number. */
+    CUSTOM = "Custom",
     LAI = "LAI",
     MCM = "MCM",
     REDUX = "Redux",
@@ -45,13 +47,17 @@ export enum Vendor {
     WCP = "WCP"
 }
 
-/**
- * Gets the full name of a vendor.
- */
+/** Team-made, so it is expected to have no part number. */
+export function isCustomPart(vendors: Vendor[]): boolean {
+    return vendors.includes(Vendor.CUSTOM);
+}
+
 export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AM:
             return "AndyMark";
+        case Vendor.CUSTOM:
+            return "Custom";
         case Vendor.LAI:
             return "Last Anvil Innovations";
         case Vendor.MCM:
@@ -72,11 +78,19 @@ export function getVendorName(vendor: Vendor) {
             return "West Coast Products";
     }
 }
+/**
+ * The two thumbnail sizes we generate and store, as the `WxH` Onshape wants.
+ * SMALL fills list rows; LARGE fills the hover card and the insert preview.
+ */
 export enum ThumbnailSize {
-    STANDARD = "300x300",
-    LARGE = "600x340",
-    SMALL = "300x170",
-    TINY = "70x40"
+    SMALL = "70x40",
+    LARGE = "300x300"
+}
+
+/** An element's two stored thumbnail URLs, produced (and stored) as a pair. */
+export interface ThumbnailUrls {
+    small: string;
+    large: string;
 }
 export enum Theme {
     SYSTEM = "system",
@@ -103,9 +117,9 @@ export interface AccessData {
     signedIn: boolean;
 }
 
-export interface ThumbnailUrls {
-    [ThumbnailSize.TINY]: string;
-    [ThumbnailSize.STANDARD]: string;
+export interface ContextData {
+    accessData: AccessData;
+    settings: Settings;
 }
 export enum LibraryId {
     FRC_DESIGN_LIB = "frc-design-lib",

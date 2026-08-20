@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { type Db } from "./db";
 import {
     libraries,
@@ -13,7 +13,7 @@ import {
     Insertables,
     Groups
 } from "../shared/api-models";
-import { PartNumberMap } from "../shared/configuration-models";
+import { ConfigurationRecord } from "../shared/configuration-models";
 import { buildSearchDb } from "../shared/search";
 
 /**
@@ -44,7 +44,19 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        db.select({ id: configurations.id }).from(configurations).all()
+        // A row can exist just to hold records, so "configurable" keys on
+        // having parameters. Tested in SQL to leave the payload in D1.
+        db
+            .select({ id: configurations.id })
+            .from(configurations)
+            .innerJoin(insertables, eq(configurations.id, insertables.id))
+            .where(
+                and(
+                    eq(insertables.libraryId, libraryId),
+                    sql`json_array_length(${configurations.parameters}) > 0`
+                )
+            )
+            .all()
     ]);
 
     const configSet = new Set(allConfigurations.map((c) => c.id));
@@ -67,7 +79,8 @@ export async function getLibraryOut(
                 instanceType: "v"
             },
             name: group.name,
-            thumbnailUrls: group.thumbnailUrls ?? undefined,
+            smallThumbnailUrl: group.smallThumbnailUrl ?? undefined,
+            largeThumbnailUrl: group.largeThumbnailUrl ?? undefined,
             insertableOrder
         };
     }
@@ -91,7 +104,8 @@ export async function getLibraryOut(
             isVisible: ins.isVisible,
             supportsFasten: ins.supportsFasten,
             elementType: ins.elementType,
-            thumbnailUrls: ins.thumbnailUrls ?? undefined,
+            smallThumbnailUrl: ins.smallThumbnailUrl ?? undefined,
+            largeThumbnailUrl: ins.largeThumbnailUrl ?? undefined,
             configurationId: configSet.has(ins.id) ? ins.id : undefined,
             vendors: ins.vendors
         } satisfies InsertableOut;
@@ -105,9 +119,8 @@ export async function getLibraryOut(
 }
 
 /**
- * Renumbers a library's groups to open a slot for a new group — directly after
- * `selectedGroupId`, or at the end — and returns the sort order to write it with.
- * The caller creates the row itself, since it also decides create vs. update.
+ * Renumbers a library's groups to open a slot and returns its sort order. The
+ * caller writes the row, since it also decides create vs. update.
  */
 export async function placeNewGroup(
     db: Db,
@@ -154,53 +167,58 @@ export async function bumpLibraryVersion(
         });
 }
 
-/**
- * Rebuilds the serialized MiniSearch index for a library from its current
- * groups/insertables and stores it on the `libraries` row in D1.
- */
+/** The R2 object key holding a library's serialized MiniSearch index. */
+export function searchIndexKey(libraryId: LibraryId): string {
+    return `search-index/${libraryId}.json`;
+}
+
+/** Rebuilds a library's search index into R2; bump `cacheVersion` alongside. */
 export async function rebuildSearchDb(
+    bucket: R2Bucket,
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const [libraryData, partNumberMap] = await Promise.all([
+    const start = Date.now();
+    const [libraryData, recordsMap] = await Promise.all([
         getLibraryOut(db, libraryId),
-        getPartNumberMap(db, libraryId)
+        getRecordsMap(db, libraryId)
     ]);
-    const searchDb = JSON.stringify(buildSearchDb(libraryData, partNumberMap));
-    await db
-        .insert(libraries)
-        .values({ id: libraryId, searchDb })
-        .onConflictDoUpdate({ target: libraries.id, set: { searchDb } });
+    const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
+    // Uncompressed: encoding here would leave the runtime compressing an
+    // already-compressed body.
+    await bucket.put(searchIndexKey(libraryId), searchDb, {
+        httpMetadata: { contentType: "application/json" }
+    });
+    console.log(
+        `Rebuilt search index for ${libraryId}: ` +
+            `${searchDb.length} B, ${Date.now() - start} ms`
+    );
     return searchDb;
 }
 
 /**
- * Assembles the per-insertable part-number map used to index part numbers:
- * a configurable insertable's map comes from its `configurations` row, while a
- * non-configurable one contributes its single `defaultPartNumber`.
+ * Assembles the per-insertable configuration records `buildSearchDb` dedupes into
+ * the part-number search map. Only indexed insertables have records.
  */
-async function getPartNumberMap(
+async function getRecordsMap(
     db: Db,
     libraryId: LibraryId
-): Promise<Record<string, PartNumberMap>> {
+): Promise<Record<string, ConfigurationRecord[]>> {
     const rows = await db
         .select({
             id: insertables.id,
-            defaultPartNumber: insertables.defaultPartNumber,
-            partNumbers: configurations.partNumbers
+            records: configurations.records
         })
         .from(insertables)
-        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .innerJoin(configurations, eq(configurations.id, insertables.id))
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
-    const partNumberMap: Record<string, PartNumberMap> = {};
+    const recordsMap: Record<string, ConfigurationRecord[]> = {};
     for (const row of rows) {
-        if (row.partNumbers && Object.keys(row.partNumbers).length > 0) {
-            partNumberMap[row.id] = row.partNumbers;
-        } else if (row.defaultPartNumber) {
-            partNumberMap[row.id] = { [row.defaultPartNumber]: {} };
+        if (row.records.length > 0) {
+            recordsMap[row.id] = row.records;
         }
     }
-    return partNumberMap;
+    return recordsMap;
 }

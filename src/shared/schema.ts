@@ -8,19 +8,18 @@ import {
     Theme,
     Vendor
 } from "./types";
-import { ThumbnailUrls } from "./types";
 import {
     ParameterValues,
     ConfigurationParameter,
-    PartNumberMap
+    ConfigurationRecord
 } from "./configuration-models";
 import { BuildIssue } from "./build-issues";
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
-    cacheVersion: integer("cache_version").notNull().default(0),
-    // Serialized MiniSearch index, rebuilt by the backend when a document loads.
-    searchDb: text("search_db")
+    cacheVersion: integer("cache_version").notNull().default(0)
+    // The serialized MiniSearch index now lives in R2 (see rebuildSearchDb),
+    // keyed by library id, rather than in a D1 column.
 });
 
 export const group = sqliteTable(
@@ -41,17 +40,15 @@ export const group = sqliteTable(
             .notNull()
             .default(false),
         sortOrder: integer("sort_order").notNull().default(0),
-        thumbnailUrls: text("thumbnail_urls", {
-            mode: "json"
-        }).$type<ThumbnailUrls>(),
+        smallThumbnailUrl: text("small_thumbnail_url"),
+        largeThumbnailUrl: text("large_thumbnail_url"),
         // Build-time issues flagged by the build checker, recomputed on reload.
         buildIssues: text("build_issues", { mode: "json" })
             .$type<BuildIssue[]>()
             .notNull()
             .default([]),
-        // When this group was last successfully loaded (epoch ms). Null until the
-        // group's first load. Written by the load path; failures are conveyed by
-        // buildIssues, not here.
+        // Epoch ms of the last successful load; null before the first. Failures
+        // are conveyed by buildIssues, not here.
         lastLoadedAt: integer("last_loaded_at")
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
@@ -84,23 +81,19 @@ export const insertables = sqliteTable("insertables", {
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Whether this insertable's part numbers are indexed for search.
-    searchPartNumbers: integer("search_part_numbers", { mode: "boolean" })
+    // Indexes this insertable's configurations even above the auto threshold.
+    // User-owned; preserved across reloads.
+    indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Part number of the default configuration. The sole source of part
-    // numbers for non-configurable insertables (which have no
-    // `configurations` row); null when part-number search is off.
-    defaultPartNumber: text("default_part_number"),
     versionId: text("version_id").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     vendors: text("vendors", { mode: "json" })
         .$type<Vendor[]>()
         .notNull()
         .default([]),
-    thumbnailUrls: text("thumbnail_urls", {
-        mode: "json"
-    }).$type<ThumbnailUrls | null>(),
+    smallThumbnailUrl: text("small_thumbnail_url"),
+    largeThumbnailUrl: text("large_thumbnail_url"),
     fastenInfo: text("fasten_info", {
         mode: "json"
     }).$type<FastenInfo | null>(),
@@ -109,9 +102,8 @@ export const insertables = sqliteTable("insertables", {
         .$type<BuildIssue[]>()
         .notNull()
         .default([]),
-    // When this insertable was last successfully loaded (epoch ms). Null until the
-    // insertable's first load. Written by the load path; failures are conveyed by
-    // buildIssues, not here.
+    // Epoch ms of the last successful load; null before the first. Failures are
+    // conveyed by buildIssues, not here.
     lastLoadedAt: integer("last_loaded_at")
 });
 
@@ -124,12 +116,12 @@ export const configurations = sqliteTable("configurations", {
         .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
-    // Deduped map of part number -> the configuration that produces it, used
-    // for part-number search. Empty unless part-number search is enabled.
-    partNumbers: text("part_numbers", { mode: "json" })
-        .$type<PartNumberMap>()
+    // One record per configuration we probed (part number + metadata). Empty
+    // unless the insertable is indexed. Search dedupes these to a part-number map.
+    records: text("records", { mode: "json" })
+        .$type<ConfigurationRecord[]>()
         .notNull()
-        .default({}),
+        .default([]),
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
         .notNull()

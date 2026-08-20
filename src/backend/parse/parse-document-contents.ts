@@ -15,13 +15,8 @@ const VALID_ELEMENT_TYPES = new Set<string>([
 ]);
 
 /**
- * The part studio / assembly tabs we load, in the order they appear in the
- * document's tab bar.
- *
- * `contents.elements` is unordered, and `contents.folders` is the folder tree
- * that defines display order — so walk the tree and pick up each tab as it is
- * encountered. Onshape has been known to omit a tab from the tree, so anything
- * left over is appended rather than dropped.
+ * Tabs in tab-bar order: `elements` is unordered, so the folder tree defines it.
+ * Onshape sometimes omits a tab from the tree, so leftovers are appended.
  */
 export function parseInsertableTabs(
     contents: OnshapeDocumentContents

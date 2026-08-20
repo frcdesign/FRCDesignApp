@@ -39,10 +39,10 @@ export function useSetVisibilityMutation(
     const closeCard = useCloseBuildCard();
 
     const mutation = useMutation({
-        mutationKey: ["set-element-visibility", ...insertableIds],
+        mutationKey: ["set-insertable-visibility", ...insertableIds],
         mutationFn: async () => {
             return apiPost(
-                "/set-element-visibility" + toLibraryPath(libraryId),
+                "/set-insertable-visibility" + toLibraryPath(libraryId),
                 {
                     body: {
                         insertableIds,
@@ -166,40 +166,39 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/** Toggles part-number search indexing for an insertable (a slow Onshape call). */
-export function useTogglePartNumberSearchMutation(insertableId: string) {
+/** Forces part-number indexing for an insertable (a slow Onshape call). */
+export function useIndexConfigurationsMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
-    const toastId = `part-number-search-${insertableId}`;
+    const toastId = `index-configurations-${insertableId}`;
     return useMutation({
-        mutationKey: ["toggle-part-number-search", insertableId],
-        mutationFn: (searchPartNumbers: boolean) =>
-            apiPost(
-                "/toggle-part-number-search" + toInsertablePath(insertableId),
-                { body: { searchPartNumbers } }
-            ),
-        onMutate: (searchPartNumbers) => {
+        mutationKey: ["index-configurations", insertableId],
+        mutationFn: (indexConfigurations: boolean) =>
+            apiPost("/index-configurations" + toInsertablePath(insertableId), {
+                body: { indexConfigurations }
+            }),
+        onMutate: (indexConfigurations) => {
             showLoadingToast(
-                searchPartNumbers
-                    ? "Enabling part number search..."
-                    : "Disabling part number search...",
+                indexConfigurations
+                    ? "Forcing part number indexing..."
+                    : "Disabling forced part number indexing...",
                 toastId
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
                 if (insertable)
-                    insertable.searchPartNumbers = searchPartNumbers;
+                    insertable.indexConfigurations = indexConfigurations;
             });
         },
-        onSuccess: (_result, searchPartNumbers) =>
+        onSuccess: (_result, indexConfigurations) =>
             showSuccessToast(
-                searchPartNumbers
-                    ? "Enabled part number search."
-                    : "Disabled part number search.",
+                indexConfigurations
+                    ? "Forced part number indexing."
+                    : "Disabled forced part number indexing.",
                 toastId
             ),
         onError: getAppErrorHandler(
-            "Unexpectedly failed to update part number search.",
+            "Unexpectedly failed to update part number indexing.",
             toastId
         ),
         onSettled: refreshLibrary

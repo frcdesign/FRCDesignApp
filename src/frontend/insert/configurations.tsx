@@ -29,21 +29,23 @@ import {
     QuantityParameter,
     UnitInfo,
     EnumOption,
-    EMPTY_UNIT_INFO
+    EMPTY_UNIT_INFO,
+    SearchRecord
 } from "../../shared/configuration-models";
-import { QuantityType, Unit } from "../../shared/configuration-enums";
 import {
     evaluateCondition,
+    findRecordForConfiguration,
+    getEvaluateOptions,
     getOption,
     getVisibleOptions
 } from "../../shared/configuration-utils";
+import { canonicalizeConfiguration } from "../../shared/canonical-configuration";
 import { handleBooleanChange } from "../common/utils";
 import {
-    EvaluateOptions,
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
-} from "./input-parser";
+} from "../../shared/input-parser";
 import { getConfigurationKey, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../common/notifications";
 import { SectionError } from "../app-common/app-zero-state";
@@ -54,11 +56,26 @@ interface ConfigurationWrapperProps {
     microversionId: string;
     configuration?: ParameterValues;
     setConfiguration: Dispatch<ParameterValues>;
+    /**
+     * Reported here because only this component has the parameters and units
+     * canonicalizing needs.
+     */
+    onCanonicalConfiguration?: (
+        canonicalConfiguration: ParameterValues
+    ) => void;
+    /** Reports the record the selection produces, for the menu's header. */
+    onRecord?: (record: SearchRecord | undefined) => void;
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const { configurationId, microversionId, configuration, setConfiguration } =
-        props;
+    const {
+        configurationId,
+        microversionId,
+        configuration,
+        setConfiguration,
+        onCanonicalConfiguration,
+        onRecord
+    } = props;
 
     const query = useQuery<ConfigurationResult>({
         queryKey: getConfigurationKey(configurationId, microversionId),
@@ -93,6 +110,24 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         );
         setConfiguration(defaultConfiguration);
     }, [query.data, configuration, setConfiguration]);
+
+    const parameters = query.data?.parameters;
+    useEffect(() => {
+        if (!parameters || !configuration) {
+            return;
+        }
+        onCanonicalConfiguration?.(
+            canonicalizeConfiguration(configuration, parameters)
+        );
+    }, [parameters, configuration, onCanonicalConfiguration]);
+
+    const records = query.data?.records;
+    useEffect(() => {
+        if (!records || !configuration) {
+            return;
+        }
+        onRecord?.(findRecordForConfiguration(configuration, records));
+    }, [records, configuration, onRecord]);
 
     if (query.isPending || !configuration) {
         return (
@@ -158,7 +193,8 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
 interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
-    value: string;
+    /** Absent when the configuration omits it, which means the default. */
+    value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
     configuration: ParameterValues;
     parameters: ConfigurationParameter[];
@@ -219,10 +255,8 @@ interface InputLabelProps {
 }
 
 /**
- * A label displayed to the left of a parameter input.
- *
- * The label is given the height of an input so it stays aligned with the input
- * itself rather than drifting when the input grows to show an error message.
+ * Given an input's height so it stays aligned rather than drifting when the
+ * input grows to show an error message.
  */
 function InputLabel(props: InputLabelProps) {
     const { label, htmlFor, children } = props;
@@ -248,13 +282,15 @@ function InputLabel(props: InputLabelProps) {
 
 function getFirstVisibleOption(
     visibleOptions: EnumOption[],
-    currentOptionId: string,
+    currentOptionId: string | undefined,
     defaultOptionId: string
 ): EnumOption | undefined {
     if (visibleOptions.length === 0) {
         return undefined;
     }
-    const currentOption = getOption(visibleOptions, currentOptionId);
+    const currentOption = currentOptionId
+        ? getOption(visibleOptions, currentOptionId)
+        : undefined;
     if (currentOption) {
         return currentOption;
     }
@@ -327,7 +363,7 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
         <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <Checkbox
                 id={parameter.id}
-                checked={value === "true"}
+                checked={(value ?? parameter.default) === "true"}
                 // The checkbox is shorter than an input, so center it against the label
                 style={{ alignSelf: "center" }}
                 styles={{
@@ -347,58 +383,12 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
         <InputLabel label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
-                value={value}
+                value={value ?? parameter.default}
                 style={{ flex: 1 }}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
         </InputLabel>
     );
-}
-
-/** Display precision used when the document's units aren't available. */
-const DEFAULT_QUANTITY_PRECISION = 3;
-
-function getEvaluateOptions(
-    parameter: QuantityParameter,
-    unitInfo: UnitInfo
-): EvaluateOptions {
-    const quantityType = parameter.quantityType;
-    const minAndMax = {
-        min: valueWithUnits(parameter.min, parameter.unit),
-        max: valueWithUnits(parameter.max, parameter.unit)
-    };
-    // Fall back to the parameter's own unit when the document's isn't available.
-    if (quantityType === QuantityType.LENGTH) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
-            ...minAndMax
-        };
-    } else if (quantityType === QuantityType.ANGLE) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.angleUnit ?? parameter.unit,
-            ...minAndMax
-        };
-    } else if (quantityType == QuantityType.REAL) {
-        return {
-            quantityType,
-            displayPrecision:
-                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: Unit.UNITLESS,
-            ...minAndMax
-        };
-    }
-    return {
-        quantityType: QuantityType.INTEGER,
-        displayPrecision: 0,
-        displayUnit: Unit.UNITLESS,
-        ...minAndMax
-    };
 }
 
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {

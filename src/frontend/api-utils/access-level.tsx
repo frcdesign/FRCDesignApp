@@ -66,7 +66,6 @@ interface RequireAccessLevelProps extends PropsWithChildren {
     useMaxAccessLevel?: boolean;
 }
 
-/** Renders children only when the access-level requirement is met. */
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
     const accessData = useAccessData();
     const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
@@ -88,7 +87,6 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
     return null;
 }
 
-/** Renders children only when the caller is signed in to Onshape. */
 export function RequireSignIn(props: PropsWithChildren) {
     return useIsSignedIn() ? props.children : null;
 }

@@ -5,10 +5,37 @@ import {
     OptionVisibilityType,
     ConfigurationParameter,
     ParameterType,
+    QuantityParameter,
+    SearchRecord,
+    UnitInfo,
     VisibilityCondition,
     VisibilityType
 } from "./configuration-models";
-import { LogicalOp } from "./configuration-enums";
+import { LogicalOp, QuantityType, Unit } from "./configuration-enums";
+import { type EvaluateOptions, valueWithUnits } from "./input-parser";
+
+/**
+ * The record a selection produces. Records key only on enumerated parameters, so
+ * several can match; the most specific (most keys) wins.
+ */
+export function findRecordForConfiguration(
+    configuration: ParameterValues,
+    records: SearchRecord[]
+): SearchRecord | undefined {
+    let best: SearchRecord | undefined;
+    let bestKeys = -1;
+    for (const record of records) {
+        const keys = Object.keys(record.configuration);
+        const matches = keys.every(
+            (key) => configuration[key] === record.configuration[key]
+        );
+        if (matches && keys.length > bestKeys) {
+            best = record;
+            bestKeys = keys.length;
+        }
+    }
+    return best;
+}
 
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
@@ -110,4 +137,53 @@ export function getVisibleOptions(
     return enumParameter.options.filter((option) =>
         validOptionsSet.has(option.id)
     );
+}
+
+/** Display precision used when the document's units aren't available. */
+const DEFAULT_QUANTITY_PRECISION = 3;
+
+/**
+ * The evaluation settings for a quantity parameter: its own bounds, plus the
+ * document's display unit and precision, falling back to the parameter's own.
+ */
+export function getEvaluateOptions(
+    parameter: QuantityParameter,
+    unitInfo: UnitInfo
+): EvaluateOptions {
+    const quantityType = parameter.quantityType;
+    const minAndMax = {
+        min: valueWithUnits(parameter.min, parameter.unit),
+        max: valueWithUnits(parameter.max, parameter.unit)
+    };
+    if (quantityType === QuantityType.LENGTH) {
+        return {
+            quantityType,
+            displayPrecision:
+                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
+            ...minAndMax
+        };
+    } else if (quantityType === QuantityType.ANGLE) {
+        return {
+            quantityType,
+            displayPrecision:
+                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo.angleUnit ?? parameter.unit,
+            ...minAndMax
+        };
+    } else if (quantityType === QuantityType.REAL) {
+        return {
+            quantityType,
+            displayPrecision:
+                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: Unit.UNITLESS,
+            ...minAndMax
+        };
+    }
+    return {
+        quantityType: QuantityType.INTEGER,
+        displayPrecision: 0,
+        displayUnit: Unit.UNITLESS,
+        ...minAndMax
+    };
 }

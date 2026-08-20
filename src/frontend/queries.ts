@@ -6,9 +6,10 @@ import {
     queryOptions,
     useQuery
 } from "@tanstack/react-query";
-import { apiGet } from "./api-utils/api";
+import { apiGet, apiGetText } from "./api-utils/api";
 import {
     type FavoritesData,
+    type JobStatus,
     type LibraryBuildStatus,
     type LibraryOut
 } from "../shared/api-models";
@@ -86,9 +87,8 @@ export function useCacheVersion(): number {
 }
 
 /**
- * Returns the current document's units for the Insert dialog. Hits Onshape, so
- * it's disabled when not connected to a document; each quantity then falls back
- * to its own default unit.
+ * The current document's units. Disabled when not connected to a document, and
+ * each quantity then falls back to its own unit.
  */
 export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
     return useQuery<UnitInfo>({
@@ -117,13 +117,18 @@ export function searchDbQueryKey(libraryId: LibraryId, cacheVersion: number) {
 export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<MiniSearch | null>({
         queryKey: searchDbQueryKey(libraryId, cacheVersion),
-        queryFn: async () =>
-            apiGet("/search-db/library/" + libraryId, {
-                cacheId: cacheVersion
-            }).then((result: { searchDb: string | null }) => {
-                if (!result.searchDb) return null;
-                return MiniSearch.loadJSON(result.searchDb, SEARCH_OPTIONS);
-            }),
+        queryFn: async () => {
+            const searchDb = await apiGetText(
+                "/search-db" + toLibraryPath(libraryId),
+                {
+                    cacheId: cacheVersion
+                }
+            );
+            if (!searchDb) {
+                return null;
+            }
+            return MiniSearch.loadJSON(searchDb, SEARCH_OPTIONS);
+        },
         staleTime: Infinity,
         gcTime: Infinity
     });
@@ -201,13 +206,38 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
     return ["job-status", libraryId];
 }
 
-/** Whether a library-load job is running; polled so indicators stay live. */
-export function getJobStatusQuery(libraryId: LibraryId, enabled = true) {
-    return queryOptions<{ running: boolean }>({
+/** Poll a fresh job often, then back off: a full reload runs for hours. */
+const FASTEST_POLL_MS = 3_000;
+const POLL_STEPS = [
+    { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },
+    { untilMs: 75_000, intervalMs: 5_000 }
+];
+const SLOWEST_POLL_MS = 10_000;
+
+function jobPollInterval(runningForMs: number): number {
+    const step = POLL_STEPS.find(({ untilMs }) => runningForMs < untilMs);
+    return step?.intervalMs ?? SLOWEST_POLL_MS;
+}
+
+/**
+ * Checked once on load, then polled while something runs and left alone when a
+ * check comes back idle. `canPoll` is the caller's gate: the route is editor-only.
+ */
+export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
+    return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        refetchInterval: 10_000,
-        enabled
+        enabled: canPoll,
+        // Every status badge observes this, so rows mounting as the user scrolls
+        // would each trigger a fetch. Only the poll should set the pace.
+        staleTime: FASTEST_POLL_MS,
+        refetchInterval: (query) => {
+            const status = query.state.data;
+            if (!status?.running) {
+                return false;
+            }
+            return jobPollInterval(status.runningForMs);
+        }
     });
 }
 

@@ -1,23 +1,26 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
+import { zValidator } from "@hono/zod-validator";
 import { HttpStatus } from "http-status-ts";
+import z from "zod";
 import { getApp, getInsertableParam, insertableRoute } from "../app";
 import { getDb, type Db } from "../db";
 import { requireEditorMiddleware } from "../access-level-utils";
 import { requireSignInMiddleware } from "../sign-in-utils";
 import { insertables, configurations } from "../../shared/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library-data";
-import { type ElementPath } from "../../shared/onshape-path";
+import { type ElementPath, INSTANCE_TYPES } from "../../shared/onshape-path";
 import {
-    type ParameterValues,
-    type ConfigurationParameter
+    type ConfigurationParameter,
+    type ParameterValues
 } from "../../shared/configuration-models";
 import {
-    NO_PART_NUMBERS,
-    PART_NUMBER_ISSUE_TYPES,
-    parsePartNumbers,
-    type PartNumberResult
-} from "../parse/parse-part-number";
+    INDEXING_ISSUE_TYPES,
+    NO_RECORDS,
+    decideIndexing,
+    parseConfigurationRecords,
+    type ConfigurationRecordsResult
+} from "../parse/parse-configuration-records";
 import { type OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementType } from "../../shared/types";
 import { DerivedFeature } from "../onshape-api/objects/derive-feature";
@@ -34,6 +37,7 @@ import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
 import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
+import { checkIndexedPartNumber } from "../parse/build-checks";
 
 export const insertableRoutes = getApp();
 
@@ -95,14 +99,14 @@ insertableRoutes.post(
     }
 );
 
-/** POST /api/toggle-part-number-search/insertable/:insertableId */
+/** POST /api/index-configurations/insertable/:insertableId */
 insertableRoutes.post(
-    "/toggle-part-number-search" + insertableRoute(),
+    "/index-configurations" + insertableRoute(),
     requireEditorMiddleware,
     async (c) => {
         const db = getDb(c.env.DB);
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ searchPartNumbers: boolean }>();
+        const body = await c.req.json<{ indexConfigurations: boolean }>();
 
         const row = await db
             .select({
@@ -111,6 +115,7 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
+                vendors: insertables.vendors,
                 isOpenComposite: insertables.isOpenComposite,
                 buildIssues: insertables.buildIssues
             })
@@ -122,108 +127,148 @@ insertableRoutes.post(
                 message: "Insertable not found"
             });
 
-        // Index before committing anything: if this throws, the flag stays off
-        // rather than being enabled with nothing indexed behind it. The error
-        // reaches the client via the app's onError handler.
-        const indexed = body.searchPartNumbers
-            ? await indexPartNumbers(await c.var.getOnshapeApi(), db, {
-                  insertableId,
-                  ...row
+        const parameters =
+            (
+                await db
+                    .select({ parameters: configurations.parameters })
+                    .from(configurations)
+                    .where(eq(configurations.id, insertableId))
+                    .get()
+            )?.parameters ?? [];
+        const indexing = decideIndexing(parameters, body.indexConfigurations);
+
+        // Index before committing anything: if this throws, nothing is written.
+        // The error reaches the client via the app's onError handler.
+        const indexed = indexing.shouldIndex
+            ? await indexRecords(await c.var.getOnshapeApi(), {
+                  documentId: row.documentId,
+                  versionId: row.versionId,
+                  elementId: row.elementId,
+                  elementType: row.elementType,
+                  isOpenComposite: row.isOpenComposite,
+                  parameters,
+                  configurations: indexing.configurations
               })
-            : NO_PART_NUMBERS;
+            : NO_RECORDS;
+
+        // Clear first, so an issue the reindex resolved (or that disabling makes
+        // moot) doesn't stick around.
+        const buildIssues = addBuildIssue(
+            clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
+            ...indexed.buildIssues,
+            ...indexing.buildIssues,
+            // Vendors are read, not re-derived: the load path wrote them.
+            ...checkIndexedPartNumber(row.vendors, indexed.records)
+        );
+
+        // Keep a configurations row while there's parameters or records to hold;
+        // a non-configurable insertable that stops indexing loses its row.
+        const configWrite =
+            parameters.length > 0 || indexed.records.length > 0
+                ? db
+                      .insert(configurations)
+                      .values({
+                          id: insertableId,
+                          parameters,
+                          records: indexed.records
+                      })
+                      .onConflictDoUpdate({
+                          target: configurations.id,
+                          set: { records: indexed.records }
+                      })
+                : db
+                      .delete(configurations)
+                      .where(eq(configurations.id, insertableId));
 
         await db.batch([
             db
                 .update(insertables)
                 .set({
-                    searchPartNumbers: body.searchPartNumbers,
-                    defaultPartNumber: indexed.defaultPartNumber,
-                    // Clear first, so an issue the reindex resolved (or that
-                    // disabling makes moot) doesn't stick around.
-                    buildIssues: addBuildIssue(
-                        clearBuildIssue(
-                            row.buildIssues,
-                            ...PART_NUMBER_ISSUE_TYPES
-                        ),
-                        ...indexed.buildIssues
-                    )
+                    indexConfigurations: body.indexConfigurations,
+                    buildIssues
                 })
                 .where(eq(insertables.id, insertableId)),
-            // No-op when the insertable has no configuration row.
-            db
-                .update(configurations)
-                .set({ partNumbers: indexed.partNumbers })
-                .where(eq(configurations.id, insertableId))
+            configWrite
         ]);
 
+        // Records feed the search index; rebuild before the bump makes the
+        // /search-db url immutable, or a stale index gets pinned for a year.
+        await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
         await bumpLibraryVersion(db, row.libraryId);
-        // Part numbers live in the search index, so rebuild it now.
-        await rebuildSearchDb(db, row.libraryId);
         return c.json({ success: true });
     }
 );
 
 /**
- * Indexes an insertable's part numbers for the toggle route, reading the
- * parameters it needs. Runs in a request, so it uses the unbatched
- * {@link parsePartNumbers} rather than the workflow's stepped loader.
+ * Runs in a request, so it uses the unbatched {@link parseConfigurationRecords}
+ * rather than the workflow's stepped loader.
  */
-async function indexPartNumbers(
+function indexRecords(
     client: OnshapeApi,
-    db: Db,
     insertable: {
-        insertableId: string;
         documentId: string;
         versionId: string;
         elementId: string;
         elementType: ElementType;
         isOpenComposite: boolean;
+        parameters: ConfigurationParameter[];
+        configurations: ParameterValues[];
     }
-): Promise<PartNumberResult> {
+): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
         documentId: insertable.documentId,
         instanceId: insertable.versionId,
         instanceType: "v",
         elementId: insertable.elementId
     };
-    const configRow = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, insertable.insertableId))
-        .get();
-
-    return parsePartNumbers(
+    return parseConfigurationRecords(
         client,
         sourcePath,
         insertable.elementType,
-        configRow?.parameters ?? [],
+        insertable.parameters,
+        insertable.configurations,
         insertable.isOpenComposite
     );
 }
 
-/** POST /api/add-to-part-studio/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
+/**
+ * The tab being inserted into, in the body so the whole path arrives as one
+ * object. A half-built one is rejected here, not as a nonsense Onshape URL.
+ */
+const targetPathSchema = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    instanceType: z.enum(INSTANCE_TYPES),
+    elementId: z.string().min(1)
+});
+
+const configurationSchema = z.record(z.string(), z.string()).optional();
+
+const insertBodySchema = z.object({
+    targetPath: targetPathSchema,
+    configuration: configurationSchema,
+    isFavorite: z.boolean().default(false),
+    isQuickInsert: z.boolean().default(false)
+});
+
+const addToPartStudioBody = insertBodySchema.extend({
+    useMateConnector: z.boolean().default(false)
+});
+
+const addToAssemblyBody = insertBodySchema.extend({
+    fasten: z.boolean().default(false)
+});
+
+/** POST /api/add-to-part-studio/insertable/:insertableId */
 insertableRoutes.post(
-    "/add-to-part-studio" +
-        insertableRoute() +
-        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    "/add-to-part-studio" + insertableRoute(),
     requireSignInMiddleware,
+    zValidator("json", addToPartStudioBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{
-            configuration: ParameterValues | undefined;
-            useMateConnector: boolean;
-            isFavorite: boolean;
-            isQuickInsert: boolean;
-        }>();
-
-        // Target part studio — from URL
-        const targetPath: ElementPath = {
-            documentId: c.req.param("documentId")!,
-            instanceId: c.req.param("instanceId")!,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")!
-        };
+        const body = c.req.valid("json");
+        const { targetPath } = body;
 
         const db = getDb(c.env.DB);
         const sourcePath = await getInsertableElementPath(db, insertableId);
@@ -272,29 +317,16 @@ insertableRoutes.post(
     }
 );
 
-/** POST /api/add-to-assembly/insertable/:insertableId/d/:documentId/:instanceType/:instanceId/e/:elementId */
+/** POST /api/add-to-assembly/insertable/:insertableId */
 insertableRoutes.post(
-    "/add-to-assembly" +
-        insertableRoute() +
-        "/d/:documentId/:instanceType/:instanceId/e/:elementId",
+    "/add-to-assembly" + insertableRoute(),
     requireSignInMiddleware,
+    zValidator("json", addToAssemblyBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{
-            configuration: ParameterValues | undefined;
-            fasten: boolean;
-            isFavorite: boolean;
-            isQuickInsert: boolean;
-        }>();
-
-        // Target assembly — from URL
-        const targetPath: ElementPath = {
-            documentId: c.req.param("documentId")!,
-            instanceId: c.req.param("instanceId")!,
-            instanceType: c.req.param("instanceType") as "w" | "v" | "m",
-            elementId: c.req.param("elementId")!
-        };
+        const body = c.req.valid("json");
+        const { targetPath } = body;
 
         const db = getDb(c.env.DB);
 
@@ -387,11 +419,7 @@ insertableRoutes.post(
         return c.json({ featureId: fastenResult.feature.featureId });
     }
 );
-/**
- * Returns the ElementPath for an insertable looked up by its ID.
- * Throws 404 if the insertable does not exist.
- * Insertable elements are always version-pinned (instanceType "v").
- */
+/** Always version-pinned; throws 404 when the insertable does not exist. */
 
 export async function getInsertableElementPath(
     db: Db,

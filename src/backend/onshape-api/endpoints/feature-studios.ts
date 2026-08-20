@@ -37,7 +37,6 @@ export function pushCode(
     );
 }
 
-/** Creates a feature studio with the given name. */
 export function createFeatureStudio(
     client: OnshapeApi,
     instancePath: InstancePath,

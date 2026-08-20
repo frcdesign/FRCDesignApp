@@ -14,9 +14,6 @@ export class HandledError extends Error {
     }
 }
 
-/**
- * Returns a function that handles app errors.
- */
 export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
     return (error: Error) => handleAppError(error, defaultMessage, toastId);
 }
@@ -34,8 +31,5 @@ export function handleAppError(
         }
         return;
     }
-    // else if (error instanceof NoError) {
-    //     return;
-    // }
     showErrorToast(defaultMessage, toastKey);
 }

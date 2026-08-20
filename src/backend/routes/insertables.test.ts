@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { insertables } from "../../shared/schema";
-import { ElementType } from "../../shared/types";
+import { configurations, insertables } from "../../shared/schema";
+import { ElementType, Vendor } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
     MOCK_ONSHAPE_API,
@@ -13,6 +13,8 @@ import {
     jsonRequest,
     resetDb,
     seedAssembly,
+    seedGroup,
+    seedInsertable,
     seedPartStudio
 } from "../../__test_utils__";
 import { getDb } from "../db";
@@ -20,6 +22,8 @@ import * as PartStudioEndpoints from "../onshape-api/endpoints/part-studios";
 import * as AssemblyEndpoints from "../onshape-api/endpoints/assemblies";
 import * as PartsEndpoints from "../onshape-api/endpoints/parts";
 import { OnshapeRateLimitError } from "../onshape-api/onshape-api";
+import { AUTO_INDEX_THRESHOLD } from "../../shared/configuration-combinations";
+import { enumParam } from "../../__test_utils__/configuration-fixtures";
 
 const db = getDb(env.DB);
 
@@ -32,8 +36,15 @@ function readInsertable(insertableId: string) {
         .get();
 }
 
+function readConfig(insertableId: string) {
+    return db
+        .select()
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+}
+
 // The target element to insert into — must be an editable workspace ("w").
-const target = "/d/doc-target/w/w-target/e/target-element";
 const targetPath = {
     documentId: "doc-target",
     instanceType: "w",
@@ -70,8 +81,9 @@ describe("insertable routes", () => {
             .mockResolvedValue({ feature: { featureId: "feat-1" } });
 
         const res = await createTestApp().request(
-            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}${target}`,
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", {
+                targetPath,
                 configuration: undefined,
                 useMateConnector: false,
                 isFavorite: false,
@@ -91,6 +103,37 @@ describe("insertable routes", () => {
         );
     });
 
+    // A half-built target used to reach Onshape as a nonsense URL and fail
+    // opaquely; the boundary rejects it instead.
+    it.each([
+        ["a missing instance id", { documentId: "d", elementId: "e" }],
+        [
+            "an unknown instance type",
+            {
+                documentId: "d",
+                instanceId: "i",
+                instanceType: "x",
+                elementId: "e"
+            }
+        ],
+        ["no target at all", undefined]
+    ])("POST /add-to-part-studio rejects %s", async (_label, targetPath) => {
+        await seedPartStudio(db);
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                configuration: undefined,
+                useMateConnector: false,
+                isFavorite: false,
+                isQuickInsert: false
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+    });
+
     it("POST /add-to-assembly inserts via the Onshape API", async () => {
         await seedAssembly(db);
         const spy = vi
@@ -98,8 +141,9 @@ describe("insertable routes", () => {
             .mockResolvedValue({});
 
         const res = await createTestApp().request(
-            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}${target}`,
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
             jsonRequest("POST", {
+                targetPath,
                 configuration: undefined,
                 fasten: false,
                 isFavorite: false,
@@ -121,33 +165,46 @@ describe("insertable routes", () => {
         );
     });
 
-    it("POST /toggle-part-number-search indexes and enables the flag", async () => {
+    it("POST /index-configurations indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p", partNumber: "PN-123" }
         ]);
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         expect(res.status).toBe(200);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(true);
-        expect(row?.defaultPartNumber).toBe("PN-123");
+        expect(row?.indexConfigurations).toBe(true);
+
+        const config = await readConfig(TEST_PART_STUDIO_ID);
+        expect(config?.records).toEqual([
+            {
+                configuration: {},
+                partNumber: "PN-123",
+                name: null,
+                description: null,
+                material: null,
+                vendor: null,
+                hasMultipleParts: false,
+                isUnstableComposite: false
+            }
+        ]);
     });
 
-    it("POST /toggle-part-number-search leaves the flag off when indexing fails", async () => {
+    it("POST /index-configurations leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
             new OnshapeRateLimitError("rate limited", 450)
         );
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         // Surfaced to the client rather than silently enabling.
@@ -156,39 +213,82 @@ describe("insertable routes", () => {
         expect(body.retryAfterSeconds).toBe(450);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(false);
-        expect(row?.defaultPartNumber).toBeNull();
+        expect(row?.indexConfigurations).toBe(false);
+        // Nothing was written, so no records survive.
+        expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    it("POST /toggle-part-number-search clears the data when disabling", async () => {
-        await seedPartStudio(db);
+    // Over the auto-index threshold nothing indexes unless an admin asks, so
+    // turning force off there drops the records and the configuration row.
+    it("POST /index-configurations clears the data when forcing off", async () => {
+        await seedGroup(db);
+        await seedInsertable(db);
+        await db.insert(configurations).values({
+            id: TEST_PART_STUDIO_ID,
+            parameters: [
+                enumParam(
+                    "A",
+                    Array.from(
+                        { length: AUTO_INDEX_THRESHOLD },
+                        (_, i) => `o${i}`
+                    )
+                )
+            ]
+        });
         const spy = vi
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
         await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         spy.mockClear();
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: false }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: false }),
             env
         );
         expect(res.status).toBe(200);
-        // Disabling needs no Onshape calls.
+        // Past the threshold it is not auto-eligible, so nothing is re-indexed.
         expect(spy).not.toHaveBeenCalled();
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.searchPartNumbers).toBe(false);
-        expect(row?.defaultPartNumber).toBeNull();
+        expect(row?.indexConfigurations).toBe(false);
+        // The row stays to hold the parameters; only the records go.
+        expect((await readConfig(TEST_PART_STUDIO_ID))?.records).toEqual([]);
+    });
+
+    // Nothing gates on vendors any more, so a part below the threshold indexes
+    // whether or not anyone sells it.
+    it("POST /index-configurations keeps indexing a custom part", async () => {
+        await seedGroup(db);
+        await seedInsertable(db, {
+            name: "Custom Bracket",
+            vendors: [Vendor.CUSTOM]
+        });
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p" }
+        ]);
+
+        const res = await createTestApp().request(
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: false }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const config = await readConfig(TEST_PART_STUDIO_ID);
+        expect(config?.records).toHaveLength(1);
+        // Nobody sells it, so a missing part number is not worth flagging.
+        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        expect(row?.buildIssues).toEqual([]);
     });
 
     // The route merges into the row's stored issues, so it has to clear the ones
     // indexing owns first, or a resolved issue would stick around forever.
-    it("POST /toggle-part-number-search replaces stale part-number issues", async () => {
+    it("POST /index-configurations replaces stale part-number issues", async () => {
         await seedPartStudio(db);
         await db
             .update(insertables)
@@ -204,8 +304,8 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/toggle-part-number-search/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { searchPartNumbers: true }),
+            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         expect(res.status).toBe(200);

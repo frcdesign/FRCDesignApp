@@ -33,7 +33,8 @@ export interface GroupLoadResult {
 /** What a load computes for the group row. */
 interface ParsedGroup {
     name: string;
-    thumbnailUrls: ThumbnailUrls | null;
+    smallThumbnailUrl: string | null;
+    largeThumbnailUrl: string | null;
     buildIssues: BuildIssue[];
     /** When this (successful) load completed, epoch ms. */
     lastLoadedAt: number;
@@ -83,7 +84,7 @@ export async function loadGroup(
         `document-thumbnail-${groupId}`,
         async () =>
             uploadDocumentThumbnails(
-                ctx.env.THUMBNAILS,
+                ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
                 versionPath
             )
@@ -154,7 +155,8 @@ async function saveGroup(
     });
     const parsed: ParsedGroup = {
         name: target.name,
-        thumbnailUrls,
+        smallThumbnailUrl: thumbnailUrls?.small ?? null,
+        largeThumbnailUrl: thumbnailUrls?.large ?? null,
         buildIssues,
         // Stamp the successful load; failures never reach here, so a failed
         // reload leaves the group's last-good time untouched.
@@ -167,6 +169,16 @@ async function saveGroup(
     const writes: BatchItem<"sqlite">[] = [
         db.update(group).set(parsed).where(eq(group.id, target.groupId))
     ];
+    if (!hasFailedInsertables) {
+        // A skipped tab never reaches saveInsertable, so move the whole group
+        // forward: the stale id is what insertion and document links use.
+        writes.push(
+            db
+                .update(insertables)
+                .set({ versionId: target.versionPath.instanceId })
+                .where(eq(insertables.groupId, target.groupId))
+        );
+    }
     if (removedInsertableIds.length > 0) {
         // Configurations and favorites follow deleted insertables via their
         // cascading foreign keys.
@@ -184,9 +196,8 @@ async function saveGroup(
 }
 
 /**
- * Adds `LOAD_FAILED` to each failed insertable's stored issues, keeping the ones
- * its last good load recorded. A brand-new insertable has no row yet, so it gets
- * no write — the group's `INSERTABLES_FAILED` covers it.
+ * Keeps the issues the last good load recorded. A brand-new insertable has no
+ * row yet, so the group's `INSERTABLES_FAILED` covers it instead.
  */
 async function flagFailedInsertables(
     db: Db,
@@ -236,9 +247,6 @@ export interface StoredInsertable {
     microversionId: string;
 }
 
-/**
- * Fetches the group's stored insertables.
- */
 async function fetchStoredInsertables(
     ctx: LoadContext,
     groupId: string
@@ -254,9 +262,8 @@ async function fetchStoredInsertables(
 }
 
 /**
- * Selects the tabs to reload: new ones, and stored ones whose microversion
- * changed (or all of them, on `forceReload`). A stored insertable keeps its id;
- * a new one gets a fresh one.
+ * New tabs, and stored ones whose microversion changed. A stored insertable
+ * keeps its id so favorites and links survive.
  */
 export function selectInsertablesToLoad(
     target: GroupTarget,

@@ -88,4 +88,15 @@ describe("parseVendors", () => {
         ];
         expect(parseVendors("Generic Part", parameters)).toEqual([]);
     });
+
+    // Custom marks a part nobody sells, so a missing part number is expected
+    // rather than a warning. The name is the only thing that sets it.
+    it("reads Custom out of a name, whatever its case", () => {
+        expect(parseVendors("Custom Bracket", [])).toEqual([Vendor.CUSTOM]);
+        expect(parseVendors("CUSTOM gusset", [])).toEqual([Vendor.CUSTOM]);
+    });
+
+    it("does not read Custom out of an unrelated word", () => {
+        expect(parseVendors("Customizable Spacer", [])).toEqual([]);
+    });
 });

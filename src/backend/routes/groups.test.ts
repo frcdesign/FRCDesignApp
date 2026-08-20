@@ -12,16 +12,19 @@ import {
     seedGroup,
     seedTestData
 } from "../../__test_utils__";
+import MiniSearch from "minisearch";
 import { getDb } from "../db";
+import type { JobStatus } from "../../shared/api-models";
+import { searchIndexKey } from "../library-data";
+import { SEARCH_OPTIONS, type SearchDocument } from "../../shared/search";
 import * as DocumentsEndpoint from "../onshape-api/endpoints/documents";
 import * as JobTracker from "../load/job-tracker";
 
 const db = getDb(env.DB);
 
 /**
- * `jsonRequest` plus a session cookie — needed by routes that call `getSessionId`
- * (unlike `c.var.getOnshapeApi()`, session lookup isn't part of `createTestApp`'s
- * mocked services, since it's read directly from the request).
+ * `jsonRequest` plus a session cookie, for routes calling `getSessionId` — which
+ * reads the request directly rather than going through the mocked services.
  */
 function sessionRequest(method: string, body?: unknown): RequestInit {
     const init = jsonRequest(method, body);
@@ -39,11 +42,11 @@ describe("group admin routes", () => {
         await resetDb(db);
     });
 
-    it("POST /set-element-visibility hides an insertable and drops its favorites", async () => {
+    it("POST /set-insertable-visibility hides an insertable and drops its favorites", async () => {
         await seedTestData(db);
 
         const res = await createTestApp().request(
-            `/api/set-element-visibility/library/${TEST_LIBRARY_ID}`,
+            `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
             jsonRequest("POST", {
                 insertableIds: [TEST_PART_STUDIO_ID],
                 isVisible: false
@@ -66,6 +69,32 @@ describe("group admin routes", () => {
             .all();
         expect(remaining).toHaveLength(0);
     });
+
+    // Search reads isVisible out of the index, not the row, so leaving it stale
+    // drops the insertable from every result until the next full load.
+    it.each([false, true])(
+        "POST /set-insertable-visibility rebuilds the search index (isVisible=%s)",
+        async (isVisible) => {
+            await seedTestData(db);
+
+            const res = await createTestApp().request(
+                `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", {
+                    insertableIds: [TEST_PART_STUDIO_ID],
+                    isVisible
+                }),
+                env
+            );
+            expect(res.status).toBe(200);
+
+            const object = await env.BLOB.get(searchIndexKey(TEST_LIBRARY_ID));
+            const indexed = MiniSearch.loadJSON<SearchDocument>(
+                await object!.text(),
+                SEARCH_OPTIONS
+            ).getStoredFields(TEST_PART_STUDIO_ID);
+            expect(indexed?.isVisible).toBe(isVisible);
+        }
+    );
 
     it("POST /sort-group-alphabetically updates the flag", async () => {
         await seedTestData(db);
@@ -128,12 +157,8 @@ describe("POST /reload-groups", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    // The route no longer checks document versions itself — it just spawns one
-    // LoadLibrary workflow, which owns the per-group skip decision.
-    // The "false" case is a regression test: z.coerce.boolean() coerces the
-    // *string* "false" to `true` (any non-empty string is truthy), so an
-    // explicit forceReload=false used to force a reload just by being present.
-    // z.stringbool() fixes this.
+    // The "false" case is a regression test: z.coerce.boolean() reads the string
+    // "false" as true, so passing forceReload=false used to force a reload.
     it.each([
         ["omitted", "", false],
         ["false", "?forceReload=false", false],
@@ -193,8 +218,11 @@ describe("GET /job-status", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it.each([true, false])("reports running=%s", async (running) => {
-        vi.spyOn(JobTracker, "isAnyJobRunning").mockResolvedValue(running);
+    it.each<JobStatus>([
+        { running: true, runningForMs: 4_000 },
+        { running: false }
+    ])("reports $running", async (status) => {
+        vi.spyOn(JobTracker, "getJobStatus").mockResolvedValue(status);
 
         const res = await createTestApp().request(
             `/api/job-status/library/${TEST_LIBRARY_ID}`,
@@ -202,7 +230,7 @@ describe("GET /job-status", () => {
             env
         );
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ running });
+        expect(await res.json()).toEqual(status);
         // Polled for live state, so it must never be served from a cache.
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });

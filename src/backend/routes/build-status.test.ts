@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { group, insertables } from "../../shared/schema";
 import {
     TEST_GROUP_ID,
@@ -20,6 +20,7 @@ const INSERTABLE_LOADED_AT = 2000;
 
 describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
 
     it("returns each group's and insertable's last-loaded time", async () => {
         await seedPartStudio(db);
@@ -72,5 +73,20 @@ describe("GET /build-status", () => {
 
         const body: LibraryBuildStatus = await res.json();
         expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBeNull();
+    });
+
+    // Job state lives on /job-status, which is what lets this be cached.
+    it("caches the response privately and immutably", async () => {
+        await seedPartStudio(db);
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
+            { method: "GET" },
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toBe(
+            "private, max-age=31536000, immutable"
+        );
     });
 });

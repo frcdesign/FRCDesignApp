@@ -48,8 +48,8 @@
     ],
     "r2_buckets": [
         {
-            "binding": "THUMBNAILS",
-            "bucket_name": "frc-design-app-dev-thumbnails"
+            "binding": "BLOB",
+            "bucket_name": "frc-design-app-dev-blob"
         }
     ],
     "workflows": [
@@ -62,6 +62,11 @@
             "name": "add-group-workflow",
             "binding": "ADD_GROUP_WORKFLOW",
             "class_name": "AddGroupWorkflow"
+        },
+        {
+            "name": "thumbnail-workflow",
+            "binding": "THUMBNAIL_WORKFLOW",
+            "class_name": "ThumbnailWorkflow"
         }
     ],
     /**
@@ -104,8 +109,8 @@
             ],
             "r2_buckets": [
                 {
-                    "binding": "THUMBNAILS",
-                    "bucket_name": "frc-design-app-cert-thumbnails"
+                    "binding": "BLOB",
+                    "bucket_name": "frc-design-app-cert-blob"
                 }
             ],
             "workflows": [
@@ -118,6 +123,11 @@
                     "name": "add-group-workflow-cert",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
+                },
+                {
+                    "name": "thumbnail-workflow-cert",
+                    "binding": "THUMBNAIL_WORKFLOW",
+                    "class_name": "ThumbnailWorkflow"
                 }
             ],
             "vars": {
@@ -150,8 +160,8 @@
             ],
             "r2_buckets": [
                 {
-                    "binding": "THUMBNAILS",
-                    "bucket_name": "frc-thumbnails-production"
+                    "binding": "BLOB",
+                    "bucket_name": "frc-blob-production"
                 }
             ],
             "workflows": [
@@ -164,6 +174,11 @@
                     "name": "add-group-workflow-production",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
+                },
+                {
+                    "name": "thumbnail-workflow-production",
+                    "binding": "THUMBNAIL_WORKFLOW",
+                    "class_name": "ThumbnailWorkflow"
                 }
             ],
             "vars": {

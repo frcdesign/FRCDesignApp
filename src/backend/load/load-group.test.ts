@@ -220,6 +220,38 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.elementId).sort()).toEqual(["e1", "e2"]);
     });
 
+    // A skipped tab never reaches saveInsertable, but its version still has to
+    // move: that id is what insertion and every document link are built from.
+    it("advances a skipped insertable's version along with the group's", async () => {
+        mockContents([tab("e1")]);
+        // Same microversion as the tab, so the load skips it entirely.
+        await seedInsertable(db, {
+            id: "ins-e1",
+            elementId: "e1",
+            name: "Existing",
+            microversionId: "mv-1",
+            versionId: "inst-1"
+        });
+        const configurationSpy = vi.spyOn(
+            ConfigurationEndpoints,
+            "getConfiguration"
+        );
+
+        const result = await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(result).toMatchObject({ loadedElements: 0 });
+        // Nothing was reloaded...
+        expect(configurationSpy).not.toHaveBeenCalled();
+        // ...but it no longer points at the version the group just left.
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-e1"))
+            .get();
+        expect(row?.versionId).toBe("v-2");
+        expect((await readGroup())?.versionId).toBe("v-2");
+    });
+
     // The version is what makes a failure self-healing: leaving it stale is what
     // brings the next reload back to retry only the insertable that failed.
     it("holds the version back and flags the insertable that failed", async () => {

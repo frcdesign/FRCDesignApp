@@ -4,6 +4,7 @@ import {
     Group,
     HoverCard,
     Loader,
+    ScrollArea,
     Stack,
     Switch,
     Text,
@@ -41,23 +42,32 @@ import {
     InsertableBuildStatus
 } from "../../shared/api-models";
 import { getVendorName, Vendor } from "../../shared/types";
+import {
+    ConfigurationParameter,
+    ParameterType
+} from "../../shared/configuration-models";
+import {
+    AUTO_INDEX_THRESHOLD,
+    type ConfigurationCount,
+    countConfigurations,
+    IndexingBand,
+    isIndexedParameter,
+    MAX_PART_NUMBER_CONFIGURATIONS
+} from "../../shared/configuration-combinations";
 import { FontWeight, IconColor, IconSize } from "../common/style-constants";
 import { RequireAccessLevel } from "../api-utils/access-level";
 import { useBuildStatusQuery, useJobStatusQuery } from "../queries";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
-    useTogglePartNumberSearchMutation,
+    useIndexConfigurationsMutation,
     useToggleSortOrderMutation
 } from "./card-hooks";
 
-/**
- * The value of a read-only "parsed" row. A discriminated union so `StateValue`
- * can render each kind appropriately (a check/cross for booleans, badges for
- * vendors).
- */
+/** Discriminated so `StateValue` renders each kind its own way. */
 export type StateRowValue =
     | { kind: "bool"; value: boolean }
+    | { kind: "text"; text: string; dimmed?: boolean }
     | { kind: "vendors"; vendors: Vendor[] };
 
 /**
@@ -72,9 +82,8 @@ function getInsertableBuildIssues(
 }
 
 /**
- * Returns the build issues for a group, combining stored build-time issues with
- * the live "no unhidden insertables" check (computed here since visibility is
- * per-insertable state in the same build-status response).
+ * Stored issues plus the live "no unhidden insertables" check, which needs the
+ * per-insertable visibility in the same response.
  */
 function useGroupBuildIssues(
     groupStatus: GroupBuildStatus | undefined,
@@ -193,9 +202,8 @@ interface BuildStatusBadgeProps {
 }
 
 /**
- * Dismisses the surrounding build-status hover card. Used by controls that open
- * a modal, since `HoverCard` only closes on mouse-leave — never fired when a
- * modal overlay simply covers the dropdown, leaving it stranded behind.
+ * For controls that open a modal: `HoverCard` closes on mouse-leave, which never
+ * fires when an overlay covers the dropdown, stranding it behind.
  */
 const CloseCardContext = createContext<() => void>(() => undefined);
 
@@ -486,15 +494,39 @@ export function InsertableStatusBadge({
             issues={getInsertableBuildIssues(insertable)}
             lastLoadedAt={insertable.lastLoadedAt}
             hoverMenu={
-                <>
-                    <InsertableAdminSection
-                        insertableId={insertableId}
-                        status={insertable}
-                    />
-                    <InsertableParsedSection status={insertable} />
-                </>
+                <InsertableHoverMenu
+                    insertableId={insertableId}
+                    status={insertable}
+                />
             }
         />
+    );
+}
+
+/** Enumerates configurations once, for every row of the card that needs it. */
+function InsertableHoverMenu({
+    insertableId,
+    status
+}: {
+    insertableId: string;
+    status: InsertableBuildStatus;
+}): ReactNode {
+    const configurationCount = useConfigurationCount(status);
+    return (
+        <>
+            <InsertableAdminSection
+                insertableId={insertableId}
+                status={status}
+                configurationCount={configurationCount}
+            />
+            <InsertableParsedSection
+                status={status}
+                count={configurationCount.count}
+            />
+            <ConfigurationSection
+                parameters={status.configuration?.parameters}
+            />
+        </>
     );
 }
 
@@ -531,12 +563,14 @@ function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     );
 }
 
-/** A label (+ description) and on/off Switch row for an editable admin flag. */
-function SwitchRow(props: {
+/**
+ * A label (+ description) and a right-aligned control. Usually a Switch, but a
+ * setting that isn't the admin's to make shows an icon saying why instead.
+ */
+function ControlRow(props: {
     label: string;
     description?: string;
-    checked: boolean;
-    onToggle: () => void;
+    control: ReactNode;
 }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="md" align="center">
@@ -546,23 +580,43 @@ function SwitchRow(props: {
                     {props.description}
                 </Text>
             </div>
-            <Switch
-                size="sm"
-                checked={props.checked}
-                onChange={props.onToggle}
-                withThumbIndicator={false}
-            />
+            {props.control}
         </Group>
+    );
+}
+
+/** A label (+ description) and on/off Switch row for an editable admin flag. */
+function SwitchRow(props: {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onToggle: () => void;
+}): ReactNode {
+    return (
+        <ControlRow
+            label={props.label}
+            description={props.description}
+            control={
+                <Switch
+                    size="sm"
+                    checked={props.checked}
+                    onChange={props.onToggle}
+                    withThumbIndicator={false}
+                />
+            }
+        />
     );
 }
 
 /** The editable admin toggles for an insertable. */
 function InsertableAdminSection({
     insertableId,
-    status
+    status,
+    configurationCount
 }: {
     insertableId: string;
     status: InsertableBuildStatus;
+    configurationCount: ConfigurationCount;
 }): ReactNode {
     return (
         <Stack gap="sm">
@@ -575,9 +629,10 @@ function InsertableAdminSection({
                 insertableId={insertableId}
                 supportsFasten={status.supportsFasten}
             />
-            <PartNumberSwitch
+            <IndexingRow
                 insertableId={insertableId}
-                searchPartNumbers={status.searchPartNumbers}
+                status={status}
+                band={configurationCount.band}
             />
         </Stack>
     );
@@ -618,21 +673,71 @@ function FastenSwitch({
     );
 }
 
-function PartNumberSwitch({
+/**
+ * A switch only where enabling indexing is the admin's call, an icon saying why
+ * not otherwise — past the cap it can't run, under the threshold it already has.
+ */
+function IndexingRow({
     insertableId,
-    searchPartNumbers
+    status,
+    band
 }: {
     insertableId: string;
-    searchPartNumbers: boolean;
+    status: InsertableBuildStatus;
+    band: IndexingBand;
 }): ReactNode {
-    const mutation = useTogglePartNumberSearchMutation(insertableId);
+    const mutation = useIndexConfigurationsMutation(insertableId);
+
+    let control: ReactNode;
+    if (band === IndexingBand.EXCEEDED) {
+        control = (
+            <IndexingIcon
+                severity={BuildIssueSeverity.ERROR}
+                tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
+            />
+        );
+    } else if (band === IndexingBand.AUTOMATIC) {
+        control = (
+            <IndexingIcon
+                severity={null}
+                tooltip={`Indexed automatically: an insertable under ${AUTO_INDEX_THRESHOLD} configurations indexes on every load.`}
+            />
+        );
+    } else {
+        control = (
+            <Switch
+                size="sm"
+                checked={status.indexConfigurations}
+                onChange={() => mutation.mutate(!status.indexConfigurations)}
+                withThumbIndicator={false}
+            />
+        );
+    }
+
     return (
-        <SwitchRow
-            label="Part number search"
-            description="Index all configurations"
-            checked={searchPartNumbers}
-            onToggle={() => mutation.mutate(!searchPartNumbers)}
+        <ControlRow
+            label="Enable indexing"
+            description="Index metadata for search"
+            control={control}
         />
+    );
+}
+
+/**
+ * Stands in for the switch where there is nothing to toggle, reusing the
+ * build-check icons so the state reads the same as the callouts above it.
+ */
+function IndexingIcon({
+    severity,
+    tooltip
+}: {
+    severity: BuildIssueSeverity | null;
+    tooltip: string;
+}): ReactNode {
+    return (
+        <Tooltip label={tooltip} withArrow multiline w={260}>
+            <IssueIcon severity={severity} style={{ flexShrink: 0 }} />
+        </Tooltip>
     );
 }
 
@@ -658,11 +763,38 @@ function GroupAdminSection({
     );
 }
 
+/**
+ * Enumerated rather than stored: the same shared routine the load path uses,
+ * and it only runs when a hover card opens.
+ */
+function useConfigurationCount(
+    status: InsertableBuildStatus
+): ConfigurationCount {
+    const parameters = status.configuration?.parameters;
+    return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
+}
+
+/** Open-ended past the cap, where enumeration stops before reaching a total. */
+function configurationCountValue(count: number | null): StateRowValue {
+    if (count === null) {
+        return {
+            kind: "text",
+            text: `Over ${MAX_PART_NUMBER_CONFIGURATIONS}`
+        };
+    }
+    if (count === 0) {
+        return { kind: "text", text: "None", dimmed: true };
+    }
+    return { kind: "text", text: count.toLocaleString() };
+}
+
 /** The read-only auto-detected facts for an insertable. */
 function InsertableParsedSection({
-    status
+    status,
+    count
 }: {
     status: InsertableBuildStatus;
+    count: number | null;
 }): ReactNode {
     return (
         <>
@@ -674,12 +806,136 @@ function InsertableParsedSection({
                     value={{ kind: "vendors", vendors: status.vendors }}
                 />
                 <ParsedRow
-                    label="Configurable"
-                    value={{ kind: "bool", value: !!status.configuration }}
+                    label="Configurations"
+                    value={configurationCountValue(count)}
                 />
             </Stack>
         </>
     );
+}
+
+/** Each parameter's name, the type it takes, and whether indexing varies it. */
+function ConfigurationSection({
+    parameters
+}: {
+    parameters?: ConfigurationParameter[];
+}): ReactNode {
+    if (!parameters || parameters.length === 0) return null;
+    return (
+        <>
+            <Divider />
+            <Stack gap={6}>
+                <SectionHeader>Configurations</SectionHeader>
+                <ScrollArea.Autosize mah={220} type="auto">
+                    <Stack gap={4}>
+                        {parameters.map((parameter) => (
+                            <Group
+                                key={parameter.id}
+                                gap="xl"
+                                wrap="nowrap"
+                                justify="space-between"
+                            >
+                                <Text size="sm">{parameter.name}</Text>
+                                <Group gap={4} wrap="nowrap">
+                                    <IndexedBadge parameter={parameter} />
+                                    <ParameterTypeBadge parameter={parameter} />
+                                </Group>
+                            </Group>
+                        ))}
+                    </Stack>
+                </ScrollArea.Autosize>
+            </Stack>
+        </>
+    );
+}
+
+/** Why a parameter is or isn't varied when indexing, shown on hover. */
+function getIndexedDescription(parameter: ConfigurationParameter): string {
+    if (isIndexedParameter(parameter)) {
+        return "Varied when indexing part numbers, so it multiplies this insertable's configuration count.";
+    }
+    if (
+        parameter.type === ParameterType.QUANTITY ||
+        parameter.type === ParameterType.STRING
+    ) {
+        return "Quantity and text parameters are never varied — they stay at their Onshape default.";
+    }
+    return "Excluded from properties, so it stays at its default instead of multiplying the configuration count.";
+}
+
+/** Whether indexing varies this parameter — the lever on the configuration count. */
+function IndexedBadge({
+    parameter
+}: {
+    parameter: ConfigurationParameter;
+}): ReactNode {
+    const isIndexed = isIndexedParameter(parameter);
+    return (
+        <Tooltip
+            label={getIndexedDescription(parameter)}
+            multiline
+            maw={260}
+            withArrow
+            events={{ hover: true, focus: true, touch: true }}
+        >
+            <Badge
+                size="xs"
+                variant="light"
+                color={isIndexed ? "blue" : "gray"}
+            >
+                {isIndexed ? "Indexed" : "Not indexed"}
+            </Badge>
+        </Tooltip>
+    );
+}
+
+/**
+ * The parameter's type. An enum also carries its option count, and lists the
+ * options on hover — the values that drive its share of the configuration count.
+ */
+function ParameterTypeBadge({
+    parameter
+}: {
+    parameter: ConfigurationParameter;
+}): ReactNode {
+    const isEnum = parameter.type === ParameterType.ENUM;
+    const label = isEnum
+        ? `${getParameterTypeLabel(parameter.type)} (${parameter.options.length})`
+        : getParameterTypeLabel(parameter.type);
+
+    const badge = (
+        <Badge size="xs" variant="light" color="gray">
+            {label}
+        </Badge>
+    );
+    if (!isEnum || parameter.options.length === 0) {
+        return badge;
+    }
+    return (
+        <Tooltip
+            label={parameter.options.map((option) => option.name).join(", ")}
+            multiline
+            maw={260}
+            withArrow
+            events={{ hover: true, focus: true, touch: true }}
+        >
+            {badge}
+        </Tooltip>
+    );
+}
+
+/** The short label for a parameter's type, shown as a badge. */
+function getParameterTypeLabel(type: ParameterType): string {
+    switch (type) {
+        case ParameterType.ENUM:
+            return "Enum";
+        case ParameterType.BOOLEAN:
+            return "Boolean";
+        case ParameterType.QUANTITY:
+            return "Quantity";
+        case ParameterType.STRING:
+            return "Text";
+    }
 }
 
 /** A read-only label/value row in the "Parsed" section. */
@@ -705,6 +961,14 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
             <IconCheck size={IconSize.SMALL} color={IconColor.GREEN} />
         ) : (
             <IconX size={IconSize.SMALL} color={IconColor.RED} />
+        );
+    }
+
+    if (value.kind === "text") {
+        return (
+            <Text size="sm" c={value.dimmed ? "dimmed" : undefined}>
+                {value.text}
+            </Text>
         );
     }
 

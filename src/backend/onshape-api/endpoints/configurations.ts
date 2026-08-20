@@ -63,14 +63,3 @@ export function encodeConfiguration(
         .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
 }
-
-/** Encodes a configuration into a format suitable for passing to the Onshape API via a query parameter. */
-export function encodeConfigurationForQuery(
-    configuration: Record<string, string>
-): string {
-    return encodeURIComponent(
-        Object.entries(configuration)
-            .map(([id, value]) => `${id}=${value}`)
-            .join(";")
-    );
-}

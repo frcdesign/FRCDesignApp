@@ -1,4 +1,4 @@
-import { Group, Menu, Table, Text } from "@mantine/core";
+import { Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     IconExternalLink,
     IconEyeOff,
@@ -9,11 +9,11 @@ import {
 } from "@tabler/icons-react";
 import { IconColor, IconSize } from "../common/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../common/url";
-import { PropsWithChildren, ReactNode, useCallback } from "react";
+import { Fragment, PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../app-common/app-menu";
-import { SearchHit } from "../search/search";
-import { SearchHitTitle } from "../search/search-results";
-import { CardThumbnail } from "../insert/thumbnail";
+import { type Position, SearchHit } from "../search/search";
+import { HighlightedText, SearchHitTitle } from "../search/search-results";
+import { CardThumbnail, type ThumbnailTarget } from "../insert/thumbnail";
 import { ConfigurablePath, InstancePath } from "../../shared/onshape-path";
 import { openCannotDeriveAssemblyAlert } from "../app/alerts";
 import {
@@ -22,7 +22,7 @@ import {
 } from "../insert/insert-hooks";
 import { InsertableOut } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import { ThumbnailUrls } from "../../shared/types";
+
 import { ParameterValues } from "../../shared/configuration-models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../api-utils/access-level";
@@ -129,13 +129,23 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    thumbnailUrls?: ThumbnailUrls;
+    smallThumbnailUrl?: string;
+    largeThumbnailUrl?: string;
+    /** Set to show a specific configuration's thumbnail instead of the default. */
+    thumbnailTarget?: ThumbnailTarget;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps) {
-    const { searchHit, title, thumbnailUrls, buildStatusBadge } = props;
+    const {
+        searchHit,
+        title,
+        smallThumbnailUrl,
+        largeThumbnailUrl,
+        thumbnailTarget,
+        buildStatusBadge
+    } = props;
     const disabled = props.disabled ?? false;
     const isHidden = props.showHiddenTag ?? false;
 
@@ -146,12 +156,50 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
+    // The hit's best-matching configuration, minus a name repeating the title.
+    // Each carries its own positions, so a part-number hit underlines there too.
+    const details = searchHit
+        ? (
+              [
+                  [searchHit.partNumber, searchHit.partNumberPositions],
+                  [searchHit.partName, searchHit.partNamePositions]
+              ] as const
+          ).filter(
+              (detail): detail is [string, Position[] | undefined] =>
+                  !!detail[0] && detail[0].toLowerCase() !== title.toLowerCase()
+          )
+        : [];
+
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <CardThumbnail thumbnailUrls={thumbnailUrls} />
-            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
-                {cardTitle}
-            </Text>
+            <CardThumbnail
+                smallThumbnailUrl={smallThumbnailUrl}
+                largeThumbnailUrl={largeThumbnailUrl}
+                target={thumbnailTarget}
+            />
+            {/* Shrinks to truncate, but never grows: the build status badge and
+                hidden tag belong beside the name, not at the row's edge. */}
+            <Stack gap={0} miw={0}>
+                <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                    {cardTitle}
+                </Text>
+                {details.length > 0 && (
+                    <Text size="xs" c="dimmed" truncate>
+                        {details.map(([text, positions], index) => (
+                            <Fragment key={text}>
+                                {index > 0 && " · "}
+                                <HighlightedText
+                                    text={text}
+                                    positions={positions}
+                                />
+                            </Fragment>
+                        ))}
+                    </Text>
+                )}
+            </Stack>
+            {buildStatusBadge}
+            {/* After the badge: toggling visibility would otherwise shift the
+                badge, dragging its open hover card out from under the cursor. */}
             {isHidden && (
                 <IconEyeOff
                     size={IconSize.SMALL}
@@ -159,7 +207,6 @@ export function CardTitle(props: CardTitleProps) {
                     title="Hidden"
                 />
             )}
-            {buildStatusBadge}
         </Group>
     );
 }

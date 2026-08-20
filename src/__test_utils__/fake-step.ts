@@ -1,9 +1,8 @@
 import type { WorkflowStep } from "cloudflare:workers";
 
 /**
- * A `WorkflowStep` that runs each step inline, so the load functions can be
- * exercised without a real workflow instance. Durability and retries are
- * Cloudflare's concern; these tests are about the orchestration.
+ * Runs each step inline, so the load functions can be exercised without a real
+ * workflow. Durability and retries are Cloudflare's concern, not these tests'.
  */
 export const FAKE_STEP = {
     do: (_name: string, optionsOrFn: unknown, maybeFn?: unknown) => {

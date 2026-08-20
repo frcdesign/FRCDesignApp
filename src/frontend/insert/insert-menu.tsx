@@ -5,9 +5,9 @@ import {
     InsertableOut
 } from "../../shared/api-models";
 import { ElementType } from "../../shared/types";
-import { Button, Checkbox, Group } from "@mantine/core";
+import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
+import { FontWeight, IconSize } from "../common/style-constants";
 import { modals } from "@mantine/modals";
 import { useIsFetching } from "@tanstack/react-query";
 import { PreviewImageCard } from "./thumbnail";
@@ -20,7 +20,11 @@ import { MenuButton } from "../app-common/app-menu";
 import { InsertableMenuItems } from "../cards/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "./insert-hooks";
-import { ParameterValues } from "../../shared/configuration-models";
+import {
+    ParameterValues,
+    SearchRecord
+} from "../../shared/configuration-models";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import { useFavoritesQuery } from "../queries";
 import { useUiState } from "../api-utils/ui-state";
 import { notifications } from "@mantine/notifications";
@@ -36,8 +40,12 @@ interface OpenInsertMenuProps {
 export function openInsertMenu(props: OpenInsertMenuProps) {
     const { insertable, defaultConfiguration } = props;
     let didInsert = false;
-    const id = modals.open({
-        title: insertable.name,
+    // Minted here so the content can address the modal it lives in, which is
+    // what lets the header follow the selected configuration.
+    const id = crypto.randomUUID();
+    modals.open({
+        modalId: id,
+        title: <InsertMenuTitle name={insertable.name} />,
         size: 500,
         centered: true,
         onClose: () => {
@@ -48,6 +56,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         children: (
             <InsertMenuContent
                 insertable={insertable}
+                modalId={id}
                 defaultConfiguration={defaultConfiguration}
                 onInsert={() => {
                     didInsert = true;
@@ -58,20 +67,64 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     });
 }
 
+/**
+ * Both are shown: the element name is how the part was found, the part number
+ * and name are what gets inserted.
+ */
+function InsertMenuTitle({
+    name,
+    record
+}: {
+    name: string;
+    record?: SearchRecord;
+}): ReactNode {
+    const details = record
+        ? [record.partNumber, record.name].filter(
+              (value): value is string => !!value && value !== name
+          )
+        : [];
+    return (
+        <Stack gap={0}>
+            <Text fw={FontWeight.SEMI_BOLD}>{name}</Text>
+            {details.length > 0 && (
+                <Text size="xs" c="dimmed">
+                    {details.join(" · ")}
+                </Text>
+            )}
+        </Stack>
+    );
+}
+
 interface InsertMenuContentProps {
     insertable: InsertableOut;
+    /** The modal this renders in, so the header can track the selection. */
+    modalId: string;
     defaultConfiguration?: ParameterValues;
     onInsert: () => void;
 }
 
 function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, onInsert } = props;
+    const { insertable, modalId, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
 
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(props.defaultConfiguration);
+    // Reported by ConfigurationWrapper, which has the parameters and units the
+    // canonical form needs. Empty means the element's default configuration.
+    const [canonicalConfiguration, setCanonicalConfiguration] =
+        useState<ParameterValues>({});
+    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
+
+    // The title lives in the modal's chrome, so it's updated rather than
+    // rendered: the header follows the configuration as the user changes it.
+    useEffect(() => {
+        modals.updateModal({
+            modalId,
+            title: <InsertMenuTitle name={insertable.name} record={record} />
+        });
+    }, [modalId, insertable.name, record]);
 
     useEffect(() => {
         if (!isSignedIn) {
@@ -93,6 +146,8 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
+                onCanonicalConfiguration={setCanonicalConfiguration}
+                onRecord={setRecord}
             />
         );
     }
@@ -101,9 +156,12 @@ function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
-                configuration={configuration}
-                thumbnailUrls={insertable.thumbnailUrls}
+                largeThumbnailUrl={insertable.largeThumbnailUrl}
+                canonicalConfiguration={encodeCanonicalConfiguration(
+                    canonicalConfiguration
+                )}
             />
             {parameters}
             <Group justify="space-between" wrap="nowrap" mt="md">

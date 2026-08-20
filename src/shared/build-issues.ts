@@ -1,9 +1,11 @@
 /**
- * Build checker: a small framework for flagging data-quality issues with groups
- * and insertables. Most checks run at build time (during the load-document
- * workflow) and are stored on the group/insertable; a few are computed live in
- * the frontend when they depend on per-user state (e.g. access level).
+ * Data-quality issues for groups and insertables. Most are stored at load time;
+ * a few are computed live where they depend on per-user state.
  */
+import {
+    AUTO_INDEX_THRESHOLD,
+    MAX_PART_NUMBER_CONFIGURATIONS
+} from "./configuration-combinations";
 
 export enum BuildIssueSeverity {
     /** A potential issue that is usually fine, e.g. no vendors parsed. */
@@ -19,8 +21,11 @@ export enum BuildIssueType {
     THUMBNAIL_FAILED = "thumbnail-failed",
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
+    NO_PART_NUMBER = "no-part-number",
+    NO_PARTS = "no-parts",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     TOO_MANY_CONFIGURATIONS = "too-many-configurations",
+    MANY_CONFIGURATIONS = "many-configurations",
     MULTIPLE_PARTS = "multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
@@ -38,8 +43,11 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
+    | BuildIssueOf<BuildIssueType.NO_PART_NUMBER>
+    | BuildIssueOf<BuildIssueType.NO_PARTS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
+    | BuildIssueOf<BuildIssueType.MANY_CONFIGURATIONS>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | BuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
@@ -54,10 +62,16 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "No thumbnail tab set";
         case BuildIssueType.NO_VENDORS:
             return "No vendors could be parsed";
+        case BuildIssueType.NO_PART_NUMBER:
+            return "No part number in any configuration, though a vendor sells this";
+        case BuildIssueType.NO_PARTS:
+            return "This part studio has no parts";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "No unhidden insertables";
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-            return "Too many configurations to index part numbers";
+            return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so its configurations cannot be indexed`;
+        case BuildIssueType.MANY_CONFIGURATIONS:
+            return `Over ${AUTO_INDEX_THRESHOLD} configurations, so indexing must be enabled manually`;
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
         case BuildIssueType.UNSTABLE_COMPOSITE:
@@ -75,12 +89,15 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
         case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.NO_PARTS:
         case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+        case BuildIssueType.MANY_CONFIGURATIONS:
+        case BuildIssueType.NO_PART_NUMBER:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

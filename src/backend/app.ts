@@ -1,5 +1,9 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type { AddGroupParams, LoadLibraryParams } from "./load/workflows";
+import type {
+    AddGroupParams,
+    LoadLibraryParams,
+    ThumbnailWorkflowParams
+} from "./load/workflows";
 import { LibraryId, type AccessLevel } from "../shared/types";
 import { type OAuthApi } from "./onshape-api/onshape-api";
 import z from "zod";
@@ -10,9 +14,12 @@ export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
     ASSETS: Fetcher;
-    THUMBNAILS: R2Bucket;
+    /** Thumbnails and search indexes; prefixes keep them apart. */
+    BLOB: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
+    /** Renders a configuration's thumbnails outside a request; see ThumbnailWorkflow. */
+    THUMBNAIL_WORKFLOW: Workflow<ThumbnailWorkflowParams>;
     ADMIN_TEAM: string;
     ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */
@@ -24,6 +31,8 @@ interface AppVariables {
     onshapeApi?: OAuthApi;
     /** Internal cache for isSignedIn in sign-in-utils.ts. */
     signedIn?: boolean;
+    /** Set by {@link setCacheTtl}; read by {@link cacheMiddleware}. */
+    cacheTtl?: number;
     /** Injected getters — see {@link AppServices} / `createApp`. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
@@ -96,6 +105,11 @@ interface CacheOptions {
     versioned?: boolean;
 }
 
+/** Overrides the route's immutable default for a body its url does not pin. */
+export function setCacheTtl(c: AppContext, maxAge: number): void {
+    c.set("cacheTtl", maxAge);
+}
+
 /** Declares how a route's response may be cached, and enforces what that takes. */
 export function cacheMiddleware(
     policy: CachePolicy = CachePolicy.NO_CACHE,
@@ -119,7 +133,15 @@ export function cacheMiddleware(
         }
         await next();
         // A miss must stay retryable, so only store what succeeded.
-        c.header("Cache-Control", c.res.ok ? cacheControl : NO_STORE);
+        if (!c.res.ok) {
+            c.header("Cache-Control", NO_STORE);
+            return;
+        }
+        const ttl = c.get("cacheTtl");
+        c.header(
+            "Cache-Control",
+            ttl === undefined ? cacheControl : `${policy}, max-age=${ttl}`
+        );
     };
 }
 

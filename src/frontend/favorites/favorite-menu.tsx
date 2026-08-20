@@ -1,8 +1,8 @@
-import { Button, Group } from "@mantine/core";
+import { Button, Group, Stack, Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { IconDeviceFloppy } from "@tabler/icons-react";
-import { IconSize } from "../common/style-constants";
-import { ReactNode, useState } from "react";
+import { FontWeight, IconSize } from "../common/style-constants";
+import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../api-utils/api";
@@ -12,7 +12,11 @@ import { ConfigurationWrapper } from "../insert/configurations";
 import { type FavoritesData } from "../../shared/api-models";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../query-client";
-import { ParameterValues } from "../../shared/configuration-models";
+import {
+    ParameterValues,
+    SearchRecord
+} from "../../shared/configuration-models";
+import { encodeCanonicalConfiguration } from "../../shared/canonical-configuration";
 import {
     favoritesQueryKey,
     useFavoritesQuery,
@@ -31,31 +35,60 @@ interface OpenFavoriteMenuProps {
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
     const { favoriteId, insertableName, defaultConfiguration } = props;
+    // Minted here so the content can update the header as the selection changes.
+    const modalId = crypto.randomUUID();
     modals.open({
-        title: (
-            <Group gap="xs" wrap="nowrap">
-                <HeartIcon />
-                {insertableName}
-            </Group>
-        ),
+        modalId,
+        title: <FavoriteMenuTitle name={insertableName} />,
         size: 500,
         centered: true,
         children: (
             <FavoriteMenuContent
                 favoriteId={favoriteId}
+                modalId={modalId}
                 defaultConfiguration={defaultConfiguration}
             />
         )
     });
 }
 
+/** The element's name, and what the saved configuration produces beneath it. */
+function FavoriteMenuTitle({
+    name,
+    record
+}: {
+    name: string;
+    record?: SearchRecord;
+}): ReactNode {
+    const details = record
+        ? [record.partNumber, record.name].filter(
+              (value): value is string => !!value && value !== name
+          )
+        : [];
+    return (
+        <Group gap="xs" wrap="nowrap">
+            <HeartIcon />
+            <Stack gap={0}>
+                <Text fw={FontWeight.SEMI_BOLD}>{name}</Text>
+                {details.length > 0 && (
+                    <Text size="xs" c="dimmed">
+                        {details.join(" · ")}
+                    </Text>
+                )}
+            </Stack>
+        </Group>
+    );
+}
+
 interface FavoriteMenuContentProps {
     favoriteId: string;
+    /** The modal this renders in, so the header can track the selection. */
+    modalId: string;
     defaultConfiguration?: ParameterValues;
 }
 
 function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
-    const { favoriteId, defaultConfiguration } = props;
+    const { favoriteId, modalId, defaultConfiguration } = props;
 
     const router = useRouter();
     const libraryId = useLibraryId();
@@ -66,14 +99,40 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
     >(defaultConfiguration);
+    // Reported by ConfigurationWrapper; addresses this selection's thumbnail.
+    // Undefined until it reports, which is what gates saving.
+    const [canonicalConfiguration, setCanonicalConfiguration] = useState<
+        ParameterValues | undefined
+    >(undefined);
+    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
+
+    const favorite = favoritesData?.favorites[favoriteId];
+    const insertable =
+        favorite && insertables
+            ? insertables[favorite.insertableId]
+            : undefined;
+
+    const insertableName = insertable?.name;
+    useEffect(() => {
+        if (insertableName === undefined) {
+            return;
+        }
+        modals.updateModal({
+            modalId,
+            title: <FavoriteMenuTitle name={insertableName} record={record} />
+        });
+    }, [modalId, insertableName, record]);
 
     const setDefaultConfigurationMutation = useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
+            // Canonical, so it addresses the thumbnail the favorites row asks
+            // for; Onshape applies defaults for what it omits.
             return apiPost("/default-configuration/" + favoriteId, {
-                body: { defaultConfiguration: configuration }
+                body: { defaultConfiguration: canonicalConfiguration }
             });
         },
+
         onMutate: async () => {
             const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
@@ -81,7 +140,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
                 queryKey,
                 getQueryUpdater((data: FavoritesData) => {
                     const fav = data.favorites[favoriteId];
-                    if (fav) fav.defaultConfiguration = configuration;
+                    if (fav) fav.defaultConfiguration = canonicalConfiguration;
                     return data;
                 })
             );
@@ -98,11 +157,6 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         onSettled: refreshFavorites
     });
 
-    const favorite = favoritesData?.favorites[favoriteId];
-    const insertable =
-        favorite && insertables
-            ? insertables[favorite.insertableId]
-            : undefined;
     if (!insertable) {
         return null;
     }
@@ -119,11 +173,16 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         <>
             <PreviewImageCard
                 path={insertable.path}
+                insertableId={insertable.id}
                 microversionId={insertable.microversionId}
-                configuration={configuration}
-                thumbnailUrls={insertable.thumbnailUrls}
+                largeThumbnailUrl={insertable.largeThumbnailUrl}
+                canonicalConfiguration={encodeCanonicalConfiguration(
+                    canonicalConfiguration ?? {}
+                )}
             />
             <ConfigurationWrapper
+                onCanonicalConfiguration={setCanonicalConfiguration}
+                onRecord={setRecord}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
                 configurationId={insertable.configurationId}
@@ -132,6 +191,9 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
             <Group justify="flex-end" mt="md">
                 <Button
                     leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
+                    // Saving before the wrapper reports would store {}, wiping
+                    // the favorite's configuration.
+                    disabled={!canonicalConfiguration}
                     onClick={() => {
                         setDefaultConfigurationMutation.mutate();
                         modals.closeAll();
