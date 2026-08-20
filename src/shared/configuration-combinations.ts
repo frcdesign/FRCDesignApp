@@ -37,10 +37,10 @@ export enum IndexingBand {
 
 /**
  * Shared with the admin card, so it can't drift from what the load path does.
- * Custom parts are the one exclusion: team-made, so there is no metadata to parse.
+ * The count is the only gate: past the cap nothing can be enumerated, and past
+ * the threshold an admin decides.
  */
 export function isIndexingEnabled(
-    isCustom: boolean,
     band: IndexingBand,
     forceIndex: boolean
 ): boolean {
@@ -50,7 +50,7 @@ export function isIndexingEnabled(
         case IndexingBand.MANUAL:
             return forceIndex;
         case IndexingBand.AUTOMATIC:
-            return !isCustom || forceIndex;
+            return true;
     }
 }
 

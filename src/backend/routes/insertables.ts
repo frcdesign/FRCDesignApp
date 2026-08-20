@@ -37,6 +37,7 @@ import { encodeConfiguration } from "../onshape-api/endpoints/configurations";
 import { FastenMateBuilder } from "../onshape-api/objects/assembly-features";
 import { getFastenQuery, parseFastenInfo } from "../parse/insert-and-fasten";
 import { addBuildIssue, clearBuildIssue } from "../../shared/build-issues";
+import { checkIndexedPartNumber } from "../parse/build-checks";
 
 export const insertableRoutes = getApp();
 
@@ -134,13 +135,7 @@ insertableRoutes.post(
                     .where(eq(configurations.id, insertableId))
                     .get()
             )?.parameters ?? [];
-        // Read, not re-derived: the load path already wrote these, and two
-        // copies of the derivation would have to stay in lockstep.
-        const indexing = decideIndexing(
-            row.vendors,
-            parameters,
-            body.forceIndex
-        );
+        const indexing = decideIndexing(parameters, body.forceIndex);
 
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
@@ -161,7 +156,9 @@ insertableRoutes.post(
         const buildIssues = addBuildIssue(
             clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
             ...indexed.buildIssues,
-            ...indexing.buildIssues
+            ...indexing.buildIssues,
+            // Vendors are read, not re-derived: the load path wrote them.
+            ...checkIndexedPartNumber(row.vendors, indexed.records)
         );
 
         // Keep a configurations row while there's parameters or records to hold;

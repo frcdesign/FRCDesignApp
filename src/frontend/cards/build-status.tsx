@@ -41,7 +41,7 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "../../shared/api-models";
-import { getVendorName, isCustomPart, Vendor } from "../../shared/types";
+import { getVendorName, Vendor } from "../../shared/types";
 import {
     ConfigurationParameter,
     ParameterType
@@ -702,10 +702,7 @@ function IndexingRow({
                 tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
             />
         );
-    } else if (
-        band === IndexingBand.AUTOMATIC &&
-        !isCustomPart(status.vendors)
-    ) {
+    } else if (band === IndexingBand.AUTOMATIC) {
         control = (
             <IndexingIcon
                 severity={null}
@@ -713,26 +710,13 @@ function IndexingRow({
             />
         );
     } else {
-        // Custom parts index only when forced, so they need the switch too.
-        const toggle = (
+        control = (
             <Switch
                 size="sm"
                 checked={status.forceIndex}
                 onChange={() => mutation.mutate(!status.forceIndex)}
                 withThumbIndicator={false}
             />
-        );
-        control = isCustomPart(status.vendors) ? (
-            <Tooltip
-                label="Custom parts are team-made, so there is no vendor metadata to parse."
-                withArrow
-                multiline
-                w={260}
-            >
-                {toggle}
-            </Tooltip>
-        ) : (
-            toggle
         );
     }
 

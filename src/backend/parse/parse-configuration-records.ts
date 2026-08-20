@@ -13,7 +13,7 @@
  */
 import { OnshapeApi } from "../onshape-api/onshape-api";
 import { ElementPath } from "../../shared/onshape-path";
-import { ElementType, type Vendor, isCustomPart } from "../../shared/types";
+import { ElementType } from "../../shared/types";
 import {
     ParameterValues,
     ConfigurationParameter,
@@ -65,12 +65,13 @@ export const INDEXING_ISSUE_TYPES = [
     BuildIssueType.TOO_MANY_CONFIGURATIONS,
     BuildIssueType.MANY_CONFIGURATIONS,
     BuildIssueType.MULTIPLE_PARTS,
-    BuildIssueType.UNSTABLE_COMPOSITE
+    BuildIssueType.UNSTABLE_COMPOSITE,
+    BuildIssueType.NO_PART_NUMBER
 ];
 
 /** Whether to index an insertable, and how to flag it if we don't. */
 export interface IndexingDecision {
-    /** Index when enabled by an admin, or a non-custom part under the threshold. */
+    /** Index below the threshold, or above it when an admin enabled it. */
     shouldIndex: boolean;
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
@@ -78,30 +79,22 @@ export interface IndexingDecision {
     configurations: ParameterValues[];
 }
 
-/**
- * Past the hard cap forcing it on cannot help, since enumeration stops there.
- * Only a candidate is flagged — an admin who enabled it is owed the reason.
- */
+/** Past the hard cap forcing it on cannot help, since enumeration stops there. */
 export function decideIndexing(
-    vendors: Vendor[],
     parameters: ConfigurationParameter[],
     forceIndex: boolean
 ): IndexingDecision {
     const { band, configurations } = countConfigurations(parameters);
-    const isCustom = isCustomPart(vendors);
-    const isCandidate = !isCustom || forceIndex;
-    const shouldIndex = isIndexingEnabled(isCustom, band, forceIndex);
+    const shouldIndex = isIndexingEnabled(band, forceIndex);
 
     if (band === IndexingBand.EXCEEDED) {
         return {
             shouldIndex,
-            buildIssues: isCandidate
-                ? [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }]
-                : [],
+            buildIssues: [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }],
             configurations
         };
     }
-    if (band === IndexingBand.MANUAL && !isCustom && !forceIndex) {
+    if (band === IndexingBand.MANUAL && !forceIndex) {
         return {
             shouldIndex,
             buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }],

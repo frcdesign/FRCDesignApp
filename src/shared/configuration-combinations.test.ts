@@ -202,25 +202,19 @@ describe("countConfigurations", () => {
 
 describe("isIndexingEnabled", () => {
     it.each([
-        // Any non-custom insertable under the threshold indexes without being
-        // asked — including one whose vendor the heuristic never recognized.
-        { custom: false, band: IndexingBand.AUTOMATIC, force: false, on: true },
-        // A custom part never does, until an admin says so.
-        { custom: true, band: IndexingBand.AUTOMATIC, force: false, on: false },
-        { custom: true, band: IndexingBand.AUTOMATIC, force: true, on: true },
-        // Past the threshold it waits to be enabled, custom or not.
-        { custom: false, band: IndexingBand.MANUAL, force: false, on: false },
-        { custom: false, band: IndexingBand.MANUAL, force: true, on: true },
-        { custom: true, band: IndexingBand.MANUAL, force: false, on: false },
+        // Under the threshold everything indexes, custom included: a part with
+        // no part number is a normal record, not a reason to skip it.
+        { band: IndexingBand.AUTOMATIC, force: false, on: true },
+        { band: IndexingBand.AUTOMATIC, force: true, on: true },
+        // Past the threshold it waits to be enabled.
+        { band: IndexingBand.MANUAL, force: false, on: false },
+        { band: IndexingBand.MANUAL, force: true, on: true },
         // Past the cap there is nothing to enumerate, so enabling changes nothing.
-        { custom: false, band: IndexingBand.EXCEEDED, force: true, on: false },
-        { custom: false, band: IndexingBand.EXCEEDED, force: false, on: false }
-    ])(
-        "custom=$custom band=$band force=$force -> $on",
-        ({ custom, band, force, on }) => {
-            expect(isIndexingEnabled(custom, band, force)).toBe(on);
-        }
-    );
+        { band: IndexingBand.EXCEEDED, force: true, on: false },
+        { band: IndexingBand.EXCEEDED, force: false, on: false }
+    ])("band=$band force=$force -> $on", ({ band, force, on }) => {
+        expect(isIndexingEnabled(band, force)).toBe(on);
+    });
 });
 
 describe("isIndexedParameter", () => {

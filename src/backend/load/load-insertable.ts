@@ -75,7 +75,7 @@ export async function loadInsertable(
 
     const isOpenComposite = await computeOpenCompositeStep(ctx, target);
 
-    const indexing = decideIndexing(vendors, parameters, flags.forceIndex);
+    const indexing = decideIndexing(parameters, flags.forceIndex);
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(
@@ -102,7 +102,11 @@ export async function loadInsertable(
     );
 
     const buildIssues = addBuildIssue(
-        checkInsertable({ vendors, thumbnailUrls }),
+        checkInsertable({
+            vendors,
+            thumbnailUrls,
+            records: recordsResult.records
+        }),
         ...recordsResult.buildIssues,
         ...indexing.buildIssues
     );

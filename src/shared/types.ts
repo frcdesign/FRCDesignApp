@@ -34,6 +34,8 @@ export function isWithinAccessLevel(
 
 export enum Vendor {
     AM = "AM",
+    /** Marks a part the team made, so nobody sells it and it has no part number. */
+    CUSTOM = "Custom",
     LAI = "LAI",
     MCM = "MCM",
     REDUX = "Redux",
@@ -45,12 +47,9 @@ export enum Vendor {
     WCP = "WCP"
 }
 
-/**
- * A team-made part: no vendor was recognized, so there is no metadata worth
- * indexing until an admin says otherwise. See `isIndexingEnabled`.
- */
+/** Team-made, so it is expected to have no part number. */
 export function isCustomPart(vendors: Vendor[]): boolean {
-    return vendors.length === 0;
+    return vendors.includes(Vendor.CUSTOM);
 }
 
 /**
@@ -60,6 +59,8 @@ export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AM:
             return "AndyMark";
+        case Vendor.CUSTOM:
+            return "Custom";
         case Vendor.LAI:
             return "Last Anvil Innovations";
         case Vendor.MCM:

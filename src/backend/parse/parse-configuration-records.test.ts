@@ -13,7 +13,7 @@ import {
     ConfigurationParameter
 } from "../../shared/configuration-models";
 import { enumParam } from "../../__test_utils__/configuration-fixtures";
-import { ElementType, Vendor } from "../../shared/types";
+import { ElementType } from "../../shared/types";
 import { BuildIssueType } from "../../shared/build-issues";
 import {
     decideIndexing,
@@ -48,100 +48,28 @@ const MANY = [{ type: BuildIssueType.MANY_CONFIGURATIONS }];
 const TOO_MANY = [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }];
 
 describe("decideIndexing", () => {
+    // Vendors no longer enter into it: the configuration count is the only gate.
     it.each([
-        // A vendor part below the auto line indexes on its own.
-        {
-            vendors: [Vendor.AM],
-            configs: 127,
-            force: false,
-            index: true,
-            issues: []
-        },
+        // Below the auto line it indexes on its own.
+        { configs: 127, force: false, index: true, issues: [] },
         // At the line it waits, flagged so an admin can trim or enable it.
-        {
-            vendors: [Vendor.AM],
-            configs: 128,
-            force: false,
-            index: false,
-            issues: MANY
-        },
+        { configs: 128, force: false, index: false, issues: MANY },
         // Enabling it overrides the count, and clears the flag.
-        {
-            vendors: [Vendor.AM],
-            configs: 128,
-            force: true,
-            index: true,
-            issues: []
-        },
+        { configs: 128, force: true, index: true, issues: [] },
         // Past the hard cap there is nothing to enumerate, so enabling it can't
         // help — it stays unindexed and flagged either way.
-        {
-            vendors: [Vendor.AM],
-            configs: 600,
-            force: false,
-            index: false,
-            issues: TOO_MANY
-        },
-        {
-            vendors: [Vendor.AM],
-            configs: 600,
-            force: true,
-            index: false,
-            issues: TOO_MANY
-        },
-        // No recognized vendor means team-made: never auto-eligible, never
-        // flagged, but still enableable by an admin.
-        {
-            vendors: [],
-            configs: 50,
-            force: false,
-            index: false,
-            issues: []
-        },
-        {
-            vendors: [],
-            configs: 50,
-            force: true,
-            index: true,
-            issues: []
-        },
-        // Nor flagged for a count it was never going to index against...
-        {
-            vendors: [],
-            configs: 200,
-            force: false,
-            index: false,
-            issues: []
-        },
-        {
-            vendors: [],
-            configs: 600,
-            force: false,
-            index: false,
-            issues: []
-        },
-        // ...unless an admin enabled it and is owed the reason it did nothing.
-        {
-            vendors: [],
-            configs: 600,
-            force: true,
-            index: false,
-            issues: TOO_MANY
-        }
-    ])(
-        "vendors=$vendors configs=$configs force=$force",
-        ({ vendors, configs, force, index, issues }) => {
-            const { shouldIndex, buildIssues } = decideIndexing(
-                vendors,
-                paramsWithConfigs(configs),
-                force
-            );
-            expect({ shouldIndex, buildIssues }).toEqual({
-                shouldIndex: index,
-                buildIssues: issues
-            });
-        }
-    );
+        { configs: 600, force: false, index: false, issues: TOO_MANY },
+        { configs: 600, force: true, index: false, issues: TOO_MANY }
+    ])("configs=$configs force=$force", ({ configs, force, index, issues }) => {
+        const { shouldIndex, buildIssues } = decideIndexing(
+            paramsWithConfigs(configs),
+            force
+        );
+        expect({ shouldIndex, buildIssues }).toEqual({
+            shouldIndex: index,
+            buildIssues: issues
+        });
+    });
 });
 
 describe("parsePartStudioRecord", () => {
