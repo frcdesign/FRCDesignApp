@@ -1,6 +1,6 @@
-import { OnshapeRateLimitError } from "../../../lib/onshape/client";
-import type { ThumbnailUrls } from "../../thumbnails/types";
-import { NoSuchConfigurationError } from "../../../lib/onshape/endpoints/thumbnails";
+import { OnshapeRateLimitError } from "../../lib/onshape/client";
+import type { ThumbnailUrls } from "../thumbnails/types";
+import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import type { LoadContext } from "./context";
 
 /** The retry input a Workflow `delay` callback receives. */

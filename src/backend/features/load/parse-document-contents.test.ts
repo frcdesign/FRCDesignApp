@@ -6,7 +6,7 @@ import {
     type OnshapeFolderEntry,
     OnshapeElementType,
     OnshapeFolderEntryType
-} from "../../../lib/onshape/types";
+} from "../../lib/onshape/types";
 import { parseInsertableTabs } from "./parse-document-contents";
 
 function element(

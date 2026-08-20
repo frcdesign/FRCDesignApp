@@ -1,18 +1,15 @@
-import { ElementType } from "../../../lib/onshape/element-type";
-import { FastenInfo, MateLocation } from "./fasten";
-import { type ElementPath } from "../../../lib/onshape/path";
-import { getAssembly } from "../../../lib/onshape/endpoints/assemblies";
-import { getFeatures } from "../../../lib/onshape/endpoints/part-studios";
-import {
-    featureOccurrenceQuery,
-    partStudioMateConnectorQuery
-} from "../../../lib/onshape/objects/assembly-features";
-import { OnshapeApi } from "../../../lib/onshape/client";
+import { ElementType } from "../../lib/onshape/element-type";
+import { FastenInfo, MateLocation } from "../library/insertables/fasten";
+import { type ElementPath } from "../../lib/onshape/path";
+import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
+import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
+
+import { OnshapeApi } from "../../lib/onshape/client";
 import {
     OnshapeAssemblyDefinition,
     OnshapeAssemblyFeature,
     OnshapeFeatureListResponse
-} from "../../../lib/onshape/types";
+} from "../../lib/onshape/types";
 
 export async function parseFastenInfo(
     onshapeApi: OnshapeApi,
@@ -108,23 +105,4 @@ export function parseFastenInfoFromAssembly(
     throw new Error(
         "Failed to find a valid Mate connector feature or instance."
     );
-}
-
-export function getFastenQuery(
-    targetElementType: ElementType,
-    path: string[],
-    fastenInfo: FastenInfo
-): object {
-    if (targetElementType === ElementType.PART_STUDIO) {
-        return partStudioMateConnectorQuery(fastenInfo.mateConnectorId, path);
-    }
-
-    const assemblyPath = [...path, ...fastenInfo.path];
-    if (fastenInfo.mateLocation === MateLocation.Part) {
-        return partStudioMateConnectorQuery(
-            fastenInfo.mateConnectorId,
-            assemblyPath
-        );
-    }
-    return featureOccurrenceQuery(fastenInfo.mateConnectorId, assemblyPath);
 }

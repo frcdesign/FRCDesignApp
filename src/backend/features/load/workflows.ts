@@ -4,15 +4,19 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import type { AppBindings } from "../../../lib/context";
-import { getDb } from "../../../db/client";
-import type { LibraryId } from "../library-id";
-import { bumpLibraryVersion, placeNewGroup, rebuildSearchDb } from "../db";
-import { getDocument } from "../../../lib/onshape/endpoints/documents";
-import { getLatestVersionId } from "../../../lib/onshape/endpoints/versions";
-import type { InstancePath } from "../../../lib/onshape/path";
-import { group, insertables, libraries } from "../../../db/schema";
-import { uploadConfigurationThumbnails } from "../../thumbnails/routes";
+import type { AppBindings } from "../../lib/context";
+import { getDb } from "../../db/client";
+import type { LibraryId } from "../library/library-id";
+import {
+    bumpLibraryVersion,
+    placeNewGroup,
+    rebuildSearchDb
+} from "../library/db";
+import { getDocument } from "../../lib/onshape/endpoints/documents";
+import { getLatestVersionId } from "../../lib/onshape/endpoints/versions";
+import type { InstancePath } from "../../lib/onshape/path";
+import { group, libraries } from "../../db/schema";
+
 import {
     type GroupTarget,
     type LoadContext,
@@ -22,7 +26,6 @@ import {
 } from "./context";
 import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
-import { THUMBNAIL_STEP_RETRIES } from "./steps";
 
 export interface LoadLibraryParams {
     libraryId: LibraryId;
@@ -228,74 +231,4 @@ async function finalizeLibrary(
     const db = getDb(env.DB);
     await rebuildSearchDb(env.BLOB, db, libraryId);
     await bumpLibraryVersion(db, libraryId);
-}
-
-/** The render to run, plus the session whose Onshape tokens it runs under. */
-export interface ThumbnailWorkflowParams {
-    insertableId: string;
-    /** Part of the key, so a render lands where the request looked for it. */
-    microversionId: string;
-    /** Never the default, which loads eagerly with the element. */
-    canonicalConfiguration: string;
-    sessionId: string;
-}
-
-/**
- * Outside a request, since Onshape can take minutes. Until it finishes,
- * requests fall back to the element's default thumbnail.
- */
-export class ThumbnailWorkflow extends WorkflowEntrypoint<
-    AppBindings,
-    ThumbnailWorkflowParams
-> {
-    async run(
-        event: WorkflowEvent<ThumbnailWorkflowParams>,
-        step: WorkflowStep
-    ): Promise<void> {
-        const {
-            insertableId,
-            microversionId,
-            canonicalConfiguration,
-            sessionId
-        } = event.payload;
-
-        const elementPath = await step.do("resolve-element", async () => {
-            const row = await getDb(this.env.DB)
-                .select({
-                    documentId: insertables.documentId,
-                    versionId: insertables.versionId,
-                    elementId: insertables.elementId
-                })
-                .from(insertables)
-                .where(eq(insertables.id, insertableId))
-                .get();
-            if (!row) {
-                throw new Error(`No insertable ${insertableId}`);
-            }
-            return {
-                documentId: row.documentId,
-                instanceId: row.versionId,
-                instanceType: "v" as const,
-                elementId: row.elementId
-            };
-        });
-
-        await step.do(
-            "render-thumbnails",
-            { retries: THUMBNAIL_STEP_RETRIES },
-            async () =>
-                uploadConfigurationThumbnails(
-                    this.env.BLOB,
-                    await getOnshapeApiFromContext({
-                        env: this.env,
-                        sessionId,
-                        step,
-                        limit: createLimiter(1)
-                    }),
-                    elementPath,
-                    microversionId,
-                    canonicalConfiguration
-                )
-        );
-    }
 }

@@ -1,6 +1,6 @@
-import type { AppBindings } from "../../../lib/context";
-import type { LibraryId } from "../library-id";
-import type { JobStatus } from "../dto";
+import type { AppBindings } from "../../lib/context";
+import type { LibraryId } from "../library/library-id";
+import type { JobStatus } from "../library/dto";
 
 /**
  * Backstop for a job that crashes before untracking itself; must outlast the

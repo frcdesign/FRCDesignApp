@@ -2,8 +2,8 @@
  * Factories for the load pipeline's insertable shapes. Import directly: the
  * barrel re-exports Workers-only helpers these tests cannot resolve.
  */
-import type { InsertableTarget } from "@backend/features/library/workflows/context";
-import type { ParsedInsertable } from "@backend/features/library/workflows/load-insertable";
+import type { InsertableTarget } from "@backend/features/load/context";
+import type { ParsedInsertable } from "@backend/features/load/load-insertable";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     TEST_GROUP_ID,

@@ -1,32 +1,32 @@
 import { eq } from "drizzle-orm";
-import { type Db, getDb } from "../../../db/client";
+import { type Db, getDb } from "../../db/client";
 import type {
     Configuration,
     ConfigurationParameter
-} from "../../configurations/models";
+} from "../configurations/models";
 import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../build-checker/issues";
-import { ElementType } from "../../../lib/onshape/element-type";
-import type { FastenInfo } from "../insertables/fasten";
-import type { ThumbnailUrls } from "../../thumbnails/types";
-import type { Vendor } from "../vendors";
-import { configurations, insertables } from "../../../db/schema";
-import { uploadThumbnails } from "../../thumbnails/routes";
-import { getConfiguration } from "../../../lib/onshape/endpoints/configurations";
-import { getParts } from "../../../lib/onshape/endpoints/parts";
-import { checkInsertable } from "../../build-checker/checks";
-import { parseOnshapeConfiguration } from "../../configurations/parse-configuration";
-import { parseVendors } from "../parse-vendors";
-import { parseFastenInfo } from "../insertables/parse-fasten";
+} from "../build-checker/issues";
+import { ElementType } from "../../lib/onshape/element-type";
+import type { FastenInfo } from "../library/insertables/fasten";
+import type { ThumbnailUrls } from "../thumbnails/types";
+import type { Vendor } from "../library/vendors";
+import { configurations, insertables } from "../../db/schema";
+import { uploadThumbnails } from "../thumbnails/store";
+import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
+import { getParts } from "../../lib/onshape/endpoints/parts";
+import { checkInsertable } from "../build-checker/checks";
+import { parseOnshapeConfiguration } from "./parse-configuration";
+import { parseVendors } from "./parse-vendors";
+import { parseFastenInfo } from "./parse-fasten";
 import {
     NO_RECORDS,
     computeOpenComposite,
     decideIndexing,
     loadConfigurationRecords
-} from "../../configurations/records";
+} from "./parse-configuration-records";
 import {
     type InsertableTarget,
     type LoadContext,

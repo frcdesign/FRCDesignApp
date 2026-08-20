@@ -1,10 +1,10 @@
 import type { WorkflowStep } from "cloudflare:workers";
-import type { AppBindings } from "../../../lib/context";
-import { getOnshapeApiFromSessionId } from "../../auth/onshape-oauth";
-import type { OnshapeApi } from "../../../lib/onshape/client";
-import type { ElementType } from "../../../lib/onshape/element-type";
-import type { LibraryId } from "../library-id";
-import type { ElementPath, InstancePath } from "../../../lib/onshape/path";
+import type { AppBindings } from "../../lib/context";
+import { getOnshapeApiFromSessionId } from "../auth/onshape-oauth";
+import type { OnshapeApi } from "../../lib/onshape/client";
+import type { ElementType } from "../../lib/onshape/element-type";
+import type { LibraryId } from "../library/library-id";
+import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
 /** How many insertables a load reads from Onshape at once. */
 export const LOAD_CONCURRENCY = 15;

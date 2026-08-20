@@ -1,9 +1,9 @@
 import { type Context, Hono } from "hono";
 import type {
     AddGroupParams,
-    LoadLibraryParams,
-    ThumbnailWorkflowParams
-} from "../features/library/workflows/index";
+    LoadLibraryParams
+} from "../features/load/workflows";
+import type { ThumbnailWorkflowParams } from "../features/thumbnails/workflow";
 import { type AccessLevel } from "../features/auth/access-level";
 import { type OAuthApi } from "./onshape/client";
 

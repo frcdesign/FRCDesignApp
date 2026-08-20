@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { OnshapeRateLimitError } from "../../../lib/onshape/client";
-import { NoSuchConfigurationError } from "../../../lib/onshape/endpoints/thumbnails";
+import { OnshapeRateLimitError } from "../../lib/onshape/client";
+import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import { ONSHAPE_STEP_RETRIES, THUMBNAIL_STEP_RETRIES } from "./steps";
 
 /** The delay before the retry that follows attempt `attempt`. */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { countConfigurations } from "./combinations";
+import { countConfigurations } from "../configurations/combinations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as MetadataEndpoints from "../../lib/onshape/endpoints/metadata";
 import { OnshapeApi } from "../../lib/onshape/client";
@@ -8,7 +8,10 @@ import type {
     OnshapePart
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
-import { ParameterValues, ConfigurationParameter } from "./models";
+import {
+    ParameterValues,
+    ConfigurationParameter
+} from "../configurations/models";
 import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
@@ -17,7 +20,7 @@ import {
     parseAssemblyRecord,
     parseConfigurationRecords,
     parsePartStudioRecord
-} from "./records";
+} from "./parse-configuration-records";
 
 const PATH: ElementPath = {
     documentId: "d",

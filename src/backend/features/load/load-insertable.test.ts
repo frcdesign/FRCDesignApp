@@ -1,19 +1,19 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { getDb } from "../../../db/client";
-import { configurations, insertables } from "../../../db/schema";
-import type { ConfigurationRecord } from "../../configurations/models";
+import { getDb } from "../../db/client";
+import { configurations, insertables } from "../../db/schema";
+import type { ConfigurationRecord } from "../configurations/models";
 import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
     resetDb,
     seedGroup
-} from "../../../../__test_utils__";
+} from "../../../__test_utils__";
 import {
     insertableTarget,
     parsedInsertable
-} from "../../../../__test_utils__/insertable-fixtures";
+} from "../../../__test_utils__/insertable-fixtures";
 import { saveInsertable } from "./load-insertable";
 
 const db = getDb(env.DB);

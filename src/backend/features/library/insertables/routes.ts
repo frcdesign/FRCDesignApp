@@ -21,7 +21,7 @@ import {
     decideIndexing,
     parseConfigurationRecords,
     type ConfigurationRecordsResult
-} from "../../configurations/records";
+} from "../../load/parse-configuration-records";
 import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -36,7 +36,8 @@ import {
 } from "../../../lib/onshape/endpoints/documents";
 import { encodeConfiguration } from "../../../lib/onshape/endpoints/configurations";
 import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
-import { getFastenQuery, parseFastenInfo } from "./parse-fasten";
+import { parseFastenInfo } from "../../load/parse-fasten";
+import { getFastenQuery } from "./fasten-query";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 import { checkIndexedPartNumber } from "../../build-checker/checks";
 

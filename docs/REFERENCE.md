@@ -72,7 +72,7 @@ All rendering happens inside the workflow, which keeps Onshape's thumbnail id se
 
 ### Workflows — Background Jobs
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. All three are defined in `src/backend/features/library/workflows/`:
+Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. The two load workflows live in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/workflow.ts`:
 
 | Binding                 | Class                 | What it does                                                                         |
 | ----------------------- | --------------------- | ------------------------------------------------------------------------------------ |
@@ -152,9 +152,10 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 - `features/` — one directory per feature, each holding its own `routes.ts` plus whatever it owns:
     - `auth/` — OAuth flow (`onshape-oauth.ts`), session storage (`session.ts`), and the two authorization gates: `sign-in.ts` (signed in to Onshape at all) and `access-control.ts` (on the admin team)
     - `users/` — user preferences and the `Settings` model
-    - `library/` — the library response (`db.ts`), its DTOs, groups and insertables, and `workflows/` (the three Workflows, their retry policies, and the job tracker)
-    - `configurations/` — configuration models, canonicalization, combination enumeration, and the Onshape parsers
-    - `thumbnails/` — thumbnail routes plus the R2 key and URL scheme the client shares
+    - `library/` — the library response (`db.ts`), its DTOs, and the groups and insertables endpoints
+    - `load/` — everything that turns Onshape into what we store: the `parse-*` modules (document contents, configurations, configuration records, vendors, fasten info), the per-group and per-insertable loaders, the Workflows that drive them, their retry policies, and the job tracker
+    - `configurations/` — the configuration domain the frontend shares: models, canonicalization, combination enumeration, and the input parser
+    - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
     - `favorites/`, `search/`
 

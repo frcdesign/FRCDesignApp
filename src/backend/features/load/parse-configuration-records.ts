@@ -9,7 +9,7 @@ import {
     ParameterValues,
     ConfigurationParameter,
     ConfigurationRecord
-} from "./models";
+} from "../configurations/models";
 import {
     addBuildIssue,
     type BuildIssue,
@@ -19,19 +19,16 @@ import {
     countConfigurations,
     IndexingBand,
     isIndexingEnabled
-} from "./combinations";
-import { canonicalizeConfiguration } from "./canonical";
+} from "../configurations/combinations";
+import { canonicalizeConfiguration } from "../configurations/canonical";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
     OnshapeMetadataObject,
     OnshapePart
 } from "../../lib/onshape/types";
-import {
-    type LoadContext,
-    getOnshapeApiFromContext
-} from "../library/workflows/context";
-import { ONSHAPE_STEP_RETRIES } from "../library/workflows/steps";
+import { type LoadContext, getOnshapeApiFromContext } from "./context";
+import { ONSHAPE_STEP_RETRIES } from "./steps";
 
 /** Configurations fetched per workflow step. */
 const BATCH_SIZE = 20;

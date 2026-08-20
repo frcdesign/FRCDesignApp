@@ -6,8 +6,8 @@ import {
     ParameterType,
     type VisibilityCondition,
     VisibilityType
-} from "./models";
-import { getUnitDisplayStr } from "./enums";
+} from "../configurations/models";
+import { getUnitDisplayStr } from "../configurations/enums";
 import {
     type OnshapeConfigurationResponse,
     type OnshapeEnumOptionVisibilityConditionList,

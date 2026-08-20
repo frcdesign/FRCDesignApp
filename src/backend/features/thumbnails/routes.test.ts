@@ -12,7 +12,7 @@ import {
     DEFAULT_CANONICAL_CONFIGURATION,
     canonicalConfigurationKey
 } from "../configurations/canonical";
-import { uploadConfigurationThumbnails } from "./routes";
+import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 
 const SIZE = ThumbnailSize.LARGE;

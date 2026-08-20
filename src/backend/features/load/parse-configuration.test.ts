@@ -5,9 +5,9 @@ import {
     ParameterType,
     VisibilityCondition,
     VisibilityType
-} from "./models";
-import { LogicalOp, QuantityType, Unit } from "./enums";
-import { evaluateCondition } from "./utils";
+} from "../configurations/models";
+import { LogicalOp, QuantityType, Unit } from "../configurations/enums";
+import { evaluateCondition } from "../configurations/utils";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import {
     OnshapeConfigurationResponse,

@@ -6,13 +6,13 @@ import {
     type OnshapeElement,
     OnshapeElementType,
     OnshapeFolderEntryType
-} from "../../../lib/onshape/types";
-import * as DocumentEndpoints from "../../../lib/onshape/endpoints/documents";
-import * as ConfigurationEndpoints from "../../../lib/onshape/endpoints/configurations";
-import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
-import { getDb } from "../../../db/client";
-import { group, insertables } from "../../../db/schema";
-import { BuildIssueType } from "../../build-checker/issues";
+} from "../../lib/onshape/types";
+import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
+import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
+import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import { getDb } from "../../db/client";
+import { group, insertables } from "../../db/schema";
+import { BuildIssueType } from "../build-checker/issues";
 import {
     type StoredInsertable,
     findRemovedInsertables,
@@ -30,7 +30,7 @@ import {
     resetDb,
     seedGroup,
     seedInsertable
-} from "../../../../__test_utils__";
+} from "../../../__test_utils__";
 
 const GROUP: GroupTarget = {
     libraryId: TEST_LIBRARY_ID,

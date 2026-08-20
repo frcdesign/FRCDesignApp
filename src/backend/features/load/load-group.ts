@@ -1,18 +1,18 @@
 import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import { type Db, getDb } from "../../../db/client";
-import { ElementType } from "../../../lib/onshape/element-type";
-import type { ThumbnailUrls } from "../../thumbnails/types";
+import { type Db, getDb } from "../../db/client";
+import { ElementType } from "../../lib/onshape/element-type";
+import type { ThumbnailUrls } from "../thumbnails/types";
 import {
     addBuildIssue,
     type BuildIssue,
     BuildIssueType
-} from "../../build-checker/issues";
-import { group, insertables } from "../../../db/schema";
-import { uploadDocumentThumbnails } from "../../thumbnails/routes";
-import { getContents } from "../../../lib/onshape/endpoints/documents";
-import type { OnshapeElement } from "../../../lib/onshape/types";
-import { checkGroup } from "../../build-checker/checks";
+} from "../build-checker/issues";
+import { group, insertables } from "../../db/schema";
+import { uploadDocumentThumbnails } from "../thumbnails/store";
+import { getContents } from "../../lib/onshape/endpoints/documents";
+import type { OnshapeElement } from "../../lib/onshape/types";
+import { checkGroup } from "../build-checker/checks";
 import { parseInsertableTabs } from "./parse-document-contents";
 import { loadInsertable } from "./load-insertable";
 import {
@@ -22,7 +22,7 @@ import {
     getOnshapeApiFromContext
 } from "./context";
 import { uploadThumbnailsStep } from "./steps";
-import type { InstancePath } from "../../../lib/onshape/path";
+import type { InstancePath } from "../../lib/onshape/path";
 
 export interface GroupLoadResult {
     loadedElements: number;

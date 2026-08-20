@@ -14,7 +14,7 @@ import {
     getJobStatus,
     isReloadRunning,
     trackJob
-} from "../workflows/job-tracker";
+} from "../../load/job-tracker";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 

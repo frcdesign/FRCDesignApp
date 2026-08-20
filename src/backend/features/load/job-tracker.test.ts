@@ -6,7 +6,7 @@ import {
     trackJob,
     untrackJob
 } from "./job-tracker";
-import { TEST_LIBRARY_ID } from "../../../../__test_utils__";
+import { TEST_LIBRARY_ID } from "../../../__test_utils__";
 
 interface Job {
     id: string;

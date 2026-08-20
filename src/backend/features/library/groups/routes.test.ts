@@ -18,7 +18,7 @@ import type { JobStatus } from "../dto";
 import { searchIndexKey } from "../db";
 import { SEARCH_OPTIONS, type SearchDocument } from "../../search/search-index";
 import * as DocumentsEndpoint from "../../../lib/onshape/endpoints/documents";
-import * as JobTracker from "../workflows/job-tracker";
+import * as JobTracker from "../../load/job-tracker";
 
 const db = getDb(env.DB);
 

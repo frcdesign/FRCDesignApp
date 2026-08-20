@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Vendor } from "./vendors";
+import { Vendor } from "../library/vendors";
 import { ParameterType } from "../configurations/models";
 import { QuantityType, Unit } from "../configurations/enums";
 import { parseNameVendor, parseVendors } from "./parse-vendors";

@@ -1,13 +1,13 @@
 /**
  * Extracts the insertable tabs from a document's contents listing.
  */
-import { ElementType } from "../../../lib/onshape/element-type";
+import { ElementType } from "../../lib/onshape/element-type";
 import {
     type OnshapeDocumentContents,
     type OnshapeElement,
     type OnshapeFolderEntry,
     OnshapeFolderEntryType
-} from "../../../lib/onshape/types";
+} from "../../lib/onshape/types";
 
 const VALID_ELEMENT_TYPES = new Set<string>([
     ElementType.ASSEMBLY,

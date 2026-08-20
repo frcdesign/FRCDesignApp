@@ -1,4 +1,4 @@
-import { Vendor, getVendorName } from "./vendors";
+import { Vendor, getVendorName } from "../library/vendors";
 import {
     ParameterType,
     type ConfigurationParameter
