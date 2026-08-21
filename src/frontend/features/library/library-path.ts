@@ -13,6 +13,10 @@ export function useLibraryId(): LibraryId {
     return params?.libraryId ?? DEFAULT_SETTINGS.libraryId;
 }
 
+export function isLibraryId(libraryId: string): libraryId is LibraryId {
+    return (Object.values(LibraryId) as string[]).includes(libraryId);
+}
+
 export function toLibraryPath(libraryId: LibraryId): string {
     return `/library/${libraryId}`;
 }

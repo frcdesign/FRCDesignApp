@@ -2,7 +2,13 @@ import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
-import { ApiError, ApiErrorKind, handledError } from "./api-error";
+import {
+    ApiError,
+    ApiErrorKind,
+    handledError,
+    internalError,
+    rateLimitedError
+} from "./api-error";
 import type { AppContextEnv } from "./context";
 
 /**
@@ -11,8 +17,7 @@ import type { AppContextEnv } from "./context";
  */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
-        return new ApiError(
-            ApiErrorKind.HANDLED,
+        return rateLimitedError(
             "Onshape rate limit reached. Please try again shortly.",
             HttpStatus.TOO_MANY_REQUESTS,
             error.retryAfterSeconds
@@ -27,8 +32,7 @@ function fromOnshapeError(error: OnshapeApiError): ApiError {
             error.status
         );
     }
-    return new ApiError(
-        ApiErrorKind.INTERNAL,
+    return internalError(
         `Onshape request failed: ${error.message}`,
         HttpStatus.BAD_GATEWAY
     );
@@ -40,7 +44,7 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     }
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
-        if (apiError.kind === ApiErrorKind.INTERNAL) {
+        if (apiError.body.kind === ApiErrorKind.INTERNAL) {
             console.error(err);
         }
         return c.json(apiError.body, apiError.status as never);

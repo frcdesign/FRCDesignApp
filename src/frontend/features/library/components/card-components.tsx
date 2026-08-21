@@ -1,4 +1,4 @@
-import { Group, Menu, Stack, Table, Text } from "@mantine/core";
+import { Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     ArrowSquareOut,
     ArrowsClockwise,
@@ -7,7 +7,7 @@ import {
     Link,
     Plus
 } from "@phosphor-icons/react";
-import { IconColor, IconSize } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { Fragment, PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../../../components/app-menu";
@@ -207,9 +207,10 @@ export function CardTitle(props: CardTitleProps) {
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
             {isHidden && (
-                <EyeSlash
+                <Box
+                    component={EyeSlash}
                     size={IconSize.SMALL}
-                    color={IconColor.YELLOW}
+                    c="yellow"
                     alt="Hidden"
                 />
             )}

@@ -10,7 +10,6 @@ import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
 import {
     BORDER,
     FontWeight,
-    IconColor,
     IconSize
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
@@ -179,7 +178,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionError
                 icon={
-                    <Warning size={IconSize.LARGE} color={IconColor.YELLOW} />
+                    <Box component={Warning} size={IconSize.LARGE} c="yellow" />
                 }
                 title="All elements are hidden by filters"
                 action={<ClearFiltersButton />}

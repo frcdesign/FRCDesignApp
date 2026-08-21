@@ -46,14 +46,12 @@ interface ToastConfig {
     withCloseButton?: boolean;
 }
 
-/** Shows a toast, replacing any existing toast with the same id. */
+/** Ids currently on screen, so a repeat updates rather than replaces. */
+const liveToasts = new Set<string>();
+
+/** Shows a toast, updating any existing toast with the same id. */
 function showToast(config: ToastConfig): string {
-    // Mantine's `show` no-ops when a toast with this id already exists, so hide
-    // it first to replace it (e.g. a loading toast upgraded to success).
-    if (config.id) {
-        notifications.hide(config.id);
-    }
-    return notifications.show({
+    const props = {
         id: config.id,
         color: config.color,
         icon: config.icon,
@@ -61,7 +59,21 @@ function showToast(config: ToastConfig): string {
         loading: config.loading,
         autoClose: config.autoClose,
         withCloseButton: config.withCloseButton
+    };
+
+    // Updating keeps the toast in place, so a loading toast becoming a success
+    // one reads as the same toast rather than one leaving and another arriving.
+    if (config.id && liveToasts.has(config.id)) {
+        notifications.update(props);
+        return config.id;
+    }
+
+    const id = notifications.show({
+        ...props,
+        onClose: () => liveToasts.delete(id)
     });
+    liveToasts.add(id);
+    return id;
 }
 
 export function showInfoToast(message: string, id?: string): string {

@@ -1,5 +1,6 @@
 import {
     Badge,
+    Box,
     Divider,
     Group,
     HoverCard,
@@ -54,7 +55,7 @@ import {
     isIndexedParameter,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
-import { FontWeight, IconColor, IconSize } from "../../../lib/style-constants";
+import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";
 import { useJobStatusQuery } from "../../library/queries";
@@ -104,7 +105,9 @@ function useGroupBuildIssues(
     }, [groupStatus, insertableStatuses]);
 }
 
-interface IssueIconProps extends ComponentPropsWithRef<"svg"> {
+interface IssueIconProps
+    // Rendered through Box, which owns these two as style props.
+    extends Omit<ComponentPropsWithRef<"svg">, "color" | "display"> {
     /** The severity to render, or null if all checks pass. */
     severity: BuildIssueSeverity | null;
     /** @default IconSize.SMALL */
@@ -120,37 +123,41 @@ export function IssueIcon({
     switch (severity) {
         case BuildIssueSeverity.ERROR:
             return (
-                <WarningOctagon
+                <Box
+                    component={WarningOctagon}
                     ref={ref}
                     size={IconSize.SMALL}
-                    color={IconColor.RED}
+                    c="red"
                     {...others}
                 />
             );
         case BuildIssueSeverity.WARNING:
             return (
-                <Warning
+                <Box
+                    component={Warning}
                     ref={ref}
                     size={IconSize.SMALL}
-                    color={IconColor.YELLOW}
+                    c="yellow"
                     {...others}
                 />
             );
         case BuildIssueSeverity.INFO:
             return (
-                <Info
+                <Box
+                    component={Info}
                     ref={ref}
                     size={IconSize.SMALL}
-                    color={IconColor.BLUE}
+                    c="blue"
                     {...others}
                 />
             );
         case null:
             return (
-                <Check
+                <Box
+                    component={Check}
                     ref={ref}
                     size={IconSize.SMALL}
-                    color={IconColor.GREEN}
+                    c="green"
                     {...others}
                 />
             );
@@ -959,9 +966,9 @@ function ParsedRow({
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
-            <Check size={IconSize.SMALL} color={IconColor.GREEN} />
+            <Box component={Check} size={IconSize.SMALL} c="green" />
         ) : (
-            <X size={IconSize.SMALL} color={IconColor.RED} />
+            <Box component={X} size={IconSize.SMALL} c="red" />
         );
     }
 

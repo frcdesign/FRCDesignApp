@@ -1,10 +1,6 @@
-import { Alert, Button, Group } from "@mantine/core";
+import { Alert, Box, Button, Group } from "@mantine/core";
 import { HeartBreak, MagnifyingGlass } from "@phosphor-icons/react";
-import {
-    HeartIconColor,
-    IconColor,
-    IconSize
-} from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "../search";
@@ -76,9 +72,9 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <MagnifyingGlass size={IconSize.LARGE} color={IconColor.YELLOW} />
+            <Box component={MagnifyingGlass} size={IconSize.LARGE} c="yellow" />
         ) : (
-            <HeartBreak size={IconSize.LARGE} color={HeartIconColor} />
+            <Box component={HeartBreak} size={IconSize.LARGE} c="red" />
         );
 
     if (filtered.byGroup > 0) {

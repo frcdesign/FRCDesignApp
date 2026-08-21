@@ -43,17 +43,3 @@ export enum PrimaryColor {
  * and hover tints, and anything else silently resolves to black.
  */
 export const HEADER_CONTROL_COLOR = "#fff";
-
-/** Red used for heart/favorite icons. */
-export const HeartIconColor = "var(--mantine-color-red-6)";
-
-/**
- * Icon color intents for use with Phosphor icons.
- * For native mantine components, just use yellow, red, blue, etc. directly.
- */
-export enum IconColor {
-    YELLOW = "var(--mantine-color-yellow-6)",
-    BLUE = "var(--mantine-color-blue-6)",
-    RED = HeartIconColor,
-    GREEN = "var(--mantine-color-green-6)"
-}

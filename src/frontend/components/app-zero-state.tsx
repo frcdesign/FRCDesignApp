@@ -1,9 +1,9 @@
-import { Center, Loader, EmptyState } from "@mantine/core";
+import { Box, Center, EmptyState, Loader } from "@mantine/core";
 import { X } from "@phosphor-icons/react";
-import { HeartIconColor, IconSize } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
 import { type JSX, ReactNode } from "react";
 
-const DEFAULT_ERROR_ICON = <X size={IconSize.HUGE} color={HeartIconColor} />;
+const DEFAULT_ERROR_ICON = <Box component={X} size={IconSize.HUGE} c="red" />;
 
 interface ZeroStateProps {
     icon?: ReactNode;

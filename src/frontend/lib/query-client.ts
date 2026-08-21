@@ -13,7 +13,7 @@ export const queryClient = new QueryClient({
                 // Retrying will not change an answer the backend meant.
                 if (
                     error instanceof AppError &&
-                    error.kind !== ApiErrorKind.INTERNAL
+                    error.body.kind !== ApiErrorKind.INTERNAL
                 ) {
                     return false;
                 }

@@ -1,18 +1,14 @@
 import { ApiErrorKind, type ApiErrorBody } from "@backend/lib/api-error";
-import { showErrorToast, showInfoToast } from "./notifications";
+import { showErrorToast } from "./notifications";
 
 /**
  * A failure worth telling the user about, from the backend or raised here.
- * `kind` decides how it is shown, so a caller only supplies the wording for
- * the case it cannot know about.
+ * `body` is the same discriminated shape the backend sends, so a caller reads
+ * whatever that kind carries without optional fields on every other kind.
  */
 export class AppError extends Error {
-    constructor(
-        readonly kind: ApiErrorKind,
-        message: string,
-        readonly retryAfterSeconds?: number
-    ) {
-        super(message);
+    constructor(readonly body: ApiErrorBody) {
+        super(body.message);
         this.name = "AppError";
         Object.setPrototypeOf(this, new.target.prototype);
     }
@@ -20,19 +16,29 @@ export class AppError extends Error {
 
 /** Raised on the client, with wording already written for the user. */
 export function appError(message: string): AppError {
-    return new AppError(ApiErrorKind.HANDLED, message);
+    return new AppError({ kind: ApiErrorKind.HANDLED, message });
 }
 
 /** Builds an {@link AppError} from a failed /api response body. */
 export function fromApiErrorBody(body: unknown): AppError {
-    const { kind, message, retryAfterSeconds } = (body ??
-        {}) as Partial<ApiErrorBody>;
-    switch (kind) {
+    const parsed = body as Partial<ApiErrorBody> | undefined;
+    switch (parsed?.kind) {
         case ApiErrorKind.HANDLED:
-        case ApiErrorKind.NOTICE:
-            return new AppError(kind, message ?? "", retryAfterSeconds);
+            return new AppError({
+                kind: ApiErrorKind.HANDLED,
+                message: parsed.message ?? ""
+            });
+        case ApiErrorKind.RATE_LIMITED:
+            return new AppError({
+                kind: ApiErrorKind.RATE_LIMITED,
+                message: parsed.message ?? "",
+                retryAfterSeconds: parsed.retryAfterSeconds ?? 0
+            });
         default:
-            return new AppError(ApiErrorKind.INTERNAL, message ?? "");
+            return new AppError({
+                kind: ApiErrorKind.INTERNAL,
+                message: parsed?.message ?? ""
+            });
     }
 }
 
@@ -42,8 +48,8 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
 
 /**
  * Shows an error. Only an error carrying wording meant for the user shows its
- * own message; anything else — including every rejected request — gets
- * `defaultMessage`, which the caller writes for its own context.
+ * own message; anything else gets `defaultMessage`, which the caller writes for
+ * its own context.
  */
 export function handleAppError(
     error: Error,
@@ -51,12 +57,10 @@ export function handleAppError(
     toastKey?: string
 ) {
     if (error instanceof AppError) {
-        switch (error.kind) {
+        switch (error.body.kind) {
             case ApiErrorKind.HANDLED:
-                showErrorToast(error.message, toastKey);
-                return;
-            case ApiErrorKind.NOTICE:
-                showInfoToast(error.message, toastKey);
+            case ApiErrorKind.RATE_LIMITED:
+                showErrorToast(error.body.message, toastKey);
                 return;
             case ApiErrorKind.INTERNAL:
                 break;
