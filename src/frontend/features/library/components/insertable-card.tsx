@@ -24,7 +24,7 @@ import {
 } from "./card-components";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
-import { openInsertMenu } from "../../insert/components/insert-menu";
+import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";

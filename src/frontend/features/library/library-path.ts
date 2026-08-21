@@ -1,4 +1,4 @@
-import { useParams } from "@tanstack/react-router";
+import { useMatch, useParams } from "@tanstack/react-router";
 import { LibraryId } from "@backend/features/library/library-id";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 
@@ -43,4 +43,14 @@ export function getLibraryName(libraryId: string): string {
             return "MKCAD (Deprecated)";
     }
     throw new Error("Unknown library: " + libraryId);
+}
+
+/** Whether the library's own page is showing, rather than one of its groups. */
+export function useIsHome(): boolean {
+    return (
+        useMatch({
+            from: "/app/library/$libraryId/",
+            shouldThrow: false
+        }) !== undefined
+    );
 }

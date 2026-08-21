@@ -21,7 +21,7 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { useCacheVersion } from "./queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
 import { useRefreshLibrary } from "../../lib/refresh";
-import { patchQuery } from "../../lib/utils";
+import { patchQuery } from "../../lib/query-cache";
 import { useCloseBuildCard } from "../build-status/components/build-status";
 
 /** The build-status query key for the currently-viewed library. */

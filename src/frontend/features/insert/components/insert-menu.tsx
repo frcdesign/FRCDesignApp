@@ -11,10 +11,7 @@ import { useIsFetching } from "@tanstack/react-query";
 import { insertableConfigurationQueryMatchKey } from "../../../lib/query-keys";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
-import {
-    NotificationAction,
-    renderNotification
-} from "../../../lib/notifications";
+import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
@@ -31,46 +28,7 @@ import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
 
-interface OpenInsertMenuProps {
-    insertable: InsertableOut;
-    defaultConfiguration?: ParameterValues;
-}
-
-export function openInsertMenu(props: OpenInsertMenuProps) {
-    const { insertable, defaultConfiguration } = props;
-    let didInsert = false;
-    // Minted here so the content can address the modal it lives in, which is
-    // what lets the header follow the selected configuration.
-    const id = crypto.randomUUID();
-    modals.open({
-        modalId: id,
-        title: <InsertMenuTitle name={insertable.name} />,
-        size: 500,
-        centered: true,
-        onClose: () => {
-            if (!didInsert) {
-                showRestoreToast(insertable, defaultConfiguration);
-            }
-        },
-        children: (
-            <InsertMenuContent
-                insertable={insertable}
-                modalId={id}
-                defaultConfiguration={defaultConfiguration}
-                onInsert={() => {
-                    didInsert = true;
-                    modals.close(id);
-                }}
-            />
-        )
-    });
-}
-
-/**
- * Both are shown: the element name is how the part was found, the part number
- * and name are what gets inserted.
- */
-function InsertMenuTitle({
+export function InsertMenuTitle({
     name,
     record
 }: {
@@ -102,7 +60,7 @@ interface InsertMenuContentProps {
     onInsert: () => void;
 }
 
-function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
+export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, modalId, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
@@ -265,26 +223,5 @@ function showSignInPreviewToast() {
             "Sign in to Onshape to see the configuration preview.",
             { text: "Sign in", onClick: startSignIn }
         )
-    });
-}
-
-function showRestoreToast(
-    insertable: InsertableOut,
-    configuration?: ParameterValues
-) {
-    const restoreButton: NotificationAction = {
-        text: "Restore",
-        onClick: () =>
-            openInsertMenu({ insertable, defaultConfiguration: configuration })
-    };
-
-    notifications.show({
-        message: renderNotification(
-            `Cancelled ${insertable.name}.`,
-            restoreButton
-        ),
-        color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
-        autoClose: 3000
     });
 }

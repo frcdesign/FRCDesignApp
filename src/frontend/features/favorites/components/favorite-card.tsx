@@ -9,8 +9,8 @@ import { Menu } from "@mantine/core";
 import { Pencil } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { useRouter } from "@tanstack/react-router";
-import { openInsertMenu } from "../../insert/components/insert-menu";
-import { openFavoriteMenu } from "./favorite-menu";
+import { openInsertMenu } from "../../insert/open-insert-menu";
+import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,

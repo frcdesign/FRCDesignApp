@@ -1,7 +1,6 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { Divider, Group, Text, Title } from "@mantine/core";
-import { modals } from "@mantine/modals";
 import { FontWeight } from "../../../lib/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { Theme } from "@backend/features/settings/settings";
@@ -9,7 +8,6 @@ import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { isWithinAccessLevel } from "@backend/features/auth/access-level";
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { useSaveSettings } from "../settings";
-import { capitalize } from "../../../lib/utils";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { RequireAccessLevel, useAccessData } from "../../auth/access-level";
 import { useUiState } from "../../../lib/ui-state";
@@ -20,14 +18,6 @@ import {
     useSelectOptions
 } from "../../../components/select-utils";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
-
-export function openSettingsMenu() {
-    modals.open({
-        title: "Settings",
-        centered: true,
-        children: <SettingsMenuContent />
-    });
-}
 
 /**
  * A labeled row holding a single setting control.
@@ -43,7 +33,12 @@ function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
     );
 }
 
-function SettingsMenuContent(): ReactNode {
+/** Capitalizes the first letter of a string and lower cases everything else. */
+function capitalize(val: string) {
+    return val[0].toUpperCase() + val.slice(1).toLowerCase();
+}
+
+export function SettingsMenuContent(): ReactNode {
     const accessData = useAccessData();
 
     let adminSettings: ReactNode = null;

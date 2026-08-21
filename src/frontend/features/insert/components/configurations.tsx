@@ -10,12 +10,13 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
-    Dispatch,
-    useEffect,
+    type Dispatch,
     ReactNode,
+    type SyntheticEvent,
+    useCallback,
+    useEffect,
     useRef,
-    useState,
-    useCallback
+    useState
 } from "react";
 import { apiGet } from "../../../lib/api-client";
 import {
@@ -40,7 +41,6 @@ import {
     getVisibleOptions
 } from "@backend/features/configurations/utils";
 import { canonicalizeConfiguration } from "@backend/features/configurations/canonical";
-import { handleBooleanChange } from "../../../lib/utils";
 import {
     formatValueWithUnits,
     valueWithUnits,
@@ -67,6 +67,12 @@ interface ConfigurationWrapperProps {
     ) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
+}
+
+/** Event handler that exposes the target element's value as a boolean. */
+function handleBooleanChange(handler: Dispatch<boolean>) {
+    return (event: SyntheticEvent<HTMLElement>) =>
+        handler((event.target as HTMLInputElement).checked);
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {

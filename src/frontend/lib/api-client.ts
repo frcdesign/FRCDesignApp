@@ -3,7 +3,7 @@ import {
     type URLSearchParamsInit,
     type QueryOptions,
     type PostOptions
-} from "./utils";
+} from "@backend/lib/query-params";
 import { fromApiErrorBody } from "./errors";
 import { THUMBNAIL_FALLBACK_HEADER } from "@backend/features/thumbnails/keys";
 import { HttpStatus } from "http-status-ts";

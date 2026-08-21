@@ -13,7 +13,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { useRouter } from "@tanstack/react-router";
 import { appError, handleAppError } from "../../../lib/errors";
-import { getQueryUpdater } from "../../../lib/utils";
+import { getQueryUpdater } from "../../../lib/query-cache";
 import {
     toFavoritePath,
     toLibraryPath,

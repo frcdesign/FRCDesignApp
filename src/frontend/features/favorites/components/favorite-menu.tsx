@@ -1,5 +1,5 @@
-import { Button, Group, Stack, Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
+import { Button, Group, Stack, Text } from "@mantine/core";
 import { FloppyDisk } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { ReactNode, useEffect, useState } from "react";
@@ -20,38 +20,13 @@ import { encodeCanonicalConfiguration } from "@backend/features/configurations/c
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";
-import { getQueryUpdater } from "../../../lib/utils";
+import { getQueryUpdater } from "../../../lib/query-cache";
 import { toFavoritePath, useLibraryId } from "../../library/library-path";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { PageError } from "../../../components/app-zero-state";
 
-interface OpenFavoriteMenuProps {
-    favoriteId: string;
-    insertableName: string;
-    defaultConfiguration?: ParameterValues;
-}
-
-export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
-    const { favoriteId, insertableName, defaultConfiguration } = props;
-    // Minted here so the content can update the header as the selection changes.
-    const modalId = crypto.randomUUID();
-    modals.open({
-        modalId,
-        title: <FavoriteMenuTitle name={insertableName} />,
-        size: 500,
-        centered: true,
-        children: (
-            <FavoriteMenuContent
-                favoriteId={favoriteId}
-                modalId={modalId}
-                defaultConfiguration={defaultConfiguration}
-            />
-        )
-    });
-}
-
 /** The element's name, and what the saved configuration produces beneath it. */
-function FavoriteMenuTitle({
+export function FavoriteMenuTitle({
     name,
     record
 }: {
@@ -85,7 +60,9 @@ interface FavoriteMenuContentProps {
     defaultConfiguration?: ParameterValues;
 }
 
-function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
+export function FavoriteMenuContent(
+    props: FavoriteMenuContentProps
+): ReactNode {
     const { favoriteId, modalId, defaultConfiguration } = props;
 
     const router = useRouter();

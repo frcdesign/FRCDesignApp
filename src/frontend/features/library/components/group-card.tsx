@@ -23,8 +23,8 @@ import { useRefreshLibrary } from "../../../lib/refresh";
 import { useBuildStatusQuery } from "../../build-status/queries";
 import { useCacheVersion, useLibraryQuery } from "../queries";
 import { libraryQueryKey } from "../../../lib/query-keys";
-import { toLibraryPath, useLibraryId } from "../library-path";
-import { getQueryUpdater, useIsHome } from "../../../lib/utils";
+import { toLibraryPath, useIsHome, useLibraryId } from "../library-path";
+import { getQueryUpdater } from "../../../lib/query-cache";
 
 interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
