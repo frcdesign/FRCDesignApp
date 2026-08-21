@@ -73,6 +73,18 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     // canonical form needs. Empty means the element's default configuration.
     const [canonicalConfiguration, setCanonicalConfiguration] =
         useState<ParameterValues>({});
+    // The first report is what the menu opened with, and so what a right-click
+    // on the card would have inserted. Absent until the parameters load.
+    const [openedWithConfiguration, setOpenedWithConfiguration] =
+        useState<ParameterValues>();
+
+    const handleCanonicalConfiguration = useCallback(
+        (canonical: ParameterValues) => {
+            setCanonicalConfiguration(canonical);
+            setOpenedWithConfiguration((opened) => opened ?? canonical);
+        },
+        []
+    );
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
 
     // The title lives in the modal's chrome, so it's updated rather than
@@ -104,7 +116,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
-                onCanonicalConfiguration={setCanonicalConfiguration}
+                onCanonicalConfiguration={handleCanonicalConfiguration}
                 onRecord={setRecord}
             />
         );
@@ -143,8 +155,11 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 <InsertButtons
                     insertable={insertable}
                     configuration={configuration}
-                    isElementDefault={
-                        Object.keys(canonicalConfiguration).length === 0
+                    isUnchanged={
+                        encodeCanonicalConfiguration(canonicalConfiguration) ===
+                        encodeCanonicalConfiguration(
+                            openedWithConfiguration ?? {}
+                        )
                     }
                     isFavorite={favorite !== undefined}
                     onInsert={onInsert}
@@ -156,10 +171,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
 interface InsertButtonsProps {
     /**
-     * Whether this is the element's own default configuration — which is what a
-     * right-click on its card inserts, and so what the tip is about.
+     * Whether the configuration is still the one the menu opened with, which a
+     * right-click on the card would have inserted without opening anything.
      */
-    isElementDefault: boolean;
+    isUnchanged: boolean;
     insertable: InsertableOut;
     configuration?: ParameterValues;
     isFavorite: boolean;
@@ -170,13 +185,8 @@ interface InsertButtonsProps {
  * The derive/insert button plus the insert and fasten checkbox.
  */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const {
-        insertable,
-        configuration,
-        isElementDefault,
-        isFavorite,
-        onInsert
-    } = props;
+    const { insertable, configuration, isUnchanged, isFavorite, onInsert } =
+        props;
 
     const search = useSearch({ from: "/app" });
     // Inserting targets the current Onshape document; there's nothing to insert
@@ -198,11 +208,11 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
-        if (isElementDefault) {
+        if (isUnchanged) {
             showQuickInsertTip();
         }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, uiState.fasten, isElementDefault]);
+    }, [insertMutation, onInsert, canFasten, uiState.fasten, isUnchanged]);
 
     if (!isConnected) {
         return null;

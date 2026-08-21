@@ -109,6 +109,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
+                    configuration={searchHit?.configuration}
                 />
             }
         />
@@ -119,6 +120,8 @@ interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     inInsertMenu?: boolean;
+    /** What quick insert inserts and "Open document" opens: a search hit's
+     * configuration on a card, the selected one inside the insert menu. */
     configuration?: ParameterValues;
 }
 
@@ -134,6 +137,7 @@ export function InsertableMenuItems(
                 <>
                     <QuickInsertItems
                         insertable={insertable}
+                        configuration={configuration}
                         isFavorite={favorite !== undefined}
                     />
                     <Menu.Divider />
