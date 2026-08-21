@@ -48,6 +48,10 @@ function RootComponent(): ReactNode {
                         position="bottom-center"
                         limit={3}
                         autoClose={4000}
+                        // Mantine pins this at 440px otherwise, wrapping a
+                        // message with an action button even on a wide window.
+                        // Mantine clamps it to the viewport on a narrow one.
+                        containerWidth="max-content"
                     />
                     <Outlet />
                 </ModalsProvider>
