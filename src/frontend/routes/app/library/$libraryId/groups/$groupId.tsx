@@ -6,11 +6,7 @@ import {
     useParams
 } from "@tanstack/react-router";
 import { Box, Button, Group, Text } from "@mantine/core";
-import {
-    IconAlertTriangle,
-    IconArrowBackUp,
-    IconArrowLeft
-} from "@tabler/icons-react";
+import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
 import {
     BORDER,
     FontWeight,
@@ -73,7 +69,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        leftSection={<IconArrowBackUp size={IconSize.SMALL} />}
+                        leftSection={<ArrowUUpLeft size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
                                 to: "/app/library/$libraryId",
@@ -137,7 +133,7 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
         >
             <Group wrap="nowrap" justify="space-between">
                 <Group gap="sm">
-                    <IconArrowLeft size={IconSize.MEDIUM} />
+                    <ArrowLeft size={IconSize.MEDIUM} />
                     <Text size="md" fw={FontWeight.SEMI_BOLD} truncate>
                         {group.name}
                     </Text>
@@ -183,10 +179,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionError
                 icon={
-                    <IconAlertTriangle
-                        size={IconSize.LARGE}
-                        color={IconColor.YELLOW}
-                    />
+                    <Warning size={IconSize.LARGE} color={IconColor.YELLOW} />
                 }
                 title="All elements are hidden by filters"
                 action={<ClearFiltersButton />}

@@ -1,5 +1,5 @@
 import { useAccessData } from "../../auth/access-level";
-import { IconHeartBroken } from "@tabler/icons-react";
+import { HeartBreak } from "@phosphor-icons/react";
 import { HeartIconColor, IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../../search/filter";
@@ -41,10 +41,7 @@ export function FavoritesList(): ReactNode {
             <SectionError
                 title="Failed to load favorites."
                 icon={
-                    <IconHeartBroken
-                        size={IconSize.LARGE}
-                        color={HeartIconColor}
-                    />
+                    <HeartBreak size={IconSize.LARGE} color={HeartIconColor} />
                 }
             />
         );

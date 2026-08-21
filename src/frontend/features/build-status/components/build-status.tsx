@@ -11,13 +11,13 @@ import {
     Tooltip
 } from "@mantine/core";
 import {
-    IconAlertOctagon,
-    IconAlertTriangle,
-    IconCheck,
-    IconClock,
-    IconInfoCircle,
-    IconX
-} from "@tabler/icons-react";
+    Check,
+    Clock,
+    Info,
+    Warning,
+    WarningOctagon,
+    X
+} from "@phosphor-icons/react";
 import {
     ComponentPropsWithRef,
     ReactNode,
@@ -120,7 +120,7 @@ export function IssueIcon({
     switch (severity) {
         case BuildIssueSeverity.ERROR:
             return (
-                <IconAlertOctagon
+                <WarningOctagon
                     ref={ref}
                     size={IconSize.SMALL}
                     color={IconColor.RED}
@@ -129,7 +129,7 @@ export function IssueIcon({
             );
         case BuildIssueSeverity.WARNING:
             return (
-                <IconAlertTriangle
+                <Warning
                     ref={ref}
                     size={IconSize.SMALL}
                     color={IconColor.YELLOW}
@@ -138,7 +138,7 @@ export function IssueIcon({
             );
         case BuildIssueSeverity.INFO:
             return (
-                <IconInfoCircle
+                <Info
                     ref={ref}
                     size={IconSize.SMALL}
                     color={IconColor.BLUE}
@@ -147,7 +147,7 @@ export function IssueIcon({
             );
         case null:
             return (
-                <IconCheck
+                <Check
                     ref={ref}
                     size={IconSize.SMALL}
                     color={IconColor.GREEN}
@@ -330,7 +330,7 @@ function LastModified({
                 c="dimmed"
                 style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             >
-                <IconClock size={IconSize.TINY} />
+                <Clock size={IconSize.TINY} />
                 <Text size="xs">
                     {!lastLoadedAt
                         ? "Unknown"
@@ -349,7 +349,7 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
                 size="sm"
                 variant="light"
                 color="green"
-                leftSection={<IconCheck size={IconSize.TINY} />}
+                leftSection={<Check size={IconSize.TINY} />}
             >
                 All checks pass
             </Badge>
@@ -959,9 +959,9 @@ function ParsedRow({
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
-            <IconCheck size={IconSize.SMALL} color={IconColor.GREEN} />
+            <Check size={IconSize.SMALL} color={IconColor.GREEN} />
         ) : (
-            <IconX size={IconSize.SMALL} color={IconColor.RED} />
+            <X size={IconSize.SMALL} color={IconColor.RED} />
         );
     }
 

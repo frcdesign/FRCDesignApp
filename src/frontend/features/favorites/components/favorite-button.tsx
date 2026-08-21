@@ -1,9 +1,5 @@
 import { ActionIcon, Menu } from "@mantine/core";
-import {
-    IconHeart,
-    IconHeartBroken,
-    IconHeartFilled
-} from "@tabler/icons-react";
+import { Heart, HeartBreak } from "@phosphor-icons/react";
 import { HeartIconColor, IconSize } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
@@ -195,9 +191,9 @@ interface HeartIconProps {
 export function HeartIcon(props: HeartIconProps): ReactNode {
     const { full = true, size = IconSize.SMALL } = props;
     return full ? (
-        <IconHeartFilled size={size} color={HeartIconColor} />
+        <Heart size={size} color={HeartIconColor} weight="fill" />
     ) : (
-        <IconHeart size={size} />
+        <Heart size={size} />
     );
 }
 
@@ -210,5 +206,5 @@ interface HeartBrokenIconProps {
 
 export function HeartBrokenIcon(props: HeartBrokenIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
-    return <IconHeartBroken size={size} color={HeartIconColor} />;
+    return <HeartBreak size={size} color={HeartIconColor} />;
 }

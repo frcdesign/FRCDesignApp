@@ -4,7 +4,7 @@ import { getFavoriteForInsertable } from "@backend/features/favorites/dto";
 import { InsertableOut } from "@backend/features/library/dto";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
-import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
+import { Info, Plus } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { modals } from "@mantine/modals";
 import { useIsFetching } from "@tanstack/react-query";
@@ -242,7 +242,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                leftSection={<IconPlus size={IconSize.SMALL} />}
+                leftSection={<Plus size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >
@@ -260,7 +260,7 @@ function showSignInPreviewToast() {
     notifications.show({
         id: "sign-in-preview",
         color: "blue",
-        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
+        icon: <Info size={IconSize.MEDIUM} />,
         message: renderNotification(
             "Sign in to Onshape to see the configuration preview.",
             { text: "Sign in", onClick: startSignIn }
@@ -284,7 +284,7 @@ function showRestoreToast(
             restoreButton
         ),
         color: "blue",
-        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
+        icon: <Info size={IconSize.MEDIUM} />,
         autoClose: 3000
     });
 }

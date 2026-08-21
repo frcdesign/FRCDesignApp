@@ -1,12 +1,12 @@
 import { Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
-    IconExternalLink,
-    IconEyeOff,
-    IconLink,
-    IconPlus,
-    IconRefresh,
-    IconSettings
-} from "@tabler/icons-react";
+    ArrowSquareOut,
+    ArrowsClockwise,
+    EyeSlash,
+    Gear,
+    Link,
+    Plus
+} from "@phosphor-icons/react";
 import { IconColor, IconSize } from "../../../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { Fragment, PropsWithChildren, ReactNode, useCallback } from "react";
@@ -45,13 +45,13 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     return (
         <>
             <Menu.Item
-                leftSection={<IconExternalLink size={IconSize.SMALL} />}
+                leftSection={<ArrowSquareOut size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
-                leftSection={<IconLink size={IconSize.SMALL} />}
+                leftSection={<Link size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
@@ -102,14 +102,14 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
         <>
             {supportsFasten && (
                 <Menu.Item
-                    leftSection={<IconPlus size={IconSize.SMALL} />}
+                    leftSection={<Plus size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
                 </Menu.Item>
             )}
             <Menu.Item
-                leftSection={<IconPlus size={IconSize.SMALL} />}
+                leftSection={<Plus size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert
@@ -207,10 +207,10 @@ export function CardTitle(props: CardTitleProps) {
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
             {isHidden && (
-                <IconEyeOff
+                <EyeSlash
                     size={IconSize.SMALL}
                     color={IconColor.YELLOW}
-                    title="Hidden"
+                    alt="Hidden"
                 />
             )}
         </Group>
@@ -286,7 +286,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
                         color="yellow"
-                        leftSection={<IconSettings size={IconSize.SMALL} />}
+                        leftSection={<Gear size={IconSize.SMALL} />}
                     >
                         Admin options
                     </Menu.Sub.Item>
@@ -311,7 +311,7 @@ export function ReloadThumbnailMenuItem(
     );
     return (
         <Menu.Item
-            leftSection={<IconRefresh size={IconSize.SMALL} />}
+            leftSection={<ArrowsClockwise size={IconSize.SMALL} />}
             onClick={() => {
                 reloadThumbnailMutation.mutate();
             }}

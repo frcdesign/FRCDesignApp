@@ -1,5 +1,5 @@
 /**
- * Standard icon sizes to pass to Tabler icons.
+ * Standard icon sizes to pass to Phosphor icons.
  */
 export enum IconSize {
     /** Icons on badges */
@@ -48,7 +48,7 @@ export const HEADER_CONTROL_COLOR = "#fff";
 export const HeartIconColor = "var(--mantine-color-red-6)";
 
 /**
- * Icon color intents for use with Tabler icons.
+ * Icon color intents for use with Phosphor icons.
  * For native mantine components, just use yellow, red, blue, etc. directly.
  */
 export enum IconColor {

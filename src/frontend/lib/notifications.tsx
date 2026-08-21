@@ -1,10 +1,6 @@
 import { notifications } from "@mantine/notifications";
-import {
-    IconInfoCircle,
-    IconCircleCheck,
-    IconCircleX,
-    ReactNode
-} from "@tabler/icons-react";
+import type { ReactNode } from "react";
+import { CheckCircle, Info, XCircle } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 import { Group, Button } from "@mantine/core";
 
@@ -65,7 +61,7 @@ export function showInfoToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "blue",
-        icon: <IconInfoCircle size={IconSize.MEDIUM} />,
+        icon: <Info size={IconSize.MEDIUM} />,
         message
     });
 }
@@ -85,7 +81,7 @@ export function showSuccessToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "green",
-        icon: <IconCircleCheck size={IconSize.MEDIUM} />,
+        icon: <CheckCircle size={IconSize.MEDIUM} />,
         message
     });
 }
@@ -94,7 +90,7 @@ export function showErrorToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "red",
-        icon: <IconCircleX size={IconSize.MEDIUM} />,
+        icon: <XCircle size={IconSize.MEDIUM} />,
         message
     });
 }

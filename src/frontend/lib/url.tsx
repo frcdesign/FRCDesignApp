@@ -10,7 +10,7 @@ import {
 } from "@backend/lib/onshape/path";
 import { encodeConfigurationForQuery } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
-import { IconLink } from "@tabler/icons-react";
+import { Link } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 
 export function makeUrl(path: ConfigurablePath): string;
@@ -64,7 +64,7 @@ export async function copyUrlToClipboard(url: string): Promise<void> {
     await navigator.clipboard.writeText(url);
     notifications.show({
         message: "Link copied to clipboard.",
-        icon: <IconLink size={IconSize.MEDIUM} />,
+        icon: <Link size={IconSize.MEDIUM} />,
         color: "blue",
         autoClose: 3000
     });

@@ -1,6 +1,6 @@
 import { Button, Group, Menu, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -69,7 +69,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
                 error={mutation.isError}
             />
             <Button
-                leftSection={<IconPlus size={IconSize.SMALL} />}
+                leftSection={<Plus size={IconSize.SMALL} />}
                 onClick={() => mutation.mutate()}
                 loading={mutation.isPending}
             >
@@ -82,7 +82,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
 export function AddGroupButton(): ReactNode {
     return (
         <Button
-            leftSection={<IconPlus size={IconSize.SMALL} />}
+            leftSection={<Plus size={IconSize.SMALL} />}
             onClick={() => openAddGroupMenu()}
         >
             Add group
@@ -97,7 +97,7 @@ interface AddGroupItemProps {
 export function AddGroupItem(props: AddGroupItemProps): ReactNode {
     return (
         <Menu.Item
-            leftSection={<IconPlus size={IconSize.SMALL} />}
+            leftSection={<Plus size={IconSize.SMALL} />}
             onClick={() => openAddGroupMenu(props.selectedGroupId)}
         >
             Add group

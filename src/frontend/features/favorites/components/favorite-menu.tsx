@@ -1,6 +1,6 @@
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconDeviceFloppy } from "@tabler/icons-react";
+import { FloppyDisk } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
@@ -188,7 +188,7 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
             />
             <Group justify="flex-end" mt="md">
                 <Button
-                    leftSection={<IconDeviceFloppy size={IconSize.SMALL} />}
+                    leftSection={<FloppyDisk size={IconSize.SMALL} />}
                     // Saving before the wrapper reports would store {}, wiping
                     // the favorite's configuration.
                     disabled={!canonicalConfiguration}

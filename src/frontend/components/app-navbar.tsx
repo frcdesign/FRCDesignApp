@@ -8,7 +8,7 @@ import {
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { IconChevronDown, IconSearch, IconSettings } from "@tabler/icons-react";
+import { CaretDown, Gear, MagnifyingGlass } from "@phosphor-icons/react";
 import { HEADER_CONTROL_COLOR, IconSize } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -128,7 +128,7 @@ function LibraryMenu(): ReactNode {
             <Menu.Target>
                 <Button
                     variant="default"
-                    rightSection={<IconChevronDown size={IconSize.SMALL} />}
+                    rightSection={<CaretDown size={IconSize.SMALL} />}
                 >
                     {getLibraryName(currentLibraryId)}
                 </Button>
@@ -168,7 +168,7 @@ export function SettingsButton() {
             title="Settings"
             onClick={() => openSettingsMenu()}
         >
-            <IconSettings size={IconSize.CONTROL} />
+            <Gear size={IconSize.CONTROL} />
         </ActionIcon>
     );
 }
@@ -202,7 +202,7 @@ export function SearchBar() {
         <TextInput
             type="search"
             maw={200} // Hardcode search bar width as max so close button doesn't expand
-            leftSection={<IconSearch size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
             placeholder="Search library..."
             ref={ref}
             value={uiState.searchQuery ?? ""}

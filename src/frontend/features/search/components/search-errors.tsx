@@ -1,5 +1,5 @@
 import { Alert, Button, Group } from "@mantine/core";
-import { IconHeartBroken, IconSearch } from "@tabler/icons-react";
+import { HeartBreak, MagnifyingGlass } from "@phosphor-icons/react";
 import {
     HeartIconColor,
     IconColor,
@@ -76,9 +76,9 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <IconSearch size={IconSize.LARGE} color={IconColor.YELLOW} />
+            <MagnifyingGlass size={IconSize.LARGE} color={IconColor.YELLOW} />
         ) : (
-            <IconHeartBroken size={IconSize.LARGE} color={HeartIconColor} />
+            <HeartBreak size={IconSize.LARGE} color={HeartIconColor} />
         );
 
     if (filtered.byGroup > 0) {
@@ -125,7 +125,7 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            leftSection={<IconSearch size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
             size={small ? "xs" : undefined}
             onClick={() => {
                 void navigate({

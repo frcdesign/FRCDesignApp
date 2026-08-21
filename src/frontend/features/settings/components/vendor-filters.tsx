@@ -1,5 +1,5 @@
 import { ActionIcon, Button, Menu } from "@mantine/core";
-import { IconFilter, IconFilterOff } from "@tabler/icons-react";
+import { Funnel, FunnelX } from "@phosphor-icons/react";
 import { HEADER_CONTROL_COLOR, IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "@backend/features/library/vendors";
@@ -31,7 +31,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
             disabled={areAllTagsActive}
             variant="default"
             size={small ? "xs" : undefined}
-            leftSection={<IconFilterOff size={IconSize.SMALL} />}
+            leftSection={<FunnelX size={IconSize.SMALL} />}
             onClick={() => {
                 setUiState({ vendorFilters: undefined });
             }}
@@ -69,7 +69,7 @@ export function VendorMenu(): ReactNode {
             </Menu.CheckboxGroup>
             <Menu.Divider />
             <Menu.Item
-                leftSection={<IconFilterOff size={IconSize.SMALL} />}
+                leftSection={<FunnelX size={IconSize.SMALL} />}
                 disabled={!hasFilters}
                 onClick={() => setUiState({ vendorFilters: undefined })}
             >
@@ -87,7 +87,7 @@ export function VendorMenu(): ReactNode {
                 size="input-sm"
                 title="Filter vendors"
             >
-                <IconFilter size={IconSize.CONTROL} />
+                <Funnel size={IconSize.CONTROL} />
             </ActionIcon>
         </AppContextMenu>
     );
