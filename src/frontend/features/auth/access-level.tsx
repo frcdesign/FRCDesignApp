@@ -32,11 +32,11 @@ export function getAccessDataQuery() {
 export interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
     /**
-     * False until access-data resolves, while the rest of these are still the
-     * placeholder. Anything that would render differently for a signed-out
-     * caller has to wait for this, or it flashes the wrong state.
+     * The query's own pending flag. While set, the rest of these are the
+     * placeholder, so anything that renders for a *signed-out* caller has to
+     * wait or it flashes; positive gates can just read `signedIn`.
      */
-    isLoaded: boolean;
+    isPending: boolean;
 }
 
 /**
@@ -44,7 +44,7 @@ export interface ResolvedAccessData extends AccessData {
  * drop below the granted max), so it survives the query refetching on navigation.
  */
 export function useAccessData(): ResolvedAccessData {
-    const { data } = useQuery(getAccessDataQuery());
+    const { data, isPending } = useQuery(getAccessDataQuery());
     const serverData = data ?? DEFAULT_ACCESS_DATA;
     const chosenLevel = useUiState()[0].accessLevel;
     return useMemo(() => {
@@ -56,12 +56,8 @@ export function useAccessData(): ResolvedAccessData {
         )
             ? desired
             : serverData.maxAccessLevel;
-        return {
-            ...serverData,
-            currentAccessLevel,
-            isLoaded: data !== undefined
-        };
-    }, [data, serverData, chosenLevel]);
+        return { ...serverData, currentAccessLevel, isPending };
+    }, [serverData, chosenLevel, isPending]);
 }
 
 /** Whether the caller is signed in to Onshape (from access-data). */

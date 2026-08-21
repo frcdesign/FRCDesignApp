@@ -59,10 +59,10 @@ export function AppNavbar(): ReactNode {
  * the current location, after which access-data reports the caller signed in.
  */
 function SignInButton(): ReactNode {
-    const { signedIn, isLoaded } = useAccessData();
+    const { signedIn, isPending } = useAccessData();
     // Waiting rather than assuming signed out: the placeholder would flash the
     // button on every load for a caller who is already signed in.
-    if (!isLoaded || signedIn) return null;
+    if (isPending || signedIn) return null;
 
     return (
         <Button
