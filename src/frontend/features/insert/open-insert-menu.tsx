@@ -1,12 +1,12 @@
 import { modals } from "@mantine/modals";
-import { notifications } from "@mantine/notifications";
-import { Info } from "@phosphor-icons/react";
+
 import type { InsertableOut } from "@backend/features/library/contract";
 import { type ParameterValues } from "@backend/features/configurations/models";
-import { IconSize } from "../../lib/style-constants";
+
 import {
     type NotificationAction,
-    renderNotification
+    renderNotification,
+    showInfoToast
 } from "../../lib/notifications";
 import { InsertMenuContent, InsertMenuTitle } from "./components/insert-menu";
 
@@ -60,13 +60,10 @@ function showRestoreToast(
             openInsertMenu({ insertable, defaultConfiguration: configuration })
     };
 
-    notifications.show({
-        message: renderNotification(
-            `Cancelled ${insertable.name}.`,
-            restoreButton
-        ),
-        color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
-        autoClose: 3000
-    });
+    // Keyed on the insertable, so opening and cancelling the same one repeatedly
+    // refreshes one toast rather than stacking up a column of them.
+    showInfoToast(
+        renderNotification(`Cancelled ${insertable.name}.`, restoreButton),
+        { id: "restore-" + insertable.id, autoClose: 3000 }
+    );
 }

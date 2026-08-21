@@ -48,7 +48,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             "add-group"
         ),
         onSuccess: () => {
-            showInfoToast("Adding document...", "add-group");
+            showInfoToast("Adding document...", { id: "add-group" });
             // Starts the job poll, which stays idle until something is known to
             // be running, and shows the spinner without waiting for a request.
             const justStarted: JobStatus = { running: true, runningForMs: 0 };

@@ -7,6 +7,7 @@ import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { Info, Plus } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { modals } from "@mantine/modals";
+import { showQuickInsertTip } from "../quick-insert-tip";
 import { useIsFetching } from "@tanstack/react-query";
 import { insertableConfigurationQueryMatchKey } from "../../../lib/query-keys";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
@@ -142,6 +143,9 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 <InsertButtons
                     insertable={insertable}
                     configuration={configuration}
+                    isElementDefault={
+                        Object.keys(canonicalConfiguration).length === 0
+                    }
                     isFavorite={favorite !== undefined}
                     onInsert={onInsert}
                 />
@@ -151,6 +155,11 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 }
 
 interface InsertButtonsProps {
+    /**
+     * Whether this is the element's own default configuration — which is what a
+     * right-click on its card inserts, and so what the tip is about.
+     */
+    isElementDefault: boolean;
     insertable: InsertableOut;
     configuration?: ParameterValues;
     isFavorite: boolean;
@@ -161,7 +170,13 @@ interface InsertButtonsProps {
  * The derive/insert button plus the insert and fasten checkbox.
  */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const { insertable, configuration, isFavorite, onInsert } = props;
+    const {
+        insertable,
+        configuration,
+        isElementDefault,
+        isFavorite,
+        onInsert
+    } = props;
 
     const search = useSearch({ from: "/app" });
     // Inserting targets the current Onshape document; there's nothing to insert
@@ -183,8 +198,11 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
+        if (isElementDefault) {
+            showQuickInsertTip();
+        }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, uiState.fasten]);
+    }, [insertMutation, onInsert, canFasten, uiState.fasten, isElementDefault]);
 
     if (!isConnected) {
         return null;

@@ -76,12 +76,21 @@ function showToast(config: ToastConfig): string {
     return id;
 }
 
-export function showInfoToast(message: string, id?: string): string {
+interface InfoToastOptions {
+    /** Repeats with the same id update the toast rather than stacking one up. */
+    id?: string;
+    autoClose?: number | false;
+}
+
+export function showInfoToast(
+    message: ReactNode,
+    options: InfoToastOptions = {}
+): string {
     return showToast({
-        id,
         color: "blue",
         icon: <Info size={IconSize.MEDIUM} />,
-        message
+        message,
+        ...options
     });
 }
 

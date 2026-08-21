@@ -12,6 +12,7 @@ import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { settingsRoutes } from "./features/settings/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
+import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
 import { bindCaller, getApp, type CallerFactory } from "./lib/context";
 import { errorHandler } from "./lib/errors";
@@ -30,6 +31,11 @@ const apiRoutes = [
 
 export function createApp(makeCaller: CallerFactory) {
     const app = getApp();
+
+    // console.log reaches Workers Logs, since wrangler.jsonc enables
+    // observability. Only /init, /api/* and /auth/* run the Worker at all
+    // (see run_worker_first), so static assets are not logged.
+    app.use("*", logger());
 
     app.use("*", bindCaller(makeCaller));
 

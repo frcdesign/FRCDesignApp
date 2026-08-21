@@ -18,7 +18,9 @@ const UiStateSchema = z.object({
     openGroupId: z.string().optional(),
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
-    accessLevel: AccessLevelType.optional()
+    accessLevel: AccessLevelType.optional(),
+    /** Whether the quick-insert tip has been shown; it is only worth saying once. */
+    hasSeenQuickInsertTip: z.boolean().default(false)
 });
 
 type UiState = z.infer<typeof UiStateSchema>;
