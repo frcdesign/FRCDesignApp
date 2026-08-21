@@ -44,8 +44,8 @@ function paramsWithConfigs(count: number): ConfigurationParameter[] {
     ];
 }
 
-const MANY = [{ type: BuildIssueType.MANY_CONFIGURATIONS }];
-const TOO_MANY = [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }];
+const MANY = [{ type: BuildIssueType.MANUAL_INDEXING_REQUIRED }];
+const TOO_MANY = [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }];
 
 describe("decideIndexing", () => {
     // Vendors no longer enter into it: the configuration count is the only gate.
@@ -97,7 +97,7 @@ describe("parsePartStudioRecord", () => {
             material: "6061 Aluminum",
             vendor: "AM",
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false
         });
     });
 
@@ -125,7 +125,7 @@ describe("parsePartStudioRecord", () => {
         );
         expect(record.partNumber).toBe("COMP-1");
         expect(record.hasMultipleParts).toBe(false);
-        expect(record.isUnstableComposite).toBe(false);
+        expect(record.isOpenComposite).toBe(true);
     });
 
     it("flags an unstable composite when a configuration loses its composite", () => {
@@ -137,26 +137,22 @@ describe("parsePartStudioRecord", () => {
             )
         ).toEqual({
             configuration: { size: "S" },
-            partNumber: null,
-            name: null,
-            description: null,
-            material: null,
-            vendor: null,
             hasMultipleParts: false,
-            isUnstableComposite: true
+            // The composite it was expected to resolve to is gone.
+            isOpenComposite: false
         });
     });
 
     it("returns an all-null record for an empty response", () => {
         expect(parsePartStudioRecord([], { A: "a1" }, false)).toEqual({
             configuration: { A: "a1" },
-            partNumber: null,
-            name: null,
-            description: null,
-            material: null,
-            vendor: null,
+            partNumber: undefined,
+            name: undefined,
+            description: undefined,
+            material: undefined,
+            vendor: undefined,
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false
         });
     });
 });
@@ -182,7 +178,7 @@ describe("parseAssemblyRecord", () => {
             material: "Steel",
             vendor: "AM",
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false
         });
     });
 });
@@ -216,7 +212,7 @@ describe("parseConfigurationRecords", () => {
         expect(result.buildIssues).toEqual([]);
         // "a1" is A's default, so that combination is the element's own probe
         // under another name and is not probed again.
-        expect(result.partData?.partNumber).toBe("PN-default");
+        expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
     });
 
@@ -236,7 +232,7 @@ describe("parseConfigurationRecords", () => {
             false
         );
 
-        expect(result.partData?.partNumber).toBe("PN-default");
+        expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a1"]);
     });
 
@@ -310,7 +306,7 @@ describe("parseConfigurationRecords", () => {
 
         expect(result.buildIssues).toEqual([]);
         expect(result.records).toHaveLength(0);
-        expect(result.partData?.partNumber).toBe("PN-default");
+        expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -331,14 +327,14 @@ describe("parseConfigurationRecords", () => {
         );
 
         expect(result.records).toEqual([]);
-        expect(result.partData).toEqual({
+        expect(result.partMetadata).toEqual({
             partNumber: "AM-1",
-            name: null,
-            description: null,
-            material: null,
-            vendor: null,
+            name: undefined,
+            description: undefined,
+            material: undefined,
+            vendor: undefined,
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false
         });
         expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
     });

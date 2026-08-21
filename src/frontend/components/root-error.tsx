@@ -6,7 +6,7 @@ import { Button } from "@mantine/core";
 import { House } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
-import { DEFAULT_LIBRARY_ID } from "@backend/features/library/library-id";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 
 /**
  * Catch-all error state for when a route below the root fails to load.
@@ -54,7 +54,7 @@ export function NotFoundError(): ReactNode {
             onClick={() => {
                 void navigate({
                     to: "/app/library/$libraryId",
-                    params: { libraryId: DEFAULT_LIBRARY_ID }
+                    params: { libraryId: DEFAULT_SETTINGS.libraryId }
                 });
             }}
         >

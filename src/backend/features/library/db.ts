@@ -2,7 +2,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { libraries, group, insertables, configurations } from "../../db/schema";
 import { LibraryId } from "./library-id";
-import { InsertableOut, LibraryOut, Insertables, Groups } from "./dto";
+import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
 import { ConfigurationRecord } from "../configurations/models";
 import { toRecords } from "../configurations/utils";
 import { buildSearchDb } from "../search/search-index";
@@ -196,7 +196,7 @@ async function getRecordsMap(
     const rows = await db
         .select({
             id: insertables.id,
-            partData: insertables.partData,
+            partMetadata: insertables.partMetadata,
             records: configurations.records
         })
         .from(insertables)
@@ -206,7 +206,7 @@ async function getRecordsMap(
 
     const recordsMap: Record<string, ConfigurationRecord[]> = {};
     for (const row of rows) {
-        const records = toRecords(row.partData, row.records ?? []);
+        const records = toRecords(row.partMetadata, row.records ?? []);
         if (records.length > 0) {
             recordsMap[row.id] = records;
         }

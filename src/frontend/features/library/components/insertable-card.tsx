@@ -4,8 +4,8 @@ import { PropsWithChildren, ReactNode } from "react";
 import {
     Favorite,
     getFavoriteForInsertable
-} from "@backend/features/favorites/dto";
-import { InsertableOut } from "@backend/features/library/dto";
+} from "@backend/features/favorites/contract";
+import { InsertableOut } from "@backend/features/library/contract";
 import { ParameterValues } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {

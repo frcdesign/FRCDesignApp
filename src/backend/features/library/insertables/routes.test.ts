@@ -184,14 +184,10 @@ describe("insertable routes", () => {
 
         // Nothing to configure, so the part data lands on the insertable and
         // no configurations row is manufactured to hold it.
-        expect(row?.partData).toEqual({
+        expect(row?.partMetadata).toEqual({
             partNumber: "PN-123",
-            name: null,
-            description: null,
-            material: null,
-            vendor: null,
             hasMultipleParts: false,
-            isUnstableComposite: false
+            isOpenComposite: false
         });
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
@@ -280,7 +276,7 @@ describe("insertable routes", () => {
         expect(res.status).toBe(200);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.partData).not.toBeNull();
+        expect(row?.partMetadata).not.toBeNull();
         // Nobody sells it, so a missing part number is not worth flagging.
         expect(row?.buildIssues).toEqual([]);
     });
@@ -294,7 +290,7 @@ describe("insertable routes", () => {
             .set({
                 buildIssues: [
                     { type: BuildIssueType.NO_VENDORS },
-                    { type: BuildIssueType.TOO_MANY_CONFIGURATIONS }
+                    { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }
                 ]
             })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));

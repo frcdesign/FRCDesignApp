@@ -26,7 +26,7 @@ import {
     useInsertMutation,
     useIsAssemblyInPartStudio
 } from "../../insert/insert-hooks";
-import { InsertableOut } from "@backend/features/library/dto";
+import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 
 import { ParameterValues } from "@backend/features/configurations/models";

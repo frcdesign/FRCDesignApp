@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { getFavoriteForInsertable } from "@backend/features/favorites/dto";
-import { InsertableOut } from "@backend/features/library/dto";
+import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
+import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { Info, Plus } from "@phosphor-icons/react";

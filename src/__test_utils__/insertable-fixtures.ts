@@ -39,7 +39,7 @@ export function parsedInsertable(
         fastenInfo: null,
         isOpenComposite: false,
         buildIssues: [],
-        partData: null,
+        partMetadata: null,
         configuration: { parameters: [], records: [] },
         ...overrides
     };

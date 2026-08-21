@@ -1,7 +1,7 @@
 import { ThumbnailUrls } from "../thumbnails/types";
 import { Vendor, isCustomPart } from "../library/vendors";
 import { addBuildIssue, BuildIssue, BuildIssueType } from "./issues";
-import type { PartData } from "../configurations/models";
+import type { PartMetadata } from "../configurations/models";
 
 interface GroupCheckInput {
     /** Whether the Onshape document has a designated thumbnail tab/element. */
@@ -42,8 +42,8 @@ interface InsertableCheckInput {
     vendors: Vendor[];
     /** The uploaded thumbnail URLs, or `null` when generation failed. */
     thumbnailUrls: ThumbnailUrls | null;
-    /** The element's own part data, plus one per indexed configuration. */
-    probed: (PartData | null)[];
+    /** Every probe of the element: its own, plus one per indexed configuration. */
+    probes: (PartMetadata | null)[];
 }
 
 /**
@@ -65,7 +65,7 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
 
     issues = addBuildIssue(
         issues,
-        ...checkIndexedPartNumber(input.vendors, input.probed)
+        ...checkIndexedPartNumber(input.vendors, input.probes)
     );
 
     return issues;
@@ -75,16 +75,16 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
  * A custom part is expected to have no part number; anything a vendor sells
  * should have one in at least one configuration.
  */
-/** `probed` is the element's own part data plus any indexed configuration's. */
+/** Every probe of an element: its own, plus one per indexed configuration. */
 export function checkIndexedPartNumber(
     vendors: Vendor[],
-    probed: (PartData | null)[]
+    probes: (PartMetadata | null)[]
 ): BuildIssue[] {
-    const found = probed.filter((data) => data !== null);
-    if (isCustomPart(vendors) || found.length === 0) {
+    const read = probes.filter((probe) => probe !== null);
+    if (isCustomPart(vendors) || read.length === 0) {
         return [];
     }
-    return found.some((data) => data.partNumber)
+    return read.some((probe) => probe.partNumber)
         ? []
         : [{ type: BuildIssueType.NO_PART_NUMBER }];
 }

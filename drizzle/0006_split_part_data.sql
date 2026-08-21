@@ -9,4 +9,4 @@
  null and repopulates on the next load, which is also when a configurations row
  that holds no parameters is dropped.
 */
-ALTER TABLE `insertables` ADD `part_data` text;
+ALTER TABLE `insertables` ADD `part_metadata` text;

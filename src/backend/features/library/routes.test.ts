@@ -14,7 +14,7 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { rebuildSearchDb, searchIndexKey } from "./db";
-import { LibraryOut } from "./dto";
+import { LibraryOut } from "./contract";
 import { LibraryId } from "./library-id";
 
 const db = getDb(env.DB);

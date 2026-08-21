@@ -8,7 +8,6 @@ import { users } from "../../db/schema";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getSessionCompanyId } from "../auth/session";
-import { DEFAULT_LIBRARY_ID } from "../library/library-id";
 import { DEFAULT_SETTINGS } from "../settings/settings";
 
 /** Cloudflare strips the port in local dev, so redirect back relatively. */
@@ -33,7 +32,7 @@ async function getEntryUrl(c: AppContext): Promise<string> {
     }
     search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
 
-    const libraryId = user?.libraryId ?? DEFAULT_LIBRARY_ID;
+    const libraryId = user?.libraryId ?? DEFAULT_SETTINGS.libraryId;
     return `/app/library/${libraryId}?${search.toString()}`;
 }
 

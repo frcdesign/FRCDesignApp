@@ -19,7 +19,7 @@ export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
 /**
  * At or above this, indexing waits for an admin, who can trim the count back
- * with "exclude from properties"; see the `MANY_CONFIGURATIONS` build issue.
+ * with "exclude from properties"; see the `MANUAL_INDEXING_REQUIRED` build issue.
  */
 export const AUTO_INDEX_THRESHOLD = 128;
 

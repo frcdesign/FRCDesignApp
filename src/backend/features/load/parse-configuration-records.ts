@@ -8,7 +8,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     ParameterValues,
     ConfigurationParameter,
-    PartData,
+    PartMetadata,
     ConfigurationRecord
 } from "../configurations/models";
 import {
@@ -37,15 +37,15 @@ const BATCH_SIZE = 20;
 /** An insertable's configuration records, and the issues indexing them raised. */
 export interface ConfigurationRecordsResult {
     /** The element's own part data; null when nothing was probed. */
-    partData: PartData | null;
-    /** One per indexed configuration; the element's own is `partData`. */
+    partMetadata: PartMetadata | null;
+    /** One per indexed configuration; the element's own is `partMetadata`. */
     records: ConfigurationRecord[];
     buildIssues: BuildIssue[];
 }
 
 /** The result for an insertable that isn't indexed. */
 export const NO_RECORDS: ConfigurationRecordsResult = {
-    partData: null,
+    partMetadata: null,
     records: [],
     buildIssues: []
 };
@@ -55,8 +55,8 @@ export const NO_RECORDS: ConfigurationRecordsResult = {
  * issues clears these first, so a resolved issue doesn't stick around.
  */
 export const INDEXING_ISSUE_TYPES = [
-    BuildIssueType.TOO_MANY_CONFIGURATIONS,
-    BuildIssueType.MANY_CONFIGURATIONS,
+    BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED,
+    BuildIssueType.MANUAL_INDEXING_REQUIRED,
     BuildIssueType.MULTIPLE_PARTS,
     BuildIssueType.UNSTABLE_COMPOSITE,
     BuildIssueType.NO_PART_NUMBER
@@ -83,14 +83,16 @@ export function decideIndexing(
     if (band === IndexingBand.EXCEEDED) {
         return {
             shouldIndex,
-            buildIssues: [{ type: BuildIssueType.TOO_MANY_CONFIGURATIONS }],
+            buildIssues: [
+                { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }
+            ],
             configurations
         };
     }
     if (band === IndexingBand.MANUAL && !indexConfigurations) {
         return {
             shouldIndex,
-            buildIssues: [{ type: BuildIssueType.MANY_CONFIGURATIONS }],
+            buildIssues: [{ type: BuildIssueType.MANUAL_INDEXING_REQUIRED }],
             configurations
         };
     }
@@ -98,9 +100,9 @@ export function decideIndexing(
 }
 
 /** Trims a raw metadata value; a missing or blank one becomes `null`. */
-function normalizeText(value: string | undefined | null): string | null {
+function normalizeText(value: string | undefined | null): string | undefined {
     const trimmed = value?.trim();
-    return trimmed ? trimmed : null;
+    return trimmed ? trimmed : undefined;
 }
 
 /** What a part studio's parts resolve to, before build issues are decided. */
@@ -148,16 +150,13 @@ export function parsePartStudioRecord(
     isOpenComposite: boolean
 ): ConfigurationRecord {
     const evaluation = evaluateParts(parts);
+    // An element that is an open composite everywhere else has no part to read
+    // in a configuration that loses it; toResult raises the build issue.
     if (isOpenComposite && !evaluation.isOpenComposite) {
         return {
             configuration,
-            partNumber: null,
-            name: null,
-            description: null,
-            material: null,
-            vendor: null,
             hasMultipleParts: false,
-            isUnstableComposite: true
+            isOpenComposite: false
         };
     }
     const part = evaluation.partToUse;
@@ -169,7 +168,7 @@ export function parsePartStudioRecord(
         material: normalizeText(part?.material?.displayName),
         vendor: normalizeText(part?.vendor),
         hasMultipleParts: evaluation.hasMultipleParts,
-        isUnstableComposite: false
+        isOpenComposite: evaluation.isOpenComposite
     };
 }
 
@@ -183,14 +182,14 @@ const METADATA_FIELDS = {
 } as const;
 
 /** Reads a metadata property value as text; materials arrive as `{displayName}`. */
-function readMetadataValue(value: unknown): string | null {
+function readMetadataValue(value: unknown): string | undefined {
     if (typeof value === "string") {
         return normalizeText(value);
     }
     if (value && typeof value === "object" && "displayName" in value) {
         return normalizeText((value as { displayName?: string }).displayName);
     }
-    return null;
+    return undefined;
 }
 
 /** Builds a record from an assembly's element metadata for one configuration. */
@@ -198,15 +197,11 @@ export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
     configuration: ParameterValues
 ): ConfigurationRecord {
+    // An assembly is never a composite, so it reads nothing about one.
     const record: ConfigurationRecord = {
         configuration,
-        partNumber: null,
-        name: null,
-        description: null,
-        material: null,
-        vendor: null,
         hasMultipleParts: false,
-        isUnstableComposite: false
+        isOpenComposite: false
     };
     for (const property of metadata.properties) {
         const field =
@@ -376,14 +371,14 @@ function toResult(
 ): ConfigurationRecordsResult {
     // The element's own probe describes the element, not a configuration of it,
     // so it sheds the (empty) configuration that produced it.
-    const partData: PartData = {
+    const partMetadata: PartMetadata = {
         partNumber: defaultRecord.partNumber,
         name: defaultRecord.name,
         description: defaultRecord.description,
         material: defaultRecord.material,
         vendor: defaultRecord.vendor,
         hasMultipleParts: defaultRecord.hasMultipleParts,
-        isUnstableComposite: defaultRecord.isUnstableComposite
+        isOpenComposite: defaultRecord.isOpenComposite
     };
 
     // Canonical, so a record addresses the same thumbnail the insert menu does
@@ -397,19 +392,24 @@ function toResult(
     }));
 
     // A capped insertable never reaches here: decideIndexing turns indexing off
-    // past the cap, and raises TOO_MANY_CONFIGURATIONS itself.
-    const probed: PartData[] = [partData, ...records];
+    // past the cap, and raises CONFIGURATION_LIMIT_EXCEEDED itself.
+    const probes: PartMetadata[] = [partMetadata, ...records];
     let buildIssues: BuildIssue[] = [];
-    if (probed.some((record) => record.hasMultipleParts)) {
+    if (probes.some((probe) => probe.hasMultipleParts)) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.MULTIPLE_PARTS
         });
     }
-    if (probed.some((record) => record.isUnstableComposite)) {
+    // The element's own probe sets the expectation; losing the composite in any
+    // configuration is what makes it unstable.
+    if (
+        partMetadata.isOpenComposite &&
+        probes.some((probe) => !probe.isOpenComposite)
+    ) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.UNSTABLE_COMPOSITE
         });
     }
 
-    return { partData, records, buildIssues };
+    return { partMetadata, records, buildIssues };
 }

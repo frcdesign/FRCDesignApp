@@ -63,7 +63,17 @@ describe("addBuildIssue", () => {
         const result = addBuildIssue(existing, {
             type: BuildIssueType.NO_VENDORS
         });
-        expect(result).toBe(existing);
+        expect(result).toEqual(existing);
+    });
+
+    // Callers hold onto the array they passed in, so it must never be the one
+    // that comes back, even when there was nothing to add.
+    it("returns a new array even when nothing is added", () => {
+        const existing: BuildIssue[] = [{ type: BuildIssueType.NO_VENDORS }];
+        expect(
+            addBuildIssue(existing, { type: BuildIssueType.NO_VENDORS })
+        ).not.toBe(existing);
+        expect(addBuildIssue(existing)).not.toBe(existing);
     });
 });
 

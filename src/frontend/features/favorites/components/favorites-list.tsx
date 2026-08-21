@@ -3,8 +3,8 @@ import { HeartBreak } from "@phosphor-icons/react";
 import { HeartIconColor, IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../../search/filter";
-import { getFavoriteForInsertable } from "@backend/features/favorites/dto";
-import { InsertableOut } from "@backend/features/library/dto";
+import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
+import { InsertableOut } from "@backend/features/library/contract";
 import { useUiState } from "../../../lib/ui-state";
 import {
     SectionError,

@@ -57,16 +57,12 @@ describe("checkGroup", () => {
 });
 
 /** An indexed record; only its part number matters to these checks. */
-function record(partNumber: string | null): ConfigurationRecord {
+function record(partNumber?: string): ConfigurationRecord {
     return {
         configuration: {},
         partNumber,
-        name: null,
-        description: null,
-        material: null,
-        vendor: null,
         hasMultipleParts: false,
-        isUnstableComposite: false
+        isOpenComposite: false
     };
 }
 
@@ -74,7 +70,7 @@ describe("checkInsertable", () => {
     const HEALTHY_INSERTABLE = {
         vendors: [Vendor.REV],
         thumbnailUrls: THUMBNAILS,
-        probed: [record("217-2600")]
+        probes: [record("217-2600")]
     };
 
     it("returns no issues when vendors are parsed and thumbnails generated", () => {
@@ -100,7 +96,7 @@ describe("checkInsertable", () => {
     it("warns when a vendor part indexed without a part number", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
-            probed: [record(null), record(null)]
+            probes: [record(), record()]
         });
         expect(issues).toEqual([{ type: BuildIssueType.NO_PART_NUMBER }]);
     });
@@ -108,7 +104,7 @@ describe("checkInsertable", () => {
     it("does not warn when only some configurations lack one", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
-            probed: [record(null), record("217-2600")]
+            probes: [record(), record("217-2600")]
         });
         expect(issues).toEqual([]);
     });
@@ -118,14 +114,14 @@ describe("checkInsertable", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
             vendors: [Vendor.CUSTOM],
-            probed: [record(null)]
+            probes: [record()]
         });
         expect(issues).toEqual([]);
     });
 
     // Nothing was probed, so there is nothing to conclude.
     it("does not warn when the insertable is not indexed", () => {
-        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, probed: [] });
+        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, probes: [] });
         expect(issues).toEqual([]);
     });
 });

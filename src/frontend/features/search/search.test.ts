@@ -5,7 +5,7 @@ import {
     tokenize
 } from "@backend/features/search/search-index";
 import { doSearch, type Position } from "./search";
-import { LibraryOut } from "@backend/features/library/dto";
+import { LibraryOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     ConfigurationRecord,
@@ -14,19 +14,16 @@ import {
 
 /** Builds a configuration record carrying a part number, name, + configuration. */
 function record(
-    partNumber: string | null,
+    partNumber: string | undefined,
     configuration: ParameterValues,
-    name: string | null = null
+    name?: string
 ): ConfigurationRecord {
     return {
         configuration,
         partNumber,
         name,
-        description: null,
-        material: null,
-        vendor: null,
         hasMultipleParts: false,
-        isUnstableComposite: false
+        isOpenComposite: false
     };
 }
 

@@ -186,7 +186,7 @@ function matchedRecord(
 function findBestRecord(
     query: string,
     records: SearchRecord[],
-    selector: (record: SearchRecord) => string | null
+    selector: (record: SearchRecord) => string | undefined
 ): SearchRecord | undefined {
     const normalizedQuery = normalizeForMatch(query.trim());
     if (records.length === 0 || normalizedQuery === "") {

@@ -1,6 +1,6 @@
 import {
     type ConfigurationRecord,
-    type PartData,
+    type PartMetadata,
     ParameterValues,
     EnumOption,
     EnumParameter,
@@ -195,9 +195,9 @@ export function getEvaluateOptions(
  * unset configuration falls back to — then one per indexed configuration.
  */
 export function toRecords(
-    partData: PartData | null,
+    partMetadata: PartMetadata | null,
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
-    if (!partData) return records;
-    return [{ ...partData, configuration: {} }, ...records];
+    if (!partMetadata) return records;
+    return [{ ...partMetadata, configuration: {} }, ...records];
 }

@@ -81,8 +81,8 @@ export interface ConfigurationResult {
  * the index and the `/configuration` route can share it.
  */
 export interface SearchRecord {
-    partNumber: string | null;
-    name: string | null;
+    partNumber?: string;
+    name?: string;
     /** The (enumerated) parameter values that produce it; empty for the default. */
     configuration: ParameterValues;
 }
@@ -140,25 +140,29 @@ export type ParameterValues = Record<string, string>;
  * UI can read it back without re-querying Onshape.
  */
 /**
- * What a probe reads off an element. Probed from the element's own defaults it
- * describes the element itself; probed from a configuration it describes that
- * configuration (see {@link ConfigurationRecord}).
+ * The part an element resolves to, as one probe of Onshape read it. Probed from
+ * the element's own defaults this describes the element; probed from a specific
+ * configuration it is a {@link ConfigurationRecord}. A field is absent when the
+ * probe found no value for it.
  */
-export interface PartData {
-    partNumber: string | null;
-    name: string | null;
-    description: string | null;
+export interface PartMetadata {
+    partNumber?: string;
+    name?: string;
+    description?: string;
     /** Material display name, e.g. "6061 Aluminum". */
-    material: string | null;
-    vendor: string | null;
-    /** True when a part studio resolved to more than one part. */
+    material?: string;
+    vendor?: string;
+    /** True when the part studio resolved to more than one part. */
     hasMultipleParts: boolean;
-    /** True when an open composite lost its composite here. */
-    isUnstableComposite: boolean;
+    /** Whether this probe resolved to an open composite. */
+    isOpenComposite: boolean;
 }
 
-/** One configuration's part data, stored only for an indexed insertable. */
-export interface ConfigurationRecord extends PartData {
+/**
+ * {@link PartMetadata} for one specific configuration — the same fields, plus
+ * the parameter values that produced them. Stored only for an indexed insertable.
+ */
+export interface ConfigurationRecord extends PartMetadata {
     /** The parameter values that produce it. */
     configuration: ParameterValues;
 }

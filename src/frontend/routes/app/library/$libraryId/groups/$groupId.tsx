@@ -15,7 +15,7 @@ import {
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
-import { GroupOut, Insertables } from "@backend/features/library/dto";
+import { GroupOut, Insertables } from "@backend/features/library/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { filterInsertables } from "../../../../../features/search/filter";
 import { GroupMenuItems } from "../../../../../features/library/components/group-card";

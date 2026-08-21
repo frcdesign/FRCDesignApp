@@ -11,7 +11,7 @@ import {
     seedPartStudio
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import type { LibraryBuildStatus } from "./dto";
+import type { LibraryBuildStatus } from "./contract";
 
 const db = getDb(env.DB);
 

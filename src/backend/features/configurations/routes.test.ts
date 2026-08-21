@@ -43,14 +43,14 @@ describe("configuration routes", () => {
     // back to, and it lives on the insertable, not in a configurations row.
     it("GET /configuration/insertable/:insertableId serves the element's own part data as a record", async () => {
         await seedPartStudio(db, {
-            partData: {
+            partMetadata: {
                 partNumber: "WCP-0405",
                 name: "2x1 Tube",
-                description: null,
-                material: null,
-                vendor: null,
+                description: undefined,
+                material: undefined,
+                vendor: undefined,
                 hasMultipleParts: false,
-                isUnstableComposite: false
+                isOpenComposite: false
             }
         });
         const app = createTestApp();

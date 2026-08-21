@@ -11,7 +11,7 @@ import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
 import { toLibraryPath, useLibraryId } from "../library-path";
 import { jobStatusQueryKey } from "../../../lib/query-keys";
-import type { JobStatus } from "@backend/features/library/dto";
+import type { JobStatus } from "@backend/features/load/contract";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     modals.open({

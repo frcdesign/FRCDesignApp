@@ -40,7 +40,7 @@ import {
 import {
     GroupBuildStatus,
     InsertableBuildStatus
-} from "@backend/features/build-checker/dto";
+} from "@backend/features/build-checker/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import {
     ConfigurationParameter,

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../../db/client";
 import type {
     Configuration,
-    PartData,
+    PartMetadata,
     ConfigurationParameter
 } from "../configurations/models";
 import {
@@ -47,7 +47,7 @@ export interface ParsedInsertable {
     isOpenComposite: boolean;
     buildIssues: BuildIssue[];
     /** The element's own part data; null when nothing was probed. */
-    partData: PartData | null;
+    partMetadata: PartMetadata | null;
     configuration: Configuration;
 }
 
@@ -111,7 +111,7 @@ export async function loadInsertable(
             ? checkInsertable({
                   vendors,
                   thumbnailUrls,
-                  probed: [recordsResult.partData, ...recordsResult.records]
+                  probes: [recordsResult.partMetadata, ...recordsResult.records]
               })
             : [{ type: BuildIssueType.NO_PARTS }],
         ...recordsResult.buildIssues,
@@ -124,7 +124,7 @@ export async function loadInsertable(
         fastenInfo,
         isOpenComposite,
         buildIssues,
-        partData: recordsResult.partData,
+        partMetadata: recordsResult.partMetadata,
         configuration: { parameters, records: recordsResult.records }
     };
 
@@ -230,7 +230,7 @@ export async function saveInsertable(
         largeThumbnailUrl: parsed.thumbnailUrls?.large ?? null,
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
-        partData: parsed.partData,
+        partMetadata: parsed.partMetadata,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: Date.now()
     };

@@ -9,7 +9,7 @@ import {
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
 import { users, favorites } from "../../db/schema";
-import type { Favorite, FavoritesData } from "./dto";
+import type { Favorite, FavoritesData } from "./contract";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
@@ -119,7 +119,7 @@ favoriteRoutes.delete(favoriteRoute(), requireSignInMiddleware, async (c) => {
     const userId = await c.var.getUserId();
     const db = getDb(c.env.DB);
 
-    // security: Require the user to also match
+    // Scoped to the owner, so another user's favorite matches nothing.
     await db
         .delete(favorites)
         .where(and(eq(favorites.id, favoriteId), eq(favorites.userId, userId)));
@@ -134,14 +134,19 @@ favoriteRoutes.post(
     zValidator("json", favoriteOrderBody),
     async (c) => {
         const { favoriteOrder } = c.req.valid("json");
+        const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
+        // Scoped to the owner rather than checked first: a favorite that is not
+        // theirs matches nothing, which costs no extra read.
         await Promise.all(
             favoriteOrder.map((id, i) =>
                 db
                     .update(favorites)
                     .set({ sortOrder: i })
-                    .where(eq(favorites.id, id))
+                    .where(
+                        and(eq(favorites.id, id), eq(favorites.userId, userId))
+                    )
             )
         );
 
@@ -157,12 +162,15 @@ favoriteRoutes.post(
     async (c) => {
         const favoriteId = getFavoriteParam(c);
         const { defaultConfiguration } = c.req.valid("json");
+        const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
         await db
             .update(favorites)
             .set({ defaultConfiguration })
-            .where(eq(favorites.id, favoriteId));
+            .where(
+                and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
+            );
 
         return c.json({ success: true });
     }

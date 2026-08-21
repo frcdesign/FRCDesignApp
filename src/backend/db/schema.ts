@@ -1,14 +1,14 @@
 import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
-import { DEFAULT_LIBRARY_ID, LibraryId } from "../features/library/library-id";
+import { LibraryId } from "../features/library/library-id";
 import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
     ParameterValues,
     ConfigurationParameter,
     ConfigurationRecord,
-    PartData
+    PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
 
@@ -96,7 +96,9 @@ export const insertables = sqliteTable("insertables", {
     }).$type<FastenInfo | null>(),
     // The element's own part identity, probed from its defaults. Null until a
     // probe succeeds; a configurable insertable left unindexed never gets one.
-    partData: text("part_data", { mode: "json" }).$type<PartData | null>(),
+    partMetadata: text("part_metadata", {
+        mode: "json"
+    }).$type<PartMetadata | null>(),
     // Build-time issues flagged by the build checker, recomputed on reload.
     buildIssues: text("build_issues", { mode: "json" })
         .$type<BuildIssue[]>()
@@ -117,7 +119,7 @@ export const configurations = sqliteTable("configurations", {
         .notNull()
         .default([]),
     // One record per indexed configuration. Empty unless the insertable is
-    // indexed; the element's own part data lives on `insertables.partData`.
+    // indexed; the element's own metadata lives on `insertables.partMetadata`.
     records: text("records", { mode: "json" })
         .$type<ConfigurationRecord[]>()
         .notNull()
@@ -137,7 +139,7 @@ export const users = sqliteTable("users", {
     libraryId: text("library_id")
         .$type<LibraryId>()
         .notNull()
-        .default(DEFAULT_LIBRARY_ID)
+        .default(DEFAULT_SETTINGS.libraryId)
 });
 
 export const favorites = sqliteTable(

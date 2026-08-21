@@ -1,4 +1,4 @@
-import { InsertableOut } from "@backend/features/library/dto";
+import { InsertableOut } from "@backend/features/library/contract";
 import { Vendor } from "@backend/features/library/vendors";
 import { FilterResult } from "./search";
 

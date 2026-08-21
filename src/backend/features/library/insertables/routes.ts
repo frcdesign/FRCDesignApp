@@ -167,7 +167,7 @@ insertableRoutes.post(
             ...indexing.buildIssues,
             // Vendors are read, not re-derived: the load path wrote them.
             ...checkIndexedPartNumber(row.vendors, [
-                indexed.partData,
+                indexed.partMetadata,
                 ...indexed.records
             ])
         );
@@ -195,7 +195,7 @@ insertableRoutes.post(
                 .update(insertables)
                 .set({
                     indexConfigurations: body.indexConfigurations,
-                    partData: indexed.partData,
+                    partMetadata: indexed.partMetadata,
                     buildIssues
                 })
                 .where(eq(insertables.id, insertableId)),

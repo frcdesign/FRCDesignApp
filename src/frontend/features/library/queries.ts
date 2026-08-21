@@ -1,7 +1,8 @@
 /** Queries for the library snapshot, its cache version, and its load jobs. */
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
-import { type JobStatus, type LibraryOut } from "@backend/features/library/dto";
+import { type LibraryOut } from "@backend/features/library/contract";
+import { type JobStatus } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";

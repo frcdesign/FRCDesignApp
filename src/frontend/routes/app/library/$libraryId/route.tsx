@@ -7,10 +7,8 @@ import {
     getLibraryVersionQuery
 } from "../../../../features/library/queries";
 import { getSearchDbQuery } from "../../../../features/search/queries";
-import {
-    DEFAULT_LIBRARY_ID,
-    LibraryId
-} from "@backend/features/library/library-id";
+import { LibraryId } from "@backend/features/library/library-id";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { getUiState } from "../../../../lib/ui-state";
 
 /** Restoring the last group is an entry behavior, so it happens once per load. */
@@ -30,7 +28,7 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         if (!isLibraryId(params.libraryId)) {
             throw redirect({
                 to: "/app/library/$libraryId",
-                params: { libraryId: DEFAULT_LIBRARY_ID }
+                params: { libraryId: DEFAULT_SETTINGS.libraryId }
             });
         }
         // Client state, so the entry redirect can't restore it.

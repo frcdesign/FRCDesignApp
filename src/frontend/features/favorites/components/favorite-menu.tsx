@@ -9,7 +9,7 @@ import { apiPost } from "../../../lib/api-client";
 import { showErrorToast, showSuccessToast } from "../../../lib/notifications";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { ConfigurationWrapper } from "../../insert/components/configurations";
-import type { FavoritesData } from "@backend/features/favorites/dto";
+import type { FavoritesData } from "@backend/features/favorites/contract";
 import { HeartIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {

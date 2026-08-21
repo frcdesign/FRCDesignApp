@@ -80,14 +80,14 @@ describe("rebuildSearchDb", () => {
     it("indexes an unconfigurable insertable's part number", async () => {
         await seedGroup(db);
         await seedInsertable(db, {
-            partData: {
+            partMetadata: {
                 partNumber: "WCP-0405",
                 name: "2x1 Tube",
-                description: null,
-                material: null,
-                vendor: null,
+                description: undefined,
+                material: undefined,
+                vendor: undefined,
                 hasMultipleParts: false,
-                isUnstableComposite: false
+                isOpenComposite: false
             }
         });
 

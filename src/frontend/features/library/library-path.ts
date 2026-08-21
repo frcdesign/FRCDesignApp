@@ -1,8 +1,6 @@
 import { useParams } from "@tanstack/react-router";
-import {
-    DEFAULT_LIBRARY_ID,
-    LibraryId
-} from "@backend/features/library/library-id";
+import { LibraryId } from "@backend/features/library/library-id";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 
 /** Returns the library being displayed, which the url is the source of truth for. */
 export function useLibraryId(): LibraryId {
@@ -12,7 +10,7 @@ export function useLibraryId(): LibraryId {
         from: "/app/library/$libraryId",
         shouldThrow: false
     });
-    return params?.libraryId ?? DEFAULT_LIBRARY_ID;
+    return params?.libraryId ?? DEFAULT_SETTINGS.libraryId;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {

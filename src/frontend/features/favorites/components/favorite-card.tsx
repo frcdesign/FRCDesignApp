@@ -1,7 +1,7 @@
 import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
 import { ReactNode } from "react";
-import { Favorite } from "@backend/features/favorites/dto";
-import { InsertableOut } from "@backend/features/library/dto";
+import { Favorite } from "@backend/features/favorites/contract";
+import { InsertableOut } from "@backend/features/library/contract";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { queryClient } from "../../../lib/query-client";

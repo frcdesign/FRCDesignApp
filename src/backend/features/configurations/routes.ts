@@ -34,7 +34,7 @@ configurationRoutes.get(
         // lives on the insertable whether or not it is configurable.
         const config = await db
             .select({
-                partData: insertables.partData,
+                partMetadata: insertables.partMetadata,
                 parameters: configurations.parameters,
                 records: configurations.records
             })
@@ -52,7 +52,7 @@ configurationRoutes.get(
         const result: ConfigurationResult = {
             parameters: config.parameters ?? [],
             records: toSearchRecords(
-                toRecords(config.partData, config.records ?? [])
+                toRecords(config.partMetadata, config.records ?? [])
             )
         };
         return c.json(result);

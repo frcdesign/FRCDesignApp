@@ -1,7 +1,4 @@
-import {
-    DEFAULT_LIBRARY_ID,
-    type LibraryId
-} from "@backend/features/library/library-id";
+import { type LibraryId } from "@backend/features/library/library-id";
 import {
     DEFAULT_SETTINGS,
     type SettingsUpdate,
@@ -24,7 +21,7 @@ export function readLocalSettings(): { theme: Theme; libraryId: LibraryId } {
     const stored = readStored();
     return {
         theme: stored.theme ?? DEFAULT_SETTINGS.theme,
-        libraryId: stored.libraryId ?? DEFAULT_LIBRARY_ID
+        libraryId: stored.libraryId ?? DEFAULT_SETTINGS.libraryId
     };
 }
 

@@ -4,7 +4,7 @@ import {
     useQuery
 } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
-import { type LibraryBuildStatus } from "@backend/features/build-checker/dto";
+import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../library/library-path";
 import { useCacheVersion } from "../library/queries";

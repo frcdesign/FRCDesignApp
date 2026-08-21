@@ -3,7 +3,7 @@ import { ArrowRight, Eye, EyeSlash, Trash } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
-import { GroupOut, LibraryOut } from "@backend/features/library/dto";
+import { GroupOut, LibraryOut } from "@backend/features/library/contract";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, apiDelete } from "../../../lib/api-client";
 import { showErrorToast } from "../../../lib/notifications";

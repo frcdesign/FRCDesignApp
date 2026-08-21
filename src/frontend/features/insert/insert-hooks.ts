@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../../lib/api-client";
-import { InsertableOut } from "@backend/features/library/dto";
+import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";

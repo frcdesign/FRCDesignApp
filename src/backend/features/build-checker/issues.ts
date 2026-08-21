@@ -24,8 +24,8 @@ export enum BuildIssueType {
     NO_PART_NUMBER = "no-part-number",
     NO_PARTS = "no-parts",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
-    TOO_MANY_CONFIGURATIONS = "too-many-configurations",
-    MANY_CONFIGURATIONS = "many-configurations",
+    CONFIGURATION_LIMIT_EXCEEDED = "configuration-limit-exceeded",
+    MANUAL_INDEXING_REQUIRED = "manual-indexing-required",
     MULTIPLE_PARTS = "multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
@@ -46,8 +46,8 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_PART_NUMBER>
     | BuildIssueOf<BuildIssueType.NO_PARTS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
-    | BuildIssueOf<BuildIssueType.TOO_MANY_CONFIGURATIONS>
-    | BuildIssueOf<BuildIssueType.MANY_CONFIGURATIONS>
+    | BuildIssueOf<BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED>
+    | BuildIssueOf<BuildIssueType.MANUAL_INDEXING_REQUIRED>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | BuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
@@ -68,9 +68,9 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "This part studio has no parts";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
             return "No unhidden insertables";
-        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
+        case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
             return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so its configurations cannot be indexed`;
-        case BuildIssueType.MANY_CONFIGURATIONS:
+        case BuildIssueType.MANUAL_INDEXING_REQUIRED:
             return `Over ${AUTO_INDEX_THRESHOLD} configurations, so indexing must be enabled manually`;
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
@@ -95,8 +95,8 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
-        case BuildIssueType.TOO_MANY_CONFIGURATIONS:
-        case BuildIssueType.MANY_CONFIGURATIONS:
+        case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
+        case BuildIssueType.MANUAL_INDEXING_REQUIRED:
         case BuildIssueType.NO_PART_NUMBER:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
@@ -112,10 +112,10 @@ export function addBuildIssue(
     issues: BuildIssue[],
     ...newIssues: BuildIssue[]
 ): BuildIssue[] {
-    let result = issues;
+    const result = [...issues];
     for (const issue of newIssues) {
         if (!result.some((existing) => existing.type === issue.type)) {
-            result = [...result, issue];
+            result.push(issue);
         }
     }
     return result;

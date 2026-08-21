@@ -3,7 +3,7 @@
  * deserializes it with the same options.
  */
 import MiniSearch, { Options } from "minisearch";
-import { LibraryOut } from "../library/dto";
+import { LibraryOut } from "../library/contract";
 import { Vendor } from "../library/vendors";
 import { ConfigurationRecord, SearchRecord } from "../configurations/models";
 
@@ -118,7 +118,7 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
 };
 
 /** Joins the distinct non-null values with spaces (a searchable field's form). */
-function uniqueJoin(values: (string | null)[]): string {
+function uniqueJoin(values: (string | undefined)[]): string {
     return Array.from(
         new Set(values.filter((value): value is string => !!value))
     ).join(" ");

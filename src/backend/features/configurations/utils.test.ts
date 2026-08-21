@@ -6,7 +6,7 @@ function rec(
     configuration: Record<string, string>,
     partNumber = "PN"
 ): SearchRecord {
-    return { partNumber, name: null, configuration };
+    return { partNumber, configuration };
 }
 
 describe("findRecordForConfiguration", () => {

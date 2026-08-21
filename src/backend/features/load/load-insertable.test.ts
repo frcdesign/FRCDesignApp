@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
-import type { ConfigurationRecord, PartData } from "../configurations/models";
+import type {
+    ConfigurationRecord,
+    PartMetadata
+} from "../configurations/models";
 import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
@@ -26,25 +29,17 @@ function readInsertable() {
         .get();
 }
 
-/** Builds an element's own part data with the given part number and defaults. */
-function partData(partNumber: string | null): PartData {
-    return {
-        partNumber,
-        name: null,
-        description: null,
-        material: null,
-        vendor: null,
-        hasMultipleParts: false,
-        isUnstableComposite: false
-    };
+/** The element's own metadata, with the given part number and defaults. */
+function partMetadata(partNumber?: string): PartMetadata {
+    return { partNumber, hasMultipleParts: false, isOpenComposite: false };
 }
 
 /** Builds a configuration record with the given part number and defaults. */
 function record(
-    partNumber: string | null,
+    partNumber?: string,
     configuration: Record<string, string> = {}
 ): ConfigurationRecord {
-    return { ...partData(partNumber), configuration };
+    return { ...partMetadata(partNumber), configuration };
 }
 
 describe("saveInsertable", () => {
@@ -140,7 +135,7 @@ describe("saveInsertable", () => {
             db,
             insertableTarget(),
             parsedInsertable({
-                partData: partData("PN-default"),
+                partMetadata: partMetadata("PN-default"),
                 configuration: { parameters: [], records: [] }
             })
         );
@@ -150,7 +145,7 @@ describe("saveInsertable", () => {
             .from(insertables)
             .where(eq(insertables.id, TEST_PART_STUDIO_ID))
             .get();
-        expect(insertable?.partData).toEqual(partData("PN-default"));
+        expect(insertable?.partMetadata).toEqual(partMetadata("PN-default"));
         expect(await db.select().from(configurations).all()).toHaveLength(0);
     });
 

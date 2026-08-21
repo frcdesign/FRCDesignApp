@@ -12,7 +12,6 @@ import { ReactNode, useMemo } from "react";
 import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
-import { DEFAULT_LIBRARY_ID } from "@backend/features/library/library-id";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { NotFoundError, RootCrash } from "../components/root-error";
 
@@ -31,7 +30,7 @@ function RootComponent(): ReactNode {
     // rewrites them — so the first paint is already the right colors.
     const params = useParams({ strict: false });
 
-    const libraryId = params.libraryId ?? DEFAULT_LIBRARY_ID;
+    const libraryId = params.libraryId ?? DEFAULT_SETTINGS.libraryId;
     const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
     const colorTheme = getColorTheme(
         search.theme ?? DEFAULT_SETTINGS.theme,

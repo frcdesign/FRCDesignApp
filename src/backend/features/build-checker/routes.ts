@@ -9,7 +9,7 @@ import type {
     LibraryBuildStatus,
     GroupBuildStatus,
     InsertableBuildStatus
-} from "./dto";
+} from "./contract";
 
 export const buildStatusRoutes = getApp();
 
