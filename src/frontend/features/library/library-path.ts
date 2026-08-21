@@ -27,6 +27,10 @@ export function toGroupPath(groupId: string): string {
     return `/group/${groupId}`;
 }
 
+export function toFavoritePath(favoriteId: string): string {
+    return `/favorite/${favoriteId}`;
+}
+
 export function getLibraryName(libraryId: string): string {
     switch (libraryId) {
         case LibraryId.FRC_DESIGN_LIB:

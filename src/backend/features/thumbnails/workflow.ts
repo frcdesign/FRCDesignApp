@@ -14,8 +14,6 @@ import { uploadConfigurationThumbnails } from "./store";
 /** The render to run, plus the session whose Onshape tokens it runs under. */
 export interface ThumbnailWorkflowParams {
     insertableId: string;
-    /** Part of the key, so a render lands where the request looked for it. */
-    microversionId: string;
     /** Never the default, which loads eagerly with the element. */
     canonicalConfiguration: string;
     sessionId: string;
@@ -33,19 +31,18 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<ThumbnailWorkflowParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const {
-            insertableId,
-            microversionId,
-            canonicalConfiguration,
-            sessionId
-        } = event.payload;
+        const { insertableId, canonicalConfiguration, sessionId } =
+            event.payload;
 
-        const elementPath = await step.do("resolve-element", async () => {
+        // Read rather than passed in: the stored row is what the key has to
+        // agree with, and a request can carry a microversion it has moved past.
+        const element = await step.do("resolve-element", async () => {
             const row = await getDb(this.env.DB)
                 .select({
                     documentId: insertables.documentId,
                     versionId: insertables.versionId,
-                    elementId: insertables.elementId
+                    elementId: insertables.elementId,
+                    microversionId: insertables.microversionId
                 })
                 .from(insertables)
                 .where(eq(insertables.id, insertableId))
@@ -53,12 +50,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
             if (!row) {
                 throw new Error(`No insertable ${insertableId}`);
             }
-            return {
-                documentId: row.documentId,
-                instanceId: row.versionId,
-                instanceType: "v" as const,
-                elementId: row.elementId
-            };
+            return row;
         });
 
         await step.do(
@@ -73,8 +65,13 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                         step,
                         limit: createLimiter(1)
                     }),
-                    elementPath,
-                    microversionId,
+                    {
+                        documentId: element.documentId,
+                        instanceId: element.versionId,
+                        instanceType: "v" as const,
+                        elementId: element.elementId
+                    },
+                    element.microversionId,
                     canonicalConfiguration
                 )
         );

@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { getApp } from "../../lib/context";
+import { getInsertableParam, insertableRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import { configurations, insertables } from "../../db/schema";
@@ -8,24 +11,24 @@ import { type ConfigurationResult, type UnitInfo } from "./models";
 import { toSearchRecords } from "../search/search-index";
 import { toRecords } from "./utils";
 import { QuantityType, type Unit } from "./enums";
-import { isInstancePath } from "../../lib/onshape/path";
+import { INSTANCE_TYPES } from "../../lib/onshape/path";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 
 export const configurationRoutes = getApp();
 
-/** GET /api/configuration/:insertableId?v=:microversionId — parameters and records */
+const instancePathQuery = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    instanceType: z.enum(INSTANCE_TYPES)
+});
+
+/** GET /api/configuration/insertable/:insertableId?v=:microversionId */
 configurationRoutes.get(
-    "/configuration/:insertableId",
+    "/configuration" + insertableRoute(),
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
-        const insertableId = c.req.param("insertableId");
-        if (!insertableId) {
-            throw new HTTPException(HttpStatus.BAD_REQUEST, {
-                message: "insertableId is required"
-            });
-        }
-
+        const insertableId = getInsertableParam(c);
         const db = getDb(c.env.DB);
         // Left join: the element's own part data is the fallback record, and it
         // lives on the insertable whether or not it is configurable.
@@ -57,34 +60,30 @@ configurationRoutes.get(
 );
 
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
-configurationRoutes.get("/unit-info", cacheMiddleware(), async (c) => {
-    const onshapeApi = await c.var.getOnshapeApi();
-    const instancePath = {
-        documentId: c.req.query("documentId"),
-        instanceId: c.req.query("instanceId"),
-        instanceType: c.req.query("instanceType")
-    };
-    if (!isInstancePath(instancePath)) {
-        throw new HTTPException(HttpStatus.BAD_REQUEST, {
-            message: "instancePath is required"
-        });
+configurationRoutes.get(
+    "/unit-info",
+    cacheMiddleware(),
+    zValidator("query", instancePathQuery),
+    async (c) => {
+        const onshapeApi = await c.var.getOnshapeApi();
+        const instancePath = c.req.valid("query");
+
+        const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
+        const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;
+
+        const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
+        const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);
+
+        const result: UnitInfo = {
+            angleUnit,
+            lengthUnit,
+            anglePrecision: rawUnitInfo.unitsDisplayPrecision[angleUnit],
+            lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
+            realPrecision: 3
+        };
+        return c.json(result);
     }
-
-    const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
-    const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;
-
-    const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
-    const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);
-
-    const result: UnitInfo = {
-        angleUnit,
-        lengthUnit,
-        anglePrecision: rawUnitInfo.unitsDisplayPrecision[angleUnit],
-        lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
-        realPrecision: 3
-    };
-    return c.json(result);
-});
+);
 
 interface OnshapeUnit {
     key: QuantityType;

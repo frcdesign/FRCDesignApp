@@ -11,7 +11,12 @@ import {
     showLoadingToast,
     showSuccessToast
 } from "../../lib/notifications";
-import { toInsertablePath, toLibraryPath, useLibraryId } from "./library-path";
+import {
+    toGroupPath,
+    toInsertablePath,
+    toLibraryPath,
+    useLibraryId
+} from "./library-path";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useCacheVersion } from "./queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
@@ -109,7 +114,7 @@ export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
     const refreshLibrary = useRefreshLibrary();
 
     const endpoint = isGroup
-        ? `/reload-group-thumbnail/group/${id}`
+        ? "/reload-group-thumbnail" + toGroupPath(id)
         : "/reload-insertable-thumbnail" + toInsertablePath(id);
 
     return useMutation({

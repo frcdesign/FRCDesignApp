@@ -24,6 +24,25 @@ const reloadGroupsQuery = z.object({
     forceReload: z.stringbool().default(false)
 });
 
+const setVisibilityBody = z.object({
+    insertableIds: z.array(z.string()),
+    isVisible: z.boolean()
+});
+
+const sortGroupBody = z.object({
+    groupId: z.string().min(1),
+    sortAlphabetically: z.boolean()
+});
+
+const groupOrderBody = z.object({ groupOrder: z.array(z.string()) });
+
+const addGroupBody = z.object({
+    newDocumentId: z.string().min(1),
+    selectedGroupId: z.string().optional()
+});
+
+const deleteGroupQuery = z.object({ groupId: z.string().min(1) });
+
 /** POST /api/reload-groups/library/:libraryId?forceReload=true */
 groupRoutes.post(
     "/reload-groups" + libraryRoute(),
@@ -71,12 +90,10 @@ groupRoutes.get(
 groupRoutes.post(
     "/set-insertable-visibility" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("json", setVisibilityBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const body = await c.req.json<{
-            insertableIds: string[];
-            isVisible: boolean;
-        }>();
+        const body = c.req.valid("json");
 
         const db = getDb(c.env.DB);
 
@@ -113,12 +130,10 @@ groupRoutes.post(
 groupRoutes.post(
     "/sort-group-alphabetically" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("json", sortGroupBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const body = await c.req.json<{
-            groupId: string;
-            sortAlphabetically: boolean;
-        }>();
+        const body = c.req.valid("json");
 
         const db = getDb(c.env.DB);
         await db
@@ -137,9 +152,10 @@ groupRoutes.post(
 groupRoutes.post(
     "/group-order" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("json", groupOrderBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const body = await c.req.json<{ groupOrder: string[] }>();
+        const body = c.req.valid("json");
 
         const db = getDb(c.env.DB);
         await Promise.all(
@@ -162,13 +178,11 @@ groupRoutes.post(
 groupRoutes.post(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("json", addGroupBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const libraryId = getLibraryParam(c);
-        const body = await c.req.json<{
-            newDocumentId: string;
-            selectedGroupId?: string;
-        }>();
+        const body = c.req.valid("json");
         const sessionId = getSessionId(c);
 
         const documentPath: DocumentPath = { documentId: body.newDocumentId };
@@ -232,14 +246,10 @@ groupRoutes.post(
 groupRoutes.delete(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
+    zValidator("query", deleteGroupQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const groupId = c.req.query("groupId");
-        if (!groupId)
-            return c.json(
-                { error: "groupId required" },
-                HttpStatus.BAD_REQUEST
-            );
+        const { groupId } = c.req.valid("query");
 
         const db = getDb(c.env.DB);
 

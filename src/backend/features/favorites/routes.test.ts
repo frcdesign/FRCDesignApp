@@ -126,14 +126,14 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("DELETE /favorites/:favoriteId", () => {
+    describe("DELETE /favorite/:favoriteId", () => {
         it("deletes a favorite owned by the current user", async () => {
             await seedPartStudio(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             const app = createTestApp();
 
             const res = await app.request(
-                `/api/favorites/${favoriteId}`,
+                `/api/favorite/${favoriteId}`,
                 jsonRequest("DELETE"),
                 env
             );
@@ -153,7 +153,7 @@ describe("favorites routes", () => {
             const app = createTestApp();
 
             const res = await app.request(
-                `/api/favorites/${favoriteId}`,
+                `/api/favorite/${favoriteId}`,
                 jsonRequest("DELETE"),
                 env
             );
@@ -198,7 +198,7 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /default-configuration/:favoriteId", () => {
+    describe("POST /default-configuration/favorite/:favoriteId", () => {
         it("persists the default configuration", async () => {
             await seedPartStudio(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
@@ -206,7 +206,7 @@ describe("favorites routes", () => {
 
             const defaultConfiguration = { "param-id": "value" };
             const res = await app.request(
-                `/api/default-configuration/${favoriteId}`,
+                `/api/default-configuration/favorite/${favoriteId}`,
                 jsonRequest("POST", { defaultConfiguration }),
                 env
             );

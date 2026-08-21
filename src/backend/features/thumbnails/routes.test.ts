@@ -240,7 +240,6 @@ describe("warming a configuration's thumbnail", () => {
             expect.objectContaining({
                 params: {
                     insertableId: INSERTABLE_ID,
-                    microversionId: MICROVERSION,
                     canonicalConfiguration: CANONICAL_CONFIGURATION,
                     // The render runs later, so it needs a session to authenticate.
                     sessionId: SESSION_ID

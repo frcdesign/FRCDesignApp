@@ -3,7 +3,12 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { CachePolicy, cacheMiddleware, setCacheTtl } from "../../lib/cache";
 import { getApp } from "../../lib/context";
-import { getInsertableParam, insertableRoute } from "../../lib/route-params";
+import {
+    getGroupParam,
+    getInsertableParam,
+    groupRoute,
+    insertableRoute
+} from "../../lib/route-params";
 import { getInsertableElementPath } from "../library/insertables/routes";
 import { getDb } from "../../db/client";
 import { requireEditorMiddleware } from "../auth/guards";
@@ -87,7 +92,6 @@ thumbnailRoutes.get(
         if (warm && insertableId) {
             await warmConfigurationThumbnail(c, {
                 insertableId,
-                microversionId,
                 canonicalConfiguration
             });
         }
@@ -184,11 +188,11 @@ thumbnailRoutes.post(
 
 /** POST /api/reload-group-thumbnail/group/:groupId */
 thumbnailRoutes.post(
-    "/reload-group-thumbnail/group/:groupId",
+    "/reload-group-thumbnail" + groupRoute(),
     requireEditorMiddleware,
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
-        const groupId = c.req.param("groupId");
+        const groupId = getGroupParam(c);
         const db = getDb(c.env.DB);
 
         const row = await db

@@ -11,7 +11,11 @@ import { queryClient } from "../../../lib/query-client";
 import { useRouter } from "@tanstack/react-router";
 import { handleAppError, HandledError } from "../../../lib/errors";
 import { getQueryUpdater } from "../../../lib/utils";
-import { toLibraryPath, useLibraryId } from "../../library/library-path";
+import {
+    toFavoritePath,
+    toLibraryPath,
+    useLibraryId
+} from "../../library/library-path";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
 
@@ -68,7 +72,7 @@ function useUpdateFavoritesMutation() {
                     }
                 });
             } else {
-                return apiDelete("/favorites/" + args.favoriteId);
+                return apiDelete(toFavoritePath(args.favoriteId));
             }
         },
         onMutate: async (args) => {

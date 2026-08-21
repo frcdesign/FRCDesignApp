@@ -44,14 +44,19 @@ import { checkIndexedPartNumber } from "../../build-checker/checks";
 export const insertableRoutes = getApp();
 
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
+const setFastenBody = z.object({ supportsFasten: z.boolean() });
+
+const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
+
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
     requireEditorMiddleware,
+    zValidator("json", setFastenBody),
     async (c) => {
         const db = getDb(c.env.DB);
 
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ supportsFasten: boolean }>();
+        const { supportsFasten } = c.req.valid("json");
 
         const insertableRow = await db
             .select({ libraryId: insertables.libraryId })
@@ -64,7 +69,7 @@ insertableRoutes.post(
             });
 
         let fastenInfo = null;
-        if (body.supportsFasten) {
+        if (supportsFasten) {
             const onshapeApi = await c.var.getOnshapeApi();
             const elementPath = await getInsertableElementPath(
                 db,
@@ -93,7 +98,7 @@ insertableRoutes.post(
 
         await db
             .update(insertables)
-            .set({ supportsFasten: body.supportsFasten, fastenInfo })
+            .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
         await bumpLibraryVersion(db, insertableRow.libraryId);
@@ -105,10 +110,11 @@ insertableRoutes.post(
 insertableRoutes.post(
     "/index-configurations" + insertableRoute(),
     requireEditorMiddleware,
+    zValidator("json", indexConfigurationsBody),
     async (c) => {
         const db = getDb(c.env.DB);
         const insertableId = getInsertableParam(c);
-        const body = await c.req.json<{ indexConfigurations: boolean }>();
+        const body = c.req.valid("json");
 
         const row = await db
             .select({

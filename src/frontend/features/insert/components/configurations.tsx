@@ -51,6 +51,7 @@ import { configurationQueryKey } from "../../../lib/query-keys";
 import { showErrorToast } from "../../../lib/notifications";
 import { SectionError } from "../../../components/app-zero-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { toInsertablePath } from "../../library/library-path";
 
 interface ConfigurationWrapperProps {
     insertableId: string;
@@ -81,7 +82,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const query = useQuery<ConfigurationResult>({
         queryKey: configurationQueryKey(insertableId, microversionId),
         queryFn: async () => {
-            return apiGet("/configuration/" + insertableId, {
+            return apiGet("/configuration" + toInsertablePath(insertableId), {
                 cacheId: microversionId
             });
         },

@@ -1,16 +1,32 @@
 import { and, asc, eq } from "drizzle-orm";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
-import { getLibraryParam, libraryRoute } from "../../lib/route-params";
+import {
+    favoriteRoute,
+    getFavoriteParam,
+    getLibraryParam,
+    libraryRoute
+} from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
 import { users, favorites } from "../../db/schema";
 import type { Favorite, FavoritesData } from "./dto";
 import type { LibraryId } from "../library/library-id";
-import { HttpStatus } from "http-status-ts";
-import { type ParameterValues } from "../configurations/models";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { requireSignInMiddleware } from "../auth/guards";
 
 export const favoriteRoutes = getApp();
+
+const addFavoriteQuery = z.object({
+    insertableId: z.string().min(1),
+    id: z.string().min(1)
+});
+
+const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
+
+const defaultConfigurationBody = z.object({
+    defaultConfiguration: z.record(z.string(), z.string())
+});
 
 async function getFavorites(
     db: Db,
@@ -61,18 +77,11 @@ favoriteRoutes.get(
 favoriteRoutes.post(
     "/favorites" + libraryRoute(),
     requireSignInMiddleware,
+    zValidator("query", addFavoriteQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
-        const insertableId = c.req.query("insertableId");
-        const favoriteId = c.req.query("id");
-        if (!insertableId)
-            return c.json(
-                { error: "insertableId required" },
-                HttpStatus.BAD_REQUEST
-            );
-        if (!favoriteId)
-            return c.json({ error: "id required" }, HttpStatus.BAD_REQUEST);
+        const { insertableId, id: favoriteId } = c.req.valid("query");
 
         const db = getDb(c.env.DB);
 
@@ -104,42 +113,31 @@ favoriteRoutes.post(
     }
 );
 
-/** DELETE /api/favorites/:favoriteId */
-favoriteRoutes.delete(
-    "/favorites/:favoriteId",
-    requireSignInMiddleware,
-    async (c) => {
-        const favoriteId = c.req.param("favoriteId");
-        if (!favoriteId) {
-            return c.json(
-                { error: "favoriteId is required" },
-                HttpStatus.BAD_REQUEST
-            );
-        }
-        const userId = await c.var.getUserId();
-        const db = getDb(c.env.DB);
+/** DELETE /api/favorite/:favoriteId */
+favoriteRoutes.delete(favoriteRoute(), requireSignInMiddleware, async (c) => {
+    const favoriteId = getFavoriteParam(c);
+    const userId = await c.var.getUserId();
+    const db = getDb(c.env.DB);
 
-        // security: Require the user to also match
-        await db
-            .delete(favorites)
-            .where(
-                and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
-            );
+    // security: Require the user to also match
+    await db
+        .delete(favorites)
+        .where(and(eq(favorites.id, favoriteId), eq(favorites.userId, userId)));
 
-        return c.json({ success: true });
-    }
-);
+    return c.json({ success: true });
+});
 
 /** POST /api/favorite-order/library/:libraryId */
 favoriteRoutes.post(
     "/favorite-order" + libraryRoute(),
     requireSignInMiddleware,
+    zValidator("json", favoriteOrderBody),
     async (c) => {
-        const body = await c.req.json<{ favoriteOrder: string[] }>();
+        const { favoriteOrder } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
         await Promise.all(
-            body.favoriteOrder.map((id, i) =>
+            favoriteOrder.map((id, i) =>
                 db
                     .update(favorites)
                     .set({ sortOrder: i })
@@ -151,20 +149,19 @@ favoriteRoutes.post(
     }
 );
 
-/** POST /api/default-configuration/:favoriteId */
+/** POST /api/default-configuration/favorite/:favoriteId */
 favoriteRoutes.post(
-    "/default-configuration/:favoriteId",
+    "/default-configuration" + favoriteRoute(),
     requireSignInMiddleware,
+    zValidator("json", defaultConfigurationBody),
     async (c) => {
-        const favoriteId = c.req.param("favoriteId");
-        const body = await c.req.json<{
-            defaultConfiguration: ParameterValues;
-        }>();
+        const favoriteId = getFavoriteParam(c);
+        const { defaultConfiguration } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
         await db
             .update(favorites)
-            .set({ defaultConfiguration: body.defaultConfiguration })
+            .set({ defaultConfiguration })
             .where(eq(favorites.id, favoriteId));
 
         return c.json({ success: true });

@@ -30,6 +30,16 @@ export function getInsertableParam(c: AppContext): string {
     return id;
 }
 
+export function favoriteRoute(): string {
+    return "/favorite/:favoriteId";
+}
+
+export function getFavoriteParam(c: AppContext): string {
+    const id = c.req.param("favoriteId");
+    if (!id) throw new Error("Missing favoriteId route param");
+    return id;
+}
+
 export function groupRoute(): string {
     return "/group/:groupId";
 }

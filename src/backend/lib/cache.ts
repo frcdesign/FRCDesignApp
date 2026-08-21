@@ -1,7 +1,6 @@
 import { type MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
-import z from "zod";
 import { type AppContext, type AppContextEnv } from "./context";
 
 /** A year — a versioned url's content never changes, only its version does. */
@@ -24,13 +23,6 @@ export function immutableCacheControl(
     return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
 }
 
-const cacheVersionSchema = z.object({ v: z.string().min(1) });
-
-interface CacheOptions {
-    /** Pass false only when the url is immutable without a `?v=`. */
-    versioned?: boolean;
-}
-
 /** Overrides the route's immutable default for a body its url does not pin. */
 export function setCacheTtl(c: AppContext, maxAge: number): void {
     c.set("cacheTtl", maxAge);
@@ -38,8 +30,7 @@ export function setCacheTtl(c: AppContext, maxAge: number): void {
 
 /** Declares how a route's response may be cached, and enforces what that takes. */
 export function cacheMiddleware(
-    policy: CachePolicy = CachePolicy.NO_CACHE,
-    options: CacheOptions = {}
+    policy: CachePolicy = CachePolicy.NO_CACHE
 ): MiddlewareHandler<AppContextEnv> {
     if (policy === CachePolicy.NO_CACHE) {
         return async (c, next) => {
@@ -49,10 +40,11 @@ export function cacheMiddleware(
     }
 
     const cacheControl = immutableCacheControl(policy);
-    const versioned = options.versioned ?? true;
 
     return async (c, next) => {
-        if (versioned && !cacheVersionSchema.safeParse(c.req.query()).success) {
+        // An immutable response has to be pinned by something, or the next
+        // version of it is unreachable behind the cache.
+        if (!c.req.query("v")) {
             throw new HTTPException(HttpStatus.BAD_REQUEST, {
                 message: "Missing cache version"
             });

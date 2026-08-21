@@ -21,7 +21,7 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { getQueryUpdater } from "../../../lib/utils";
-import { useLibraryId } from "../../library/library-path";
+import { toFavoritePath, useLibraryId } from "../../library/library-path";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { PageError } from "../../../components/app-zero-state";
 
@@ -126,9 +126,12 @@ function FavoriteMenuContent(props: FavoriteMenuContentProps): ReactNode {
         mutationFn: async () => {
             // Canonical, so it addresses the thumbnail the favorites row asks
             // for; Onshape applies defaults for what it omits.
-            return apiPost("/default-configuration/" + favoriteId, {
-                body: { defaultConfiguration: canonicalConfiguration }
-            });
+            return apiPost(
+                "/default-configuration" + toFavoritePath(favoriteId),
+                {
+                    body: { defaultConfiguration: canonicalConfiguration }
+                }
+            );
         },
 
         onMutate: async () => {

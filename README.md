@@ -150,7 +150,9 @@ To exercise the signed-in-only UI (favorites, insert button) without a real
 Onshape session, set `FORCE_SIGNED_IN=true` in your `.env`. This is a
 testing-only escape hatch — it uses a fake user id and Onshape calls it reveals
 won't actually work, so leave it unset normally. Combine with
-`ACCESS_LEVEL_OVERRIDE=admin` to also show editor/admin controls.
+`ACCESS_LEVEL_OVERRIDE=admin` to also show editor/admin controls — editor
+routes require a session as well as the access level, so the override alone
+does not reach them.
 
 # Troubleshooting
 

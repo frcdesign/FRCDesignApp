@@ -23,13 +23,13 @@ describe("configuration routes", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it("GET /configuration/:id returns the stored parameters", async () => {
+    it("GET /configuration/insertable/:insertableId returns the stored parameters", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/configuration/${TEST_PART_STUDIO_ID}?v=abc123`,
+            `/api/configuration/insertable/${TEST_PART_STUDIO_ID}?v=abc123`,
             jsonRequest("GET"),
             env
         );
@@ -41,7 +41,7 @@ describe("configuration routes", () => {
 
     // The element's own part data is the record an unset configuration falls
     // back to, and it lives on the insertable, not in a configurations row.
-    it("GET /configuration/:id serves the element's own part data as a record", async () => {
+    it("GET /configuration/insertable/:insertableId serves the element's own part data as a record", async () => {
         await seedPartStudio(db, {
             partData: {
                 partNumber: "WCP-0405",
@@ -56,7 +56,7 @@ describe("configuration routes", () => {
         const app = createTestApp();
 
         const res = await app.request(
-            `/api/configuration/${TEST_PART_STUDIO_ID}?v=abc123`,
+            `/api/configuration/insertable/${TEST_PART_STUDIO_ID}?v=abc123`,
             jsonRequest("GET"),
             env
         );
@@ -74,10 +74,10 @@ describe("configuration routes", () => {
         });
     });
 
-    it("GET /configuration/:id 404s for an unknown id", async () => {
+    it("GET /configuration/insertable/:insertableId 404s for an unknown id", async () => {
         const app = createTestApp();
         const res = await app.request(
-            "/api/configuration/missing?v=abc123",
+            "/api/configuration/insertable/missing?v=abc123",
             jsonRequest("GET"),
             env
         );
