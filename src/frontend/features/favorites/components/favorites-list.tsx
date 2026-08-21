@@ -42,7 +42,11 @@ export function FavoritesList(): ReactNode {
             <SectionError
                 title="Failed to load favorites."
                 icon={
-                    <Box component={HeartBreak} size={IconSize.LARGE} c="red" />
+                    <Box
+                        component={HeartBreak}
+                        size={IconSize.SECTION}
+                        c="red"
+                    />
                 }
             />
         );

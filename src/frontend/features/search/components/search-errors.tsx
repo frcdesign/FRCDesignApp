@@ -72,9 +72,13 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <Box component={MagnifyingGlass} size={IconSize.LARGE} c="yellow" />
+            <Box
+                component={MagnifyingGlass}
+                size={IconSize.SECTION}
+                c="yellow"
+            />
         ) : (
-            <Box component={HeartBreak} size={IconSize.LARGE} c="red" />
+            <Box component={HeartBreak} size={IconSize.SECTION} c="red" />
         );
 
     if (filtered.byGroup > 0) {

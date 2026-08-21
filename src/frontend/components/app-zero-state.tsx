@@ -3,7 +3,7 @@ import { X } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { type JSX, ReactNode } from "react";
 
-const DEFAULT_ERROR_ICON = <Box component={X} size={IconSize.HUGE} c="red" />;
+const DEFAULT_ERROR_ICON = <Box component={X} size={IconSize.PAGE} c="red" />;
 
 interface ZeroStateProps {
     icon?: ReactNode;

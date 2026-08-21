@@ -178,7 +178,11 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionError
                 icon={
-                    <Box component={Warning} size={IconSize.LARGE} c="yellow" />
+                    <Box
+                        component={Warning}
+                        size={IconSize.SECTION}
+                        c="yellow"
+                    />
                 }
                 title="All elements are hidden by filters"
                 action={<ClearFiltersButton />}

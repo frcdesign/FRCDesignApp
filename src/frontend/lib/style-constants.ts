@@ -1,19 +1,21 @@
 /**
- * Standard icon sizes to pass to Phosphor icons.
+ * Standard icon sizes to pass to Phosphor icons. The first three are general
+ * magnitudes for an icon sitting in a line of content; the rest each name the
+ * one place they are used.
  */
 export enum IconSize {
-    /** Icons on badges */
+    /** Beside xs text: badge labels and metadata rows. */
     TINY = 12,
-    /** Menu options */
+    /** The default, beside a label in a button or menu option. */
     SMALL = 16,
-    /** Buttons */
+    /** Standalone in a row, and the icon of a toast. */
     MEDIUM = 18,
-    /** Input-height controls, which sit next to full-height buttons */
+    /** Icon-only controls, at input height next to full-height buttons. */
     CONTROL = 24,
-    /** In-line error states */
-    LARGE = 36,
-    /** Full-page error states */
-    HUGE = 48
+    /** Section-level empty and error states. */
+    SECTION = 36,
+    /** Full-page error states. */
+    PAGE = 48
 }
 
 /**
