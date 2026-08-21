@@ -21,8 +21,16 @@ export function renderNotification(
     }
     return (
         <Group justify="space-between" wrap="nowrap" gap="sm">
-            <span>{message}</span>
-            <Button size="compact-sm" variant="subtle" onClick={action.onClick}>
+            {/* minWidth lets the message wrap rather than force the row wider. */}
+            <span style={{ minWidth: 0 }}>{message}</span>
+            {/* The row does not wrap, so without this the button is the flex
+                item that shrinks and its label gets clipped. */}
+            <Button
+                size="compact-sm"
+                variant="subtle"
+                onClick={action.onClick}
+                style={{ flexShrink: 0 }}
+            >
                 {action.text}
             </Button>
         </Group>

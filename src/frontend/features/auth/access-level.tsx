@@ -31,6 +31,12 @@ export function getAccessDataQuery() {
 /** Server access plus the level the app is currently viewed as. */
 export interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
+    /**
+     * False until access-data resolves, while the rest of these are still the
+     * placeholder. Anything that would render differently for a signed-out
+     * caller has to wait for this, or it flashes the wrong state.
+     */
+    isLoaded: boolean;
 }
 
 /**
@@ -38,8 +44,8 @@ export interface ResolvedAccessData extends AccessData {
  * drop below the granted max), so it survives the query refetching on navigation.
  */
 export function useAccessData(): ResolvedAccessData {
-    const serverData =
-        useQuery(getAccessDataQuery()).data ?? DEFAULT_ACCESS_DATA;
+    const { data } = useQuery(getAccessDataQuery());
+    const serverData = data ?? DEFAULT_ACCESS_DATA;
     const chosenLevel = useUiState()[0].accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
@@ -50,8 +56,12 @@ export function useAccessData(): ResolvedAccessData {
         )
             ? desired
             : serverData.maxAccessLevel;
-        return { ...serverData, currentAccessLevel };
-    }, [serverData, chosenLevel]);
+        return {
+            ...serverData,
+            currentAccessLevel,
+            isLoaded: data !== undefined
+        };
+    }, [data, serverData, chosenLevel]);
 }
 
 /** Whether the caller is signed in to Onshape (from access-data). */

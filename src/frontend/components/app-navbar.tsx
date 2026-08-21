@@ -20,7 +20,7 @@ import { useUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../features/library/library-path";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
-import { useIsSignedIn } from "../features/auth/access-level";
+import { useAccessData } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -59,8 +59,10 @@ export function AppNavbar(): ReactNode {
  * the current location, after which access-data reports the caller signed in.
  */
 function SignInButton(): ReactNode {
-    const isSignedIn = useIsSignedIn();
-    if (isSignedIn) return null;
+    const { signedIn, isLoaded } = useAccessData();
+    // Waiting rather than assuming signed out: the placeholder would flash the
+    // button on every load for a caller who is already signed in.
+    if (!isLoaded || signedIn) return null;
 
     return (
         <Button
