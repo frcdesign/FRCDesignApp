@@ -4,7 +4,7 @@ import {
     type QueryOptions,
     type PostOptions
 } from "./utils";
-import { HandledError } from "./errors";
+import { fromApiErrorBody } from "./errors";
 import { THUMBNAIL_FALLBACK_HEADER } from "@backend/features/thumbnails/keys";
 import { HttpStatus } from "http-status-ts";
 
@@ -119,12 +119,9 @@ export async function apiDelete(
 }
 
 async function handleResponse(response: Response) {
-    const json = await response.json();
+    const json = await response.json().catch(() => undefined);
     if (!response.ok) {
-        if (json.type === "handled") {
-            throw new HandledError(json.message, json.isError);
-        }
-        throw new Error("Network response failed.");
+        throw fromApiErrorBody(json);
     }
     return json;
 }

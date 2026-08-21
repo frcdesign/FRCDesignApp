@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validate } from "../../lib/validate";
 import { getApp } from "../../lib/context";
 import { getInsertableParam, insertableRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
@@ -12,7 +12,7 @@ import { toSearchRecords } from "../search/search-index";
 import { toRecords } from "./utils";
 import { QuantityType, type Unit } from "./enums";
 import { INSTANCE_TYPES } from "../../lib/onshape/path";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
 
 export const configurationRoutes = getApp();
@@ -44,9 +44,10 @@ configurationRoutes.get(
             .get();
 
         if (!config) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Failed to find configuration"
-            });
+            throw internalError(
+                "Failed to find configuration",
+                HttpStatus.NOT_FOUND
+            );
         }
 
         const result: ConfigurationResult = {
@@ -63,7 +64,7 @@ configurationRoutes.get(
 configurationRoutes.get(
     "/unit-info",
     cacheMiddleware(),
-    zValidator("query", instancePathQuery),
+    validate("query", instancePathQuery),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const instancePath = c.req.valid("query");

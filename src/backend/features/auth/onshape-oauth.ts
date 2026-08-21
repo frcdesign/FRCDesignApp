@@ -1,7 +1,7 @@
 /** The Onshape OAuth handshake: where we send the user, and what comes back. */
 import { HttpStatus } from "http-status-ts";
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "../../lib/api-error";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import {
@@ -75,9 +75,10 @@ export async function doCallback(c: AppContext): Promise<Response> {
     }
 
     if (!search.code || session.state !== search.state) {
-        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
-            message: "Invalid response from Onshape"
-        });
+        throw internalError(
+            "Invalid response from Onshape",
+            HttpStatus.UNAUTHORIZED
+        );
     }
 
     const oauthClient = getOauthClient();

@@ -12,7 +12,7 @@ import { users, favorites } from "../../db/schema";
 import type { Favorite, FavoritesData } from "./contract";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 
 export const favoriteRoutes = getApp();
@@ -77,7 +77,7 @@ favoriteRoutes.get(
 favoriteRoutes.post(
     "/favorites" + libraryRoute(),
     requireSignInMiddleware,
-    zValidator("query", addFavoriteQuery),
+    validate("query", addFavoriteQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
@@ -131,7 +131,7 @@ favoriteRoutes.delete(favoriteRoute(), requireSignInMiddleware, async (c) => {
 favoriteRoutes.post(
     "/favorite-order" + libraryRoute(),
     requireSignInMiddleware,
-    zValidator("json", favoriteOrderBody),
+    validate("json", favoriteOrderBody),
     async (c) => {
         const { favoriteOrder } = c.req.valid("json");
         const userId = await c.var.getUserId();
@@ -158,7 +158,7 @@ favoriteRoutes.post(
 favoriteRoutes.post(
     "/default-configuration" + favoriteRoute(),
     requireSignInMiddleware,
-    zValidator("json", defaultConfigurationBody),
+    validate("json", defaultConfigurationBody),
     async (c) => {
         const favoriteId = getFavoriteParam(c);
         const { defaultConfiguration } = c.req.valid("json");

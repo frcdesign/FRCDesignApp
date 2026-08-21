@@ -1,6 +1,6 @@
 /** Session cookie plus the KV records it keys: OAuth tokens and login state. */
 import { HttpStatus } from "http-status-ts";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "../../lib/api-error";
 import { getCookie, setCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
 
@@ -11,9 +11,10 @@ export const SESSION_TTL = 30 * 24 * 3600; // 30 days
 export function getSessionId(c: AppContext): string {
     const sessionId = getCookie(c, SESSION_COOKIE);
     if (!sessionId) {
-        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
-            message: "Failed to find a valid session"
-        });
+        throw internalError(
+            "Failed to find a valid session",
+            HttpStatus.UNAUTHORIZED
+        );
     }
     return sessionId;
 }
@@ -44,9 +45,10 @@ export async function getTokens(
 ): Promise<AuthTokens> {
     const raw = await kv.get(`tokens:${sessionId}`);
     if (!raw) {
-        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
-            message: "Failed to find valid auth tokens to use"
-        });
+        throw internalError(
+            "Failed to find valid auth tokens to use",
+            HttpStatus.UNAUTHORIZED
+        );
     }
     return JSON.parse(raw) as AuthTokens;
 }

@@ -1,27 +1,62 @@
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
-import { OnshapeRateLimitError } from "./onshape/client";
+import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
+import { ApiError, ApiErrorKind, handledError } from "./api-error";
 import type { AppContextEnv } from "./context";
 
-export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
-    // Surface an Onshape rate limit as a 429 the client can retry, rather
-    // than blocking the request thread waiting it out.
-    if (err instanceof OnshapeRateLimitError) {
-        return c.json(
-            {
-                error: "Onshape rate limit reached. Please try again shortly.",
-                retryAfterSeconds: err.retryAfterSeconds
-            },
-            HttpStatus.TOO_MANY_REQUESTS
+/**
+ * What we are willing to say about an Onshape failure. Anything not named here
+ * is ours to explain, not Onshape's, so it stays generic.
+ */
+function fromOnshapeError(error: OnshapeApiError): ApiError {
+    if (error instanceof OnshapeRateLimitError) {
+        return new ApiError(
+            ApiErrorKind.HANDLED,
+            "Onshape rate limit reached. Please try again shortly.",
+            HttpStatus.TOO_MANY_REQUESTS,
+            error.retryAfterSeconds
         );
     }
+    if (
+        error.status === HttpStatus.UNAUTHORIZED ||
+        error.status === HttpStatus.FORBIDDEN
+    ) {
+        return handledError(
+            "Onshape refused the request. Try signing in again.",
+            error.status
+        );
+    }
+    return new ApiError(
+        ApiErrorKind.INTERNAL,
+        `Onshape request failed: ${error.message}`,
+        HttpStatus.BAD_GATEWAY
+    );
+}
+
+export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
+    if (err instanceof ApiError) {
+        return c.json(err.body, err.status as never);
+    }
+    if (err instanceof OnshapeApiError) {
+        const apiError = fromOnshapeError(err);
+        if (apiError.kind === ApiErrorKind.INTERNAL) {
+            console.error(err);
+        }
+        return c.json(apiError.body, apiError.status as never);
+    }
+    // A raw HTTPException is a validator rejecting a malformed request, which
+    // is our bug rather than something the user can act on.
     if (err instanceof HTTPException) {
-        return err.getResponse();
+        console.error(err);
+        return c.json(
+            { kind: ApiErrorKind.INTERNAL, message: err.message },
+            err.status as never
+        );
     }
     console.error(err);
     return c.json(
-        { error: "Internal Server Error" },
-        HttpStatus.INTERNAL_SERVER_ERROR
+        { kind: ApiErrorKind.INTERNAL, message: "Internal Server Error" },
+        HttpStatus.INTERNAL_SERVER_ERROR as never
     );
 };

@@ -10,13 +10,14 @@ import { type DocumentPath } from "../../../lib/onshape/path";
 import { group, insertables, libraries, favorites } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
+import { handledError } from "../../../lib/api-error";
 import {
     getJobStatus,
     isReloadRunning,
     trackJob
 } from "../../load/job-tracker";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validate } from "../../../lib/validate";
 
 export const groupRoutes = getApp();
 
@@ -47,7 +48,7 @@ const deleteGroupQuery = z.object({ groupId: z.string().min(1) });
 groupRoutes.post(
     "/reload-groups" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("query", reloadGroupsQuery),
+    validate("query", reloadGroupsQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const { forceReload } = c.req.valid("query");
@@ -90,7 +91,7 @@ groupRoutes.get(
 groupRoutes.post(
     "/set-insertable-visibility" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("json", setVisibilityBody),
+    validate("json", setVisibilityBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = c.req.valid("json");
@@ -130,7 +131,7 @@ groupRoutes.post(
 groupRoutes.post(
     "/sort-group-alphabetically" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("json", sortGroupBody),
+    validate("json", sortGroupBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = c.req.valid("json");
@@ -152,7 +153,7 @@ groupRoutes.post(
 groupRoutes.post(
     "/group-order" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("json", groupOrderBody),
+    validate("json", groupOrderBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const body = c.req.valid("json");
@@ -178,7 +179,7 @@ groupRoutes.post(
 groupRoutes.post(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("json", addGroupBody),
+    validate("json", addGroupBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const libraryId = getLibraryParam(c);
@@ -191,12 +192,8 @@ groupRoutes.post(
         try {
             documentName = (await getDocument(onshapeApi, documentPath)).name;
         } catch {
-            return c.json(
-                {
-                    type: "handled",
-                    message: "Failed to find the specified document.",
-                    isError: true
-                },
+            throw handledError(
+                "Failed to find the specified document.",
                 HttpStatus.UNPROCESSABLE_ENTITY
             );
         }
@@ -215,12 +212,8 @@ groupRoutes.post(
             .get();
 
         if (existingGroup) {
-            return c.json(
-                {
-                    type: "handled",
-                    message: "Document has already been added to library.",
-                    isError: true
-                },
+            throw handledError(
+                "Document has already been added to library.",
                 HttpStatus.UNPROCESSABLE_ENTITY
             );
         }
@@ -246,7 +239,7 @@ groupRoutes.post(
 groupRoutes.delete(
     "/group" + libraryRoute(),
     requireEditorMiddleware,
-    zValidator("query", deleteGroupQuery),
+    validate("query", deleteGroupQuery),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const { groupId } = c.req.valid("query");

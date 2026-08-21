@@ -6,7 +6,7 @@ import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { parseUrl } from "../../../lib/url";
-import { getAppErrorHandler, HandledError } from "../../../lib/errors";
+import { appError, getAppErrorHandler } from "../../../lib/errors";
 import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
 import { toLibraryPath, useLibraryId } from "../library-path";
@@ -35,7 +35,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
         mutationFn: async () => {
             const newDocumentId = parseUrl(url)?.documentId;
             if (!newDocumentId) {
-                throw new HandledError("Failed to parse url.");
+                throw appError("Failed to parse url.");
             }
             showLoadingToast("Adding document...", "add-group");
             modals.closeAll();

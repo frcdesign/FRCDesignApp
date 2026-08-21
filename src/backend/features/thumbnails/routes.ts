@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validate } from "../../lib/validate";
 import { CachePolicy, cacheMiddleware, setCacheTtl } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import {
@@ -16,7 +16,7 @@ import { bumpLibraryVersion } from "../library/db";
 
 import { type InstancePath } from "../../lib/onshape/path";
 import { group, insertables } from "../../db/schema";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
 import { ThumbnailSize } from "./types";
 import {
@@ -64,8 +64,8 @@ const storedThumbnailQuery = z.object({
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
-    zValidator("param", storedThumbnailParams),
-    zValidator("query", storedThumbnailQuery),
+    validate("param", storedThumbnailParams),
+    validate("query", storedThumbnailQuery),
     async (c) => {
         const { size, elementId } = c.req.valid("param");
         const {
@@ -157,9 +157,7 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
         const thumbnails = await uploadThumbnails(
@@ -207,9 +205,7 @@ thumbnailRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Group not found"
-            });
+            throw internalError("Group not found", HttpStatus.NOT_FOUND);
         }
 
         const instancePath: InstancePath = {

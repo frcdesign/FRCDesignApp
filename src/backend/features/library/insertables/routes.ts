@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { HTTPException } from "hono/http-exception";
-import { zValidator } from "@hono/zod-validator";
+import { internalError } from "../../../lib/api-error";
+import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
 import { getApp } from "../../../lib/context";
@@ -51,7 +51,7 @@ const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
     requireEditorMiddleware,
-    zValidator("json", setFastenBody),
+    validate("json", setFastenBody),
     async (c) => {
         const db = getDb(c.env.DB);
 
@@ -64,9 +64,7 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!insertableRow)
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
         let fastenInfo = null;
         if (supportsFasten) {
@@ -84,9 +82,10 @@ insertableRoutes.post(
                 .get();
 
             if (!insertable) {
-                throw new HTTPException(HttpStatus.NOT_FOUND, {
-                    message: "Insertable not found"
-                });
+                throw internalError(
+                    "Insertable not found",
+                    HttpStatus.NOT_FOUND
+                );
             }
 
             fastenInfo = await parseFastenInfo(
@@ -110,7 +109,7 @@ insertableRoutes.post(
 insertableRoutes.post(
     "/index-configurations" + insertableRoute(),
     requireEditorMiddleware,
-    zValidator("json", indexConfigurationsBody),
+    validate("json", indexConfigurationsBody),
     async (c) => {
         const db = getDb(c.env.DB);
         const insertableId = getInsertableParam(c);
@@ -131,9 +130,7 @@ insertableRoutes.post(
             .where(eq(insertables.id, insertableId))
             .get();
         if (!row)
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
         const parameters =
             (
@@ -274,7 +271,7 @@ const addToAssemblyBody = insertBodySchema.extend({
 insertableRoutes.post(
     "/add-to-part-studio" + insertableRoute(),
     requireSignInMiddleware,
-    zValidator("json", addToPartStudioBody),
+    validate("json", addToPartStudioBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -294,9 +291,7 @@ insertableRoutes.post(
             .get();
 
         if (!insertable) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
         // Look up parsed configuration parameters from D1 if configuration is provided
@@ -332,7 +327,7 @@ insertableRoutes.post(
 insertableRoutes.post(
     "/add-to-assembly" + insertableRoute(),
     requireSignInMiddleware,
-    zValidator("json", addToAssemblyBody),
+    validate("json", addToAssemblyBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -357,9 +352,7 @@ insertableRoutes.post(
             .get();
 
         if (!row) {
-            throw new HTTPException(HttpStatus.NOT_FOUND, {
-                message: "Insertable not found"
-            });
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
         const sourcePath: ElementPath = {
@@ -409,9 +402,10 @@ insertableRoutes.post(
 
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
-            throw new HTTPException(HttpStatus.BAD_REQUEST, {
-                message: `${row.name} does not support insert and fasten.`
-            });
+            throw internalError(
+                `${row.name} does not support insert and fasten.`,
+                HttpStatus.BAD_REQUEST
+            );
         }
 
         const instancePath: string[] =
@@ -447,9 +441,7 @@ export async function getInsertableElementPath(
         .get();
 
     if (!row) {
-        throw new HTTPException(HttpStatus.NOT_FOUND, {
-            message: "Insertable not found"
-        });
+        throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
     }
 
     return {

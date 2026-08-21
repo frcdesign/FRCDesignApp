@@ -1,5 +1,5 @@
 import { HttpStatus } from "http-status-ts";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "../../lib/api-error";
 import { getApp } from "../../lib/context";
 import { cacheMiddleware } from "../../lib/cache";
 import { type AccessData } from "./access-level";
@@ -31,9 +31,10 @@ authRoutes.get("/sign-in", async (c) => {
     }
 
     if (!redirectUrl) {
-        throw new HTTPException(HttpStatus.BAD_REQUEST, {
-            message: "Failed to find valid redirectUrl"
-        });
+        throw internalError(
+            "Failed to find valid redirectUrl",
+            HttpStatus.BAD_REQUEST
+        );
     }
 
     // Standalone sign-in omits sessionCompanyId; leave companyId undefined so the

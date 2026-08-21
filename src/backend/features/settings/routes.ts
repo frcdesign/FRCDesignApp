@@ -3,7 +3,7 @@ import { getApp } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { users } from "../../db/schema";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { LibraryId } from "../library/library-id";
 import { Theme } from "./settings";
@@ -19,7 +19,7 @@ const settingsBody = z.object({
 settingsRoutes.post(
     "/settings",
     requireSignInMiddleware,
-    zValidator("json", settingsBody),
+    validate("json", settingsBody),
     async (c) => {
         const userId = await c.var.getUserId();
         const body = c.req.valid("json");

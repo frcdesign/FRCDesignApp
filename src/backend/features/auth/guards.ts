@@ -1,6 +1,6 @@
 /** The two gates routes mount: signed in to Onshape at all, and on the admin team. */
 import type { MiddlewareHandler } from "hono";
-import { HTTPException } from "hono/http-exception";
+import { handledError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
 import type { AppContext, AppContextEnv } from "../../lib/context";
 import { hasEditorAccess } from "./access-level";
@@ -8,10 +8,10 @@ import { isSignedIn } from "./caller";
 
 async function requireSignIn(c: AppContext): Promise<void> {
     if (!(await isSignedIn(c))) {
-        throw new HTTPException(HttpStatus.UNAUTHORIZED, {
-            message:
-                "You must be signed in to Onshape to use this functionality"
-        });
+        throw handledError(
+            "You must be signed in to Onshape to use this functionality",
+            HttpStatus.UNAUTHORIZED
+        );
     }
 }
 
@@ -34,9 +34,10 @@ export const requireEditorMiddleware: MiddlewareHandler<AppContextEnv> = async (
 ) => {
     await requireSignIn(c);
     if (!hasEditorAccess(await c.var.getAccessLevel())) {
-        throw new HTTPException(HttpStatus.FORBIDDEN, {
-            message: "You must be on the admin team to use this functionality"
-        });
+        throw handledError(
+            "You must be on the admin team to use this functionality",
+            HttpStatus.FORBIDDEN
+        );
     }
     await next();
 };

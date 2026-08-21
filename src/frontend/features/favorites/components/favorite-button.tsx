@@ -12,7 +12,7 @@ import type { InsertableOut } from "@backend/features/library/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { useRouter } from "@tanstack/react-router";
-import { handleAppError, HandledError } from "../../../lib/errors";
+import { appError, handleAppError } from "../../../lib/errors";
 import { getQueryUpdater } from "../../../lib/utils";
 import {
     toFavoritePath,
@@ -64,7 +64,7 @@ function useUpdateFavoritesMutation() {
         mutationFn: async (args) => {
             if (args.operation === Operation.ADD) {
                 if (!args.insertable.isVisible) {
-                    throw new HandledError(
+                    throw appError(
                         `Cannot favorite hidden element ${args.insertable.name}.`
                     );
                 }

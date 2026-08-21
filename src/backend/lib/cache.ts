@@ -1,5 +1,5 @@
 import { type MiddlewareHandler } from "hono";
-import { HTTPException } from "hono/http-exception";
+import { internalError } from "./api-error";
 import { HttpStatus } from "http-status-ts";
 import { type AppContext, type AppContextEnv } from "./context";
 
@@ -45,9 +45,10 @@ export function cacheMiddleware(
         // An immutable response has to be pinned by something, or the next
         // version of it is unreachable behind the cache.
         if (!c.req.query("v")) {
-            throw new HTTPException(HttpStatus.BAD_REQUEST, {
-                message: "Missing cache version"
-            });
+            throw internalError(
+                "Missing cache version",
+                HttpStatus.BAD_REQUEST
+            );
         }
         await next();
         // A miss must stay retryable, so only store what succeeded.
