@@ -1,12 +1,17 @@
-import { createRootRoute, Outlet, useSearch } from "@tanstack/react-router";
+import {
+    createRootRoute,
+    Outlet,
+    useParams,
+    useSearch
+} from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { useColorScheme } from "@mantine/hooks";
 import { queryClient } from "../lib/query-client";
-import { appTheme } from "../theme";
+import { createAppTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { NotFoundError, RootCrash } from "../components/root-error";
@@ -21,9 +26,15 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    // The theme comes off the url — the entry redirect seeds it — so the first
-    // paint is already the right colors.
+    // Both come off the url — the entry redirect seeds them and a switch
+    // rewrites them — so the first paint is already the right colors.
     const search = useSearch({ strict: false });
+    const params = useParams({ strict: false });
+
+    const theme = useMemo(
+        () => createAppTheme(params.libraryId ?? DEFAULT_SETTINGS.libraryId),
+        [params.libraryId]
+    );
 
     // Onshape puts its own scheme on the url when it launches us; standalone
     // there is none, and the OS is what "system" means.
@@ -35,7 +46,7 @@ function RootComponent(): ReactNode {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={appTheme} forceColorScheme={colorTheme}>
+            <MantineProvider theme={theme} forceColorScheme={colorTheme}>
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >
