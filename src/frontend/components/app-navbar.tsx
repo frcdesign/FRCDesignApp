@@ -1,15 +1,17 @@
 import {
     ActionIcon,
+    Box,
     Button,
     Group,
     Input,
     Loader,
-    Menu,
+    Stack,
+    Tabs,
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { CaretDown, Gear, MagnifyingGlass } from "@phosphor-icons/react";
-import { HEADER_CONTROL_COLOR, IconSize } from "../lib/style-constants";
+import { Gear, MagnifyingGlass } from "@phosphor-icons/react";
+import { BORDER, IconSize } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -17,7 +19,12 @@ import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../features/library/library-path";
+import {
+    getLibraryFullName,
+    getLibraryName,
+    getLibraryTabLabel,
+    useLibraryId
+} from "../features/library/library-path";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
 import { useAccessData } from "../features/auth/access-level";
@@ -28,29 +35,34 @@ import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 
 /**
- * Provides top-level navigation for the app. A single colored control row holds
- * the brand, library menu, search, vendor filter menu, and settings.
+ * Provides top-level navigation for the app: a row of library tabs with the
+ * brand and settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
-    // Create a subgroup that won't wrap and flexes to take up the entire space
-    const leftGroup = (
-        <Group wrap="nowrap" flex={1} miw={0}>
-            <FrcDesignBookIcon />
-            <LibraryMenu />
-            <SearchBar />
-            <VendorMenu />
-        </Group>
-    );
-
     return (
-        <Group justify="space-between" wrap="nowrap" gap="xs" p="sm">
-            {leftGroup}
-            <Group wrap="nowrap" gap="xs">
-                <JobIndicator />
-                <SignInButton />
-                <SettingsButton />
+        <Stack gap={0}>
+            {/* Stretched so the tabs run the full height and their underline
+                lands on the row's own border. */}
+            <Group
+                gap="sm"
+                px="sm"
+                wrap="nowrap"
+                align="stretch"
+                style={{ borderBottom: BORDER }}
+            >
+                <FrcDesignBookIcon />
+                <LibraryTabs />
+                <Group gap="xs" wrap="nowrap" ml="auto">
+                    <JobIndicator />
+                    <SignInButton />
+                    <SettingsButton />
+                </Group>
             </Group>
-        </Group>
+            <Group gap="xs" p="sm" wrap="nowrap">
+                <SearchBar />
+                <VendorMenu />
+            </Group>
+        </Stack>
     );
 }
 
@@ -65,11 +77,7 @@ function SignInButton(): ReactNode {
     if (isPending || signedIn) return null;
 
     return (
-        <Button
-            variant="outline"
-            color={HEADER_CONTROL_COLOR}
-            onClick={startSignIn}
-        >
+        <Button variant="outline" size="compact-sm" onClick={startSignIn}>
             Sign in
         </Button>
     );
@@ -93,32 +101,44 @@ function RunningJobLoader(): ReactNode {
             withArrow
             label="The library is being loaded from Onshape in the background"
         >
-            <Loader size="md" color="white" />
+            <Loader size="sm" />
         </Tooltip>
     );
 }
 
 function FrcDesignBookIcon(): ReactNode {
     return (
-        <a href="https://frcdesign.org" target="_blank">
-            <img
-                src={frcDesignBook}
-                alt="FRCDesign.org"
-                width={24}
-                // Render the book in the header's contrast color (white on the
-                // colored header) instead of its native gray.
-                style={{ display: "block", filter: "brightness(0) invert(1)" }}
-            />
-        </a>
+        <Box
+            component="a"
+            href="https://frcdesign.org"
+            target="_blank"
+            aria-label="FRCDesign.org"
+            w={IconSize.CONTROL}
+            h={IconSize.CONTROL}
+            my="auto"
+            // Not the link color the anchor would otherwise hand the mask.
+            c="var(--mantine-color-text)"
+            // Masked rather than drawn, so the book takes the text color rather
+            // than the gray baked into the file. The url has to be quoted:
+            // Vite inlines this asset as a data uri containing apostrophes.
+            style={{
+                backgroundColor: "currentColor",
+                maskImage: `url("${frcDesignBook}")`,
+                maskSize: "contain",
+                maskRepeat: "no-repeat",
+                maskPosition: "center"
+            }}
+        />
     );
 }
 
-function LibraryMenu(): ReactNode {
+/** Switches libraries; the url is what actually selects one. */
+function LibraryTabs(): ReactNode {
     const currentLibraryId = useLibraryId();
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
-    // Warm the versions on open, so picking one has nothing left to wait for.
+    // Warm the versions on hover, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
         for (const libraryId of Object.values(LibraryId)) {
             void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
@@ -126,37 +146,46 @@ function LibraryMenu(): ReactNode {
     };
 
     return (
-        <Menu position="bottom-start" withinPortal onOpen={prefetchVersions}>
-            <Menu.Target>
-                <Button
-                    variant="default"
-                    rightSection={<CaretDown size={IconSize.SMALL} />}
-                >
-                    {getLibraryName(currentLibraryId)}
-                </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
+        <Tabs
+            value={currentLibraryId}
+            onMouseEnter={prefetchVersions}
+            onChange={(value) => {
+                if (!value || value === currentLibraryId) {
+                    return;
+                }
+                const libraryId = value as LibraryId;
+                // Write-behind: the url displays it, this only decides where
+                // `/init` lands next time.
+                saveSettings({ libraryId });
+                void navigate({
+                    to: "/app/library/$libraryId",
+                    params: { libraryId }
+                });
+            }}
+            styles={{
+                // Hides the line Mantine draws under the tab list alone —
+                // the row owns one that runs the full width. The active tab's
+                // indicator is colored separately and survives this.
+                root: { "--tab-border-color": "transparent" },
+                // Pulled onto that divider, so the active tab's indicator
+                // replaces it instead of stacking a second line above it.
+                tab: { marginBottom: -1 }
+            }}
+        >
+            <Tabs.List aria-label="Libraries">
                 {Object.values(LibraryId).map((libraryId) => (
-                    <Menu.Item
+                    <Tooltip
                         key={libraryId}
-                        onClick={() => {
-                            if (libraryId === currentLibraryId) {
-                                return;
-                            }
-                            // Write-behind: the url displays it, this only
-                            // decides where `/init` lands next time.
-                            saveSettings({ libraryId });
-                            void navigate({
-                                to: "/app/library/$libraryId",
-                                params: { libraryId }
-                            });
-                        }}
+                        withArrow
+                        label={getLibraryFullName(libraryId)}
                     >
-                        {getLibraryName(libraryId)}
-                    </Menu.Item>
+                        <Tabs.Tab value={libraryId}>
+                            {getLibraryTabLabel(libraryId)}
+                        </Tabs.Tab>
+                    </Tooltip>
                 ))}
-            </Menu.Dropdown>
-        </Menu>
+            </Tabs.List>
+        </Tabs>
     );
 }
 
@@ -164,10 +193,10 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color={HEADER_CONTROL_COLOR}
-            // Match the height of the buttons and search input beside it.
-            size="input-sm"
+            color="gray"
             title="Settings"
+            my="auto"
+            size="input-sm"
             onClick={() => openSettingsMenu()}
         >
             <Gear size={IconSize.CONTROL} />
@@ -187,6 +216,7 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
 export function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const [uiState, setUiState] = useUiState();
+    const libraryId = useLibraryId();
 
     const clearButton = uiState.searchQuery ? (
         <Input.ClearButton
@@ -203,9 +233,9 @@ export function SearchBar() {
     return (
         <TextInput
             type="search"
-            maw={200} // Hardcode search bar width as max so close button doesn't expand
+            flex={1}
             leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
-            placeholder="Search library..."
+            placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={uiState.searchQuery ?? ""}
             onFocus={() => {

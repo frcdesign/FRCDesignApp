@@ -1,21 +1,15 @@
-import {
-    createRootRoute,
-    Outlet,
-    useParams,
-    useSearch
-} from "@tanstack/react-router";
+import { createRootRoute, Outlet, useSearch } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
-import { ReactNode, useMemo } from "react";
+import { ReactNode } from "react";
 import { useColorScheme } from "@mantine/hooks";
 import { queryClient } from "../lib/query-client";
-import { createAppTheme } from "../theme";
+import { appTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { NotFoundError, RootCrash } from "../components/root-error";
-import { isLibraryId } from "../features/library/library-path";
 
 export const Route = createRootRoute({
     component: RootComponent,
@@ -27,18 +21,10 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
+    // The theme comes off the url — the entry redirect seeds it — so the first
+    // paint is already the right colors.
     const search = useSearch({ strict: false });
-    // Both come off the url — the entry redirect seeds them and a switch
-    // rewrites them — so the first paint is already the right colors.
-    const params = useParams({ strict: false });
 
-    // The root renders around a not-found too, so the url may name a library
-    // that does not exist; its theme still has to resolve to something.
-    const libraryId =
-        params.libraryId && isLibraryId(params.libraryId)
-            ? params.libraryId
-            : DEFAULT_SETTINGS.libraryId;
-    const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
     // Onshape puts its own scheme on the url when it launches us; standalone
     // there is none, and the OS is what "system" means.
     const osColorScheme = useColorScheme();
@@ -49,7 +35,7 @@ function RootComponent(): ReactNode {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={theme} forceColorScheme={colorTheme}>
+            <MantineProvider theme={appTheme} forceColorScheme={colorTheme}>
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >

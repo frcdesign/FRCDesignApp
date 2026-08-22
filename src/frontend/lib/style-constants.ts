@@ -39,9 +39,3 @@ export enum PrimaryColor {
      */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }
-
-/**
- * Hex, not a css var or a named color: Mantine parses `color` to derive border
- * and hover tints, and anything else silently resolves to black.
- */
-export const HEADER_CONTROL_COLOR = "#fff";

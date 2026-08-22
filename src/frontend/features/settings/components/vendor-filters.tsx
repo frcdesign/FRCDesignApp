@@ -1,6 +1,6 @@
 import { ActionIcon, Button, Menu } from "@mantine/core";
 import { Funnel, FunnelX } from "@phosphor-icons/react";
-import { HEADER_CONTROL_COLOR, IconSize } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "@backend/features/library/vendors";
 import { Vendor } from "@backend/features/library/vendors";
@@ -82,8 +82,8 @@ export function VendorMenu(): ReactNode {
         <AppContextMenu wideMenu menuItems={menuItems} controlledByButton>
             <ActionIcon
                 variant={hasFilters ? "light" : "subtle"}
-                color={HEADER_CONTROL_COLOR}
-                // Match the height of the buttons and search input beside it.
+                color={hasFilters ? undefined : "gray"}
+                // Match the height of the search input beside it.
                 size="input-sm"
                 title="Filter vendors"
             >

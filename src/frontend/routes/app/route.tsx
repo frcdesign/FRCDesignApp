@@ -14,7 +14,6 @@ import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
 import { useSignInToast } from "../../features/auth/sign-in";
 import { RootAppError } from "../../components/root-error";
-import { PrimaryColor } from "../../lib/style-constants";
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -37,7 +36,7 @@ function App() {
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
-            <AppShell.Header bg={PrimaryColor.FILLED} c={PrimaryColor.CONTRAST}>
+            <AppShell.Header>
                 <div ref={headerRef}>
                     <AppNavbar />
                 </div>

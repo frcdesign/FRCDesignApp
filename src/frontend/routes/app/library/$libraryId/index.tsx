@@ -20,7 +20,7 @@ import { AddGroupButton } from "../../../../features/library/components/add-grou
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import {
-    getLibraryName,
+    getLibraryFullName,
     useLibraryId
 } from "../../../../features/library/library-path";
 import { updateUiState, useUiState } from "../../../../lib/ui-state";
@@ -94,7 +94,7 @@ function HomeList(): ReactNode {
                           color={PrimaryColor.FILLED}
                       />
                   ),
-                  title: getLibraryName(libraryId),
+                  title: getLibraryFullName(libraryId),
                   panel: <LibraryList />,
                   opened: uiState.isLibraryOpen,
                   setOpened: (opened) => setUiState({ isLibraryOpen: opened })

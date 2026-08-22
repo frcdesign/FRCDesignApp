@@ -38,11 +38,42 @@ export function getLibraryName(libraryId: string): string {
         case LibraryId.FRC_DESIGN_LIB:
             return "FRCDesignLib";
         case LibraryId.FTC_DESIGN_LIB:
-            return "FTCDesignLib (Beta)";
+            return "FTCDesignLib";
         case LibraryId.MKCAD:
-            return "MKCAD (Deprecated)";
+            return "MKCAD";
     }
     throw new Error("Unknown library: " + libraryId);
+}
+
+/** The label on a library's tab, where there is only room for a few characters. */
+export function getLibraryTabLabel(libraryId: string): string {
+    switch (libraryId) {
+        case LibraryId.FRC_DESIGN_LIB:
+            return "FRC";
+        case LibraryId.FTC_DESIGN_LIB:
+            return "FTC";
+        case LibraryId.MKCAD:
+            return "MKCad";
+    }
+    throw new Error("Unknown library: " + libraryId);
+}
+
+/** Where a library is in its life; undefined once it is simply supported. */
+export function getLibraryStatus(libraryId: string): string | undefined {
+    switch (libraryId) {
+        case LibraryId.FTC_DESIGN_LIB:
+            return "Beta";
+        case LibraryId.MKCAD:
+            return "Deprecated";
+    }
+    return undefined;
+}
+
+/** The name with its status, for the places with room to spell it out. */
+export function getLibraryFullName(libraryId: string): string {
+    const status = getLibraryStatus(libraryId);
+    const name = getLibraryName(libraryId);
+    return status ? `${name} (${status})` : name;
 }
 
 /** Whether the library's own page is showing, rather than one of its groups. */
