@@ -16,10 +16,7 @@ export function AppModalBody(props: AppModalBodyProps): ReactNode {
     );
 }
 
-/**
- * A modal's actions, flush against the bottom on the header's surface. Lay
- * children out as leading and trailing groups; a lone child sits at the end.
- */
+/** A modal's actions. A lone child sits at the end; two split the row. */
 export function AppModalFooter(props: PropsWithChildren): ReactNode {
     return (
         <Group

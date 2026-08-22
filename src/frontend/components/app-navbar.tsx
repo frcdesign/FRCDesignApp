@@ -125,9 +125,9 @@ function FrcDesignBookIcon(): ReactNode {
                 placeItems: "center"
             }}
         >
-            {/* Masked rather than drawn, so the book takes the tile's contrast
-                color rather than the gray baked into the file. The url has to
-                be quoted: Vite inlines this asset as a data uri with quotes. */}
+            {/* Masked, not drawn, so the book takes the tile's contrast color
+                rather than the gray in the file. The url needs quoting: Vite
+                inlines the asset as a data uri containing apostrophes. */}
             <Box
                 w={IconSize.SMALL}
                 h={IconSize.SMALL}
@@ -174,23 +174,21 @@ function LibraryTabs(): ReactNode {
                 });
             }}
             styles={{
-                // Hides the line Mantine draws under the tab list alone —
-                // the row owns one that runs the full width. The active tab's
-                // indicator is colored separately and survives this.
+                // Hides the line under the tab list alone; the row owns one
+                // that spans it. The active indicator is colored separately.
                 root: { "--tab-border-color": "transparent" },
-                // Three full names outgrow a narrow panel; scrolling them
-                // keeps the navbar one row rather than reflowing into two.
+                // Three full names outgrow a narrow panel; scrolling beats
+                // reflowing the navbar into two rows.
                 list: {
                     flexWrap: "nowrap",
                     overflowX: "auto",
                     scrollbarWidth: "none"
                 },
+                // Pulled onto that divider, so the active tab's indicator
+                // replaces it rather than stacking a line above it.
                 tab: {
-                    // Pulled onto that divider, so the active tab's indicator
-                    // replaces it instead of stacking a second line above it.
                     marginBottom: -1,
-                    paddingInline: "var(--mantine-spacing-sm)",
-                    whiteSpace: "nowrap"
+                    paddingInline: "var(--mantine-spacing-sm)"
                 }
             }}
         >

@@ -125,9 +125,9 @@ function HomeList(): ReactNode {
                     // the next one; content closes off an open one.
                     control: {
                         borderBottom: BORDER,
-                        minHeight: SECTION_HEADER_HEIGHT,
-                        paddingBlock: 0
+                        minHeight: SECTION_HEADER_HEIGHT
                     },
+                    // Its own padding would outgrow that height.
                     label: { paddingBlock: 0 },
                     content: { padding: 0, borderBottom: BORDER },
                     icon: TITLE_ICON_NUDGE

@@ -1,7 +1,6 @@
 /**
- * Standard icon sizes to pass to Phosphor icons. The first three are general
- * magnitudes for an icon sitting in a line of content; the rest each name the
- * one place they are used.
+ * Sizes for Phosphor icons. The first three are general magnitudes for an icon
+ * in a line of content; the rest each name the one place they are used.
  */
 export enum IconSize {
     /** Beside xs text: badge labels and metadata rows. */
@@ -18,9 +17,7 @@ export enum IconSize {
     PAGE = 48
 }
 
-/**
- * Standard Mantine FontWeights.
- */
+/** Standard Mantine font weights. */
 export enum FontWeight {
     SEMI_BOLD = 500,
     BOLD = 700
@@ -28,42 +25,26 @@ export enum FontWeight {
 
 export const BORDER = "1px solid var(--mantine-color-default-border)";
 
-/**
- * A step off the page, for the app's chrome: the navbar's tab row and a
- * modal's header and footer, which read apart from the content between them.
- */
+/** A step off the page: the navbar's tab row, a modal's header and footer. */
 export const CHROME_BACKGROUND =
     "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
 
 /**
- * An icon centres on the text's line box, but text reads as centred on its cap
- * height, which sits about a pixel higher — so a centred icon looks low. CSS
- * `text-box` would trim the box properly, but it clips descenders under the
- * truncation titles need, so title icons take the pixel back by hand.
+ * Text reads as centred on its cap height, a pixel above its line box, so an
+ * icon centred on that box looks low. `text-box` clips descenders under truncation.
  */
 export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
 
 /**
- * One height for a section's header row, whether an accordion section or a
- * group's. Set rather than left to the content, whose tallest child differs:
- * an accordion is sized by its label, a group header by its menu button.
+ * One height for a section header, set rather than left to the content: an
+ * accordion is sized by its label, a group header by its menu button.
  */
 export const SECTION_HEADER_HEIGHT = 48;
 
-/**
- * Padding for a modal's header, tighter above and below than the inset it
- * shares with the body: a title line needs less room around it than a button.
- */
-export const MODAL_HEADER_PADDING = "6px var(--mantine-spacing-sm)";
-
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
-    /**
-     * The current library color, e.g., green for FRCDesign.
-     */
+    /** The current library's color, e.g. green for FRCDesign. */
     FILLED = "var(--mantine-primary-color-filled)",
-    /**
-     * The current library contrast color, typically white.
-     */
+    /** What reads on top of it, typically white. */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }

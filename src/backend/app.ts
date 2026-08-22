@@ -32,9 +32,8 @@ const apiRoutes = [
 export function createApp(makeCaller: CallerFactory) {
     const app = getApp();
 
-    // console.log reaches Workers Logs, since wrangler.jsonc enables
-    // observability. Only /init, /api/* and /auth/* run the Worker at all
-    // (see run_worker_first), so static assets are not logged.
+    // Reaches Workers Logs, which wrangler.jsonc enables. Only /init, /api/*
+    // and /auth/* run the Worker, so static assets are not logged.
     app.use("*", logger());
 
     app.use("*", bindCaller(makeCaller));

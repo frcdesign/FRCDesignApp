@@ -13,17 +13,13 @@ interface AppTitleProps {
     rightSection?: ReactNode;
 }
 
-/**
- * The app's heading: one weight and size for every icon-and-text title, so a
- * modal header, an accordion section, and a group header all read alike.
- */
+/** One weight and size for every icon-and-text heading in the app. */
 export function AppTitle(props: AppTitleProps): ReactNode {
     const { title, icon, subtitle, rightSection } = props;
     return (
         <Group gap="sm" wrap="nowrap" miw={0}>
-            {/* Centred rather than wrapped in a plain box: inside a block the
-                icon goes back to sitting on the text baseline, which drops it
-                several pixels rather than the one the nudge takes back. */}
+            {/* Centred, not wrapped in a block, where the icon would go back
+                to sitting on the text baseline several pixels low. */}
             {icon && <Center style={TITLE_ICON_NUDGE}>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" wrap="nowrap" miw={0}>
@@ -49,10 +45,8 @@ interface MenuTitleProps {
     icon?: ReactNode;
 }
 
-/**
- * A menu's header. Both names are shown: the element is how the part was found,
- * the record is what actually gets inserted.
- */
+/** A menu's header: the element is how the part was found, the record is
+ * what gets inserted, so both are shown. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
     const details = record

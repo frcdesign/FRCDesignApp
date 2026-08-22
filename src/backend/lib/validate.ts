@@ -5,9 +5,8 @@ import type { ZodType } from "zod";
 import { internalError } from "./api-error";
 
 /**
- * `zValidator` with our error shape. On its own it answers with a body of its
- * own design, which is the one response that would not look like every other
- * failure. A malformed request is our bug, so the detail is for the logs.
+ * `zValidator` with our error shape; its own body is the one that would not
+ * match. A malformed request is our bug, so the detail is for the logs.
  */
 export function validate<
     T extends ZodType,

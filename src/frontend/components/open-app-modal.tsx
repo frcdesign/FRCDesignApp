@@ -1,10 +1,6 @@
 import { modals } from "@mantine/modals";
 import type { ReactNode } from "react";
-import {
-    BORDER,
-    CHROME_BACKGROUND,
-    MODAL_HEADER_PADDING
-} from "../lib/style-constants";
+import { BORDER, CHROME_BACKGROUND } from "../lib/style-constants";
 
 interface OpenAppModalProps {
     title: ReactNode;
@@ -16,9 +12,8 @@ interface OpenAppModalProps {
 }
 
 /**
- * Opens a modal wearing the app's chrome: a tight header on its own surface
- * over an unpadded body, so an `AppModalFooter` can sit flush at the bottom.
- * Content belongs in an `AppModalBody`, which supplies the padding instead.
+ * Opens a modal wearing the app's chrome. Its body is unpadded, so content
+ * belongs in an `AppModalBody` and actions in an `AppModalFooter`.
  */
 export function openAppModal(props: OpenAppModalProps): void {
     const { title, children, modalId, size, onClose } = props;
@@ -27,8 +22,7 @@ export function openAppModal(props: OpenAppModalProps): void {
         title,
         size,
         // Takes the focus the trap would otherwise land on the close button,
-        // which reads as the button being pre-selected. Focus still enters the
-        // dialog, so Tab stays scoped to it.
+        // which reads as that button being pre-selected.
         children: (
             <div data-autofocus tabIndex={-1} style={{ outline: "none" }}>
                 {children}
@@ -36,17 +30,13 @@ export function openAppModal(props: OpenAppModalProps): void {
         ),
         onClose,
         centered: true,
-        // The default close button is what makes an otherwise tight header tall.
-        closeButtonProps: { size: "sm" },
         styles: {
-            // Drawn, not just shadowed, so the card reads as one panel against
-            // the app behind it.
+            // Drawn, not just shadowed, so the card reads as one panel.
             content: { border: BORDER },
             header: {
                 background: CHROME_BACKGROUND,
                 borderBottom: BORDER,
-                padding: MODAL_HEADER_PADDING,
-                minHeight: 0
+                padding: "var(--mantine-spacing-sm)"
             },
             body: { padding: 0 }
         }

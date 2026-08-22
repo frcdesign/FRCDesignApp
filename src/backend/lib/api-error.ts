@@ -1,9 +1,6 @@
 /**
- * The one shape every failed /api response takes. `kind` tells the client what
- * to do, and each kind carries exactly the data that kind needs — a new kind
- * brings its own fields rather than adding an optional one to every error.
- *
- * A leaf module: the frontend imports these to switch on them.
+ * The one shape every failed /api response takes; `kind` tells the client what
+ * to do and carries what that kind needs. A leaf module the frontend imports.
  */
 
 export enum ApiErrorKind {

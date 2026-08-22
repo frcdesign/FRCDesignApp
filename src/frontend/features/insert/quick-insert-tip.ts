@@ -2,9 +2,8 @@ import { showInfoToast } from "../../lib/notifications";
 import { getUiState, updateUiState } from "../../lib/ui-state";
 
 /**
- * Points out the faster route after an insert that changed nothing in the menu:
- * the same insert was one right-click away. Shown only once, since someone who
- * wants the menu should not be told off for using it.
+ * After an insert that changed nothing in the menu, points out that a
+ * right-click would have done it. Once only: the menu is a fine way to work.
  */
 export function showQuickInsertTip(): void {
     if (getUiState().hasSeenQuickInsertTip) {

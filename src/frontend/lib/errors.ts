@@ -3,8 +3,7 @@ import { showErrorToast } from "./notifications";
 
 /**
  * A failure worth telling the user about, from the backend or raised here.
- * `body` is the same discriminated shape the backend sends, so a caller reads
- * whatever that kind carries without optional fields on every other kind.
+ * `body` is the discriminated shape the backend sends, read by its kind.
  */
 export class AppError extends Error {
     constructor(readonly body: ApiErrorBody) {
