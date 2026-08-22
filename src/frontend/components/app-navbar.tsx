@@ -180,7 +180,11 @@ function LibraryTabs(): ReactNode {
                 root: { "--tab-border-color": "transparent" },
                 // Three full names outgrow a narrow panel; scrolling them
                 // keeps the navbar one row rather than reflowing into two.
-                list: { flexWrap: "nowrap", overflowX: "auto" },
+                list: {
+                    flexWrap: "nowrap",
+                    overflowX: "auto",
+                    scrollbarWidth: "none"
+                },
                 tab: {
                     // Pulled onto that divider, so the active tab's indicator
                     // replaces it instead of stacking a second line above it.

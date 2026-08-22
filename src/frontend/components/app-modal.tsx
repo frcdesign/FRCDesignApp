@@ -14,7 +14,7 @@ interface AppModalBodyProps extends PropsWithChildren {
 /** A modal's content, padded away from the chrome framing it. */
 export function AppModalBody(props: AppModalBodyProps): ReactNode {
     return (
-        <Stack p="md" gap={props.gap}>
+        <Stack p="sm" gap={props.gap}>
             {props.children}
         </Stack>
     );

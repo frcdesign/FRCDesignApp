@@ -32,6 +32,9 @@ export function openAppModal(props: OpenAppModalProps): void {
         // The default close button is what makes an otherwise tight header tall.
         closeButtonProps: { size: "sm" },
         styles: {
+            // Drawn, not just shadowed, so the card reads as one panel against
+            // the app behind it.
+            content: { border: BORDER },
             header: {
                 background: CHROME_BACKGROUND,
                 borderBottom: BORDER,

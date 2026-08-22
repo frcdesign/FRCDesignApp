@@ -39,6 +39,8 @@ export function createAppTheme(libraryId: string) {
         colors: { frcGreen },
         primaryColor: getLibraryColor(libraryId),
         autoContrast: true,
+        // Mantine's "md" default reads soft for a dense CAD panel.
+        defaultRadius: "sm",
         cursorType: "pointer",
         // Drops the class carrying Mantine's 1px press-down translate, which
         // nudged every button and icon button down on click.
