@@ -36,7 +36,9 @@ export function openAppModal(props: OpenAppModalProps): void {
             header: {
                 background: CHROME_BACKGROUND,
                 borderBottom: BORDER,
-                padding: "var(--mantine-spacing-sm)"
+                padding: "var(--mantine-spacing-sm)",
+                // Otherwise a Mantine minimum, not the padding, sets the height.
+                minHeight: 0
             },
             body: { padding: 0 }
         }
