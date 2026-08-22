@@ -83,6 +83,8 @@ export interface ConfigurationResult {
 export interface SearchRecord {
     partNumber?: string;
     name?: string;
+    /** The vendor's page for this part, when one can be resolved. */
+    url?: string;
     /** The (enumerated) parameter values that produce it; empty for the default. */
     configuration: ParameterValues;
 }

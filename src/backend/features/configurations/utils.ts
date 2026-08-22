@@ -13,6 +13,7 @@ import {
     VisibilityCondition,
     VisibilityType
 } from "./models";
+import { getVendorPartUrl, toVendor } from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
@@ -81,6 +82,17 @@ export function evaluateCondition(
     }
     return true;
 }
+/**
+ * The page for a part: a description that is already a url wins, since it names
+ * the exact product, over one derived from the vendor and part number.
+ */
+export function getPartUrl(record: PartMetadata): string | undefined {
+    if (record.description && /^https?:\/\//i.test(record.description)) {
+        return record.description;
+    }
+    return getVendorPartUrl(toVendor(record.vendor), record.partNumber);
+}
+
 export function encodeConfigurationForQuery(
     configuration?: ParameterValues
 ): string {

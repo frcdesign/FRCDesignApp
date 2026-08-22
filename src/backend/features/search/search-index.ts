@@ -6,6 +6,7 @@ import MiniSearch, { Options } from "minisearch";
 import { LibraryOut } from "../library/contract";
 import { Vendor } from "../library/vendors";
 import { ConfigurationRecord, SearchRecord } from "../configurations/models";
+import { getPartUrl } from "../configurations/utils";
 
 const deliminator = "^";
 
@@ -145,6 +146,7 @@ export function toSearchRecords(
         searchRecords.push({
             partNumber: record.partNumber,
             name: record.name,
+            url: getPartUrl(record),
             configuration: record.configuration
         });
     }

@@ -1,13 +1,23 @@
-import { Center, Group, Stack, Text } from "@mantine/core";
+import {
+    ActionIcon,
+    Anchor,
+    Center,
+    CopyButton,
+    Group,
+    Stack,
+    Text,
+    Tooltip
+} from "@mantine/core";
+import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
-import { FontWeight, TITLE_ICON_NUDGE } from "../lib/style-constants";
+import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
 
 interface AppTitleProps {
     title: ReactNode;
     /** Leading icon, at `IconSize.MEDIUM` to match the title's size. */
     icon?: ReactNode;
-    /** A quieter second line, e.g. what the current configuration resolves to. */
+    /** A quieter second line, laid out as a row so it can hold controls. */
     subtitle?: ReactNode;
     /** Trailing content on the title's own line, e.g. a status badge. */
     rightSection?: ReactNode;
@@ -29,9 +39,9 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     {rightSection}
                 </Group>
                 {subtitle && (
-                    <Text size="xs" c="dimmed" truncate>
+                    <Group gap={4} wrap="nowrap" fz="xs" c="dimmed">
                         {subtitle}
-                    </Text>
+                    </Group>
                 )}
             </Stack>
         </Group>
@@ -49,16 +59,81 @@ interface MenuTitleProps {
  * what gets inserted, so both are shown. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
-    const details = record
-        ? [record.name, record.partNumber].filter(
-              (value): value is string => !!value && value !== name
-          )
-        : [];
+    const partName = record?.name !== name ? record?.name : undefined;
+    const partNumber =
+        record?.partNumber !== name ? record?.partNumber : undefined;
     return (
         <AppTitle
             icon={icon}
             title={name}
-            subtitle={details.length > 0 ? details.join(" · ") : undefined}
+            subtitle={
+                (partName || partNumber) && (
+                    <>
+                        {partName && (
+                            <Text inherit truncate>
+                                {partName}
+                            </Text>
+                        )}
+                        {partName && partNumber && <Text inherit>·</Text>}
+                        {partNumber && (
+                            <PartNumber
+                                partNumber={partNumber}
+                                url={record?.url}
+                            />
+                        )}
+                    </>
+                )
+            }
         />
+    );
+}
+
+/** The part number, linked to the vendor's page for it when there is one. */
+function PartNumber({
+    partNumber,
+    url
+}: {
+    partNumber: string;
+    url?: string;
+}): ReactNode {
+    if (!url) {
+        return (
+            <Text inherit truncate>
+                {partNumber}
+            </Text>
+        );
+    }
+    return (
+        <>
+            <Anchor
+                href={url}
+                target="_blank"
+                inherit
+                truncate
+                onClick={(event) => event.stopPropagation()}
+            >
+                {partNumber}
+            </Anchor>
+            <ArrowSquareOut size={IconSize.TINY} />
+            <CopyButton value={url}>
+                {({ copied, copy }) => (
+                    <Tooltip label={copied ? "Copied" : "Copy link"} withArrow>
+                        <ActionIcon
+                            variant="subtle"
+                            color={copied ? "teal" : "gray"}
+                            size="xs"
+                            aria-label="Copy link"
+                            onClick={copy}
+                        >
+                            {copied ? (
+                                <Check size={IconSize.TINY} />
+                            ) : (
+                                <Copy size={IconSize.TINY} />
+                            )}
+                        </ActionIcon>
+                    </Tooltip>
+                )}
+            </CopyButton>
+        </>
     );
 }

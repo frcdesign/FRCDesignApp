@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findRecordForConfiguration } from "./utils";
-import { SearchRecord } from "./models";
+import { findRecordForConfiguration, getPartUrl } from "./utils";
+import { PartMetadata, SearchRecord } from "./models";
 
 function rec(
     configuration: Record<string, string>,
@@ -45,6 +45,40 @@ describe("findRecordForConfiguration", () => {
         const records = [rec({ size: "s" }, "PN-S")];
         expect(
             findRecordForConfiguration({ size: "l" }, records)
+        ).toBeUndefined();
+    });
+});
+
+function metadata(fields: Partial<PartMetadata>): PartMetadata {
+    return { hasMultipleParts: false, isOpenComposite: false, ...fields };
+}
+
+describe("getPartUrl", () => {
+    it("prefers a description that is already a url, naming the exact product", () => {
+        const url = getPartUrl(
+            metadata({
+                vendor: "WCP",
+                partNumber: "WCP-1025",
+                description: "https://wcproducts.com/products/something-else"
+            })
+        );
+        expect(url).toBe("https://wcproducts.com/products/something-else");
+    });
+
+    it("falls back to the vendor's page when the description is prose", () => {
+        const url = getPartUrl(
+            metadata({
+                vendor: "WCP",
+                partNumber: "WCP-1025",
+                description: "A gearbox"
+            })
+        );
+        expect(url).toBe("https://wcproducts.com/products/wcp-1025");
+    });
+
+    it("has none for a vendor whose urls cannot be derived", () => {
+        expect(
+            getPartUrl(metadata({ vendor: "AM", partNumber: "am-1234" }))
         ).toBeUndefined();
     });
 });

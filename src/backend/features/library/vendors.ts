@@ -1,8 +1,6 @@
 /** The vendors an insertable can come from, and how they are displayed. */
 export enum Vendor {
     AM = "AM",
-    /** Marks a part the team made, so nobody sells it and it has no part number. */
-    CUSTOM = "Custom",
     LAI = "LAI",
     MCM = "MCM",
     REDUX = "Redux",
@@ -11,7 +9,38 @@ export enum Vendor {
     SWYFT = "SWYFT",
     TTB = "TTB",
     VEX = "VEX",
-    WCP = "WCP"
+    WCP = "WCP",
+    /** Last, being the absence of a vendor: the team made it, so nobody sells
+     * it and it has no part number. */
+    CUSTOM = "Custom"
+}
+
+/** Resolves the free text Onshape carries as a vendor to one we know. */
+export function toVendor(vendor: string | undefined): Vendor | undefined {
+    return Object.values(Vendor).find(
+        (known) => known.toUpperCase() === vendor?.toUpperCase()
+    );
+}
+
+/**
+ * The vendor's own page for a part. Most vendors have no url derivable from a
+ * part number, so this is undefined for all but the few that do.
+ */
+export function getVendorPartUrl(
+    vendor: Vendor | undefined,
+    partNumber: string | undefined
+): string | undefined {
+    if (!partNumber) {
+        return undefined;
+    }
+    switch (vendor) {
+        case Vendor.MCM:
+            return `https://www.mcmaster.com/${partNumber}/`;
+        case Vendor.WCP:
+            return `https://wcproducts.com/products/${partNumber.toLowerCase()}`;
+        default:
+            return undefined;
+    }
 }
 
 /** Team-made, so it is expected to have no part number. */
