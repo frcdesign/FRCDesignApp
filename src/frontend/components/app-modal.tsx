@@ -1,10 +1,6 @@
 import { Group, type MantineSpacing, Stack } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
-import {
-    BORDER,
-    CHROME_BACKGROUND,
-    CHROME_PADDING
-} from "../lib/style-constants";
+import { BORDER, CHROME_BACKGROUND } from "../lib/style-constants";
 
 interface AppModalBodyProps extends PropsWithChildren {
     /** Space between children; content that spaces itself should pass 0. */
@@ -29,8 +25,9 @@ export function AppModalFooter(props: PropsWithChildren): ReactNode {
         <Group
             justify="space-between"
             wrap="nowrap"
+            p="sm"
             bg={CHROME_BACKGROUND}
-            style={{ padding: CHROME_PADDING, borderTop: BORDER }}
+            style={{ borderTop: BORDER }}
         >
             {props.children}
         </Group>

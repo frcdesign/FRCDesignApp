@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import {
     BORDER,
     CHROME_BACKGROUND,
-    CHROME_PADDING
+    MODAL_HEADER_PADDING
 } from "../lib/style-constants";
 
 interface OpenAppModalProps {
@@ -45,7 +45,7 @@ export function openAppModal(props: OpenAppModalProps): void {
             header: {
                 background: CHROME_BACKGROUND,
                 borderBottom: BORDER,
-                padding: CHROME_PADDING,
+                padding: MODAL_HEADER_PADDING,
                 minHeight: 0
             },
             body: { padding: 0 }

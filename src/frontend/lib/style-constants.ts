@@ -50,8 +50,11 @@ export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
  */
 export const SECTION_HEADER_HEIGHT = 48;
 
-/** Padding for a modal's header and footer, tighter than the body they frame. */
-export const CHROME_PADDING = "6px var(--mantine-spacing-sm)";
+/**
+ * Padding for a modal's header, tighter above and below than the inset it
+ * shares with the body: a title line needs less room around it than a button.
+ */
+export const MODAL_HEADER_PADDING = "6px var(--mantine-spacing-sm)";
 
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
