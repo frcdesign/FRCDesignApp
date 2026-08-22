@@ -165,7 +165,6 @@ export async function rebuildSearchDb(
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const start = Date.now();
     const [libraryData, recordsMap] = await Promise.all([
         getLibraryOut(db, libraryId),
         getRecordsMap(db, libraryId)
@@ -176,10 +175,6 @@ export async function rebuildSearchDb(
     await bucket.put(searchIndexKey(libraryId), searchDb, {
         httpMetadata: { contentType: "application/json" }
     });
-    console.log(
-        `Rebuilt search index for ${libraryId}: ` +
-            `${searchDb.length} B, ${Date.now() - start} ms`
-    );
     return searchDb;
 }
 
