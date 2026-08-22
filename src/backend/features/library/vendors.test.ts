@@ -30,7 +30,10 @@ describe("toVendor", () => {
     it.each([
         ["WCP", Vendor.WCP],
         ["custom", Vendor.CUSTOM],
+        ["West Coast Products", Vendor.WCP],
+        ["  mcmaster-carr ", Vendor.MCM],
         ["Acme", undefined],
+        ["", undefined],
         [undefined, undefined]
     ])("resolves %s", (text, expected) => {
         expect(toVendor(text)).toBe(expected);

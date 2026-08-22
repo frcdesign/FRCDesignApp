@@ -35,6 +35,7 @@ configurationRoutes.get(
         const config = await db
             .select({
                 partMetadata: insertables.partMetadata,
+                vendors: insertables.vendors,
                 parameters: configurations.parameters,
                 records: configurations.records
             })
@@ -53,7 +54,8 @@ configurationRoutes.get(
         const result: ConfigurationResult = {
             parameters: config.parameters ?? [],
             records: toSearchRecords(
-                toRecords(config.partMetadata, config.records ?? [])
+                toRecords(config.partMetadata, config.records ?? []),
+                config.vendors
             )
         };
         return c.json(result);

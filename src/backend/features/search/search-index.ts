@@ -130,7 +130,8 @@ function uniqueJoin(values: (string | undefined)[]): string {
  * drops records with neither. First-wins is what keeps the latest revision.
  */
 export function toSearchRecords(
-    records: ConfigurationRecord[]
+    records: ConfigurationRecord[],
+    vendors: Vendor[] = []
 ): SearchRecord[] {
     const seen = new Set<string>();
     const searchRecords: SearchRecord[] = [];
@@ -146,7 +147,7 @@ export function toSearchRecords(
         searchRecords.push({
             partNumber: record.partNumber,
             name: record.name,
-            url: getPartUrl(record),
+            url: getPartUrl(record, vendors),
             configuration: record.configuration
         });
     }
@@ -165,7 +166,10 @@ export function buildSearchDb(
         .filter((element) => !!element)
         .map((element) => {
             const parentGroup = libraryData.groups[element.groupId];
-            const records = toSearchRecords(recordsMap[element.id] ?? []);
+            const records = toSearchRecords(
+                recordsMap[element.id] ?? [],
+                element.vendors
+            );
             return {
                 id: element.id,
                 groupId: element.groupId,

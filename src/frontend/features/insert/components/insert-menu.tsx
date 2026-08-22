@@ -19,6 +19,7 @@ import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
+import { useConfigurationQuery } from "../queries";
 import {
     ParameterValues,
     SearchRecord
@@ -64,15 +65,27 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         []
     );
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
+    // A part with no parameters has one record — the element's own part data —
+    // which no ConfigurationWrapper is mounted to report, but the title wants.
+    const soleRecord = useConfigurationQuery(
+        insertable.id,
+        insertable.microversionId,
+        !insertable.isConfigurable
+    ).data?.records[0];
 
     // The title lives in the modal's chrome, so it's updated rather than
     // rendered: the header follows the configuration as the user changes it.
     useEffect(() => {
         modals.updateModal({
             modalId,
-            title: <MenuTitle name={insertable.name} record={record} />
+            title: (
+                <MenuTitle
+                    name={insertable.name}
+                    record={record ?? soleRecord}
+                />
+            )
         });
-    }, [modalId, insertable.name, record]);
+    }, [modalId, insertable.name, record, soleRecord]);
 
     useEffect(() => {
         if (!isSignedIn) {

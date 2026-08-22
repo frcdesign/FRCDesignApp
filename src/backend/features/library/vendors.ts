@@ -15,10 +15,19 @@ export enum Vendor {
     CUSTOM = "Custom"
 }
 
-/** Resolves the free text Onshape carries as a vendor to one we know. */
+/**
+ * Resolves the free text Onshape carries as a vendor to one we know, written
+ * either as its code or as its full name.
+ */
 export function toVendor(vendor: string | undefined): Vendor | undefined {
+    const text = vendor?.trim().toUpperCase();
+    if (!text) {
+        return undefined;
+    }
     return Object.values(Vendor).find(
-        (known) => known.toUpperCase() === vendor?.toUpperCase()
+        (known) =>
+            known.toUpperCase() === text ||
+            getVendorName(known).toUpperCase() === text
     );
 }
 

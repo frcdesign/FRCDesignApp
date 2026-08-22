@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { findRecordForConfiguration, getPartUrl } from "./utils";
 import { PartMetadata, SearchRecord } from "./models";
+import { Vendor } from "../library/vendors";
 
 function rec(
     configuration: Record<string, string>,
@@ -80,5 +81,29 @@ describe("getPartUrl", () => {
         expect(
             getPartUrl(metadata({ vendor: "AM", partNumber: "am-1234" }))
         ).toBeUndefined();
+    });
+
+    it("falls back to the insertable's vendor when the record names none", () => {
+        const url = getPartUrl(metadata({ partNumber: "WCP-1025" }), [
+            Vendor.WCP
+        ]);
+        expect(url).toBe("https://wcproducts.com/products/wcp-1025");
+    });
+
+    it("will not guess between several, which do not say which this is", () => {
+        expect(
+            getPartUrl(metadata({ partNumber: "WCP-1025" }), [
+                Vendor.WCP,
+                Vendor.MCM
+            ])
+        ).toBeUndefined();
+    });
+
+    it("prefers the record's own vendor over the insertable's", () => {
+        const url = getPartUrl(
+            metadata({ vendor: "McMaster-Carr", partNumber: "91251A445" }),
+            [Vendor.WCP]
+        );
+        expect(url).toBe("https://www.mcmaster.com/91251A445/");
     });
 });

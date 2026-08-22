@@ -8,7 +8,6 @@ import {
     Text,
     TextInput
 } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
     type Dispatch,
@@ -19,7 +18,6 @@ import {
     useRef,
     useState
 } from "react";
-import { apiGet } from "../../../lib/api-client";
 import {
     ParameterValues,
     ConfigurationResult,
@@ -47,12 +45,10 @@ import {
     valueWithUnits,
     evaluateExpression
 } from "@backend/features/configurations/input-parser";
-import { useUnitInfoQuery } from "../queries";
-import { configurationQueryKey } from "../../../lib/query-keys";
+import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../../../lib/notifications";
 import { SectionError } from "../../../components/app-zero-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { toInsertablePath } from "../../library/library-path";
 
 interface ConfigurationWrapperProps {
     insertableId: string;
@@ -86,16 +82,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         onRecord
     } = props;
 
-    const query = useQuery<ConfigurationResult>({
-        queryKey: configurationQueryKey(insertableId, microversionId),
-        queryFn: async () => {
-            return apiGet("/configuration" + toInsertablePath(insertableId), {
-                cacheId: microversionId
-            });
-        },
-        // Don't refetch query automatically so we don't reset user inputs
-        refetchInterval: false
-    });
+    const query = useConfigurationQuery(insertableId, microversionId);
 
     const search = useSearch({ from: "/app" });
     // Units come from the current document; empty when not connected to one, in
