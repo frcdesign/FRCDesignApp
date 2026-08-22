@@ -11,7 +11,7 @@ export function showQuickInsertTip(): void {
     }
     updateUiState({ hasSeenQuickInsertTip: true });
     showInfoToast(
-        "Tip: right-click an item to insert it without opening this menu.",
+        "Tip: right-click a part to insert it without opening the insert menu.",
         { id: "quick-insert-tip", autoClose: 8000 }
     );
 }
