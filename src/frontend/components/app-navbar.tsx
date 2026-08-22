@@ -11,7 +11,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { Gear, MagnifyingGlass } from "@phosphor-icons/react";
-import { BORDER, IconSize } from "../lib/style-constants";
+import { BORDER, IconSize, PrimaryColor } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -20,7 +20,6 @@ import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useUiState } from "../lib/ui-state";
 import {
-    getLibraryFullName,
     getLibraryName,
     getLibraryTabLabel,
     useLibraryId
@@ -33,6 +32,10 @@ import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
+
+/** A step off the page, so the tab row reads apart from the search row. */
+const TOP_ROW_BACKGROUND =
+    "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
 
 /**
  * Provides top-level navigation for the app: a row of library tabs with the
@@ -48,6 +51,7 @@ export function AppNavbar(): ReactNode {
                 px="sm"
                 wrap="nowrap"
                 align="stretch"
+                bg={TOP_ROW_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />
@@ -116,19 +120,29 @@ function FrcDesignBookIcon(): ReactNode {
             w={IconSize.CONTROL}
             h={IconSize.CONTROL}
             my="auto"
-            // Not the link color the anchor would otherwise hand the mask.
-            c="var(--mantine-color-text)"
-            // Masked rather than drawn, so the book takes the text color rather
-            // than the gray baked into the file. The url has to be quoted:
-            // Vite inlines this asset as a data uri containing apostrophes.
+            bg={PrimaryColor.FILLED}
+            c={PrimaryColor.CONTRAST}
             style={{
-                backgroundColor: "currentColor",
-                maskImage: `url("${frcDesignBook}")`,
-                maskSize: "contain",
-                maskRepeat: "no-repeat",
-                maskPosition: "center"
+                borderRadius: "var(--mantine-radius-sm)",
+                display: "grid",
+                placeItems: "center"
             }}
-        />
+        >
+            {/* Masked rather than drawn, so the book takes the tile's contrast
+                color rather than the gray baked into the file. The url has to
+                be quoted: Vite inlines this asset as a data uri with quotes. */}
+            <Box
+                w={IconSize.SMALL}
+                h={IconSize.SMALL}
+                style={{
+                    backgroundColor: "currentColor",
+                    maskImage: `url("${frcDesignBook}")`,
+                    maskSize: "contain",
+                    maskRepeat: "no-repeat",
+                    maskPosition: "center"
+                }}
+            />
+        </Box>
     );
 }
 
@@ -177,7 +191,7 @@ function LibraryTabs(): ReactNode {
                     <Tooltip
                         key={libraryId}
                         withArrow
-                        label={getLibraryFullName(libraryId)}
+                        label={getLibraryName(libraryId)}
                     >
                         <Tabs.Tab value={libraryId}>
                             {getLibraryTabLabel(libraryId)}

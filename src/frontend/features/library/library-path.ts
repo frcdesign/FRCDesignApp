@@ -40,7 +40,7 @@ export function getLibraryName(libraryId: string): string {
         case LibraryId.FTC_DESIGN_LIB:
             return "FTCDesignLib";
         case LibraryId.MKCAD:
-            return "MKCAD";
+            return "MKCad";
     }
     throw new Error("Unknown library: " + libraryId);
 }
@@ -58,22 +58,21 @@ export function getLibraryTabLabel(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
-/** Where a library is in its life; undefined once it is simply supported. */
-export function getLibraryStatus(libraryId: string): string | undefined {
-    switch (libraryId) {
-        case LibraryId.FTC_DESIGN_LIB:
-            return "Beta";
-        case LibraryId.MKCAD:
-            return "Deprecated";
-    }
-    return undefined;
+export interface LibraryStatus {
+    label: string;
+    /** Mantine color for the badge; how much the label should alarm. */
+    color: string;
 }
 
-/** The name with its status, for the places with room to spell it out. */
-export function getLibraryFullName(libraryId: string): string {
-    const status = getLibraryStatus(libraryId);
-    const name = getLibraryName(libraryId);
-    return status ? `${name} (${status})` : name;
+/** Where a library is in its life; undefined once it is simply supported. */
+export function getLibraryStatus(libraryId: string): LibraryStatus | undefined {
+    switch (libraryId) {
+        case LibraryId.FTC_DESIGN_LIB:
+            return { label: "Beta", color: "blue" };
+        case LibraryId.MKCAD:
+            return { label: "Deprecated", color: "red" };
+    }
+    return undefined;
 }
 
 /** Whether the library's own page is showing, rather than one of its groups. */

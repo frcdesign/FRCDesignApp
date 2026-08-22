@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion } from "@mantine/core";
-import { Book, MagnifyingGlass } from "@phosphor-icons/react";
+import { Accordion, Badge, Group } from "@mantine/core";
+import { Books, MagnifyingGlass } from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
@@ -20,7 +20,8 @@ import { AddGroupButton } from "../../../../features/library/components/add-grou
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import {
-    getLibraryFullName,
+    getLibraryName,
+    getLibraryStatus,
     useLibraryId
 } from "../../../../features/library/library-path";
 import { updateUiState, useUiState } from "../../../../lib/ui-state";
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/app/library/$libraryId/")({
 interface Section {
     value: string;
     icon: ReactNode;
-    title: string;
+    title: ReactNode;
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
@@ -89,12 +90,12 @@ function HomeList(): ReactNode {
             : {
                   value: "library",
                   icon: (
-                      <Book
+                      <Books
                           size={IconSize.MEDIUM}
                           color={PrimaryColor.FILLED}
                       />
                   ),
-                  title: getLibraryFullName(libraryId),
+                  title: <LibraryTitle libraryId={libraryId} />,
                   panel: <LibraryList />,
                   opened: uiState.isLibraryOpen,
                   setOpened: (opened) => setUiState({ isLibraryOpen: opened })
@@ -137,6 +138,21 @@ function HomeList(): ReactNode {
             </Accordion>
             <Outlet />
         </>
+    );
+}
+
+/** The library's name, and a badge when it is not simply supported. */
+function LibraryTitle({ libraryId }: { libraryId: string }): ReactNode {
+    const status = getLibraryStatus(libraryId);
+    return (
+        <Group gap="xs" wrap="nowrap">
+            {getLibraryName(libraryId)}
+            {status && (
+                <Badge size="sm" variant="light" color={status.color}>
+                    {status.label}
+                </Badge>
+            )}
+        </Group>
     );
 }
 
