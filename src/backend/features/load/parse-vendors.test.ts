@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { Vendor } from "../library/vendors";
 import { ParameterType } from "../configurations/models";
 import { QuantityType, Unit } from "../configurations/enums";
-import { parseNameVendor, parseVendors } from "./parse-vendors";
+import {
+    parseNameVendor,
+    parseRecordVendor,
+    parseVendors
+} from "./parse-vendors";
 
 describe("parseNameVendor", () => {
     it("detects vendor token in element name", () => {
@@ -98,5 +102,62 @@ describe("parseVendors", () => {
 
     it("does not read Custom out of an unrelated word", () => {
         expect(parseVendors("Customizable Spacer", [])).toEqual([]);
+    });
+});
+
+const vendorParameter = {
+    id: "vendor",
+    name: "Vendor",
+    default: "wcp",
+    isCosmetic: false,
+    type: ParameterType.ENUM as const,
+    options: [
+        { id: "wcp", name: "West Coast Products" },
+        { id: "am", name: "AndyMark" }
+    ],
+    optionConditions: []
+};
+
+describe("parseRecordVendor", () => {
+    it("reads the selected option, by its full name", () => {
+        expect(
+            parseRecordVendor("Bearing", { vendor: "am" }, [vendorParameter])
+        ).toBe(Vendor.AM);
+    });
+
+    it("reads a default selection, which is still a selection", () => {
+        expect(
+            parseRecordVendor("Bearing", { vendor: "wcp" }, [vendorParameter])
+        ).toBe(Vendor.WCP);
+    });
+
+    it("treats an absent value as the parameter's default", () => {
+        expect(parseRecordVendor("Bearing", {}, [vendorParameter])).toBe(
+            Vendor.WCP
+        );
+    });
+
+    it("prefers the selection over the part's own name", () => {
+        expect(
+            parseRecordVendor("REV Bearing", { vendor: "am" }, [
+                vendorParameter
+            ])
+        ).toBe(Vendor.AM);
+    });
+
+    it("falls back to the part name when nothing is selected", () => {
+        expect(parseRecordVendor("WCP-1025 Gearbox", {}, [])).toBe(Vendor.WCP);
+    });
+
+    it("reads a vendor off a part name that is only a part number", () => {
+        expect(parseRecordVendor("WCP-1025", {}, [])).toBe(Vendor.WCP);
+    });
+
+    it("has none when neither names a vendor", () => {
+        expect(parseRecordVendor("Generic Bearing", {}, [])).toBeUndefined();
+    });
+
+    it("has none without a part name", () => {
+        expect(parseRecordVendor(undefined, {}, [])).toBeUndefined();
     });
 });

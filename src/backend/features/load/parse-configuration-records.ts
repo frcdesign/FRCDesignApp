@@ -3,6 +3,7 @@
  * is kept: search dedupes itself, and build checks read the ones it drops.
  */
 import { OnshapeApi } from "../../lib/onshape/client";
+import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
@@ -363,6 +364,17 @@ async function fetchBatch(
     return records;
 }
 
+/** Onshape's vendor when a part carries one, otherwise the parsed one. */
+function resolveVendor(
+    record: ConfigurationRecord,
+    parameters: ConfigurationParameter[]
+): string | undefined {
+    return (
+        record.vendor ??
+        parseRecordVendor(record.name, record.configuration, parameters)
+    );
+}
+
 /** Folds the default probe and every batch together, the default first. */
 function toResult(
     defaultRecord: ConfigurationRecord,
@@ -376,7 +388,7 @@ function toResult(
         name: defaultRecord.name,
         description: defaultRecord.description,
         material: defaultRecord.material,
-        vendor: defaultRecord.vendor,
+        vendor: resolveVendor(defaultRecord, parameters),
         hasMultipleParts: defaultRecord.hasMultipleParts,
         isOpenComposite: defaultRecord.isOpenComposite
     };
@@ -385,6 +397,9 @@ function toResult(
     // for the same selection.
     const records = batches.flat().map((record) => ({
         ...record,
+        // Read before canonicalizing, which drops a selection that is the
+        // default — including a default vendor option.
+        vendor: resolveVendor(record, parameters),
         configuration: canonicalizeConfiguration(
             record.configuration,
             parameters

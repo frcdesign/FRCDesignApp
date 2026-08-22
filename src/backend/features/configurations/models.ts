@@ -153,6 +153,7 @@ export interface PartMetadata {
     description?: string;
     /** Material display name, e.g. "6061 Aluminum". */
     material?: string;
+    /** Onshape's own, or parsed from the part and its options when it has none. */
     vendor?: string;
     /** True when the part studio resolved to more than one part. */
     hasMultipleParts: boolean;

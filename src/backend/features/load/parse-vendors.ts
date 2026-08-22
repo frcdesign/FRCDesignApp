@@ -1,7 +1,8 @@
-import { Vendor, getVendorName } from "../library/vendors";
+import { Vendor, toVendor } from "../library/vendors";
 import {
     ParameterType,
-    type ConfigurationParameter
+    type ConfigurationParameter,
+    type ParameterValues
 } from "../configurations/models";
 
 export function parseNameVendor(name: string): Vendor | undefined {
@@ -15,6 +16,11 @@ export function parseNameVendor(name: string): Vendor | undefined {
     return undefined;
 }
 
+/** A vendor an option names, as a token within its label or as the whole of it. */
+function parseOptionVendor(optionName: string): Vendor | undefined {
+    return parseNameVendor(optionName) ?? toVendor(optionName);
+}
+
 export function parseVendors(
     name: string,
     parameters: ConfigurationParameter[]
@@ -26,17 +32,30 @@ export function parseVendors(
     for (const param of parameters) {
         if (param.type !== ParameterType.ENUM) continue;
         for (const option of param.options) {
-            const vendor = parseNameVendor(option.name);
-            if (vendor) {
-                vendors.add(vendor);
-                continue;
-            }
-            const byFullName = Object.values(Vendor).find(
-                (v) =>
-                    getVendorName(v).toUpperCase() === option.name.toUpperCase()
-            );
-            if (byFullName) vendors.add(byFullName);
+            const vendor = parseOptionVendor(option.name);
+            if (vendor) vendors.add(vendor);
         }
     }
     return [...vendors];
+}
+
+/**
+ * The vendor one configuration resolves to. Its selected options name it more
+ * precisely than the part does, so they are read before the part's own name.
+ */
+export function parseRecordVendor(
+    partName: string | undefined,
+    configuration: ParameterValues,
+    parameters: ConfigurationParameter[]
+): Vendor | undefined {
+    for (const param of parameters) {
+        if (param.type !== ParameterType.ENUM) continue;
+        // An absent value is the parameter's default, which is what the
+        // element's own probe — configured with nothing — resolves to.
+        const selected = configuration[param.id] ?? param.default;
+        const option = param.options.find((o) => o.id === selected);
+        const vendor = option && parseOptionVendor(option.name);
+        if (vendor) return vendor;
+    }
+    return partName ? parseNameVendor(partName) : undefined;
 }

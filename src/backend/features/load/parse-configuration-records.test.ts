@@ -15,6 +15,7 @@ import {
 import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
+import { Vendor } from "../library/vendors";
 import {
     decideIndexing,
     parseAssemblyRecord,
@@ -214,6 +215,43 @@ describe("parseConfigurationRecords", () => {
         // under another name and is not probed again.
         expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
+    });
+
+    it("fills the vendor Onshape leaves unset, per configuration", async () => {
+        // Onshape reports no vendor; the option each record selected names it.
+        mockParts((configuration) => [
+            { partId: "p", partNumber: `PN-${configuration.Vendor ?? "wcp"}` }
+        ]);
+        const vendorParam = enumParam("Vendor", ["wcp", "am"]);
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [vendorParam],
+            countConfigurations([vendorParam]).configurations,
+            false
+        );
+
+        expect(result.partMetadata?.vendor).toBe(Vendor.WCP);
+        expect(result.records.map((r) => r.vendor)).toEqual([Vendor.AM]);
+    });
+
+    it("keeps the vendor Onshape does report", async () => {
+        mockParts(() => [
+            { partId: "p", partNumber: "PN", vendor: "AndyMark", name: "WCP" }
+        ]);
+
+        const result = await parseConfigurationRecords(
+            CLIENT,
+            PATH,
+            ElementType.PART_STUDIO,
+            [],
+            [],
+            false
+        );
+
+        expect(result.partMetadata?.vendor).toBe("AndyMark");
     });
 
     it("probes every combination when none of them is the default", async () => {
