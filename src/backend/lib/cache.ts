@@ -23,6 +23,25 @@ export function immutableCacheControl(
     return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
 }
 
+/**
+ * A short private cache for a body that goes stale on time rather than by url.
+ * Keep the window under the caller's poll interval, or a poll is served the
+ * answer it already has.
+ */
+export function shortCacheMiddleware(
+    maxAge: number
+): MiddlewareHandler<AppContextEnv> {
+    return async (c, next) => {
+        await next();
+        c.header(
+            "Cache-Control",
+            c.res.ok
+                ? `${CachePolicy.PRIVATE_CACHE}, max-age=${maxAge}`
+                : NO_STORE
+        );
+    };
+}
+
 /** Overrides the route's immutable default for a body its url does not pin. */
 export function setCacheTtl(c: AppContext, maxAge: number): void {
     c.set("cacheTtl", maxAge);

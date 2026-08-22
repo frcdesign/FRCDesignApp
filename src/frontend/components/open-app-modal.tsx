@@ -26,7 +26,14 @@ export function openAppModal(props: OpenAppModalProps): void {
         modalId,
         title,
         size,
-        children,
+        // Takes the focus the trap would otherwise land on the close button,
+        // which reads as the button being pre-selected. Focus still enters the
+        // dialog, so Tab stays scoped to it.
+        children: (
+            <div data-autofocus tabIndex={-1} style={{ outline: "none" }}>
+                {children}
+            </div>
+        ),
         onClose,
         centered: true,
         // The default close button is what makes an otherwise tight header tall.

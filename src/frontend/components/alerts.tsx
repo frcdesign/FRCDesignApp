@@ -19,7 +19,11 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
                 title={props.title}
             />
         ),
-        children: <Text size="sm">{props.text}</Text>,
+        children: (
+            <Text data-autofocus tabIndex={-1} size="sm">
+                {props.text}
+            </Text>
+        ),
         labels: { confirm: "Close", cancel: null },
         centered: true,
         cancelProps: { display: "none" },

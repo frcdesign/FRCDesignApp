@@ -167,8 +167,8 @@ export function CardTitle(props: CardTitleProps) {
     const details = searchHit
         ? (
               [
-                  [searchHit.partNumber, searchHit.partNumberPositions],
-                  [searchHit.partName, searchHit.partNamePositions]
+                  [searchHit.partName, searchHit.partNamePositions],
+                  [searchHit.partNumber, searchHit.partNumberPositions]
               ] as const
           ).filter(
               (detail): detail is [string, Position[] | undefined] =>

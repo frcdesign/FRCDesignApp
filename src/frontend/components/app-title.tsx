@@ -53,7 +53,7 @@ interface MenuTitleProps {
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
     const details = record
-        ? [record.partNumber, record.name].filter(
+        ? [record.name, record.partNumber].filter(
               (value): value is string => !!value && value !== name
           )
         : [];

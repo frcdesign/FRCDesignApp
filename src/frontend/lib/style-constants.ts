@@ -33,7 +33,7 @@ export const BORDER = "1px solid var(--mantine-color-default-border)";
  * modal's header and footer, which read apart from the content between them.
  */
 export const CHROME_BACKGROUND =
-    "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
+    "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
 
 /**
  * An icon centres on the text's line box, but text reads as centred on its cap

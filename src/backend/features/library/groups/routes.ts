@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { cacheMiddleware } from "../../../lib/cache";
+import { shortCacheMiddleware } from "../../../lib/cache";
 import { getApp } from "../../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../../lib/route-params";
 import { getDb } from "../../../db/client";
@@ -77,11 +77,17 @@ groupRoutes.post(
     }
 );
 
+/**
+ * The poll's fastest interval, which the cache window has to stay under so a
+ * poll is never answered from the cache with what it already had.
+ */
+const JOB_STATUS_CACHE_SECONDS = 2;
+
 /** GET /api/job-status/library/:libraryId — checked on load, then polled. */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
-    cacheMiddleware(),
+    shortCacheMiddleware(JOB_STATUS_CACHE_SECONDS),
     async (c) => {
         return c.json(await getJobStatus(c.env, getLibraryParam(c)));
     }
