@@ -148,7 +148,9 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
 export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
-        <Card withBorder pos="relative" m="sm" mb={0}>
+        // No margin: the modal body it sits in supplies the inset, and the
+        // padding stays tight so the preview is not lost inside its frame.
+        <Card withBorder pos="relative" p="xs">
             <Center>
                 <PreviewImage {...props} />
             </Center>
