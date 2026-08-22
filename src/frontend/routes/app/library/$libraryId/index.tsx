@@ -5,7 +5,8 @@ import { Books, MagnifyingGlass } from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
-    PrimaryColor
+    PrimaryColor,
+    TITLE_ICON_NUDGE
 } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
@@ -122,7 +123,8 @@ function HomeList(): ReactNode {
                     // On the control, so a collapsed section still divides from
                     // the next one; content closes off an open one.
                     control: { borderBottom: BORDER },
-                    content: { padding: 0, borderBottom: BORDER }
+                    content: { padding: 0, borderBottom: BORDER },
+                    icon: TITLE_ICON_NUDGE
                 }}
             >
                 {sections.map((section) => (

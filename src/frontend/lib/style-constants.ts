@@ -35,6 +35,14 @@ export const BORDER = "1px solid var(--mantine-color-default-border)";
 export const CHROME_BACKGROUND =
     "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
 
+/**
+ * An icon centres on the text's line box, but text reads as centred on its cap
+ * height, which sits about a pixel higher — so a centred icon looks low. CSS
+ * `text-box` would trim the box properly, but it clips descenders under the
+ * truncation titles need, so title icons take the pixel back by hand.
+ */
+export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
+
 /** Padding for a modal's header and footer, tighter than the body they frame. */
 export const CHROME_PADDING = "6px var(--mantine-spacing-sm)";
 
