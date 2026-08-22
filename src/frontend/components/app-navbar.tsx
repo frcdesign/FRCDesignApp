@@ -249,6 +249,8 @@ export function SearchBar() {
     return (
         <TextInput
             type="search"
+            // The panel opens to a library the caller is here to search.
+            autoFocus
             flex={1}
             leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}

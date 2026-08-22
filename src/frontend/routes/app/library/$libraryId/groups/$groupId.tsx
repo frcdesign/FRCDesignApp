@@ -8,7 +8,11 @@ import {
 } from "@tanstack/react-router";
 import { Box, Button, Group } from "@mantine/core";
 import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
-import { BORDER, IconSize } from "../../../../../lib/style-constants";
+import {
+    BORDER,
+    IconSize,
+    SECTION_HEADER_HEIGHT
+} from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
@@ -125,9 +129,10 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
                     params: { libraryId }
                 })
             }
-            p="sm"
+            px="md"
+            h={SECTION_HEADER_HEIGHT}
         >
-            <Group wrap="nowrap" justify="space-between">
+            <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
                     icon={<ArrowLeft size={IconSize.MEDIUM} />}
                     title={group.name}

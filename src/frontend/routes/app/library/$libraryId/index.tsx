@@ -6,6 +6,7 @@ import {
     BORDER,
     IconSize,
     PrimaryColor,
+    SECTION_HEADER_HEIGHT,
     TITLE_ICON_NUDGE
 } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -122,7 +123,12 @@ function HomeList(): ReactNode {
                 styles={{
                     // On the control, so a collapsed section still divides from
                     // the next one; content closes off an open one.
-                    control: { borderBottom: BORDER },
+                    control: {
+                        borderBottom: BORDER,
+                        minHeight: SECTION_HEADER_HEIGHT,
+                        paddingBlock: 0
+                    },
+                    label: { paddingBlock: 0 },
                     content: { padding: 0, borderBottom: BORDER },
                     icon: TITLE_ICON_NUDGE
                 }}

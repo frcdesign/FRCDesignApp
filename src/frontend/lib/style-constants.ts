@@ -43,6 +43,13 @@ export const CHROME_BACKGROUND =
  */
 export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
 
+/**
+ * One height for a section's header row, whether an accordion section or a
+ * group's. Set rather than left to the content, whose tallest child differs:
+ * an accordion is sized by its label, a group header by its menu button.
+ */
+export const SECTION_HEADER_HEIGHT = 48;
+
 /** Padding for a modal's header and footer, tighter than the body they frame. */
 export const CHROME_PADDING = "6px var(--mantine-spacing-sm)";
 

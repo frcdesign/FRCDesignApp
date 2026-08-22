@@ -1,4 +1,4 @@
-import { Box, Group, Stack, Text } from "@mantine/core";
+import { Center, Group, Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
 import { FontWeight, TITLE_ICON_NUDGE } from "../lib/style-constants";
@@ -21,7 +21,10 @@ export function AppTitle(props: AppTitleProps): ReactNode {
     const { title, icon, subtitle, rightSection } = props;
     return (
         <Group gap="sm" wrap="nowrap" miw={0}>
-            {icon && <Box style={TITLE_ICON_NUDGE}>{icon}</Box>}
+            {/* Centred rather than wrapped in a plain box: inside a block the
+                icon goes back to sitting on the text baseline, which drops it
+                several pixels rather than the one the nudge takes back. */}
+            {icon && <Center style={TITLE_ICON_NUDGE}>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" wrap="nowrap" miw={0}>
                     <Text fw={FontWeight.SEMI_BOLD} truncate>

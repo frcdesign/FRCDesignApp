@@ -58,8 +58,6 @@ const POLL_STEPS = [
     { untilMs: 75_000, intervalMs: 5_000 }
 ];
 const SLOWEST_POLL_MS = 10_000;
-/** How long a mount reuses the status it has rather than asking again. */
-const STATUS_REUSE_MS = 30_000;
 
 function jobPollInterval(runningForMs: number): number {
     const step = POLL_STEPS.find(({ untilMs }) => runningForMs < untilMs);
@@ -75,10 +73,9 @@ export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
         enabled: canPoll,
-        // Every status badge observes this, and switching libraries remounts
-        // them all, so without a window each would trigger its own fetch. Only
-        // the poll should set the pace, and it ignores this.
-        staleTime: STATUS_REUSE_MS,
+        // Every status badge observes this, so rows mounting as the user scrolls
+        // would each trigger a fetch. Only the poll should set the pace.
+        staleTime: FASTEST_POLL_MS,
         refetchInterval: (query) => {
             const status = query.state.data;
             if (!status?.running) {

@@ -25,8 +25,11 @@ export function makeUrl(path: DocumentPath): string {
         url += `/e/${path.elementId}`;
     }
     if (isConfigurablePath(path)) {
+        // Encoded here rather than in the shared helper, whose raw output is
+        // what Onshape's api takes; a url needs its own escaping.
         url +=
-            "?configuration=" + encodeConfigurationForQuery(path.configuration);
+            "?configuration=" +
+            encodeURIComponent(encodeConfigurationForQuery(path.configuration));
     }
     return url;
 }

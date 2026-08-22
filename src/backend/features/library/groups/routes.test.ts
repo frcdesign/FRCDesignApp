@@ -231,9 +231,8 @@ describe("GET /job-status", () => {
         );
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual(status);
-        // Cached briefly so revisiting a library costs nothing, but under the
-        // poll's interval so a poll is never answered from the cache.
-        expect(res.headers.get("Cache-Control")).toBe("private, max-age=2");
+        // Polled for live state, so it must never be served from a cache.
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 });
 
