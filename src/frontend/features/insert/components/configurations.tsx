@@ -4,6 +4,7 @@ import {
     Group,
     Loader,
     Select,
+    Stack,
     Text,
     TextInput
 } from "@mantine/core";
@@ -196,7 +197,9 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             />
         );
     });
-    return <div>{parameters}</div>;
+    // Spaced by the stack, not by a margin on each row, which the first row
+    // would add to the gap the body already leaves above it.
+    return <Stack gap="sm">{parameters}</Stack>;
 }
 
 interface ParameterProps<T extends ConfigurationParameter> {
@@ -269,7 +272,7 @@ interface InputLabelProps {
 function InputLabel(props: InputLabelProps) {
     const { label, htmlFor, children } = props;
     return (
-        <Group gap="sm" align="flex-start" mt="sm">
+        <Group gap="sm" align="flex-start">
             <Text
                 size="sm"
                 style={{

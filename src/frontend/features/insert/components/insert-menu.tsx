@@ -208,8 +208,10 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                // Mantine trims the icon side only, leaving the label's side
-                // half again as wide; even it up.
+                // Even up the visible gaps: Mantine leaves the label's side
+                // wider, and the plus is inset inside its own box, so the icon
+                // side needs less padding still.
+                pl={9}
                 pr="sm"
                 leftSection={<Plus size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}

@@ -102,12 +102,7 @@ function GroupList(): ReactNode {
     return (
         <>
             <GroupHeaderRow group={group} />
-            <Box
-                style={{
-                    borderBottom: BORDER,
-                    borderTop: BORDER
-                }}
-            >
+            <Box style={{ borderBottom: BORDER }}>
                 {content}
                 <Outlet />
             </Box>
@@ -131,6 +126,9 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
             }
             px="md"
             h={SECTION_HEADER_HEIGHT}
+            // Owned here, as an accordion control owns its own, so the row and
+            // its divider measure the same as a section header's.
+            style={{ borderBottom: BORDER }}
         >
             <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
