@@ -1,4 +1,4 @@
-import { modals } from "@mantine/modals";
+import { openAppModal } from "../../components/open-app-modal";
 import { type ParameterValues } from "@backend/features/configurations/models";
 import {
     FavoriteMenuContent,
@@ -15,11 +15,10 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
     const { favoriteId, insertableName, defaultConfiguration } = props;
     // Minted here so the content can update the header as the selection changes.
     const modalId = crypto.randomUUID();
-    modals.open({
+    openAppModal({
         modalId,
         title: <FavoriteMenuTitle name={insertableName} />,
         size: 500,
-        centered: true,
         children: (
             <FavoriteMenuContent
                 favoriteId={favoriteId}

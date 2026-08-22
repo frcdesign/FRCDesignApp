@@ -1,4 +1,5 @@
 import { modals } from "@mantine/modals";
+import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { FloppyDisk } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
@@ -149,25 +150,28 @@ export function FavoriteMenuContent(
 
     return (
         <>
-            <PreviewImageCard
-                path={insertable.path}
-                insertableId={insertable.id}
-                microversionId={insertable.microversionId}
-                largeThumbnailUrl={insertable.largeThumbnailUrl}
-                canonicalConfiguration={encodeCanonicalConfiguration(
-                    canonicalConfiguration ?? {}
-                )}
-            />
-            <ConfigurationWrapper
-                onCanonicalConfiguration={setCanonicalConfiguration}
-                onRecord={setRecord}
-                configuration={configuration}
-                setConfiguration={setConfiguration}
-                insertableId={insertable.id}
-                microversionId={insertable.microversionId}
-            />
-            <Group justify="flex-end" mt="md">
+            <AppModalBody>
+                <PreviewImageCard
+                    path={insertable.path}
+                    insertableId={insertable.id}
+                    microversionId={insertable.microversionId}
+                    largeThumbnailUrl={insertable.largeThumbnailUrl}
+                    canonicalConfiguration={encodeCanonicalConfiguration(
+                        canonicalConfiguration ?? {}
+                    )}
+                />
+                <ConfigurationWrapper
+                    onCanonicalConfiguration={setCanonicalConfiguration}
+                    onRecord={setRecord}
+                    configuration={configuration}
+                    setConfiguration={setConfiguration}
+                    insertableId={insertable.id}
+                    microversionId={insertable.microversionId}
+                />
+            </AppModalBody>
+            <AppModalFooter>
                 <Button
+                    ml="auto"
                     leftSection={<FloppyDisk size={IconSize.SMALL} />}
                     // Saving before the wrapper reports would store {}, wiping
                     // the favorite's configuration.
@@ -179,7 +183,7 @@ export function FavoriteMenuContent(
                 >
                     Save
                 </Button>
-            </Group>
+            </AppModalFooter>
         </>
     );
 }

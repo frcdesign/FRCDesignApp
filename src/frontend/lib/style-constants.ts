@@ -35,6 +35,9 @@ export const BORDER = "1px solid var(--mantine-color-default-border)";
 export const CHROME_BACKGROUND =
     "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
 
+/** Padding for a modal's header and footer, tighter than the body they frame. */
+export const CHROME_PADDING = "6px var(--mantine-spacing-md)";
+
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
     /**

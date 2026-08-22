@@ -1,5 +1,5 @@
 import { modals } from "@mantine/modals";
-import { BORDER, CHROME_BACKGROUND } from "../../lib/style-constants";
+import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
 import { type ParameterValues } from "@backend/features/configurations/models";
@@ -22,20 +22,10 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     // Minted here so the content can address the modal it lives in, which is
     // what lets the header follow the selected configuration.
     const id = crypto.randomUUID();
-    modals.open({
+    openAppModal({
         modalId: id,
         title: <InsertMenuTitle name={insertable.name} />,
         size: 500,
-        centered: true,
-        // The header and footer are chrome around the configuration, so they
-        // sit on their own surface and the body spans the full width.
-        styles: {
-            header: {
-                background: CHROME_BACKGROUND,
-                borderBottom: BORDER
-            },
-            body: { padding: 0 }
-        },
         onClose: () => {
             if (!didInsert) {
                 showRestoreToast(insertable, defaultConfiguration);

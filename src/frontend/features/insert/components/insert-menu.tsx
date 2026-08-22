@@ -5,12 +5,8 @@ import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { Info, Plus } from "@phosphor-icons/react";
-import {
-    BORDER,
-    CHROME_BACKGROUND,
-    FontWeight,
-    IconSize
-} from "../../../lib/style-constants";
+import { FontWeight, IconSize } from "../../../lib/style-constants";
+import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { modals } from "@mantine/modals";
 import { showQuickInsertTip } from "../quick-insert-tip";
 import { useIsFetching } from "@tanstack/react-query";
@@ -129,7 +125,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
     return (
         <>
-            <Stack p="md">
+            <AppModalBody>
                 <PreviewImageCard
                     path={insertable.path}
                     insertableId={insertable.id}
@@ -140,15 +136,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     )}
                 />
                 {parameters}
-            </Stack>
-            {/* Chrome, like the header: the body scrolls between them. */}
-            <Group
-                justify="space-between"
-                wrap="nowrap"
-                p="md"
-                bg={CHROME_BACKGROUND}
-                style={{ borderTop: BORDER }}
-            >
+            </AppModalBody>
+            <AppModalFooter>
                 <Group gap={4}>
                     <RequireSignIn>
                         <FavoriteButton
@@ -178,7 +167,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     isFavorite={favorite !== undefined}
                     onInsert={onInsert}
                 />
-            </Group>
+            </AppModalFooter>
         </>
     );
 }

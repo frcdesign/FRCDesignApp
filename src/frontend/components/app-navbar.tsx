@@ -24,11 +24,7 @@ import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useUiState } from "../lib/ui-state";
-import {
-    getLibraryName,
-    getLibraryTabLabel,
-    useLibraryId
-} from "../features/library/library-path";
+import { getLibraryName, useLibraryId } from "../features/library/library-path";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
 import { useAccessData } from "../features/auth/access-level";
@@ -182,22 +178,23 @@ function LibraryTabs(): ReactNode {
                 // the row owns one that runs the full width. The active tab's
                 // indicator is colored separately and survives this.
                 root: { "--tab-border-color": "transparent" },
-                // Pulled onto that divider, so the active tab's indicator
-                // replaces it instead of stacking a second line above it.
-                tab: { marginBottom: -1 }
+                // Three full names outgrow a narrow panel; scrolling them
+                // keeps the navbar one row rather than reflowing into two.
+                list: { flexWrap: "nowrap", overflowX: "auto" },
+                tab: {
+                    // Pulled onto that divider, so the active tab's indicator
+                    // replaces it instead of stacking a second line above it.
+                    marginBottom: -1,
+                    paddingInline: "var(--mantine-spacing-sm)",
+                    whiteSpace: "nowrap"
+                }
             }}
         >
             <Tabs.List aria-label="Libraries">
                 {Object.values(LibraryId).map((libraryId) => (
-                    <Tooltip
-                        key={libraryId}
-                        withArrow
-                        label={getLibraryName(libraryId)}
-                    >
-                        <Tabs.Tab value={libraryId}>
-                            {getLibraryTabLabel(libraryId)}
-                        </Tabs.Tab>
-                    </Tooltip>
+                    <Tabs.Tab key={libraryId} value={libraryId}>
+                        {getLibraryName(libraryId)}
+                    </Tabs.Tab>
                 ))}
             </Tabs.List>
         </Tabs>

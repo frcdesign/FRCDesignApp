@@ -45,19 +45,6 @@ export function getLibraryName(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
-/** The label on a library's tab, where there is only room for a few characters. */
-export function getLibraryTabLabel(libraryId: string): string {
-    switch (libraryId) {
-        case LibraryId.FRC_DESIGN_LIB:
-            return "FRC";
-        case LibraryId.FTC_DESIGN_LIB:
-            return "FTC";
-        case LibraryId.MKCAD:
-            return "MKCad";
-    }
-    throw new Error("Unknown library: " + libraryId);
-}
-
 /** Where a library is in its life; undefined once it is simply supported. */
 export function getLibraryStatus(libraryId: string): string | undefined {
     switch (libraryId) {

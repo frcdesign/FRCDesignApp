@@ -1,5 +1,7 @@
-import { Button, Group, Menu, TextInput } from "@mantine/core";
+import { Button, Menu, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
+import { openAppModal } from "../../../components/open-app-modal";
+import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { Plus } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -14,9 +16,8 @@ import { jobStatusQueryKey } from "../../../lib/query-keys";
 import type { JobStatus } from "@backend/features/load/contract";
 
 function openAddGroupMenu(selectedGroupId?: string) {
-    modals.open({
+    openAppModal({
         title: "Add group",
-        centered: true,
         children: <AddGroupMenuContent selectedGroupId={selectedGroupId} />
     });
 }
@@ -60,22 +61,26 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     });
 
     return (
-        <Group align="flex-end" gap="sm" wrap="nowrap">
-            <TextInput
-                flex={1}
-                placeholder="Document url..."
-                value={url}
-                onChange={(event) => setUrl(event.currentTarget.value)}
-                error={mutation.isError}
-            />
-            <Button
-                leftSection={<Plus size={IconSize.SMALL} />}
-                onClick={() => mutation.mutate()}
-                loading={mutation.isPending}
-            >
-                Add
-            </Button>
-        </Group>
+        <>
+            <AppModalBody>
+                <TextInput
+                    placeholder="Document url..."
+                    value={url}
+                    onChange={(event) => setUrl(event.currentTarget.value)}
+                    error={mutation.isError}
+                />
+            </AppModalBody>
+            <AppModalFooter>
+                <Button
+                    ml="auto"
+                    leftSection={<Plus size={IconSize.SMALL} />}
+                    onClick={() => mutation.mutate()}
+                    loading={mutation.isPending}
+                >
+                    Add
+                </Button>
+            </AppModalFooter>
+        </>
     );
 }
 

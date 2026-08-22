@@ -39,6 +39,9 @@ export function createAppTheme(libraryId: string) {
         colors: { frcGreen },
         primaryColor: getLibraryColor(libraryId),
         autoContrast: true,
-        cursorType: "pointer"
+        cursorType: "pointer",
+        // Drops the class carrying Mantine's 1px press-down translate, which
+        // nudged every button and icon button down on click.
+        activeClassName: ""
     });
 }
