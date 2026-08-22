@@ -5,7 +5,12 @@ import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
 import { Info, Plus } from "@phosphor-icons/react";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import {
+    BORDER,
+    CHROME_BACKGROUND,
+    FontWeight,
+    IconSize
+} from "../../../lib/style-constants";
 import { modals } from "@mantine/modals";
 import { showQuickInsertTip } from "../quick-insert-tip";
 import { useIsFetching } from "@tanstack/react-query";
@@ -124,17 +129,26 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
     return (
         <>
-            <PreviewImageCard
-                path={insertable.path}
-                insertableId={insertable.id}
-                microversionId={insertable.microversionId}
-                largeThumbnailUrl={insertable.largeThumbnailUrl}
-                canonicalConfiguration={encodeCanonicalConfiguration(
-                    canonicalConfiguration
-                )}
-            />
-            {parameters}
-            <Group justify="space-between" wrap="nowrap" mt="md">
+            <Stack p="md">
+                <PreviewImageCard
+                    path={insertable.path}
+                    insertableId={insertable.id}
+                    microversionId={insertable.microversionId}
+                    largeThumbnailUrl={insertable.largeThumbnailUrl}
+                    canonicalConfiguration={encodeCanonicalConfiguration(
+                        canonicalConfiguration
+                    )}
+                />
+                {parameters}
+            </Stack>
+            {/* Chrome, like the header: the body scrolls between them. */}
+            <Group
+                justify="space-between"
+                wrap="nowrap"
+                p="md"
+                bg={CHROME_BACKGROUND}
+                style={{ borderTop: BORDER }}
+            >
                 <Group gap={4}>
                     <RequireSignIn>
                         <FavoriteButton

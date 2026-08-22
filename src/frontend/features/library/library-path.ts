@@ -58,19 +58,13 @@ export function getLibraryTabLabel(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
-export interface LibraryStatus {
-    label: string;
-    /** Mantine color for the badge; how much the label should alarm. */
-    color: string;
-}
-
 /** Where a library is in its life; undefined once it is simply supported. */
-export function getLibraryStatus(libraryId: string): LibraryStatus | undefined {
+export function getLibraryStatus(libraryId: string): string | undefined {
     switch (libraryId) {
         case LibraryId.FTC_DESIGN_LIB:
-            return { label: "Beta", color: "blue" };
+            return "Beta";
         case LibraryId.MKCAD:
-            return { label: "Deprecated", color: "red" };
+            return "Deprecated";
     }
     return undefined;
 }

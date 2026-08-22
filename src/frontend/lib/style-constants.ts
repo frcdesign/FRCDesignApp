@@ -28,6 +28,13 @@ export enum FontWeight {
 
 export const BORDER = "1px solid var(--mantine-color-default-border)";
 
+/**
+ * A step off the page, for the app's chrome: the navbar's tab row and a
+ * modal's header and footer, which read apart from the content between them.
+ */
+export const CHROME_BACKGROUND =
+    "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
+
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
     /**

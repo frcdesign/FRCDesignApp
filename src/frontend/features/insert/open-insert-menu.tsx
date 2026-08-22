@@ -1,4 +1,5 @@
 import { modals } from "@mantine/modals";
+import { BORDER, CHROME_BACKGROUND } from "../../lib/style-constants";
 
 import type { InsertableOut } from "@backend/features/library/contract";
 import { type ParameterValues } from "@backend/features/configurations/models";
@@ -26,6 +27,15 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         title: <InsertMenuTitle name={insertable.name} />,
         size: 500,
         centered: true,
+        // The header and footer are chrome around the configuration, so they
+        // sit on their own surface and the body spans the full width.
+        styles: {
+            header: {
+                background: CHROME_BACKGROUND,
+                borderBottom: BORDER
+            },
+            body: { padding: 0 }
+        },
         onClose: () => {
             if (!didInsert) {
                 showRestoreToast(insertable, defaultConfiguration);

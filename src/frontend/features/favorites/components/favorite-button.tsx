@@ -197,8 +197,10 @@ interface HeartIconProps {
 
 export function HeartIcon(props: HeartIconProps): ReactNode {
     const { full = true, size = IconSize.SMALL } = props;
+    // fz, not size: Box builds its own `style`, dropping the font-size that
+    // Phosphor's `size` sets, which shrank the icon to 1em.
     return full ? (
-        <Box component={Heart} size={size} c="red" weight="fill" />
+        <Box component={Heart} fz={size} c="red" weight="fill" />
     ) : (
         <Heart size={size} />
     );
@@ -213,5 +215,5 @@ interface HeartBrokenIconProps {
 
 export function HeartBrokenIcon(props: HeartBrokenIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
-    return <Box component={HeartBreak} size={size} c="red" />;
+    return <Box component={HeartBreak} fz={size} c="red" />;
 }

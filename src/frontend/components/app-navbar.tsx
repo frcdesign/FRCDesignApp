@@ -11,7 +11,12 @@ import {
     Tooltip
 } from "@mantine/core";
 import { Gear, MagnifyingGlass } from "@phosphor-icons/react";
-import { BORDER, IconSize, PrimaryColor } from "../lib/style-constants";
+import {
+    BORDER,
+    CHROME_BACKGROUND,
+    IconSize,
+    PrimaryColor
+} from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -33,10 +38,6 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 
-/** A step off the page, so the tab row reads apart from the search row. */
-const TOP_ROW_BACKGROUND =
-    "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))";
-
 /**
  * Provides top-level navigation for the app: a row of library tabs with the
  * brand and settings alongside, over a row holding search and its filters.
@@ -51,7 +52,7 @@ export function AppNavbar(): ReactNode {
                 px="sm"
                 wrap="nowrap"
                 align="stretch"
-                bg={TOP_ROW_BACKGROUND}
+                bg={CHROME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />
@@ -210,10 +211,10 @@ export function SettingsButton() {
             color="gray"
             title="Settings"
             my="auto"
-            size="input-sm"
+            size="lg"
             onClick={() => openSettingsMenu()}
         >
-            <Gear size={IconSize.CONTROL} />
+            <Gear size={IconSize.MEDIUM} />
         </ActionIcon>
     );
 }

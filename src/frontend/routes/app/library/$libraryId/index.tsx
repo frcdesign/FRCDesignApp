@@ -148,8 +148,8 @@ function LibraryTitle({ libraryId }: { libraryId: string }): ReactNode {
         <Group gap="xs" wrap="nowrap">
             {getLibraryName(libraryId)}
             {status && (
-                <Badge size="sm" variant="light" color={status.color}>
-                    {status.label}
+                <Badge size="sm" variant="light">
+                    {status}
                 </Badge>
             )}
         </Group>
