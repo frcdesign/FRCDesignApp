@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion, Badge, Group } from "@mantine/core";
+import { Accordion, Badge } from "@mantine/core";
+import { AppTitle } from "../../../../components/app-title";
 import { Books, MagnifyingGlass } from "@phosphor-icons/react";
 import {
     BORDER,
@@ -57,8 +58,8 @@ function HomeList(): ReactNode {
     if (isSignedIn) {
         sections.push({
             value: "favorites",
-            icon: <HeartIcon />,
-            title: "Favorites",
+            icon: <HeartIcon size={IconSize.MEDIUM} />,
+            title: <AppTitle title="Favorites" />,
             panel: <FavoritesList />,
             opened: uiState.isFavoritesOpen,
             setOpened: (opened) => setUiState({ isFavoritesOpen: opened })
@@ -77,7 +78,7 @@ function HomeList(): ReactNode {
                           color={PrimaryColor.FILLED}
                       />
                   ),
-                  title: "Search Results",
+                  title: <AppTitle title="Search Results" />,
                   panel: (
                       <SearchResults
                           query={uiState.searchQuery}
@@ -145,14 +146,16 @@ function HomeList(): ReactNode {
 function LibraryTitle({ libraryId }: { libraryId: string }): ReactNode {
     const status = getLibraryStatus(libraryId);
     return (
-        <Group gap="xs" wrap="nowrap">
-            {getLibraryName(libraryId)}
-            {status && (
-                <Badge size="sm" variant="light">
-                    {status}
-                </Badge>
-            )}
-        </Group>
+        <AppTitle
+            title={getLibraryName(libraryId)}
+            rightSection={
+                status && (
+                    <Badge size="sm" variant="light">
+                        {status}
+                    </Badge>
+                )
+            }
+        />
     );
 }
 

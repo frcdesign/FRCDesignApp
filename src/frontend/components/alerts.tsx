@@ -1,5 +1,8 @@
 import { modals } from "@mantine/modals";
-import { Text } from "@mantine/core";
+import { Box, Text } from "@mantine/core";
+import { Warning } from "@phosphor-icons/react";
+import { AppTitle } from "./app-title";
+import { IconSize } from "../lib/style-constants";
 
 interface OpenWarningAlertProps {
     title: string;
@@ -8,7 +11,14 @@ interface OpenWarningAlertProps {
 
 function openWarningAlert(props: OpenWarningAlertProps): void {
     modals.openConfirmModal({
-        title: props.title,
+        title: (
+            <AppTitle
+                icon={
+                    <Box component={Warning} fz={IconSize.MEDIUM} c="yellow" />
+                }
+                title={props.title}
+            />
+        ),
         children: <Text size="sm">{props.text}</Text>,
         labels: { confirm: "Close", cancel: null },
         centered: true,

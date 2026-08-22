@@ -1,8 +1,9 @@
 import { modals } from "@mantine/modals";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
-import { Button, Group, Stack, Text } from "@mantine/core";
+import { MenuTitle } from "../../../components/app-title";
+import { Button } from "@mantine/core";
 import { FloppyDisk } from "@phosphor-icons/react";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
@@ -25,34 +26,6 @@ import { getQueryUpdater } from "../../../lib/query-cache";
 import { toFavoritePath, useLibraryId } from "../../library/library-path";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { PageError } from "../../../components/app-zero-state";
-
-/** The element's name, and what the saved configuration produces beneath it. */
-export function FavoriteMenuTitle({
-    name,
-    record
-}: {
-    name: string;
-    record?: SearchRecord;
-}): ReactNode {
-    const details = record
-        ? [record.partNumber, record.name].filter(
-              (value): value is string => !!value && value !== name
-          )
-        : [];
-    return (
-        <Group gap="xs" wrap="nowrap">
-            <HeartIcon />
-            <Stack gap={0}>
-                <Text fw={FontWeight.SEMI_BOLD}>{name}</Text>
-                {details.length > 0 && (
-                    <Text size="xs" c="dimmed">
-                        {details.join(" · ")}
-                    </Text>
-                )}
-            </Stack>
-        </Group>
-    );
-}
 
 interface FavoriteMenuContentProps {
     favoriteId: string;
@@ -95,7 +68,13 @@ export function FavoriteMenuContent(
         }
         modals.updateModal({
             modalId,
-            title: <FavoriteMenuTitle name={insertableName} record={record} />
+            title: (
+                <MenuTitle
+                    name={insertableName}
+                    record={record}
+                    icon={<HeartIcon size={IconSize.MEDIUM} />}
+                />
+            )
         });
     }, [modalId, insertableName, record]);
 

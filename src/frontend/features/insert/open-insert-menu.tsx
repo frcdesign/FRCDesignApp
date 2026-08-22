@@ -9,7 +9,8 @@ import {
     renderNotification,
     showInfoToast
 } from "../../lib/notifications";
-import { InsertMenuContent, InsertMenuTitle } from "./components/insert-menu";
+import { InsertMenuContent } from "./components/insert-menu";
+import { MenuTitle } from "../../components/app-title";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
@@ -24,7 +25,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     const id = crypto.randomUUID();
     openAppModal({
         modalId: id,
-        title: <InsertMenuTitle name={insertable.name} />,
+        title: <MenuTitle name={insertable.name} />,
         size: 500,
         onClose: () => {
             if (!didInsert) {

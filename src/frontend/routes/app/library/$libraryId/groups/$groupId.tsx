@@ -1,17 +1,14 @@
 import { useAccessData } from "../../../../../features/auth/access-level";
+import { AppTitle } from "../../../../../components/app-title";
 import {
     createFileRoute,
     Outlet,
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Box, Button, Group, Text } from "@mantine/core";
+import { Box, Button, Group } from "@mantine/core";
 import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
-import {
-    BORDER,
-    FontWeight,
-    IconSize
-} from "../../../../../lib/style-constants";
+import { BORDER, IconSize } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
@@ -131,12 +128,10 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
             p="sm"
         >
             <Group wrap="nowrap" justify="space-between">
-                <Group gap="sm">
-                    <ArrowLeft size={IconSize.MEDIUM} />
-                    <Text size="md" fw={FontWeight.SEMI_BOLD} truncate>
-                        {group.name}
-                    </Text>
-                </Group>
+                <AppTitle
+                    icon={<ArrowLeft size={IconSize.MEDIUM} />}
+                    title={group.name}
+                />
                 <MenuButton>{menuItems}</MenuButton>
             </Group>
         </Box>

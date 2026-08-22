@@ -3,10 +3,11 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { Button, Checkbox, Group, Stack, Text } from "@mantine/core";
+import { Button, Checkbox, Group } from "@mantine/core";
 import { Info, Plus } from "@phosphor-icons/react";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import { MenuTitle } from "../../../components/app-title";
 import { modals } from "@mantine/modals";
 import { showQuickInsertTip } from "../quick-insert-tip";
 import { useIsFetching } from "@tanstack/react-query";
@@ -29,30 +30,6 @@ import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
-
-export function InsertMenuTitle({
-    name,
-    record
-}: {
-    name: string;
-    record?: SearchRecord;
-}): ReactNode {
-    const details = record
-        ? [record.partNumber, record.name].filter(
-              (value): value is string => !!value && value !== name
-          )
-        : [];
-    return (
-        <Stack gap={0}>
-            <Text fw={FontWeight.SEMI_BOLD}>{name}</Text>
-            {details.length > 0 && (
-                <Text size="xs" c="dimmed">
-                    {details.join(" · ")}
-                </Text>
-            )}
-        </Stack>
-    );
-}
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -93,7 +70,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     useEffect(() => {
         modals.updateModal({
             modalId,
-            title: <InsertMenuTitle name={insertable.name} record={record} />
+            title: <MenuTitle name={insertable.name} record={record} />
         });
     }, [modalId, insertable.name, record]);
 
