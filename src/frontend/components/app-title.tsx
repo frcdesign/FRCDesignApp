@@ -8,7 +8,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { Check, Copy } from "@phosphor-icons/react";
+import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
 import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
@@ -99,43 +99,52 @@ function PartNumber({
     partNumber: string;
     url?: string;
 }): ReactNode {
+    // Nowhere to send them, so offer the number itself to search with.
     if (!url) {
         return (
-            <Text inherit truncate>
-                {partNumber}
-            </Text>
+            <>
+                <Text inherit truncate>
+                    {partNumber}
+                </Text>
+                <CopyButton value={partNumber}>
+                    {({ copied, copy }) => (
+                        <Tooltip
+                            label={copied ? "Copied" : "Copy part number"}
+                            withArrow
+                        >
+                            <ActionIcon
+                                variant="subtle"
+                                color={copied ? "teal" : "gray"}
+                                size="xs"
+                                aria-label="Copy part number"
+                                onClick={copy}
+                            >
+                                {copied ? (
+                                    <Check size={IconSize.TINY} />
+                                ) : (
+                                    <Copy size={IconSize.TINY} />
+                                )}
+                            </ActionIcon>
+                        </Tooltip>
+                    )}
+                </CopyButton>
+            </>
         );
     }
     return (
-        <>
-            <Anchor
-                href={url}
-                target="_blank"
-                inherit
-                truncate
-                onClick={(event) => event.stopPropagation()}
-            >
+        // inline-flex so the icon centres on the text rather than sitting on
+        // its baseline, and takes the link's color by being inside it.
+        <Anchor
+            href={url}
+            target="_blank"
+            inherit
+            onClick={(event) => event.stopPropagation()}
+            style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
+        >
+            <Text component="span" inherit truncate>
                 {partNumber}
-            </Anchor>
-            <CopyButton value={url}>
-                {({ copied, copy }) => (
-                    <Tooltip label={copied ? "Copied" : "Copy link"} withArrow>
-                        <ActionIcon
-                            variant="subtle"
-                            color={copied ? "teal" : "gray"}
-                            size="xs"
-                            aria-label="Copy link"
-                            onClick={copy}
-                        >
-                            {copied ? (
-                                <Check size={IconSize.TINY} />
-                            ) : (
-                                <Copy size={IconSize.TINY} />
-                            )}
-                        </ActionIcon>
-                    </Tooltip>
-                )}
-            </CopyButton>
-        </>
+            </Text>
+            <ArrowSquareOut size={IconSize.TINY} />
+        </Anchor>
     );
 }

@@ -32,8 +32,8 @@ export function toVendor(vendor: string | undefined): Vendor | undefined {
 }
 
 /**
- * The vendor's own page for a part. Most vendors have no url derivable from a
- * part number, so this is undefined for all but the few that do.
+ * The vendor's page for a part, or its search for one where that is all the
+ * site offers. Most vendors have no url derivable from a part number at all.
  */
 export function getVendorPartUrl(
     vendor: Vendor | undefined,
@@ -42,11 +42,16 @@ export function getVendorPartUrl(
     if (!partNumber) {
         return undefined;
     }
+    const query = encodeURIComponent(partNumber);
     switch (vendor) {
         case Vendor.MCM:
-            return `https://www.mcmaster.com/${partNumber}/`;
+            return `https://www.mcmaster.com/${query}/`;
         case Vendor.WCP:
-            return `https://wcproducts.com/products/${partNumber.toLowerCase()}`;
+            return `https://wcproducts.com/products/${query.toLowerCase()}`;
+        case Vendor.REV:
+            return `https://www.revrobotics.com/search.php?search_query=${query}&section=product`;
+        case Vendor.TTB:
+            return `https://www.thethriftybot.com/search?type=product&q=${query}`;
         default:
             return undefined;
     }

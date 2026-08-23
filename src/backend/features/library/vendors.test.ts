@@ -14,7 +14,25 @@ describe("getVendorPartUrl", () => {
         );
     });
 
-    it.each([Vendor.AM, Vendor.REV, Vendor.CUSTOM])(
+    it("searches REV, which has no per-part url", () => {
+        expect(getVendorPartUrl(Vendor.REV, "REV-42-1442")).toBe(
+            "https://www.revrobotics.com/search.php?search_query=REV-42-1442&section=product"
+        );
+    });
+
+    it("searches The Thrifty Bot, likewise", () => {
+        expect(getVendorPartUrl(Vendor.TTB, "TTB-0008")).toBe(
+            "https://www.thethriftybot.com/search?type=product&q=TTB-0008"
+        );
+    });
+
+    it("escapes a part number before putting it in a url", () => {
+        expect(getVendorPartUrl(Vendor.TTB, "TTB 1&2")).toBe(
+            "https://www.thethriftybot.com/search?type=product&q=TTB%201%262"
+        );
+    });
+
+    it.each([Vendor.AM, Vendor.SDS, Vendor.CUSTOM])(
         "has no derivable page for %s",
         (vendor) => {
             expect(getVendorPartUrl(vendor, "12345")).toBeUndefined();
