@@ -11,12 +11,7 @@ import {
     showLoadingToast,
     showSuccessToast
 } from "../../lib/notifications";
-import {
-    toGroupPath,
-    toInsertablePath,
-    toLibraryPath,
-    useLibraryId
-} from "./library-path";
+import { toInsertablePath, toLibraryPath, useLibraryId } from "./library-path";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useCacheVersion } from "./queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
@@ -108,26 +103,6 @@ export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     return useMemo(() => {
         return !insertable.isVisible && hasUserAccess(currentAccessLevel);
     }, [insertable.isVisible, currentAccessLevel]);
-}
-
-export function useReloadThumbnailMutation(id: string, isGroup: boolean) {
-    const refreshLibrary = useRefreshLibrary();
-
-    const endpoint = isGroup
-        ? "/reload-group-thumbnail" + toGroupPath(id)
-        : "/reload-insertable-thumbnail" + toInsertablePath(id);
-
-    return useMutation({
-        mutationKey: ["thumbnail", "reload", id],
-        mutationFn: async () => {
-            return apiPost(endpoint);
-        },
-        onError: getAppErrorHandler("Unexpectedly failed to reload thumbnail."),
-        onSuccess: () => {
-            showSuccessToast("Successfully reloaded thumbnail.");
-        },
-        onSettled: refreshLibrary
-    });
 }
 
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */

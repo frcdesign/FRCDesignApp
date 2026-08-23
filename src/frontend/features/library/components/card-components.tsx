@@ -1,7 +1,6 @@
 import { Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     ArrowSquareOut,
-    ArrowsClockwise,
     EyeSlash,
     Gear,
     Link,
@@ -32,7 +31,6 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
-import { useReloadThumbnailMutation } from "../card-hooks";
 
 interface OpenDocumentItemsProps {
     path: InstancePath | ConfigurablePath;
@@ -295,29 +293,5 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
                 <Menu.Sub.Dropdown>{props.children}</Menu.Sub.Dropdown>
             </Menu.Sub>
         </RequireAccessLevel>
-    );
-}
-
-interface ReloadThumbnailMenuItemProps {
-    id: string;
-    isGroup: boolean;
-}
-
-export function ReloadThumbnailMenuItem(
-    props: ReloadThumbnailMenuItemProps
-): ReactNode {
-    const reloadThumbnailMutation = useReloadThumbnailMutation(
-        props.id,
-        props.isGroup
-    );
-    return (
-        <Menu.Item
-            leftSection={<ArrowsClockwise size={IconSize.SMALL} />}
-            onClick={() => {
-                reloadThumbnailMutation.mutate();
-            }}
-        >
-            Reload thumbnail
-        </Menu.Item>
     );
 }

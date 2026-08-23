@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     addBuildIssue,
+    hasBuildIssue,
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
@@ -74,6 +75,30 @@ describe("addBuildIssue", () => {
             addBuildIssue(existing, { type: BuildIssueType.NO_VENDORS })
         ).not.toBe(existing);
         expect(addBuildIssue(existing)).not.toBe(existing);
+    });
+});
+
+describe("hasBuildIssue", () => {
+    const issues = [
+        { type: BuildIssueType.NO_PARTS },
+        { type: BuildIssueType.NO_VENDORS }
+    ];
+
+    it("finds one of the types asked for", () => {
+        expect(hasBuildIssue(issues, BuildIssueType.NO_PARTS)).toBe(true);
+        expect(
+            hasBuildIssue(
+                issues,
+                BuildIssueType.LOAD_FAILED,
+                BuildIssueType.NO_VENDORS
+            )
+        ).toBe(true);
+    });
+
+    it("finds none of them", () => {
+        expect(hasBuildIssue(issues, BuildIssueType.LOAD_FAILED)).toBe(false);
+        expect(hasBuildIssue([], BuildIssueType.NO_PARTS)).toBe(false);
+        expect(hasBuildIssue(issues)).toBe(false);
     });
 });
 

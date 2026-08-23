@@ -14,8 +14,7 @@ import {
     AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
-    OpenDocumentItems,
-    ReloadThumbnailMenuItem
+    OpenDocumentItems
 } from "./card-components";
 import { AddGroupItem } from "./add-group-menu";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
@@ -112,7 +111,6 @@ export function GroupAdminContextMenu({
             <HideAllElementsMenuItem
                 insertableOrder={groupStatus.insertableOrder}
             />
-            <ReloadThumbnailMenuItem id={groupId} isGroup={true} />
             {isHome && (
                 <>
                     <Menu.Divider />

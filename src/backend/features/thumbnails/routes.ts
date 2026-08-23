@@ -1,23 +1,8 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
 import { CachePolicy, cacheMiddleware, setCacheTtl } from "../../lib/cache";
 import { getApp } from "../../lib/context";
-import {
-    getGroupParam,
-    getInsertableParam,
-    groupRoute,
-    insertableRoute
-} from "../../lib/route-params";
-import { getInsertableElementPath } from "../library/insertables/routes";
-import { getDb } from "../../db/client";
-import { requireEditorMiddleware } from "../auth/guards";
-import { bumpLibraryVersion } from "../library/db";
 
-import { type InstancePath } from "../../lib/onshape/path";
-import { group, insertables } from "../../db/schema";
-import { internalError } from "../../lib/api-error";
-import { HttpStatus } from "http-status-ts";
 import { ThumbnailSize } from "./types";
 import {
     THUMBNAIL_FALLBACK_CACHE_TTL,
@@ -33,8 +18,6 @@ import {
 import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";
 import { getSessionId } from "../auth/session";
-import { BuildIssueType, clearBuildIssue } from "../build-checker/issues";
-import { uploadDocumentThumbnails, uploadThumbnails } from "./store";
 
 export const thumbnailRoutes = getApp();
 
@@ -134,105 +117,3 @@ async function warmConfigurationThumbnail(
         // Never fatal: the caller still has the default thumbnail to serve.
     }
 }
-
-/** POST /api/reload-insertable-thumbnail/insertable/:insertableId */
-thumbnailRoutes.post(
-    "/reload-insertable-thumbnail" + insertableRoute(),
-    requireEditorMiddleware,
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const insertableId = getInsertableParam(c);
-        const db = getDb(c.env.DB);
-
-        const elementPath = await getInsertableElementPath(db, insertableId);
-
-        const row = await db
-            .select({
-                microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId,
-                buildIssues: insertables.buildIssues
-            })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-
-        if (!row) {
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        }
-
-        const thumbnails = await uploadThumbnails(
-            c.env.BLOB,
-            onshapeApi,
-            elementPath,
-            row.microversionId
-        );
-
-        await db
-            .update(insertables)
-            .set({
-                smallThumbnailUrl: thumbnails.small,
-                largeThumbnailUrl: thumbnails.large,
-                buildIssues: clearBuildIssue(
-                    row.buildIssues,
-                    BuildIssueType.THUMBNAIL_FAILED
-                )
-            })
-            .where(eq(insertables.id, insertableId));
-
-        await bumpLibraryVersion(db, row.libraryId);
-        return c.json({ success: true });
-    }
-);
-
-/** POST /api/reload-group-thumbnail/group/:groupId */
-thumbnailRoutes.post(
-    "/reload-group-thumbnail" + groupRoute(),
-    requireEditorMiddleware,
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const groupId = getGroupParam(c);
-        const db = getDb(c.env.DB);
-
-        const row = await db
-            .select({
-                documentId: group.documentId,
-                versionId: group.versionId,
-                libraryId: group.libraryId,
-                buildIssues: group.buildIssues
-            })
-            .from(group)
-            .where(eq(group.id, groupId))
-            .get();
-
-        if (!row) {
-            throw internalError("Group not found", HttpStatus.NOT_FOUND);
-        }
-
-        const instancePath: InstancePath = {
-            documentId: row.documentId,
-            instanceId: row.versionId,
-            instanceType: "v"
-        };
-
-        const thumbnails = await uploadDocumentThumbnails(
-            c.env.BLOB,
-            onshapeApi,
-            instancePath
-        );
-
-        await db
-            .update(group)
-            .set({
-                smallThumbnailUrl: thumbnails.small,
-                largeThumbnailUrl: thumbnails.large,
-                buildIssues: clearBuildIssue(
-                    row.buildIssues,
-                    BuildIssueType.THUMBNAIL_FAILED
-                )
-            })
-            .where(eq(group.id, groupId));
-
-        await bumpLibraryVersion(db, row.libraryId);
-        return c.json({ success: true });
-    }
-);

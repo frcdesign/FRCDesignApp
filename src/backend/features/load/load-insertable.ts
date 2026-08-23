@@ -8,7 +8,8 @@ import type {
 import {
     addBuildIssue,
     type BuildIssue,
-    BuildIssueType
+    BuildIssueType,
+    hasBuildIssue
 } from "../build-checker/issues";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { FastenInfo } from "../library/insertables/fasten";
@@ -74,7 +75,11 @@ export async function loadInsertable(
         ? await parseFastenInfoStep(ctx, target)
         : null;
 
-    const { isOpenComposite, hasParts } = await readPartsStep(ctx, target);
+    const parts = await readPartsStep(ctx, target);
+    const { isOpenComposite } = parts;
+    // An empty studio renders nothing and probes to nothing, so what it raises
+    // decides how much of the rest of the load is worth running.
+    const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
     const indexing = decideIndexing(parameters, flags.indexConfigurations);
 
@@ -113,7 +118,7 @@ export async function loadInsertable(
                   thumbnailUrls,
                   probes: [recordsResult.partMetadata, ...recordsResult.records]
               })
-            : [{ type: BuildIssueType.NO_PARTS }],
+            : parts.buildIssues,
         ...recordsResult.buildIssues,
         ...indexing.buildIssues
     );
@@ -170,7 +175,8 @@ function parseConfigurationStep(
 /** What one look at a part studio's default parts tells the rest of the load. */
 interface PartsSummary {
     isOpenComposite: boolean;
-    hasParts: boolean;
+    /** NO_PARTS when the studio is empty; the rest of the load reads it. */
+    buildIssues: BuildIssue[];
 }
 
 /**
@@ -182,9 +188,9 @@ function readPartsStep(
     { insertableId, elementPath, elementType }: InsertableTarget
 ): Promise<PartsSummary> {
     if (elementType !== ElementType.PART_STUDIO) {
-        return Promise.resolve({ isOpenComposite: false, hasParts: true });
+        return Promise.resolve({ isOpenComposite: false, buildIssues: [] });
     }
-    return ctx.step.do(`open-composite-${insertableId}`, async () => {
+    return ctx.step.do(`parts-${insertableId}`, async () => {
         const parts = await getParts(
             await getOnshapeApiFromContext(ctx),
             elementPath,
@@ -192,7 +198,8 @@ function readPartsStep(
         );
         return {
             isOpenComposite: computeOpenComposite(parts),
-            hasParts: parts.length > 0
+            buildIssues:
+                parts.length > 0 ? [] : [{ type: BuildIssueType.NO_PARTS }]
         };
     });
 }

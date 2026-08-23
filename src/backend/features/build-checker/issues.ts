@@ -121,6 +121,14 @@ export function addBuildIssue(
     return result;
 }
 
+/** Whether `issues` holds one of `types`. */
+export function hasBuildIssue(
+    issues: BuildIssue[],
+    ...types: BuildIssueType[]
+): boolean {
+    return issues.some((issue) => types.includes(issue.type));
+}
+
 /**
  * Removes any issue whose type is one of `types`.
  */

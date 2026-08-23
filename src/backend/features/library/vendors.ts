@@ -48,6 +48,8 @@ export function getVendorPartUrl(
             return `https://www.mcmaster.com/${query}/`;
         case Vendor.WCP:
             return `https://wcproducts.com/products/${query.toLowerCase()}`;
+        case Vendor.AM:
+            return `https://andymark.com/pages/search-results-page?q=${query.toLowerCase()}`;
         case Vendor.REV:
             return `https://www.revrobotics.com/search.php?search_query=${query}&section=product`;
         case Vendor.TTB:

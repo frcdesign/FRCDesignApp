@@ -79,7 +79,7 @@ describe("getPartUrl", () => {
 
     it("has none for a vendor whose urls cannot be derived", () => {
         expect(
-            getPartUrl(metadata({ vendor: "AM", partNumber: "am-1234" }))
+            getPartUrl(metadata({ vendor: "SDS", partNumber: "sds-1234" }))
         ).toBeUndefined();
     });
 

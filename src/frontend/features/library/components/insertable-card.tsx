@@ -15,12 +15,10 @@ import {
 import { useIsInsertableHidden } from "../card-hooks";
 import { InsertableStatusBadge } from "../../build-status/components/build-status";
 import {
-    AdminOptionsSubmenu,
     CardTitle,
     ItemRow,
     OpenDocumentItems,
-    QuickInsertItems,
-    ReloadThumbnailMenuItem
+    QuickInsertItems
 } from "./card-components";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -151,9 +149,6 @@ export function InsertableMenuItems(
                 <Menu.Divider />
             </RequireSignIn>
             <OpenDocumentItems path={{ ...insertable.path, configuration }} />
-            <AdminOptionsSubmenu>
-                <ReloadThumbnailMenuItem id={insertable.id} isGroup={false} />
-            </AdminOptionsSubmenu>
         </>
     );
 }

@@ -14,6 +14,12 @@ describe("getVendorPartUrl", () => {
         );
     });
 
+    it("searches AndyMark, whose search is lowercase", () => {
+        expect(getVendorPartUrl(Vendor.AM, "AM-5833")).toBe(
+            "https://andymark.com/pages/search-results-page?q=am-5833"
+        );
+    });
+
     it("searches REV, which has no per-part url", () => {
         expect(getVendorPartUrl(Vendor.REV, "REV-42-1442")).toBe(
             "https://www.revrobotics.com/search.php?search_query=REV-42-1442&section=product"
@@ -32,7 +38,7 @@ describe("getVendorPartUrl", () => {
         );
     });
 
-    it.each([Vendor.AM, Vendor.SDS, Vendor.CUSTOM])(
+    it.each([Vendor.SDS, Vendor.VEX, Vendor.CUSTOM])(
         "has no derivable page for %s",
         (vendor) => {
             expect(getVendorPartUrl(vendor, "12345")).toBeUndefined();

@@ -12,28 +12,29 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
     // Onshape gives no signal when a render lands, so the step polls. Starting
     // at four seconds keeps a quick render from waiting on a long first delay.
     it("doubles from four seconds", () => {
-        expect([1, 2, 3, 4, 5, 6].map((a) => thumbnailDelay(a))).toEqual([
+        expect([1, 2, 3, 4, 5].map((a) => thumbnailDelay(a))).toEqual([
             "4 seconds",
             "8 seconds",
             "16 seconds",
             "32 seconds",
-            "64 seconds",
-            "128 seconds"
+            "64 seconds"
         ]);
     });
 
-    it("keeps doubling rather than settling on a ceiling", () => {
-        expect(thumbnailDelay(7)).toEqual("256 seconds");
-        expect(thumbnailDelay(8)).toEqual("512 seconds");
+    // Uncapped, the last waits outgrow the renders themselves, leaving a
+    // thumbnail that landed early unnoticed for minutes.
+    it("stops doubling at two minutes", () => {
+        expect(thumbnailDelay(6)).toEqual("120 seconds");
+        expect(thumbnailDelay(12)).toEqual("120 seconds");
     });
 
-    it("polls for about seventeen minutes before giving up", () => {
+    it("polls for about half an hour before giving up", () => {
         const total = Array.from(
             { length: THUMBNAIL_STEP_RETRIES.limit - 1 },
             (_, i) => Number.parseInt(thumbnailDelay(i + 1), 10)
         ).reduce((sum, seconds) => sum + seconds, 0);
 
-        expect(total).toBe(1020);
+        expect(total).toBe(1804);
     });
 
     // A warm request naming a configuration that matches nothing would

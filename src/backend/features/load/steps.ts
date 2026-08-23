@@ -41,6 +41,12 @@ export const ONSHAPE_STEP_RETRIES = {
 const THUMBNAIL_BASE_DELAY_SECONDS = 4;
 
 /**
+ * Where the doubling stops. Left uncapped, the last waits grow longer than the
+ * renders themselves, so a thumbnail that landed early sits unnoticed.
+ */
+const THUMBNAIL_MAX_DELAY_SECONDS = 120;
+
+/**
  * Onshape gives no signal when a render lands, so the step polls, doubling from
  * four seconds. A rate limit overrides the curve.
  */
@@ -53,14 +59,17 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     if (input.error instanceof NoSuchConfigurationError) {
         return "0 seconds";
     }
-    const seconds = THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1);
+    const seconds = Math.min(
+        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
+        THUMBNAIL_MAX_DELAY_SECONDS
+    );
     return `${seconds} seconds`;
 }
 
 export const THUMBNAIL_STEP_RETRIES = {
-    // 4s, 8s … 512s: a bit over seventeen minutes of polling, which a slow
-    // Onshape render is worth waiting out.
-    limit: 9,
+    // 4s, 8s … 120s and then every two minutes: half an hour of polling, since
+    // a reload is the only other way to pick a late render up.
+    limit: 20,
     delay: thumbnailRetryDelay
 };
 
