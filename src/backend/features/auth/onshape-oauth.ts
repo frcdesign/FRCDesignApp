@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import {
     type AuthTokens,
-    saveTokens,
+    saveSession,
     startLoginSession,
     takeLoginSession
 } from "./session";
@@ -86,7 +86,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
     await oauthClient
         .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
         .then((tokens) => makeAuthTokens(tokens))
-        .then((tokens) => saveTokens(c.env.KV, session.sessionId, tokens));
+        .then((tokens) => saveSession(c.env.KV, session.sessionId, tokens));
 
     return c.redirect(session.redirectUrl);
 }

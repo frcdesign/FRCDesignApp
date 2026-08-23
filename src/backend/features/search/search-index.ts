@@ -126,6 +126,20 @@ function uniqueJoin(values: (string | undefined)[]): string {
 }
 
 /**
+ * A part number that only repeats the name identifies nothing — it is what a
+ * generic part is given when there is no real number to use — so it is dropped
+ * rather than shown, searched, or turned into a vendor link.
+ */
+function withoutRepeatedPartNumber(
+    record: ConfigurationRecord
+): ConfigurationRecord {
+    const repeated =
+        record.partNumber?.trim().toLowerCase() ===
+        record.name?.trim().toLowerCase();
+    return repeated ? { ...record, partNumber: undefined } : record;
+}
+
+/**
  * Keeps the first of each distinct (part number, name) in enumeration order and
  * drops records with neither. First-wins is what keeps the latest revision.
  */
@@ -135,7 +149,8 @@ export function toSearchRecords(
 ): SearchRecord[] {
     const seen = new Set<string>();
     const searchRecords: SearchRecord[] = [];
-    for (const record of records) {
+    for (const raw of records) {
+        const record = withoutRepeatedPartNumber(raw);
         if (!record.partNumber && !record.name) {
             continue;
         }

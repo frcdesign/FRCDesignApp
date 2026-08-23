@@ -1,4 +1,4 @@
-/** Session cookie plus the KV records it keys: OAuth tokens and login state. */
+/** Session cookie plus the KV records it keys: the session and login state. */
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
 import { getCookie, setCookie } from "hono/cookie";
@@ -29,28 +29,39 @@ export interface AuthTokens {
     expiresAt: number;
 }
 
-export async function saveTokens(
+/** A signed-in session: what it takes to call Onshape, and who is calling. */
+export interface Session extends AuthTokens {
+    /** Resolved on first use, since signing in never needs to ask. */
+    userId?: string;
+}
+
+/** Still `tokens:`, so sessions signed in before this held a userId survive. */
+function sessionKey(sessionId: string): string {
+    return `tokens:${sessionId}`;
+}
+
+export async function saveSession(
     kv: KVNamespace,
     sessionId: string,
-    tokens: AuthTokens
+    session: Session
 ) {
-    await kv.put(`tokens:${sessionId}`, JSON.stringify(tokens), {
+    await kv.put(sessionKey(sessionId), JSON.stringify(session), {
         expirationTtl: SESSION_TTL
     });
 }
 
-export async function getTokens(
+export async function getSession(
     kv: KVNamespace,
     sessionId: string
-): Promise<AuthTokens> {
-    const raw = await kv.get(`tokens:${sessionId}`);
+): Promise<Session> {
+    const raw = await kv.get(sessionKey(sessionId));
     if (!raw) {
         throw internalError(
             "Failed to find valid auth tokens to use",
             HttpStatus.UNAUTHORIZED
         );
     }
-    return JSON.parse(raw) as AuthTokens;
+    return JSON.parse(raw) as Session;
 }
 
 /** What the callback needs to finish a sign-in it did not start. */

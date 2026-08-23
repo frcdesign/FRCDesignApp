@@ -18,11 +18,10 @@ import {
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import {
-    SESSION_TTL,
+    getSession,
     getSessionCompanyId,
     getSessionId,
-    getTokens,
-    saveTokens
+    saveSession
 } from "./session";
 
 /** How long a resolved access level is cached in KV. */
@@ -35,22 +34,23 @@ export async function getOnshapeApiFromSessionId(
     kv: KVNamespace,
     sessionId: string
 ): Promise<OAuthApi> {
-    const tokens = await getTokens(kv, sessionId);
+    const session = await getSession(kv, sessionId);
 
     const refreshCallback = async () => {
         const oauthClient = getOauthClient();
         const newTokens = await oauthClient
-            .refreshAccessToken(TOKEN_ENDPOINT, tokens.refreshToken, [])
+            .refreshAccessToken(TOKEN_ENDPOINT, session.refreshToken, [])
             .then((refreshed) => makeAuthTokens(refreshed));
 
-        void saveTokens(kv, sessionId, newTokens);
+        // Spread, so a refresh keeps the userId the session already resolved.
+        void saveSession(kv, sessionId, { ...session, ...newTokens });
 
         return newTokens.accessToken;
     };
 
-    let accessToken = tokens.accessToken;
+    let accessToken = session.accessToken;
     // If the token expired in the past, refresh immediately
-    if (tokens.expiresAt <= Date.now()) {
+    if (session.expiresAt <= Date.now()) {
         accessToken = await refreshCallback();
     }
 
@@ -70,19 +70,14 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     return api;
 }
 
-function userIdKey(sessionId: string): string {
-    return `user-id:${sessionId}`;
-}
-
-/** Returns the caller's Onshape user id, memoized in KV by session. */
+/** Returns the caller's Onshape user id, resolved once and kept on the session. */
 export async function getCachedUserId(c: AppContext): Promise<string> {
-    const key = userIdKey(getSessionId(c));
-
-    const cached = await c.env.KV.get(key);
-    if (cached) return cached;
+    const sessionId = getSessionId(c);
+    const session = await getSession(c.env.KV, sessionId);
+    if (session.userId) return session.userId;
 
     const userId = await getUserId(await getOnshapeApi(c));
-    await c.env.KV.put(key, userId, { expirationTtl: SESSION_TTL });
+    await saveSession(c.env.KV, sessionId, { ...session, userId });
     return userId;
 }
 

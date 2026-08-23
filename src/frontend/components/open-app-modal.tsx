@@ -40,6 +40,9 @@ export function openAppModal(props: OpenAppModalProps): void {
                 // Otherwise a Mantine minimum, not the padding, sets the height.
                 minHeight: 0
             },
+            // Shrinkable, so a long title ellipsizes rather than running under
+            // the close button.
+            title: { minWidth: 0 },
             body: { padding: 0 }
         }
     });

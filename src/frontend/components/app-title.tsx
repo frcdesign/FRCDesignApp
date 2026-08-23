@@ -33,7 +33,7 @@ export function AppTitle(props: AppTitleProps): ReactNode {
             {icon && <Center style={TITLE_ICON_NUDGE}>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" wrap="nowrap" miw={0}>
-                    <Text fw={FontWeight.SEMI_BOLD} truncate>
+                    <Text fw={FontWeight.SEMI_BOLD} truncate miw={0}>
                         {title}
                     </Text>
                     {rightSection}
@@ -42,7 +42,16 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     // lh, because the title's own is 1: inheriting that
                     // leaves no leading under the last line, and the block
                     // reads low against a header padded evenly.
-                    <Group gap={4} wrap="nowrap" fz="xs" lh="xs" c="dimmed">
+                    <Group
+                        gap={4}
+                        wrap="nowrap"
+                        // Shrinkable, so a part number long enough to overrun
+                        // the header ellipsizes instead.
+                        miw={0}
+                        fz="xs"
+                        lh="xs"
+                        c="dimmed"
+                    >
                         {subtitle}
                     </Group>
                 )}
@@ -73,7 +82,7 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
                 (partName || partNumber) && (
                     <>
                         {partName && (
-                            <Text inherit truncate>
+                            <Text inherit truncate miw={0}>
                                 {partName}
                             </Text>
                         )}
@@ -91,6 +100,12 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
     );
 }
 
+/**
+ * The part number takes whatever room the part name leaves, up to what it
+ * needs — rather than sharing the overflow, which ellipsizes both.
+ */
+const PART_NUMBER_FLEX = { flexGrow: 1, flexBasis: 0, maxWidth: "max-content" };
+
 /** The part number, linked to the vendor's page for it when there is one. */
 function PartNumber({
     partNumber,
@@ -103,7 +118,7 @@ function PartNumber({
     if (!url) {
         return (
             <>
-                <Text inherit truncate>
+                <Text inherit truncate miw={0} style={PART_NUMBER_FLEX}>
                     {partNumber}
                 </Text>
                 <CopyButton value={partNumber}>
@@ -139,9 +154,15 @@ function PartNumber({
             target="_blank"
             inherit
             onClick={(event) => event.stopPropagation()}
-            style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
+            style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 2,
+                minWidth: 0,
+                ...PART_NUMBER_FLEX
+            }}
         >
-            <Text component="span" inherit truncate>
+            <Text component="span" inherit truncate miw={0}>
                 {partNumber}
             </Text>
             <ArrowSquareOut size={IconSize.TINY} />
