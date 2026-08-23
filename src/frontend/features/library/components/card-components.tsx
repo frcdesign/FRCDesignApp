@@ -1,4 +1,4 @@
-import { Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
+import { Anchor, Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     ArrowSquareOut,
     EyeSlash,
@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
-import { Fragment, PropsWithChildren, ReactNode, useCallback } from "react";
+import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../../../components/app-menu";
 import { type Position, SearchHit } from "../../search/search";
 import {
@@ -160,19 +160,13 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
-    // The hit's best-matching configuration, minus a name repeating the title.
-    // Each carries its own positions, so a part-number hit underlines there too.
-    const details = searchHit
-        ? (
-              [
-                  [searchHit.partName, searchHit.partNamePositions],
-                  [searchHit.partNumber, searchHit.partNumberPositions]
-              ] as const
-          ).filter(
-              (detail): detail is [string, Position[] | undefined] =>
-                  !!detail[0] && detail[0].toLowerCase() !== title.toLowerCase()
-          )
-        : [];
+    // The hit's best-matching configuration, minus a value repeating the title.
+    const detail = (value: string | undefined) =>
+        value && value.toLowerCase() !== title.toLowerCase()
+            ? value
+            : undefined;
+    const partName = detail(searchHit?.partName);
+    const partNumber = detail(searchHit?.partNumber);
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
@@ -187,18 +181,32 @@ export function CardTitle(props: CardTitleProps) {
                 <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                     {cardTitle}
                 </Text>
-                {details.length > 0 && (
-                    <Text size="xs" c="dimmed" truncate>
-                        {details.map(([text, positions], index) => (
-                            <Fragment key={text}>
-                                {index > 0 && " · "}
+                {(partName || partNumber) && (
+                    <Group
+                        gap={4}
+                        wrap="nowrap"
+                        miw={0}
+                        fz="xs"
+                        lh="xs"
+                        c="dimmed"
+                    >
+                        {partName && (
+                            <Text inherit truncate miw={0}>
                                 <HighlightedText
-                                    text={text}
-                                    positions={positions}
+                                    text={partName}
+                                    positions={searchHit?.partNamePositions}
                                 />
-                            </Fragment>
-                        ))}
-                    </Text>
+                            </Text>
+                        )}
+                        {partName && partNumber && <Text inherit>·</Text>}
+                        {partNumber && (
+                            <CardPartNumber
+                                partNumber={partNumber}
+                                positions={searchHit?.partNumberPositions}
+                                url={searchHit?.url}
+                            />
+                        )}
+                    </Group>
                 )}
             </Stack>
             {buildStatusBadge}
@@ -213,6 +221,51 @@ export function CardTitle(props: CardTitleProps) {
                 />
             )}
         </Group>
+    );
+}
+
+/**
+ * The part number never shrinks, so the part name gives up every character
+ * before it loses one: the number is what identifies the part. Capped at the
+ * row, past which there is nothing left to take.
+ */
+const PART_NUMBER_FIXED = { flexShrink: 0, maxWidth: "100%" };
+
+/** The part number, linked to the vendor's page for it when there is one. */
+function CardPartNumber(props: {
+    partNumber: string;
+    positions?: Position[];
+    url?: string;
+}): ReactNode {
+    const { partNumber, positions, url } = props;
+    const text = <HighlightedText text={partNumber} positions={positions} />;
+    if (!url) {
+        return (
+            <Text inherit truncate miw={0} style={PART_NUMBER_FIXED}>
+                {text}
+            </Text>
+        );
+    }
+    return (
+        <Anchor
+            href={url}
+            target="_blank"
+            inherit
+            // The row inserts on click, which is not what the link is for.
+            onClick={(event) => event.stopPropagation()}
+            style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 2,
+                minWidth: 0,
+                ...PART_NUMBER_FIXED
+            }}
+        >
+            <Text component="span" inherit truncate miw={0}>
+                {text}
+            </Text>
+            <ArrowSquareOut size={IconSize.TINY} />
+        </Anchor>
     );
 }
 

@@ -140,7 +140,11 @@ insertableRoutes.post(
                     .where(eq(configurations.id, insertableId))
                     .get()
             )?.parameters ?? [];
-        const indexing = decideIndexing(parameters, body.indexConfigurations);
+        const indexing = decideIndexing(
+            row.elementType,
+            parameters,
+            body.indexConfigurations
+        );
 
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.

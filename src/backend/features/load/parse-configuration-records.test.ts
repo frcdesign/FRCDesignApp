@@ -63,6 +63,7 @@ describe("decideIndexing", () => {
         { configs: 600, force: true, index: false, issues: TOO_MANY }
     ])("configs=$configs force=$force", ({ configs, force, index, issues }) => {
         const { shouldIndex, buildIssues } = decideIndexing(
+            ElementType.PART_STUDIO,
             paramsWithConfigs(configs),
             force
         );
@@ -70,6 +71,14 @@ describe("decideIndexing", () => {
             shouldIndex: index,
             buildIssues: issues
         });
+    });
+
+    // No assembly configures its part properties, so the default probe is the
+    // whole of it however many combinations the count would have enumerated.
+    it("probes only the default for an assembly", () => {
+        expect(
+            decideIndexing(ElementType.ASSEMBLY, paramsWithConfigs(600), false)
+        ).toEqual({ shouldIndex: true, buildIssues: [], configurations: [] });
     });
 });
 

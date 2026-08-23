@@ -92,11 +92,23 @@ describe("getPartUrl", () => {
 
     it("will not guess between several, which do not say which this is", () => {
         expect(
-            getPartUrl(metadata({ partNumber: "WCP-1025" }), [
+            getPartUrl(metadata({ partNumber: "1025" }), [
                 Vendor.WCP,
                 Vendor.MCM
             ])
         ).toBeUndefined();
+    });
+
+    // A part configurable across vendors carries a generic vendor, but each
+    // configuration's number still says who sells that one.
+    it("reads the vendor out of the part number over a generic tagging", () => {
+        const url = getPartUrl(metadata({ partNumber: "TTB-0016" }), [
+            Vendor.WCP,
+            Vendor.TTB
+        ]);
+        expect(url).toBe(
+            "https://www.thethriftybot.com/search?type=product&q=TTB-0016"
+        );
     });
 
     it("prefers the record's own vendor over the insertable's", () => {

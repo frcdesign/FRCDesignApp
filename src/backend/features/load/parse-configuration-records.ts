@@ -75,9 +75,16 @@ export interface IndexingDecision {
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
 export function decideIndexing(
+    elementType: ElementType,
     parameters: ConfigurationParameter[],
     indexConfigurations: boolean
 ): IndexingDecision {
+    // No assembly configures its part properties today, so every combination
+    // would probe back to what the default already says.
+    if (elementType === ElementType.ASSEMBLY) {
+        return { shouldIndex: true, buildIssues: [], configurations: [] };
+    }
+
     const { band, configurations } = countConfigurations(parameters);
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 

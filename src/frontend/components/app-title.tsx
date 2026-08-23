@@ -67,11 +67,10 @@ interface MenuTitleProps {
     icon?: ReactNode;
 }
 
-/** A menu's header: the element is how the part was found, the record is
- * what gets inserted, so both are shown. */
+/** A menu's header: the element name is how the part was found, the part
+ * number is what identifies what gets inserted. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
-    const partName = record?.name !== name ? record?.name : undefined;
     const partNumber =
         record?.partNumber !== name ? record?.partNumber : undefined;
     return (
@@ -79,32 +78,13 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
             icon={icon}
             title={name}
             subtitle={
-                (partName || partNumber) && (
-                    <>
-                        {partName && (
-                            <Text inherit truncate miw={0}>
-                                {partName}
-                            </Text>
-                        )}
-                        {partName && partNumber && <Text inherit>·</Text>}
-                        {partNumber && (
-                            <PartNumber
-                                partNumber={partNumber}
-                                url={record?.url}
-                            />
-                        )}
-                    </>
+                partNumber && (
+                    <PartNumber partNumber={partNumber} url={record?.url} />
                 )
             }
         />
     );
 }
-
-/**
- * The part number takes whatever room the part name leaves, up to what it
- * needs — rather than sharing the overflow, which ellipsizes both.
- */
-const PART_NUMBER_FLEX = { flexGrow: 1, flexBasis: 0, maxWidth: "max-content" };
 
 /** The xs line box the subtitle row is otherwise sized by, floored. */
 const COPY_BUTTON_SIZE = 16;
@@ -121,7 +101,7 @@ function PartNumber({
     if (!url) {
         return (
             <>
-                <Text inherit truncate miw={0} style={PART_NUMBER_FLEX}>
+                <Text inherit truncate miw={0}>
                     {partNumber}
                 </Text>
                 <CopyButton value={partNumber}>
@@ -163,8 +143,7 @@ function PartNumber({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 2,
-                minWidth: 0,
-                ...PART_NUMBER_FLEX
+                minWidth: 0
             }}
         >
             <Text component="span" inherit truncate miw={0}>

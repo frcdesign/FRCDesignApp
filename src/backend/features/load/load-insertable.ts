@@ -81,7 +81,11 @@ export async function loadInsertable(
     // decides how much of the rest of the load is worth running.
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(parameters, flags.indexConfigurations);
+    const indexing = decideIndexing(
+        target.elementType,
+        parameters,
+        flags.indexConfigurations
+    );
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(

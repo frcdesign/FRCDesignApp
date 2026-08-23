@@ -13,7 +13,12 @@ import {
     VisibilityCondition,
     VisibilityType
 } from "./models";
-import { Vendor, getVendorPartUrl, toVendor } from "../library/vendors";
+import {
+    Vendor,
+    getVendorPartUrl,
+    parsePartNumberVendor,
+    toVendor
+} from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
@@ -86,9 +91,11 @@ export function evaluateCondition(
  * The page for a part: a description that is already a url wins, since it names
  * the exact product, over one derived from the vendor and part number.
  *
- * Onshape's vendor field is often unset, so the insertable's own vendors stand
- * in — but only when they name one, since a part configurable across several
- * does not say which this record is.
+ * The part number names its own vendor most precisely, since a generic
+ * insertable still carries a number only one vendor sells. Onshape's vendor
+ * field and then the insertable's own vendors stand in — the latter only when
+ * they name one, since a part configurable across several does not say which
+ * this record is.
  */
 export function getPartUrl(
     record: PartMetadata,
@@ -98,6 +105,7 @@ export function getPartUrl(
         return record.description;
     }
     const vendor =
+        parsePartNumberVendor(record.partNumber) ??
         toVendor(record.vendor) ??
         (vendors.length === 1 ? vendors[0] : undefined);
     return getVendorPartUrl(vendor, record.partNumber);

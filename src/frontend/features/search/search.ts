@@ -41,6 +41,8 @@ export interface SearchHit {
     configuration?: ParameterValues;
     partNumber?: string;
     partName?: string;
+    /** The vendor's page for the part number, when one can be derived. */
+    url?: string;
     /** Where the query matched inside `partNumber` / `partName`, for underlining. */
     partNumberPositions?: Position[];
     partNamePositions?: Position[];
@@ -138,6 +140,7 @@ export function doSearch(
                 configuration: record?.configuration,
                 partNumber,
                 partName,
+                url: record?.url,
                 partNumberPositions: partNumber
                     ? generateHighlightPositions(
                           miniSearchResult,

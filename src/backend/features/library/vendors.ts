@@ -32,6 +32,17 @@ export function toVendor(vendor: string | undefined): Vendor | undefined {
 }
 
 /**
+ * The vendor a part number names itself, e.g. `WCP-1025` or `am-5833`. More
+ * reliable than the vendor an insertable is tagged with, which is generic
+ * wherever one part is configurable across several vendors.
+ */
+export function parsePartNumberVendor(
+    partNumber: string | undefined
+): Vendor | undefined {
+    return toVendor(/^([A-Za-z]+)-/.exec(partNumber?.trim() ?? "")?.[1]);
+}
+
+/**
  * The vendor's page for a part, or its search for one where that is all the
  * site offers. Most vendors have no url derivable from a part number at all.
  */
