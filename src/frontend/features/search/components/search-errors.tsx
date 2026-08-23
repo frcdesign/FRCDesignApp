@@ -1,5 +1,5 @@
-import { Alert, Box, Button, Group } from "@mantine/core";
-import { HeartBreak, MagnifyingGlass } from "@phosphor-icons/react";
+import { Alert, Box, Button, Group, Text } from "@mantine/core";
+import { HeartBreak, Info, MagnifyingGlass } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
@@ -32,6 +32,26 @@ interface FilterCalloutProps {
 }
 
 /**
+ * Blue rather than the library accent: the strip reports on the results, so it
+ * should read as a note beside them rather than as part of the library.
+ */
+function Callout(props: { text: string; action: ReactNode }): ReactNode {
+    return (
+        <Alert
+            color="blue"
+            p="xs"
+            icon={<Info size={IconSize.MEDIUM} />}
+            styles={{ body: { minWidth: 0 } }}
+        >
+            <Group justify="space-between" wrap="nowrap" gap="sm">
+                <Text size="sm">{props.text}</Text>
+                {props.action}
+            </Group>
+        </Alert>
+    );
+}
+
+/**
  * A callout which renders whenever there are items hidden by filters.
  */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
@@ -42,21 +62,17 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
 
     if (filtered.byGroup > 0) {
         return (
-            <Alert p="xs">
-                <Group justify="space-between" wrap="nowrap">
-                    {getGroupString(filtered, objectLabel)}
-                    <SearchAllButton small />
-                </Group>
-            </Alert>
+            <Callout
+                text={getGroupString(filtered, objectLabel)}
+                action={<SearchAllButton small />}
+            />
         );
     }
     return (
-        <Alert p="xs">
-            <Group justify="space-between" wrap="nowrap">
-                {getVendorString(filtered, objectLabel)}
-                <ClearFiltersButton small />
-            </Group>
-        </Alert>
+        <Callout
+            text={getVendorString(filtered, objectLabel)}
+            action={<ClearFiltersButton small />}
+        />
     );
 }
 
@@ -126,6 +142,9 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     return (
         <Button
             leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+            // Small means inside the callout, where a filled button would
+            // shout over the note it sits in.
+            variant={small ? "default" : undefined}
             size={small ? "xs" : undefined}
             onClick={() => {
                 void navigate({

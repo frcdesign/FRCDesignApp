@@ -71,6 +71,16 @@ describe("tokenize", () => {
         expect(tokenize("1/3")).toEqual(["0.33"]);
     });
 
+    it("keeps a leading-zero part segment out of a mixed number", () => {
+        // "0016" numbers the part; only the "5/32" is a size.
+        expect(tokenize("TTB-0016-5/32")).toEqual(["TTB", "16", "0.16"]);
+    });
+
+    it("drops leading zeros so either spelling of a segment matches", () => {
+        expect(tokenize("TTB-0016")).toEqual(["TTB", "16"]);
+        expect(tokenize("TTB-16")).toEqual(["TTB", "16"]);
+    });
+
     it("leaves thread specs and part numbers untouched", () => {
         expect(tokenize("10-32")).toEqual(["10", "32"]);
         expect(tokenize("217-2600")).toEqual(["217", "2600"]);
@@ -315,6 +325,26 @@ describe("doSearch highlighting", () => {
             expect(
                 highlighted(hit.partNumber!, hit.partNumberPositions ?? [])
             ).toBe("217");
+        });
+
+        // The segment after a leading-zero one used to be folded into a mixed
+        // number, leaving nothing in the text for the query to underline.
+        it("underlines a leading-zero segment of the part number", () => {
+            const { hits } = doSearch(
+                buildSearchDb(library(), {
+                    i1: [record("TTB-0016-5/32", { size: "small" })]
+                }),
+                "TTB-0016",
+                undefined,
+                undefined,
+                true
+            );
+            expect(
+                highlighted(
+                    hits[0].partNumber!,
+                    hits[0].partNumberPositions ?? []
+                )
+            ).toBe("TTB0016");
         });
 
         it("underlines the typed prefix of the part name", () => {

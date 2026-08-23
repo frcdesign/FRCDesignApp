@@ -33,9 +33,21 @@ export function processTerm(term: string): string[] {
     return Array.from(new Set(terms));
 }
 
-// A mixed number, simple fraction, or decimal (incl. leading-dot). Alternatives
-// are ordered longest-first so `1-1/2` is consumed whole, not as `1` + `1/2`.
-const NUMERIC_PATTERN = /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*/g;
+// A mixed number, simple fraction, decimal (incl. leading-dot), or plain
+// integer. Alternatives are ordered longest-first so `1-1/2` is consumed whole,
+// not as `1` + `1/2`.
+const NUMERIC_PATTERN =
+    /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*|\d+/g;
+
+/** Leading zeros are spelling, not value: `TTB-0016` and `TTB-16` are one part. */
+function withoutLeadingZeros(digits: string): string {
+    return digits.replace(/^0+(?=\d)/, "");
+}
+
+/** One 2-dp decimal, the single form every number is stored and queried as. */
+function toDecimal(value: number): string {
+    return String(Math.round(value * 100) / 100);
+}
 
 /**
  * Rewrites numbers and fractions to one 2-dp decimal, at index and query time
@@ -45,10 +57,23 @@ function canonicalizeNumbers(text: string): string {
     return text.replace(
         NUMERIC_PATTERN,
         (match, mixedWhole, mixedNum, mixedDen, fracNum, fracDen) => {
+            // Left as written, so a long one cannot round-trip through a float.
+            if (/^\d+$/.test(match)) {
+                return withoutLeadingZeros(match);
+            }
+
             let value: number;
             if (mixedWhole !== undefined) {
-                value =
-                    Number(mixedWhole) + Number(mixedNum) / Number(mixedDen);
+                const fraction = Number(mixedNum) / Number(mixedDen);
+                // A leading zero marks a part number segment rather than a
+                // quantity, so `TTB-0016-5/32` is part 16 in 5/32", not 16 and
+                // 5/32. Each half still canonicalizes on its own.
+                if (mixedWhole.startsWith("0")) {
+                    return Number.isFinite(fraction)
+                        ? `${withoutLeadingZeros(mixedWhole)}-${toDecimal(fraction)}`
+                        : match;
+                }
+                value = Number(mixedWhole) + fraction;
             } else if (fracNum !== undefined) {
                 value = Number(fracNum) / Number(fracDen);
             } else {
@@ -57,7 +82,7 @@ function canonicalizeNumbers(text: string): string {
             if (!Number.isFinite(value)) {
                 return match;
             }
-            return String(Math.round(value * 100) / 100);
+            return toDecimal(value);
         }
     );
 }

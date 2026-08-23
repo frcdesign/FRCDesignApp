@@ -287,7 +287,15 @@ function generateHighlightPositions(
             new RegExp(escapeRegExp(term), "g")
         );
         for (const match of matchedLocations) {
-            positions.push({ start: match.index, length });
+            // A number is indexed without its leading zeros, so underline the
+            // digits it landed inside too: `16` should light up all of `0016`.
+            const leadingZeros = /^\d+$/.test(term)
+                ? /0*$/.exec(haystack.slice(0, match.index))![0].length
+                : 0;
+            positions.push({
+                start: match.index - leadingZeros,
+                length: length + leadingZeros
+            });
         }
     }
 
