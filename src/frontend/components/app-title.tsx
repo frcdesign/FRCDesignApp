@@ -8,7 +8,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
+import { Check, Copy } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
 import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
@@ -117,7 +117,6 @@ function PartNumber({
             >
                 {partNumber}
             </Anchor>
-            <ArrowSquareOut size={IconSize.TINY} />
             <CopyButton value={url}>
                 {({ copied, copy }) => (
                     <Tooltip label={copied ? "Copied" : "Copy link"} withArrow>
