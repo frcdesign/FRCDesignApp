@@ -191,6 +191,61 @@ describe("doSearch part-number matching", () => {
     });
 });
 
+// Production shape: the element's own part data leads the list as the record an
+// unset configuration falls back to, followed by one record per configuration.
+describe("doSearch configuration matching", () => {
+    const gears: Record<string, ConfigurationRecord[]> = {
+        i1: [
+            record("WCP-1234", {}, "12T MAXSpline Gear"),
+            record("WCP-1235", { teeth: "24" }, "24T MAXSpline Gear"),
+            record("WCP-1236", { teeth: "36" }, "36T MAXSpline Gear")
+        ]
+    };
+
+    it("picks the configuration a term of the query names", () => {
+        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
+        const { hits } = doSearch(
+            searchDb,
+            "maxspline 24t",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits[0].configuration).toEqual({ teeth: "24" });
+        expect(hits[0].partNumber).toBe("WCP-1235");
+    });
+
+    it("picks it from the distinguishing term alone", () => {
+        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
+        const { hits } = doSearch(searchDb, "36t", undefined, undefined, true);
+        expect(hits[0].configuration).toEqual({ teeth: "36" });
+    });
+
+    it("keeps the default when no term distinguishes a configuration", () => {
+        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
+        const { hits } = doSearch(
+            searchDb,
+            "maxspline gear",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits[0].configuration).toEqual({});
+    });
+
+    it("lets a part number typed in full outrank a looser name match", () => {
+        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
+        const { hits } = doSearch(
+            searchDb,
+            "WCP-1236",
+            undefined,
+            undefined,
+            true
+        );
+        expect(hits[0].configuration).toEqual({ teeth: "36" });
+    });
+});
+
 describe("doSearch highlighting", () => {
     /** The characters `positions` underline, merged the way applyRanges does. */
     function highlighted(text: string, positions: Position[]): string {

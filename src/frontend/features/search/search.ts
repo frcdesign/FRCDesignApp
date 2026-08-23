@@ -2,7 +2,8 @@ import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import {
     SearchDocument,
-    normalizeForMatch
+    normalizeForMatch,
+    tokenize
 } from "@backend/features/search/search-index";
 import {
     ParameterValues,
@@ -159,8 +160,9 @@ export function doSearch(
 }
 
 /**
- * The single best record for a hit: matched by part number, else by name, else
- * the default — so every row can show a part number and name.
+ * The single best record for a hit, by part number or name — whichever the
+ * query describes better. Falls back to the default record, so every row can
+ * show a part number and name even when the title alone matched.
  */
 function matchedRecord(
     result: MiniSearchResult,
@@ -174,35 +176,75 @@ function matchedRecord(
     const byName = matchedFields.includes("partNames")
         ? findBestRecord(query, document.records, (r) => r.name)
         : undefined;
-    // A multi-term query can match the field without any one record matching the
-    // whole query, so fall back rather than leaving the row with no record.
-    return byNumber ?? byName ?? document.records[0];
+
+    const best = [byNumber, byName]
+        .filter((match) => match !== undefined)
+        // Part number first, so it wins a tie: it is the more specific field.
+        .sort((a, b) => b.score - a.score)[0];
+    return best?.record ?? document.records[0];
+}
+
+interface RecordMatch {
+    record: SearchRecord;
+    score: number;
+}
+
+/** Query terms the value covers, prefix-matched the way the index searches. */
+function coveredTerms(value: string, queryTerms: string[]): number {
+    const valueTerms = tokenize(value).map((term) => term.toLowerCase());
+    return queryTerms.filter((queryTerm) =>
+        valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
+    ).length;
 }
 
 /**
- * Prefers an exact match, then a prefix, then a substring. Ties go first-wins,
- * which in enumeration order is the latest option.
+ * How well a value answers the query: a whole-query match ranks above any
+ * number of loose terms, so a part number typed out in full still wins.
+ */
+function matchScore(
+    value: string,
+    normalizedQuery: string,
+    queryTerms: string[]
+): number {
+    let whole = 0;
+    if (value === normalizedQuery) {
+        whole = 3;
+    } else if (value.startsWith(normalizedQuery)) {
+        whole = 2;
+    } else if (value.includes(normalizedQuery)) {
+        whole = 1;
+    }
+    return whole * (queryTerms.length + 1) + coveredTerms(value, queryTerms);
+}
+
+/**
+ * The record the query describes best. Scoring by term, not by the whole query:
+ * "maxspline 24t" names a configuration even though no record reads that way.
+ * Ties go first-wins, which in enumeration order is the latest option.
  */
 function findBestRecord(
     query: string,
     records: SearchRecord[],
     selector: (record: SearchRecord) => string | undefined
-): SearchRecord | undefined {
+): RecordMatch | undefined {
+    // Canonicalize the same way the index did, so a fraction/decimal query lines
+    // up with the stored original (e.g. `.5` matches a `"1/2 Bearing"` name).
     const normalizedQuery = normalizeForMatch(query.trim());
     if (records.length === 0 || normalizedQuery === "") {
         return undefined;
     }
+    const queryTerms = tokenize(query).map((term) => term.toLowerCase());
 
-    // Canonicalize the same way the index did, so a fraction/decimal query lines
-    // up with the stored original (e.g. `.5` matches a `"1/2 Bearing"` name).
-    const value = (record: SearchRecord) =>
-        normalizeForMatch(selector(record) ?? "");
-
-    return (
-        records.find((r) => value(r) === normalizedQuery) ??
-        records.find((r) => value(r).startsWith(normalizedQuery)) ??
-        records.find((r) => value(r).includes(normalizedQuery))
-    );
+    let best: RecordMatch | undefined;
+    for (const record of records) {
+        const value = normalizeForMatch(selector(record) ?? "");
+        if (!value) continue;
+        const score = matchScore(value, normalizedQuery, queryTerms);
+        if (score > (best?.score ?? 0)) {
+            best = { record, score };
+        }
+    }
+    return best;
 }
 
 /** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */
