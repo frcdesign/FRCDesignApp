@@ -7,6 +7,7 @@ import {
     Plus
 } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
+import { displayPartNumber } from "../../../lib/part-number";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../../../components/app-menu";
@@ -161,12 +162,11 @@ export function CardTitle(props: CardTitleProps) {
     }
 
     // The hit's best-matching configuration, minus a value repeating the title.
-    const detail = (value: string | undefined) =>
-        value && value.toLowerCase() !== title.toLowerCase()
-            ? value
+    const partName =
+        searchHit?.partName?.toLowerCase() !== title.toLowerCase()
+            ? searchHit?.partName
             : undefined;
-    const partName = detail(searchHit?.partName);
-    const partNumber = detail(searchHit?.partNumber);
+    const partNumber = displayPartNumber(searchHit?.partNumber, title);
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
