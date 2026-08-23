@@ -36,18 +36,6 @@ describe("toSearchRecords", () => {
         expect(result.url).toBeUndefined();
     });
 
-    it.each(["N/A", "n/a", " NA ", "none", "-"])(
-        "drops %s as a placeholder part number",
-        (partNumber) => {
-            const [result] = toSearchRecords(
-                [record({ partNumber, name: "Spacer" })],
-                [Vendor.WCP]
-            );
-            expect(result.partNumber).toBeUndefined();
-            expect(result.url).toBeUndefined();
-        }
-    );
-
     it("keeps a part number that says something the name does not", () => {
         const [result] = toSearchRecords(
             [record({ partNumber: "WCP-1025", name: "Gearbox" })],

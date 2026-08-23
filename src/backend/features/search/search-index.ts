@@ -125,23 +125,18 @@ function uniqueJoin(values: (string | undefined)[]): string {
     ).join(" ");
 }
 
-/** What admins write in for a generic part that has no real number. */
-const PLACEHOLDER_PART_NUMBERS = ["n/a", "na", "none", "-"];
-
 /**
- * A placeholder part number identifies nothing, so it is dropped rather than
- * shown, searched, or turned into a vendor link.
+ * A part number that only repeats the name identifies nothing — it is what a
+ * generic part is given when there is no real number to use — so it is dropped
+ * rather than shown, searched, or turned into a vendor link.
  */
-function withoutPlaceholderPartNumber(
+function withoutRepeatedPartNumber(
     record: ConfigurationRecord
 ): ConfigurationRecord {
-    const partNumber = record.partNumber?.trim().toLowerCase();
-    if (!partNumber) return record;
-
-    const placeholder =
-        partNumber === record.name?.trim().toLowerCase() ||
-        PLACEHOLDER_PART_NUMBERS.includes(partNumber);
-    return placeholder ? { ...record, partNumber: undefined } : record;
+    const repeated =
+        record.partNumber?.trim().toLowerCase() ===
+        record.name?.trim().toLowerCase();
+    return repeated ? { ...record, partNumber: undefined } : record;
 }
 
 /**
@@ -155,7 +150,7 @@ export function toSearchRecords(
     const seen = new Set<string>();
     const searchRecords: SearchRecord[] = [];
     for (const raw of records) {
-        const record = withoutPlaceholderPartNumber(raw);
+        const record = withoutRepeatedPartNumber(raw);
         if (!record.partNumber && !record.name) {
             continue;
         }
