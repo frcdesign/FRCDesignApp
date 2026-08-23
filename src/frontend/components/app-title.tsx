@@ -106,6 +106,9 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
  */
 const PART_NUMBER_FLEX = { flexGrow: 1, flexBasis: 0, maxWidth: "max-content" };
 
+/** The xs line box the subtitle row is otherwise sized by, floored. */
+const COPY_BUTTON_SIZE = 16;
+
 /** The part number, linked to the vendor's page for it when there is one. */
 function PartNumber({
     partNumber,
@@ -130,7 +133,9 @@ function PartNumber({
                             <ActionIcon
                                 variant="subtle"
                                 color={copied ? "teal" : "gray"}
-                                size="xs"
+                                // Sized to the text line: taller, and the row
+                                // grows, shifting the title above it.
+                                size={COPY_BUTTON_SIZE}
                                 aria-label="Copy part number"
                                 onClick={copy}
                             >
