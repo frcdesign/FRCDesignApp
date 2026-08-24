@@ -15,7 +15,8 @@ import {
 import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersionId } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
-import { group, libraries } from "../../db/schema";
+import { group, libraries, PLACEHOLDER_VERSION_ID } from "../../db/schema";
+import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 
 import {
     type GroupTarget,
@@ -94,6 +95,9 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     const loaded = await loadGroup(ctx, target, forceReload);
                     return { groupId, status: "reloaded", ...loaded };
                 } catch {
+                    await ctx.step.do(`flag-failed-${groupId}`, () =>
+                        flagFailedGroup(ctx.env, groupId)
+                    );
                     return { groupId, status: "failed" };
                 }
             })
@@ -112,6 +116,8 @@ export interface AddGroupParams {
     /** The new group's id, minted by the route. */
     groupId: string;
     documentId: string;
+    /** The document's name, already fetched by the route. */
+    documentName: string;
     libraryId: LibraryId;
     sessionId: string;
     /** An existing group to place the new group after. */
@@ -137,17 +143,21 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
             limit: createLimiter(LOAD_CONCURRENCY)
         };
 
+        // Written before anything can fail, so an add that dies partway leaves a
+        // group the library still shows and an editor can retry or delete.
+        await step.do("create-shell-group", () =>
+            createShellGroup(ctx.env, params)
+        );
+
         let result: GroupResult;
         try {
             const target = await resolveGroupTarget(ctx, params, "");
-
-            await step.do("create-shell-group", () =>
-                createShellGroup(ctx.env, params, target.name)
-            );
-
             const loaded = await loadGroup(ctx, target, false);
             result = { groupId: params.groupId, status: "created", ...loaded };
         } catch {
+            await step.do("flag-failed-group", () =>
+                flagFailedGroup(ctx.env, params.groupId)
+            );
             result = { groupId: params.groupId, status: "failed" };
         }
 
@@ -195,8 +205,7 @@ async function resolveGroupTarget(
  */
 async function createShellGroup(
     env: AppBindings,
-    params: AddGroupParams,
-    groupName: string
+    params: AddGroupParams
 ): Promise<void> {
     const db = getDb(env.DB);
     await db
@@ -215,12 +224,39 @@ async function createShellGroup(
             id: params.groupId,
             documentId: params.documentId,
             libraryId: params.libraryId,
-            name: groupName,
-            // Placeholder value so failed loads can be retried
-            versionId: "placeholder",
+            name: params.documentName,
+            versionId: PLACEHOLDER_VERSION_ID,
             sortOrder
         })
         .onConflictDoNothing();
+}
+
+/**
+ * Records the failure on the group row, so the library flags it instead of
+ * showing an empty group with nothing to explain it. A later successful load
+ * recomputes `buildIssues` from scratch and clears it.
+ */
+async function flagFailedGroup(
+    env: AppBindings,
+    groupId: string
+): Promise<void> {
+    const db = getDb(env.DB);
+    const row = await db
+        .select({ buildIssues: group.buildIssues })
+        .from(group)
+        .where(eq(group.id, groupId))
+        .get();
+    if (!row) {
+        return;
+    }
+    await db
+        .update(group)
+        .set({
+            buildIssues: addBuildIssue(row.buildIssues, {
+                type: BuildIssueType.LOAD_FAILED
+            })
+        })
+        .where(eq(group.id, groupId));
 }
 
 /** Rebuild the library's search index and bump its cache version. */

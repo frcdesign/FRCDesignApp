@@ -36,7 +36,8 @@ import {
     BuildIssueType,
     getIssueDescription,
     getIssueSeverity,
-    getMaxSeverity
+    getMaxSeverity,
+    hasBuildIssue
 } from "@backend/features/build-checker/issues";
 import {
     GroupBuildStatus,
@@ -96,7 +97,12 @@ function useGroupBuildIssues(
         const hasUnhidden = groupStatus.insertableOrder.some(
             (id) => insertableStatuses?.[id]?.isVisible
         );
-        if (hasUnhidden) {
+        // A group that never loaded has no insertables to unhide, so the failure
+        // is the whole story.
+        if (
+            hasUnhidden ||
+            hasBuildIssue(groupStatus.buildIssues, BuildIssueType.LOAD_FAILED)
+        ) {
             return groupStatus.buildIssues;
         }
         return addBuildIssue(groupStatus.buildIssues, {

@@ -75,10 +75,12 @@ export async function seedUser(
     return id;
 }
 
+/** Seeds a fully loaded group; pass overrides for e.g. an unloaded shell. */
 export async function seedGroup(
     db: Db,
     id: string = TEST_GROUP_ID,
-    libraryId: LibraryId = TEST_LIBRARY_ID
+    libraryId: LibraryId = TEST_LIBRARY_ID,
+    overrides: Partial<typeof group.$inferInsert> = {}
 ): Promise<string> {
     await seedLibrary(db, libraryId);
     await db
@@ -88,7 +90,9 @@ export async function seedGroup(
             libraryId,
             name: "Test Group",
             documentId: `doc-${id}`,
-            versionId: "inst-1"
+            versionId: "inst-1",
+            lastLoadedAt: Date.now(),
+            ...overrides
         })
         .onConflictDoNothing();
     return id;

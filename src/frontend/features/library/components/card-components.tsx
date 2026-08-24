@@ -20,7 +20,11 @@ import {
     CardThumbnail,
     type ThumbnailTarget
 } from "../../thumbnails/components/thumbnail";
-import { ConfigurablePath, InstancePath } from "@backend/lib/onshape/path";
+import {
+    ConfigurablePath,
+    DocumentPath,
+    InstancePath
+} from "@backend/lib/onshape/path";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import {
     useInsertMutation,
@@ -34,7 +38,8 @@ import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 
 interface OpenDocumentItemsProps {
-    path: InstancePath | ConfigurablePath;
+    /** Any Onshape path; a shell group's stops at the document. */
+    path: DocumentPath | InstancePath | ConfigurablePath;
 }
 /**
  * Menu items which can be used to open or copy a link to a document.

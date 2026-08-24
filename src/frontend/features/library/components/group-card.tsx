@@ -47,6 +47,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
             left={
                 <CardTitle
                     title={group.name}
+                    disabled={!group.isLoaded}
                     smallThumbnailUrl={group.smallThumbnailUrl}
                     largeThumbnailUrl={group.largeThumbnailUrl}
                     buildStatusBadge={
