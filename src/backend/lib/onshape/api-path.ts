@@ -4,10 +4,7 @@ export interface ApiPathOptions {
     endRoute?: string;
     endId?: string;
     featureId?: string;
-    /**
-     * When true and the path is a DocumentPath, emits `/{documentId}` instead of `/d/{documentId}`.
-     * Used for document-level Onshape endpoints that don't use the `/d/` prefix.
-     */
+    /** For the document-level endpoints that take a bare id, without `/d/`. */
     skipDocumentD?: boolean;
 }
 

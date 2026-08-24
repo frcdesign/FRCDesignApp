@@ -177,11 +177,7 @@ export function getWorkspaceMicroversionId(
         .then((r: any) => r.microversion);
 }
 
-/**
- * An undocumented OAuth-only endpoint which returns all external references in a document.
- *
- * Generally speaking, this returns a list of the external workspaces referenced by each tab in the instance.
- */
+/** Undocumented and OAuth-only: the external workspaces each tab references. */
 export function getExternalReferences(
     client: OAuthApi,
     instancePath: InstancePath

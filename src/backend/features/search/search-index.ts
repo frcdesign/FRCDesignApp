@@ -151,9 +151,8 @@ function uniqueJoin(values: (string | undefined)[]): string {
 }
 
 /**
- * A part number that only repeats the name identifies nothing — it is what a
- * generic part is given when there is no real number to use — so it is dropped
- * rather than shown, searched, or turned into a vendor link.
+ * A part number repeating the name identifies nothing — it is what a generic
+ * part is given for want of a real one — so it is neither shown nor searched.
  */
 function withoutRepeatedPartNumber(
     record: ConfigurationRecord

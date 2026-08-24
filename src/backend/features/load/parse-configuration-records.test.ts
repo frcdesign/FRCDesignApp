@@ -12,7 +12,10 @@ import {
     ParameterValues,
     ConfigurationParameter
 } from "../configurations/models";
-import { enumParam } from "../../../__test_utils__/configuration-fixtures";
+import {
+    enumParam,
+    paramsWithConfigs
+} from "../../../__test_utils__/configuration-fixtures";
 import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
 import { Vendor } from "../library/vendors";
@@ -34,16 +37,6 @@ const PATH: ElementPath = {
 const CLIENT = {} as OnshapeApi;
 
 afterEach(() => vi.restoreAllMocks());
-
-/** A single enum whose N options make the element enumerate to N configurations. */
-function paramsWithConfigs(count: number): ConfigurationParameter[] {
-    return [
-        enumParam(
-            "A",
-            Array.from({ length: count }, (_, i) => `o${i}`)
-        )
-    ];
-}
 
 const MANY = [{ type: BuildIssueType.MANUAL_INDEXING_REQUIRED }];
 const TOO_MANY = [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }];
@@ -156,11 +149,6 @@ describe("parsePartStudioRecord", () => {
     it("returns an all-null record for an empty response", () => {
         expect(parsePartStudioRecord([], { A: "a1" }, false)).toEqual({
             configuration: { A: "a1" },
-            partNumber: undefined,
-            name: undefined,
-            description: undefined,
-            material: undefined,
-            vendor: undefined,
             hasMultipleParts: false,
             isOpenComposite: false
         });
@@ -204,20 +192,28 @@ function mockParts(
         );
 }
 
+/** Probes an element the way the load does: its own combinations, in full. */
+function probeRecords(
+    parameters: ConfigurationParameter[],
+    options: { elementType?: ElementType; isOpenComposite?: boolean } = {}
+) {
+    return parseConfigurationRecords(
+        CLIENT,
+        PATH,
+        options.elementType ?? ElementType.PART_STUDIO,
+        parameters,
+        countConfigurations(parameters).configurations,
+        options.isOpenComposite ?? false
+    );
+}
+
 describe("parseConfigurationRecords", () => {
     it("returns the element's part data plus a record per configuration", async () => {
         mockParts((configuration) => [
             { partId: "p", partNumber: `PN-${configuration.A ?? "default"}` }
         ]);
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])],
-            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
-            false
-        );
+        const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
 
         expect(result.buildIssues).toEqual([]);
         // "a1" is A's default, so that combination is the element's own probe
@@ -233,14 +229,7 @@ describe("parseConfigurationRecords", () => {
         ]);
         const vendorParam = enumParam("Vendor", ["wcp", "am"]);
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [vendorParam],
-            countConfigurations([vendorParam]).configurations,
-            false
-        );
+        const result = await probeRecords([vendorParam]);
 
         expect(result.partMetadata?.vendor).toBe(Vendor.WCP);
         expect(result.records.map((r) => r.vendor)).toEqual([Vendor.AM]);
@@ -251,14 +240,7 @@ describe("parseConfigurationRecords", () => {
             { partId: "p", partNumber: "PN", vendor: "AndyMark", name: "WCP" }
         ]);
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [],
-            [],
-            false
-        );
+        const result = await probeRecords([]);
 
         expect(result.partMetadata?.vendor).toBe("AndyMark");
     });
@@ -268,16 +250,9 @@ describe("parseConfigurationRecords", () => {
             { partId: "p", partNumber: `PN-${configuration.A ?? "default"}` }
         ]);
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [{ ...enumParam("A", ["a1", "a2"]), default: "a2" }],
-            countConfigurations([
-                { ...enumParam("A", ["a1", "a2"]), default: "a2" }
-            ]).configurations,
-            false
-        );
+        const result = await probeRecords([
+            { ...enumParam("A", ["a1", "a2"]), default: "a2" }
+        ]);
 
         expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a1"]);
@@ -321,14 +296,9 @@ describe("parseConfigurationRecords", () => {
                   ]
         );
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            [enumParam("A", ["a1", "a2"])],
-            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
-            true
-        );
+        const result = await probeRecords([enumParam("A", ["a1", "a2"])], {
+            isOpenComposite: true
+        });
 
         expect(result.buildIssues).toEqual([
             { type: BuildIssueType.UNSTABLE_COMPOSITE }
@@ -342,14 +312,7 @@ describe("parseConfigurationRecords", () => {
             { partId: "p", partNumber: "PN-default" }
         ]);
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
-            paramsWithConfigs(600),
-            countConfigurations(paramsWithConfigs(600)).configurations,
-            false
-        );
+        const result = await probeRecords(paramsWithConfigs(600));
 
         expect(result.buildIssues).toEqual([]);
         expect(result.records).toHaveLength(0);
@@ -364,22 +327,13 @@ describe("parseConfigurationRecords", () => {
                 properties: [{ name: "Part number", value: "AM-1" }]
             });
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
-            PATH,
-            ElementType.ASSEMBLY,
-            [],
-            countConfigurations([]).configurations,
-            false
-        );
+        const result = await probeRecords([], {
+            elementType: ElementType.ASSEMBLY
+        });
 
         expect(result.records).toEqual([]);
         expect(result.partMetadata).toEqual({
             partNumber: "AM-1",
-            name: undefined,
-            description: undefined,
-            material: undefined,
-            vendor: undefined,
             hasMultipleParts: false,
             isOpenComposite: false
         });

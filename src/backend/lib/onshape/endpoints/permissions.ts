@@ -15,11 +15,7 @@ export enum Permission {
     OWNER = "OWNER"
 }
 
-/**
- * Returns the permissions the authenticated user has on a document.
- *
- * Returns an empty array if the document is not shared with the user (Onshape returns 403 in that case).
- */
+/** Empty when the document is not shared with the caller, which Onshape 403s. */
 export async function getPermissions(
     client: OnshapeApi,
     documentPath: DocumentPath

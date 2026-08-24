@@ -94,10 +94,7 @@ export function useSetVisibilityMutation(
     return { mutate, isPending: mutation.isPending };
 }
 
-/**
- * Returns true if the insertable should be hidden from the current user.
- * Note this is different from whether the insertable is visible since admins can always see hidden insertables.
- */
+/** Narrower than `isVisible`: an admin still sees what is hidden. */
 export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     const { currentAccessLevel } = useAccessData();
     return useMemo(() => {

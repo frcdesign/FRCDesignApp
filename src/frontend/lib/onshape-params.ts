@@ -25,9 +25,8 @@ export interface OnshapeParams extends ElementPath {
 export type ColorTheme = "light" | "dark";
 
 /**
- * Resolves the theme to an actual color scheme. `systemTheme` is Onshape's,
- * forwarded by the entry redirect; standalone there is none, so the caller
- * passes the OS preference instead.
+ * `systemTheme` is Onshape's, forwarded by the entry redirect; standalone there
+ * is none, so the caller passes the OS preference instead.
  */
 export function getColorTheme(
     theme: Theme,

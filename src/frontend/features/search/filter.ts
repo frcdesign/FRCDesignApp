@@ -25,10 +25,8 @@ export interface FilteredInsertables {
     filtered: VendorFilterResult;
 }
 
-/**
- * Returns an ordered list of insertables in a document and tracks how many were filtered by vendors.
- * Does not include handling for being in a document since this should only be used when search is not active.
- */
+/** Ordered insertables plus the vendor-filtered count. Browsing only: an
+ * active search filters through `doSearch` instead. */
 export function filterInsertables(
     insertables: InsertableOut[],
     args: FilterArgs

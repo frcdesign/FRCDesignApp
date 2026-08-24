@@ -32,9 +32,8 @@ export function toVendor(vendor: string | undefined): Vendor | undefined {
 }
 
 /**
- * The vendor a part number names itself, e.g. `WCP-1025` or `am-5833`. More
- * reliable than the vendor an insertable is tagged with, which is generic
- * wherever one part is configurable across several vendors.
+ * The vendor a part number names itself, e.g. `WCP-1025` — more precise than an
+ * insertable's tagging, which is generic wherever one part spans vendors.
  */
 export function parsePartNumberVendor(
     partNumber: string | undefined

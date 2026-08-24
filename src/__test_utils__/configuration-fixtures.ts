@@ -5,6 +5,7 @@
 import {
     ParameterType,
     type BooleanParameter,
+    type ConfigurationRecord,
     type EnumParameter,
     type QuantityParameter,
     type UnitInfo
@@ -30,6 +31,16 @@ export function enumParam(
         optionConditions: [],
         ...extra
     };
+}
+
+/** A single enum whose N options enumerate to N configurations. */
+export function paramsWithConfigs(count: number): EnumParameter[] {
+    return [
+        enumParam(
+            "A",
+            Array.from({ length: count }, (_, i) => `o${i}`)
+        )
+    ];
 }
 
 export function boolParam(id: string): BooleanParameter {
@@ -70,3 +81,15 @@ export const TEST_UNIT_INFO: UnitInfo = {
     anglePrecision: 3,
     realPrecision: 3
 };
+
+/** A probe of one configuration; override whichever fields a test is about. */
+export function configurationRecord(
+    overrides: Partial<ConfigurationRecord> = {}
+): ConfigurationRecord {
+    return {
+        configuration: {},
+        hasMultipleParts: false,
+        isOpenComposite: false,
+        ...overrides
+    };
+}

@@ -142,10 +142,9 @@ export type ParameterValues = Record<string, string>;
  * UI can read it back without re-querying Onshape.
  */
 /**
- * The part an element resolves to, as one probe of Onshape read it. Probed from
- * the element's own defaults this describes the element; probed from a specific
- * configuration it is a {@link ConfigurationRecord}. A field is absent when the
- * probe found no value for it.
+ * The part an element resolves to, as one probe read it: from the element's own
+ * defaults it describes the element, from one configuration a
+ * {@link ConfigurationRecord}.
  */
 export interface PartMetadata {
     partNumber?: string;

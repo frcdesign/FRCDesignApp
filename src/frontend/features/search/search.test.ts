@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import MiniSearch from "minisearch";
 import {
     buildSearchDb,
     processTerm,
-    tokenize
+    tokenize,
+    type SearchDocument
 } from "@backend/features/search/search-index";
 import { doSearch, type Position } from "./search";
 import { LibraryOut } from "@backend/features/library/contract";
@@ -11,47 +13,30 @@ import {
     ConfigurationRecord,
     ParameterValues
 } from "@backend/features/configurations/models";
+import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
-/** Builds a configuration record carrying a part number, name, + configuration. */
-function record(
+const record = (
     partNumber: string | undefined,
     configuration: ParameterValues,
     name?: string
-): ConfigurationRecord {
-    return {
-        configuration,
-        partNumber,
-        name,
-        hasMultipleParts: false,
-        isOpenComposite: false
-    };
-}
+) => configurationRecord({ partNumber, configuration, name });
+
+/** Hidden insertables shown: these tests are about matching, not visibility. */
+const search = (searchDb: MiniSearch<SearchDocument>, query: string) =>
+    doSearch(searchDb, query, undefined, undefined, true);
 
 describe("processTerm", () => {
-    it("should process camelCase", () => {
-        const result = processTerm("MAXSpline");
-        expect(result).toEqual(
-            expect.arrayContaining(["max", "spline", "maxspline"])
-        );
-    });
-
-    it("should process CapitalCase", () => {
-        const result = processTerm("MaxSpline");
-        expect(result).toEqual(
+    it.each(["MAXSpline", "MaxSpline"])("splits %s into its words", (term) => {
+        expect(processTerm(term)).toEqual(
             expect.arrayContaining(["max", "spline", "maxspline"])
         );
     });
 });
 
 describe("tokenize", () => {
-    it("should keep quotes", () => {
-        const result = tokenize('1" Linear (REV)');
-        expect(result).toEqual(["1", "Linear", "REV"]);
-    });
-
-    it("should strip punctuation", () => {
-        const result = tokenize("10-32 Bearings & Bushings #X-Contact");
-        expect(result).toEqual([
+    it("splits on punctuation, keeping the words whole", () => {
+        expect(tokenize('1" Linear (REV)')).toEqual(["1", "Linear", "REV"]);
+        expect(tokenize("10-32 Bearings & Bushings #X-Contact")).toEqual([
             "10",
             "32",
             "Bearings",
@@ -138,13 +123,7 @@ describe("doSearch part-number matching", () => {
 
     it("matches a part number and returns its configuration", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
-        const { hits } = doSearch(
-            searchDb,
-            "217-2601",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "217-2601");
         expect(hits).toHaveLength(1);
         expect(hits[0].id).toBe("i1");
         expect(hits[0].configuration).toEqual({ length: "long" });
@@ -154,26 +133,14 @@ describe("doSearch part-number matching", () => {
     // matches the whole query — the row must still show a part number.
     it("falls back to the default record when no one record matches the query", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
-        const { hits } = doSearch(
-            searchDb,
-            "Bracket 217",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "Bracket 217");
         expect(hits).toHaveLength(1);
         expect(hits[0].partNumber).toBe("217-2600");
     });
 
     it("attaches the default (first) record for a title match", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
-        const { hits } = doSearch(
-            searchDb,
-            "Bracket",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "Bracket");
         expect(hits).toHaveLength(1);
         // The insertable's own name matched, so the row shows its default config.
         expect(hits[0].configuration).toEqual({ length: "short" });
@@ -189,13 +156,7 @@ describe("doSearch part-number matching", () => {
                 record("217-2600", { version: "older" })
             ]
         });
-        const { hits } = doSearch(
-            searchDb,
-            "217-2600",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "217-2600");
         expect(hits).toHaveLength(1);
         expect(hits[0].configuration).toEqual({ version: "latest" });
     });
@@ -204,54 +165,32 @@ describe("doSearch part-number matching", () => {
 // Production shape: the element's own part data leads the list as the record an
 // unset configuration falls back to, followed by one record per configuration.
 describe("doSearch configuration matching", () => {
-    const gears: Record<string, ConfigurationRecord[]> = {
+    const searchDb = buildSearchDb(library("MAXSpline Gear"), {
         i1: [
             record("WCP-1234", {}, "12T MAXSpline Gear"),
             record("WCP-1235", { teeth: "24" }, "24T MAXSpline Gear"),
             record("WCP-1236", { teeth: "36" }, "36T MAXSpline Gear")
         ]
-    };
+    });
 
     it("picks the configuration a term of the query names", () => {
-        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
-        const { hits } = doSearch(
-            searchDb,
-            "maxspline 24t",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "maxspline 24t");
         expect(hits[0].configuration).toEqual({ teeth: "24" });
         expect(hits[0].partNumber).toBe("WCP-1235");
     });
 
     it("picks it from the distinguishing term alone", () => {
-        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
-        const { hits } = doSearch(searchDb, "36t", undefined, undefined, true);
+        const { hits } = search(searchDb, "36t");
         expect(hits[0].configuration).toEqual({ teeth: "36" });
     });
 
     it("keeps the default when no term distinguishes a configuration", () => {
-        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
-        const { hits } = doSearch(
-            searchDb,
-            "maxspline gear",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "maxspline gear");
         expect(hits[0].configuration).toEqual({});
     });
 
     it("lets a part number typed in full outrank a looser name match", () => {
-        const searchDb = buildSearchDb(library("MAXSpline Gear"), gears);
-        const { hits } = doSearch(
-            searchDb,
-            "WCP-1236",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "WCP-1236");
         expect(hits[0].configuration).toEqual({ teeth: "36" });
     });
 });
@@ -269,13 +208,7 @@ describe("doSearch highlighting", () => {
     }
 
     function highlightFor(name: string, query: string): string {
-        const { hits } = doSearch(
-            buildSearchDb(library(name)),
-            query,
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(buildSearchDb(library(name)), query);
         expect(hits).toHaveLength(1);
         return highlighted(name, hits[0].positions);
     }
@@ -309,12 +242,9 @@ describe("doSearch highlighting", () => {
         };
 
         function hitFor(query: string) {
-            const { hits } = doSearch(
+            const { hits } = search(
                 buildSearchDb(library(), recordsMap),
-                query,
-                undefined,
-                undefined,
-                true
+                query
             );
             expect(hits).toHaveLength(1);
             return hits[0];
@@ -330,14 +260,11 @@ describe("doSearch highlighting", () => {
         // The segment after a leading-zero one used to be folded into a mixed
         // number, leaving nothing in the text for the query to underline.
         it("underlines a leading-zero segment of the part number", () => {
-            const { hits } = doSearch(
+            const { hits } = search(
                 buildSearchDb(library(), {
                     i1: [record("TTB-0016-5/32", { size: "small" })]
                 }),
-                "TTB-0016",
-                undefined,
-                undefined,
-                true
+                "TTB-0016"
             );
             expect(
                 highlighted(
@@ -377,13 +304,7 @@ describe("doSearch name matching", () => {
 
     it("matches a part name, returning its number, name, and configuration", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
-        const { hits } = doSearch(
-            searchDb,
-            "3/4 bearing",
-            undefined,
-            undefined,
-            true
-        );
+        const { hits } = search(searchDb, "3/4 bearing");
         expect(hits).toHaveLength(1);
         expect(hits[0].partName).toBe("3/4 Bearing");
         expect(hits[0].partNumber).toBe("217-2601");
@@ -393,13 +314,7 @@ describe("doSearch name matching", () => {
     it("finds a fractional name by its decimal forms (.5, 0.5, 1/2)", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         for (const query of [".5", "0.5", "1/2"]) {
-            const { hits } = doSearch(
-                searchDb,
-                query,
-                undefined,
-                undefined,
-                true
-            );
+            const { hits } = search(searchDb, query);
             const hit = hits.find((h) => h.id === "i1");
             expect(hit?.partName).toBe("1/2 Bearing");
         }

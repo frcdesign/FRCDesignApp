@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toSearchRecords } from "./search-index";
-import type { ConfigurationRecord } from "../configurations/models";
 import { Vendor } from "../library/vendors";
-
-function record(fields: Partial<ConfigurationRecord>): ConfigurationRecord {
-    return {
-        configuration: {},
-        hasMultipleParts: false,
-        isOpenComposite: false,
-        ...fields
-    };
-}
+import { configurationRecord as record } from "../../../__test_utils__/configuration-fixtures";
 
 describe("toSearchRecords", () => {
     it("drops a part number that only repeats the name", () => {

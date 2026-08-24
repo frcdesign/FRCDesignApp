@@ -225,9 +225,8 @@ export function CardTitle(props: CardTitleProps) {
 }
 
 /**
- * The part number never shrinks, so the part name gives up every character
- * before it loses one: the number is what identifies the part. Capped at the
- * row, past which there is nothing left to take.
+ * Never shrinks, so the part name gives up every character before the number
+ * loses one. Capped at the row, past which there is nothing left to take.
  */
 const PART_NUMBER_FIXED = { flexShrink: 0, maxWidth: "100%" };
 

@@ -35,9 +35,8 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        // Which insertables are configurable: a configurations row exists
-        // exactly when there are parameters. Only the ids — the payload stays
-        // in D1 and is fetched per insertable when one is actually opened.
+        // Ids only: a configurations row exists exactly when there are
+        // parameters, and its payload is fetched when one is opened.
         db
             .select({ id: configurations.id })
             .from(configurations)
@@ -179,10 +178,8 @@ export async function rebuildSearchDb(
 }
 
 /**
- * Assembles the per-insertable records `buildSearchDb` dedupes into the
- * part-number search map: the element's own part data, plus one per indexed
- * configuration. A left join, since an unconfigurable element still has both a
- * part number and no configurations row.
+ * The records `buildSearchDb` dedupes: an element's own part data plus one per
+ * indexed configuration. Left joined — an unconfigurable element has no row.
  */
 async function getRecordsMap(
     db: Db,

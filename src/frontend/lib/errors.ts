@@ -46,9 +46,8 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
 }
 
 /**
- * Shows an error. Only an error carrying wording meant for the user shows its
- * own message; anything else gets `defaultMessage`, which the caller writes for
- * its own context.
+ * Only an error carrying wording meant for the user shows its own message;
+ * anything else gets `defaultMessage`, written for the caller's context.
  */
 export function handleAppError(
     error: Error,

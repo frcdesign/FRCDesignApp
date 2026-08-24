@@ -5,7 +5,7 @@ import { BuildIssueType } from "./issues";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { thumbnailUrl } from "../thumbnails/keys";
 import { checkGroup, checkInsertable } from "./checks";
-import type { ConfigurationRecord } from "../configurations/models";
+import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
 /** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
@@ -56,15 +56,8 @@ describe("checkGroup", () => {
     });
 });
 
-/** An indexed record; only its part number matters to these checks. */
-function record(partNumber?: string): ConfigurationRecord {
-    return {
-        configuration: {},
-        partNumber,
-        hasMultipleParts: false,
-        isOpenComposite: false
-    };
-}
+/** Only the part number matters to these checks. */
+const record = (partNumber?: string) => configurationRecord({ partNumber });
 
 describe("checkInsertable", () => {
     const HEALTHY_INSERTABLE = {

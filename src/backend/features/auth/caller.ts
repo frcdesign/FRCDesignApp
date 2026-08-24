@@ -1,7 +1,6 @@
 /**
- * Resolves who is calling from their session, memoizing the Onshape lookups in
- * KV. `productionCaller` is what `createApp` binds onto every request; the
- * guards and routes read the results through `c.var`.
+ * Resolves who is calling from their session, memoized in KV. `createApp` binds
+ * `productionCaller` onto every request; guards and routes read it via `c.var`.
  */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";

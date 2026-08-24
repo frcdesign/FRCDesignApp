@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
     OptionVisibilityType,
-    ConfigurationParameter,
     ParameterType,
+    ParameterValues,
     VisibilityCondition,
     VisibilityType
 } from "../configurations/models";
+import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { LogicalOp, QuantityType, Unit } from "../configurations/enums";
 import { evaluateCondition } from "../configurations/utils";
 import { parseOnshapeConfiguration } from "./parse-configuration";
@@ -226,169 +227,52 @@ describe("parseOnshapeConfiguration", () => {
 });
 
 describe("evaluateCondition", () => {
-    const makeEnumParam = (
-        id: string,
-        options: string[]
-    ): ConfigurationParameter => ({
-        type: ParameterType.ENUM,
+    const sizes = enumParam("size", ["xs", "sm", "md", "lg", "xl"]);
+    const equals = (id: string, value: string): VisibilityCondition => ({
+        type: VisibilityType.EQUAL,
         id,
-        name: id,
-        isCosmetic: false,
-        default: options[0],
-        condition: undefined,
-        optionConditions: [],
-        options: options.map((option) => ({ id: option, name: option }))
+        value
     });
-
-    it("returns true when condition is undefined", () => {
-        expect(evaluateCondition(undefined, {}, [])).toBe(true);
+    /** `a=1` and `b=2`, joined by the operation under test. */
+    const bothOf = (operation: LogicalOp): VisibilityCondition => ({
+        type: VisibilityType.LOGICAL,
+        operation,
+        children: [equals("a", "1"), equals("b", "2")]
     });
+    const smToLg: VisibilityCondition = {
+        type: VisibilityType.RANGE,
+        id: "size",
+        start: "sm",
+        end: "lg"
+    };
 
-    it("ALWAYS_SHOWN: returns true", () => {
-        const condition: VisibilityCondition = {
-            type: VisibilityType.ALWAYS_SHOWN
-        };
-        expect(evaluateCondition(condition, {}, [])).toBe(true);
-    });
-
-    it("EQUAL: returns true when value matches", () => {
-        const condition = {
-            type: VisibilityType.EQUAL as const,
-            id: "size",
-            value: "large"
-        };
-        expect(evaluateCondition(condition, { size: "large" }, [])).toBe(true);
-    });
-
-    it("EQUAL: returns false when value does not match", () => {
-        const condition = {
-            type: VisibilityType.EQUAL as const,
-            id: "size",
-            value: "large"
-        };
-        expect(evaluateCondition(condition, { size: "small" }, [])).toBe(false);
-    });
-
-    it("RANGE: returns true when value is in range", () => {
-        const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition: VisibilityCondition = {
-            type: VisibilityType.RANGE,
-            id: "size",
-            start: "sm",
-            end: "lg"
-        };
-        expect(evaluateCondition(condition, { size: "md" }, [param])).toBe(
-            true
-        );
-    });
-
-    it("RANGE: returns false when value is below start", () => {
-        const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition: VisibilityCondition = {
-            type: VisibilityType.RANGE,
-            id: "size",
-            start: "sm",
-            end: "lg"
-        };
-        expect(evaluateCondition(condition, { size: "xs" }, [param])).toBe(
+    const cases: [
+        string,
+        VisibilityCondition | undefined,
+        ParameterValues,
+        boolean
+    ][] = [
+        ["no condition", undefined, {}, true],
+        ["always shown", { type: VisibilityType.ALWAYS_SHOWN }, {}, true],
+        ["equal, matching", equals("size", "lg"), { size: "lg" }, true],
+        ["equal, differing", equals("size", "lg"), { size: "sm" }, false],
+        ["range, inside", smToLg, { size: "md" }, true],
+        ["range, below start", smToLg, { size: "xs" }, false],
+        ["range, above end", smToLg, { size: "xl" }, false],
+        ["and, both matching", bothOf(LogicalOp.AND), { a: "1", b: "2" }, true],
+        [
+            "and, one differing",
+            bothOf(LogicalOp.AND),
+            { a: "1", b: "9" },
             false
-        );
-    });
+        ],
+        ["or, one matching", bothOf(LogicalOp.OR), { a: "1", b: "9" }, true],
+        ["or, none matching", bothOf(LogicalOp.OR), { a: "9", b: "9" }, false]
+    ];
 
-    it("RANGE: returns false when value is above end", () => {
-        const param = makeEnumParam("size", ["xs", "sm", "md", "lg", "xl"]);
-        const condition: VisibilityCondition = {
-            type: VisibilityType.RANGE,
-            id: "size",
-            start: "sm",
-            end: "lg"
-        };
-        expect(evaluateCondition(condition, { size: "xl" }, [param])).toBe(
-            false
-        );
-    });
-
-    it("LOGICAL AND: true when all children match", () => {
-        const condition: VisibilityCondition = {
-            type: VisibilityType.LOGICAL,
-            operation: LogicalOp.AND,
-            children: [
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "a",
-                    value: "1"
-                },
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "b",
-                    value: "2"
-                }
-            ]
-        };
-        expect(evaluateCondition(condition, { a: "1", b: "2" }, [])).toBe(true);
-    });
-
-    it("LOGICAL AND: false when one child does not match", () => {
-        const condition: VisibilityCondition = {
-            type: VisibilityType.LOGICAL,
-            operation: LogicalOp.AND,
-            children: [
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "a",
-                    value: "1"
-                },
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "b",
-                    value: "2"
-                }
-            ]
-        };
-        expect(evaluateCondition(condition, { a: "1", b: "9" }, [])).toBe(
-            false
-        );
-    });
-
-    it("LOGICAL OR: true when one child matches", () => {
-        const condition: VisibilityCondition = {
-            type: VisibilityType.LOGICAL,
-            operation: LogicalOp.OR,
-            children: [
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "a",
-                    value: "1"
-                },
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "b",
-                    value: "2"
-                }
-            ]
-        };
-        expect(evaluateCondition(condition, { a: "1", b: "9" }, [])).toBe(true);
-    });
-
-    it("LOGICAL OR: false when no children match", () => {
-        const condition: VisibilityCondition = {
-            type: VisibilityType.LOGICAL,
-            operation: LogicalOp.OR,
-            children: [
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "a",
-                    value: "1"
-                },
-                {
-                    type: VisibilityType.EQUAL,
-                    id: "b",
-                    value: "2"
-                }
-            ]
-        };
-        expect(evaluateCondition(condition, { a: "9", b: "9" }, [])).toBe(
-            false
+    it.each(cases)("%s", (_name, condition, configuration, expected) => {
+        expect(evaluateCondition(condition, configuration, [sizes])).toBe(
+            expected
         );
     });
 });

@@ -163,9 +163,8 @@ export function doSearch(
 }
 
 /**
- * The single best record for a hit, by part number or name — whichever the
- * query describes better. Falls back to the default record, so every row can
- * show a part number and name even when the title alone matched.
+ * The best record by part number or name, whichever the query describes better,
+ * else the default — so a row shows one even when only the title matched.
  */
 function matchedRecord(
     result: MiniSearchResult,
@@ -221,9 +220,8 @@ function matchScore(
 }
 
 /**
- * The record the query describes best. Scoring by term, not by the whole query:
- * "maxspline 24t" names a configuration even though no record reads that way.
- * Ties go first-wins, which in enumeration order is the latest option.
+ * Scored by term rather than by the whole query, which "maxspline 24t" matches
+ * no record as. Ties go first-wins: the latest option, in enumeration order.
  */
 function findBestRecord(
     query: string,

@@ -18,143 +18,52 @@ const defaultOptions = (
     max: valueWithUnits(100, displayUnit)
 });
 
-describe("evaluateExpression - valid expressions", () => {
-    it("parses simple number (unitless)", () => {
-        const res = evaluateExpression(
-            "42",
-            defaultOptions(QuantityType.REAL, Unit.UNITLESS)
-        );
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("42");
+/** Every valid case reads the same way: an expression in, a display string out. */
+describe("evaluateExpression", () => {
+    const REAL = defaultOptions(QuantityType.REAL, Unit.UNITLESS);
+    const LENGTH = defaultOptions();
+    const DEGREES = defaultOptions(QuantityType.ANGLE, Unit.DEGREE);
+
+    it.each([
+        ["42", REAL, "42"],
+        ["10 mm", LENGTH, "10 mm"],
+        ["5 mm + 5 mm", LENGTH, "10 mm"],
+        ["15 mm - 5 mm", LENGTH, "10 mm"],
+        ["2 * 5 mm", LENGTH, "10 mm"],
+        ["10 / 2 mm", LENGTH, "5 mm"],
+        ["(2 + 3) mm", LENGTH, "5 mm"],
+        ["-5 mm", LENGTH, "-5 mm"],
+        ["90 deg", DEGREES, "90 deg"],
+        // The display unit fills in for an expression that names none.
+        ["5", LENGTH, "5 mm"],
+        ["   7   mm   +   3 mm ", LENGTH, "10 mm"]
+    ])("evaluates %s", (expression, options, display) => {
+        const result = evaluateExpression(expression, options);
+        expect(result.hasError).toBe(false);
+        expect((result as Result).displayExpression).toBe(display);
     });
 
-    it("parses number with unit", () => {
-        const res = evaluateExpression(
-            "10 mm",
-            defaultOptions(QuantityType.LENGTH)
-        );
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("10 mm");
-    });
-
-    it("parses addition with units", () => {
-        const res = evaluateExpression("5 mm + 5 mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("10 mm");
-    });
-
-    it("parses subtraction with units", () => {
-        const res = evaluateExpression("15 mm - 5 mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("10 mm");
-    });
-
-    it("parses multiplication with unit and number", () => {
-        const res = evaluateExpression("2 * 5 mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("10 mm");
-    });
-
-    it("parses division with unit and number", () => {
-        const res = evaluateExpression("10 / 2 mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("5 mm");
-    });
-
-    it("parses parenthesis with unit", () => {
-        const res = evaluateExpression("(2 + 3) mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("5 mm");
-    });
-
-    it("parses negative numbers", () => {
-        const res = evaluateExpression("-5 mm", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("-5 mm");
-    });
-
-    it("parses angles in degrees", () => {
-        const res = evaluateExpression(
-            "90 deg",
-            defaultOptions(QuantityType.ANGLE, Unit.DEGREE)
-        );
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("90 deg");
-    });
-
-    it("parses angles in radians", () => {
-        const res = evaluateExpression(
+    it("evaluates an angle in radians", () => {
+        const result = evaluateExpression(
             "3.14159265359 rad",
             defaultOptions(QuantityType.ANGLE, Unit.RADIAN)
         );
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toContain("rad");
+        expect(result.hasError).toBe(false);
+        expect((result as Result).displayExpression).toContain("rad");
     });
 
-    it("applies default unit for unitless input", () => {
-        const res = evaluateExpression("5", defaultOptions());
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("5 mm");
-    });
-
-    it("handles whitespace and spacing", () => {
-        const res = evaluateExpression(
-            "   7   mm   +   3 mm ",
-            defaultOptions()
-        );
-        expect(res.hasError).toBe(false);
-        expect((res as Result).displayExpression).toBe("10 mm");
-    });
-});
-
-describe("evaluateExpression - failure cases", () => {
-    it("fails on empty input", () => {
-        const res = evaluateExpression("", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on invalid unit", () => {
-        const res = evaluateExpression("5 bananas", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on mismatched units in addition", () => {
-        const res = evaluateExpression("5 mm + 2 deg", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on division by zero", () => {
-        const res = evaluateExpression("10 mm / 0", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on invalid syntax", () => {
-        const res = evaluateExpression("5 +", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on unit applied to non-number", () => {
-        const res = evaluateExpression("(5 mm) mm", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on multiplication of two units", () => {
-        const res = evaluateExpression("5 mm * 2 mm", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails on division of two units", () => {
-        const res = evaluateExpression("5 mm / 2 mm", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails if value is less than min", () => {
-        const res = evaluateExpression("-100.001 mm", defaultOptions());
-        expect(res.hasError).toBe(true);
-    });
-
-    it("fails if value is greater than max", () => {
-        const res = evaluateExpression("100.001 mm", defaultOptions());
-        expect(res.hasError).toBe(true);
+    it.each([
+        ["", "there is nothing to evaluate"],
+        ["5 bananas", "the unit is not one we know"],
+        ["5 mm + 2 deg", "the units do not match"],
+        ["10 mm / 0", "it divides by zero"],
+        ["5 +", "the syntax is incomplete"],
+        ["(5 mm) mm", "a unit is applied to something already dimensioned"],
+        ["5 mm * 2 mm", "two units are multiplied"],
+        ["5 mm / 2 mm", "two units are divided"],
+        ["-100.001 mm", "it falls below the minimum"],
+        ["100.001 mm", "it rises above the maximum"]
+    ])("rejects %s, since %s", (expression) => {
+        expect(evaluateExpression(expression, LENGTH).hasError).toBe(true);
     });
 });

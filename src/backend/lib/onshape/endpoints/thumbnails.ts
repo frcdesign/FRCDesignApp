@@ -33,11 +33,7 @@ export function getElementThumbnail(
     return client.getImage(path);
 }
 
-/**
- * Returns the thumbnail of a given element in a workspace, optionally with a specific configuration.
- *
- * Compared to `getElementThumbnail`, this endpoint supports configurations but is limited to workspaces only.
- */
+/** Unlike `getElementThumbnail` this takes a configuration, but only in a workspace. */
 export function getThumbnailFromWorkspace(
     client: OnshapeApi,
     elementPath: ElementPath,
@@ -85,11 +81,7 @@ export async function getThumbnailId(
     return thumbnailId;
 }
 
-/**
- * Returns the thumbnail for a given thumbnail ID.
- *
- * WARNING: This endpoint is very buggy and can fail repeatedly while Onshape generates the thumbnail in the background.
- */
+/** Fails repeatedly while Onshape renders the thumbnail in the background. */
 export function getThumbnailFromId(
     client: OnshapeApi,
     thumbnailId: string,

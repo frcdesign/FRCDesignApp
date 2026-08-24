@@ -12,31 +12,16 @@ import {
     OptionVisibilityType,
     ConfigurationParameter,
     ParameterType,
-    QuantityParameter,
     StringParameter,
     VisibilityCondition,
     VisibilityType
 } from "./models";
 import {
     boolParam,
-    enumParam
+    enumParam,
+    paramsWithConfigs,
+    quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
-import { QuantityType, Unit } from "./enums";
-
-function quantityParam(id: string): QuantityParameter {
-    return {
-        id,
-        name: id,
-        default: "0",
-        isCosmetic: false,
-        type: ParameterType.QUANTITY,
-        quantityType: QuantityType.LENGTH,
-        defaultValue: 0,
-        min: 0,
-        max: 10,
-        unit: Unit.MILLIMETER
-    };
-}
 
 function stringParam(id: string): StringParameter {
     return {
@@ -148,16 +133,6 @@ describe("enumerateConfigurations", () => {
 });
 
 describe("countConfigurations", () => {
-    /** A single enum whose N options enumerate to N configurations. */
-    function paramsWithConfigs(count: number): ConfigurationParameter[] {
-        return [
-            enumParam(
-                "A",
-                Array.from({ length: count }, (_, i) => `o${i}`)
-            )
-        ];
-    }
-
     it("counts an insertable with nothing to vary as having none", () => {
         expect(countConfigurations([])).toMatchObject({
             count: 0,
@@ -168,7 +143,7 @@ describe("countConfigurations", () => {
     // Cosmetic and quantity parameters ride their defaults rather than
     // multiplying the count, so they leave nothing to vary either.
     it("ignores parameters that don't vary the build", () => {
-        const cosmetic = { ...enumParam("A", ["x", "y"]), isCosmetic: true };
+        const cosmetic = enumParam("A", ["x", "y"], { isCosmetic: true });
         expect(countConfigurations([cosmetic])).toMatchObject({
             count: 0,
             band: IndexingBand.AUTOMATIC
@@ -228,14 +203,7 @@ describe("isIndexedParameter", () => {
 
     it("never varies quantity or text parameters", () => {
         expect(isIndexedParameter(quantityParam("q"))).toBe(false);
-        const text: StringParameter = {
-            id: "s",
-            name: "s",
-            default: "",
-            isCosmetic: false,
-            type: ParameterType.STRING
-        };
-        expect(isIndexedParameter(text)).toBe(false);
+        expect(isIndexedParameter(stringParam("s"))).toBe(false);
     });
 
     it("does not vary a parameter excluded from properties", () => {

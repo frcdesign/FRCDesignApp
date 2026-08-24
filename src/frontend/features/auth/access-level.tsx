@@ -32,9 +32,8 @@ export function getAccessDataQuery() {
 export interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
     /**
-     * The query's own pending flag. While set, the rest of these are the
-     * placeholder, so anything that renders for a *signed-out* caller has to
-     * wait or it flashes; positive gates can just read `signedIn`.
+     * While set, the rest are the placeholder — so anything rendered for a
+     * *signed-out* caller must wait or it flashes. Positive gates need not.
      */
     isPending: boolean;
 }

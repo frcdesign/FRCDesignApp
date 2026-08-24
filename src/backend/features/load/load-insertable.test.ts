@@ -3,10 +3,8 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
-import type {
-    ConfigurationRecord,
-    PartMetadata
-} from "../configurations/models";
+import type { ParameterValues, PartMetadata } from "../configurations/models";
+import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
@@ -29,18 +27,11 @@ function readInsertable() {
         .get();
 }
 
-/** The element's own metadata, with the given part number and defaults. */
-function partMetadata(partNumber?: string): PartMetadata {
-    return { partNumber, hasMultipleParts: false, isOpenComposite: false };
-}
+const partMetadata = (partNumber?: string): PartMetadata =>
+    configurationRecord({ partNumber });
 
-/** Builds a configuration record with the given part number and defaults. */
-function record(
-    partNumber?: string,
-    configuration: Record<string, string> = {}
-): ConfigurationRecord {
-    return { ...partMetadata(partNumber), configuration };
-}
+const record = (partNumber?: string, configuration: ParameterValues = {}) =>
+    configurationRecord({ partNumber, configuration });
 
 describe("saveInsertable", () => {
     beforeEach(async () => {

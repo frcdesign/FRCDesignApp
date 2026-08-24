@@ -25,29 +25,13 @@ describe("getMaxSeverity", () => {
         expect(getMaxSeverity([])).toBeNull();
     });
 
-    it("returns the only severity present", () => {
-        expect(getMaxSeverity([issue(BuildIssueSeverity.INFO)])).toBe(
-            BuildIssueSeverity.INFO
-        );
-    });
-
-    it("returns the worst severity for a mix", () => {
-        expect(
-            getMaxSeverity([
-                issue(BuildIssueSeverity.INFO),
-                issue(BuildIssueSeverity.ERROR),
-                issue(BuildIssueSeverity.WARNING)
-            ])
-        ).toBe(BuildIssueSeverity.ERROR);
-    });
-
-    it("ranks warning above info", () => {
-        expect(
-            getMaxSeverity([
-                issue(BuildIssueSeverity.INFO),
-                issue(BuildIssueSeverity.WARNING)
-            ])
-        ).toBe(BuildIssueSeverity.WARNING);
+    const { INFO, WARNING, ERROR } = BuildIssueSeverity;
+    it.each([
+        [[INFO], INFO],
+        [[INFO, WARNING], WARNING],
+        [[INFO, ERROR, WARNING], ERROR]
+    ])("takes the worst of %s", (severities, worst) => {
+        expect(getMaxSeverity(severities.map(issue))).toBe(worst);
     });
 });
 
