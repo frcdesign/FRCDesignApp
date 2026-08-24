@@ -40,7 +40,7 @@ In the database, Groups correspond to Documents (or more specifically Versions o
 
 ### Path types in the codebase
 
-These are defined in `src/shared/onshape-path.ts`:
+These are defined in `src/backend/lib/onshape/path.ts`:
 
 ```ts
 // Just a document
@@ -78,10 +78,7 @@ The `apiPath()` function in `src/backend/onshape-api/api-path.ts` assembles thes
 
 ```ts
 import { apiPath } from "../api-path";
-import {
-    toInstanceApiPath,
-    toElementApiPath
-} from "../../../shared/onshape-path";
+import { toInstanceApiPath, toElementApiPath } from "./path";
 
 // Produces: /assemblies/d/{did}/w/{wid}/e/{eid}/features
 apiPath("assemblies", elementPath, toElementApiPath, { endRoute: "features" });
@@ -90,7 +87,7 @@ apiPath("assemblies", elementPath, toElementApiPath, { endRoute: "features" });
 apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" });
 ```
 
-The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`) are all defined in `src/shared/onshape-path.ts` and convert a path object into its URL segment string.
+The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`) are all defined in `src/backend/lib/onshape/path.ts` and convert a path object into its URL segment string.
 
 ### Calling the Onshape API
 
@@ -116,7 +113,7 @@ Use this when you need to expose new functionality to the frontend via a new API
 
 ### 1. Add the handler to a routes file
 
-Open the relevant file in `src/backend/routes/` (or create a new one if the functionality is in a new area). Each file creates a Hono sub-app and registers handlers on it:
+Open the `routes.ts` of the feature that owns the functionality, under `src/backend/features/` (or add a new feature directory if it belongs to none of them). Each `routes.ts` creates a Hono sub-app and registers handlers on it:
 
 ```ts
 export const myRoutes = getApp();
@@ -160,9 +157,9 @@ import { myRoutes } from "./routes/my-routes";
 app.route("/api", myRoutes);
 ```
 
-### 3. Define the response type in shared
+### 3. Define the response type
 
-If the frontend needs to consume this endpoint, define a TypeScript interface for the response in `src/shared/api-models.ts` so both sides agree on the shape.
+If the frontend needs to consume this endpoint, define a TypeScript interface for the response in the feature's `dto.ts` (e.g. `src/backend/features/library/dto.ts`). The backend owns the contract; the frontend imports it through `@backend/features/<feature>/dto`, so both sides agree on the shape.
 
 ---
 
@@ -230,7 +227,7 @@ The schema is the source of truth for what's stored in D1. Drizzle ORM reads it 
 
 ### 1. Edit the schema
 
-Open `src/shared/schema.ts`. Tables are defined using Drizzle's SQLite helpers:
+Open `src/backend/db/schema.ts`. Tables are defined using Drizzle's SQLite helpers:
 
 ```ts
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
@@ -266,7 +263,7 @@ This runs all pending migrations against your local D1 database (used by `npx wr
 
 ### 4. Update API response types if needed
 
-If the new data needs to be returned to the frontend, update the relevant interface in `src/shared/api-models.ts` and modify the query in `src/backend/library-data.ts` (if it's part of the main library response) or in the appropriate route handler.
+If the new data needs to be returned to the frontend, update the relevant interface in the feature's `dto.ts` and modify the query in `src/backend/features/library/db.ts` (if it's part of the main library response) or in the appropriate route handler.
 
 ## Adding a Frontend Route
 
@@ -349,20 +346,20 @@ function GroupPage() {
 
 If you just need to fetch data inside an existing component (without creating a new route), follow this pattern.
 
-### 1. Define the query in `queries.ts`
+### 1. Define the query in the feature's `queries.ts`
 
-Open `src/frontend/queries.ts` and add a query definition:
+Add the key to `src/frontend/lib/query-keys.ts`, then add the query to `src/frontend/features/<feature>/queries.ts`:
 
 ```ts
 export function getMyDataQuery(someId: string) {
     return queryOptions({
-        queryKey: ["my-data", someId],
+        queryKey: myDataQueryKey(someId),
         queryFn: () => apiGet("/my-thing/" + someId)
     });
 }
 ```
 
-Keeping query definitions in `queries.ts` means the same query can be used in multiple components and they'll all share the same cache.
+Keeping query definitions in the feature's `queries.ts` means the same query can be used in multiple components and they'll all share the same cache. Keys live in `lib/query-keys.ts` so the refresh flows can invalidate across features.
 
 ### 2. Use it in a component
 
@@ -426,7 +423,7 @@ function useMyMutation(someId: string) {
 }
 ```
 
-`getQueryUpdater` (from `src/frontend/common/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer allows you to mutate query results directly rather than mutating an original cache value, which is much cleaner for nested data.
+`getQueryUpdater` (from `src/frontend/lib/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer allows you to mutate query results directly rather than mutating an original cache value, which is much cleaner for nested data.
 
 **Why cancel queries in `onMutate`?** If a background refetch lands after the optimistic update, it will overwrite the cache with stale data. Canceling outstanding queries for that key prevents this race condition.
 
@@ -602,7 +599,7 @@ If rule 2 tempts you to call a hook from a utility function, make the utility fu
 
 A custom hook is just a regular TypeScript function that starts with `use` and calls other hooks inside. You write them to extract repeated stateful logic out of components so it can be shared and tested independently.
 
-Example from this codebase — `useUiState()` in `src/frontend/api-utils/ui-state.ts`:
+Example from this codebase — `useUiState()` in `src/frontend/lib/ui-state.ts`:
 
 ```tsx
 // In ui-state.ts (a .ts file — no JSX, so no .tsx needed)
@@ -656,7 +653,7 @@ Prefer Mantine component props (`c=`, `bg=`, `p=`, `radius=`) over adding new SC
 
 ## The `apiGet` / `apiPost` / `apiDelete` Helpers
 
-These are thin wrappers around `fetch` defined in `src/frontend/api-utils/api.ts`. They:
+These are thin wrappers around `fetch` defined in `src/frontend/lib/api-client.ts`. They:
 
 - Automatically prepend `/api` to the path (so you write `"/context-data"` not `"/api/context-data"`)
 - Serialize query parameters via `URLSearchParams`

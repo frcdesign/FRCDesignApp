@@ -3,24 +3,24 @@ import {
     readD1Migrations
 } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
+import { alias } from "./vite.config";
 
 export default defineConfig({
     test: {
         projects: [
             {
-                // Pure logic (frontend + shared) tests run in a fast Node environment.
+                resolve: { alias },
+                // Frontend logic needs no bindings, so it runs in a fast Node environment.
                 test: {
                     name: "node",
                     environment: "node",
-                    include: [
-                        "src/frontend/**/*.test.ts",
-                        "src/shared/**/*.test.ts"
-                    ]
+                    include: ["src/frontend/**/*.test.ts"]
                 }
             },
             {
                 // Backend tests run in the Workers runtime with real, per-test
                 // isolated D1/R2/KV bindings from wrangler.jsonc.
+                resolve: { alias },
                 plugins: [
                     cloudflareTest(async () => {
                         const migrations = await readD1Migrations("./drizzle");

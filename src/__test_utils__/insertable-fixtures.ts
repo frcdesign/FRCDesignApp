@@ -2,9 +2,9 @@
  * Factories for the load pipeline's insertable shapes. Import directly: the
  * barrel re-exports Workers-only helpers these tests cannot resolve.
  */
-import type { InsertableTarget } from "../backend/load/load-common";
-import type { ParsedInsertable } from "../backend/load/load-insertable";
-import { ElementType } from "../shared/types";
+import type { InsertableTarget } from "@backend/features/load/context";
+import type { ParsedInsertable } from "@backend/features/load/load-insertable";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
@@ -39,6 +39,7 @@ export function parsedInsertable(
         fastenInfo: null,
         isOpenComposite: false,
         buildIssues: [],
+        partMetadata: null,
         configuration: { parameters: [], records: [] },
         ...overrides
     };

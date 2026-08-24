@@ -1,34 +1,30 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { queryClient } from "../../../../query-client";
-import { getAccessDataQuery } from "../../../../api-utils/access-level";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { queryClient } from "../../../../lib/query-client";
+import { getAccessDataQuery } from "../../../../features/auth/access-level";
+import { getFavoritesQuery } from "../../../../features/favorites/queries";
 import {
-    getFavoritesQuery,
     getLibraryQuery,
-    getLibraryVersionQuery,
-    getSearchDbQuery
-} from "../../../../queries";
-import { DEFAULT_LIBRARY_ID, LibraryId } from "../../../../../shared/types";
-import { getUiState } from "../../../../api-utils/ui-state";
+    getLibraryVersionQuery
+} from "../../../../features/library/queries";
+import { getSearchDbQuery } from "../../../../features/search/queries";
+import { LibraryId } from "@backend/features/library/library-id";
+import { getUiState } from "../../../../lib/ui-state";
+import { isLibraryId } from "../../../../features/library/library-path";
 
 /** Restoring the last group is an entry behavior, so it happens once per load. */
 let restoredGroup = false;
 
-function isLibraryId(libraryId: string): libraryId is LibraryId {
-    return (Object.values(LibraryId) as string[]).includes(libraryId);
-}
-
 export const Route = createFileRoute("/app/library/$libraryId")({
     params: {
-        // Narrowed by beforeLoad, which sends an unknown library elsewhere.
+        // Narrowed by beforeLoad, which 404s an unknown library.
         parse: ({ libraryId }) => ({ libraryId: libraryId as LibraryId }),
         stringify: ({ libraryId }) => ({ libraryId })
     },
     beforeLoad: ({ params }) => {
+        // Quietly showing a different library would hide the bad url and leave
+        // the caller wondering why they are somewhere else.
         if (!isLibraryId(params.libraryId)) {
-            throw redirect({
-                to: "/app/library/$libraryId",
-                params: { libraryId: DEFAULT_LIBRARY_ID }
-            });
+            throw notFound();
         }
         // Client state, so the entry redirect can't restore it.
         const { openGroupId } = getUiState();

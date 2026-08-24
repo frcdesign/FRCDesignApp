@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { OpenUrlButton } from "../../common/open-url-button";
-import { PageError } from "../../app-common/app-zero-state";
+import { OpenUrlButton } from "../../components/open-url-button";
+import { PageError } from "../../components/app-zero-state";
 
 export const Route = createFileRoute("/_pages/safari-error")({
     component: SafariError

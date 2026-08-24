@@ -1,27 +1,34 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion } from "@mantine/core";
-import { IconBook, IconSearch } from "@tabler/icons-react";
+import { Accordion, Badge } from "@mantine/core";
+import { AppTitle } from "../../../../components/app-title";
+import { Books, MagnifyingGlass } from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
-    PrimaryColor
-} from "../../../../common/style-constants";
+    PrimaryColor,
+    SECTION_HEADER_HEIGHT,
+    TITLE_ICON_NUDGE
+} from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
-import { GroupCard } from "../../../../groups/group-card";
-import { ItemTable } from "../../../../cards/card-components";
-import { HeartIcon } from "../../../../favorites/favorite-button";
-import { SearchResults } from "../../../../search/search-results";
+import { GroupCard } from "../../../../features/library/components/group-card";
+import { ItemTable } from "../../../../features/library/components/card-components";
+import { HeartIcon } from "../../../../features/favorites/components/favorite-button";
+import { SearchResults } from "../../../../features/search/components/search-results";
 import {
     SectionError,
     SectionLoading
-} from "../../../../app-common/app-zero-state";
-import { RequireAccessLevel } from "../../../../api-utils/access-level";
-import { AddGroupButton } from "../../../../groups/add-group-menu";
-import { FavoritesList } from "../../../../favorites/favorites-list";
-import { useLibraryQuery } from "../../../../queries";
-import { getLibraryName, useLibraryId } from "../../../../api-utils/library";
-import { updateUiState, useUiState } from "../../../../api-utils/ui-state";
-import { useIsSignedIn } from "../../../../api-utils/access-level";
+} from "../../../../components/app-zero-state";
+import { RequireAccessLevel } from "../../../../features/auth/access-level";
+import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
+import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
+import { useLibraryQuery } from "../../../../features/library/queries";
+import {
+    getLibraryName,
+    getLibraryStatus,
+    useLibraryId
+} from "../../../../features/library/library-path";
+import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import { useIsSignedIn } from "../../../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -30,108 +37,133 @@ export const Route = createFileRoute("/app/library/$libraryId/")({
     }
 });
 
+/** One accordion section: what it shows, and where its open state lives. */
+interface Section {
+    value: string;
+    icon: ReactNode;
+    title: ReactNode;
+    panel: ReactNode;
+    opened: boolean;
+    setOpened: (opened: boolean) => void;
+}
+
 function HomeList(): ReactNode {
     const [uiState, setUiState] = useUiState();
+    // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
-    // Favorites are per-user and hidden until signed in.
     const isSignedIn = useIsSignedIn();
 
-    const isSearch = !!uiState.searchQuery;
-    const listKey = isSearch ? "search" : "library";
+    const sections: Section[] = [];
 
-    const value: string[] = [];
-    if (uiState.isFavoritesOpen) {
-        value.push("favorites");
+    // Favorites are per-user and hidden until signed in.
+    if (isSignedIn) {
+        sections.push({
+            value: "favorites",
+            icon: <HeartIcon size={IconSize.MEDIUM} />,
+            title: <AppTitle title="Favorites" />,
+            panel: <FavoritesList />,
+            opened: uiState.isFavoritesOpen,
+            setOpened: (opened) => setUiState({ isFavoritesOpen: opened })
+        });
     }
-    if (isSearch ? isSearchOpen : uiState.isLibraryOpen) {
-        value.push(listKey);
-    }
 
-    const handleChange = (newValue: string[]) => {
-        setUiState({ isFavoritesOpen: newValue.includes("favorites") });
-        if (isSearch) {
-            setIsSearchOpen(newValue.includes(listKey));
-        } else {
-            setUiState({ isLibraryOpen: newValue.includes(listKey) });
-        }
-    };
-
-    const favoritesAccordion = (
-        <Accordion.Item value="favorites">
-            <Accordion.Control icon={<HeartIcon />} className="interactive">
-                Favorites
-            </Accordion.Control>
-            <Accordion.Panel>
-                <FavoritesList />
-            </Accordion.Panel>
-        </Accordion.Item>
+    // One slot below favorites, showing search results while a query is active
+    // and the library otherwise. The differing `value` remounts it on the swap.
+    sections.push(
+        uiState.searchQuery
+            ? {
+                  value: "search",
+                  icon: (
+                      <MagnifyingGlass
+                          size={IconSize.MEDIUM}
+                          color={PrimaryColor.FILLED}
+                      />
+                  ),
+                  title: <AppTitle title="Search Results" />,
+                  panel: (
+                      <SearchResults
+                          query={uiState.searchQuery}
+                          filters={{ vendors: uiState.vendorFilters }}
+                      />
+                  ),
+                  opened: isSearchOpen,
+                  setOpened: setIsSearchOpen
+              }
+            : {
+                  value: "library",
+                  icon: (
+                      <Books
+                          size={IconSize.MEDIUM}
+                          color={PrimaryColor.FILLED}
+                      />
+                  ),
+                  title: <LibraryTitle libraryId={libraryId} />,
+                  panel: <LibraryList />,
+                  opened: uiState.isLibraryOpen,
+                  setOpened: (opened) => setUiState({ isLibraryOpen: opened })
+              }
     );
 
-    let childAccordion: ReactNode;
-    if (isSearch) {
-        childAccordion = (
-            <Accordion.Item key={listKey} value={listKey}>
-                <Accordion.Control
-                    className="interactive"
-                    icon={
-                        <IconSearch
-                            size={IconSize.MEDIUM}
-                            color={PrimaryColor.FILLED}
-                        />
-                    }
-                >
-                    Search Results
-                </Accordion.Control>
-                <Accordion.Panel>
-                    <SearchResults
-                        query={uiState.searchQuery}
-                        filters={{ vendors: uiState.vendorFilters }}
-                    />
-                </Accordion.Panel>
-            </Accordion.Item>
-        );
-    } else {
-        childAccordion = (
-            <Accordion.Item key={listKey} value={listKey}>
-                <Accordion.Control
-                    className="interactive"
-                    icon={
-                        <IconBook
-                            size={IconSize.MEDIUM}
-                            color={PrimaryColor.FILLED}
-                        />
-                    }
-                >
-                    {getLibraryName(libraryId)}
-                </Accordion.Control>
-                <Accordion.Panel>
-                    <LibraryList />
-                </Accordion.Panel>
-            </Accordion.Item>
-        );
-    }
+    const handleChange = (opened: string[]) => {
+        for (const section of sections) {
+            section.setOpened(opened.includes(section.value));
+        }
+    };
 
     return (
         <>
             <Accordion
                 multiple
                 variant="unstyled"
-                value={value}
+                value={sections
+                    .filter((section) => section.opened)
+                    .map((section) => section.value)}
                 onChange={handleChange}
                 styles={{
-                    content: {
-                        padding: 0,
-                        borderTop: BORDER,
-                        borderBottom: BORDER
-                    }
+                    // On the control, so a collapsed section still divides from
+                    // the next one; content closes off an open one.
+                    control: {
+                        borderBottom: BORDER,
+                        minHeight: SECTION_HEADER_HEIGHT
+                    },
+                    // Its own padding would outgrow that height.
+                    label: { paddingBlock: 0 },
+                    content: { padding: 0, borderBottom: BORDER },
+                    icon: TITLE_ICON_NUDGE
                 }}
             >
-                {isSignedIn && favoritesAccordion}
-                {childAccordion}
+                {sections.map((section) => (
+                    <Accordion.Item key={section.value} value={section.value}>
+                        <Accordion.Control
+                            icon={section.icon}
+                            className="interactive"
+                        >
+                            {section.title}
+                        </Accordion.Control>
+                        <Accordion.Panel>{section.panel}</Accordion.Panel>
+                    </Accordion.Item>
+                ))}
             </Accordion>
             <Outlet />
         </>
+    );
+}
+
+/** The library's name, and a badge when it is not simply supported. */
+function LibraryTitle({ libraryId }: { libraryId: string }): ReactNode {
+    const status = getLibraryStatus(libraryId);
+    return (
+        <AppTitle
+            title={getLibraryName(libraryId)}
+            rightSection={
+                status && (
+                    <Badge size="sm" variant="light">
+                        {status}
+                    </Badge>
+                )
+            }
+        />
     );
 }
 

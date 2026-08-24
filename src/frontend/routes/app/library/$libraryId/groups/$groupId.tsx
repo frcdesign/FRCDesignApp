@@ -1,41 +1,37 @@
-import { useAccessData } from "../../../../../api-utils/access-level";
+import { useAccessData } from "../../../../../features/auth/access-level";
+import { AppTitle } from "../../../../../components/app-title";
 import {
     createFileRoute,
     Outlet,
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Box, Button, Group, Text } from "@mantine/core";
-import {
-    IconAlertTriangle,
-    IconArrowBackUp,
-    IconArrowLeft
-} from "@tabler/icons-react";
+import { Box, Button, Group } from "@mantine/core";
+import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
 import {
     BORDER,
-    FontWeight,
-    IconColor,
-    IconSize
-} from "../../../../../common/style-constants";
+    IconSize,
+    SECTION_HEADER_HEIGHT
+} from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
-import { SearchResults } from "../../../../../search/search-results";
-import { GroupOut, Insertables } from "../../../../../../shared/api-models";
-import { hasEditorAccess } from "../../../../../../shared/types";
-import { filterInsertables } from "../../../../../search/filter";
-import { GroupMenuItems } from "../../../../../groups/group-card";
-import { InsertableCard } from "../../../../../cards/insertable-card";
-import { ItemTable } from "../../../../../cards/card-components";
-import { AppContextMenu, MenuButton } from "../../../../../app-common/app-menu";
-import { SearchCallout } from "../../../../../search/search-errors";
+import { SearchResults } from "../../../../../features/search/components/search-results";
+import { GroupOut, Insertables } from "@backend/features/library/contract";
+import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { filterInsertables } from "../../../../../features/search/filter";
+import { GroupMenuItems } from "../../../../../features/library/components/group-card";
+import { InsertableCard } from "../../../../../features/library/components/insertable-card";
+import { ItemTable } from "../../../../../features/library/components/card-components";
+import { AppContextMenu, MenuButton } from "../../../../../components/app-menu";
+import { SearchCallout } from "../../../../../features/search/components/search-errors";
 import {
     PageError,
     SectionError,
     SectionLoading
-} from "../../../../../app-common/app-zero-state";
-import { ClearFiltersButton } from "../../../../../settings/vendor-filters";
-import { useLibraryQuery } from "../../../../../queries";
-import { useLibraryId } from "../../../../../api-utils/library";
-import { useUiState, updateUiState } from "../../../../../api-utils/ui-state";
+} from "../../../../../components/app-zero-state";
+import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
+import { useLibraryQuery } from "../../../../../features/library/queries";
+import { useLibraryId } from "../../../../../features/library/library-path";
+import { useUiState, updateUiState } from "../../../../../lib/ui-state";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
@@ -73,7 +69,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        leftSection={<IconArrowBackUp size={IconSize.SMALL} />}
+                        leftSection={<ArrowUUpLeft size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
                                 to: "/app/library/$libraryId",
@@ -106,12 +102,7 @@ function GroupList(): ReactNode {
     return (
         <>
             <GroupHeaderRow group={group} />
-            <Box
-                style={{
-                    borderBottom: BORDER,
-                    borderTop: BORDER
-                }}
-            >
+            <Box style={{ borderBottom: BORDER }}>
                 {content}
                 <Outlet />
             </Box>
@@ -133,15 +124,17 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
                     params: { libraryId }
                 })
             }
-            p="sm"
+            px="md"
+            h={SECTION_HEADER_HEIGHT}
+            // Owned here, as an accordion control owns its own, so the row and
+            // its divider measure the same as a section header's.
+            style={{ borderBottom: BORDER }}
         >
-            <Group wrap="nowrap" justify="space-between">
-                <Group gap="sm">
-                    <IconArrowLeft size={IconSize.MEDIUM} />
-                    <Text size="md" fw={FontWeight.SEMI_BOLD} truncate>
-                        {group.name}
-                    </Text>
-                </Group>
+            <Group wrap="nowrap" justify="space-between" h="100%">
+                <AppTitle
+                    icon={<ArrowLeft size={IconSize.MEDIUM} />}
+                    title={group.name}
+                />
                 <MenuButton>{menuItems}</MenuButton>
             </Group>
         </Box>
@@ -183,9 +176,10 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionError
                 icon={
-                    <IconAlertTriangle
-                        size={IconSize.LARGE}
-                        color={IconColor.YELLOW}
+                    <Box
+                        component={Warning}
+                        size={IconSize.SECTION}
+                        c="yellow"
                     />
                 }
                 title="All elements are hidden by filters"

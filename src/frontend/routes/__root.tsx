@@ -9,11 +9,12 @@ import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
-import { queryClient } from "../query-client";
+import { useColorScheme } from "@mantine/hooks";
+import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
-import { getColorTheme } from "../api-utils/onshape-params";
-import { DEFAULT_LIBRARY_ID, DEFAULT_SETTINGS } from "../../shared/types";
-import { NotFoundError, RootCrash } from "../app/root-error";
+import { getColorTheme } from "../lib/onshape-params";
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
+import { NotFoundError, RootCrash } from "../components/root-error";
 
 export const Route = createRootRoute({
     component: RootComponent,
@@ -25,16 +26,22 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    const search = useSearch({ strict: false });
     // Both come off the url — the entry redirect seeds them and a switch
     // rewrites them — so the first paint is already the right colors.
+    const search = useSearch({ strict: false });
     const params = useParams({ strict: false });
 
-    const libraryId = params.libraryId ?? DEFAULT_LIBRARY_ID;
-    const theme = useMemo(() => createAppTheme(libraryId), [libraryId]);
+    const theme = useMemo(
+        () => createAppTheme(params.libraryId ?? DEFAULT_SETTINGS.libraryId),
+        [params.libraryId]
+    );
+
+    // Onshape puts its own scheme on the url when it launches us; standalone
+    // there is none, and the OS is what "system" means.
+    const osColorScheme = useColorScheme();
     const colorTheme = getColorTheme(
         search.theme ?? DEFAULT_SETTINGS.theme,
-        search.systemTheme
+        search.systemTheme ?? osColorScheme
     );
 
     return (
@@ -47,6 +54,9 @@ function RootComponent(): ReactNode {
                         position="bottom-center"
                         limit={3}
                         autoClose={4000}
+                        // Otherwise pinned at 440px, wrapping a message with
+                        // an action button. Still clamped to a narrow viewport.
+                        containerWidth="max-content"
                     />
                     <Outlet />
                 </ModalsProvider>

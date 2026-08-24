@@ -1,5 +1,9 @@
 {
     "compilerOptions": {
+        "paths": {
+            "@backend/*": ["./src/backend/*"],
+            "@frontend/*": ["./src/frontend/*"]
+        },
         "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
         "target": "es2023",
         "lib": ["ES2023", "DOM"],
@@ -18,10 +22,5 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true
     },
-    "include": [
-        "src/**/*.test.ts",
-        "src/**/*.test.tsx",
-        "src/__test_utils__",
-        "src/shared"
-    ]
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__test_utils__"]
 }

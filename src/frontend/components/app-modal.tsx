@@ -1,0 +1,32 @@
+import { Group, type MantineSpacing, Stack } from "@mantine/core";
+import { PropsWithChildren, ReactNode } from "react";
+import { BORDER, CHROME_BACKGROUND } from "../lib/style-constants";
+
+interface AppModalBodyProps extends PropsWithChildren {
+    /** Space between children; content that spaces itself should pass 0. */
+    gap?: MantineSpacing;
+}
+
+/** A modal's content, padded away from the chrome framing it. */
+export function AppModalBody(props: AppModalBodyProps): ReactNode {
+    return (
+        <Stack p="sm" gap={props.gap ?? "sm"}>
+            {props.children}
+        </Stack>
+    );
+}
+
+/** A modal's actions. A lone child sits at the end; two split the row. */
+export function AppModalFooter(props: PropsWithChildren): ReactNode {
+    return (
+        <Group
+            justify="space-between"
+            wrap="nowrap"
+            p="sm"
+            bg={CHROME_BACKGROUND}
+            style={{ borderTop: BORDER }}
+        >
+            {props.children}
+        </Group>
+    );
+}

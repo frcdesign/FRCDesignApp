@@ -15,7 +15,6 @@ import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-err
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
-import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdIndexRouteImport } from './routes/app/library/$libraryId/index'
 import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
@@ -50,11 +49,6 @@ const PagesCookieErrorRoute = PagesCookieErrorRouteImport.update({
   path: '/cookie-error',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PagesBetaCompleteRoute = PagesBetaCompleteRouteImport.update({
-  id: '/_pages/beta-complete',
-  path: '/beta-complete',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppLibraryLibraryIdRouteRoute =
   AppLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
@@ -77,7 +71,6 @@ const AppLibraryLibraryIdGroupsGroupIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
-  '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
@@ -89,7 +82,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
-  '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
@@ -101,7 +93,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
-  '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
@@ -115,7 +106,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
-    | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
     | '/license'
@@ -127,7 +117,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
-    | '/beta-complete'
     | '/cookie-error'
     | '/grant-denied'
     | '/license'
@@ -138,7 +127,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
-    | '/_pages/beta-complete'
     | '/_pages/cookie-error'
     | '/_pages/grant-denied'
     | '/_pages/license'
@@ -151,7 +139,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
-  PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
   PagesLicenseRoute: typeof PagesLicenseRoute
@@ -200,13 +187,6 @@ declare module '@tanstack/react-router' {
       path: '/cookie-error'
       fullPath: '/cookie-error'
       preLoaderRoute: typeof PagesCookieErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_pages/beta-complete': {
-      id: '/_pages/beta-complete'
-      path: '/beta-complete'
-      fullPath: '/beta-complete'
-      preLoaderRoute: typeof PagesBetaCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/library/$libraryId': {
@@ -265,7 +245,6 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
-  PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,
   PagesLicenseRoute: PagesLicenseRoute,

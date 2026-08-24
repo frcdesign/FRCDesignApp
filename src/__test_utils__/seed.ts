@@ -1,4 +1,4 @@
-import { type Db } from "../backend/db";
+import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
@@ -6,13 +6,14 @@ import {
     insertables,
     libraries,
     users
-} from "../shared/schema";
+} from "@backend/db/schema";
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../shared/configuration-models";
-import { type ElementPath, type InstancePath } from "../shared/onshape-path";
-import { ElementType, LibraryId } from "../shared/types";
+} from "@backend/features/configurations/models";
+import { type ElementPath, type InstancePath } from "@backend/lib/onshape/path";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { LibraryId } from "@backend/features/library/library-id";
 
 export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
 export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId
@@ -119,9 +120,12 @@ export async function seedInsertable(
 }
 
 /** Seeds the standard part-studio insertable (ensures library + group). */
-export async function seedPartStudio(db: Db): Promise<string> {
+export async function seedPartStudio(
+    db: Db,
+    overrides: Partial<typeof insertables.$inferInsert> = {}
+): Promise<string> {
     await seedGroup(db);
-    return seedInsertable(db);
+    return seedInsertable(db, overrides);
 }
 
 /** Seeds the standard assembly insertable (ensures library + group). */

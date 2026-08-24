@@ -1,166 +1,54 @@
-import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type {
-    AddGroupParams,
-    LoadLibraryParams,
-    ThumbnailWorkflowParams
-} from "./load/workflows";
-import { LibraryId, type AccessLevel } from "../shared/types";
-import { type OAuthApi } from "./onshape-api/onshape-api";
-import z from "zod";
-import { HTTPException } from "hono/http-exception";
-import { HttpStatus } from "http-status-ts";
-
-export interface AppBindings {
-    DB: D1Database;
-    KV: KVNamespace;
-    ASSETS: Fetcher;
-    /** Thumbnails and search indexes; prefixes keep them apart. */
-    BLOB: R2Bucket;
-    LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
-    ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
-    /** Renders a configuration's thumbnails outside a request; see ThumbnailWorkflow. */
-    THUMBNAIL_WORKFLOW: Workflow<ThumbnailWorkflowParams>;
-    ADMIN_TEAM: string;
-    ACCESS_LEVEL_OVERRIDE?: string;
-    /** Testing-only: treat requests as signed in with a fake user. Not for production. */
-    FORCE_SIGNED_IN?: string;
-}
-
-interface AppVariables {
-    /** Internal cache for {@link getOnshapeApi} in auth.ts. */
-    onshapeApi?: OAuthApi;
-    /** Internal cache for isSignedIn in sign-in-utils.ts. */
-    signedIn?: boolean;
-    /** Set by {@link setCacheTtl}; read by {@link cacheMiddleware}. */
-    cacheTtl?: number;
-    /** Injected getters — see {@link AppServices} / `createApp`. */
-    getOnshapeApi: () => Promise<OAuthApi>;
-    getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
-    isAuthenticated: () => Promise<boolean>;
-}
-
-export interface AppContextEnv {
-    Bindings: AppBindings;
-    Variables: AppVariables;
-}
-
-export type AppContext = Context<AppContextEnv>;
-
 /**
- * Per-request dependencies injected into the app.
+ * Composition root: binds the caller onto every request and mounts each
+ * feature's routes. Everything it wires lives in a feature or in lib.
  */
-export interface AppServices {
-    getOnshapeApi: () => Promise<OAuthApi>;
-    getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
-    isAuthenticated: () => Promise<boolean>;
-}
+import { accessRoutes, authRoutes } from "./features/auth/routes";
+import { buildStatusRoutes } from "./features/build-checker/routes";
+import { configurationRoutes } from "./features/configurations/routes";
+import { entryRoutes } from "./features/entry/routes";
+import { favoriteRoutes } from "./features/favorites/routes";
+import { groupRoutes } from "./features/library/groups/routes";
+import { insertableRoutes } from "./features/library/insertables/routes";
+import { libraryRoutes } from "./features/library/routes";
+import { settingsRoutes } from "./features/settings/routes";
+import { thumbnailRoutes } from "./features/thumbnails/routes";
+import { logger } from "hono/logger";
+import { cacheMiddleware } from "./lib/cache";
+import { bindCaller, getApp, type CallerFactory } from "./lib/context";
+import { errorHandler } from "./lib/errors";
 
-export type AppServicesFactory = (c: AppContext) => AppServices;
+const apiRoutes = [
+    accessRoutes,
+    settingsRoutes,
+    libraryRoutes,
+    groupRoutes,
+    insertableRoutes,
+    configurationRoutes,
+    thumbnailRoutes,
+    favoriteRoutes,
+    buildStatusRoutes
+];
 
-export function getApp() {
-    return new Hono<AppContextEnv>();
-}
+export function createApp(makeCaller: CallerFactory) {
+    const app = getApp();
 
-export function libraryRoute(): string {
-    return "/library/:libraryId";
-}
+    // Reaches Workers Logs, which wrangler.jsonc enables. Only /init, /api/*
+    // and /auth/* run the Worker, so static assets are not logged.
+    app.use("*", logger());
 
-export function getLibraryParam(c: AppContext): LibraryId {
-    const libraryId = c.req.param("libraryId");
-    const parsed = z.enum(LibraryId).safeParse(libraryId);
-    if (!parsed.success) {
-        throw new HTTPException(HttpStatus.BAD_REQUEST, {
-            message: "Invalid libraryId"
-        });
-    }
-    return parsed.data;
-}
+    app.use("*", bindCaller(makeCaller));
 
-/** A year — a versioned url's content never changes, only its version does. */
-const IMMUTABLE_CACHE_TTL = 365 * 24 * 3600;
-
-const NO_STORE = "private, no-store";
-
-export enum CachePolicy {
-    /** Never stored, anywhere. */
-    NO_CACHE = "no-cache",
-    /** Immutable, but kept out of shared caches. */
-    PRIVATE_CACHE = "private",
-    /** Immutable and the same for every caller. */
-    PUBLIC_CACHE = "public"
-}
-
-export function immutableCacheControl(
-    policy: CachePolicy.PRIVATE_CACHE | CachePolicy.PUBLIC_CACHE
-): string {
-    return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
-}
-
-const cacheVersionSchema = z.object({ v: z.string().min(1) });
-
-interface CacheOptions {
-    /** Pass false only when the url is immutable without a `?v=`. */
-    versioned?: boolean;
-}
-
-/** Overrides the route's immutable default for a body its url does not pin. */
-export function setCacheTtl(c: AppContext, maxAge: number): void {
-    c.set("cacheTtl", maxAge);
-}
-
-/** Declares how a route's response may be cached, and enforces what that takes. */
-export function cacheMiddleware(
-    policy: CachePolicy = CachePolicy.NO_CACHE,
-    options: CacheOptions = {}
-): MiddlewareHandler<AppContextEnv> {
-    if (policy === CachePolicy.NO_CACHE) {
-        return async (c, next) => {
-            await next();
-            c.header("Cache-Control", NO_STORE);
-        };
+    for (const routes of apiRoutes) {
+        app.route("/api", routes);
     }
 
-    const cacheControl = immutableCacheControl(policy);
-    const versioned = options.versioned ?? true;
+    // Per-request redirects carrying OAuth state; never reusable.
+    app.use("/auth/*", cacheMiddleware());
+    app.route("/auth", authRoutes);
 
-    return async (c, next) => {
-        if (versioned && !cacheVersionSchema.safeParse(c.req.query()).success) {
-            throw new HTTPException(HttpStatus.BAD_REQUEST, {
-                message: "Missing cache version"
-            });
-        }
-        await next();
-        // A miss must stay retryable, so only store what succeeded.
-        if (!c.res.ok) {
-            c.header("Cache-Control", NO_STORE);
-            return;
-        }
-        const ttl = c.get("cacheTtl");
-        c.header(
-            "Cache-Control",
-            ttl === undefined ? cacheControl : `${policy}, max-age=${ttl}`
-        );
-    };
-}
+    app.route("/", entryRoutes);
 
-export function insertableRoute(): string {
-    return "/insertable/:insertableId";
-}
+    app.onError(errorHandler);
 
-export function getInsertableParam(c: AppContext): string {
-    const id = c.req.param("insertableId");
-    if (!id) throw new Error("Missing insertableId route param");
-    return id;
-}
-
-export function groupRoute(): string {
-    return "/group/:groupId";
-}
-
-export function getGroupParam(c: AppContext): string {
-    const id = c.req.param("groupId");
-    if (!id) throw new Error("Missing groupId route param");
-    return id;
+    return app;
 }

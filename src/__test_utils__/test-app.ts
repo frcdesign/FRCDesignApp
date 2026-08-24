@@ -1,5 +1,5 @@
-import { createApp } from "../backend/create-app";
-import { AccessLevel } from "../shared/types";
+import { createApp } from "@backend/app";
+import { AccessLevel } from "@backend/features/auth/access-level";
 import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 
 export interface TestAppOptions {
@@ -19,8 +19,8 @@ export interface TestAppOptions {
 }
 
 /**
- * The real app from `createApp`, with Onshape, userId and access level mocked.
- * Drive it with `app.request(path, init, env)`.
+ * The real app from `createApp`, with a stub caller in place of
+ * `productionCaller`. Drive it with `app.request(path, init, env)`.
  */
 export function createTestApp(options: TestAppOptions = {}) {
     const signedIn = options.signedIn ?? true;

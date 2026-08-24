@@ -8,13 +8,12 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { OnshapeParams } from "../../api-utils/onshape-params";
-import { AppNavbar } from "../../app/app-navbar";
-import { SectionLoading } from "../../app-common/app-zero-state";
-import { useMessageListener } from "../../api-utils/messages";
-import { useSignInToast } from "../../api-utils/sign-in";
-import { RootAppError } from "../../app/root-error";
-import { PrimaryColor } from "../../common/style-constants";
+import { OnshapeParams } from "../../lib/onshape-params";
+import { AppNavbar } from "../../components/app-navbar";
+import { SectionLoading } from "../../components/app-zero-state";
+import { useMessageListener } from "../../lib/messages";
+import { useSignInToast } from "../../features/auth/sign-in";
+import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
     component: App,
@@ -37,7 +36,7 @@ function App() {
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
-            <AppShell.Header bg={PrimaryColor.FILLED} c={PrimaryColor.CONTRAST}>
+            <AppShell.Header>
                 <div ref={headerRef}>
                     <AppNavbar />
                 </div>
