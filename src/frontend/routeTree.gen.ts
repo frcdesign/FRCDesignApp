@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppBoltHelperRouteImport } from './routes/app/bolt-helper'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppBoltHelperRoute = AppBoltHelperRouteImport.update({
+  id: '/bolt-helper',
+  path: '/bolt-helper',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/app/bolt-helper': typeof AppBoltHelperRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/app/bolt-helper': typeof AppBoltHelperRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
+  '/app/bolt-helper': typeof AppBoltHelperRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/app/bolt-helper'
     | '/app/library/$libraryId'
     | '/app/library/$libraryId/'
     | '/app/library/$libraryId/groups/$groupId'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/app/bolt-helper'
     | '/app/library/$libraryId'
     | '/app/library/$libraryId/groups/$groupId'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
+    | '/app/bolt-helper'
     | '/app/library/$libraryId'
     | '/app/library/$libraryId/'
     | '/app/library/$libraryId/groups/$groupId'
@@ -160,6 +172,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/app/bolt-helper': {
+      id: '/app/bolt-helper'
+      path: '/bolt-helper'
+      fullPath: '/app/bolt-helper'
+      preLoaderRoute: typeof AppBoltHelperRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -231,10 +250,12 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
   )
 
 interface AppRouteRouteChildren {
+  AppBoltHelperRoute: typeof AppBoltHelperRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppBoltHelperRoute: AppBoltHelperRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }
 

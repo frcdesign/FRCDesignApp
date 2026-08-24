@@ -3,6 +3,7 @@
  * feature's routes. Everything it wires lives in a feature or in lib.
  */
 import { accessRoutes, authRoutes } from "./features/auth/routes";
+import { boltHelperRoutes } from "./features/bolt-helper/routes";
 import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
 import { entryRoutes } from "./features/entry/routes";
@@ -26,7 +27,8 @@ const apiRoutes = [
     configurationRoutes,
     thumbnailRoutes,
     favoriteRoutes,
-    buildStatusRoutes
+    buildStatusRoutes,
+    boltHelperRoutes
 ];
 
 export function createApp(makeCaller: CallerFactory) {

@@ -29,7 +29,7 @@ export function individualOccurrenceQuery(path: string[]): object {
 export function featureOccurrenceQuery(
     featureId: string,
     path: string[] = [],
-    queryData = ""
+    queryData?: string
 ): object {
     return {
         btType: "BTMFeatureQueryWithOccurrence-157",
@@ -40,6 +40,32 @@ export function featureOccurrenceQuery(
 }
 
 export const ORIGIN_QUERY = featureOccurrenceQuery("Origin", [], "ORIGIN_Z");
+
+/**
+ * A query for an entity/selection in a part studio.
+ */
+export function inferenceQuery(
+    selectionId: string,
+    path: string[] = []
+): object {
+    return {
+        btType: "BTMInferenceQueryWithOccurrence-1083",
+        inferenceType: "CENTER",
+        entityQuery: `query=qTransient("${selectionId}");`,
+        path,
+        deterministicIds: [selectionId]
+    };
+}
+
+export function individualCreatedByQuery(featureId: string) {
+    return {
+        btType: "BTMIndividualCreatedByQuery-137",
+        queryString: `query = qBodyType(qCreatedBy(id + "${featureId}", EntityType.BODY), BodyType.MATE_CONNECTOR);`,
+        featureId,
+        bodyType: "MATE_CONNECTOR",
+        entityType: "BODY"
+    };
+}
 
 /** A builder for fasten mate features. */
 export class FastenMateBuilder {
@@ -85,19 +111,21 @@ export class FastenMateBuilder {
 export function fastenMate(
     name: string,
     queries: Iterable<object>,
-    mateConnectors?: Iterable<object>
+    mateConnectors?: object[]
 ): object {
-    const connectors = mateConnectors ? [...mateConnectors] : [];
-    return {
+    const result: Record<string, unknown> = {
         btType: "BTMMate-64",
         featureType: "mate",
         name,
         parameters: [
             mateTypeParameter("FASTENED"),
             queryParameter("mateConnectorsQuery", queries)
-        ],
-        ...(connectors.length > 0 && { mateConnectors: connectors })
+        ]
     };
+    if (mateConnectors && mateConnectors.length > 0) {
+        result.subFeatures = mateConnectors;
+    }
+    return result;
 }
 
 export function queryParameter(
@@ -140,11 +168,14 @@ export function groupMate(name: string, queries: Iterable<object>): object {
     };
 }
 
-export function mateConnector(
+/**
+ * Constructs a mate connector feature.
+ */
+export function makeMateConnector(
     name: string,
     originQuery: object,
     implicit = false
-): object {
+): Record<string, unknown> {
     return {
         btType: "BTMMateConnector-66",
         name,
@@ -162,6 +193,8 @@ export function mateConnector(
 }
 
 /** Constructs a mate connector that is implicitly owned by another mate. */
-export function implicitMateConnector(originQuery: object): object {
-    return mateConnector("Mate connector", originQuery, true);
+export function implicitMateConnector(
+    originQuery: object
+): Record<string, unknown> {
+    return makeMateConnector("Mate connector", originQuery, true);
 }

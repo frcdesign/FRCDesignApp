@@ -18,7 +18,7 @@ import {
     PrimaryColor
 } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useMatch, useNavigate } from "@tanstack/react-router";
 
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
@@ -35,10 +35,11 @@ import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 
 /**
- * Provides top-level navigation for the app: a row of library tabs with the
- * brand and settings alongside, over a row holding search and its filters.
+ * Provides top-level navigation for the app: a row of tabs with the brand and
+ * settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
+    const activeTab = useActiveTab();
     return (
         <Stack gap={0}>
             {/* Stretched so the tabs run the full height and their underline
@@ -52,17 +53,21 @@ export function AppNavbar(): ReactNode {
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />
-                <LibraryTabs />
+                <AppTabs activeTab={activeTab} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <JobIndicator />
                     <SignInButton />
                     <SettingsButton />
                 </Group>
             </Group>
-            <Group gap="xs" p="sm" wrap="nowrap">
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {/* Search covers the library, so it has nothing to offer the
+                tabs that aren't one. */}
+            {activeTab !== BOLT_HELPER_TAB && (
+                <Group gap="xs" p="sm" wrap="nowrap">
+                    <SearchBar />
+                    <VendorMenu />
+                </Group>
+            )}
         </Stack>
     );
 }
@@ -143,9 +148,21 @@ function FrcDesignBookIcon(): ReactNode {
     );
 }
 
-/** Switches libraries; the url is what actually selects one. */
-function LibraryTabs(): ReactNode {
-    const currentLibraryId = useLibraryId();
+/** The one tab that isn't a library; its own route holds the tool. */
+const BOLT_HELPER_TAB = "bolt-helper";
+
+/** Which tab the url has open, libraries aside. */
+function useActiveTab(): string {
+    const libraryId = useLibraryId();
+    const boltHelperMatch = useMatch({
+        from: "/app/bolt-helper",
+        shouldThrow: false
+    });
+    return boltHelperMatch ? BOLT_HELPER_TAB : libraryId;
+}
+
+/** Switches tabs; the url is what actually selects one. */
+function AppTabs({ activeTab }: { activeTab: string }): ReactNode {
     const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
@@ -158,10 +175,14 @@ function LibraryTabs(): ReactNode {
 
     return (
         <Tabs
-            value={currentLibraryId}
+            value={activeTab}
             onMouseEnter={prefetchVersions}
             onChange={(value) => {
-                if (!value || value === currentLibraryId) {
+                if (!value || value === activeTab) {
+                    return;
+                }
+                if (value === BOLT_HELPER_TAB) {
+                    void navigate({ to: "/app/bolt-helper" });
                     return;
                 }
                 const libraryId = value as LibraryId;
@@ -192,12 +213,13 @@ function LibraryTabs(): ReactNode {
                 }
             }}
         >
-            <Tabs.List aria-label="Libraries">
+            <Tabs.List aria-label="Libraries and tools">
                 {Object.values(LibraryId).map((libraryId) => (
                     <Tabs.Tab key={libraryId} value={libraryId}>
                         {getLibraryName(libraryId)}
                     </Tabs.Tab>
                 ))}
+                <Tabs.Tab value={BOLT_HELPER_TAB}>Bolt Helper</Tabs.Tab>
             </Tabs.List>
         </Tabs>
     );

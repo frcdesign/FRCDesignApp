@@ -1,5 +1,11 @@
 /** Utilities for working with queries in part studios and assemblies. */
 
+// Example (DO NOT DELETE):
+// { queryType : UNION , subqueries : [ { disambiguationData : [ { disambiguationType : ORIGINAL_DEPENDENCY , originals : [ { entityType : EDGE , historyType : CREATION , operationId : [ F86ylNPrzWLomm9_1.wireOp ] , queryType : SKETCH_ENTITY , sketchEntityId : rGNlyQ5ipaBS } ] } ] , entityType : EDGE , historyType : CREATION , isStart : false , operationId : [ FHCYmesA2a3t0Lm_1.opExtrude ] , queryType : CAP_EDGE } ] }
+// query=makeQuery(makeId(\"FHCYmesA2a3t0Lm_1.opExtrude\"), \"CAP_EDGE\", EntityType.EDGE, { \"isStart\" : false, \"disambiguationData\" : [{ \"disambiguationType\" : \"ORIGINAL_DEPENDENCY\", \"originals\" : [makeQuery(makeId(\"F86ylNPrzWLomm9_1.wireOp\"), \"SKETCH_ENTITY\", EntityType.EDGE, { \"sketchEntityId\" : \"rGNlyQ5ipaBS\" })] } ] });
+
+// query=qTransient("JH1");
+
 /** Parses a query object into a FeatureScript query expression string. */
 export function parseQuery(query: Record<string, unknown>): string {
     if (query.queryType === "UNION") {
