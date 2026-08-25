@@ -107,7 +107,8 @@ export function fastenMate(
         parameters: [
             mateTypeParameter("FASTENED"),
             queryParameter("mateConnectorsQuery", queries)
-        ]
+        ],
+        mateConnectorFeature: true
     };
     if (mateConnectors && mateConnectors.length > 0) {
         result.mateConnectors = mateConnectors;

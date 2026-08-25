@@ -1,0 +1,53 @@
+{
+    "btType": "BTMMate-64",
+    "featureType": "mate",
+    "name": "Bolt 1",
+    "parameters": [
+        {
+            "btType": "BTMParameterEnum-145",
+            "parameterId": "mateType",
+            "value": "FASTENED",
+            "enumName": "Mate type"
+        },
+        {
+            "btType": "BTMParameterQueryWithOccurrenceList-67",
+            "parameterId": "mateConnectorsQuery",
+            "queries": [
+                {
+                    "btType": "BTMFeatureQueryWithOccurrence-157",
+                    "path": [],
+                    "featureId": "00000000000000000"
+                }
+            ]
+        }
+    ],
+    "mateConnectors": [
+        {
+            "btType": "BTMMateConnector-66",
+            "name": "Mate connector",
+            "implicit": true,
+            "parameters": [
+                {
+                    "btType": "BTMParameterEnum-145",
+                    "value": "ON_ENTITY",
+                    "enumName": "Origin type",
+                    "parameterId": "originType"
+                },
+                {
+                    "btType": "BTMParameterQueryWithOccurrenceList-67",
+                    "parameterId": "originQuery",
+                    "queries": [
+                        {
+                            "btType": "BTMInferenceQueryWithOccurrence-1083",
+                            "inferenceType": "CENTER",
+                            "entityQuery": "query=qTransient(\"JH1\");",
+                            "path": ["Mgwzx91M5PBOcHU1C"],
+                            "deterministicIds": ["JH1"]
+                        }
+                    ]
+                }
+            ],
+            "featureId": "00000000000000000"
+        }
+    ]
+}

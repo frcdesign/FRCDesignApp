@@ -176,7 +176,7 @@ export function addAssemblyFeature(
             endRoute: "features",
             featureId
         }),
-        { body: { feature } }
+        { body: { feature, rejectMicroversionSkew: false } }
     );
 }
 
