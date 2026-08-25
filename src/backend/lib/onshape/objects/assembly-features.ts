@@ -57,20 +57,9 @@ export function inferenceQuery(
     };
 }
 
-export function individualCreatedByQuery(featureId: string) {
-    return {
-        btType: "BTMIndividualCreatedByQuery-137",
-        queryString: `query = qBodyType(qCreatedBy(id + "${featureId}", EntityType.BODY), BodyType.MATE_CONNECTOR);`,
-        featureId,
-        bodyType: "MATE_CONNECTOR",
-        entityType: "BODY"
-    };
-}
-
 /** A builder for fasten mate features. */
 export class FastenMateBuilder {
     private readonly mateConnectors: Record<string, unknown>[] = [];
-    private readonly queries: object[];
 
     /**
      * @param queries Initial queries. Note Onshape has a tendency to preserve the location of the
@@ -78,10 +67,8 @@ export class FastenMateBuilder {
      */
     constructor(
         private readonly name: string,
-        queries: Iterable<object> = []
-    ) {
-        this.queries = [...queries];
-    }
+        private readonly queries: object[] = []
+    ) {}
 
     addQuery(query: object): this {
         this.queries.push(query);
@@ -110,7 +97,7 @@ export class FastenMateBuilder {
  */
 export function fastenMate(
     name: string,
-    queries: Iterable<object>,
+    queries: object[],
     mateConnectors?: object[]
 ): object {
     const result: Record<string, unknown> = {
@@ -123,19 +110,16 @@ export function fastenMate(
         ]
     };
     if (mateConnectors && mateConnectors.length > 0) {
-        result.subFeatures = mateConnectors;
+        result.mateConnectors = mateConnectors;
     }
     return result;
 }
 
-export function queryParameter(
-    parameterId: string,
-    queries: Iterable<object>
-): object {
+export function queryParameter(parameterId: string, queries: object[]): object {
     return {
         btType: "BTMParameterQueryWithOccurrenceList-67",
         parameterId,
-        queries: [...queries]
+        queries
     };
 }
 
@@ -159,7 +143,7 @@ export function primaryAxisParameter(
     };
 }
 
-export function groupMate(name: string, queries: Iterable<object>): object {
+export function groupMate(name: string, queries: object[]): object {
     return {
         btType: "BTMMateGroup-65",
         name,
