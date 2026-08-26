@@ -5,9 +5,7 @@ import {
     countDistinct,
     eq,
     gte,
-    isNull,
     lte,
-    or,
     sql,
     sum
 } from "drizzle-orm";
@@ -33,6 +31,7 @@ import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/models";
+import { SPARKLINE_DAYS } from "./contract";
 import type {
     AnalyticsOverviewOut,
     AnalyticsTotals,
@@ -162,12 +161,11 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
 
-    // The union of what the library holds and what has ever been inserted, so
-    // a part nobody has used is still listed (at zero) and a part that has left
-    // the library still shows its history. The two halves are disjoint by
-    // construction: the first is visible parts, the second is everything with
-    // usage that is not a visible part.
-    const [current, departed] = await Promise.all([
+    // Driven off the library rather than the stats table, so a part nobody has
+    // used is still listed (at zero) and a part that has left the library is
+    // not listed at all — its usage is history about something you can no
+    // longer open, which only pads the table.
+    const [rows, series] = await Promise.all([
         db
             .select({
                 elementId: insertables.elementId,
@@ -177,6 +175,7 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
                 name: insertables.name,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
+                isVisible: insertables.isVisible,
                 groupName: group.name
             })
             .from(insertables)
@@ -187,44 +186,14 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
                     eq(insertableStats.elementId, insertables.elementId)
                 )
             )
-            .leftJoin(group, eq(group.id, insertables.groupId))
-            .where(
-                and(
-                    eq(insertables.libraryId, libraryId),
-                    eq(insertables.isVisible, true)
-                )
-            )
+            // `groupId` is a non-null FK that cascades, so a row always matches.
+            .innerJoin(group, eq(group.id, insertables.groupId))
+            .where(eq(insertables.libraryId, libraryId))
             .all(),
-        db
-            .select({
-                elementId: insertableStats.elementId,
-                insertCount: insertableStats.insertCount,
-                lastInsertedAt: insertableStats.lastInsertedAt,
-                insertableId: insertables.id,
-                name: insertables.name,
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                groupName: group.name
-            })
-            .from(insertableStats)
-            .leftJoin(
-                insertables,
-                and(
-                    eq(insertables.libraryId, insertableStats.libraryId),
-                    eq(insertables.elementId, insertableStats.elementId)
-                )
-            )
-            .leftJoin(group, eq(group.id, insertables.groupId))
-            .where(
-                and(
-                    eq(insertableStats.libraryId, libraryId),
-                    or(isNull(insertables.id), eq(insertables.isVisible, false))
-                )
-            )
-            .all()
+        getPartSparklines(db, libraryId)
     ]);
 
-    const out: PartUsageOut[] = [...current, ...departed]
+    const out: PartUsageOut[] = rows
         .map((row) => ({
             elementId: row.elementId,
             insertableId: row.insertableId,
@@ -232,17 +201,68 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
             groupName: row.groupName,
             documentId: row.documentId,
             versionId: row.versionId,
+            isVisible: row.isVisible,
             insertCount: row.insertCount ?? 0,
-            lastInsertedAt: row.lastInsertedAt
+            lastInsertedAt: row.lastInsertedAt,
+            recent: series.get(row.elementId) ?? emptySparkline()
         }))
         // Most used first; unused parts fall to the bottom in name order.
         .sort(
             (a, b) =>
-                b.insertCount - a.insertCount ||
-                (a.name ?? a.elementId).localeCompare(b.name ?? b.elementId)
+                b.insertCount - a.insertCount || a.name.localeCompare(b.name)
         );
     return c.json(out);
 });
+
+function emptySparkline(): number[] {
+    return Array.from({ length: SPARKLINE_DAYS }, () => 0);
+}
+
+/**
+ * Daily insert counts per part over the trailing window, as dense arrays the
+ * table can plot directly.
+ *
+ * Read from the raw event log rather than a rollup: this is the one query
+ * narrow enough not to need one, since it is a single library over a month.
+ */
+async function getPartSparklines(
+    db: Db,
+    libraryId: LibraryId
+): Promise<Map<string, number[]>> {
+    const now = Date.now();
+    const days = Array.from({ length: SPARKLINE_DAYS }, (_, i) =>
+        toDayKey(now - (SPARKLINE_DAYS - 1 - i) * 24 * 3600 * 1000)
+    );
+    const dayIndex = new Map(days.map((day, i) => [day, i]));
+
+    const rows = await db
+        .select({
+            elementId: events.elementId,
+            day: events.day,
+            count: count()
+        })
+        .from(events)
+        .where(
+            and(
+                eq(events.libraryId, libraryId),
+                eq(events.type, EventType.INSERT),
+                gte(events.day, days[0])
+            )
+        )
+        .groupBy(events.elementId, events.day)
+        .all();
+
+    const byElement = new Map<string, number[]>();
+    for (const row of rows) {
+        if (row.elementId === null) continue;
+        const index = dayIndex.get(row.day);
+        if (index === undefined) continue;
+        const counts = byElement.get(row.elementId) ?? emptySparkline();
+        counts[index] = row.count;
+        byElement.set(row.elementId, counts);
+    }
+    return byElement;
+}
 
 /** GET /api/analytics/unused/library/:libraryId */
 analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
@@ -266,6 +286,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             groupName: group.name,
+            isVisible: insertables.isVisible,
             insertCount: insertableStats.insertCount,
             lastInsertedAt: insertableStats.lastInsertedAt
         })
@@ -277,7 +298,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
                 eq(insertableStats.elementId, insertables.elementId)
             )
         )
-        .leftJoin(group, eq(group.id, insertables.groupId))
+        .innerJoin(group, eq(group.id, insertables.groupId))
         .where(
             and(
                 eq(insertables.libraryId, libraryId),
@@ -291,6 +312,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
         )
         .all();
 
+    const series = await getPartSparklines(db, libraryId);
     const out: PartUsageOut[] = rows.map((row) => ({
         elementId: row.elementId,
         insertableId: row.insertableId,
@@ -298,8 +320,10 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
         groupName: row.groupName,
         documentId: row.documentId,
         versionId: row.versionId,
+        isVisible: row.isVisible,
         insertCount: row.insertCount ?? 0,
-        lastInsertedAt: row.lastInsertedAt
+        lastInsertedAt: row.lastInsertedAt,
+        recent: series.get(row.elementId) ?? emptySparkline()
     }));
     return c.json(out);
 });

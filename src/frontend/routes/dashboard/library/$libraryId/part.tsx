@@ -3,16 +3,16 @@ import {
     Badge,
     Card,
     Group,
-    Select,
     SimpleGrid,
     Stack,
     Text,
+    TextInput,
     Title
 } from "@mantine/core";
-import { ArrowSquareOut } from "@phosphor-icons/react";
+import { ArrowSquareOut, MagnifyingGlass } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { IconSize } from "../../../../lib/style-constants";
 import { makeUrl } from "../../../../lib/url";
@@ -43,29 +43,30 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/part")({
 function PartReport(): ReactNode {
     const { libraryId } = Route.useParams();
     const { element } = Route.useSearch();
+    const [search, setSearch] = useState("");
     const parts = useQuery(getPartsQuery(libraryId));
 
     return (
         <Stack gap="xl">
-            <PartPicker libraryId={libraryId} selected={element} />
-
             {element !== undefined && (
                 <ReportBody libraryId={libraryId} elementId={element} />
             )}
 
             {/* Kept below the report so another part is always one click away. */}
             <Card withBorder padding="lg" radius="md">
-                <Title order={4}>
-                    {element === undefined ? "Pick a part" : "All parts"}
-                </Title>
-                <Text size="sm" c="dimmed" mb="md">
-                    Every part in the library, most used first. Open the report
-                    from the part name, or the part itself in Onshape.
-                </Text>
+                <TextInput
+                    w={360}
+                    mb="md"
+                    placeholder="Search parts…"
+                    leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+                    value={search}
+                    onChange={(event) => setSearch(event.currentTarget.value)}
+                />
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
+                        search={search}
                         emptyMessage="This library has no parts."
                     />
                 ) : (
@@ -73,47 +74,6 @@ function PartReport(): ReactNode {
                 )}
             </Card>
         </Stack>
-    );
-}
-
-/**
- * Switches parts without leaving the report. Options come from the parts that
- * have usage, ordered by it, so the most relevant are at the top.
- */
-function PartPicker({
-    libraryId,
-    selected
-}: {
-    libraryId: LibraryId;
-    selected?: string;
-}): ReactNode {
-    const navigate = useNavigate();
-    const parts = useQuery(getPartsQuery(libraryId));
-
-    return (
-        <Select
-            searchable
-            clearable
-            w={360}
-            label="Part"
-            placeholder="Search parts…"
-            nothingFoundMessage="No matching part"
-            value={selected ?? null}
-            data={(parts.data ?? []).map((part) => ({
-                value: part.elementId,
-                label: part.name ?? part.elementId
-            }))}
-            onChange={(value) => {
-                void navigate({
-                    to: "/dashboard/library/$libraryId/part",
-                    params: { libraryId },
-                    search: (prev) => ({
-                        ...prev,
-                        element: value ?? undefined
-                    })
-                });
-            }}
-        />
     );
 }
 

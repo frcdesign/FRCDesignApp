@@ -118,16 +118,23 @@ export interface AnalyticsOverviewOut {
     to: string;
 }
 
-/** A row of the parts table; nulls mean the part left the library. */
+/** The trailing days each parts-table row's sparkline plots. */
+export const SPARKLINE_DAYS = 30;
+
+/** A row of the parts table. Only parts still in the library are listed. */
 export interface PartUsageOut {
     elementId: string;
-    insertableId: string | null;
-    name: string | null;
-    groupName: string | null;
-    documentId: string | null;
-    versionId: string | null;
+    insertableId: string;
+    name: string;
+    groupName: string;
+    documentId: string;
+    versionId: string;
+    /** Hidden parts stay listed: they are in the library, just not insertable. */
+    isVisible: boolean;
     insertCount: number;
     lastInsertedAt: number | null;
+    /** Daily inserts over the trailing window, oldest first, for the sparkline. */
+    recent: number[];
 }
 
 /** One observed (or declared but unused) value of a configuration parameter. */

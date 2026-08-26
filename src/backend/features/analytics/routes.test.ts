@@ -26,13 +26,15 @@ import { createApp } from "../../app";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
 import { ParameterType } from "../configurations/models";
-import type {
-    AnalyticsOverviewOut,
-    InsertableReportOut,
-    LibraryHealthOut,
-    PartUsageOut
+import {
+    SPARKLINE_DAYS,
+    type AnalyticsOverviewOut,
+    type InsertableReportOut,
+    type LibraryHealthOut,
+    type PartUsageOut
 } from "./contract";
 import { buildParameterUsage, summarizeHealth } from "./routes";
+import { toDayKey } from "./tracking";
 import { BuildIssueSeverity, BuildIssueType } from "../build-checker/issues";
 import type { ConfigurationParameter } from "../configurations/models";
 
@@ -354,8 +356,8 @@ describe("analytics routes", () => {
         });
 
         it("keeps history for a part that is no longer visible", async () => {
-            // Hidden parts drop out of the library half, so without the second
-            // half their usage would vanish from the report entirely.
+            // A hidden part is still in the library, so it stays listed with
+            // whatever usage it accumulated while it was insertable.
             await seedPartStudio(db);
             await seedInsertableStats(9);
 
@@ -382,9 +384,11 @@ describe("analytics routes", () => {
             expect(body[0].insertCount).toBe(3);
         });
 
-        it("joins live insertables and orders by insert count", async () => {
+        it("leaves out a part that is no longer in the library", async () => {
             await seedPartStudio(db);
             await seedInsertableStats(9);
+            // Usage with no insertable behind it: the tab was deleted. It would
+            // otherwise top the table with a part nobody can open.
             await db.insert(insertableStats).values({
                 libraryId: TEST_LIBRARY_ID,
                 elementId: "e-gone",
@@ -398,17 +402,60 @@ describe("analytics routes", () => {
             );
             const body: PartUsageOut[] = await res.json();
 
-            expect(body.map((row) => row.elementId)).toEqual([
-                "e-gone",
-                elementId
-            ]);
-            // History outlives the insertable row it came from.
-            expect(body[0].name).toBeNull();
-            expect(body[1]).toMatchObject({
+            expect(body.map((row) => row.elementId)).toEqual([elementId]);
+            expect(body[0]).toMatchObject({
                 name: "Test PARTSTUDIO",
                 groupName: "Test Group",
                 insertCount: 9
             });
+        });
+
+        it("plots recent inserts per day, oldest first", async () => {
+            await seedPartStudio(db);
+            await seedInsertableStats(2);
+            const today = toDayKey(Date.now());
+            await db.insert(events).values([
+                {
+                    type: EventType.INSERT,
+                    createdAt: 1,
+                    day: today,
+                    libraryId: TEST_LIBRARY_ID,
+                    userId: "user-a",
+                    elementId
+                },
+                {
+                    type: EventType.INSERT,
+                    createdAt: 2,
+                    day: today,
+                    libraryId: TEST_LIBRARY_ID,
+                    userId: "user-b",
+                    elementId
+                }
+            ]);
+
+            const res = await anonymousGet(
+                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
+            );
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].recent).toHaveLength(SPARKLINE_DAYS);
+            expect(body[0].recent.at(-1)).toBe(2);
+            expect(body[0].recent.slice(0, -1)).toEqual(
+                Array.from({ length: SPARKLINE_DAYS - 1 }, () => 0)
+            );
+        });
+
+        it("gives a never-used part a flat sparkline", async () => {
+            await seedPartStudio(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
+            );
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].recent).toEqual(
+                Array.from({ length: SPARKLINE_DAYS }, () => 0)
+            );
         });
     });
 
