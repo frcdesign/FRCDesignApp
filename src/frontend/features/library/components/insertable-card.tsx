@@ -28,18 +28,21 @@ import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
     searchHit?: SearchHit;
     onClick?: () => void;
+    /** Where this card is listed — browsing a group unless told otherwise. */
+    source?: InsertSource;
 }
 
 /**
  * A card representing a part studio or assembly.
  */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
-    const { insertable, searchHit } = props;
+    const { insertable, searchHit, source = InsertSource.BROWSE } = props;
 
     const favorites = useFavoritesQuery().data?.favorites;
 
@@ -66,7 +69,11 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             openCannotDeriveAssemblyAlert();
             return;
         }
-        openInsertMenu({ insertable, defaultConfiguration: hitConfiguration });
+        openInsertMenu({
+            insertable,
+            defaultConfiguration: hitConfiguration,
+            source
+        });
     };
 
     const thumbnail = (
@@ -120,6 +127,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     favorite={favorite}
                     insertable={insertable}
                     configuration={hitConfiguration}
+                    source={source}
                 />
             }
         />
@@ -135,6 +143,7 @@ interface InsertableMenuItemsProps {
     configuration?: ParameterValues;
     /** The same selection canonicalized, so favoriting can key its thumbnail. */
     canonicalConfiguration?: string;
+    source: InsertSource;
 }
 
 export function InsertableMenuItems(
@@ -145,7 +154,8 @@ export function InsertableMenuItems(
         insertable,
         inInsertMenu,
         configuration,
-        canonicalConfiguration
+        canonicalConfiguration,
+        source
     } = props;
     const isConnected = useIsConnectedToOnshape();
 
@@ -157,6 +167,7 @@ export function InsertableMenuItems(
                         insertable={insertable}
                         configuration={configuration}
                         isFavorite={favorite !== undefined}
+                        source={source}
                     />
                     <Menu.Divider />
                 </>

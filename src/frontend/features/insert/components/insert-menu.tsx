@@ -31,6 +31,7 @@ import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -40,6 +41,7 @@ interface InsertMenuContentProps {
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
+    source: InsertSource;
 }
 
 /**
@@ -74,7 +76,7 @@ function useInsertSelection(defaultConfiguration?: ParameterValues) {
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, openedAt, onInsert } = props;
+    const { insertable, modalId, openedAt, onInsert, source } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
 
@@ -146,6 +148,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 canonicalConfiguration={canonicalConfiguration}
                 isUnchanged={isUnchanged}
                 openedAt={openedAt}
+                source={source}
                 onInsert={onInsert}
             />
         </>
@@ -160,6 +163,8 @@ interface InsertMenuFooterProps {
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
     openedAt: number;
+    /** Where the insert began, which the menu and the buttons both record. */
+    source: InsertSource;
     onInsert: () => void;
 }
 
@@ -172,6 +177,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         canonicalConfiguration,
         isUnchanged,
         openedAt,
+        source,
         onInsert
     } = props;
     return (
@@ -193,6 +199,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         inInsertMenu
                         configuration={configuration}
                         canonicalConfiguration={canonicalConfiguration}
+                        source={source}
                     />
                 </MenuButton>
             </Group>
@@ -202,6 +209,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                 isUnchanged={isUnchanged}
                 isFavorite={favorite !== undefined}
                 openedAt={openedAt}
+                source={source}
                 onInsert={onInsert}
             />
         </AppModalFooter>
@@ -220,6 +228,7 @@ interface InsertButtonsProps {
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
+    source: InsertSource;
 }
 
 /**
@@ -232,6 +241,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         isUnchanged,
         isFavorite,
         openedAt,
+        source,
         onInsert
     } = props;
 
@@ -240,7 +250,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     // into when the app is open standalone.
     const isConnected = useIsConnectedToOnshape();
     const insertMutation = useInsertMutation(insertable, configuration, {
-        isFavorite
+        isFavorite,
+        source
     });
     const uiState = useGetUiState();
     const setUiState = useSetUiState();

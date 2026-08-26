@@ -29,6 +29,9 @@ import { ReloadGroupsButton } from "../../library/components/reload-groups-butto
 /** The FRCDesign feedback form, which the setting below opens. */
 const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
+/** The usage dashboard, served standalone and needing no sign-in. */
+const DASHBOARD_URL = "/dashboard";
+
 interface SettingRowProps extends PropsWithChildren {
     label: string;
 }
@@ -119,6 +122,9 @@ function UserSettings(): ReactNode {
                     />
                 </SettingRow>
             )}
+            <SettingRow label="Usage dashboard">
+                <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
+            </SettingRow>
             <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </SettingRow>

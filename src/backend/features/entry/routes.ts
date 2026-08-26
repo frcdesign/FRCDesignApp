@@ -9,6 +9,8 @@ import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getSessionCompanyId } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
+import { LibraryId } from "../library/library-id";
+import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Cloudflare strips the port in local dev, so redirect back relatively. */
 function getRelativeUrl(requestUrl: string) {
@@ -16,9 +18,20 @@ function getRelativeUrl(requestUrl: string) {
     return pathname + search;
 }
 
-/** Builds the url the caller resumes at, seeded with the library and theme they last used. */
-async function getEntryUrl(c: AppContext): Promise<string> {
+interface AppEntry {
+    url: string;
+    userId: string;
+    libraryId: LibraryId;
+}
+
+/**
+ * Builds the url the caller resumes at, seeded with the library and theme they
+ * last used. Returns who they are alongside it so `/init` can record the open
+ * without repeating the lookup.
+ */
+async function getAppEntry(c: AppContext): Promise<AppEntry> {
     const db = getDb(c.env.DB);
+    const userId = await c.var.getUserId();
     // The join is the check on the stored group: one deleted, or left behind by
     // a library switch, comes back null and lands the caller in the library.
     const user = await db
@@ -35,7 +48,7 @@ async function getEntryUrl(c: AppContext): Promise<string> {
                 eq(group.libraryId, users.libraryId)
             )
         )
-        .where(eq(users.id, await c.var.getUserId()))
+        .where(eq(users.id, userId))
         .get();
 
     const search = new URL(c.req.url).searchParams;
@@ -48,7 +61,7 @@ async function getEntryUrl(c: AppContext): Promise<string> {
     const libraryId = user?.libraryId ?? DEFAULT_SETTINGS.libraryId;
     const path = `/app/library/${libraryId}`;
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
-    return `${groupPath}?${search.toString()}`;
+    return { url: `${groupPath}?${search.toString()}`, userId, libraryId };
 }
 
 export const entryRoutes = getApp();
@@ -61,5 +74,11 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
             `/auth/sign-in?redirectUrl=${redirectUrl}&sessionCompanyId=${getSessionCompanyId(c)}`
         );
     }
-    return c.redirect(await getEntryUrl(c));
+    const entry = await getAppEntry(c);
+    // Reaching here is exactly "the panel was opened", and it is the only entry
+    // Onshape uses. Best-effort, so the redirect never waits on it.
+    await trackInBackground(c, () =>
+        trackAppOpen(c, { libraryId: entry.libraryId, userId: entry.userId })
+    );
+    return c.redirect(entry.url);
 });

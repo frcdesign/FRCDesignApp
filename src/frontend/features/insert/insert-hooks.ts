@@ -11,9 +11,12 @@ import { useMemo } from "react";
 import { ParameterValues } from "@backend/features/configurations/models";
 import { toInsertablePath } from "../library/library-path";
 import { sendOpenFeatureMessage } from "../../lib/messages";
+import { InsertSource } from "@backend/features/analytics/events";
 
 export interface InsertArgs {
+    /** Whether the part is favorited — see `source` for where the insert began. */
     isFavorite: boolean;
+    source: InsertSource;
     isQuickInsert?: boolean;
 }
 
@@ -48,6 +51,7 @@ export function useInsertMutation(
                     configuration,
                     isFavorite: insertArgs.isFavorite,
                     isQuickInsert: insertArgs.isQuickInsert ?? false,
+                    source: insertArgs.source,
                     fasten,
                     elementType: insertable.elementType
                 };
@@ -58,6 +62,7 @@ export function useInsertMutation(
                     configuration,
                     isFavorite: insertArgs.isFavorite,
                     isQuickInsert: insertArgs.isQuickInsert ?? false,
+                    source: insertArgs.source,
                     useMateConnector: insertable.supportsFasten
                 };
             }

@@ -24,6 +24,8 @@ import {
 } from "../../load/parse-configuration-records";
 import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
+import { InsertSource } from "../../analytics/events";
+import { trackInBackground, trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -254,7 +256,10 @@ const insertBodySchema = z.object({
     targetPath: targetPathSchema,
     configuration: configurationSchema,
     isFavorite: z.boolean().default(false),
-    isQuickInsert: z.boolean().default(false)
+    isQuickInsert: z.boolean().default(false),
+    // Where the insert began, which `isFavorite` does not answer. Defaulted so
+    // an older client cannot drop the whole tracking batch on a NOT NULL.
+    source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
 const addToPartStudioBody = insertBodySchema.extend({
@@ -282,7 +287,9 @@ insertableRoutes.post(
         const insertable = await db
             .select({
                 name: insertables.name,
-                microversionId: insertables.microversionId
+                microversionId: insertables.microversionId,
+                libraryId: insertables.libraryId,
+                elementId: insertables.elementId
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -317,6 +324,23 @@ insertableRoutes.post(
             targetPath,
             feature.getFeature()
         );
+
+        await trackInBackground(c, async () =>
+            trackInsert(c, {
+                libraryId: insertable.libraryId,
+                userId: await c.var.getUserId(),
+                elementId: insertable.elementId,
+                insertableId,
+                targetElementType: ElementType.PART_STUDIO,
+                configuration: body.configuration,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                // Insert-and-fasten is only offered for assembly targets.
+                fasten: false
+            })
+        );
+
         return c.json({ featureId: result.feature?.featureId });
     }
 );
@@ -340,6 +364,7 @@ insertableRoutes.post(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
+                libraryId: insertables.libraryId,
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
@@ -392,6 +417,23 @@ insertableRoutes.post(
                 configuration: encodedConfiguration,
                 partTypes
             }
+        );
+
+        // Recorded here so a later fasten failure doesn't lose an insert that
+        // did land. `configuration` is already resolved to the defaults above.
+        await trackInBackground(c, async () =>
+            trackInsert(c, {
+                libraryId: row.libraryId,
+                userId: await c.var.getUserId(),
+                elementId: row.elementId,
+                insertableId,
+                targetElementType: ElementType.ASSEMBLY,
+                configuration,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                fasten: body.fasten
+            })
         );
 
         if (!body.fasten) {

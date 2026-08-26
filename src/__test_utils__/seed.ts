@@ -1,10 +1,17 @@
 import { type Db } from "@backend/db/client";
 import {
+    configurationValueStats,
     configurations,
+    dailyMetrics,
+    dailySourceMetrics,
+    dailyUserActivity,
+    events,
     favorites,
     group,
+    insertableStats,
     insertables,
     libraries,
+    userStats,
     users
 } from "@backend/db/schema";
 import {
@@ -57,6 +64,14 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(group);
     await db.delete(users);
     await db.delete(libraries);
+    // Analytics has no foreign keys, so nothing cascades these away.
+    await db.delete(events);
+    await db.delete(dailyMetrics);
+    await db.delete(dailySourceMetrics);
+    await db.delete(dailyUserActivity);
+    await db.delete(insertableStats);
+    await db.delete(configurationValueStats);
+    await db.delete(userStats);
 }
 
 export async function seedLibrary(

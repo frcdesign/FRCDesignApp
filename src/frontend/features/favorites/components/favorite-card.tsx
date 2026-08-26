@@ -35,6 +35,7 @@ import { useRefreshFavorites } from "../../../lib/refresh";
 import { produce } from "immer";
 import { SearchHit } from "../../search/search";
 import { toLibraryPath, useLibraryId } from "../../library/library-path";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;
@@ -67,7 +68,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 }
                 openInsertMenu({
                     insertable,
-                    defaultConfiguration: favorite.defaultConfiguration
+                    defaultConfiguration: favorite.defaultConfiguration,
+                    source: InsertSource.FAVORITES
                 });
             }}
             left={
@@ -127,6 +129,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                         insertable={insertable}
                         configuration={favorite.defaultConfiguration}
                         isFavorite
+                        source={InsertSource.FAVORITES}
                     />
                     <Menu.Divider />
                 </>

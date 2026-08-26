@@ -11,14 +11,16 @@ import {
 } from "../../lib/notifications";
 import { InsertMenuContent } from "./components/insert-menu";
 import { MenuTitle } from "../../components/app-title";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
     defaultConfiguration?: ParameterValues;
+    source: InsertSource;
 }
 
 export function openInsertMenu(props: OpenInsertMenuProps) {
-    const { insertable, defaultConfiguration } = props;
+    const { insertable, defaultConfiguration, source } = props;
     let didInsert = false;
     // How quickly the insert follows is what says whether the menu was worth
     // opening, so the quick insert tip is timed from here.
@@ -32,7 +34,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         size: 500,
         onClose: () => {
             if (!didInsert) {
-                showRestoreToast(insertable, defaultConfiguration);
+                showRestoreToast(insertable, source, defaultConfiguration);
             }
         },
         children: (
@@ -41,6 +43,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
                 modalId={id}
                 defaultConfiguration={defaultConfiguration}
                 openedAt={openedAt}
+                source={source}
                 onInsert={() => {
                     didInsert = true;
                     modals.close(id);
@@ -57,12 +60,17 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 
 function showRestoreToast(
     insertable: InsertableOut,
+    source: InsertSource,
     configuration?: ParameterValues
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",
         onClick: () =>
-            openInsertMenu({ insertable, defaultConfiguration: configuration })
+            openInsertMenu({
+                insertable,
+                defaultConfiguration: configuration,
+                source
+            })
     };
 
     // Keyed on the insertable, so opening and cancelling the same one repeatedly

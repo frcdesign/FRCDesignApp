@@ -33,6 +33,7 @@ import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
@@ -64,15 +65,17 @@ interface QuickInsertItemProps {
     insertable: InsertableOut;
     configuration?: ParameterValues;
     isFavorite: boolean;
+    source: InsertSource;
 }
 
 export function QuickInsertItems(props: QuickInsertItemProps) {
-    const { insertable, configuration, isFavorite } = props;
+    const { insertable, configuration, isFavorite, source } = props;
     const search = useSearch({ from: "/app" });
 
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite,
-        isQuickInsert: true
+        isQuickInsert: true,
+        source
     });
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType

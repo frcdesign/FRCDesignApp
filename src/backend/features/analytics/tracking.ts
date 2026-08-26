@@ -1,0 +1,329 @@
+import { eq, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+import { type AppContext } from "../../lib/context";
+import { getDb, type Db } from "../../db/client";
+import {
+    configurations,
+    configurationValueStats,
+    dailyMetrics,
+    dailySourceMetrics,
+    dailyUserActivity,
+    events,
+    insertableStats,
+    userStats
+} from "../../db/schema";
+import { EventType, InsertSource } from "./events";
+import { type LibraryId } from "../library/library-id";
+import { ElementType } from "../../lib/onshape/element-type";
+import { type ParameterValues } from "../configurations/models";
+
+/** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
+export function toDayKey(timestamp: number): string {
+    return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+export interface InsertEvent {
+    libraryId: LibraryId;
+    userId: string;
+    /** Onshape element id — the key analytics is stored against. */
+    elementId: string;
+    insertableId: string;
+    /** The type of tab the user inserted into. */
+    targetElementType: ElementType;
+    /**
+     * The values the user chose, or undefined when they took the defaults. The
+     * defaults are then looked up here rather than on the insert path, since
+     * this runs after the response.
+     */
+    configuration: ParameterValues | undefined;
+    /** Whether the part was favorited, not where the insert came from. */
+    isFavorite: boolean;
+    isQuickInsert: boolean;
+    source: InsertSource;
+    fasten: boolean;
+}
+
+export interface AppOpenEvent {
+    libraryId: LibraryId;
+    userId: string;
+}
+
+/**
+ * Runs tracking work without blocking the response, swallowing any failure.
+ *
+ * Usage data is never worth failing a user's insert over, so errors are logged
+ * and dropped. Falls back to awaiting when no execution context is available.
+ */
+export async function trackInBackground(
+    c: AppContext,
+    work: () => Promise<void>
+): Promise<void> {
+    const guarded = work().catch((error) => {
+        console.error("Failed to record usage event", error);
+    });
+
+    try {
+        c.executionCtx.waitUntil(guarded);
+    } catch {
+        await guarded;
+    }
+}
+
+/** Records an insert as a raw event plus its rollups, in a single D1 batch. */
+export async function trackInsert(
+    c: AppContext,
+    event: InsertEvent
+): Promise<void> {
+    const db = getDb(c.env.DB);
+    const now = Date.now();
+    const day = toDayKey(now);
+    const configuration =
+        event.configuration ??
+        (await getDefaultConfiguration(db, event.insertableId));
+
+    const writes: BatchItem<"sqlite">[] = [
+        db.insert(events).values({
+            type: EventType.INSERT,
+            createdAt: now,
+            day,
+            libraryId: event.libraryId,
+            userId: event.userId,
+            elementId: event.elementId,
+            insertableId: event.insertableId,
+            targetElementType: event.targetElementType,
+            configuration,
+            isFavorite: event.isFavorite,
+            isQuickInsert: event.isQuickInsert,
+            source: event.source,
+            fasten: event.fasten
+        }),
+        incrementDailyMetric(db, day, event.libraryId, EventType.INSERT, {
+            favorite: event.isFavorite,
+            fasten: event.fasten,
+            quickInsert: event.isQuickInsert,
+            assembly: event.targetElementType === ElementType.ASSEMBLY
+        }),
+        incrementSourceMetric(db, day, event),
+        markUserActive(db, day, event.libraryId, event.userId),
+        db
+            .insert(insertableStats)
+            .values({
+                libraryId: event.libraryId,
+                elementId: event.elementId,
+                insertCount: 1,
+                firstInsertedAt: now,
+                lastInsertedAt: now
+            })
+            .onConflictDoUpdate({
+                target: [insertableStats.libraryId, insertableStats.elementId],
+                set: {
+                    insertCount: sql`${insertableStats.insertCount} + 1`,
+                    lastInsertedAt: now
+                }
+            }),
+        db
+            .insert(userStats)
+            .values({
+                userId: event.userId,
+                libraryId: event.libraryId,
+                insertCount: 1,
+                firstSeenAt: now,
+                lastSeenAt: now
+            })
+            .onConflictDoUpdate({
+                target: [userStats.userId, userStats.libraryId],
+                set: {
+                    insertCount: sql`${userStats.insertCount} + 1`,
+                    lastSeenAt: now
+                }
+            }),
+        ...configurationWrites(db, event, configuration)
+    ];
+
+    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+}
+
+/** Records an app open as a raw event plus its rollups. */
+export async function trackAppOpen(
+    c: AppContext,
+    event: AppOpenEvent
+): Promise<void> {
+    const db = getDb(c.env.DB);
+    const now = Date.now();
+    const day = toDayKey(now);
+
+    await db.batch([
+        db.insert(events).values({
+            type: EventType.APP_OPEN,
+            createdAt: now,
+            day,
+            libraryId: event.libraryId,
+            userId: event.userId
+        }),
+        incrementDailyMetric(db, day, event.libraryId, EventType.APP_OPEN),
+        markUserActive(db, day, event.libraryId, event.userId),
+        db
+            .insert(userStats)
+            .values({
+                userId: event.userId,
+                libraryId: event.libraryId,
+                openCount: 1,
+                firstSeenAt: now,
+                lastSeenAt: now
+            })
+            .onConflictDoUpdate({
+                target: [userStats.userId, userStats.libraryId],
+                set: {
+                    openCount: sql`${userStats.openCount} + 1`,
+                    lastSeenAt: now
+                }
+            })
+    ]);
+}
+
+/**
+ * Records that this user was active today. Idempotent, so the row is written
+ * once per user per library per day no matter how much they do.
+ */
+function markUserActive(
+    db: Db,
+    day: string,
+    libraryId: LibraryId,
+    userId: string
+) {
+    return db
+        .insert(dailyUserActivity)
+        .values({ day, libraryId, userId })
+        .onConflictDoNothing();
+}
+
+/** Counters incremented alongside a day's inserts, each a subset of its total. */
+interface InsertFlags {
+    favorite: boolean;
+    fasten: boolean;
+    quickInsert: boolean;
+    /** Targeted an assembly, so insert-and-fasten was on offer. */
+    assembly: boolean;
+}
+
+const NO_FLAGS: InsertFlags = {
+    favorite: false,
+    fasten: false,
+    quickInsert: false,
+    assembly: false
+};
+
+function incrementDailyMetric(
+    db: Db,
+    day: string,
+    libraryId: LibraryId,
+    type: EventType,
+    flags: InsertFlags = NO_FLAGS
+) {
+    const favorite = flags.favorite ? 1 : 0;
+    const fasten = flags.fasten ? 1 : 0;
+    const quickInsert = flags.quickInsert ? 1 : 0;
+    const assembly = flags.assembly ? 1 : 0;
+
+    return db
+        .insert(dailyMetrics)
+        .values({
+            day,
+            libraryId,
+            type,
+            count: 1,
+            favoriteCount: favorite,
+            fastenCount: fasten,
+            quickInsertCount: quickInsert,
+            assemblyCount: assembly
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyMetrics.day,
+                dailyMetrics.libraryId,
+                dailyMetrics.type
+            ],
+            set: {
+                count: sql`${dailyMetrics.count} + 1`,
+                favoriteCount: sql`${dailyMetrics.favoriteCount} + ${favorite}`,
+                fastenCount: sql`${dailyMetrics.fastenCount} + ${fasten}`,
+                quickInsertCount: sql`${dailyMetrics.quickInsertCount} + ${quickInsert}`,
+                assemblyCount: sql`${dailyMetrics.assemblyCount} + ${assembly}`
+            }
+        });
+}
+
+function incrementSourceMetric(db: Db, day: string, event: InsertEvent) {
+    const quickInsert = event.isQuickInsert ? 1 : 0;
+
+    return db
+        .insert(dailySourceMetrics)
+        .values({
+            day,
+            libraryId: event.libraryId,
+            source: event.source,
+            count: 1,
+            quickInsertCount: quickInsert
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailySourceMetrics.day,
+                dailySourceMetrics.libraryId,
+                dailySourceMetrics.source
+            ],
+            set: {
+                count: sql`${dailySourceMetrics.count} + 1`,
+                quickInsertCount: sql`${dailySourceMetrics.quickInsertCount} + ${quickInsert}`
+            }
+        });
+}
+
+/**
+ * Returns the parameter defaults an insert without an explicit configuration
+ * resolves to, or null when the insertable has no configuration.
+ */
+async function getDefaultConfiguration(
+    db: Db,
+    insertableId: string
+): Promise<ParameterValues | null> {
+    const configRow = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+
+    if (!configRow || configRow.parameters.length === 0) return null;
+    return Object.fromEntries(
+        configRow.parameters.map((p) => [p.id, p.default])
+    );
+}
+
+/** One counter per parameter value the insert used. */
+function configurationWrites(
+    db: Db,
+    event: InsertEvent,
+    configuration: ParameterValues | null
+): BatchItem<"sqlite">[] {
+    if (!configuration) return [];
+
+    return Object.entries(configuration).map(([parameterId, value]) =>
+        db
+            .insert(configurationValueStats)
+            .values({
+                libraryId: event.libraryId,
+                elementId: event.elementId,
+                parameterId,
+                value,
+                count: 1
+            })
+            .onConflictDoUpdate({
+                target: [
+                    configurationValueStats.libraryId,
+                    configurationValueStats.elementId,
+                    configurationValueStats.parameterId,
+                    configurationValueStats.value
+                ],
+                set: { count: sql`${configurationValueStats.count} + 1` }
+            })
+    );
+}
