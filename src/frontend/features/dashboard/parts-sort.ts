@@ -3,6 +3,7 @@ import type { PartUsageOut } from "@backend/features/analytics/contract";
 export type SortColumn =
     | "name"
     | "groupName"
+    | "usesPerMonth"
     | "insertCount"
     | "lastInsertedAt";
 
@@ -11,9 +12,12 @@ export interface SortState {
     descending: boolean;
 }
 
-/** Most used first, which is what the table is usually read for. */
+/**
+ * Most used first, by rate rather than lifetime total: a part added last month
+ * should not sit below one that earned its total over three seasons.
+ */
 export const DEFAULT_SORT: SortState = {
-    column: "insertCount",
+    column: "usesPerMonth",
     descending: true
 };
 
@@ -21,6 +25,7 @@ export const DEFAULT_SORT: SortState = {
 const DESCENDING_FIRST: Record<SortColumn, boolean> = {
     name: false,
     groupName: false,
+    usesPerMonth: true,
     insertCount: true,
     lastInsertedAt: true
 };
@@ -38,6 +43,11 @@ function compare(a: PartUsageOut, b: PartUsageOut, column: SortColumn): number {
             return a.name.localeCompare(b.name);
         case "groupName":
             return a.groupName.localeCompare(b.groupName);
+        case "usesPerMonth":
+            // Ties are common once rounded, so fall back to the raw total.
+            return (
+                a.usesPerMonth - b.usesPerMonth || a.insertCount - b.insertCount
+            );
         case "insertCount":
             return a.insertCount - b.insertCount;
         case "lastInsertedAt":

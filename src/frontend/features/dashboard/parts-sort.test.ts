@@ -17,6 +17,7 @@ function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
         versionId: "v-1",
         isVisible: true,
         insertCount: 0,
+        usesPerMonth: 0,
         lastInsertedAt: null,
         recent: [],
         ...overrides
@@ -24,17 +25,55 @@ function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
 }
 
 const PARTS = [
-    part({ name: "Bearing", insertCount: 3, lastInsertedAt: 300 }),
-    part({ name: "Tube", groupName: "Structure", insertCount: 10 }),
-    part({ name: "Axle", insertCount: 0 }),
-    part({ name: "Spacer", insertCount: 3, lastInsertedAt: 100 })
+    part({
+        name: "Bearing",
+        insertCount: 3,
+        usesPerMonth: 3,
+        lastInsertedAt: 300
+    }),
+    part({
+        name: "Tube",
+        groupName: "Structure",
+        insertCount: 10,
+        usesPerMonth: 1
+    }),
+    part({ name: "Axle", insertCount: 0, usesPerMonth: 0 }),
+    part({
+        name: "Spacer",
+        insertCount: 3,
+        usesPerMonth: 3,
+        lastInsertedAt: 100
+    })
 ];
 
 const names = (parts: PartUsageOut[]) => parts.map((p) => p.name);
 
 describe("filterAndSort", () => {
-    it("puts the most used first by default", () => {
+    it("puts the highest rate first by default, not the highest total", () => {
+        // Tube has the most insertions but the lowest rate, so it drops below
+        // the two parts earning three a month.
         expect(names(filterAndSort(PARTS, "", DEFAULT_SORT))).toEqual([
+            "Bearing",
+            "Spacer",
+            "Tube",
+            "Axle"
+        ]);
+    });
+
+    it("breaks a rounded rate tie on the raw total", () => {
+        const parts = [
+            part({ name: "Low", insertCount: 5, usesPerMonth: 2 }),
+            part({ name: "High", insertCount: 40, usesPerMonth: 2 })
+        ];
+        expect(names(filterAndSort(parts, "", DEFAULT_SORT))).toEqual([
+            "High",
+            "Low"
+        ]);
+    });
+
+    it("still sorts by lifetime total when asked", () => {
+        const sort: SortState = { column: "insertCount", descending: true };
+        expect(names(filterAndSort(PARTS, "", sort))).toEqual([
             "Tube",
             "Bearing",
             "Spacer",
@@ -81,8 +120,8 @@ describe("filterAndSort", () => {
 
 describe("nextSort", () => {
     it("flips direction when the same column is clicked again", () => {
-        expect(nextSort(DEFAULT_SORT, "insertCount")).toEqual({
-            column: "insertCount",
+        expect(nextSort(DEFAULT_SORT, "usesPerMonth")).toEqual({
+            column: "usesPerMonth",
             descending: false
         });
     });

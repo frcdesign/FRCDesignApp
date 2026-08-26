@@ -59,7 +59,7 @@ export function PartsTable({
     }
 
     return (
-        <Table.ScrollContainer minWidth={820}>
+        <Table.ScrollContainer minWidth={900}>
             <Table striped highlightOnHover>
                 <Table.Thead>
                     <Table.Tr>
@@ -76,7 +76,14 @@ export function PartsTable({
                             onToggle={toggle}
                         />
                         <SortableTh
-                            label="Insertions"
+                            label="Uses / month"
+                            column="usesPerMonth"
+                            sort={sort}
+                            onToggle={toggle}
+                            align="right"
+                        />
+                        <SortableTh
+                            label="Total"
                             column="insertCount"
                             sort={sort}
                             onToggle={toggle}
@@ -174,7 +181,10 @@ function PartRow({
                 </Group>
             </Table.Td>
             <Table.Td>{part.groupName}</Table.Td>
-            <Table.Td ta="right">{formatCount(part.insertCount)}</Table.Td>
+            <Table.Td ta="right">{formatCount(part.usesPerMonth)}</Table.Td>
+            <Table.Td ta="right" c="dimmed">
+                {formatCount(part.insertCount)}
+            </Table.Td>
             <Table.Td>
                 <Suspense fallback={<div style={{ height: 24 }} />}>
                     <PartSparkline recent={part.recent} />

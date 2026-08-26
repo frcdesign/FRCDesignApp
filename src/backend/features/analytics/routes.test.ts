@@ -13,6 +13,7 @@ import {
 } from "../../db/schema";
 import {
     TEST_LIBRARY_ID,
+    TEST_ASSEMBLY_PATH,
     TEST_PART_STUDIO_PATH,
     jsonRequest,
     resetDb,
@@ -410,6 +411,41 @@ describe("analytics routes", () => {
             });
         });
 
+        it("ranks by rate, so a long-lived part does not coast on its total", async () => {
+            const day = 24 * 3600 * 1000;
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await db.update(insertables).set({ isVisible: true });
+            // The part studio earned 60 over two years; the assembly earned 20
+            // in the last two months and is the one in active use.
+            await db.insert(insertableStats).values([
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId,
+                    insertCount: 60,
+                    firstInsertedAt: Date.now() - 730 * day,
+                    lastInsertedAt: Date.now()
+                },
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId: TEST_ASSEMBLY_PATH.elementId,
+                    insertCount: 20,
+                    firstInsertedAt: Date.now() - 60 * day,
+                    lastInsertedAt: Date.now()
+                }
+            ]);
+
+            const res = await anonymousGet(
+                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
+            );
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body.map((row) => row.usesPerMonth)).toEqual([10, 2]);
+            expect(body[0].elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
+            // The lifetime total is still reported alongside it.
+            expect(body.map((row) => row.insertCount)).toEqual([20, 60]);
+        });
+
         it("plots recent inserts per day, oldest first", async () => {
             await seedPartStudio(db);
             await seedInsertableStats(2);
@@ -630,6 +666,25 @@ describe("analytics routes", () => {
             expect(body.insertCount).toBe(0);
             expect(body.series).toEqual([]);
             expect(body.parameters).toEqual([]);
+        });
+
+        it("reports the rate alongside the lifetime total", async () => {
+            await seedPartStudio(db);
+            await db.insert(insertableStats).values({
+                libraryId: TEST_LIBRARY_ID,
+                elementId,
+                insertCount: 60,
+                firstInsertedAt: Date.now() - 180 * 24 * 3600 * 1000,
+                lastInsertedAt: Date.now()
+            });
+
+            const res = await anonymousGet(
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+            );
+            const body: InsertableReportOut = await res.json();
+
+            expect(body.insertCount).toBe(60);
+            expect(body.usesPerMonth).toBe(10);
         });
     });
 });

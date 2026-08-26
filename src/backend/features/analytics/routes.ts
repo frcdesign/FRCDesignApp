@@ -31,7 +31,7 @@ import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/models";
-import { SPARKLINE_DAYS } from "./contract";
+import { SPARKLINE_DAYS, usesPerMonth } from "./contract";
 import type {
     AnalyticsOverviewOut,
     AnalyticsTotals,
@@ -170,6 +170,7 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
             .select({
                 elementId: insertables.elementId,
                 insertCount: insertableStats.insertCount,
+                firstInsertedAt: insertableStats.firstInsertedAt,
                 lastInsertedAt: insertableStats.lastInsertedAt,
                 insertableId: insertables.id,
                 name: insertables.name,
@@ -193,6 +194,7 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
         getPartSparklines(db, libraryId)
     ]);
 
+    const now = Date.now();
     const out: PartUsageOut[] = rows
         .map((row) => ({
             elementId: row.elementId,
@@ -203,13 +205,18 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
             versionId: row.versionId,
             isVisible: row.isVisible,
             insertCount: row.insertCount ?? 0,
+            usesPerMonth: usesPerMonth(
+                row.insertCount ?? 0,
+                row.firstInsertedAt,
+                now
+            ),
             lastInsertedAt: row.lastInsertedAt,
             recent: series.get(row.elementId) ?? emptySparkline()
         }))
         // Most used first; unused parts fall to the bottom in name order.
         .sort(
             (a, b) =>
-                b.insertCount - a.insertCount || a.name.localeCompare(b.name)
+                b.usesPerMonth - a.usesPerMonth || a.name.localeCompare(b.name)
         );
     return c.json(out);
 });
@@ -288,6 +295,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
             groupName: group.name,
             isVisible: insertables.isVisible,
             insertCount: insertableStats.insertCount,
+            firstInsertedAt: insertableStats.firstInsertedAt,
             lastInsertedAt: insertableStats.lastInsertedAt
         })
         .from(insertables)
@@ -313,6 +321,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
         .all();
 
     const series = await getPartSparklines(db, libraryId);
+    const now = Date.now();
     const out: PartUsageOut[] = rows.map((row) => ({
         elementId: row.elementId,
         insertableId: row.insertableId,
@@ -322,6 +331,11 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
         versionId: row.versionId,
         isVisible: row.isVisible,
         insertCount: row.insertCount ?? 0,
+        usesPerMonth: usesPerMonth(
+            row.insertCount ?? 0,
+            row.firstInsertedAt,
+            now
+        ),
         lastInsertedAt: row.lastInsertedAt,
         recent: series.get(row.elementId) ?? emptySparkline()
     }));
@@ -422,6 +436,11 @@ analyticsRoutes.get(
             documentId: insertable?.documentId ?? null,
             versionId: insertable?.versionId ?? null,
             insertCount: stats?.insertCount ?? 0,
+            usesPerMonth: usesPerMonth(
+                stats?.insertCount ?? 0,
+                stats?.firstInsertedAt ?? null,
+                Date.now()
+            ),
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             lastInsertedAt: stats?.lastInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
