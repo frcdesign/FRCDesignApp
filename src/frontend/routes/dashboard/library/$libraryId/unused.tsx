@@ -1,32 +1,31 @@
-import { Card, Group, NumberInput, Text, Title } from "@mantine/core";
+import { Card, Group, NumberInput, Stack, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { getUnusedQuery } from "../../../../features/dashboard/dashboard-queries";
+import {
+    getUnusedOptionsQuery,
+    getUnusedQuery
+} from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
+import { OptionsTable } from "../../../../features/dashboard/options-table";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
-    component: UnusedParts
+    component: LowUsage
 });
 
 const DEFAULT_THRESHOLD = 5;
 
-function UnusedParts(): ReactNode {
+function LowUsage(): ReactNode {
     const { libraryId } = Route.useParams();
     const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
 
-    const query = useQuery(getUnusedQuery(libraryId, threshold));
+    const parts = useQuery(getUnusedQuery(libraryId, threshold));
+    const options = useQuery(getUnusedOptionsQuery(libraryId, threshold));
 
     return (
-        <Card withBorder padding="lg" radius="md">
-            <Group justify="space-between" mb="md" wrap="wrap">
-                <div>
-                    <Title order={4}>Unused and low-usage parts</Title>
-                    <Text size="sm" c="dimmed">
-                        Visible parts inserted at most this many times.
-                    </Text>
-                </div>
+        <Stack gap="xl">
+            <Group justify="flex-end">
                 <NumberInput
                     label="Threshold"
                     min={0}
@@ -41,15 +40,36 @@ function UnusedParts(): ReactNode {
                     }
                 />
             </Group>
-            {query.data ? (
-                <PartsTable
-                    libraryId={libraryId}
-                    parts={query.data}
-                    emptyMessage="Every visible part in this library is used more than the threshold."
-                />
-            ) : (
-                <DashboardState query={query} />
-            )}
-        </Card>
+
+            <Card withBorder padding="lg" radius="md">
+                <Title order={4} mb="md">
+                    Low-usage parts
+                </Title>
+                {parts.data ? (
+                    <PartsTable
+                        libraryId={libraryId}
+                        parts={parts.data}
+                        emptyMessage="Every visible part is used more than the threshold."
+                    />
+                ) : (
+                    <DashboardState query={parts} />
+                )}
+            </Card>
+
+            <Card withBorder padding="lg" radius="md">
+                <Title order={4} mb="md">
+                    Low-usage configuration options
+                </Title>
+                {options.data ? (
+                    <OptionsTable
+                        libraryId={libraryId}
+                        options={options.data}
+                        emptyMessage="Every configuration option is used more than the threshold."
+                    />
+                ) : (
+                    <DashboardState query={options} />
+                )}
+            </Card>
+        </Stack>
     );
 }

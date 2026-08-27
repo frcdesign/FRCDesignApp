@@ -27,6 +27,7 @@ import {
 } from "../../db/schema";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
+import { ElementType } from "../../lib/onshape/element-type";
 import {
     ParameterType,
     type ConfigurationParameter
@@ -46,7 +47,9 @@ import type {
     LibraryHealthCounts,
     LibraryHealthOut,
     LibrarySummary,
-    PartUsageOut
+    PartUsageOut,
+    TargetSplit,
+    UnusedOptionOut
 } from "./contract";
 import {
     BuildIssueSeverity,
@@ -342,6 +345,92 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
     return c.json(out);
 });
 
+/** GET /api/analytics/unused-options/library/:libraryId */
+analyticsRoutes.get("/analytics/unused-options" + libraryRoute(), async (c) => {
+    const libraryId = getLibraryParam(c);
+    const db = getDb(c.env.DB);
+
+    const parsed = z.coerce
+        .number()
+        .int()
+        .nonnegative()
+        .safeParse(c.req.query("threshold"));
+    const threshold = parsed.success ? parsed.data : DEFAULT_UNUSED_THRESHOLD;
+
+    const [parts, valueRows] = await Promise.all([
+        db
+            .select({
+                elementId: insertables.elementId,
+                name: insertables.name,
+                parameters: configurations.parameters
+            })
+            .from(insertables)
+            .innerJoin(configurations, eq(configurations.id, insertables.id))
+            .where(
+                and(
+                    eq(insertables.libraryId, libraryId),
+                    eq(insertables.isVisible, true)
+                )
+            )
+            .all(),
+        db
+            .select({
+                elementId: configurationValueStats.elementId,
+                parameterId: configurationValueStats.parameterId,
+                value: configurationValueStats.value,
+                count: configurationValueStats.count
+            })
+            .from(configurationValueStats)
+            .where(eq(configurationValueStats.libraryId, libraryId))
+            .all()
+    ]);
+
+    const byElement = new Map<string, typeof valueRows>();
+    for (const row of valueRows) {
+        byElement.set(row.elementId, [
+            ...(byElement.get(row.elementId) ?? []),
+            row
+        ]);
+    }
+
+    const out: UnusedOptionOut[] = [];
+    for (const part of parts) {
+        const usage = buildParameterUsage(
+            part.parameters,
+            byElement.get(part.elementId) ?? []
+        );
+        for (const parameter of usage) {
+            // Only an enum declares the options it could have been given, so
+            // only an enum can have one that was never picked.
+            if (parameter.type !== ParameterType.ENUM) continue;
+            for (const value of parameter.values) {
+                if (value.count > threshold) continue;
+                out.push({
+                    elementId: part.elementId,
+                    partName: part.name,
+                    parameterId: parameter.parameterId,
+                    parameterName: parameter.name,
+                    value: value.value,
+                    label: value.label,
+                    count: value.count,
+                    isDefault: value.isDefault,
+                    parameterTotal: parameter.total
+                });
+            }
+        }
+    }
+
+    // Never-picked first, then by how much of the parameter went elsewhere:
+    // an option skipped on a heavily configured part is the stronger signal.
+    out.sort(
+        (a, b) =>
+            a.count - b.count ||
+            b.parameterTotal - a.parameterTotal ||
+            a.partName.localeCompare(b.partName)
+    );
+    return c.json(out);
+});
+
 /** GET /api/analytics/insertable/library/:libraryId/element/:elementId */
 analyticsRoutes.get(
     "/analytics/insertable" + libraryRoute() + "/element/:elementId",
@@ -350,7 +439,7 @@ analyticsRoutes.get(
         const elementId = c.req.param("elementId")!;
         const db = getDb(c.env.DB);
 
-        const [stats, insertable, valueRows, series, uniqueUsers] =
+        const [stats, insertable, valueRows, series, uniqueUsers, targetRows] =
             await Promise.all([
                 db
                     .select()
@@ -415,7 +504,22 @@ analyticsRoutes.get(
                             eq(events.type, EventType.INSERT)
                         )
                     )
-                    .get()
+                    .get(),
+                db
+                    .select({
+                        targetElementType: events.targetElementType,
+                        count: count()
+                    })
+                    .from(events)
+                    .where(
+                        and(
+                            eq(events.libraryId, libraryId),
+                            eq(events.elementId, elementId),
+                            eq(events.type, EventType.INSERT)
+                        )
+                    )
+                    .groupBy(events.targetElementType)
+                    .all()
             ]);
 
         // The 1:1 configurations table is keyed by insertable id, so the
@@ -444,12 +548,31 @@ analyticsRoutes.get(
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             lastInsertedAt: stats?.lastInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
+            targets: toTargetSplit(targetRows),
             series,
             parameters: buildParameterUsage(parameters, valueRows)
         };
         return c.json(out);
     }
 );
+
+/**
+ * Splits inserts by the tab they landed in. A part studio target means the
+ * part was derived; an assembly target means it was inserted as an instance.
+ */
+function toTargetSplit(
+    rows: { targetElementType: ElementType | null; count: number }[]
+): TargetSplit {
+    const split: TargetSplit = { partStudio: 0, assembly: 0 };
+    for (const row of rows) {
+        if (row.targetElementType === ElementType.PART_STUDIO) {
+            split.partStudio += row.count;
+        } else if (row.targetElementType === ElementType.ASSEMBLY) {
+            split.assembly += row.count;
+        }
+    }
+    return split;
+}
 
 /**
  * Merges recorded value counts with the insertable's current parameters, so
@@ -933,9 +1056,9 @@ export function summarizeHealth(
     const counts: LibraryHealthCounts = {
         groupCount: groups.length,
         insertableCount: insertables.length,
-        errorItems: 0,
-        warningItems: 0,
-        infoItems: 0,
+        errorCount: 0,
+        warningCount: 0,
+        infoCount: 0,
         healthyItems: 0,
         neverLoaded: 0
     };
@@ -955,10 +1078,18 @@ export function summarizeHealth(
         }
         for (const issue of issues) {
             issueCounts.set(issue.type, (issueCounts.get(issue.type) ?? 0) + 1);
+            switch (getIssueSeverity(issue)) {
+                case BuildIssueSeverity.ERROR:
+                    counts.errorCount++;
+                    break;
+                case BuildIssueSeverity.WARNING:
+                    counts.warningCount++;
+                    break;
+                case BuildIssueSeverity.INFO:
+                    counts.infoCount++;
+                    break;
+            }
         }
-        if (severity === BuildIssueSeverity.ERROR) counts.errorItems++;
-        else if (severity === BuildIssueSeverity.WARNING) counts.warningItems++;
-        else counts.infoItems++;
 
         items.push(toItem(severity));
     };

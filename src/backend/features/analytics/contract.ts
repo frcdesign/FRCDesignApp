@@ -52,15 +52,17 @@ export interface InsertSourceUsage {
 }
 
 /**
- * Build-health counts for a library. Items are counted by their *worst*
- * severity, so the four buckets partition every group and insertable.
+ * Build-health counts for a library. The severity counts are of issues, not
+ * items: one part with three warnings is three, so fixing it moves the number
+ * by what it actually cost. `healthyItems` counts items, and is what
+ * `groupCount + insertableCount` partitions.
  */
 export interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
-    errorItems: number;
-    warningItems: number;
-    infoItems: number;
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
     healthyItems: number;
     /** Groups and insertables that have never loaded successfully. */
     neverLoaded: number;
@@ -181,6 +183,30 @@ export interface ConfigurationParameterUsage {
     isRetired: boolean;
 }
 
+/**
+ * One declared enum option and how often it was actually chosen, across a
+ * whole library. Only enums appear: a quantity or string parameter has no
+ * declared option list, so "never used" is not a question that can be asked.
+ */
+export interface UnusedOptionOut {
+    elementId: string;
+    partName: string;
+    parameterId: string;
+    parameterName: string;
+    value: string;
+    label: string;
+    count: number;
+    isDefault: boolean;
+    /** Recorded values for this parameter, so a count reads as a share. */
+    parameterTotal: number;
+}
+
+/** How an insert reached Onshape: derived into a part studio, or inserted. */
+export interface TargetSplit {
+    partStudio: number;
+    assembly: number;
+}
+
 export interface InsertableReportOut {
     elementId: string;
     name: string | null;
@@ -192,6 +218,8 @@ export interface InsertableReportOut {
     firstInsertedAt: number | null;
     lastInsertedAt: number | null;
     uniqueUsers: number;
+    /** Inserts by the kind of tab they landed in; derived vs. inserted. */
+    targets: TargetSplit;
     series: { day: string; count: number }[];
     parameters: ConfigurationParameterUsage[];
 }

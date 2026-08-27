@@ -1,4 +1,4 @@
-import { Card, Group, Stack, Text, Title } from "@mantine/core";
+import { Card, Group, Stack, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -52,6 +52,7 @@ function LibraryOverview(): ReactNode {
             <TrendTiles
                 totals={summary.data.totals}
                 series={summary.data.metricSeries}
+                scopedToLibrary
             />
 
             <Card withBorder padding="lg" radius="md">
@@ -67,22 +68,16 @@ function LibraryOverview(): ReactNode {
                     <HealthTiles counts={health.data.counts} />
 
                     <Card withBorder padding="lg" radius="md">
-                        <Title order={4}>Issues by kind</Title>
-                        <Text size="sm" c="dimmed" mb="md">
-                            Every occurrence across{" "}
-                            {health.data.counts.groupCount} groups and{" "}
-                            {health.data.counts.insertableCount} visible parts.
-                            An item can carry more than one.
-                        </Text>
+                        <Title order={4} mb="md">
+                            Issues by kind
+                        </Title>
                         <IssueBreakdown issues={health.data.issues} />
                     </Card>
 
                     <Card withBorder padding="lg" radius="md">
-                        <Title order={4}>What needs attention</Title>
-                        <Text size="sm" c="dimmed" mb="md">
-                            Worst first. Hidden parts are exempt from the
-                            checks, so they are left out entirely.
-                        </Text>
+                        <Title order={4} mb="md">
+                            What needs attention
+                        </Title>
                         <HealthItemsTable items={health.data.items} />
                     </Card>
                 </>
@@ -91,10 +86,9 @@ function LibraryOverview(): ReactNode {
             )}
 
             <Card withBorder padding="lg" radius="md">
-                <Title order={4}>Most used parts</Title>
-                <Text size="sm" c="dimmed" mb="md">
-                    The top {MOST_USED_LIMIT}. The part report lists every part.
-                </Text>
+                <Title order={4} mb="md">
+                    Most used parts
+                </Title>
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}

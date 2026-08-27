@@ -76,7 +76,7 @@ export function LibraryInsertsChart({
             withLegend
             withDots={series.length <= 45}
             curveType="monotone"
-            yAxisLabel="Insertions"
+            yAxisLabel="Total uses"
             series={libraryIds.map((libraryId) => ({
                 name: getLibraryName(libraryId),
                 color: `${getLibraryColor(libraryId)}.6`

@@ -27,13 +27,13 @@ export const DASHBOARDS: DashboardDefinition[] = [
     },
     {
         key: "unused",
-        label: "Unused parts",
+        label: "Low usage",
         to: "/dashboard/library/$libraryId/unused",
         needsLibrary: true
     },
     {
         key: "part",
-        label: "Part report",
+        label: "Part",
         to: "/dashboard/library/$libraryId/part",
         needsLibrary: true
     }

@@ -1,13 +1,20 @@
-import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
-import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { ActionIcon, Badge, Group, Menu, Table, Text } from "@mantine/core";
+import {
+    ArrowSquareOut,
+    CaretDown,
+    CaretUp,
+    ChartLine,
+    DotsThree
+} from "@phosphor-icons/react";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { DashboardLink } from "./dashboard-link";
 import {
     SPARKLINE_DAYS,
     type PartUsageOut
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { makeUrl } from "../../lib/url";
+import { makeUrl, openUrlInNewTab } from "../../lib/url";
 import { IconSize } from "../../lib/style-constants";
 import { formatCount, formatDate } from "./series-utils";
 import {
@@ -76,14 +83,14 @@ export function PartsTable({
                             onToggle={toggle}
                         />
                         <SortableTh
-                            label="Uses / month"
+                            label="Uses per month"
                             column="usesPerMonth"
                             sort={sort}
                             onToggle={toggle}
                             align="right"
                         />
                         <SortableTh
-                            label="Total"
+                            label="Total uses"
                             column="insertCount"
                             sort={sort}
                             onToggle={toggle}
@@ -96,7 +103,7 @@ export function PartsTable({
                             sort={sort}
                             onToggle={toggle}
                         />
-                        <Table.Th>Onshape</Table.Th>
+                        <Table.Th />
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -192,19 +199,61 @@ function PartRow({
             </Table.Td>
             <Table.Td>{formatDate(part.lastInsertedAt)}</Table.Td>
             <Table.Td>
-                <Anchor
-                    href={makeUrl({
-                        documentId: part.documentId,
-                        instanceId: part.versionId,
-                        instanceType: "v",
-                        elementId: part.elementId
-                    })}
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    <ArrowSquareOut size={IconSize.SMALL} />
-                </Anchor>
+                <RowMenu libraryId={libraryId} part={part} />
             </Table.Td>
         </Table.Tr>
+    );
+}
+
+/** Per-row actions, so the table itself stays counts and names. */
+function RowMenu({
+    libraryId,
+    part
+}: {
+    libraryId: LibraryId;
+    part: PartUsageOut;
+}): ReactNode {
+    const navigate = useNavigate();
+
+    return (
+        <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" aria-label="Actions">
+                    <DotsThree size={IconSize.MEDIUM} weight="bold" />
+                </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+                <Menu.Item
+                    leftSection={<ChartLine size={IconSize.SMALL} />}
+                    onClick={() =>
+                        void navigate({
+                            to: "/dashboard/library/$libraryId/part",
+                            params: { libraryId },
+                            search: (prev) => ({
+                                ...prev,
+                                element: part.elementId
+                            })
+                        })
+                    }
+                >
+                    Open usage report
+                </Menu.Item>
+                <Menu.Item
+                    leftSection={<ArrowSquareOut size={IconSize.SMALL} />}
+                    onClick={() =>
+                        openUrlInNewTab(
+                            makeUrl({
+                                documentId: part.documentId,
+                                instanceId: part.versionId,
+                                instanceType: "v",
+                                elementId: part.elementId
+                            })
+                        )
+                    }
+                >
+                    Open in Onshape
+                </Menu.Item>
+            </Menu.Dropdown>
+        </Menu>
     );
 }

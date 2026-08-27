@@ -25,7 +25,8 @@ import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import {
     formatCount,
-    formatDate
+    formatDate,
+    formatPercent
 } from "../../../../features/dashboard/series-utils";
 
 interface PartSearch {
@@ -117,13 +118,13 @@ function ReportBody({
                 )}
             </Group>
 
-            <SimpleGrid cols={{ base: 1, sm: 4 }}>
+            <SimpleGrid cols={{ base: 1, sm: 5 }}>
                 <SummaryCard
                     label="Uses per month"
                     value={formatCount(report.usesPerMonth)}
                 />
                 <SummaryCard
-                    label="Insertions"
+                    label="Total uses"
                     value={formatCount(report.insertCount)}
                 />
                 <SummaryCard
@@ -134,16 +135,19 @@ function ReportBody({
                     label="Last used"
                     value={formatDate(report.lastInsertedAt)}
                 />
+                <SummaryCard
+                    label="Derived"
+                    value={formatPercent(
+                        report.targets.partStudio,
+                        report.targets.partStudio + report.targets.assembly
+                    )}
+                />
             </SimpleGrid>
 
             <div>
-                <Title order={4} mb="xs">
+                <Title order={4} mb="md">
                     Configuration values used
                 </Title>
-                <Text size="sm" c="dimmed" mb="md">
-                    Counts of each value chosen across all insertions. A default
-                    that isn&apos;t the most common choice is worth revisiting.
-                </Text>
                 <ConfigurationBreakdown parameters={report.parameters} />
             </div>
         </Stack>

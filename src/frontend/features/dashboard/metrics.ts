@@ -49,14 +49,14 @@ export interface MetricDefinition {
 export const METRICS: Record<MetricKey, MetricDefinition> = {
     inserts: {
         key: "inserts",
-        label: "Parts inserted",
+        label: "Total uses",
         description:
             "Every part inserted into a document from the library, counted once per insert. Quick inserts and inserts from the insert menu both count, and inserting the same part twice counts twice.",
-        numeratorLabel: "Insertions",
+        numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
         aggregate: "sum",
-        detailLabel: "Insertions"
+        detailLabel: "Total uses"
     },
     appOpens: {
         key: "appOpens",

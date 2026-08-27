@@ -57,7 +57,7 @@ function DashboardOverview(): ReactNode {
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>Library</Table.Th>
-                            <Table.Th ta="right">Parts inserted</Table.Th>
+                            <Table.Th ta="right">Total uses</Table.Th>
                             <Table.Th ta="right">App opens</Table.Th>
                             <Table.Th ta="right">Unique users</Table.Th>
                             <Table.Th ta="right">Build issues</Table.Th>

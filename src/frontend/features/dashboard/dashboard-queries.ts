@@ -4,7 +4,8 @@ import type {
     AnalyticsOverviewOut,
     InsertableReportOut,
     LibraryHealthOut,
-    PartUsageOut
+    PartUsageOut,
+    UnusedOptionOut
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { toLibraryPath } from "../library/library-path";
@@ -59,6 +60,16 @@ export function getUnusedQuery(libraryId: LibraryId, threshold: number) {
         queryKey: ["analytics", "unused", libraryId, threshold],
         queryFn: () =>
             apiGet("/analytics/unused" + toLibraryPath(libraryId), {
+                query: { threshold: threshold.toString() }
+            })
+    });
+}
+
+export function getUnusedOptionsQuery(libraryId: LibraryId, threshold: number) {
+    return queryOptions<UnusedOptionOut[]>({
+        queryKey: ["analytics", "unused-options", libraryId, threshold],
+        queryFn: () =>
+            apiGet("/analytics/unused-options" + toLibraryPath(libraryId), {
                 query: { threshold: threshold.toString() }
             })
     });

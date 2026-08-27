@@ -88,25 +88,21 @@ export function HealthTiles({
         {
             label: "Healthy",
             value: formatPercent(counts.healthyItems, total),
-            hint: `${formatCount(counts.healthyItems)} of ${formatCount(total)} groups and parts are clean`,
             severity: null
         },
         {
             label: "Errors",
-            value: formatCount(counts.errorItems),
-            hint: "items whose worst issue is an error",
+            value: formatCount(counts.errorCount),
             severity: BuildIssueSeverity.ERROR
         },
         {
             label: "Warnings",
-            value: formatCount(counts.warningItems),
-            hint: "items whose worst issue is a warning",
+            value: formatCount(counts.warningCount),
             severity: BuildIssueSeverity.WARNING
         },
         {
             label: "Info",
-            value: formatCount(counts.infoItems),
-            hint: "items with only informational notes",
+            value: formatCount(counts.infoCount),
             severity: BuildIssueSeverity.INFO
         }
     ];
@@ -122,9 +118,6 @@ export function HealthTiles({
                         </Text>
                     </Group>
                     <Title order={2}>{tile.value}</Title>
-                    <Text size="xs" c="dimmed" mt={4}>
-                        {tile.hint}
-                    </Text>
                 </Card>
             ))}
         </SimpleGrid>
@@ -286,7 +279,7 @@ export function HealthSummary({
         );
     }
 
-    if (health.errorItems === 0 && health.warningItems === 0) {
+    if (health.errorCount === 0 && health.warningCount === 0) {
         return (
             <Group gap={4} justify="flex-end">
                 <SeverityIcon severity={null} />
@@ -299,16 +292,16 @@ export function HealthSummary({
 
     return (
         <Group gap="xs" justify="flex-end">
-            {health.errorItems > 0 && (
+            {health.errorCount > 0 && (
                 <Group gap={4}>
                     <SeverityIcon severity={BuildIssueSeverity.ERROR} />
-                    <Text size="sm">{formatCount(health.errorItems)}</Text>
+                    <Text size="sm">{formatCount(health.errorCount)}</Text>
                 </Group>
             )}
-            {health.warningItems > 0 && (
+            {health.warningCount > 0 && (
                 <Group gap={4}>
                     <SeverityIcon severity={BuildIssueSeverity.WARNING} />
-                    <Text size="sm">{formatCount(health.warningItems)}</Text>
+                    <Text size="sm">{formatCount(health.warningCount)}</Text>
                 </Group>
             )}
         </Group>

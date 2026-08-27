@@ -37,7 +37,7 @@ export function StatTiles({ totals }: { totals: AnalyticsTotals }): ReactNode {
     return (
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
             <StatTile
-                label="Parts inserted"
+                label="Total uses"
                 value={totals.inserts}
                 icon={PuzzlePiece}
             />

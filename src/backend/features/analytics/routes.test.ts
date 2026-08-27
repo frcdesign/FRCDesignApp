@@ -26,10 +26,15 @@ import { getDb } from "../../db/client";
 import { createApp } from "../../app";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
-import { ParameterType } from "../configurations/models";
+import {
+    ParameterType,
+    type ConfigurationParameter
+} from "../configurations/models";
+import { ElementType } from "../../lib/onshape/element-type";
 import {
     SPARKLINE_DAYS,
     type AnalyticsOverviewOut,
+    type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthOut,
     type PartUsageOut
@@ -37,7 +42,6 @@ import {
 import { buildParameterUsage, summarizeHealth } from "./routes";
 import { toDayKey } from "./tracking";
 import { BuildIssueSeverity, BuildIssueType } from "../build-checker/issues";
-import type { ConfigurationParameter } from "../configurations/models";
 
 const db = getDb(env.DB);
 const elementId = TEST_PART_STUDIO_PATH.elementId;
@@ -495,6 +499,108 @@ describe("analytics routes", () => {
         });
     });
 
+    describe("GET /analytics/unused-options/library/:libraryId", () => {
+        const ENUM_PARAMETER: ConfigurationParameter = {
+            type: ParameterType.ENUM,
+            id: "stages",
+            name: "Stages",
+            isCosmetic: false,
+            default: "one",
+            options: [
+                { id: "one", name: "1 Stage" },
+                { id: "two", name: "2 Stage" },
+                { id: "three", name: "3 Stage" }
+            ],
+            optionConditions: []
+        };
+
+        async function seedEnumPart() {
+            await seedPartStudio(db);
+            await db.update(insertables).set({ isVisible: true });
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({ parameters: [ENUM_PARAMETER] });
+        }
+
+        it("surfaces an option nobody has ever picked", async () => {
+            await seedEnumPart();
+            await db.insert(configurationValueStats).values([
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId,
+                    parameterId: "stages",
+                    value: "two",
+                    count: 40
+                }
+            ]);
+
+            const res = await anonymousGet(
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+            );
+            const body: UnusedOptionOut[] = await res.json();
+
+            expect(body.map((row) => row.value)).toEqual(["one", "three"]);
+            expect(body[0]).toMatchObject({
+                partName: "Test PARTSTUDIO",
+                parameterName: "Stages",
+                count: 0,
+                parameterTotal: 40
+            });
+        });
+
+        it("flags a default that nobody picks", async () => {
+            await seedEnumPart();
+            await db.insert(configurationValueStats).values({
+                libraryId: TEST_LIBRARY_ID,
+                elementId,
+                parameterId: "stages",
+                value: "two",
+                count: 12
+            });
+
+            const res = await anonymousGet(
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+            );
+            const body: UnusedOptionOut[] = await res.json();
+
+            const defaults = body.filter((row) => row.isDefault);
+            expect(defaults).toHaveLength(1);
+            expect(defaults[0].value).toBe("one");
+        });
+
+        it("leaves out an option used more than the threshold", async () => {
+            await seedEnumPart();
+            await db.insert(configurationValueStats).values({
+                libraryId: TEST_LIBRARY_ID,
+                elementId,
+                parameterId: "stages",
+                value: "one",
+                count: 6
+            });
+
+            const res = await anonymousGet(
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=5`
+            );
+            const body: UnusedOptionOut[] = await res.json();
+
+            expect(body.map((row) => row.value)).toEqual(["two", "three"]);
+        });
+
+        it("ignores a parameter with no declared options", async () => {
+            // A boolean or quantity has no option list, so "never used" is not
+            // a question that can be asked of it.
+            await seedPartStudio(db);
+            await db.update(insertables).set({ isVisible: true });
+            await seedConfiguration(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+            );
+            expect(await res.json()).toEqual([]);
+        });
+    });
+
     describe("GET /analytics/unused/library/:libraryId", () => {
         it("includes never-inserted parts and honors the threshold", async () => {
             await seedPartStudio(db);
@@ -546,7 +652,7 @@ describe("analytics routes", () => {
             expect(body.counts).toMatchObject({
                 groupCount: 1,
                 insertableCount: 1,
-                errorItems: 1,
+                errorCount: 1,
                 healthyItems: 1
             });
             expect(body.issues).toEqual([
@@ -585,7 +691,7 @@ describe("analytics routes", () => {
             );
             const body: LibraryHealthOut = await res.json();
 
-            expect(body.counts.warningItems).toBe(1);
+            expect(body.counts.warningCount).toBe(1);
             expect(body.items[0].issues).toEqual([
                 BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED
             ]);
@@ -666,6 +772,31 @@ describe("analytics routes", () => {
             expect(body.insertCount).toBe(0);
             expect(body.series).toEqual([]);
             expect(body.parameters).toEqual([]);
+        });
+
+        it("splits inserts by the tab they landed in", async () => {
+            await seedPartStudio(db);
+            const base = {
+                type: EventType.INSERT,
+                createdAt: 1,
+                day: "2026-03-01",
+                libraryId: TEST_LIBRARY_ID,
+                userId: "user-a",
+                elementId
+            };
+            await db.insert(events).values([
+                { ...base, targetElementType: ElementType.PART_STUDIO },
+                { ...base, targetElementType: ElementType.PART_STUDIO },
+                { ...base, targetElementType: ElementType.PART_STUDIO },
+                { ...base, targetElementType: ElementType.ASSEMBLY }
+            ]);
+
+            const res = await anonymousGet(
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+            );
+            const body: InsertableReportOut = await res.json();
+
+            expect(body.targets).toEqual({ partStudio: 3, assembly: 1 });
         });
 
         it("reports the rate alongside the lifetime total", async () => {
@@ -766,7 +897,7 @@ describe("summarizeHealth", () => {
         lastLoadedAt: 1
     };
 
-    it("counts each item by its worst severity", () => {
+    it("counts every issue, including a lesser one on the same item", () => {
         const { counts } = summarizeHealth(
             [cleanGroup],
             [
@@ -774,7 +905,8 @@ describe("summarizeHealth", () => {
                 {
                     ...insertable,
                     id: "i2",
-                    // An error and an info together count once, as an error.
+                    // Both are counted; the item is still listed once, as an
+                    // error, since that is its worst.
                     buildIssues: [
                         { type: BuildIssueType.LOAD_FAILED },
                         { type: BuildIssueType.NO_VENDORS }
@@ -792,9 +924,9 @@ describe("summarizeHealth", () => {
         expect(counts).toMatchObject({
             groupCount: 1,
             insertableCount: 3,
-            errorItems: 1,
-            warningItems: 1,
-            infoItems: 0,
+            errorCount: 1,
+            warningCount: 1,
+            infoCount: 1,
             healthyItems: 2
         });
     });
@@ -809,11 +941,30 @@ describe("summarizeHealth", () => {
             ])
         );
 
-        expect(counts.warningItems).toBe(1);
+        expect(counts.warningCount).toBe(1);
         expect(counts.healthyItems).toBe(1); // the group
         expect(items[0].issues).toEqual([
             BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED
         ]);
+    });
+
+    it("counts issues, not items, so two on one part read as two", () => {
+        const { counts } = summarizeHealth(
+            [cleanGroup],
+            [insertable],
+            new Map([
+                [
+                    "i1",
+                    [
+                        { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED },
+                        { type: BuildIssueType.MANUAL_INDEXING_REQUIRED }
+                    ]
+                ]
+            ])
+        );
+
+        expect(counts.warningCount).toBe(2);
+        expect(counts.healthyItems).toBe(1);
     });
 
     it("reports a group's stored issues without recomputing any", () => {

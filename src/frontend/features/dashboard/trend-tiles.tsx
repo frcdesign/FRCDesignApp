@@ -14,7 +14,7 @@ const LibraryInsertsChart = lazy(() =>
     }))
 );
 
-/** The order tiles appear in, across both dashboard views. */
+/** The order tiles appear in on the app dashboard. */
 const TILE_ORDER: MetricKey[] = [
     "inserts",
     "appOpens",
@@ -24,6 +24,15 @@ const TILE_ORDER: MetricKey[] = [
     "quickShare"
 ];
 
+/**
+ * The library view drops app opens: the panel is opened once for the app, not
+ * for a library, so attributing an open to whichever library happened to be
+ * selected would count the same event differently depending on a preference.
+ */
+const LIBRARY_TILE_ORDER: MetricKey[] = TILE_ORDER.filter(
+    (key) => key !== "appOpens"
+);
+
 interface TrendTilesProps {
     totals: AnalyticsTotals;
     series: DailyMetricPoint[];
@@ -32,16 +41,21 @@ interface TrendTilesProps {
      * library instead of showing a single line.
      */
     librarySeries?: DailyInsertPoint[];
+    /** Scoped to one library, which has no meaningful app-open count. */
+    scopedToLibrary?: boolean;
 }
 
 export function TrendTiles({
     totals,
     series,
-    librarySeries
+    librarySeries,
+    scopedToLibrary = false
 }: TrendTilesProps): ReactNode {
+    const order = scopedToLibrary ? LIBRARY_TILE_ORDER : TILE_ORDER;
+
     return (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-            {TILE_ORDER.map((key) => (
+            {order.map((key) => (
                 <TrendTile
                     key={key}
                     metric={METRICS[key]}
