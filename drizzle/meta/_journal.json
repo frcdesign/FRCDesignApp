@@ -57,6 +57,13 @@
             "when": 1787265951429,
             "tag": "0007_resume_group",
             "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "6",
+            "when": 1787858751091,
+            "tag": "0008_favorite_created_at",
+            "breakpoints": true
         }
     ]
 }

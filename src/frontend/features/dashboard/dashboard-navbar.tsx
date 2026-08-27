@@ -5,11 +5,12 @@ import {
     Group,
     Menu,
     Stack,
+    Text,
     Tabs,
     Tooltip
 } from "@mantine/core";
 import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -22,6 +23,9 @@ import {
 } from "../../lib/style-constants";
 import { DashboardSettingsMenu } from "./dashboard-settings";
 import { RangeControl } from "./range-control";
+import { getOverviewQuery } from "./dashboard-queries";
+import { toDayRange } from "./range";
+import { formatDay } from "./series-utils";
 import {
     DASHBOARDS,
     DEFAULT_LIBRARY,
@@ -65,10 +69,18 @@ export function DashboardNavbar(): ReactNode {
             >
                 {/* The app dashboard spans every library, so it has none to
                     pick; the range still applies to it. */}
-                {current !== "app" && <LibraryMenu dashboard={current} />}
-                <Group ml="auto">
-                    <RangeControl />
-                </Group>
+                {current === "app" ? (
+                    <TrackingSince />
+                ) : (
+                    <LibraryMenu dashboard={current} />
+                )}
+                {/* Only the library view has anything the range drives; the
+                    app dashboard's cards each state their own window. */}
+                {current === "library" && (
+                    <Group ml="auto">
+                        <RangeControl />
+                    </Group>
+                )}
             </Group>
         </Stack>
     );
@@ -149,6 +161,22 @@ function LibraryMenu({ dashboard }: { dashboard: DashboardKey }): ReactNode {
                 ))}
             </Menu.Dropdown>
         </Menu>
+    );
+}
+
+/**
+ * How much history there is.
+ *
+ * Worth more than a window picker on a dataset this new: every empty
+ * comparison on the page is explained by this one date.
+ */
+function TrackingSince(): ReactNode {
+    const { data } = useQuery(getOverviewQuery(toDayRange("all")));
+    if (!data?.trackingSince) return null;
+    return (
+        <Text size="xs" c="dimmed" my="auto">
+            Tracking since {formatDay(data.trackingSince)}
+        </Text>
     );
 }
 

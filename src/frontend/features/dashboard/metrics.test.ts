@@ -22,7 +22,11 @@ describe("metric definitions", () => {
         const shares = Object.values(METRICS)
             .filter(isShare)
             .map((metric) => metric.key);
-        expect(shares.sort()).toEqual(["fastenShare", "quickShare"]);
+        expect(shares.sort()).toEqual([
+            "deriveShare",
+            "fastenShare",
+            "quickShare"
+        ]);
     });
 
     it("measures fasten against assembly inserts", () => {
@@ -91,7 +95,11 @@ describe("toTrend", () => {
         const trend = toTrend(points, METRICS.inserts);
 
         expect(trend).toHaveLength(12);
-        expect(trend[0]).toEqual({ date: "Jan 2026", value: 31 });
+        expect(trend[0]).toEqual({
+            bucket: "2026-01",
+            label: "Jan 2026",
+            value: 31
+        });
     });
 
     it("reports zero rather than dividing by zero", () => {

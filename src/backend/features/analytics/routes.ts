@@ -2,6 +2,7 @@ import {
     and,
     asc,
     count,
+    min,
     countDistinct,
     eq,
     gte,
@@ -61,6 +62,7 @@ import {
     type BuildIssue
 } from "../build-checker/issues";
 import { toDayKey } from "./tracking";
+import { getGrowth } from "./growth";
 
 export const analyticsRoutes = getApp();
 
@@ -101,26 +103,33 @@ function getRange(c: AppContext): DayRange {
 /** GET /api/analytics/overview */
 analyticsRoutes.get("/analytics/overview", async (c) => {
     const db = getDb(c.env.DB);
-    const range = getRange(c);
+    const requested = getRange(c);
+    const trackingSince = await getTrackingSince(db);
+    // Series are densified, so they read the clamped range; the totals still
+    // read what was asked for, where extra empty days cost nothing.
+    const range = clampRange(requested, trackingSince);
 
-    const [totals, rangeTotals, perLibrary, series, metricSeries, sources] =
+    const [totals, perLibrary, series, metricSeries, sources, growth] =
         await Promise.all([
             getTotals(db),
-            getTotals(db, undefined, range),
-            getLibrarySummaries(db, range),
+            getLibrarySummaries(db, requested),
             getSeries(db, range),
             getMetricSeries(db, range),
-            getSources(db, range)
+            getSources(db, requested),
+            getGrowth(db, toDayKey(Date.now()), trackingSince)
         ]);
 
     const out: AnalyticsOverviewOut = {
         totals,
-        rangeTotals,
         libraries: perLibrary,
         series,
         metricSeries,
         sources,
-        ...range
+        trackingSince,
+        // No library scope here, so the share denominator is the same number.
+        appInserts: totals.inserts,
+        growth,
+        ...requested
     };
     return c.json(out);
 });
@@ -129,26 +138,40 @@ analyticsRoutes.get("/analytics/overview", async (c) => {
 analyticsRoutes.get("/analytics/summary" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
-    const range = getRange(c);
+    const requested = getRange(c);
+    const trackingSince = await getTrackingSince(db);
+    const range = clampRange(requested, trackingSince);
 
-    const [totals, rangeTotals, series, metricSeries, sources, health] =
-        await Promise.all([
-            getTotals(db, libraryId),
-            getTotals(db, libraryId, range),
-            getSeries(db, range, libraryId),
-            getMetricSeries(db, range, libraryId),
-            getSources(db, range, libraryId),
-            getHealthCounts(db, libraryId)
-        ]);
+    const [
+        totals,
+        rangeTotals,
+        series,
+        metricSeries,
+        sources,
+        health,
+        growth,
+        appInserts
+    ] = await Promise.all([
+        getTotals(db, libraryId),
+        getTotals(db, libraryId, requested),
+        getSeries(db, range, libraryId),
+        getMetricSeries(db, range, libraryId),
+        getSources(db, requested, libraryId),
+        getHealthCounts(db, libraryId),
+        getGrowth(db, toDayKey(Date.now()), trackingSince, libraryId),
+        getAppInserts(db)
+    ]);
 
     const out: AnalyticsOverviewOut = {
         totals,
-        rangeTotals,
         libraries: [{ libraryId, totals, rangeTotals, health }],
         series,
         metricSeries,
         sources,
-        ...range
+        trackingSince,
+        appInserts,
+        growth,
+        ...requested
     };
     return c.json(out);
 });
@@ -444,7 +467,6 @@ analyticsRoutes.get(
             stats,
             insertable,
             valueRows,
-            series,
             uniqueUsers,
             targetRows,
             favoriteCount
@@ -483,24 +505,6 @@ analyticsRoutes.get(
                         eq(configurationValueStats.elementId, elementId)
                     )
                 )
-                .all(),
-            // A single part's trend is narrow enough to read from raw
-            // events via events_element_day_idx, so it needs no rollup.
-            db
-                .select({
-                    day: events.day,
-                    count: count()
-                })
-                .from(events)
-                .where(
-                    and(
-                        eq(events.libraryId, libraryId),
-                        eq(events.elementId, elementId),
-                        eq(events.type, EventType.INSERT)
-                    )
-                )
-                .groupBy(events.day)
-                .orderBy(asc(events.day))
                 .all(),
             db
                 .select({ value: countDistinct(events.userId) })
@@ -574,7 +578,6 @@ analyticsRoutes.get(
             uniqueUsers: uniqueUsers?.value ?? 0,
             favorites: favoriteCount?.value ?? 0,
             targets: toTargetSplit(targetRows),
-            series,
             parameters: buildParameterUsage(parameters, valueRows)
         };
         return c.json(out);
@@ -703,6 +706,16 @@ function sumCounts(counts: Map<string, number>): number {
  * over `user_stats` — globally it must be distinct, since a person active in
  * two libraries has a row in each.
  */
+/** App-wide lifetime uses, the denominator for a library's share of them. */
+async function getAppInserts(db: Db): Promise<number> {
+    const row = await db
+        .select({ value: sum(dailyMetrics.count).mapWith(Number) })
+        .from(dailyMetrics)
+        .where(eq(dailyMetrics.type, EventType.INSERT))
+        .get();
+    return row?.value ?? 0;
+}
+
 async function getTotals(
     db: Db,
     libraryId?: LibraryId,
@@ -872,7 +885,51 @@ async function getMetricSeries(
         pointFor(row.day).activeUsers = row.activeUsers;
     }
 
+    // A quiet day is a zero, not a missing point. Without this, anything that
+    // divides by the number of points averages over *active* days instead of
+    // calendar days, and a chart joins straight across a gap.
+    for (const day of eachDay(range)) pointFor(day);
+
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/**
+ * Every day in the range, inclusive.
+ *
+ * Callers must clamp `from` to the first recorded day first: the "all time"
+ * preset reaches back to 2000, and filling two decades of zeroes would dwarf
+ * the data it surrounds.
+ */
+function eachDay(range: DayRange): string[] {
+    const days: string[] = [];
+    const last = Date.parse(`${range.to}T00:00:00Z`);
+    for (
+        let at = Date.parse(`${range.from}T00:00:00Z`);
+        at <= last;
+        at += 24 * 3600 * 1000
+    ) {
+        days.push(toDayKey(at));
+    }
+    return days;
+}
+
+/**
+ * The first day anything was recorded, so a range can be clamped to the
+ * history that exists and a caller can tell "nothing happened" from "we were
+ * not tracking yet".
+ */
+export async function getTrackingSince(db: Db): Promise<string | null> {
+    const row = await db
+        .select({ day: min(dailyMetrics.day) })
+        .from(dailyMetrics)
+        .get();
+    return row?.day ?? null;
+}
+
+/** Narrows a requested range to the days actually covered by tracking. */
+export function clampRange(range: DayRange, since: string | null): DayRange {
+    if (since === null) return { from: range.to, to: range.to };
+    return { from: range.from < since ? since : range.from, to: range.to };
 }
 
 /** Lifetime inserts split by which part of the app they started from. */
@@ -937,7 +994,12 @@ async function getSeries(
         point.counts[row.libraryId] = row.count;
         byDay.set(row.day, point);
     }
-    return [...byDay.values()];
+    // Same reason as the metric series: a missing day is a zero, and a line
+    // that jumps across it reads as activity that never happened.
+    for (const day of eachDay(range)) {
+        if (!byDay.has(day)) byDay.set(day, { day, counts: {} });
+    }
+    return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
 
 /**

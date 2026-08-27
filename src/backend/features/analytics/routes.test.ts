@@ -21,6 +21,7 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
+    seedLibrary,
     seedPartStudio,
     seedTestData
 } from "../../../__test_utils__";
@@ -178,18 +179,16 @@ describe("analytics routes", () => {
                 // The fasten denominator, so the UI reads 3/5 rather than 3/10.
                 assemblyInserts: 5
             });
-            expect(body.metricSeries).toEqual([
-                {
-                    day: "2026-03-01",
-                    inserts: 10,
-                    appOpens: 0,
-                    activeUsers: 0,
-                    favoriteInserts: 4,
-                    fastenInserts: 3,
-                    quickInserts: 6,
-                    assemblyInserts: 5
-                }
-            ]);
+            expect(body.metricSeries[0]).toEqual({
+                day: "2026-03-01",
+                inserts: 10,
+                appOpens: 0,
+                activeUsers: 0,
+                favoriteInserts: 4,
+                fastenInserts: 3,
+                quickInserts: 6,
+                assemblyInserts: 5
+            });
         });
 
         it("scopes rangeTotals to the range while totals stay lifetime", async () => {
@@ -223,14 +222,38 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals.inserts).toBe(8);
-            expect(body.rangeTotals.inserts).toBe(3);
-            expect(body.rangeTotals.uniqueUsers).toBe(1);
-            // The daily trend counts each day's actives separately.
-            expect(
-                body.metricSeries.map((point) => [point.day, point.activeUsers])
-            ).toEqual([
-                ["2026-06-15", 1],
-                ["2026-06-16", 1]
+            const scoped = body.libraries.find(
+                (row) => row.libraryId === TEST_LIBRARY_ID
+            );
+            expect(scoped?.rangeTotals.inserts).toBe(3);
+            expect(scoped?.rangeTotals.uniqueUsers).toBe(1);
+        });
+
+        it("fills quiet days in, so an average is per calendar day", async () => {
+            // Two active days inside a wider window. Left sparse, anything
+            // dividing by the number of points would report the two-day
+            // average and call it the month's.
+            await seedMetric("2026-06-15", 2);
+            await seedMetric("2026-06-18", 4);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview?from=2026-06-01&to=2026-06-20"
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            // Clamped to the first recorded day, not back to the requested
+            // one: "all time" reaches to 2000 and would fill two decades.
+            expect(body.trackingSince).toBe("2026-06-15");
+            expect(body.metricSeries.map((point) => point.day)).toEqual([
+                "2026-06-15",
+                "2026-06-16",
+                "2026-06-17",
+                "2026-06-18",
+                "2026-06-19",
+                "2026-06-20"
+            ]);
+            expect(body.metricSeries.map((point) => point.inserts)).toEqual([
+                2, 0, 0, 4, 0, 0
             ]);
         });
 
@@ -318,8 +341,17 @@ describe("analytics routes", () => {
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            expect(body.series).toHaveLength(1);
-            expect(body.series[0].day).toBe("2026-06-01");
+            // Every day in the window is present, but only the one inside it
+            // carries a count — days outside are excluded, not zeroed.
+            expect(body.series).toHaveLength(62);
+            expect(body.series[0].day).toBe("2026-05-01");
+            expect(body.series.at(-1)?.day).toBe("2026-07-01");
+            const withCounts = body.series.filter(
+                (point) => Object.keys(point.counts).length > 0
+            );
+            expect(withCounts.map((point) => point.day)).toEqual([
+                "2026-06-01"
+            ]);
             // Totals stay lifetime, independent of the range.
             expect(body.totals.inserts).toBe(7);
         });
@@ -515,7 +547,29 @@ describe("analytics routes", () => {
 
             // seedTestData favorites the part studio and the assembly.
             expect(body.totals.favorites).toBe(2);
-            expect(body.rangeTotals.favorites).toBe(2);
+            const scoped = body.libraries.find(
+                (row) => row.libraryId === TEST_LIBRARY_ID
+            );
+            expect(scoped?.rangeTotals.favorites).toBe(2);
+        });
+
+        it("returns app-wide uses, so a library can state its share", async () => {
+            await seedLibrary(db, LibraryId.MKCAD);
+            await seedMetric("2026-01-01", 30);
+            await db.insert(dailyMetrics).values({
+                day: "2026-01-01",
+                libraryId: LibraryId.MKCAD,
+                type: EventType.INSERT,
+                count: 70
+            });
+
+            const res = await anonymousGet(
+                `/api/analytics/summary/library/${TEST_LIBRARY_ID}`
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            expect(body.totals.inserts).toBe(30);
+            expect(body.appInserts).toBe(100);
         });
 
         it("scopes the count to one library", async () => {
@@ -784,7 +838,6 @@ describe("analytics routes", () => {
                 insertCount: 3,
                 uniqueUsers: 2
             });
-            expect(body.series).toEqual([{ day: "2026-03-01", count: 2 }]);
 
             const parameter = body.parameters[0];
             expect(parameter.parameterId).toBe("boolean");
@@ -801,7 +854,6 @@ describe("analytics routes", () => {
             const body: InsertableReportOut = await res.json();
 
             expect(body.insertCount).toBe(0);
-            expect(body.series).toEqual([]);
             expect(body.parameters).toEqual([]);
         });
 

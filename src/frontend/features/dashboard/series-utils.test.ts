@@ -50,10 +50,24 @@ describe("toChartData", () => {
         // 365 days from Jan 1 of a non-leap year is exactly 12 months.
         expect(data).toHaveLength(12);
         expect(data[0][FRC]).toBe(31); // all of January
-        expect(data[0].date).toBe("Jan 2026");
+        expect(data[0].bucket).toBe("2026-01");
+        expect(data[0].label).toBe("Jan 2026");
     });
 
     it("returns nothing for an empty series", () => {
         expect(toChartData([], [LibraryId.FRC_DESIGN_LIB])).toEqual([]);
+    });
+
+    it("takes a granularity over the one the span implies", () => {
+        // 2026-01-01 is a Thursday, so the first week is a stub of 4 days.
+        const data = toChartData(
+            makeDays(30),
+            [LibraryId.FRC_DESIGN_LIB],
+            "week"
+        );
+
+        expect(data[0].bucket).toBe("2025-12-29");
+        expect(data[0][FRC]).toBe(4);
+        expect(data[1][FRC]).toBe(7);
     });
 });

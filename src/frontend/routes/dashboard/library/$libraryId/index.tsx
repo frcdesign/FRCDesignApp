@@ -1,4 +1,5 @@
-import { Card, Stack, Title } from "@mantine/core";
+import { SimpleGrid, Stack } from "@mantine/core";
+import { ChartPieSlice, Star } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -16,9 +17,20 @@ import {
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../../../features/dashboard/insert-mix";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { toDayRange } from "../../../../features/dashboard/range";
+import {
+    RANGE_PRESETS,
+    toDayRange
+} from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
-import { TrendTiles } from "../../../../features/dashboard/trend-tiles";
+import { formatPercent } from "../../../../features/dashboard/series-utils";
+import {
+    RecentSection,
+    SeasonSection
+} from "../../../../features/dashboard/growth-section";
+import { METRICS } from "../../../../features/dashboard/metrics";
+import { Section, SectionCard } from "../../../../features/dashboard/section";
+import { StatTile } from "../../../../features/dashboard/stat-tiles";
+import { TrendTile } from "../../../../features/dashboard/trend-tile";
 
 /** Enough to see the head of the distribution without a wall of rows. */
 const MOST_USED_LIMIT = 10;
@@ -30,6 +42,7 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/")({
 function LibraryOverview(): ReactNode {
     const { libraryId } = Route.useParams();
     const preset = useRangePreset();
+    const window = RANGE_PRESETS[preset].label;
 
     const summary = useQuery(
         getLibrarySummaryQuery(libraryId, toDayRange(preset))
@@ -40,51 +53,59 @@ function LibraryOverview(): ReactNode {
     if (!summary.data) {
         return <DashboardState query={summary} />;
     }
+    const { totals, metricSeries, sources, growth, appInserts } = summary.data;
 
     return (
         <Stack gap="xl">
-            <TrendTiles
-                totals={summary.data.totals}
-                series={summary.data.metricSeries}
-                scopedToLibrary
+            <RecentSection growth={growth} />
+
+            <SeasonSection growth={growth} />
+
+            <Section title="Usage" window={window}>
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+                    <TrendTile
+                        metric={METRICS.inserts}
+                        totals={totals}
+                        series={metricSeries}
+                    />
+                    <TrendTile
+                        metric={METRICS.activeUsers}
+                        totals={totals}
+                        series={metricSeries}
+                    />
+                    {/* Lifetime on both sides, so a library's place among the
+                        others does not move when the range does. */}
+                    <StatTile
+                        label="Share of all uses"
+                        value={formatPercent(totals.inserts, appInserts)}
+                        icon={ChartPieSlice}
+                    />
+                    <StatTile
+                        label="Favorites"
+                        value={totals.favorites}
+                        icon={Star}
+                    />
+                </SimpleGrid>
+            </Section>
+
+            <InsertsOverTimeCard
+                series={metricSeries}
+                libraryId={libraryId}
+                window={window}
             />
 
-            <InsertsOverTimeCard series={summary.data.metricSeries} />
+            <SectionCard title="How parts are found here" window={window}>
+                <InsertSourceBreakdown sources={sources} />
+                <SimpleGrid cols={{ base: 1, sm: 2 }} mt="lg">
+                    <TrendTile
+                        metric={METRICS.deriveShare}
+                        totals={totals}
+                        series={metricSeries}
+                    />
+                </SimpleGrid>
+            </SectionCard>
 
-            <Card withBorder padding="lg" radius="md">
-                <Title order={4} mb="md">
-                    Where inserts start
-                </Title>
-                <InsertSourceBreakdown sources={summary.data.sources} />
-            </Card>
-
-            <Title order={3}>Build status</Title>
-            {health.data ? (
-                <>
-                    <HealthTiles counts={health.data.counts} />
-
-                    <Card withBorder padding="lg" radius="md">
-                        <Title order={4} mb="md">
-                            Issues by kind
-                        </Title>
-                        <IssueBreakdown issues={health.data.issues} />
-                    </Card>
-
-                    <Card withBorder padding="lg" radius="md">
-                        <Title order={4} mb="md">
-                            What needs attention
-                        </Title>
-                        <HealthItemsTable items={health.data.items} />
-                    </Card>
-                </>
-            ) : (
-                <DashboardState query={health} />
-            )}
-
-            <Card withBorder padding="lg" radius="md">
-                <Title order={4} mb="md">
-                    Most used parts
-                </Title>
+            <SectionCard title="Most used parts" window="All time">
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
@@ -96,7 +117,25 @@ function LibraryOverview(): ReactNode {
                 ) : (
                     <DashboardState query={parts} />
                 )}
-            </Card>
+            </SectionCard>
+
+            <Section title="Build status" window="Right now">
+                {health.data ? (
+                    <>
+                        <HealthTiles counts={health.data.counts} />
+
+                        <SectionCard title="Issues by kind">
+                            <IssueBreakdown issues={health.data.issues} />
+                        </SectionCard>
+
+                        <SectionCard title="What needs attention">
+                            <HealthItemsTable items={health.data.items} />
+                        </SectionCard>
+                    </>
+                ) : (
+                    <DashboardState query={health} />
+                )}
+            </Section>
         </Stack>
     );
 }

@@ -148,7 +148,8 @@ favoriteRoutes.post(
                 libraryId,
                 insertableId,
                 defaultConfiguration,
-                sortOrder: existingCount.length
+                sortOrder: existingCount.length,
+                createdAt: Date.now()
             })
             .onConflictDoNothing();
 

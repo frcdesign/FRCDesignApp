@@ -150,6 +150,28 @@ describe("favorites routes", () => {
             expect(row?.sortOrder).toBe(1);
         });
 
+        it("stamps createdAt, leaving rows that predate the column null", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            // Seeded without a timestamp, the way every row written before the
+            // column existed looks. Backfilling those would draw a cliff of
+            // favorites on the migration date.
+            const old = await seedFavorite(db, TEST_PART_STUDIO_ID);
+
+            const app = createTestApp();
+            const before = Date.now();
+            await app.request(
+                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-stamped`,
+                jsonRequest("POST"),
+                env
+            );
+
+            const rows = await db.select().from(favorites).all();
+            const stamped = rows.find((row) => row.id === "fav-stamped");
+            expect(stamped?.createdAt).toBeGreaterThanOrEqual(before);
+            expect(rows.find((row) => row.id === old)?.createdAt).toBeNull();
+        });
+
         it("400s when insertableId or id is missing", async () => {
             const app = createTestApp();
             const missingInsertable = await app.request(

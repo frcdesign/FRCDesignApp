@@ -43,8 +43,6 @@ interface TrendTileProps {
     /** Lifetime measures, shown as context beneath the range value. */
     totals: AnalyticsTotals;
     series: DailyMetricPoint[];
-    /** Replaces the default single-series detail chart. */
-    detail?: ReactNode;
 }
 
 /**
@@ -56,8 +54,7 @@ interface TrendTileProps {
 export function TrendTile({
     metric,
     totals,
-    series,
-    detail
+    series
 }: TrendTileProps): ReactNode {
     const trend = toTrend(series, metric);
     const share = isShare(metric);
@@ -120,9 +117,7 @@ export function TrendTile({
                     </div>
                     <MetricTerms metric={metric} series={series} />
                     <Suspense fallback={<div style={{ height: 160 }} />}>
-                        {detail ?? (
-                            <MetricDetailChart metric={metric} trend={trend} />
-                        )}
+                        <MetricDetailChart metric={metric} trend={trend} />
                     </Suspense>
                 </Stack>
             </HoverCard.Dropdown>

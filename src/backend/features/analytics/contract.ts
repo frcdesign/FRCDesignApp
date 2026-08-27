@@ -111,11 +111,68 @@ export interface LibrarySummary {
     health: LibraryHealthCounts;
 }
 
+/** One measure over a window and the matching earlier window. */
+export interface PeriodComparison {
+    current: number;
+    previous: number;
+    /** Null whenever stating a change would be dishonest; see `unavailable`. */
+    changeRatio: number | null;
+    /**
+     * Why there is no change to state. `no-prior-data` means the baseline
+     * window predates tracking, so its zero is an absence of measurement;
+     * `no-activity` means both windows are genuinely empty; `zero-baseline`
+     * means only the baseline is, which reads as "new" rather than as an
+     * infinite increase.
+     */
+    unavailable?:
+        | "no-prior-data"
+        | "partial-prior-data"
+        | "no-activity"
+        | "zero-baseline";
+    currentFrom: string;
+    currentTo: string;
+    previousFrom: string;
+    previousTo: string;
+    /** "FRC 2027 so far" / "FRC 2026 at the same point". */
+    label: string;
+    baselineLabel: string;
+}
+
+/**
+ * One week of two seasons laid on top of each other.
+ *
+ * Keyed on weeks since each season opened rather than on a date, which is the
+ * only way FRC's January start and FTC's September one can share an axis — and
+ * what makes "we are ahead of last year" readable without matching up dates.
+ */
+export interface SeasonCurvePoint {
+    /** Weeks elapsed since the season opened, 0-based. */
+    week: number;
+    /** Cumulative inserts; null past the point the season has reached. */
+    current: number | null;
+    previous: number | null;
+}
+
+/** Two seasons' cumulative curves, plus what to call each line. */
+export interface SeasonCurveOut {
+    points: SeasonCurvePoint[];
+    label: string;
+    baselineLabel: string;
+}
+
+export interface GrowthOut {
+    /** Trailing windows, which are meaningful from the first month. */
+    recent: Record<"inserts" | "activeUsers" | "appOpens", PeriodComparison>;
+    /** Season to date against the same stretch of the season before. */
+    season: PeriodComparison;
+    /** The same comparison drawn out week by week. */
+    seasonCurve: SeasonCurveOut;
+    trackingSince: string | null;
+}
+
 export interface AnalyticsOverviewOut {
     /** Lifetime totals, shown as context beneath each tile's range value. */
     totals: AnalyticsTotals;
-    /** The same measures restricted to the selected range — what tiles show. */
-    rangeTotals: AnalyticsTotals;
     libraries: LibrarySummary[];
     /** Per-library daily inserts, for the inserts tile's split-out detail. */
     series: DailyInsertPoint[];
@@ -123,6 +180,14 @@ export interface AnalyticsOverviewOut {
     sources: InsertSourceUsage[];
     from: string;
     to: string;
+    /** The first day anything was recorded; null before any event. */
+    trackingSince: string | null;
+    /**
+     * App-wide lifetime uses, so a library can state its share of them. Equal
+     * to `totals.inserts` when the response is not scoped to a library.
+     */
+    appInserts: number;
+    growth: GrowthOut;
 }
 
 /** The trailing days each parts-table row's sparkline plots. */
@@ -227,6 +292,5 @@ export interface InsertableReportOut {
     favorites: number;
     /** Inserts by the kind of tab they landed in; derived vs. inserted. */
     targets: TargetSplit;
-    series: { day: string; count: number }[];
     parameters: ConfigurationParameterUsage[];
 }

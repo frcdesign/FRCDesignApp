@@ -2,19 +2,21 @@ import type {
     AnalyticsTotals,
     DailyMetricPoint
 } from "@backend/features/analytics/contract";
-
-/**
- * Above this many days, points are bucketed by month so a sparkline stays
- * readable and a detail chart doesn't turn into noise.
- */
-const MONTHLY_BUCKET_THRESHOLD = 120;
+import {
+    formatBucket,
+    pickGranularity,
+    toBucketKey,
+    type BucketPoint,
+    type Granularity
+} from "./buckets";
 
 export type MetricKey =
     | "inserts"
     | "appOpens"
     | "activeUsers"
     | "fastenShare"
-    | "quickShare";
+    | "quickShare"
+    | "deriveShare";
 
 /**
  * How one number is derived, formatted and trended.
@@ -111,6 +113,20 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.quickInserts,
         aggregate: "sum",
         detailLabel: "% of inserts"
+    },
+    deriveShare: {
+        key: "deriveShare",
+        label: "Derived into a part studio",
+        description:
+            "How often a part is derived into a part studio rather than inserted into an assembly. A library people derive from is being used as a starting point to modify; one people insert into assemblies is being used as finished hardware.",
+        numeratorLabel: "Inserts into a part studio",
+        denominatorLabel: "All inserts",
+        numerator: (point) => point.inserts - point.assemblyInserts,
+        denominator: (point) => point.inserts,
+        lifetimeValue: (totals) => totals.inserts - totals.assemblyInserts,
+        lifetimeDenominator: (totals) => totals.inserts,
+        aggregate: "sum",
+        detailLabel: "% of inserts"
     }
 };
 
@@ -160,9 +176,7 @@ export function isShare(metric: MetricDefinition): boolean {
     return metric.denominator !== undefined;
 }
 
-export interface TrendPoint {
-    /** Bucket label for the x-axis. */
-    date: string;
+export interface TrendPoint extends BucketPoint {
     value: number;
 }
 
@@ -174,16 +188,15 @@ export interface TrendPoint {
  */
 export function toTrend(
     points: DailyMetricPoint[],
-    metric: MetricDefinition
+    metric: MetricDefinition,
+    granularity: Granularity = pickGranularity(points.map((p) => p.day))
 ): TrendPoint[] {
-    const monthly = points.length > MONTHLY_BUCKET_THRESHOLD;
-
     const buckets = new Map<
         string,
         { numerator: number; denominator: number; days: number }
     >();
     for (const point of points) {
-        const key = monthly ? point.day.slice(0, 7) : point.day;
+        const key = toBucketKey(point.day, granularity);
         const bucket = buckets.get(key) ?? {
             numerator: 0,
             denominator: 0,
@@ -197,9 +210,10 @@ export function toTrend(
 
     return [...buckets.entries()]
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([key, bucket]) => ({
-            date: formatBucket(key, monthly),
-            value: bucketValue(bucket, metric)
+        .map(([bucket, totals]) => ({
+            bucket,
+            label: formatBucket(bucket, granularity),
+            value: bucketValue(totals, metric)
         }));
 }
 
@@ -217,13 +231,4 @@ function bucketValue(
             : Math.round(bucket.numerator / bucket.days);
     }
     return bucket.numerator;
-}
-
-function formatBucket(key: string, monthly: boolean): string {
-    const parsed = new Date(monthly ? `${key}-01` : key);
-    return parsed.toLocaleDateString("en-US", {
-        month: "short",
-        ...(monthly ? { year: "numeric" } : { day: "numeric" }),
-        timeZone: "UTC"
-    });
 }

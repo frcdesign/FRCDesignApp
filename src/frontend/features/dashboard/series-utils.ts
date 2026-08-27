@@ -1,14 +1,16 @@
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
+import {
+    formatBucket,
+    pickGranularity,
+    toBucketKey,
+    type BucketPoint,
+    type Granularity
+} from "./buckets";
 
-/** Above this many days, daily points are bucketed by month to stay readable. */
-const MONTHLY_BUCKET_THRESHOLD = 120;
-
-export interface ChartPoint {
-    date: string;
-    [libraryName: string]: string | number;
-}
+/** A bucket plus one numeric column per library, keyed by display name. */
+export type ChartPoint = BucketPoint & Record<string, string | number>;
 
 /**
  * Flattens the API's per-day/per-library counts into the one-record-per-x-value
@@ -16,13 +18,12 @@ export interface ChartPoint {
  */
 export function toChartData(
     series: DailyInsertPoint[],
-    libraryIds: LibraryId[]
+    libraryIds: LibraryId[],
+    granularity: Granularity = pickGranularity(series.map((p) => p.day))
 ): ChartPoint[] {
-    const bucketed = shouldBucketByMonth(series);
-
     const totals = new Map<string, Map<LibraryId, number>>();
     for (const point of series) {
-        const key = bucketed ? point.day.slice(0, 7) : point.day;
+        const key = toBucketKey(point.day, granularity);
         const counts = totals.get(key) ?? new Map<LibraryId, number>();
         for (const [libraryId, count] of Object.entries(point.counts)) {
             const id = libraryId as LibraryId;
@@ -33,27 +34,17 @@ export function toChartData(
 
     return [...totals.entries()]
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([date, counts]) => {
-            const point: ChartPoint = { date: formatBucket(date, bucketed) };
+        .map(([bucket, counts]) => {
+            const point: ChartPoint = {
+                bucket,
+                label: formatBucket(bucket, granularity)
+            };
             // Every series needs a value on every point, or lines break up.
             for (const libraryId of libraryIds) {
                 point[getLibraryName(libraryId)] = counts.get(libraryId) ?? 0;
             }
             return point;
         });
-}
-
-function shouldBucketByMonth(series: { length: number }): boolean {
-    return series.length > MONTHLY_BUCKET_THRESHOLD;
-}
-
-function formatBucket(date: string, bucketed: boolean): string {
-    const parsed = new Date(bucketed ? `${date}-01` : date);
-    return parsed.toLocaleDateString("en-US", {
-        month: "short",
-        ...(bucketed ? { year: "numeric" } : { day: "numeric" }),
-        timeZone: "UTC"
-    });
 }
 
 /** Formats a count for the stat tiles, e.g. 12400 -> "12,400". */
@@ -74,5 +65,15 @@ export function formatDate(timestamp: number | null): string {
         year: "numeric",
         month: "short",
         day: "numeric"
+    });
+}
+
+/** Formats a "YYYY-MM-DD" day key as a short date. */
+export function formatDay(day: string): string {
+    return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
     });
 }

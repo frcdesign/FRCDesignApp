@@ -181,7 +181,11 @@ export const favorites = sqliteTable(
         defaultConfiguration: text("default_configuration", {
             mode: "json"
         }).$type<ParameterValues | null>(),
-        sortOrder: integer("sort_order").notNull().default(0)
+        sortOrder: integer("sort_order").notNull().default(0),
+        // Null on every row that predates this column. Deliberately not
+        // backfilled: stamping them all with the migration date would draw a
+        // cliff of favorites on a day nobody favorited anything.
+        createdAt: integer("created_at")
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );

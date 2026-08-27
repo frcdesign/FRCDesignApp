@@ -28,6 +28,8 @@ import {
     getIssueDescription,
     type BuildIssueType
 } from "@backend/features/build-checker/issues";
+import { LibraryId } from "@backend/features/library/library-id";
+import { getLibraryName } from "../library/library-path";
 import { IconSize } from "../../lib/style-constants";
 import { makeUrl } from "../../lib/url";
 import { formatCount, formatDate, formatPercent } from "./series-utils";
@@ -84,7 +86,14 @@ export function HealthTiles({
 }): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
+    // Info issues are counted in the breakdown below rather than given a tile:
+    // a number nobody acts on does not deserve a quarter of the row.
     const tiles = [
+        {
+            label: "Parts",
+            value: formatCount(counts.insertableCount),
+            severity: undefined
+        },
         {
             label: "Healthy",
             value: formatPercent(counts.healthyItems, total),
@@ -99,11 +108,6 @@ export function HealthTiles({
             label: "Warnings",
             value: formatCount(counts.warningCount),
             severity: BuildIssueSeverity.WARNING
-        },
-        {
-            label: "Info",
-            value: formatCount(counts.infoCount),
-            severity: BuildIssueSeverity.INFO
         }
     ];
 
@@ -112,7 +116,9 @@ export function HealthTiles({
             {tiles.map((tile) => (
                 <Card key={tile.label} withBorder padding="lg" radius="md">
                     <Group gap="xs">
-                        <SeverityIcon severity={tile.severity} />
+                        {tile.severity !== undefined && (
+                            <SeverityIcon severity={tile.severity} />
+                        )}
                         <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                             {tile.label}
                         </Text>
@@ -264,46 +270,50 @@ function ItemLink({ item }: { item: HealthItem }): ReactNode {
     );
 }
 
-/** Compact error/warning counts for the top-level libraries table. */
-export function HealthSummary({
-    health
+/**
+ * Every library's health at a glance, for the app dashboard.
+ *
+ * Kept apart from the usage table below it: health is current state and usage
+ * is a window, and interleaving them made one row answer two questions.
+ */
+export function LibraryHealthStrip({
+    libraries
 }: {
-    health: LibraryHealthCounts;
+    libraries: { libraryId: LibraryId; health: LibraryHealthCounts }[];
 }): ReactNode {
-    if (health.groupCount === 0 && health.insertableCount === 0) {
-        // An empty library has nothing to be clean about.
-        return (
-            <Text size="sm" c="dimmed">
-                —
-            </Text>
-        );
-    }
-
-    if (health.errorCount === 0 && health.warningCount === 0) {
-        return (
-            <Group gap={4} justify="flex-end">
-                <SeverityIcon severity={null} />
-                <Text size="sm" c="dimmed">
-                    Clean
-                </Text>
-            </Group>
-        );
-    }
-
     return (
-        <Group gap="xs" justify="flex-end">
-            {health.errorCount > 0 && (
-                <Group gap={4}>
-                    <SeverityIcon severity={BuildIssueSeverity.ERROR} />
-                    <Text size="sm">{formatCount(health.errorCount)}</Text>
-                </Group>
-            )}
-            {health.warningCount > 0 && (
-                <Group gap={4}>
-                    <SeverityIcon severity={BuildIssueSeverity.WARNING} />
-                    <Text size="sm">{formatCount(health.warningCount)}</Text>
-                </Group>
-            )}
-        </Group>
+        <Table>
+            <Table.Thead>
+                <Table.Tr>
+                    <Table.Th>Library</Table.Th>
+                    <Table.Th ta="right">Parts</Table.Th>
+                    <Table.Th ta="right">Healthy</Table.Th>
+                    <Table.Th ta="right">Errors</Table.Th>
+                    <Table.Th ta="right">Warnings</Table.Th>
+                </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+                {libraries.map(({ libraryId, health }) => (
+                    <Table.Tr key={libraryId}>
+                        <Table.Td>{getLibraryName(libraryId)}</Table.Td>
+                        <Table.Td ta="right">
+                            {formatCount(health.insertableCount)}
+                        </Table.Td>
+                        <Table.Td ta="right">
+                            {formatPercent(
+                                health.healthyItems,
+                                health.groupCount + health.insertableCount
+                            )}
+                        </Table.Td>
+                        <Table.Td ta="right">
+                            {formatCount(health.errorCount)}
+                        </Table.Td>
+                        <Table.Td ta="right">
+                            {formatCount(health.warningCount)}
+                        </Table.Td>
+                    </Table.Tr>
+                ))}
+            </Table.Tbody>
+        </Table>
     );
 }

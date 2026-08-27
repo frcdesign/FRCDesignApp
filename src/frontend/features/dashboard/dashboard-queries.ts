@@ -15,15 +15,6 @@ export interface DayRange {
     to: string;
 }
 
-/** The dashboard's default window: the last year of activity. */
-export function getDefaultRange(): DayRange {
-    const now = Date.now();
-    return {
-        from: toDayKey(now - 365 * 24 * 3600 * 1000),
-        to: toDayKey(now)
-    };
-}
-
 export function toDayKey(timestamp: number): string {
     return new Date(timestamp).toISOString().slice(0, 10);
 }
