@@ -1,5 +1,14 @@
-import { ActionIcon, Box, Group, Stack, Tabs, Tooltip } from "@mantine/core";
-import { ArrowsClockwise } from "@phosphor-icons/react";
+import {
+    ActionIcon,
+    Box,
+    Button,
+    Group,
+    Menu,
+    Stack,
+    Tabs,
+    Tooltip
+} from "@mantine/core";
+import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -11,6 +20,8 @@ import {
     IconSize,
     PrimaryColor
 } from "../../lib/style-constants";
+import { DashboardSettingsMenu } from "./dashboard-settings";
+import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
     DEFAULT_LIBRARY,
@@ -41,10 +52,24 @@ export function DashboardNavbar(): ReactNode {
                 <DashboardTabs current={current} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <RefreshButton />
+                    <DashboardSettingsMenu />
                 </Group>
             </Group>
-            {/* The app dashboard spans every library, so it has none to pick. */}
-            {current !== "app" && <LibraryTabs dashboard={current} />}
+            <Group
+                gap="sm"
+                px="sm"
+                py="xs"
+                wrap="nowrap"
+                align="center"
+                style={{ borderBottom: BORDER }}
+            >
+                {/* The app dashboard spans every library, so it has none to
+                    pick; the range still applies to it. */}
+                {current !== "app" && <LibraryMenu dashboard={current} />}
+                <Group ml="auto">
+                    <RangeControl />
+                </Group>
+            </Group>
         </Stack>
     );
 }
@@ -82,7 +107,7 @@ function DashboardTabs({ current }: { current: DashboardKey }): ReactNode {
 }
 
 /** Repoints the current library-scoped dashboard at another library. */
-function LibraryTabs({ dashboard }: { dashboard: DashboardKey }): ReactNode {
+function LibraryMenu({ dashboard }: { dashboard: DashboardKey }): ReactNode {
     const navigate = useNavigate();
     const params = useParams({ strict: false });
     const current = params.libraryId ?? DEFAULT_LIBRARY;
@@ -90,35 +115,40 @@ function LibraryTabs({ dashboard }: { dashboard: DashboardKey }): ReactNode {
     const target = DASHBOARDS.find((entry) => entry.key === dashboard);
 
     return (
-        <Group
-            gap="sm"
-            px="sm"
-            wrap="nowrap"
-            align="stretch"
-            style={{ borderBottom: BORDER }}
-        >
-            <Tabs
-                value={current}
-                onChange={(value) => {
-                    if (!value || value === current) return;
-                    void navigate({
-                        to: target?.to ?? "/dashboard/library/$libraryId",
-                        params: { libraryId: value as LibraryId },
-                        // The selected part belongs to the old library.
-                        search: (prev) => ({ ...prev, element: undefined })
-                    });
-                }}
-                styles={TAB_STYLES}
-            >
-                <Tabs.List aria-label="Libraries">
-                    {Object.values(LibraryId).map((libraryId) => (
-                        <Tabs.Tab key={libraryId} value={libraryId}>
-                            {getLibraryName(libraryId)}
-                        </Tabs.Tab>
-                    ))}
-                </Tabs.List>
-            </Tabs>
-        </Group>
+        <Menu position="bottom-start" withinPortal>
+            <Menu.Target>
+                <Button
+                    variant="default"
+                    size="compact-sm"
+                    rightSection={<CaretDown size={IconSize.SMALL} />}
+                >
+                    {getLibraryName(current)}
+                </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+                {Object.values(LibraryId).map((libraryId) => (
+                    <Menu.Item
+                        key={libraryId}
+                        disabled={libraryId === current}
+                        onClick={() =>
+                            void navigate({
+                                to:
+                                    target?.to ??
+                                    "/dashboard/library/$libraryId",
+                                params: { libraryId },
+                                // The part belongs to the old library.
+                                search: (prev) => ({
+                                    ...prev,
+                                    element: undefined
+                                })
+                            })
+                        }
+                    >
+                        {getLibraryName(libraryId)}
+                    </Menu.Item>
+                ))}
+            </Menu.Dropdown>
+        </Menu>
     );
 }
 
@@ -141,7 +171,7 @@ function RefreshButton(): ReactNode {
                     })
                 }
             >
-                <ArrowsClockwise size={IconSize.MEDIUM} />
+                <ArrowClockwise size={IconSize.MEDIUM} />
             </ActionIcon>
         </Tooltip>
     );

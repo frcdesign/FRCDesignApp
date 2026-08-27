@@ -22,11 +22,7 @@ describe("metric definitions", () => {
         const shares = Object.values(METRICS)
             .filter(isShare)
             .map((metric) => metric.key);
-        expect(shares.sort()).toEqual([
-            "fastenShare",
-            "favoriteShare",
-            "quickShare"
-        ]);
+        expect(shares.sort()).toEqual(["fastenShare", "quickShare"]);
     });
 
     it("measures fasten against assembly inserts", () => {
@@ -51,10 +47,10 @@ describe("toTrend", () => {
     it("turns a share into a percentage per day", () => {
         const trend = toTrend(
             [
-                day(0, { inserts: 10, favoriteInserts: 3 }),
-                day(1, { inserts: 4, favoriteInserts: 1 })
+                day(0, { inserts: 10, quickInserts: 3 }),
+                day(1, { inserts: 4, quickInserts: 1 })
             ],
-            METRICS.favoriteShare
+            METRICS.quickShare
         );
         expect(trend.map((point) => point.value)).toEqual([30, 25]);
     });
@@ -62,12 +58,12 @@ describe("toTrend", () => {
     it("ratios a month from its totals, not by averaging daily rates", () => {
         // A quiet 1-of-1 day beside many busy 0-of-99 days is ~1%, not ~50%.
         const points = [
-            day(0, { inserts: 1, favoriteInserts: 1 }),
+            day(0, { inserts: 1, quickInserts: 1 }),
             ...Array.from({ length: 200 }, (_, index) =>
-                day(index + 1, { inserts: 99, favoriteInserts: 0 })
+                day(index + 1, { inserts: 99, quickInserts: 0 })
             )
         ];
-        const [first] = toTrend(points, METRICS.favoriteShare);
+        const [first] = toTrend(points, METRICS.quickShare);
         expect(first.value).toBeLessThan(1);
     });
 
@@ -99,7 +95,7 @@ describe("toTrend", () => {
     });
 
     it("reports zero rather than dividing by zero", () => {
-        const [point] = toTrend([day(0)], METRICS.favoriteShare);
+        const [point] = toTrend([day(0)], METRICS.quickShare);
         expect(point.value).toBe(0);
     });
 
@@ -167,10 +163,10 @@ describe("rangeValue", () => {
     it("ratios a share from range totals, not from daily rates", () => {
         const value = rangeValue(
             [
-                day(0, { inserts: 1, favoriteInserts: 1 }),
-                day(1, { inserts: 99, favoriteInserts: 0 })
+                day(0, { inserts: 1, quickInserts: 1 }),
+                day(1, { inserts: 99, quickInserts: 0 })
             ],
-            METRICS.favoriteShare
+            METRICS.quickShare
         );
         expect(value).toBeCloseTo(1, 1);
     });
@@ -178,7 +174,7 @@ describe("rangeValue", () => {
     it("reports zero for an empty range", () => {
         expect(rangeValue([], METRICS.inserts)).toBe(0);
         expect(rangeValue([], METRICS.activeUsers)).toBe(0);
-        expect(rangeValue([], METRICS.favoriteShare)).toBe(0);
+        expect(rangeValue([], METRICS.quickShare)).toBe(0);
     });
 });
 
@@ -200,16 +196,16 @@ describe("metric descriptions", () => {
 describe("rangeTerms", () => {
     it("returns the numbers the share is divided from", () => {
         const points = [
-            day(0, { inserts: 10, favoriteInserts: 3 }),
-            day(1, { inserts: 30, favoriteInserts: 7 })
+            day(0, { inserts: 10, quickInserts: 3 }),
+            day(1, { inserts: 30, quickInserts: 7 })
         ];
 
-        expect(rangeTerms(points, METRICS.favoriteShare)).toEqual({
+        expect(rangeTerms(points, METRICS.quickShare)).toEqual({
             numerator: 10,
             denominator: 40
         });
         // Those terms are exactly what the displayed value divides.
-        expect(rangeValue(points, METRICS.favoriteShare)).toBeCloseTo(25, 5);
+        expect(rangeValue(points, METRICS.quickShare)).toBeCloseTo(25, 5);
     });
 
     it("leaves the denominator at zero for a count", () => {

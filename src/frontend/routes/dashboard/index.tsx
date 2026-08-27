@@ -1,4 +1,4 @@
-import { Card, Group, Stack, Table, Title } from "@mantine/core";
+import { Card, Stack, Table, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -7,12 +7,10 @@ import { DashboardLink } from "../../features/dashboard/dashboard-link";
 import { getOverviewQuery } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { HealthSummary } from "../../features/dashboard/health-report";
+import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
 import { toDayRange } from "../../features/dashboard/range";
-import {
-    RangeControl,
-    useRangePreset
-} from "../../features/dashboard/range-control";
+import { useRangePreset } from "../../features/dashboard/range-control";
 import { formatCount } from "../../features/dashboard/series-utils";
 import { TrendTiles } from "../../features/dashboard/trend-tiles";
 
@@ -31,16 +29,13 @@ function DashboardOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Group justify="space-between">
-                <Title order={3}>All libraries</Title>
-                <RangeControl />
-            </Group>
-
             <TrendTiles
                 totals={totals}
                 series={metricSeries}
                 librarySeries={series}
             />
+
+            <InsertsByLibraryCard series={series} />
 
             <Card withBorder padding="lg" radius="md">
                 <Title order={4} mb="md">

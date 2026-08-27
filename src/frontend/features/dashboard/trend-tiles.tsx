@@ -1,4 +1,5 @@
 import { SimpleGrid } from "@mantine/core";
+import { Star } from "@phosphor-icons/react";
 import { lazy, Suspense, type ReactNode } from "react";
 import type {
     AnalyticsTotals,
@@ -7,6 +8,7 @@ import type {
 } from "@backend/features/analytics/contract";
 import { METRICS, type MetricKey } from "./metrics";
 import { TrendTile } from "./trend-tile";
+import { StatTile } from "./stat-tiles";
 
 const LibraryInsertsChart = lazy(() =>
     import("./trend-chart").then((module) => ({
@@ -19,7 +21,6 @@ const TILE_ORDER: MetricKey[] = [
     "inserts",
     "appOpens",
     "activeUsers",
-    "favoriteShare",
     "fastenShare",
     "quickShare"
 ];
@@ -55,6 +56,9 @@ export function TrendTiles({
 
     return (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+            {/* Favorites are current state, not a series, so this is a plain
+                count rather than a tile with a trend under it. */}
+            <StatTile label="Favorites" value={totals.favorites} icon={Star} />
             {order.map((key) => (
                 <TrendTile
                     key={key}

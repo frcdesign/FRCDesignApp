@@ -15,7 +15,7 @@ export function RangeControl(): ReactNode {
 
     return (
         <SegmentedControl
-            size="sm"
+            size="xs"
             value={preset}
             onChange={(value) => {
                 void navigate({

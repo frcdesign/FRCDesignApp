@@ -15,25 +15,25 @@ export interface DashboardDefinition {
 export const DASHBOARDS: DashboardDefinition[] = [
     {
         key: "app",
-        label: "App",
+        label: "App dashboard",
         to: "/dashboard",
         needsLibrary: false
     },
     {
         key: "library",
-        label: "Library",
+        label: "Library dashboard",
         to: "/dashboard/library/$libraryId",
         needsLibrary: true
     },
     {
         key: "unused",
-        label: "Low usage",
+        label: "Low usage dashboard",
         to: "/dashboard/library/$libraryId/unused",
         needsLibrary: true
     },
     {
         key: "part",
-        label: "Part",
+        label: "Part dashboard",
         to: "/dashboard/library/$libraryId/part",
         needsLibrary: true
     }

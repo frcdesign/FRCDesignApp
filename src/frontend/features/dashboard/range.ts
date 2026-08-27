@@ -1,17 +1,17 @@
 import { toDayKey, type DayRange } from "./dashboard-queries";
 
-/** Selectable windows for the range chart. */
+/** Selectable windows, widest first so the default sits at the near end. */
 export const RANGE_PRESETS = {
-    "7d": { label: "7 days", days: 7 },
-    "30d": { label: "30 days", days: 30 },
-    "90d": { label: "90 days", days: 90 },
+    all: { label: "All time", days: null },
     "1y": { label: "1 year", days: 365 },
-    all: { label: "All time", days: null }
+    "90d": { label: "90 days", days: 90 },
+    "30d": { label: "30 days", days: 30 },
+    "7d": { label: "7 days", days: 7 }
 } as const;
 
 export type RangePreset = keyof typeof RANGE_PRESETS;
 
-export const DEFAULT_RANGE_PRESET: RangePreset = "30d";
+export const DEFAULT_RANGE_PRESET: RangePreset = "all";
 
 export function isRangePreset(value: unknown): value is RangePreset {
     return typeof value === "string" && value in RANGE_PRESETS;

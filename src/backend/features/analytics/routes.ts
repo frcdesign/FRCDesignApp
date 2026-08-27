@@ -20,6 +20,7 @@ import {
     dailySourceMetrics,
     dailyUserActivity,
     events,
+    favorites,
     group,
     insertables,
     insertableStats,
@@ -439,88 +440,111 @@ analyticsRoutes.get(
         const elementId = c.req.param("elementId")!;
         const db = getDb(c.env.DB);
 
-        const [stats, insertable, valueRows, series, uniqueUsers, targetRows] =
-            await Promise.all([
-                db
-                    .select()
-                    .from(insertableStats)
-                    .where(
-                        and(
-                            eq(insertableStats.libraryId, libraryId),
-                            eq(insertableStats.elementId, elementId)
-                        )
+        const [
+            stats,
+            insertable,
+            valueRows,
+            series,
+            uniqueUsers,
+            targetRows,
+            favoriteCount
+        ] = await Promise.all([
+            db
+                .select()
+                .from(insertableStats)
+                .where(
+                    and(
+                        eq(insertableStats.libraryId, libraryId),
+                        eq(insertableStats.elementId, elementId)
                     )
-                    .get(),
-                db
-                    .select({
-                        id: insertables.id,
-                        name: insertables.name,
-                        documentId: insertables.documentId,
-                        versionId: insertables.versionId
-                    })
-                    .from(insertables)
-                    .where(
-                        and(
-                            eq(insertables.libraryId, libraryId),
-                            eq(insertables.elementId, elementId)
-                        )
+                )
+                .get(),
+            db
+                .select({
+                    id: insertables.id,
+                    name: insertables.name,
+                    documentId: insertables.documentId,
+                    versionId: insertables.versionId
+                })
+                .from(insertables)
+                .where(
+                    and(
+                        eq(insertables.libraryId, libraryId),
+                        eq(insertables.elementId, elementId)
                     )
-                    .get(),
-                db
-                    .select()
-                    .from(configurationValueStats)
-                    .where(
-                        and(
-                            eq(configurationValueStats.libraryId, libraryId),
-                            eq(configurationValueStats.elementId, elementId)
-                        )
+                )
+                .get(),
+            db
+                .select()
+                .from(configurationValueStats)
+                .where(
+                    and(
+                        eq(configurationValueStats.libraryId, libraryId),
+                        eq(configurationValueStats.elementId, elementId)
                     )
-                    .all(),
-                // A single part's trend is narrow enough to read from raw
-                // events via events_element_day_idx, so it needs no rollup.
-                db
-                    .select({
-                        day: events.day,
-                        count: count()
-                    })
-                    .from(events)
-                    .where(
-                        and(
-                            eq(events.libraryId, libraryId),
-                            eq(events.elementId, elementId),
-                            eq(events.type, EventType.INSERT)
-                        )
+                )
+                .all(),
+            // A single part's trend is narrow enough to read from raw
+            // events via events_element_day_idx, so it needs no rollup.
+            db
+                .select({
+                    day: events.day,
+                    count: count()
+                })
+                .from(events)
+                .where(
+                    and(
+                        eq(events.libraryId, libraryId),
+                        eq(events.elementId, elementId),
+                        eq(events.type, EventType.INSERT)
                     )
-                    .groupBy(events.day)
-                    .orderBy(asc(events.day))
-                    .all(),
-                db
-                    .select({ value: countDistinct(events.userId) })
-                    .from(events)
-                    .where(
-                        and(
-                            eq(events.libraryId, libraryId),
-                            eq(events.elementId, elementId),
-                            eq(events.type, EventType.INSERT)
-                        )
+                )
+                .groupBy(events.day)
+                .orderBy(asc(events.day))
+                .all(),
+            db
+                .select({ value: countDistinct(events.userId) })
+                .from(events)
+                .where(
+                    and(
+                        eq(events.libraryId, libraryId),
+                        eq(events.elementId, elementId),
+                        eq(events.type, EventType.INSERT)
                     )
-                    .get(),
-                db
-                    .select({
-                        targetElementType: events.targetElementType,
-                        count: count()
-                    })
-                    .from(events)
-                    .where(
-                        and(
-                            eq(events.libraryId, libraryId),
-                            eq(events.elementId, elementId),
-                            eq(events.type, EventType.INSERT)
-                        )
+                )
+                .get(),
+            db
+                .select({
+                    targetElementType: events.targetElementType,
+                    count: count()
+                })
+                .from(events)
+                .where(
+                    and(
+                        eq(events.libraryId, libraryId),
+                        eq(events.elementId, elementId),
+                        eq(events.type, EventType.INSERT)
                     )
-                    .groupBy(events.targetElementType)
-                    .all()
-            ]);
+                )
+                .groupBy(events.targetElementType)
+                .all(),
+            // Favorites are keyed by insertable id, so a part that left
+            // the library has none to count.
+            db
+                .select({ value: count() })
+                .from(favorites)
+                .innerJoin(
+                    insertables,
+                    eq(insertables.id, favorites.insertableId)
+                )
+                .where(
+                    and(
+                        eq(insertables.libraryId, libraryId),
+                        eq(insertables.elementId, elementId)
+                    )
+                )
+                .get()
+        ]);
 
         // The 1:1 configurations table is keyed by insertable id, so the
         // current parameter definitions are only reachable via a live row.
@@ -548,6 +572,7 @@ analyticsRoutes.get(
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             lastInsertedAt: stats?.lastInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
+            favorites: favoriteCount?.value ?? 0,
             targets: toTargetSplit(targetRows),
             series,
             parameters: buildParameterUsage(parameters, valueRows)
@@ -690,7 +715,7 @@ async function getTotals(
         metricFilters.push(lte(dailyMetrics.day, range.to));
     }
 
-    const [metrics, uniqueUsers] = await Promise.all([
+    const [metrics, uniqueUsers, favoriteCount] = await Promise.all([
         db
             .select({
                 type: dailyMetrics.type,
@@ -721,7 +746,12 @@ async function getTotals(
               : db
                     .select({ value: countDistinct(userStats.userId) })
                     .from(userStats)
-                    .get()
+                    .get(),
+        db
+            .select({ value: count() })
+            .from(favorites)
+            .where(libraryId ? eq(favorites.libraryId, libraryId) : undefined)
+            .get()
     ]);
 
     const byType = new Map(metrics.map((row) => [row.type, row]));
@@ -734,7 +764,8 @@ async function getTotals(
         favoriteInserts: Number(inserts?.favorites ?? 0),
         quickInserts: Number(inserts?.quickInserts ?? 0),
         fastenInserts: Number(inserts?.fastens ?? 0),
-        assemblyInserts: Number(inserts?.assemblies ?? 0)
+        assemblyInserts: Number(inserts?.assemblies ?? 0),
+        favorites: favoriteCount?.value ?? 0
     };
 }
 

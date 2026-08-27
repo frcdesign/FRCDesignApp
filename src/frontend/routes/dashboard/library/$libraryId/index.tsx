@@ -1,4 +1,4 @@
-import { Card, Group, Stack, Title } from "@mantine/core";
+import { Card, Stack, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -13,13 +13,11 @@ import {
     HealthTiles,
     IssueBreakdown
 } from "../../../../features/dashboard/health-report";
+import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../../../features/dashboard/insert-mix";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
-import {
-    RangeControl,
-    useRangePreset
-} from "../../../../features/dashboard/range-control";
+import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { TrendTiles } from "../../../../features/dashboard/trend-tiles";
 
 /** Enough to see the head of the distribution without a wall of rows. */
@@ -45,15 +43,13 @@ function LibraryOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Group justify="flex-end">
-                <RangeControl />
-            </Group>
-
             <TrendTiles
                 totals={summary.data.totals}
                 series={summary.data.metricSeries}
                 scopedToLibrary
             />
+
+            <InsertsOverTimeCard series={summary.data.metricSeries} />
 
             <Card withBorder padding="lg" radius="md">
                 <Title order={4} mb="md">

@@ -14,11 +14,13 @@ import {
 import {
     TEST_LIBRARY_ID,
     TEST_ASSEMBLY_PATH,
+    TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
     jsonRequest,
     resetDb,
     seedAssembly,
     seedConfiguration,
+    seedFavorite,
     seedPartStudio,
     seedTestData
 } from "../../../__test_utils__";
@@ -37,6 +39,7 @@ import {
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthOut,
+    type LibrarySummary,
     type PartUsageOut
 } from "./contract";
 import { buildParameterUsage, summarizeHealth } from "./routes";
@@ -499,6 +502,34 @@ describe("analytics routes", () => {
         });
     });
 
+    describe("favorite totals", () => {
+        it("counts favorites as standing state, not over the range", async () => {
+            await seedTestData(db);
+            // Deliberately outside any range the dashboard can select.
+            await seedMetric("2020-01-01", 1);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview?from=2026-01-01&to=2026-01-02"
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            // seedTestData favorites the part studio and the assembly.
+            expect(body.totals.favorites).toBe(2);
+            expect(body.rangeTotals.favorites).toBe(2);
+        });
+
+        it("scopes the count to one library", async () => {
+            await seedTestData(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/summary/library/${LibraryId.MKCAD}`
+            );
+            const body: LibrarySummary = await res.json();
+
+            expect(body.totals.favorites).toBe(0);
+        });
+    });
+
     describe("GET /analytics/unused-options/library/:libraryId", () => {
         const ENUM_PARAMETER: ConfigurationParameter = {
             type: ParameterType.ENUM,
@@ -772,6 +803,19 @@ describe("analytics routes", () => {
             expect(body.insertCount).toBe(0);
             expect(body.series).toEqual([]);
             expect(body.parameters).toEqual([]);
+        });
+
+        it("counts how many users have the part favorited", async () => {
+            await seedPartStudio(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "user-a");
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "user-b");
+
+            const res = await anonymousGet(
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+            );
+            const body: InsertableReportOut = await res.json();
+
+            expect(body.favorites).toBe(2);
         });
 
         it("splits inserts by the tab they landed in", async () => {

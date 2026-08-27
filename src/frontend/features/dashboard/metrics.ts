@@ -13,7 +13,6 @@ export type MetricKey =
     | "inserts"
     | "appOpens"
     | "activeUsers"
-    | "favoriteShare"
     | "fastenShare"
     | "quickShare";
 
@@ -83,20 +82,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.uniqueUsers,
         aggregate: "average",
         detailLabel: "Active users per day"
-    },
-    favoriteShare: {
-        key: "favoriteShare",
-        label: "Favorited parts",
-        description:
-            "How often people insert a part they had favorited. This is a property of the part, not of where the insert came from \u2014 a favorited part inserted from search still counts here. Use \u201cWhere inserts start\u201d for the favorites list itself.",
-        numeratorLabel: "Inserts of a favorited part",
-        denominatorLabel: "All inserts",
-        numerator: (point) => point.favoriteInserts,
-        denominator: (point) => point.inserts,
-        lifetimeDenominator: (totals) => totals.inserts,
-        lifetimeValue: (totals) => totals.favoriteInserts,
-        aggregate: "sum",
-        detailLabel: "% of inserts"
     },
     fastenShare: {
         key: "fastenShare",

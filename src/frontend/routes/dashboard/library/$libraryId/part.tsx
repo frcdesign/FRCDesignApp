@@ -118,7 +118,7 @@ function ReportBody({
                 )}
             </Group>
 
-            <SimpleGrid cols={{ base: 1, sm: 5 }}>
+            <SimpleGrid cols={{ base: 1, sm: 3, lg: 6 }}>
                 <SummaryCard
                     label="Uses per month"
                     value={formatCount(report.usesPerMonth)}
@@ -130,6 +130,10 @@ function ReportBody({
                 <SummaryCard
                     label="Unique users"
                     value={formatCount(report.uniqueUsers)}
+                />
+                <SummaryCard
+                    label="Favorites"
+                    value={formatCount(report.favorites)}
                 />
                 <SummaryCard
                     label="Last used"

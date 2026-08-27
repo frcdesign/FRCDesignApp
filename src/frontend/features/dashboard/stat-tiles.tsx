@@ -16,7 +16,11 @@ interface StatTileProps {
     icon: Icon;
 }
 
-function StatTile({ label, value, icon: TileIcon }: StatTileProps): ReactNode {
+export function StatTile({
+    label,
+    value,
+    icon: TileIcon
+}: StatTileProps): ReactNode {
     return (
         <Card withBorder padding="lg" radius="md">
             <Group justify="space-between" wrap="nowrap">

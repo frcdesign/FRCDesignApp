@@ -33,15 +33,18 @@ export function MetricSparkline({ trend }: { trend: TrendPoint[] }): ReactNode {
 /** The same numbers as the sparkline, with axes and a tooltip. */
 export function MetricDetailChart({
     metric,
-    trend
+    trend,
+    h = DETAIL_HEIGHT
 }: {
     metric: MetricDefinition;
     trend: TrendPoint[];
+    /** Taller when the chart is the page's own, not a hover panel's. */
+    h?: number;
 }): ReactNode {
     const share = isShare(metric);
     return (
         <LineChart
-            h={DETAIL_HEIGHT}
+            h={h}
             data={trend}
             dataKey="date"
             curveType="monotone"
@@ -63,14 +66,17 @@ export function MetricDetailChart({
 
 /** Inserts split by library — the one trend that is genuinely multi-series. */
 export function LibraryInsertsChart({
-    series
+    series,
+    h = DETAIL_HEIGHT
 }: {
     series: DailyInsertPoint[];
+    /** Taller when the chart is the page's own, not a hover panel's. */
+    h?: number;
 }): ReactNode {
     const libraryIds = Object.values(LibraryId);
     return (
         <LineChart
-            h={DETAIL_HEIGHT}
+            h={h}
             data={toChartData(series, libraryIds)}
             dataKey="date"
             withLegend

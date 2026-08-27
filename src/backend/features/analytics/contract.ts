@@ -16,6 +16,11 @@ export interface AnalyticsTotals {
      */
     fastenInserts: number;
     assemblyInserts: number;
+    /**
+     * Favorites standing right now, not over the range: a favorite is state a
+     * user keeps, not an event, so it has no day to be windowed by.
+     */
+    favorites: number;
 }
 
 /** One day of the range chart; `counts` is keyed by library id. */
@@ -218,6 +223,8 @@ export interface InsertableReportOut {
     firstInsertedAt: number | null;
     lastInsertedAt: number | null;
     uniqueUsers: number;
+    /** How many users currently have this part favorited. */
+    favorites: number;
     /** Inserts by the kind of tab they landed in; derived vs. inserted. */
     targets: TargetSplit;
     series: { day: string; count: number }[];
