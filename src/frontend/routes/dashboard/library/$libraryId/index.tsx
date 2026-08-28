@@ -17,13 +17,9 @@ import {
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../../../features/dashboard/insert-mix";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import {
-    RANGE_PRESETS,
-    toDayRange
-} from "../../../../features/dashboard/range";
+import { toDayRange } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { formatPercent } from "../../../../features/dashboard/series-utils";
-import { RecentSection } from "../../../../features/dashboard/growth-section";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../../../features/dashboard/metrics";
 import { Section, SectionCard } from "../../../../features/dashboard/section";
@@ -40,7 +36,6 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/")({
 function LibraryOverview(): ReactNode {
     const { libraryId } = Route.useParams();
     const preset = useRangePreset();
-    const window = RANGE_PRESETS[preset].label;
 
     const summary = useQuery(
         getLibrarySummaryQuery(libraryId, toDayRange(preset))
@@ -55,13 +50,11 @@ function LibraryOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Section title="Overall" window="All time">
+            <Section title="Overall">
                 <LifetimeTiles totals={totals} growth={growth} />
             </Section>
 
-            <RecentSection growth={growth} />
-
-            <Section title="Usage" window={window}>
+            <Section title="Usage">
                 {/* Total uses is not repeated here: the Overall card above
                     carries it, and the chart below draws its trend full size. */}
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -85,13 +78,9 @@ function LibraryOverview(): ReactNode {
                 </SimpleGrid>
             </Section>
 
-            <InsertsOverTimeCard
-                series={metricSeries}
-                libraryId={libraryId}
-                window={window}
-            />
+            <InsertsOverTimeCard series={metricSeries} libraryId={libraryId} />
 
-            <SectionCard title="How parts are found here" window={window}>
+            <SectionCard title="How parts are found here">
                 <InsertSourceBreakdown sources={sources} />
                 <SimpleGrid cols={{ base: 1, sm: 2 }} mt="lg">
                     <TrendTile
@@ -102,7 +91,7 @@ function LibraryOverview(): ReactNode {
                 </SimpleGrid>
             </SectionCard>
 
-            <SectionCard title="Most used parts" window="All time">
+            <SectionCard title="Most used parts">
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
@@ -116,7 +105,7 @@ function LibraryOverview(): ReactNode {
                 )}
             </SectionCard>
 
-            <Section title="Build status" window="Right now">
+            <Section title="Build status">
                 {health.data ? (
                     <>
                         <HealthTiles counts={health.data.counts} />

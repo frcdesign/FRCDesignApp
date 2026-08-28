@@ -61,7 +61,7 @@ export function toComparison(
     current: number,
     previous: number,
     windows: { current: Window; previous: Window },
-    labels: { label: string; baselineLabel: string },
+    labels: Pick<PeriodComparison, "label" | "baselineLabel" | "baselineShort">,
     trackingSince: string | null
 ): PeriodComparison {
     const base = {
@@ -170,7 +170,7 @@ async function countPeople(
 async function measure(
     db: Db,
     windows: { current: Window; previous: Window },
-    labels: { label: string; baselineLabel: string },
+    labels: Pick<PeriodComparison, "label" | "baselineLabel" | "baselineShort">,
     trackingSince: string | null,
     libraryId?: LibraryId
 ): Promise<Record<GrowthMeasure, PeriodComparison>> {
@@ -213,7 +213,8 @@ export async function getGrowth(
     const windows = recentWindows(today);
     const recentLabels = {
         label: `Last ${RECENT_DAYS} days`,
-        baselineLabel: `the ${RECENT_DAYS} days before`
+        baselineLabel: `the ${RECENT_DAYS} days before`,
+        baselineShort: `${RECENT_DAYS} days`
     };
 
     const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FTC;
@@ -231,7 +232,8 @@ export async function getGrowth(
             : name(season.season),
         baselineLabel: season.inProgress
             ? `${name(baseline.season)} at the same point`
-            : name(baseline.season)
+            : name(baseline.season),
+        baselineShort: "last season"
     };
 
     const [recent, seasonal] = await Promise.all([

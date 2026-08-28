@@ -38,15 +38,15 @@ function DashboardOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Section title="Overall" window="All time">
+            <Section title="Overall">
                 <LifetimeTiles totals={totals} growth={growth} withOpens />
             </Section>
 
-            <RecentSection growth={growth} withOpens />
+            <RecentSection growth={growth} />
 
             <InsertsByLibraryCard series={series} />
 
-            <SectionCard title="How people use the app" window="All time">
+            <SectionCard title="How people use the app">
                 <InsertSourceBreakdown sources={sources} />
                 <SimpleGrid cols={{ base: 1, sm: 3 }} mt="lg">
                     <TrendTile
@@ -67,7 +67,7 @@ function DashboardOverview(): ReactNode {
                 </SimpleGrid>
             </SectionCard>
 
-            <Section title="Libraries" window="All time">
+            <Section title="Libraries">
                 {/* A person active in two libraries has a row in each, so
                     the user column deliberately does not sum to the app
                     total. */}
@@ -109,7 +109,7 @@ function DashboardOverview(): ReactNode {
                         </Table.Tbody>
                     </Table>
                 </SectionCard>
-                <SectionCard title="Build health" window="Right now">
+                <SectionCard title="Build health">
                     <LibraryHealthStrip libraries={libraries} />
                 </SectionCard>
             </Section>

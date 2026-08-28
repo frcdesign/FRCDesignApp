@@ -34,7 +34,11 @@ async function seedActive(day: string, userId: string) {
 }
 
 const WINDOWS = recentWindows(TODAY);
-const LABELS = { label: "current", baselineLabel: "before" };
+const LABELS = {
+    label: "current",
+    baselineLabel: "before",
+    baselineShort: "before"
+};
 
 describe("recentWindows", () => {
     it("ends yesterday, so a part-finished today cannot drag it down", () => {
@@ -101,6 +105,7 @@ describe("getGrowth", () => {
         expect(growth.recent.inserts.current).toBe(30);
         expect(growth.recent.inserts.previous).toBe(20);
         expect(growth.recent.inserts.changeRatio).toBeCloseTo(0.5);
+        expect(growth.recent.inserts.baselineShort).toBe("28 days");
     });
 
     it("counts a person once per window, not once overall", async () => {
@@ -124,6 +129,8 @@ describe("getGrowth", () => {
 
         expect(growth.season.inserts.label).toBe("2025–26 season");
         expect(growth.season.inserts.baselineLabel).toBe("2024–25 season");
+        // The chip is terse; the exact season stays in the tooltip above.
+        expect(growth.season.inserts.baselineShort).toBe("last season");
         expect(growth.season.inserts.current).toBe(100);
         expect(growth.season.inserts.previous).toBe(50);
         expect(growth.season.inserts.changeRatio).toBeCloseTo(1);

@@ -17,7 +17,8 @@ function comparison(
         previousFrom: "2026-07-04",
         previousTo: "2026-07-31",
         label: "Last 28 days",
-        baselineLabel: "the 28 days before"
+        baselineLabel: "the 28 days before",
+        baselineShort: "28 days"
     };
 }
 

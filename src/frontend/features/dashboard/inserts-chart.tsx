@@ -1,4 +1,4 @@
-import { Card, Group, SegmentedControl, Text, Title } from "@mantine/core";
+import { Card, Group, SegmentedControl, Title } from "@mantine/core";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import type {
     DailyInsertPoint,
@@ -38,13 +38,11 @@ const GRANULARITIES = [
 
 function ChartCard({
     title,
-    window,
     granularity,
     onGranularityChange,
     children
 }: {
     title: string;
-    window: string;
     granularity?: Granularity;
     onGranularityChange?: (value: Granularity) => void;
     children: ReactNode;
@@ -52,12 +50,7 @@ function ChartCard({
     return (
         <Card withBorder padding="lg" radius="md">
             <Group justify="space-between" align="flex-start" mb="md">
-                <div>
-                    <Title order={4}>{title}</Title>
-                    <Text size="xs" c="dimmed">
-                        {window}
-                    </Text>
-                </div>
+                <Title order={4}>{title}</Title>
                 {granularity && onGranularityChange && (
                     <SegmentedControl
                         size="xs"
@@ -87,7 +80,6 @@ export function InsertsByLibraryCard({
     return (
         <ChartCard
             title="Uses over time"
-            window="Everything recorded"
             granularity={granularity}
             onGranularityChange={setGranularity}
         >
@@ -105,15 +97,13 @@ export function InsertsByLibraryCard({
 /** The one library's own line, for the library dashboard. */
 export function InsertsOverTimeCard({
     series,
-    libraryId,
-    window
+    libraryId
 }: {
     series: DailyMetricPoint[];
     libraryId: LibraryId;
-    window: string;
 }): ReactNode {
     return (
-        <ChartCard title="Uses over time" window={window}>
+        <ChartCard title="Uses over time">
             <MetricDetailChart
                 metric={METRICS.inserts}
                 trend={toTrend(series, METRICS.inserts)}

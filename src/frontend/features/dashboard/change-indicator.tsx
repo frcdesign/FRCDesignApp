@@ -10,7 +10,9 @@ import { formatCount } from "./series-utils";
  *
  * A percentage is never shown without what it is measured against: the tiles
  * that use this mix windows deliberately — an all-time value with a
- * season-over-season change — so a bare "+82%" would be unreadable.
+ * season-over-season change — so a bare "+82%" would be unreadable. The chip
+ * says it in the fewest words that still say it, and the tooltip carries the
+ * exact window and count.
  */
 export function ChangeIndicator({
     comparison,
@@ -65,7 +67,7 @@ export function ChangeIndicator({
             c="dimmed"
             ta={stacked ? "right" : undefined}
         >
-            vs {comparison.baselineLabel}
+            vs {comparison.baselineShort}
         </Text>
     );
     const Layout = stacked ? Stack : Group;
@@ -92,16 +94,17 @@ export function formatRate(value: number): string {
     return value.toFixed(1);
 }
 
+/** Sits where the chip does, so it is kept as short; `explain` has the rest. */
 function shortReason(comparison: PeriodComparison): string {
     switch (comparison.unavailable) {
         case "zero-baseline":
             return "New";
         case "no-activity":
-            return "No uses in either period";
+            return "No activity";
         case "partial-prior-data":
-            return "Part of the earlier period is untracked";
+            return "Partial baseline";
         default:
-            return "No earlier period to compare";
+            return "No baseline";
     }
 }
 
@@ -124,7 +127,9 @@ function explain(
     }
 }
 
+/** A decimal only under 10%, where rounding to a whole number loses the move. */
 function formatPercentChange(ratio: number): string {
-    const sign = ratio > 0 ? "+" : "";
-    return `${sign}${(ratio * 100).toFixed(ratio >= 1 || ratio <= -1 ? 0 : 1)}%`;
+    const percent = ratio * 100;
+    const sign = percent > 0 ? "+" : "";
+    return `${sign}${percent.toFixed(Math.abs(percent) < 10 ? 1 : 0)}%`;
 }

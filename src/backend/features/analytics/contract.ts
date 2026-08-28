@@ -133,9 +133,11 @@ export interface PeriodComparison {
     currentTo: string;
     previousFrom: string;
     previousTo: string;
-    /** "FRC 2027 so far" / "FRC 2026 at the same point". */
+    /** "FRC 2027 so far" / "FRC 2026 at the same point", for the tooltip. */
     label: string;
     baselineLabel: string;
+    /** "last season" / "28 days" — the chip on the card, where space is out. */
+    baselineShort: string;
 }
 
 /** The measures reported both as a trailing window and season over season. */

@@ -12,21 +12,14 @@ import { Section } from "./section";
  * The section that says something useful from the first weeks of tracking,
  * before there is a second season to compare against.
  */
-export function RecentSection({
-    growth,
-    withOpens = false
-}: {
-    growth: GrowthOut;
-    /** Opens follow the selected library, so the rate is app-level only. */
-    withOpens?: boolean;
-}): ReactNode {
+export function RecentSection({ growth }: { growth: GrowthOut }): ReactNode {
     const { recent, trackingSince } = growth;
     const perUser = perUnit(recent.inserts, recent.activeUsers);
     const perOpen = perUnit(recent.inserts, recent.appOpens);
 
     return (
-        <Section title="Right now" window={recent.inserts.label}>
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: withOpens ? 4 : 3 }}>
+        <Section title="Right now">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <ComparisonTile
                     label="Uses"
                     comparison={recent.inserts}
@@ -43,14 +36,12 @@ export function RecentSection({
                     trackingSince={trackingSince}
                     format={formatRate}
                 />
-                {withOpens && (
-                    <ComparisonTile
-                        label="Uses per session"
-                        comparison={perOpen}
-                        trackingSince={trackingSince}
-                        format={formatRate}
-                    />
-                )}
+                <ComparisonTile
+                    label="Uses per session"
+                    comparison={perOpen}
+                    trackingSince={trackingSince}
+                    format={formatRate}
+                />
             </SimpleGrid>
         </Section>
     );
