@@ -6,17 +6,10 @@ import { EventType } from "./events";
 import {
     baselineWindow,
     LIBRARY_PROGRAM,
-    previousSeason,
     Program,
-    seasonWindow,
-    type SeasonWindow
+    seasonWindow
 } from "./seasons";
-import type {
-    GrowthOut,
-    PeriodComparison,
-    SeasonCurveOut,
-    SeasonCurvePoint
-} from "./contract";
+import type { GrowthMeasure, GrowthOut, PeriodComparison } from "./contract";
 
 /**
  * Trailing window length. 28 rather than 30 so it is whole weeks: a 30-day
@@ -170,112 +163,46 @@ async function countPeople(
     return { current: current?.value ?? 0, previous: previous?.value ?? 0 };
 }
 
-/** Daily inserts inside one window, oldest first. */
-async function insertsByDay(
-    db: Db,
-    window: Window,
-    libraryId?: LibraryId
-): Promise<{ day: string; count: number }[]> {
-    const filters = [
-        eq(dailyMetrics.type, EventType.INSERT),
-        gte(dailyMetrics.day, window.from),
-        lte(dailyMetrics.day, window.to)
-    ];
-    if (libraryId) filters.push(eq(dailyMetrics.libraryId, libraryId));
-
-    return db
-        .select({
-            day: dailyMetrics.day,
-            count: sum(dailyMetrics.count).mapWith(Number)
-        })
-        .from(dailyMetrics)
-        .where(and(...filters))
-        .groupBy(dailyMetrics.day)
-        .orderBy(dailyMetrics.day)
-        .all();
-}
-
-/** Whole weeks between a season opening and a day in it. */
-function weekIndex(seasonFrom: string, day: string): number {
-    const ms =
-        Date.parse(`${day}T00:00:00Z`) - Date.parse(`${seasonFrom}T00:00:00Z`);
-    return Math.floor(ms / (7 * 24 * 3600 * 1000));
-}
-
-/** Running totals by week, so week n holds everything up to the end of it. */
-function toCumulative(
-    rows: { day: string; count: number }[],
-    seasonFrom: string,
-    weeks: number
-): number[] {
-    const perWeek = new Array<number>(weeks).fill(0);
-    for (const row of rows) {
-        const index = weekIndex(seasonFrom, row.day);
-        if (index >= 0 && index < weeks) perWeek[index] += row.count;
-    }
-    let running = 0;
-    return perWeek.map((count) => (running += count));
-}
-
 /**
- * Both seasons' cumulative curves on one axis of weeks since kickoff.
- *
- * Weeks rather than dates, because the two seasons open on different days —
- * and for FTC in different calendar years — so no date axis can hold both.
- * Last season is drawn in full while this one stops where it has got to, which
- * is the whole point: the gap between the two lines is the year-over-year
- * change, read off at a glance instead of from a percentage.
+ * Measures one window pair three ways, so a set of comparisons is built from a
+ * single description of what to compare.
  */
-async function getSeasonCurve(
+async function measure(
     db: Db,
-    window: SeasonWindow,
+    windows: { current: Window; previous: Window },
+    labels: { label: string; baselineLabel: string },
+    trackingSince: string | null,
     libraryId?: LibraryId
-): Promise<SeasonCurveOut> {
-    const previous = previousSeason(window.season);
-    const weeks =
-        Math.max(
-            weekIndex(window.season.from, window.season.to),
-            weekIndex(previous.from, previous.to)
-        ) + 1;
-    // Whole weeks only: a part-finished week always falls below the line and
-    // reads as a slowdown that has not happened.
-    const reached = window.inProgress
-        ? weekIndex(window.season.from, window.to)
-        : weeks;
-
-    const [currentRows, previousRows] = await Promise.all([
-        insertsByDay(
-            db,
-            { from: window.season.from, to: window.to },
-            libraryId
-        ),
-        insertsByDay(db, { from: previous.from, to: previous.to }, libraryId)
+): Promise<Record<GrowthMeasure, PeriodComparison>> {
+    const [inserts, people, opens] = await Promise.all([
+        countEvents(db, windows, EventType.INSERT, libraryId),
+        countPeople(db, windows, libraryId),
+        countEvents(db, windows, EventType.APP_OPEN, libraryId)
     ]);
 
-    const current = toCumulative(currentRows, window.season.from, weeks);
-    const priorTotals = toCumulative(previousRows, previous.from, weeks);
+    const compare = (counts: { current: number; previous: number }) =>
+        toComparison(
+            counts.current,
+            counts.previous,
+            windows,
+            labels,
+            trackingSince
+        );
 
-    const points: SeasonCurvePoint[] = [];
-    for (let week = 0; week < weeks; week++) {
-        points.push({
-            week,
-            current: week < reached ? current[week] : null,
-            previous: priorTotals[week]
-        });
-    }
     return {
-        points,
-        label: window.season.label,
-        baselineLabel: previous.label
+        inserts: compare(inserts),
+        activeUsers: compare(people),
+        appOpens: compare(opens)
     };
 }
 
 /**
  * Growth for a library, or for the app when no library is given.
  *
- * The app spans both competitions, so its season comparison uses FRC — the
- * program two of the three libraries serve, and the one whose Jan–Apr window
- * sits inside FTC's.
+ * The app spans both competitions, so it is measured over Sept–Apr. That is
+ * numerically FTC's span, and it is the right app-wide window precisely because
+ * FRC's Jan–Apr falls inside it — one season covering both, named without a
+ * program so it does not read as an FTC-only figure.
  */
 export async function getGrowth(
     db: Db,
@@ -289,62 +216,28 @@ export async function getGrowth(
         baselineLabel: `the ${RECENT_DAYS} days before`
     };
 
-    const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FRC;
+    const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FTC;
     const season = seasonWindow(program, today);
     const baseline = baselineWindow(season);
     const seasonWindows = {
         current: { from: season.from, to: season.to },
         previous: { from: baseline.from, to: baseline.to }
     };
-
-    const [inserts, people, opens, seasonInserts, seasonCurve] =
-        await Promise.all([
-            countEvents(db, windows, EventType.INSERT, libraryId),
-            countPeople(db, windows, libraryId),
-            countEvents(db, windows, EventType.APP_OPEN, libraryId),
-            countEvents(db, seasonWindows, EventType.INSERT, libraryId),
-            getSeasonCurve(db, season, libraryId)
-        ]);
-
-    return {
-        recent: {
-            inserts: toComparison(
-                inserts.current,
-                inserts.previous,
-                windows,
-                recentLabels,
-                trackingSince
-            ),
-            activeUsers: toComparison(
-                people.current,
-                people.previous,
-                windows,
-                recentLabels,
-                trackingSince
-            ),
-            appOpens: toComparison(
-                opens.current,
-                opens.previous,
-                windows,
-                recentLabels,
-                trackingSince
-            )
-        },
-        season: toComparison(
-            seasonInserts.current,
-            seasonInserts.previous,
-            seasonWindows,
-            {
-                label: season.inProgress
-                    ? `${season.season.label} so far`
-                    : season.season.label,
-                baselineLabel: season.inProgress
-                    ? `${baseline.season.label} at the same point`
-                    : baseline.season.label
-            },
-            trackingSince
-        ),
-        seasonCurve,
-        trackingSince
+    const name = (of: { label: string; years: string }) =>
+        libraryId ? of.label : `${of.years} season`;
+    const seasonLabels = {
+        label: season.inProgress
+            ? `${name(season.season)} so far`
+            : name(season.season),
+        baselineLabel: season.inProgress
+            ? `${name(baseline.season)} at the same point`
+            : name(baseline.season)
     };
+
+    const [recent, seasonal] = await Promise.all([
+        measure(db, windows, recentLabels, trackingSince, libraryId),
+        measure(db, seasonWindows, seasonLabels, trackingSince, libraryId)
+    ]);
+
+    return { recent, season: seasonal, trackingSince };
 }

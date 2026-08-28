@@ -14,10 +14,7 @@ import {
     formatCount,
     formatPercent
 } from "../../features/dashboard/series-utils";
-import {
-    RecentSection,
-    SeasonSection
-} from "../../features/dashboard/growth-section";
+import { RecentSection } from "../../features/dashboard/growth-section";
 import { LifetimeTiles } from "../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section, SectionCard } from "../../features/dashboard/section";
@@ -41,9 +38,11 @@ function DashboardOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <RecentSection growth={growth} withOpens />
+            <Section title="Overall" window="All time">
+                <LifetimeTiles totals={totals} growth={growth} withOpens />
+            </Section>
 
-            <SeasonSection growth={growth} />
+            <RecentSection growth={growth} withOpens />
 
             <InsertsByLibraryCard series={series} />
 
@@ -113,10 +112,6 @@ function DashboardOverview(): ReactNode {
                 <SectionCard title="Build health" window="Right now">
                     <LibraryHealthStrip libraries={libraries} />
                 </SectionCard>
-            </Section>
-
-            <Section title="Lifetime" window="All time">
-                <LifetimeTiles totals={totals} withOpens />
             </Section>
         </Stack>
     );

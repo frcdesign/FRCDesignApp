@@ -41,6 +41,8 @@ export interface Season {
      * FTC's Sept 2026 – Apr 2027 is the 2027 season, as is FRC's Jan–Apr 2027.
      */
     year: number;
+    /** "2027" or "2026–27" — the season named without naming a program. */
+    years: string;
     /** "FRC 2027" or "FTC 2026–27". */
     label: string;
 }
@@ -61,16 +63,27 @@ export function seasonOf(program: Program, year: number): Season {
     const { startMonth, endMonth } = SPANS[program];
     // A start month after the end month means the season opened last year.
     const startYear = startMonth > endMonth ? year - 1 : year;
+    const years =
+        startYear === year ? `${year}` : `${startYear}–${pad(year % 100)}`;
     return {
         program,
         from: `${startYear}-${pad(startMonth)}-01`,
         to: endOfMonth(year, endMonth),
         year,
-        label:
-            startYear === year
-                ? `${program.toUpperCase()} ${year}`
-                : `${program.toUpperCase()} ${startYear}–${pad(year % 100)}`
+        years,
+        label: `${program.toUpperCase()} ${years}`
     };
+}
+
+/**
+ * The day the season culminates, for a chart marker.
+ *
+ * Both programs finish at the same event, so a season year has one of these.
+ * The real date moves every year within the second half of April; this is an
+ * approximation, which is all a chart bucketed by week or month can show.
+ */
+export function championshipOf(season: Season): string {
+    return `${season.year}-04-20`;
 }
 
 /** The season containing `day`, or null when the day is between seasons. */

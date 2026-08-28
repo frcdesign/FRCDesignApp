@@ -5,8 +5,8 @@ function ratio(numerator: number, denominator: number): number {
 }
 
 /**
- * One comparison divided by another — "uses per builder" from uses and
- * builders, without a second round trip for either.
+ * One comparison divided by another — "uses per user" from uses and users,
+ * without a second round trip for either.
  *
  * A rate is never more knowable than the counts behind it, so an unavailable
  * term makes the rate unavailable for the same stated reason rather than

@@ -1,38 +1,52 @@
 import { SimpleGrid } from "@mantine/core";
-import { AppWindow, PuzzlePiece, Star, Users } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import type { AnalyticsTotals } from "@backend/features/analytics/contract";
+import type {
+    AnalyticsTotals,
+    GrowthOut
+} from "@backend/features/analytics/contract";
 import { StatTile } from "./stat-tiles";
 
-/** Scale, all time. Separated from growth so a level never reads as a change. */
+/**
+ * The page's headline: how big this is, and whether it grew.
+ *
+ * The value is all time and the change beside it is season over season — the
+ * two windows a maintainer actually asks about, and the reason each tile's
+ * indicator names the season it compares.
+ */
 export function LifetimeTiles({
     totals,
+    growth,
     withOpens = false
 }: {
     totals: AnalyticsTotals;
-    /** Opens are attributed to whichever library was selected, so app only. */
+    growth: GrowthOut;
+    /** Opens follow whichever library was selected, so app level only. */
     withOpens?: boolean;
 }): ReactNode {
+    const { season, trackingSince } = growth;
+
     return (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: withOpens ? 4 : 3 }}>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: withOpens ? 3 : 2 }}>
             <StatTile
                 label="Total uses"
                 value={totals.inserts}
-                icon={PuzzlePiece}
+                change={season.inserts}
+                trackingSince={trackingSince}
             />
             <StatTile
-                label="People reached"
+                label="Total users"
                 value={totals.uniqueUsers}
-                icon={Users}
+                change={season.activeUsers}
+                trackingSince={trackingSince}
             />
             {withOpens && (
                 <StatTile
-                    label="App opens"
+                    label="App sessions"
                     value={totals.appOpens}
-                    icon={AppWindow}
+                    change={season.appOpens}
+                    trackingSince={trackingSince}
                 />
             )}
-            <StatTile label="Favorites" value={totals.favorites} icon={Star} />
         </SimpleGrid>
     );
 }

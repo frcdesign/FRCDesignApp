@@ -91,12 +91,11 @@ export function InsertsByLibraryCard({
             granularity={granularity}
             onGranularityChange={setGranularity}
         >
-            {/* The app spans both competitions; FRC's Jan–Apr window sits
-                inside FTC's, so shading it alone keeps one band, not two. */}
+            {/* The app spans both competitions, so both are marked. */}
             <LibraryInsertsChart
                 series={series}
                 h={PAGE_CHART_HEIGHT}
-                program={Program.FRC}
+                programs={[Program.FTC, Program.FRC]}
                 granularity={granularity}
             />
         </ChartCard>
@@ -119,7 +118,7 @@ export function InsertsOverTimeCard({
                 metric={METRICS.inserts}
                 trend={toTrend(series, METRICS.inserts)}
                 h={PAGE_CHART_HEIGHT}
-                program={LIBRARY_PROGRAM[libraryId]}
+                programs={[LIBRARY_PROGRAM[libraryId]]}
             />
         </ChartCard>
     );

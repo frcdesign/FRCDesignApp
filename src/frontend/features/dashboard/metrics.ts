@@ -12,7 +12,6 @@ import {
 
 export type MetricKey =
     | "inserts"
-    | "appOpens"
     | "activeUsers"
     | "fastenShare"
     | "quickShare"
@@ -58,17 +57,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.inserts,
         aggregate: "sum",
         detailLabel: "Total uses"
-    },
-    appOpens: {
-        key: "appOpens",
-        label: "App opens",
-        description:
-            "Times the panel was opened in Onshape. Opening a second document tab counts again, as does reloading, so this tracks reach rather than distinct sessions.",
-        numeratorLabel: "App opens",
-        numerator: (point) => point.appOpens,
-        lifetimeValue: (totals) => totals.appOpens,
-        aggregate: "sum",
-        detailLabel: "App opens"
     },
     activeUsers: {
         key: "activeUsers",

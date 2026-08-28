@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     baselineWindow,
+    championshipOf,
     currentSeason,
     lastCompleteSeason,
     LIBRARY_PROGRAM,
@@ -147,5 +148,27 @@ describe("LIBRARY_PROGRAM", () => {
         }
         expect(LIBRARY_PROGRAM[LibraryId.MKCAD]).toBe(Program.FRC);
         expect(LIBRARY_PROGRAM[LibraryId.FTC_DESIGN_LIB]).toBe(Program.FTC);
+    });
+});
+
+describe("years", () => {
+    it("names a season without naming a program", () => {
+        expect(seasonOf(Program.FRC, 2027).years).toBe("2027");
+        expect(seasonOf(Program.FTC, 2027).years).toBe("2026–27");
+    });
+});
+
+describe("championshipOf", () => {
+    it("puts both programs' seasons on the same closing event", () => {
+        // One event finishes both, so a chart must not draw two markers.
+        expect(championshipOf(seasonOf(Program.FRC, 2027))).toBe(
+            championshipOf(seasonOf(Program.FTC, 2027))
+        );
+    });
+
+    it("falls inside the season it closes", () => {
+        const season = seasonOf(Program.FTC, 2027);
+        const day = championshipOf(season);
+        expect(day >= season.from && day <= season.to).toBe(true);
     });
 });

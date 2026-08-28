@@ -1,16 +1,17 @@
 import { LineChart, Sparkline } from "@mantine/charts";
-import { ReferenceArea } from "recharts";
 import { type ReactNode } from "react";
-import type {
-    DailyInsertPoint,
-    SeasonCurveOut
-} from "@backend/features/analytics/contract";
+import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { getLibraryColor } from "../../theme";
 import { toChartData } from "./series-utils";
 import { type BucketPoint, type Granularity } from "./buckets";
-import { Program, seasonsBetween } from "@backend/features/analytics/seasons";
+import type { ChartReferenceLineProps } from "@mantine/charts";
+import {
+    championshipOf,
+    Program,
+    seasonsBetween
+} from "@backend/features/analytics/seasons";
 import { isShare, type MetricDefinition, type TrendPoint } from "./metrics";
 
 // Kept in this lazily-loaded module so recharts and its styles stay out of the
@@ -41,14 +42,14 @@ export function MetricDetailChart({
     metric,
     trend,
     h = DETAIL_HEIGHT,
-    program
+    programs
 }: {
     metric: MetricDefinition;
     trend: TrendPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;
-    /** Shades the competition season; omitted in the tile hover panels. */
-    program?: Program;
+    /** Marks kickoffs and championships; omitted in the tile hover panels. */
+    programs?: Program[];
 }): ReactNode {
     const share = isShare(metric);
     return (
@@ -63,6 +64,7 @@ export function MetricDetailChart({
             // A share is only comparable against a fixed axis.
             yAxisProps={share ? { domain: [0, 100] } : undefined}
             valueFormatter={(value) => (share ? `${value}%` : String(value))}
+            referenceLines={seasonLines(programs, trend)}
             series={[
                 {
                     name: "value",
@@ -70,9 +72,7 @@ export function MetricDetailChart({
                     color: "var(--mantine-primary-color-filled)"
                 }
             ]}
-        >
-            {program && <SeasonBands program={program} points={trend} />}
-        </LineChart>
+        />
     );
 }
 
@@ -80,14 +80,14 @@ export function MetricDetailChart({
 export function LibraryInsertsChart({
     series,
     h = DETAIL_HEIGHT,
-    program,
+    programs,
     granularity
 }: {
     series: DailyInsertPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;
-    /** Shades the competition season; omitted in the tile hover panels. */
-    program?: Program;
+    /** Marks kickoffs and championships; omitted in the tile hover panels. */
+    programs?: Program[];
     /** Overrides the granularity picked from the span. */
     granularity?: Granularity;
 }): ReactNode {
@@ -103,112 +103,60 @@ export function LibraryInsertsChart({
             withDots={series.length <= 45}
             curveType="monotone"
             yAxisLabel="Total uses"
+            referenceLines={seasonLines(programs, data)}
             series={libraryIds.map((libraryId) => ({
                 name: getLibraryName(libraryId),
                 color: `${getLibraryColor(libraryId)}.6`
             }))}
-        >
-            {program && <SeasonBands program={program} points={data} />}
-        </LineChart>
-    );
-}
-
-/**
- * This season's cumulative uses laid over last season's, by week since kickoff.
- *
- * The gap between the two lines is the year-over-year change — the same story
- * the season tile tells as a percentage, but readable at every week rather
- * than only at today.
- */
-export function SeasonCurveChart({
-    curve,
-    h = DETAIL_HEIGHT
-}: {
-    curve: SeasonCurveOut;
-    h?: number;
-}): ReactNode {
-    return (
-        <LineChart
-            h={h}
-            data={curve.points}
-            dataKey="week"
-            // The current line ends where the season has got to; joining it to
-            // nothing would draw a season that has not happened yet.
-            connectNulls={false}
-            curveType="monotone"
-            withDots={false}
-            withLegend
-            xAxisLabel="Weeks since kickoff"
-            yAxisLabel="Uses so far"
-            series={[
-                {
-                    name: "current",
-                    label: curve.label,
-                    color: "var(--mantine-primary-color-filled)"
-                },
-                {
-                    name: "previous",
-                    label: curve.baselineLabel,
-                    color: "gray.5"
-                }
-            ]}
         />
     );
 }
 
 /**
- * Season bands, clipped to the buckets the chart actually plots.
+ * Kickoff and championship markers for the seasons the chart covers.
  *
- * A `ReferenceArea` on a category axis matches by exact category value, so a
- * season only draws where its first and last bucket are both on the axis —
- * hence charting on `bucket` rather than the formatted label.
+ * A reference line on a category axis matches by exact category value, so each
+ * marker is pinned to the bucket containing its day — hence charting on
+ * `bucket` rather than the formatted label. Markers landing in the same bucket
+ * join their labels instead of drawing two lines on one tick, which is what
+ * happens to both programs' championships at monthly granularity.
  */
-function SeasonBands({
-    program,
-    points
-}: {
-    program: Program;
-    points: BucketPoint[];
-}): ReactNode {
-    if (points.length === 0) return null;
+function seasonLines(
+    programs: Program[] | undefined,
+    points: BucketPoint[]
+): ChartReferenceLineProps[] {
+    if (!programs?.length || points.length === 0) return [];
     const buckets = points.map((point) => point.bucket);
     const first = buckets[0];
     const last = buckets[buckets.length - 1];
 
-    return (
-        <>
-            {seasonsBetween(program, first, last).map((season) => {
-                // Bands are drawn per bucket, so a season starting mid-bucket
-                // clamps to the one containing it rather than vanishing.
-                const from = buckets.find(
-                    (bucket) => bucket >= season.from.slice(0, bucket.length)
-                );
-                const to = [...buckets]
-                    .reverse()
-                    .find(
-                        (bucket) => bucket <= season.to.slice(0, bucket.length)
-                    );
-                if (from === undefined || to === undefined || from > to) {
-                    return null;
-                }
-                return (
-                    <ReferenceArea
-                        key={season.label}
-                        x1={from}
-                        x2={to}
-                        fill="var(--mantine-primary-color-filled)"
-                        fillOpacity={0.07}
-                        label={{
-                            value: season.label,
-                            position: "insideTop",
-                            fontSize: 11,
-                            fill: "var(--mantine-color-dimmed)"
-                        }}
-                    />
-                );
-            })}
-        </>
-    );
+    const labels = new Map<string, string[]>();
+    const mark = (day: string, label: string) => {
+        // The bucket keys are prefixes of a day key, so a plain comparison of
+        // equal-length slices finds the bucket the day falls in.
+        const bucket = buckets.find(
+            (candidate) => candidate === day.slice(0, candidate.length)
+        );
+        if (bucket === undefined) return;
+        const existing = labels.get(bucket) ?? [];
+        if (!existing.includes(label)) labels.set(bucket, [...existing, label]);
+    };
+
+    for (const program of programs) {
+        for (const season of seasonsBetween(program, first, last)) {
+            mark(season.from, `${program.toUpperCase()} kickoff`);
+            // Both programs finish at the same event, so this deduplicates.
+            mark(championshipOf(season), "Championship");
+        }
+    }
+
+    return [...labels.entries()].map(([bucket, names]) => ({
+        x: bucket,
+        color: "gray.5",
+        strokeDasharray: "4 4",
+        label: names.join(" · "),
+        labelPosition: "top" as const
+    }));
 }
 
 /** Ticks show the label; bands match the raw key the axis is actually keyed on. */

@@ -138,35 +138,14 @@ export interface PeriodComparison {
     baselineLabel: string;
 }
 
-/**
- * One week of two seasons laid on top of each other.
- *
- * Keyed on weeks since each season opened rather than on a date, which is the
- * only way FRC's January start and FTC's September one can share an axis — and
- * what makes "we are ahead of last year" readable without matching up dates.
- */
-export interface SeasonCurvePoint {
-    /** Weeks elapsed since the season opened, 0-based. */
-    week: number;
-    /** Cumulative inserts; null past the point the season has reached. */
-    current: number | null;
-    previous: number | null;
-}
-
-/** Two seasons' cumulative curves, plus what to call each line. */
-export interface SeasonCurveOut {
-    points: SeasonCurvePoint[];
-    label: string;
-    baselineLabel: string;
-}
+/** The measures reported both as a trailing window and season over season. */
+export type GrowthMeasure = "inserts" | "activeUsers" | "appOpens";
 
 export interface GrowthOut {
     /** Trailing windows, which are meaningful from the first month. */
-    recent: Record<"inserts" | "activeUsers" | "appOpens", PeriodComparison>;
+    recent: Record<GrowthMeasure, PeriodComparison>;
     /** Season to date against the same stretch of the season before. */
-    season: PeriodComparison;
-    /** The same comparison drawn out week by week. */
-    seasonCurve: SeasonCurveOut;
+    season: Record<GrowthMeasure, PeriodComparison>;
     trackingSince: string | null;
 }
 

@@ -23,10 +23,8 @@ import {
 } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { formatPercent } from "../../../../features/dashboard/series-utils";
-import {
-    RecentSection,
-    SeasonSection
-} from "../../../../features/dashboard/growth-section";
+import { RecentSection } from "../../../../features/dashboard/growth-section";
+import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../../../features/dashboard/metrics";
 import { Section, SectionCard } from "../../../../features/dashboard/section";
 import { StatTile } from "../../../../features/dashboard/stat-tiles";
@@ -57,17 +55,16 @@ function LibraryOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
+            <Section title="Overall" window="All time">
+                <LifetimeTiles totals={totals} growth={growth} />
+            </Section>
+
             <RecentSection growth={growth} />
 
-            <SeasonSection growth={growth} />
-
             <Section title="Usage" window={window}>
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-                    <TrendTile
-                        metric={METRICS.inserts}
-                        totals={totals}
-                        series={metricSeries}
-                    />
+                {/* Total uses is not repeated here: the Overall card above
+                    carries it, and the chart below draws its trend full size. */}
+                <SimpleGrid cols={{ base: 1, sm: 3 }}>
                     <TrendTile
                         metric={METRICS.activeUsers}
                         totals={totals}

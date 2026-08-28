@@ -15,12 +15,13 @@ const TODAY = "2026-08-27";
 async function seedInserts(
     day: string,
     count: number,
-    libraryId = TEST_LIBRARY_ID
+    libraryId = TEST_LIBRARY_ID,
+    type = EventType.INSERT
 ) {
     await seedLibrary(db, libraryId);
     await db
         .insert(dailyMetrics)
-        .values({ day, libraryId, type: EventType.INSERT, count })
+        .values({ day, libraryId, type, count })
         .onConflictDoNothing();
 }
 
@@ -114,42 +115,72 @@ describe("getGrowth", () => {
     });
 
     it("compares whole seasons when today is between them", async () => {
-        // August is off-season, so FRC 2026 is compared with FRC 2025.
+        // August is off-season, and app-wide seasons run Sept-Apr so both
+        // competitions are covered by one window.
         await seedInserts("2026-03-01", 100);
         await seedInserts("2025-03-01", 50);
 
-        const growth = await getGrowth(db, TODAY, "2025-01-01");
+        const growth = await getGrowth(db, TODAY, "2024-09-01");
 
-        expect(growth.season.label).toBe("FRC 2026");
-        expect(growth.season.baselineLabel).toBe("FRC 2025");
-        expect(growth.season.current).toBe(100);
-        expect(growth.season.previous).toBe(50);
-        expect(growth.season.changeRatio).toBeCloseTo(1);
+        expect(growth.season.inserts.label).toBe("2025–26 season");
+        expect(growth.season.inserts.baselineLabel).toBe("2024–25 season");
+        expect(growth.season.inserts.current).toBe(100);
+        expect(growth.season.inserts.previous).toBe(50);
+        expect(growth.season.inserts.changeRatio).toBeCloseTo(1);
+    });
+
+    it("counts an FTC-only autumn the app-wide season would miss on FRC", async () => {
+        // October is inside Sept-Apr but outside FRC's Jan-Apr, so measuring
+        // the app on FRC's span would drop this entirely.
+        await seedInserts("2025-10-15", 40);
+
+        const growth = await getGrowth(db, TODAY, "2024-09-01");
+
+        expect(growth.season.inserts.current).toBe(40);
+    });
+
+    it("reports each measure over the season, not just uses", async () => {
+        await seedInserts("2026-03-01", 100);
+        await seedInserts(
+            "2026-03-01",
+            12,
+            TEST_LIBRARY_ID,
+            EventType.APP_OPEN
+        );
+        await seedActive("2026-03-01", "user-a");
+        await seedActive("2026-03-02", "user-b");
+
+        const { season } = await getGrowth(db, TODAY, "2024-09-01");
+
+        expect(season.appOpens.current).toBe(12);
+        expect(season.activeUsers.current).toBe(2);
     });
 
     it("clips an in-season baseline to the same elapsed stretch", async () => {
-        // 1 Feb is 32 days in. Last season's whole run was 60, but only the
-        // 40 inside its first 32 days may be compared against.
+        // 1 Feb is 154 days into a Sept-Apr season. Last season ran on past
+        // that point, and only the part inside it may be compared against.
         await seedInserts("2027-01-15", 25);
         await seedInserts("2026-01-15", 40);
         await seedInserts("2026-03-15", 20);
 
-        const growth = await getGrowth(db, "2027-02-01", "2025-01-01");
+        const growth = await getGrowth(db, "2027-02-01", "2024-09-01");
 
-        expect(growth.season.label).toBe("FRC 2027 so far");
-        expect(growth.season.baselineLabel).toBe("FRC 2026 at the same point");
-        expect(growth.season.current).toBe(25);
-        expect(growth.season.previous).toBe(40);
+        expect(growth.season.inserts.label).toBe("2026–27 season so far");
+        expect(growth.season.inserts.baselineLabel).toBe(
+            "2025–26 season at the same point"
+        );
+        expect(growth.season.inserts.current).toBe(25);
+        expect(growth.season.inserts.previous).toBe(40);
     });
 
     it("withholds the season change before a second season exists", async () => {
         await seedInserts("2026-03-01", 100);
 
-        const growth = await getGrowth(db, TODAY, "2026-01-01");
+        const growth = await getGrowth(db, TODAY, "2025-09-01");
 
-        expect(growth.season.current).toBe(100);
-        expect(growth.season.changeRatio).toBeNull();
-        expect(growth.season.unavailable).toBe("no-prior-data");
+        expect(growth.season.inserts.current).toBe(100);
+        expect(growth.season.inserts.changeRatio).toBeNull();
+        expect(growth.season.inserts.unavailable).toBe("no-prior-data");
     });
 
     it("reports nothing rather than failing with no data at all", async () => {
@@ -158,7 +189,7 @@ describe("getGrowth", () => {
         expect(growth.recent.inserts.current).toBe(0);
         expect(growth.recent.inserts.changeRatio).toBeNull();
         expect(growth.recent.inserts.unavailable).toBe("no-prior-data");
-        expect(growth.season.changeRatio).toBeNull();
+        expect(growth.season.inserts.changeRatio).toBeNull();
         expect(growth.trackingSince).toBeNull();
     });
 
@@ -181,64 +212,7 @@ describe("getGrowth", () => {
             "2026-01-01",
             LibraryId.FTC_DESIGN_LIB
         );
-        expect(ftc.season.label).toBe("FTC 2025–26");
-    });
-
-    describe("seasonCurve", () => {
-        it("lays last season out in full beside this one so far", async () => {
-            // Week 2 of FRC 2027 against a 2026 season that ran to April.
-            await seedInserts("2027-01-16", 10);
-            await seedInserts("2026-01-16", 4);
-            await seedInserts("2026-04-01", 6);
-
-            const { seasonCurve } = await getGrowth(
-                db,
-                "2027-01-25",
-                "2025-01-01"
-            );
-
-            expect(seasonCurve.label).toBe("FRC 2027");
-            expect(seasonCurve.baselineLabel).toBe("FRC 2026");
-            // Cumulative, so last season's line keeps climbing to its total.
-            const previous = seasonCurve.points.map((p) => p.previous);
-            expect(previous[2]).toBe(4);
-            expect(previous[previous.length - 1]).toBe(10);
-        });
-
-        it("stops this season's line at the last whole week", async () => {
-            // 25 Jan is 24 days in: three whole weeks, and a fourth running.
-            const { seasonCurve } = await getGrowth(
-                db,
-                "2027-01-25",
-                "2025-01-01"
-            );
-
-            const drawn = seasonCurve.points.filter((p) => p.current !== null);
-            expect(drawn).toHaveLength(3);
-            expect(seasonCurve.points[3].current).toBeNull();
-        });
-
-        it("draws a finished season end to end", async () => {
-            const { seasonCurve } = await getGrowth(db, TODAY, "2025-01-01");
-
-            expect(seasonCurve.points.every((p) => p.current !== null)).toBe(
-                true
-            );
-        });
-
-        it("counts only the selected library", async () => {
-            await seedInserts("2027-01-08", 5, TEST_LIBRARY_ID);
-            await seedInserts("2027-01-08", 50, LibraryId.MKCAD);
-
-            const { seasonCurve } = await getGrowth(
-                db,
-                "2027-02-01",
-                "2025-01-01",
-                TEST_LIBRARY_ID
-            );
-
-            expect(seasonCurve.points[1].current).toBe(5);
-        });
+        expect(ftc.season.inserts.label).toBe("FTC 2025–26");
     });
 
     it("uses a window of whole weeks", () => {

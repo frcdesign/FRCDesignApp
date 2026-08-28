@@ -2,8 +2,8 @@
  * Bucketing for the time-series charts.
  *
  * Chart points keep the raw bucket key alongside the formatted label, because
- * recharts matches a `ReferenceArea` against exact category values — season
- * bands can line up with "2026-01" but not with "Jan 2026".
+ * recharts matches a reference line against exact category values — a season
+ * marker can line up with "2026-01" but not with "Jan 2026".
  */
 
 /** Above this many days, points are bucketed by month to stay readable. */
