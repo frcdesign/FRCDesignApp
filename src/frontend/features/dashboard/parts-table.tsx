@@ -82,8 +82,9 @@ export function PartsTable({
                             onToggle={toggle}
                             align="right"
                         />
+                        {/* Not "total": this is the selected window's count. */}
                         <SortableTh
-                            label="Total uses"
+                            label="Uses"
                             column="insertCount"
                             sort={sort}
                             onToggle={toggle}

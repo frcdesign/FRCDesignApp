@@ -1,7 +1,7 @@
 import { Anchor, Breadcrumbs, Group, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
-import type { GroupUsageOut } from "@backend/features/analytics/contract";
+import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryColor } from "../../theme";
 import { SectionCard } from "./section";
@@ -24,25 +24,25 @@ const CHART_HEIGHT = 360;
  */
 export function GroupTreemap({
     libraryId,
-    groups
+    parts
 }: {
     libraryId: LibraryId;
-    groups: GroupUsageOut[];
+    parts: PartUsageOut[];
 }): ReactNode {
     const navigate = useNavigate();
     const [selected, setSelected] = useState<string | null>(null);
     const color = getLibraryColor(libraryId);
 
-    const parts = useMemo(
-        () => (selected === null ? [] : toPartNodes(groups, selected, color)),
-        [groups, selected, color]
+    const partNodes = useMemo(
+        () => (selected === null ? [] : toPartNodes(parts, selected, color)),
+        [parts, selected, color]
     );
     // A range change can drop the group being viewed, so falling back to the
     // top level beats drawing an empty rectangle.
-    const zoomed = selected !== null && parts.length > 0;
+    const zoomed = selected !== null && partNodes.length > 0;
     const nodes = useMemo(
-        () => (zoomed ? parts : toGroupNodes(groups, color)),
-        [zoomed, parts, groups, color]
+        () => (zoomed ? partNodes : toGroupNodes(parts, color)),
+        [zoomed, partNodes, parts, color]
     );
 
     function select(node: TreemapNode): void {

@@ -1,4 +1,4 @@
-import type { GroupUsageOut } from "@backend/features/analytics/contract";
+import type { PartUsageOut } from "@backend/features/analytics/contract";
 
 /**
  * One tile. Area is insertions, so a group's share of the library is its share
@@ -32,30 +32,50 @@ function shade(color: string, rank: number): string {
     return `var(--mantine-color-${color}-${step})`;
 }
 
+/**
+ * A part with no uses in the window is dropped rather than drawn: a zero-value
+ * tile has no area but still sits in the DOM catching clicks.
+ */
+function used(parts: PartUsageOut[]): PartUsageOut[] {
+    return parts.filter((part) => part.insertCount > 0);
+}
+
 /** Every group with at least one insertion, largest first. */
 export function toGroupNodes(
-    groups: GroupUsageOut[],
+    parts: PartUsageOut[],
     color: string
 ): TreemapNode[] {
-    return groups.map((entry, rank) => ({
-        name: entry.groupName,
-        value: entry.insertCount,
-        color: shade(color, rank),
-        groupName: entry.groupName
-    }));
+    const totals = new Map<string, number>();
+    for (const part of used(parts)) {
+        totals.set(
+            part.groupName,
+            (totals.get(part.groupName) ?? 0) + part.insertCount
+        );
+    }
+
+    return [...totals.entries()]
+        .sort(([, a], [, b]) => b - a)
+        .map(([groupName, value], rank) => ({
+            name: groupName,
+            value,
+            color: shade(color, rank),
+            groupName
+        }));
 }
 
 /** The parts of one group, largest first; empty when the group is gone. */
 export function toPartNodes(
-    groups: GroupUsageOut[],
+    parts: PartUsageOut[],
     groupName: string,
     color: string
 ): TreemapNode[] {
-    const entry = groups.find((candidate) => candidate.groupName === groupName);
-    return (entry?.parts ?? []).map((part, rank) => ({
-        name: part.name,
-        value: part.insertCount,
-        color: shade(color, rank),
-        elementId: part.elementId
-    }));
+    return used(parts)
+        .filter((part) => part.groupName === groupName)
+        .sort((a, b) => b.insertCount - a.insertCount)
+        .map((part, rank) => ({
+            name: part.name,
+            value: part.insertCount,
+            color: shade(color, rank),
+            elementId: part.elementId
+        }));
 }

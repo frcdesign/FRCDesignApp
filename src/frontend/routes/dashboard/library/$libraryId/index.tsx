@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import {
-    getGroupUsageQuery,
     getHealthQuery,
     getLibrarySummaryQuery,
     getPartsQuery
@@ -39,17 +38,18 @@ function LibraryOverview(): ReactNode {
     const { libraryId } = Route.useParams();
     const preset = useRangePreset();
 
-    const summary = useQuery(
-        getLibrarySummaryQuery(libraryId, toDayRange(preset))
-    );
-    const parts = useQuery(getPartsQuery(libraryId));
+    const range = toDayRange(preset);
+
+    const summary = useQuery(getLibrarySummaryQuery(libraryId, range));
+    const parts = useQuery(getPartsQuery(libraryId, range));
     const health = useQuery(getHealthQuery(libraryId));
-    const groups = useQuery(getGroupUsageQuery(libraryId, toDayRange(preset)));
 
     if (!summary.data) {
         return <DashboardState query={summary} />;
     }
     const { totals, metricSeries, sources, growth, appInserts } = summary.data;
+    // The library's own window total, so both sides of the share match.
+    const rangeTotals = summary.data.libraries[0].rangeTotals;
 
     return (
         <Stack gap="xl">
@@ -66,11 +66,9 @@ function LibraryOverview(): ReactNode {
                         totals={totals}
                         series={metricSeries}
                     />
-                    {/* Lifetime on both sides, so a library's place among the
-                        others does not move when the range does. */}
                     <StatTile
                         label="Share of all uses"
-                        value={formatPercent(totals.inserts, appInserts)}
+                        value={formatPercent(rangeTotals.inserts, appInserts)}
                         icon={ChartPieSlice}
                     />
                     <StatTile
@@ -126,16 +124,16 @@ function LibraryOverview(): ReactNode {
                 )}
             </Section>
 
-            {groups.data ? (
+            {parts.data ? (
                 /* Keyed so switching library drops a zoom into a group that
                    the next library does not have. */
                 <GroupTreemap
                     key={libraryId}
                     libraryId={libraryId}
-                    groups={groups.data}
+                    parts={parts.data}
                 />
             ) : (
-                <DashboardState query={groups} />
+                <DashboardState query={parts} />
             )}
         </Stack>
     );

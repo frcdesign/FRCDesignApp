@@ -23,6 +23,7 @@ import {
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
+import { toDayRange } from "../../../../features/dashboard/range";
 import {
     formatCount,
     formatDate,
@@ -45,7 +46,8 @@ function PartReport(): ReactNode {
     const { libraryId } = Route.useParams();
     const { element } = Route.useSearch();
     const [search, setSearch] = useState("");
-    const parts = useQuery(getPartsQuery(libraryId));
+    // This page has no range picker, so it reports on everything recorded.
+    const parts = useQuery(getPartsQuery(libraryId, toDayRange("all")));
 
     return (
         <Stack gap="xl">

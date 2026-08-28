@@ -21,8 +21,6 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
-    seedGroup,
-    seedInsertable,
     seedLibrary,
     seedPartStudio,
     seedTestData
@@ -39,7 +37,6 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     SPARKLINE_DAYS,
     type AnalyticsOverviewOut,
-    type GroupUsageOut,
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthOut,
@@ -101,7 +98,6 @@ describe("analytics routes", () => {
                 "/api/analytics/overview",
                 `/api/analytics/summary/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/parts/library/${TEST_LIBRARY_ID}`,
-                `/api/analytics/groups/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
@@ -362,14 +358,38 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/parts/library/:libraryId", () => {
+        const ALL_TIME = "?from=2000-01-01&to=2099-12-31";
+
+        /** `count` insert events on one element, all on the same day. */
+        async function seedInserts(
+            count: number,
+            day = toDayKey(Date.now()),
+            element = elementId
+        ) {
+            const rows = Array.from({ length: count }, (_, index) => ({
+                type: EventType.INSERT,
+                createdAt: Date.parse(`${day}T00:00:00Z`) + index,
+                day,
+                libraryId: TEST_LIBRARY_ID,
+                userId: `user-${index}`,
+                elementId: element
+            }));
+            // Chunked: D1 caps the bound variables one statement may carry.
+            for (let at = 0; at < rows.length; at += 10) {
+                await db.insert(events).values(rows.slice(at, at + 10));
+            }
+        }
+
+        function partsUrl(query = ALL_TIME) {
+            return `/api/analytics/parts/library/${TEST_LIBRARY_ID}${query}`;
+        }
+
         it("lists a visible part that has never been inserted", async () => {
             // The picker needs every part, not only the ones with history.
             await seedPartStudio(db);
             await db.update(insertables).set({ isVisible: true });
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
@@ -384,30 +404,62 @@ describe("analytics routes", () => {
             expect(body[0].versionId).toBeTruthy();
         });
 
-        it("sorts used parts above unused ones", async () => {
+        it("counts only inserts inside the window", async () => {
             await seedPartStudio(db);
-            await seedAssembly(db);
-            await db.update(insertables).set({ isVisible: true });
-            await seedInsertableStats(4);
+            await seedInserts(3, "2026-03-01");
+            await seedInserts(7, "2025-03-01");
+
+            const inWindow = await anonymousGet(
+                partsUrl("?from=2026-01-01&to=2026-12-31")
+            );
+            const allTime = await anonymousGet(partsUrl());
+
+            const windowed: PartUsageOut[] = await inWindow.json();
+            const lifetime: PartUsageOut[] = await allTime.json();
+            expect(windowed[0].insertCount).toBe(3);
+            expect(lifetime[0].insertCount).toBe(10);
+        });
+
+        it("still lists a part that went unused in the window", async () => {
+            // Zero here means "not used lately", which is the interesting
+            // reading — dropping the row would hide it.
+            await seedPartStudio(db);
+            await seedInserts(4, "2025-03-01");
 
             const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
+                partsUrl("?from=2026-01-01&to=2026-12-31")
             );
             const body: PartUsageOut[] = await res.json();
 
-            expect(body.map((row) => row.insertCount)).toEqual([4, 0]);
-            expect(body[0].elementId).toBe(elementId);
+            expect(body).toHaveLength(1);
+            expect(body[0].insertCount).toBe(0);
+            expect(body[0].usesPerMonth).toBe(0);
+        });
+
+        it("reports last used lifetime, not clipped to the window", async () => {
+            // Whether a part has gone dead is the useful fact; a date near the
+            // window's end would say nothing.
+            await seedPartStudio(db);
+            await seedInsertableStats(4, Date.parse("2025-03-01T00:00:00Z"));
+            await seedInserts(4, "2025-03-01");
+
+            const res = await anonymousGet(
+                partsUrl("?from=2026-01-01&to=2026-12-31")
+            );
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].lastInsertedAt).toBe(
+                Date.parse("2025-03-01T00:00:00Z")
+            );
         });
 
         it("keeps history for a part that is no longer visible", async () => {
             // A hidden part is still in the library, so it stays listed with
             // whatever usage it accumulated while it was insertable.
             await seedPartStudio(db);
-            await seedInsertableStats(9);
+            await seedInserts(9);
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
@@ -417,11 +469,9 @@ describe("analytics routes", () => {
         it("does not list a part twice", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({ isVisible: true });
-            await seedInsertableStats(3);
+            await seedInserts(3);
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
@@ -430,20 +480,12 @@ describe("analytics routes", () => {
 
         it("leaves out a part that is no longer in the library", async () => {
             await seedPartStudio(db);
-            await seedInsertableStats(9);
+            await seedInserts(9);
             // Usage with no insertable behind it: the tab was deleted. It would
             // otherwise top the table with a part nobody can open.
-            await db.insert(insertableStats).values({
-                libraryId: TEST_LIBRARY_ID,
-                elementId: "e-gone",
-                insertCount: 30,
-                firstInsertedAt: 1,
-                lastInsertedAt: 2
-            });
+            await seedInserts(30, toDayKey(Date.now()), "e-gone");
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body.map((row) => row.elementId)).toEqual([elementId]);
@@ -456,6 +498,7 @@ describe("analytics routes", () => {
 
         it("ranks by rate, so a long-lived part does not coast on its total", async () => {
             const day = 24 * 3600 * 1000;
+            const ago = (days: number) => toDayKey(Date.now() - days * day);
             await seedPartStudio(db);
             await seedAssembly(db);
             await db.update(insertables).set({ isVisible: true });
@@ -477,44 +520,55 @@ describe("analytics routes", () => {
                     lastInsertedAt: Date.now()
                 }
             ]);
+            await seedInserts(60, ago(700));
+            await seedInserts(20, ago(30), TEST_ASSEMBLY_PATH.elementId);
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body.map((row) => row.usesPerMonth)).toEqual([10, 2]);
             expect(body[0].elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
-            // The lifetime total is still reported alongside it.
+            expect(body[0].usesPerMonth).toBeGreaterThan(body[1].usesPerMonth);
+            // The window's total is still reported alongside the rate.
             expect(body.map((row) => row.insertCount)).toEqual([20, 60]);
+        });
+
+        it("rates a part over its own days, not the whole window", async () => {
+            // Both parts were used 10 times, but one only existed for the last
+            // stretch of the window and must not be marked down for it.
+            const day = 24 * 3600 * 1000;
+            const ago = (days: number) => toDayKey(Date.now() - days * day);
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await db.insert(insertableStats).values([
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId,
+                    insertCount: 10,
+                    firstInsertedAt: Date.now() - 300 * day,
+                    lastInsertedAt: Date.now()
+                },
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId: TEST_ASSEMBLY_PATH.elementId,
+                    insertCount: 10,
+                    firstInsertedAt: Date.now() - 30 * day,
+                    lastInsertedAt: Date.now()
+                }
+            ]);
+            await seedInserts(10, ago(200));
+            await seedInserts(10, ago(20), TEST_ASSEMBLY_PATH.elementId);
+
+            const res = await anonymousGet(partsUrl());
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
         });
 
         it("plots recent inserts per day, oldest first", async () => {
             await seedPartStudio(db);
-            await seedInsertableStats(2);
-            const today = toDayKey(Date.now());
-            await db.insert(events).values([
-                {
-                    type: EventType.INSERT,
-                    createdAt: 1,
-                    day: today,
-                    libraryId: TEST_LIBRARY_ID,
-                    userId: "user-a",
-                    elementId
-                },
-                {
-                    type: EventType.INSERT,
-                    createdAt: 2,
-                    day: today,
-                    libraryId: TEST_LIBRARY_ID,
-                    userId: "user-b",
-                    elementId
-                }
-            ]);
+            await seedInserts(2);
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body[0].recent).toHaveLength(SPARKLINE_DAYS);
@@ -524,12 +578,24 @@ describe("analytics routes", () => {
             );
         });
 
+        it("keeps the sparkline at 30 days whatever the range", async () => {
+            // It is a shape, not a window: two years of points in a sparkline
+            // is a smear.
+            await seedPartStudio(db);
+            await seedInserts(2);
+
+            const res = await anonymousGet(
+                partsUrl("?from=2026-08-01&to=2026-08-07")
+            );
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].recent).toHaveLength(SPARKLINE_DAYS);
+        });
+
         it("gives a never-used part a flat sparkline", async () => {
             await seedPartStudio(db);
 
-            const res = await anonymousGet(
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`
-            );
+            const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
             expect(body[0].recent).toEqual(
@@ -557,9 +623,12 @@ describe("analytics routes", () => {
             expect(scoped?.rangeTotals.favorites).toBe(2);
         });
 
-        it("returns app-wide uses, so a library can state its share", async () => {
+        it("returns app-wide uses over the same window as the library's", async () => {
+            // Both sides of the share have to cover one window, or a library
+            // reads as a share of a total it was never measured against.
             await seedLibrary(db, LibraryId.MKCAD);
             await seedMetric("2026-01-01", 30);
+            await seedMetric("2025-01-01", 999);
             await db.insert(dailyMetrics).values({
                 day: "2026-01-01",
                 libraryId: LibraryId.MKCAD,
@@ -568,11 +637,12 @@ describe("analytics routes", () => {
             });
 
             const res = await anonymousGet(
-                `/api/analytics/summary/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/summary/library/${TEST_LIBRARY_ID}` +
+                    "?from=2026-01-01&to=2026-12-31"
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            expect(body.totals.inserts).toBe(30);
+            expect(body.libraries[0].rangeTotals.inserts).toBe(30);
             expect(body.appInserts).toBe(100);
         });
 
@@ -585,108 +655,6 @@ describe("analytics routes", () => {
             const body: LibrarySummary = await res.json();
 
             expect(body.totals.favorites).toBe(0);
-        });
-    });
-
-    describe("GET /analytics/groups/library/:libraryId", () => {
-        /** One insert event on `elementId`, on the given day. */
-        async function seedInsert(
-            day: string,
-            element = elementId,
-            libraryId = TEST_LIBRARY_ID
-        ) {
-            await db.insert(events).values({
-                type: EventType.INSERT,
-                createdAt: Date.parse(`${day}T00:00:00Z`),
-                day,
-                libraryId,
-                userId: "user-a",
-                elementId: element
-            });
-        }
-
-        it("counts a group's parts inside the window only", async () => {
-            await seedPartStudio(db);
-            await seedInsert("2026-03-01");
-            await seedInsert("2026-03-02");
-            await seedInsert("2025-01-01"); // outside
-
-            const res = await anonymousGet(
-                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
-                    "?from=2026-01-01&to=2026-12-31"
-            );
-            const body: GroupUsageOut[] = await res.json();
-
-            expect(body).toHaveLength(1);
-            expect(body[0].groupName).toBe("Test Group");
-            expect(body[0].insertCount).toBe(2);
-            expect(body[0].parts).toEqual([
-                {
-                    elementId,
-                    name: `Test ${ElementType.PART_STUDIO}`,
-                    insertCount: 2
-                }
-            ]);
-        });
-
-        it("sums a group over its parts and orders both by size", async () => {
-            await seedPartStudio(db);
-            await seedAssembly(db);
-            await seedGroup(db, "group-2", TEST_LIBRARY_ID, {
-                name: "Second Group"
-            });
-            await seedInsertable(db, {
-                id: "quiet-part",
-                groupId: "group-2",
-                elementId: "quiet-element"
-            });
-
-            const assemblyElement = TEST_ASSEMBLY_PATH.elementId;
-            await seedInsert("2026-03-01");
-            await seedInsert("2026-03-02");
-            await seedInsert("2026-03-01", assemblyElement);
-            await seedInsert("2026-03-01", "quiet-element");
-
-            const res = await anonymousGet(
-                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
-                    "?from=2026-01-01&to=2026-12-31"
-            );
-            const body: GroupUsageOut[] = await res.json();
-
-            expect(body.map((entry) => entry.insertCount)).toEqual([3, 1]);
-            // Two parts in the first group, the busier one first.
-            expect(body[0].parts.map((part) => part.insertCount)).toEqual([
-                2, 1
-            ]);
-        });
-
-        it("drops a part that has left the library", async () => {
-            // The event survives a tab being removed, but the tile it would
-            // draw opens nothing, so it must not be counted.
-            await seedGroup(db);
-            await seedInsert("2026-03-01", "gone-element");
-
-            const res = await anonymousGet(
-                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
-                    "?from=2026-01-01&to=2026-12-31"
-            );
-
-            expect(await res.json()).toEqual([]);
-        });
-
-        it("never counts another library's events", async () => {
-            await seedPartStudio(db);
-            await seedLibrary(db, LibraryId.MKCAD);
-            await seedInsert("2026-03-01");
-            await seedInsert("2026-03-01", elementId, LibraryId.MKCAD);
-
-            const res = await anonymousGet(
-                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
-                    "?from=2026-01-01&to=2026-12-31"
-            );
-            const body: GroupUsageOut[] = await res.json();
-
-            expect(body[0].insertCount).toBe(1);
         });
     });
 

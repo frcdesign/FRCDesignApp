@@ -2,7 +2,6 @@ import { queryOptions } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     AnalyticsOverviewOut,
-    GroupUsageOut,
     InsertableReportOut,
     LibraryHealthOut,
     PartUsageOut,
@@ -40,21 +39,18 @@ export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
     });
 }
 
-export function getPartsQuery(libraryId: LibraryId) {
+/**
+ * The library's parts, counted over `range`.
+ *
+ * The range is required rather than defaulted: a caller that forgets it would
+ * silently inherit the API's own 30-day default and report a window nothing on
+ * the page names.
+ */
+export function getPartsQuery(libraryId: LibraryId, range: DayRange) {
     return queryOptions<PartUsageOut[]>({
-        queryKey: ["analytics", "parts", libraryId],
-        queryFn: () => apiGet("/analytics/parts" + toLibraryPath(libraryId))
-    });
-}
-
-/** Insertions per group in the window, with each group's parts nested. */
-export function getGroupUsageQuery(libraryId: LibraryId, range: DayRange) {
-    return queryOptions<GroupUsageOut[]>({
-        // The range is in the key: unlike the parts table, this one follows the
-        // picker, so a new part is not drowned out by years of an old one.
-        queryKey: ["analytics", "groups", libraryId, range.from, range.to],
+        queryKey: ["analytics", "parts", libraryId, range.from, range.to],
         queryFn: () =>
-            apiGet("/analytics/groups" + toLibraryPath(libraryId), {
+            apiGet("/analytics/parts" + toLibraryPath(libraryId), {
                 query: { from: range.from, to: range.to }
             })
     });

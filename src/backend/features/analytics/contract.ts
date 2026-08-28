@@ -164,31 +164,11 @@ export interface AnalyticsOverviewOut {
     /** The first day anything was recorded; null before any event. */
     trackingSince: string | null;
     /**
-     * App-wide lifetime uses, so a library can state its share of them. Equal
-     * to `totals.inserts` when the response is not scoped to a library.
+     * App-wide uses inside the requested window, so a library can state its
+     * share of them against its own `rangeTotals`.
      */
     appInserts: number;
     growth: GrowthOut;
-}
-
-/** One part's insertions inside the reported window. */
-export interface GroupPartUsage {
-    elementId: string;
-    name: string;
-    insertCount: number;
-}
-
-/**
- * A group's insertions in the window, with the parts making them up.
- *
- * Parts are nested rather than fetched separately so drilling into a group on
- * the treemap costs no round trip. Groups are keyed by name, which is unique
- * within a library.
- */
-export interface GroupUsageOut {
-    groupName: string;
-    insertCount: number;
-    parts: GroupPartUsage[];
 }
 
 /** The trailing days each parts-table row's sparkline plots. */
@@ -201,9 +181,11 @@ const MONTH_DAYS = 30;
  * Inserts per month, normalized for how long a part has been in use so one
  * added recently is not buried under one that has been around for years.
  *
- * The observed span is floored at a month, so a part used twice in its first
- * week reads as 2 rather than being extrapolated to 60. Rounded, because a
- * rate with decimals in it is harder to scan than it is precise.
+ * Called with the reported window's bounds, so `firstInsertedAt` is the later
+ * of the part's first use and the window opening. The observed span is floored
+ * at a month, so a part used twice in its first week reads as 2 rather than
+ * being extrapolated to 60. Rounded, because a rate with decimals in it is
+ * harder to scan than it is precise.
  */
 export function usesPerMonth(
     insertCount: number,
@@ -225,11 +207,17 @@ export interface PartUsageOut {
     versionId: string;
     /** Hidden parts stay listed: they are in the library, just not insertable. */
     isVisible: boolean;
+    /** Inserts inside the reported window; 0 for a part unused in it. */
     insertCount: number;
-    /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
+    /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
+    /** Lifetime, not windowed: what matters is whether a part has gone dead. */
     lastInsertedAt: number | null;
-    /** Daily inserts over the trailing window, oldest first, for the sparkline. */
+    /**
+     * Daily inserts over a fixed trailing {@link SPARKLINE_DAYS}, oldest first.
+     * Deliberately not the reported window: this is a shape, and two years of
+     * points in a sparkline is a smear.
+     */
     recent: number[];
 }
 

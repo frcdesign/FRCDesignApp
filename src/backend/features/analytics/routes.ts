@@ -42,7 +42,6 @@ import type {
     ConfigurationValueUsage,
     DailyInsertPoint,
     DailyMetricPoint,
-    GroupUsageOut,
     HealthIssueCount,
     HealthItem,
     InsertableReportOut,
@@ -110,15 +109,23 @@ analyticsRoutes.get("/analytics/overview", async (c) => {
     // read what was asked for, where extra empty days cost nothing.
     const range = clampRange(requested, trackingSince);
 
-    const [totals, perLibrary, series, metricSeries, sources, growth] =
-        await Promise.all([
-            getTotals(db),
-            getLibrarySummaries(db, requested),
-            getSeries(db, range),
-            getMetricSeries(db, range),
-            getSources(db, requested),
-            getGrowth(db, toDayKey(Date.now()), trackingSince)
-        ]);
+    const [
+        totals,
+        perLibrary,
+        series,
+        metricSeries,
+        sources,
+        growth,
+        appTotals
+    ] = await Promise.all([
+        getTotals(db),
+        getLibrarySummaries(db, requested),
+        getSeries(db, range),
+        getMetricSeries(db, range),
+        getSources(db, requested),
+        getGrowth(db, toDayKey(Date.now()), trackingSince),
+        getAppInserts(db, requested)
+    ]);
 
     const out: AnalyticsOverviewOut = {
         totals,
@@ -127,8 +134,7 @@ analyticsRoutes.get("/analytics/overview", async (c) => {
         metricSeries,
         sources,
         trackingSince,
-        // No library scope here, so the share denominator is the same number.
-        appInserts: totals.inserts,
+        appInserts: appTotals,
         growth,
         ...requested
     };
@@ -160,7 +166,7 @@ analyticsRoutes.get("/analytics/summary" + libraryRoute(), async (c) => {
         getSources(db, requested, libraryId),
         getHealthCounts(db, libraryId),
         getGrowth(db, toDayKey(Date.now()), trackingSince, libraryId),
-        getAppInserts(db)
+        getAppInserts(db, requested)
     ]);
 
     const out: AnalyticsOverviewOut = {
@@ -184,23 +190,17 @@ analyticsRoutes.get("/analytics/health" + libraryRoute(), async (c) => {
     return c.json(await getLibraryHealth(db, libraryId));
 });
 
-/** GET /api/analytics/groups/library/:libraryId */
-analyticsRoutes.get("/analytics/groups" + libraryRoute(), async (c) => {
-    const libraryId = getLibraryParam(c);
-    const db = getDb(c.env.DB);
-    return c.json(await getGroupUsage(db, libraryId, getRange(c)));
-});
-
 /** GET /api/analytics/parts/library/:libraryId */
 analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
+    const range = getRange(c);
 
     // Driven off the library rather than the stats table, so a part nobody has
     // used is still listed (at zero) and a part that has left the library is
     // not listed at all — its usage is history about something you can no
     // longer open, which only pads the table.
-    const [rows, series] = await Promise.all([
+    const [rows, series, windowed] = await Promise.all([
         db
             .select({
                 elementId: insertables.elementId,
@@ -226,28 +226,38 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
             .innerJoin(group, eq(group.id, insertables.groupId))
             .where(eq(insertables.libraryId, libraryId))
             .all(),
-        getPartSparklines(db, libraryId)
+        getPartSparklines(db, libraryId),
+        getWindowedInsertCounts(db, libraryId, range)
     ]);
 
-    const now = Date.now();
+    // A part first used inside the window is rated over the days it has
+    // actually existed, not over the whole window, so arriving late is not
+    // read as being unpopular.
+    const from = Date.parse(`${range.from}T00:00:00Z`);
+    const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
+
     const out: PartUsageOut[] = rows
-        .map((row) => ({
-            elementId: row.elementId,
-            insertableId: row.insertableId,
-            name: row.name,
-            groupName: row.groupName,
-            documentId: row.documentId,
-            versionId: row.versionId,
-            isVisible: row.isVisible,
-            insertCount: row.insertCount ?? 0,
-            usesPerMonth: usesPerMonth(
-                row.insertCount ?? 0,
-                row.firstInsertedAt,
-                now
-            ),
-            lastInsertedAt: row.lastInsertedAt,
-            recent: series.get(row.elementId) ?? emptySparkline()
-        }))
+        .map((row) => {
+            const insertCount = windowed.get(row.elementId) ?? 0;
+            const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
+            return {
+                elementId: row.elementId,
+                insertableId: row.insertableId,
+                name: row.name,
+                groupName: row.groupName,
+                documentId: row.documentId,
+                versionId: row.versionId,
+                isVisible: row.isVisible,
+                insertCount,
+                usesPerMonth: usesPerMonth(
+                    insertCount,
+                    insertCount === 0 ? null : firstUsed,
+                    to
+                ),
+                lastInsertedAt: row.lastInsertedAt,
+                recent: series.get(row.elementId) ?? emptySparkline()
+            };
+        })
         // Most used first; unused parts fall to the bottom in name order.
         .sort(
             (a, b) =>
@@ -257,38 +267,21 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
 });
 
 /**
- * Insertions per group in the window, with each group's parts nested.
+ * Inserts per element inside the window, keyed by element id.
  *
- * Counted from raw events rather than a rollup because this has to follow the
- * range picker, which is what `events_element_day_idx` exists for: the library
- * leads the index, so one library's inserts are a range scan, and grouping by
- * element comes back in index order.
- *
- * Joined through `insertables`, so a part that has left the library is dropped
- * rather than drawn as a tile that opens nothing — the same rule the parts
- * handler applies for the same reason.
+ * Counted from raw events rather than a rollup because the parts table and the
+ * treemap both follow the range picker, which is what `events_element_day_idx`
+ * exists for: the library leads the index, so one library's inserts are a range
+ * scan, and grouping by element comes back in index order.
  */
-async function getGroupUsage(
+async function getWindowedInsertCounts(
     db: Db,
     libraryId: LibraryId,
     range: DayRange
-): Promise<GroupUsageOut[]> {
+): Promise<Map<string, number>> {
     const rows = await db
-        .select({
-            groupName: group.name,
-            elementId: insertables.elementId,
-            name: insertables.name,
-            insertCount: count()
-        })
+        .select({ elementId: events.elementId, count: count() })
         .from(events)
-        .innerJoin(
-            insertables,
-            and(
-                eq(insertables.libraryId, events.libraryId),
-                eq(insertables.elementId, events.elementId)
-            )
-        )
-        .innerJoin(group, eq(group.id, insertables.groupId))
         .where(
             and(
                 eq(events.libraryId, libraryId),
@@ -297,31 +290,14 @@ async function getGroupUsage(
                 lte(events.day, range.to)
             )
         )
-        .groupBy(insertables.elementId)
+        .groupBy(events.elementId)
         .all();
 
-    const groups = new Map<string, GroupUsageOut>();
+    const counts = new Map<string, number>();
     for (const row of rows) {
-        const entry = groups.get(row.groupName) ?? {
-            groupName: row.groupName,
-            insertCount: 0,
-            parts: []
-        };
-        entry.insertCount += row.insertCount;
-        entry.parts.push({
-            elementId: row.elementId,
-            name: row.name,
-            insertCount: row.insertCount
-        });
-        groups.set(row.groupName, entry);
+        if (row.elementId !== null) counts.set(row.elementId, row.count);
     }
-
-    // Largest first at both levels, so the treemap's shades track its layout.
-    const byCount = (a: { insertCount: number }, b: { insertCount: number }) =>
-        b.insertCount - a.insertCount;
-    const out = [...groups.values()].sort(byCount);
-    for (const entry of out) entry.parts.sort(byCount);
-    return out;
+    return counts;
 }
 
 function emptySparkline(): number[] {
@@ -782,12 +758,18 @@ function sumCounts(counts: Map<string, number>): number {
  * over `user_stats` — globally it must be distinct, since a person active in
  * two libraries has a row in each.
  */
-/** App-wide lifetime uses, the denominator for a library's share of them. */
-async function getAppInserts(db: Db): Promise<number> {
+/** App-wide uses in the window, the denominator for a library's share. */
+async function getAppInserts(db: Db, range: DayRange): Promise<number> {
     const row = await db
         .select({ value: sum(dailyMetrics.count).mapWith(Number) })
         .from(dailyMetrics)
-        .where(eq(dailyMetrics.type, EventType.INSERT))
+        .where(
+            and(
+                eq(dailyMetrics.type, EventType.INSERT),
+                gte(dailyMetrics.day, range.from),
+                lte(dailyMetrics.day, range.to)
+            )
+        )
         .get();
     return row?.value ?? 0;
 }
