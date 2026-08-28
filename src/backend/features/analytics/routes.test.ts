@@ -21,6 +21,8 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
+    seedGroup,
+    seedInsertable,
     seedLibrary,
     seedPartStudio,
     seedTestData
@@ -37,6 +39,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     SPARKLINE_DAYS,
     type AnalyticsOverviewOut,
+    type GroupUsageOut,
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthOut,
@@ -98,6 +101,7 @@ describe("analytics routes", () => {
                 "/api/analytics/overview",
                 `/api/analytics/summary/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/parts/library/${TEST_LIBRARY_ID}`,
+                `/api/analytics/groups/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`,
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
@@ -581,6 +585,108 @@ describe("analytics routes", () => {
             const body: LibrarySummary = await res.json();
 
             expect(body.totals.favorites).toBe(0);
+        });
+    });
+
+    describe("GET /analytics/groups/library/:libraryId", () => {
+        /** One insert event on `elementId`, on the given day. */
+        async function seedInsert(
+            day: string,
+            element = elementId,
+            libraryId = TEST_LIBRARY_ID
+        ) {
+            await db.insert(events).values({
+                type: EventType.INSERT,
+                createdAt: Date.parse(`${day}T00:00:00Z`),
+                day,
+                libraryId,
+                userId: "user-a",
+                elementId: element
+            });
+        }
+
+        it("counts a group's parts inside the window only", async () => {
+            await seedPartStudio(db);
+            await seedInsert("2026-03-01");
+            await seedInsert("2026-03-02");
+            await seedInsert("2025-01-01"); // outside
+
+            const res = await anonymousGet(
+                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
+                    "?from=2026-01-01&to=2026-12-31"
+            );
+            const body: GroupUsageOut[] = await res.json();
+
+            expect(body).toHaveLength(1);
+            expect(body[0].groupName).toBe("Test Group");
+            expect(body[0].insertCount).toBe(2);
+            expect(body[0].parts).toEqual([
+                {
+                    elementId,
+                    name: `Test ${ElementType.PART_STUDIO}`,
+                    insertCount: 2
+                }
+            ]);
+        });
+
+        it("sums a group over its parts and orders both by size", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await seedGroup(db, "group-2", TEST_LIBRARY_ID, {
+                name: "Second Group"
+            });
+            await seedInsertable(db, {
+                id: "quiet-part",
+                groupId: "group-2",
+                elementId: "quiet-element"
+            });
+
+            const assemblyElement = TEST_ASSEMBLY_PATH.elementId;
+            await seedInsert("2026-03-01");
+            await seedInsert("2026-03-02");
+            await seedInsert("2026-03-01", assemblyElement);
+            await seedInsert("2026-03-01", "quiet-element");
+
+            const res = await anonymousGet(
+                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
+                    "?from=2026-01-01&to=2026-12-31"
+            );
+            const body: GroupUsageOut[] = await res.json();
+
+            expect(body.map((entry) => entry.insertCount)).toEqual([3, 1]);
+            // Two parts in the first group, the busier one first.
+            expect(body[0].parts.map((part) => part.insertCount)).toEqual([
+                2, 1
+            ]);
+        });
+
+        it("drops a part that has left the library", async () => {
+            // The event survives a tab being removed, but the tile it would
+            // draw opens nothing, so it must not be counted.
+            await seedGroup(db);
+            await seedInsert("2026-03-01", "gone-element");
+
+            const res = await anonymousGet(
+                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
+                    "?from=2026-01-01&to=2026-12-31"
+            );
+
+            expect(await res.json()).toEqual([]);
+        });
+
+        it("never counts another library's events", async () => {
+            await seedPartStudio(db);
+            await seedLibrary(db, LibraryId.MKCAD);
+            await seedInsert("2026-03-01");
+            await seedInsert("2026-03-01", elementId, LibraryId.MKCAD);
+
+            const res = await anonymousGet(
+                `/api/analytics/groups/library/${TEST_LIBRARY_ID}` +
+                    "?from=2026-01-01&to=2026-12-31"
+            );
+            const body: GroupUsageOut[] = await res.json();
+
+            expect(body[0].insertCount).toBe(1);
         });
     });
 

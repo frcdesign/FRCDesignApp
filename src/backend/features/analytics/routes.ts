@@ -42,6 +42,7 @@ import type {
     ConfigurationValueUsage,
     DailyInsertPoint,
     DailyMetricPoint,
+    GroupUsageOut,
     HealthIssueCount,
     HealthItem,
     InsertableReportOut,
@@ -183,6 +184,13 @@ analyticsRoutes.get("/analytics/health" + libraryRoute(), async (c) => {
     return c.json(await getLibraryHealth(db, libraryId));
 });
 
+/** GET /api/analytics/groups/library/:libraryId */
+analyticsRoutes.get("/analytics/groups" + libraryRoute(), async (c) => {
+    const libraryId = getLibraryParam(c);
+    const db = getDb(c.env.DB);
+    return c.json(await getGroupUsage(db, libraryId, getRange(c)));
+});
+
 /** GET /api/analytics/parts/library/:libraryId */
 analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
@@ -247,6 +255,74 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
         );
     return c.json(out);
 });
+
+/**
+ * Insertions per group in the window, with each group's parts nested.
+ *
+ * Counted from raw events rather than a rollup because this has to follow the
+ * range picker, which is what `events_element_day_idx` exists for: the library
+ * leads the index, so one library's inserts are a range scan, and grouping by
+ * element comes back in index order.
+ *
+ * Joined through `insertables`, so a part that has left the library is dropped
+ * rather than drawn as a tile that opens nothing — the same rule the parts
+ * handler applies for the same reason.
+ */
+async function getGroupUsage(
+    db: Db,
+    libraryId: LibraryId,
+    range: DayRange
+): Promise<GroupUsageOut[]> {
+    const rows = await db
+        .select({
+            groupName: group.name,
+            elementId: insertables.elementId,
+            name: insertables.name,
+            insertCount: count()
+        })
+        .from(events)
+        .innerJoin(
+            insertables,
+            and(
+                eq(insertables.libraryId, events.libraryId),
+                eq(insertables.elementId, events.elementId)
+            )
+        )
+        .innerJoin(group, eq(group.id, insertables.groupId))
+        .where(
+            and(
+                eq(events.libraryId, libraryId),
+                eq(events.type, EventType.INSERT),
+                gte(events.day, range.from),
+                lte(events.day, range.to)
+            )
+        )
+        .groupBy(insertables.elementId)
+        .all();
+
+    const groups = new Map<string, GroupUsageOut>();
+    for (const row of rows) {
+        const entry = groups.get(row.groupName) ?? {
+            groupName: row.groupName,
+            insertCount: 0,
+            parts: []
+        };
+        entry.insertCount += row.insertCount;
+        entry.parts.push({
+            elementId: row.elementId,
+            name: row.name,
+            insertCount: row.insertCount
+        });
+        groups.set(row.groupName, entry);
+    }
+
+    // Largest first at both levels, so the treemap's shades track its layout.
+    const byCount = (a: { insertCount: number }, b: { insertCount: number }) =>
+        b.insertCount - a.insertCount;
+    const out = [...groups.values()].sort(byCount);
+    for (const entry of out) entry.parts.sort(byCount);
+    return out;
+}
 
 function emptySparkline(): number[] {
     return Array.from({ length: SPARKLINE_DAYS }, () => 0);

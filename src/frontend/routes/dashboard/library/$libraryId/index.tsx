@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import {
+    getGroupUsageQuery,
     getHealthQuery,
     getLibrarySummaryQuery,
     getPartsQuery
@@ -20,6 +21,7 @@ import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { formatPercent } from "../../../../features/dashboard/series-utils";
+import { GroupTreemap } from "../../../../features/dashboard/group-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../../../features/dashboard/metrics";
 import { Section, SectionCard } from "../../../../features/dashboard/section";
@@ -42,6 +44,7 @@ function LibraryOverview(): ReactNode {
     );
     const parts = useQuery(getPartsQuery(libraryId));
     const health = useQuery(getHealthQuery(libraryId));
+    const groups = useQuery(getGroupUsageQuery(libraryId, toDayRange(preset)));
 
     if (!summary.data) {
         return <DashboardState query={summary} />;
@@ -122,6 +125,18 @@ function LibraryOverview(): ReactNode {
                     <DashboardState query={health} />
                 )}
             </Section>
+
+            {groups.data ? (
+                /* Keyed so switching library drops a zoom into a group that
+                   the next library does not have. */
+                <GroupTreemap
+                    key={libraryId}
+                    libraryId={libraryId}
+                    groups={groups.data}
+                />
+            ) : (
+                <DashboardState query={groups} />
+            )}
         </Stack>
     );
 }

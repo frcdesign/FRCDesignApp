@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     AnalyticsOverviewOut,
+    GroupUsageOut,
     InsertableReportOut,
     LibraryHealthOut,
     PartUsageOut,
@@ -43,6 +44,19 @@ export function getPartsQuery(libraryId: LibraryId) {
     return queryOptions<PartUsageOut[]>({
         queryKey: ["analytics", "parts", libraryId],
         queryFn: () => apiGet("/analytics/parts" + toLibraryPath(libraryId))
+    });
+}
+
+/** Insertions per group in the window, with each group's parts nested. */
+export function getGroupUsageQuery(libraryId: LibraryId, range: DayRange) {
+    return queryOptions<GroupUsageOut[]>({
+        // The range is in the key: unlike the parts table, this one follows the
+        // picker, so a new part is not drowned out by years of an old one.
+        queryKey: ["analytics", "groups", libraryId, range.from, range.to],
+        queryFn: () =>
+            apiGet("/analytics/groups" + toLibraryPath(libraryId), {
+                query: { from: range.from, to: range.to }
+            })
     });
 }
 

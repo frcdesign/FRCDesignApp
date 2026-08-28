@@ -171,6 +171,26 @@ export interface AnalyticsOverviewOut {
     growth: GrowthOut;
 }
 
+/** One part's insertions inside the reported window. */
+export interface GroupPartUsage {
+    elementId: string;
+    name: string;
+    insertCount: number;
+}
+
+/**
+ * A group's insertions in the window, with the parts making them up.
+ *
+ * Parts are nested rather than fetched separately so drilling into a group on
+ * the treemap costs no round trip. Groups are keyed by name, which is unique
+ * within a library.
+ */
+export interface GroupUsageOut {
+    groupName: string;
+    insertCount: number;
+    parts: GroupPartUsage[];
+}
+
 /** The trailing days each parts-table row's sparkline plots. */
 export const SPARKLINE_DAYS = 30;
 
