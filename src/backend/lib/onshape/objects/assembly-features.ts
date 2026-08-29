@@ -2,7 +2,7 @@
 
 /** A dummy ID which allows features to bypass validation. */
 export function dummyId(): string {
-    return "0".repeat(17);
+    return "M" + "0".repeat(16);
 }
 
 /** A query for a mate connector feature in a part studio. */
@@ -29,7 +29,7 @@ export function individualOccurrenceQuery(path: string[]): object {
 export function featureOccurrenceQuery(
     featureId: string,
     path: string[] = [],
-    queryData?: string
+    queryData = ""
 ): object {
     return {
         btType: "BTMFeatureQueryWithOccurrence-157",
@@ -51,7 +51,8 @@ export function inferenceQuery(
     return {
         btType: "BTMInferenceQueryWithOccurrence-1083",
         inferenceType: "CENTER",
-        entityQuery: `query=qTransient("${selectionId}");`,
+        entityQuery: "",
+        // entityQuery: `query=qTransient("${selectionId}");`,
         path,
         deterministicIds: [selectionId]
     };
@@ -59,15 +60,14 @@ export function inferenceQuery(
 
 /** A builder for fasten mate features. */
 export class FastenMateBuilder {
-    private readonly mateConnectors: Record<string, unknown>[] = [];
-
     /**
      * @param queries Initial queries. Note Onshape has a tendency to preserve the location of the
      * second query in cases where neither instance is constrained.
      */
     constructor(
         private readonly name: string,
-        private readonly queries: object[] = []
+        private readonly queries: object[] = [],
+        private readonly mateConnectors: Record<string, unknown>[] = []
     ) {}
 
     addQuery(query: object): this {
@@ -80,9 +80,9 @@ export class FastenMateBuilder {
      */
     addMateConnector(mateConnector: Record<string, unknown>): this {
         const mateId = dummyId();
+        this.queries.push(featureOccurrenceQuery(mateId));
         mateConnector.featureId = mateId;
         this.mateConnectors.push(mateConnector);
-        this.queries.push(featureOccurrenceQuery(mateId));
         return this;
     }
 
@@ -98,7 +98,7 @@ export class FastenMateBuilder {
 export function fastenMate(
     name: string,
     queries: object[],
-    mateConnectors?: object[]
+    mateConnectors: object[] = []
 ): object {
     const result: Record<string, unknown> = {
         btType: "BTMMate-64",
@@ -108,11 +108,8 @@ export function fastenMate(
             mateTypeParameter("FASTENED"),
             queryParameter("mateConnectorsQuery", queries)
         ],
-        mateConnectorFeature: true
+        mateConnectors
     };
-    if (mateConnectors && mateConnectors.length > 0) {
-        result.mateConnectors = mateConnectors;
-    }
     return result;
 }
 
@@ -163,6 +160,7 @@ export function makeMateConnector(
 ): Record<string, unknown> {
     return {
         btType: "BTMMateConnector-66",
+        version: 9,
         name,
         implicit,
         parameters: [

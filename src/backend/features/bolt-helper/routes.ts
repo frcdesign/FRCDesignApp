@@ -19,7 +19,7 @@ import {
     FastenMateBuilder,
     implicitMateConnector,
     inferenceQuery,
-    makeMateConnector
+    partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
 import { type BoltHelperResult } from "./contract";
 
@@ -79,15 +79,23 @@ boltHelperRoutes.post(
             const builder = new FastenMateBuilder(`Bolt ${index + 1}`);
 
             const query = inferenceQuery(edge.selectionId, edge.occurrencePath);
-            builder.addMateConnector(implicitMateConnector(query));
+            const mateConnector = implicitMateConnector(query);
+            console.log(JSON.stringify(mateConnector, null, 2));
 
-            console.log(JSON.stringify(builder.build(), null, 2));
+            // const response = await addAssemblyFeature(
+            //     onshapeApi,
+            //     targetPath,
+            //     mateConnector
+            // );
 
-            await addAssemblyFeature(
-                onshapeApi,
-                targetPath,
-                makeMateConnector("Test mate connector", query)
+            // const featureId = response.feature.featureId;
+            builder.addMateConnector(mateConnector);
+            builder.addQuery(
+                partStudioMateConnectorQuery("FqqwcgrQqeEielg_1", [
+                    "M1wfjzdxR+1fuYkR9"
+                ])
             );
+            console.log(JSON.stringify(builder.build(), null, 2));
 
             // CENTER inference on a circular edge lands the connector on the
             // hole's axis, which is what a bolt mates to.

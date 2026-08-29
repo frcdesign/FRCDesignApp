@@ -17,6 +17,11 @@
                     "btType": "BTMFeatureQueryWithOccurrence-157",
                     "path": [],
                     "featureId": "00000000000000000"
+                },
+                {
+                    "btType": "BTMFeatureQueryWithOccurrence-157",
+                    "path": [],
+                    "featureId": "00000000000000000"
                 }
             ]
         }
