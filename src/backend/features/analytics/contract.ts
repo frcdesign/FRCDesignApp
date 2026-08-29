@@ -1,4 +1,3 @@
-import { BuildIssueSeverity, BuildIssueType } from "../build-checker/issues";
 import { LibraryId } from "../library/library-id";
 import { InsertSource } from "./events";
 
@@ -67,47 +66,12 @@ export interface LibraryHealthCounts {
     insertableCount: number;
     errorCount: number;
     warningCount: number;
-    infoCount: number;
     healthyItems: number;
-    /** Groups and insertables that have never loaded successfully. */
-    neverLoaded: number;
-}
-
-/** How many items carry one kind of issue. */
-export interface HealthIssueCount {
-    type: BuildIssueType;
-    description: string;
-    severity: BuildIssueSeverity;
-    count: number;
-}
-
-/** A group or insertable with at least one issue. */
-export interface HealthItem {
-    kind: "group" | "insertable";
-    id: string;
-    name: string;
-    /** The parent group's name, for insertables. */
-    groupName: string | null;
-    documentId: string;
-    versionId: string;
-    /** Null for groups, which are documents rather than tabs. */
-    elementId: string | null;
-    issues: BuildIssueType[];
-    severity: BuildIssueSeverity;
-    lastLoadedAt: number | null;
-}
-
-export interface LibraryHealthOut {
-    counts: LibraryHealthCounts;
-    issues: HealthIssueCount[];
-    items: HealthItem[];
 }
 
 export interface LibrarySummary {
     libraryId: LibraryId;
     totals: AnalyticsTotals;
-    /** Scoped to the selected range, so the table agrees with the tiles. */
-    rangeTotals: AnalyticsTotals;
     health: LibraryHealthCounts;
 }
 
@@ -151,6 +115,24 @@ export interface GrowthOut {
     trackingSince: string | null;
 }
 
+/**
+ * What one library's page reads.
+ *
+ * Deliberately narrower than the app overview: the two used to share a type,
+ * which meant every library page paid for a per-library series, a source
+ * breakdown and a range total that nothing on it opened.
+ */
+export interface LibrarySummaryOut {
+    /** Lifetime, for the headline cards. */
+    totals: AnalyticsTotals;
+    /** Scoped to the requested range, for the chart and the sparklines. */
+    metricSeries: DailyMetricPoint[];
+    growth: GrowthOut;
+    trackingSince: string | null;
+    from: string;
+    to: string;
+}
+
 export interface AnalyticsOverviewOut {
     /** Lifetime totals, shown as context beneath each tile's range value. */
     totals: AnalyticsTotals;
@@ -163,11 +145,6 @@ export interface AnalyticsOverviewOut {
     to: string;
     /** The first day anything was recorded; null before any event. */
     trackingSince: string | null;
-    /**
-     * App-wide uses inside the requested window, so a library can state its
-     * share of them against its own `rangeTotals`.
-     */
-    appInserts: number;
     growth: GrowthOut;
 }
 
@@ -211,8 +188,6 @@ export interface PartUsageOut {
     insertCount: number;
     /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    /** Lifetime, not windowed: what matters is whether a part has gone dead. */
-    lastInsertedAt: number | null;
     /**
      * Daily inserts over a fixed trailing {@link SPARKLINE_DAYS}, oldest first.
      * Deliberately not the reported window: this is a shape, and two years of
@@ -275,7 +250,6 @@ export interface InsertableReportOut {
     /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
     firstInsertedAt: number | null;
-    lastInsertedAt: number | null;
     uniqueUsers: number;
     /** How many users currently have this part favorited. */
     favorites: number;

@@ -1,10 +1,18 @@
 import { Card, Group, Text, Title } from "@mantine/core";
 import { type Icon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
 import { ChangeIndicator } from "./change-indicator";
 import { formatCount } from "./series-utils";
+
+const MiniSparkline = lazy(() =>
+    import("./sparkline").then((module) => ({
+        default: module.MiniSparkline
+    }))
+);
+
+const SPARKLINE_HEIGHT = 40;
 
 interface StatTileProps {
     label: string;
@@ -18,6 +26,12 @@ interface StatTileProps {
      */
     change?: PeriodComparison;
     trackingSince?: string | null;
+    /**
+     * The measure's shape over the selected window, under the value. Follows
+     * the picker even though the value above it is all time: a sparkline has
+     * no axis and claims no total, so the two do not have to agree.
+     */
+    spark?: number[];
 }
 
 export function StatTile({
@@ -25,7 +39,8 @@ export function StatTile({
     value,
     icon: TileIcon,
     change,
-    trackingSince = null
+    trackingSince = null,
+    spark
 }: StatTileProps): ReactNode {
     return (
         <Card withBorder padding="lg" radius="md">
@@ -50,6 +65,13 @@ export function StatTile({
                     )
                 )}
             </Group>
+            {spark && (
+                <Suspense
+                    fallback={<div style={{ height: SPARKLINE_HEIGHT }} />}
+                >
+                    <MiniSparkline data={spark} h={SPARKLINE_HEIGHT} />
+                </Suspense>
+            )}
         </Card>
     );
 }

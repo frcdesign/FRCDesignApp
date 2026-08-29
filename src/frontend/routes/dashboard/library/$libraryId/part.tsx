@@ -26,7 +26,6 @@ import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
 import {
     formatCount,
-    formatDate,
     formatPercent
 } from "../../../../features/dashboard/series-utils";
 
@@ -120,7 +119,7 @@ function ReportBody({
                 )}
             </Group>
 
-            <SimpleGrid cols={{ base: 1, sm: 3, lg: 6 }}>
+            <SimpleGrid cols={{ base: 1, sm: 3, lg: 5 }}>
                 <SummaryCard
                     label="Uses per month"
                     value={formatCount(report.usesPerMonth)}
@@ -136,10 +135,6 @@ function ReportBody({
                 <SummaryCard
                     label="Favorites"
                     value={formatCount(report.favorites)}
-                />
-                <SummaryCard
-                    label="Last used"
-                    value={formatDate(report.lastInsertedAt)}
                 />
                 <SummaryCard
                     label="Derived"

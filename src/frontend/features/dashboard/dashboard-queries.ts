@@ -2,8 +2,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     AnalyticsOverviewOut,
+    LibrarySummaryOut,
     InsertableReportOut,
-    LibraryHealthOut,
+    LibraryHealthCounts,
     PartUsageOut,
     UnusedOptionOut
 } from "@backend/features/analytics/contract";
@@ -30,7 +31,7 @@ export function getOverviewQuery(range: DayRange) {
 }
 
 export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
-    return queryOptions<AnalyticsOverviewOut>({
+    return queryOptions<LibrarySummaryOut>({
         queryKey: ["analytics", "summary", libraryId, range.from, range.to],
         queryFn: () =>
             apiGet("/analytics/summary" + toLibraryPath(libraryId), {
@@ -93,7 +94,7 @@ export function getInsertableReportQuery(
 }
 
 export function getHealthQuery(libraryId: LibraryId) {
-    return queryOptions<LibraryHealthOut>({
+    return queryOptions<LibraryHealthCounts>({
         queryKey: ["analytics", "health", libraryId],
         queryFn: () => apiGet("/analytics/health" + toLibraryPath(libraryId))
     });

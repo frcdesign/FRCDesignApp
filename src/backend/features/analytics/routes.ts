@@ -37,17 +37,15 @@ import {
 import { SPARKLINE_DAYS, usesPerMonth } from "./contract";
 import type {
     AnalyticsOverviewOut,
+    LibrarySummaryOut,
     AnalyticsTotals,
     ConfigurationParameterUsage,
     ConfigurationValueUsage,
     DailyInsertPoint,
     DailyMetricPoint,
-    HealthIssueCount,
-    HealthItem,
     InsertableReportOut,
     InsertSourceUsage,
     LibraryHealthCounts,
-    LibraryHealthOut,
     LibrarySummary,
     PartUsageOut,
     TargetSplit,
@@ -55,8 +53,6 @@ import type {
 } from "./contract";
 import {
     BuildIssueSeverity,
-    BuildIssueType,
-    getIssueDescription,
     getIssueSeverity,
     getMaxSeverity,
     type BuildIssue
@@ -109,23 +105,15 @@ analyticsRoutes.get("/analytics/overview", async (c) => {
     // read what was asked for, where extra empty days cost nothing.
     const range = clampRange(requested, trackingSince);
 
-    const [
-        totals,
-        perLibrary,
-        series,
-        metricSeries,
-        sources,
-        growth,
-        appTotals
-    ] = await Promise.all([
-        getTotals(db),
-        getLibrarySummaries(db, requested),
-        getSeries(db, range),
-        getMetricSeries(db, range),
-        getSources(db, requested),
-        getGrowth(db, toDayKey(Date.now()), trackingSince),
-        getAppInserts(db, requested)
-    ]);
+    const [totals, perLibrary, series, metricSeries, sources, growth] =
+        await Promise.all([
+            getTotals(db),
+            getLibrarySummaries(db),
+            getSeries(db, range),
+            getMetricSeries(db, range),
+            getSources(db, requested),
+            getGrowth(db, toDayKey(Date.now()), trackingSince)
+        ]);
 
     const out: AnalyticsOverviewOut = {
         totals,
@@ -134,7 +122,6 @@ analyticsRoutes.get("/analytics/overview", async (c) => {
         metricSeries,
         sources,
         trackingSince,
-        appInserts: appTotals,
         growth,
         ...requested
     };
@@ -149,35 +136,17 @@ analyticsRoutes.get("/analytics/summary" + libraryRoute(), async (c) => {
     const trackingSince = await getTrackingSince(db);
     const range = clampRange(requested, trackingSince);
 
-    const [
-        totals,
-        rangeTotals,
-        series,
-        metricSeries,
-        sources,
-        health,
-        growth,
-        appInserts
-    ] = await Promise.all([
+    const [totals, metricSeries, growth] = await Promise.all([
         getTotals(db, libraryId),
-        getTotals(db, libraryId, requested),
-        getSeries(db, range, libraryId),
         getMetricSeries(db, range, libraryId),
-        getSources(db, requested, libraryId),
-        getHealthCounts(db, libraryId),
-        getGrowth(db, toDayKey(Date.now()), trackingSince, libraryId),
-        getAppInserts(db, requested)
+        getGrowth(db, toDayKey(Date.now()), trackingSince, libraryId)
     ]);
 
-    const out: AnalyticsOverviewOut = {
+    const out: LibrarySummaryOut = {
         totals,
-        libraries: [{ libraryId, totals, rangeTotals, health }],
-        series,
         metricSeries,
-        sources,
-        trackingSince,
-        appInserts,
         growth,
+        trackingSince,
         ...requested
     };
     return c.json(out);
@@ -187,7 +156,7 @@ analyticsRoutes.get("/analytics/summary" + libraryRoute(), async (c) => {
 analyticsRoutes.get("/analytics/health" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
-    return c.json(await getLibraryHealth(db, libraryId));
+    return c.json(await getHealthCounts(db, libraryId));
 });
 
 /** GET /api/analytics/parts/library/:libraryId */
@@ -206,7 +175,6 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
                 elementId: insertables.elementId,
                 insertCount: insertableStats.insertCount,
                 firstInsertedAt: insertableStats.firstInsertedAt,
-                lastInsertedAt: insertableStats.lastInsertedAt,
                 insertableId: insertables.id,
                 name: insertables.name,
                 documentId: insertables.documentId,
@@ -254,7 +222,6 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
                     insertCount === 0 ? null : firstUsed,
                     to
                 ),
-                lastInsertedAt: row.lastInsertedAt,
                 recent: series.get(row.elementId) ?? emptySparkline()
             };
         })
@@ -374,8 +341,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
             groupName: group.name,
             isVisible: insertables.isVisible,
             insertCount: insertableStats.insertCount,
-            firstInsertedAt: insertableStats.firstInsertedAt,
-            lastInsertedAt: insertableStats.lastInsertedAt
+            firstInsertedAt: insertableStats.firstInsertedAt
         })
         .from(insertables)
         .leftJoin(
@@ -415,7 +381,6 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
             row.firstInsertedAt,
             now
         ),
-        lastInsertedAt: row.lastInsertedAt,
         recent: series.get(row.elementId) ?? emptySparkline()
     }));
     return c.json(out);
@@ -626,7 +591,6 @@ analyticsRoutes.get(
                 Date.now()
             ),
             firstInsertedAt: stats?.firstInsertedAt ?? null,
-            lastInsertedAt: stats?.lastInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
             favorites: favoriteCount?.value ?? 0,
             targets: toTargetSplit(targetRows),
@@ -758,22 +722,6 @@ function sumCounts(counts: Map<string, number>): number {
  * over `user_stats` — globally it must be distinct, since a person active in
  * two libraries has a row in each.
  */
-/** App-wide uses in the window, the denominator for a library's share. */
-async function getAppInserts(db: Db, range: DayRange): Promise<number> {
-    const row = await db
-        .select({ value: sum(dailyMetrics.count).mapWith(Number) })
-        .from(dailyMetrics)
-        .where(
-            and(
-                eq(dailyMetrics.type, EventType.INSERT),
-                gte(dailyMetrics.day, range.from),
-                lte(dailyMetrics.day, range.to)
-            )
-        )
-        .get();
-    return row?.value ?? 0;
-}
-
 async function getTotals(
     db: Db,
     libraryId?: LibraryId,
@@ -840,15 +788,11 @@ async function getTotals(
     };
 }
 
-async function getLibrarySummaries(
-    db: Db,
-    range: DayRange
-): Promise<LibrarySummary[]> {
+async function getLibrarySummaries(db: Db): Promise<LibrarySummary[]> {
     return Promise.all(
         Object.values(LibraryId).map(async (libraryId) => ({
             libraryId,
             totals: await getTotals(db, libraryId),
-            rangeTotals: await getTotals(db, libraryId, range),
             health: await getHealthCounts(db, libraryId)
         }))
     );
@@ -1102,45 +1046,7 @@ async function getHealthCounts(
         groups,
         allInsertables,
         await getConfigurationIssues(db, libraryId)
-    ).counts;
-}
-
-/** The full report: counts, per-type totals, and every affected item. */
-async function getLibraryHealth(
-    db: Db,
-    libraryId: LibraryId
-): Promise<LibraryHealthOut> {
-    const [groups, allInsertables, configurationIssues] = await Promise.all([
-        db
-            .select({
-                id: group.id,
-                name: group.name,
-                documentId: group.documentId,
-                versionId: group.versionId,
-                buildIssues: group.buildIssues,
-                lastLoadedAt: group.lastLoadedAt
-            })
-            .from(group)
-            .where(eq(group.libraryId, libraryId))
-            .all(),
-        db
-            .select({
-                id: insertables.id,
-                groupId: insertables.groupId,
-                name: insertables.name,
-                elementId: insertables.elementId,
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                buildIssues: insertables.buildIssues,
-                lastLoadedAt: insertables.lastLoadedAt
-            })
-            .from(insertables)
-            .where(visibleIn(libraryId))
-            .all(),
-        getConfigurationIssues(db, libraryId)
-    ]);
-
-    return summarizeHealth(groups, allInsertables, configurationIssues);
+    );
 }
 
 /**
@@ -1200,35 +1106,21 @@ export function summarizeHealth(
     groups: HealthGroupRow[],
     insertables: HealthInsertableRow[],
     configurationIssues: Map<string, BuildIssue[]>
-): LibraryHealthOut {
-    const groupNames = new Map(groups.map((row) => [row.id, row.name ?? ""]));
-
-    const items: HealthItem[] = [];
+): LibraryHealthCounts {
     const counts: LibraryHealthCounts = {
         groupCount: groups.length,
         insertableCount: insertables.length,
         errorCount: 0,
         warningCount: 0,
-        infoCount: 0,
-        healthyItems: 0,
-        neverLoaded: 0
+        healthyItems: 0
     };
-    const issueCounts = new Map<BuildIssueType, number>();
 
-    const record = (
-        issues: BuildIssue[],
-        lastLoadedAt: number | null,
-        toItem: (severity: BuildIssueSeverity) => HealthItem
-    ) => {
-        if (lastLoadedAt === null) counts.neverLoaded++;
-
-        const severity = getMaxSeverity(issues);
-        if (severity === null) {
+    const record = (issues: BuildIssue[]) => {
+        if (getMaxSeverity(issues) === null) {
             counts.healthyItems++;
             return;
         }
         for (const issue of issues) {
-            issueCounts.set(issue.type, (issueCounts.get(issue.type) ?? 0) + 1);
             switch (getIssueSeverity(issue)) {
                 case BuildIssueSeverity.ERROR:
                     counts.errorCount++;
@@ -1236,78 +1128,21 @@ export function summarizeHealth(
                 case BuildIssueSeverity.WARNING:
                     counts.warningCount++;
                     break;
+                // Info issues are counted by neither tile, so they only have
+                // to leave the item healthy-or-not, which `record` already did.
                 case BuildIssueSeverity.INFO:
-                    counts.infoCount++;
                     break;
             }
         }
-
-        items.push(toItem(severity));
     };
 
-    for (const row of groups) {
-        const issues = row.buildIssues;
-
-        record(issues, row.lastLoadedAt, (severity) => ({
-            kind: "group",
-            id: row.id,
-            name: row.name ?? row.id,
-            groupName: null,
-            documentId: row.documentId ?? "",
-            versionId: row.versionId ?? "",
-            elementId: null,
-            issues: issues.map((issue) => issue.type),
-            severity,
-            lastLoadedAt: row.lastLoadedAt
-        }));
-    }
-
+    for (const row of groups) record(row.buildIssues);
     for (const row of insertables) {
-        const issues = [
+        record([
             ...row.buildIssues,
             ...(configurationIssues.get(row.id) ?? [])
-        ];
-
-        record(issues, row.lastLoadedAt, (severity) => ({
-            kind: "insertable",
-            id: row.id,
-            name: row.name ?? row.id,
-            groupName: groupNames.get(row.groupId) ?? null,
-            documentId: row.documentId ?? "",
-            versionId: row.versionId ?? "",
-            elementId: row.elementId ?? null,
-            issues: issues.map((issue) => issue.type),
-            severity,
-            lastLoadedAt: row.lastLoadedAt
-        }));
+        ]);
     }
 
-    const issues: HealthIssueCount[] = [...issueCounts.entries()]
-        .map(([type, count]) => ({
-            type,
-            description: getIssueDescription({ type }),
-            severity: getIssueSeverity({ type }),
-            count
-        }))
-        .sort(
-            (a, b) =>
-                SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
-                b.count - a.count
-        );
-
-    // Worst first, so the top of the list is where a maintainer should start.
-    items.sort(
-        (a, b) =>
-            SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
-            b.issues.length - a.issues.length ||
-            a.name.localeCompare(b.name)
-    );
-
-    return { counts, issues, items };
+    return counts;
 }
-
-const SEVERITY_RANK: Record<BuildIssueSeverity, number> = {
-    [BuildIssueSeverity.ERROR]: 2,
-    [BuildIssueSeverity.WARNING]: 1,
-    [BuildIssueSeverity.INFO]: 0
-};

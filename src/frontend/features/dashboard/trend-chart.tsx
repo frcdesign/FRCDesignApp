@@ -1,4 +1,4 @@
-import { LineChart, Sparkline } from "@mantine/charts";
+import { LineChart } from "@mantine/charts";
 import { type ReactNode } from "react";
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -18,24 +18,8 @@ import { isShare, type MetricDefinition, type TrendPoint } from "./metrics";
 // Onshape panel bundle entirely.
 import "@mantine/charts/styles.layer.css";
 
-const SPARKLINE_HEIGHT = 40;
 // Keeps the hover panel short enough to fit beside a tile on a laptop.
 const DETAIL_HEIGHT = 160;
-
-/** The inline trend on a tile: shape only, no axes. */
-export function MetricSparkline({ trend }: { trend: TrendPoint[] }): ReactNode {
-    return (
-        <Sparkline
-            h={SPARKLINE_HEIGHT}
-            data={trend.map((point) => point.value)}
-            curveType="monotone"
-            color="var(--mantine-primary-color-filled)"
-            fillOpacity={0.15}
-            strokeWidth={1.5}
-            withGradient
-        />
-    );
-}
 
 /** The same numbers as the sparkline, with axes and a tooltip. */
 export function MetricDetailChart({

@@ -21,7 +21,6 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
-    seedLibrary,
     seedPartStudio,
     seedTestData
 } from "../../../__test_utils__";
@@ -39,13 +38,13 @@ import {
     type AnalyticsOverviewOut,
     type UnusedOptionOut,
     type InsertableReportOut,
-    type LibraryHealthOut,
+    type LibraryHealthCounts,
     type LibrarySummary,
     type PartUsageOut
 } from "./contract";
 import { buildParameterUsage, summarizeHealth } from "./routes";
 import { toDayKey } from "./tracking";
-import { BuildIssueSeverity, BuildIssueType } from "../build-checker/issues";
+import { BuildIssueType } from "../build-checker/issues";
 
 const db = getDb(env.DB);
 const elementId = TEST_PART_STUDIO_PATH.elementId;
@@ -222,11 +221,6 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals.inserts).toBe(8);
-            const scoped = body.libraries.find(
-                (row) => row.libraryId === TEST_LIBRARY_ID
-            );
-            expect(scoped?.rangeTotals.inserts).toBe(3);
-            expect(scoped?.rangeTotals.uniqueUsers).toBe(1);
         });
 
         it("fills quiet days in, so an average is per calendar day", async () => {
@@ -396,8 +390,7 @@ describe("analytics routes", () => {
             expect(body[0]).toMatchObject({
                 elementId,
                 name: "Test PARTSTUDIO",
-                insertCount: 0,
-                lastInsertedAt: null
+                insertCount: 0
             });
             // Enough to build both links the picker offers.
             expect(body[0].documentId).toBeTruthy();
@@ -434,23 +427,6 @@ describe("analytics routes", () => {
             expect(body).toHaveLength(1);
             expect(body[0].insertCount).toBe(0);
             expect(body[0].usesPerMonth).toBe(0);
-        });
-
-        it("reports last used lifetime, not clipped to the window", async () => {
-            // Whether a part has gone dead is the useful fact; a date near the
-            // window's end would say nothing.
-            await seedPartStudio(db);
-            await seedInsertableStats(4, Date.parse("2025-03-01T00:00:00Z"));
-            await seedInserts(4, "2025-03-01");
-
-            const res = await anonymousGet(
-                partsUrl("?from=2026-01-01&to=2026-12-31")
-            );
-            const body: PartUsageOut[] = await res.json();
-
-            expect(body[0].lastInsertedAt).toBe(
-                Date.parse("2025-03-01T00:00:00Z")
-            );
         });
 
         it("keeps history for a part that is no longer visible", async () => {
@@ -617,33 +593,6 @@ describe("analytics routes", () => {
 
             // seedTestData favorites the part studio and the assembly.
             expect(body.totals.favorites).toBe(2);
-            const scoped = body.libraries.find(
-                (row) => row.libraryId === TEST_LIBRARY_ID
-            );
-            expect(scoped?.rangeTotals.favorites).toBe(2);
-        });
-
-        it("returns app-wide uses over the same window as the library's", async () => {
-            // Both sides of the share have to cover one window, or a library
-            // reads as a share of a total it was never measured against.
-            await seedLibrary(db, LibraryId.MKCAD);
-            await seedMetric("2026-01-01", 30);
-            await seedMetric("2025-01-01", 999);
-            await db.insert(dailyMetrics).values({
-                day: "2026-01-01",
-                libraryId: LibraryId.MKCAD,
-                type: EventType.INSERT,
-                count: 70
-            });
-
-            const res = await anonymousGet(
-                `/api/analytics/summary/library/${TEST_LIBRARY_ID}` +
-                    "?from=2026-01-01&to=2026-12-31"
-            );
-            const body: AnalyticsOverviewOut = await res.json();
-
-            expect(body.libraries[0].rangeTotals.inserts).toBe(30);
-            expect(body.appInserts).toBe(100);
         });
 
         it("scopes the count to one library", async () => {
@@ -796,7 +745,7 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/health/library/:libraryId", () => {
-        it("reports stored issues with the item that carries them", async () => {
+        it("counts an issue against the item that carries it", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({
                 isVisible: true,
@@ -806,33 +755,14 @@ describe("analytics routes", () => {
             const res = await anonymousGet(
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`
             );
-            const body: LibraryHealthOut = await res.json();
+            const body: LibraryHealthCounts = await res.json();
 
-            expect(body.counts).toMatchObject({
+            expect(body).toMatchObject({
                 groupCount: 1,
                 insertableCount: 1,
                 errorCount: 1,
                 healthyItems: 1
             });
-            expect(body.issues).toEqual([
-                {
-                    type: BuildIssueType.THUMBNAIL_FAILED,
-                    description: "Thumbnail failed to generate",
-                    severity: BuildIssueSeverity.ERROR,
-                    count: 1
-                }
-            ]);
-
-            const item = body.items[0];
-            expect(item).toMatchObject({
-                kind: "insertable",
-                name: "Test PARTSTUDIO",
-                groupName: "Test Group",
-                severity: BuildIssueSeverity.ERROR
-            });
-            // Enough to build the Onshape deep link.
-            expect(item.elementId).toBe(elementId);
-            expect(item.documentId).toBeTruthy();
         });
 
         it("merges configuration issues into the insertable", async () => {
@@ -848,12 +778,9 @@ describe("analytics routes", () => {
             const res = await anonymousGet(
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`
             );
-            const body: LibraryHealthOut = await res.json();
+            const body: LibraryHealthCounts = await res.json();
 
-            expect(body.counts.warningCount).toBe(1);
-            expect(body.items[0].issues).toEqual([
-                BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED
-            ]);
+            expect(body.warningCount).toBe(1);
         });
 
         it("returns a clean report for a library with no issues", async () => {
@@ -863,11 +790,11 @@ describe("analytics routes", () => {
             const res = await anonymousGet(
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`
             );
-            const body: LibraryHealthOut = await res.json();
+            const body: LibraryHealthCounts = await res.json();
 
-            expect(body.items).toEqual([]);
-            expect(body.issues).toEqual([]);
-            expect(body.counts.healthyItems).toBe(2);
+            expect(body.errorCount).toBe(0);
+            expect(body.warningCount).toBe(0);
+            expect(body.healthyItems).toBe(2);
         });
     });
 
@@ -1068,15 +995,13 @@ describe("summarizeHealth", () => {
     };
 
     it("counts every issue, including a lesser one on the same item", () => {
-        const { counts } = summarizeHealth(
+        const counts = summarizeHealth(
             [cleanGroup],
             [
                 insertable,
                 {
                     ...insertable,
                     id: "i2",
-                    // Both are counted; the item is still listed once, as an
-                    // error, since that is its worst.
                     buildIssues: [
                         { type: BuildIssueType.LOAD_FAILED },
                         { type: BuildIssueType.NO_VENDORS }
@@ -1085,25 +1010,26 @@ describe("summarizeHealth", () => {
                 {
                     ...insertable,
                     id: "i3",
+                    // Info-only, so it leaves the item unhealthy without
+                    // landing on either tile.
                     buildIssues: [{ type: BuildIssueType.NO_THUMBNAIL_TAB }]
                 }
             ],
             new Map()
         );
 
-        expect(counts).toMatchObject({
+        expect(counts).toEqual({
             groupCount: 1,
             insertableCount: 3,
             errorCount: 1,
             warningCount: 1,
-            infoCount: 1,
             healthyItems: 2
         });
     });
 
     it("counts an insertable's configuration issues as its own", () => {
         // The panel merges these, so the dashboard must not disagree.
-        const { counts, items } = summarizeHealth(
+        const counts = summarizeHealth(
             [cleanGroup],
             [insertable],
             new Map([
@@ -1113,13 +1039,10 @@ describe("summarizeHealth", () => {
 
         expect(counts.warningCount).toBe(1);
         expect(counts.healthyItems).toBe(1); // the group
-        expect(items[0].issues).toEqual([
-            BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED
-        ]);
     });
 
     it("counts issues, not items, so two on one part read as two", () => {
-        const { counts } = summarizeHealth(
+        const counts = summarizeHealth(
             [cleanGroup],
             [insertable],
             new Map([
@@ -1140,7 +1063,7 @@ describe("summarizeHealth", () => {
     it("reports a group's stored issues without recomputing any", () => {
         // Visibility checks now run in the workflow and on the visibility
         // toggle, so this only reads what they wrote.
-        const { items } = summarizeHealth(
+        const counts = summarizeHealth(
             [
                 {
                     ...cleanGroup,
@@ -1153,54 +1076,7 @@ describe("summarizeHealth", () => {
             new Map()
         );
 
-        const groupItem = items.find((item) => item.kind === "group");
-        expect(groupItem?.issues).toEqual([
-            BuildIssueType.NO_UNHIDDEN_INSERTABLES
-        ]);
-        expect(groupItem?.severity).toBe(BuildIssueSeverity.ERROR);
-    });
-
-    it("tallies issue kinds and sorts them worst first", () => {
-        const { issues } = summarizeHealth(
-            [cleanGroup],
-            [
-                {
-                    ...insertable,
-                    buildIssues: [{ type: BuildIssueType.NO_VENDORS }]
-                },
-                {
-                    ...insertable,
-                    id: "i2",
-                    buildIssues: [{ type: BuildIssueType.NO_VENDORS }]
-                },
-                {
-                    ...insertable,
-                    id: "i3",
-                    buildIssues: [{ type: BuildIssueType.THUMBNAIL_FAILED }]
-                }
-            ],
-            new Map()
-        );
-
-        // The single error outranks the two infos.
-        expect(issues[0]).toMatchObject({
-            type: BuildIssueType.THUMBNAIL_FAILED,
-            severity: BuildIssueSeverity.ERROR,
-            count: 1
-        });
-        expect(issues[1]).toMatchObject({
-            type: BuildIssueType.NO_VENDORS,
-            count: 2
-        });
-    });
-
-    it("counts items that have never loaded", () => {
-        const { counts } = summarizeHealth(
-            [cleanGroup],
-            [{ ...insertable, lastLoadedAt: null }],
-            new Map()
-        );
-
-        expect(counts.neverLoaded).toBe(1);
+        expect(counts.errorCount).toBe(1);
+        expect(counts.healthyItems).toBe(0);
     });
 });

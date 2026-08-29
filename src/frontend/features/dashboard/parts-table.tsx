@@ -9,7 +9,7 @@ import {
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
 import { IconSize } from "../../lib/style-constants";
-import { formatCount, formatDate } from "./series-utils";
+import { formatCount } from "./series-utils";
 import {
     DEFAULT_SORT,
     filterAndSort,
@@ -18,11 +18,14 @@ import {
     type SortState
 } from "./parts-sort";
 
-const PartSparkline = lazy(() =>
-    import("./parts-sparkline").then((module) => ({
-        default: module.PartSparkline
+const MiniSparkline = lazy(() =>
+    import("./sparkline").then((module) => ({
+        default: module.MiniSparkline
     }))
 );
+
+/** Small enough to sit in a row without stretching it. */
+const ROW_SPARKLINE = { h: 24, w: 80 };
 
 interface PartsTableProps {
     libraryId: LibraryId;
@@ -91,12 +94,6 @@ export function PartsTable({
                             align="right"
                         />
                         <Table.Th>Last {SPARKLINE_DAYS} days</Table.Th>
-                        <SortableTh
-                            label="Last used"
-                            column="lastInsertedAt"
-                            sort={sort}
-                            onToggle={toggle}
-                        />
                         <Table.Th ta="center">Onshape</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
@@ -190,10 +187,9 @@ function PartRow({
             </Table.Td>
             <Table.Td>
                 <Suspense fallback={<div style={{ height: 24 }} />}>
-                    <PartSparkline recent={part.recent} />
+                    <MiniSparkline data={part.recent} {...ROW_SPARKLINE} />
                 </Suspense>
             </Table.Td>
-            <Table.Td>{formatDate(part.lastInsertedAt)}</Table.Td>
             {/* Stops the row's own navigation: this link leaves the app. */}
             <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>
                 <Anchor

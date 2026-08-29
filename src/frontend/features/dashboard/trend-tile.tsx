@@ -23,9 +23,9 @@ import {
 } from "./metrics";
 import { formatCount, formatPercent } from "./series-utils";
 
-const MetricSparkline = lazy(() =>
-    import("./trend-chart").then((module) => ({
-        default: module.MetricSparkline
+const MiniSparkline = lazy(() =>
+    import("./sparkline").then((module) => ({
+        default: module.MiniSparkline
     }))
 );
 const MetricDetailChart = lazy(() =>
@@ -100,7 +100,10 @@ export function TrendTile({
                     <Suspense
                         fallback={<div style={{ height: SPARKLINE_HEIGHT }} />}
                     >
-                        <MetricSparkline trend={trend} />
+                        <MiniSparkline
+                            data={trend.map((point) => point.value)}
+                            h={SPARKLINE_HEIGHT}
+                        />
                     </Suspense>
                     <Text size="xs" c="dimmed">
                         {lifetime} all time

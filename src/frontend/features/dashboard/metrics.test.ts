@@ -71,16 +71,6 @@ describe("toTrend", () => {
         expect(first.value).toBeLessThan(1);
     });
 
-    it("averages active users over a bucket rather than summing them", () => {
-        // Summing distinct-per-day counts would count one person many times.
-        const points = Array.from({ length: 200 }, (_, index) =>
-            day(index, { activeUsers: 10 })
-        );
-        for (const point of toTrend(points, METRICS.activeUsers)) {
-            expect(point.value).toBe(10);
-        }
-    });
-
     it("keeps a short range at daily resolution", () => {
         const points = Array.from({ length: 30 }, (_, index) =>
             day(index, { inserts: 1 })
@@ -143,9 +133,9 @@ describe("rangeValue", () => {
 
             // A fold of the plotted values must land within them.
             expect(value, metric.key).toBeGreaterThanOrEqual(
-                metric.aggregate === "average" || isShare(metric) ? low : high
+                isShare(metric) ? low : high
             );
-            if (metric.aggregate === "average" || isShare(metric)) {
+            if (isShare(metric)) {
                 expect(value, metric.key).toBeLessThanOrEqual(high);
             }
         }
@@ -157,15 +147,6 @@ describe("rangeValue", () => {
             METRICS.inserts
         );
         expect(value).toBe(40);
-    });
-
-    it("averages active users rather than summing them", () => {
-        // Summing would claim 14 people when at most 8 were ever seen in a day.
-        const value = rangeValue(
-            [day(0, { activeUsers: 6 }), day(1, { activeUsers: 8 })],
-            METRICS.activeUsers
-        );
-        expect(value).toBe(7);
     });
 
     it("ratios a share from range totals, not from daily rates", () => {
@@ -181,7 +162,6 @@ describe("rangeValue", () => {
 
     it("reports zero for an empty range", () => {
         expect(rangeValue([], METRICS.inserts)).toBe(0);
-        expect(rangeValue([], METRICS.activeUsers)).toBe(0);
         expect(rangeValue([], METRICS.quickShare)).toBe(0);
     });
 });

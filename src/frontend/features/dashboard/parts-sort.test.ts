@@ -18,19 +18,13 @@ function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
         isVisible: true,
         insertCount: 0,
         usesPerMonth: 0,
-        lastInsertedAt: null,
         recent: [],
         ...overrides
     };
 }
 
 const PARTS = [
-    part({
-        name: "Bearing",
-        insertCount: 3,
-        usesPerMonth: 3,
-        lastInsertedAt: 300
-    }),
+    part({ name: "Bearing", insertCount: 3, usesPerMonth: 3 }),
     part({
         name: "Tube",
         groupName: "Structure",
@@ -38,12 +32,7 @@ const PARTS = [
         usesPerMonth: 1
     }),
     part({ name: "Axle", insertCount: 0, usesPerMonth: 0 }),
-    part({
-        name: "Spacer",
-        insertCount: 3,
-        usesPerMonth: 3,
-        lastInsertedAt: 100
-    })
+    part({ name: "Spacer", insertCount: 3, usesPerMonth: 3 })
 ];
 
 const names = (parts: PartUsageOut[]) => parts.map((p) => p.name);
@@ -86,16 +75,6 @@ describe("filterAndSort", () => {
         expect(names(filterAndSort(reversed, "", DEFAULT_SORT))).toEqual(
             names(filterAndSort(PARTS, "", DEFAULT_SORT))
         );
-    });
-
-    it("sorts a never-used part as the oldest, not the newest", () => {
-        const sort: SortState = { column: "lastInsertedAt", descending: true };
-        expect(names(filterAndSort(PARTS, "", sort))).toEqual([
-            "Bearing",
-            "Spacer",
-            "Axle",
-            "Tube"
-        ]);
     });
 
     it("matches on the group name too", () => {

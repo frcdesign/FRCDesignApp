@@ -1,11 +1,6 @@
 import type { PartUsageOut } from "@backend/features/analytics/contract";
 
-export type SortColumn =
-    | "name"
-    | "groupName"
-    | "usesPerMonth"
-    | "insertCount"
-    | "lastInsertedAt";
+export type SortColumn = "name" | "groupName" | "usesPerMonth" | "insertCount";
 
 export interface SortState {
     column: SortColumn;
@@ -26,8 +21,7 @@ const DESCENDING_FIRST: Record<SortColumn, boolean> = {
     name: false,
     groupName: false,
     usesPerMonth: true,
-    insertCount: true,
-    lastInsertedAt: true
+    insertCount: true
 };
 
 /** Clicking a column sorts by it, then flips direction on each further click. */
@@ -50,9 +44,6 @@ function compare(a: PartUsageOut, b: PartUsageOut, column: SortColumn): number {
             );
         case "insertCount":
             return a.insertCount - b.insertCount;
-        case "lastInsertedAt":
-            // Never-used parts sort as the oldest rather than jumping the list.
-            return (a.lastInsertedAt ?? 0) - (b.lastInsertedAt ?? 0);
     }
 }
 

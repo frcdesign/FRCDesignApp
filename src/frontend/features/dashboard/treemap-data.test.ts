@@ -13,7 +13,6 @@ function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
         isVisible: true,
         insertCount: 0,
         usesPerMonth: 0,
-        lastInsertedAt: null,
         recent: [],
         ...overrides
     };

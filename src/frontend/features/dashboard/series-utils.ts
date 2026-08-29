@@ -58,16 +58,6 @@ export function formatPercent(part: number, total: number): string {
     return `${((part / total) * 100).toFixed(1)}%`;
 }
 
-/** Formats an epoch timestamp as a short date, or a dash when never used. */
-export function formatDate(timestamp: number | null): string {
-    if (timestamp === null) return "—";
-    return new Date(timestamp).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-    });
-}
-
 /** Formats a "YYYY-MM-DD" day key as a short date. */
 export function formatDay(day: string): string {
     return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {

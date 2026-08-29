@@ -39,7 +39,12 @@ function DashboardOverview(): ReactNode {
     return (
         <Stack gap="xl">
             <Section title="Overall">
-                <LifetimeTiles totals={totals} growth={growth} withOpens />
+                <LifetimeTiles
+                    totals={totals}
+                    growth={growth}
+                    series={metricSeries}
+                    withOpens
+                />
             </Section>
 
             <RecentSection growth={growth} />

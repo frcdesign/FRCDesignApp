@@ -12,7 +12,6 @@ import {
 
 export type MetricKey =
     | "inserts"
-    | "activeUsers"
     | "fastenShare"
     | "quickShare"
     | "deriveShare";
@@ -37,11 +36,6 @@ export interface MetricDefinition {
     /** The all-time figure, shown as context beneath the range value. */
     lifetimeValue: (totals: AnalyticsTotals) => number;
     lifetimeDenominator?: (totals: AnalyticsTotals) => number;
-    /**
-     * Daily counts add up over a bucket; a distinct-user count does not, so it
-     * averages instead.
-     */
-    aggregate: "sum" | "average";
     /** What the detail chart's y-axis is measuring. */
     detailLabel: string;
 }
@@ -55,23 +49,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
-        aggregate: "sum",
         detailLabel: "Total uses"
-    },
-    activeUsers: {
-        key: "activeUsers",
-        label: "Active users",
-        // Averaged, not summed: the tile is the mean of the plotted series, so
-        // it measures the same thing the trend does. A distinct count over the
-        // whole range would be a different (larger) number than any point on
-        // the line, which is what made the old tile disagree with its chart.
-        description:
-            "How many distinct people used the app on a typical day in this range. Averaged across the days rather than summed, since the same person active all week is one user, not seven. The all-time figure below counts each person once, ever.",
-        numeratorLabel: "Active users per day",
-        numerator: (point) => point.activeUsers,
-        lifetimeValue: (totals) => totals.uniqueUsers,
-        aggregate: "average",
-        detailLabel: "Active users per day"
     },
     fastenShare: {
         key: "fastenShare",
@@ -85,7 +63,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         denominator: (point) => point.assemblyInserts,
         lifetimeDenominator: (totals) => totals.assemblyInserts,
         lifetimeValue: (totals) => totals.fastenInserts,
-        aggregate: "sum",
         detailLabel: "% of assembly inserts"
     },
     quickShare: {
@@ -99,7 +76,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         denominator: (point) => point.inserts,
         lifetimeDenominator: (totals) => totals.inserts,
         lifetimeValue: (totals) => totals.quickInserts,
-        aggregate: "sum",
         detailLabel: "% of inserts"
     },
     deriveShare: {
@@ -113,7 +89,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         denominator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts - totals.assemblyInserts,
         lifetimeDenominator: (totals) => totals.inserts,
-        aggregate: "sum",
         detailLabel: "% of inserts"
     }
 };
@@ -152,9 +127,6 @@ export function rangeValue(
 
     if (metric.denominator) {
         return denominator === 0 ? 0 : (numerator / denominator) * 100;
-    }
-    if (metric.aggregate === "average") {
-        return points.length === 0 ? 0 : Math.round(numerator / points.length);
     }
     return numerator;
 }
@@ -212,11 +184,6 @@ function bucketValue(
     if (metric.denominator) {
         if (bucket.denominator === 0) return 0;
         return Math.round((bucket.numerator / bucket.denominator) * 1000) / 10;
-    }
-    if (metric.aggregate === "average") {
-        return bucket.days === 0
-            ? 0
-            : Math.round(bucket.numerator / bucket.days);
     }
     return bucket.numerator;
 }
