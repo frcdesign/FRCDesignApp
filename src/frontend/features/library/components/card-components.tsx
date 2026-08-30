@@ -173,6 +173,40 @@ export function CardTitle(props: CardTitleProps) {
             : undefined;
     const partNumber = displayPartNumber(searchHit?.partNumber, title);
 
+    let partNameAndNumberComponent = null;
+    if (partName || partNumber) {
+        partNameAndNumberComponent = (
+            <Group gap={4} wrap="nowrap" miw={0} fz="xs" lh="xs" c="dimmed">
+                {partName && (
+                    <Text inherit truncate miw={0}>
+                        <HighlightedText
+                            text={partName}
+                            positions={searchHit?.partNamePositions}
+                        />
+                    </Text>
+                )}
+                {partName && partNumber && <Text inherit>·</Text>}
+                {partNumber && (
+                    <CardPartNumber
+                        partNumber={partNumber}
+                        positions={searchHit?.partNumberPositions}
+                        url={searchHit?.url}
+                    />
+                )}
+            </Group>
+        );
+    }
+
+    // Shrinks to truncate, but never grows: the build status badge and hidden tag belong beside the name, not at the row's edge.
+    const cardTitleComponent = (
+        <Stack gap={0} miw={0}>
+            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+                {cardTitle}
+                {partNameAndNumberComponent}
+            </Text>
+        </Stack>
+    );
+
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
             <CardThumbnail
@@ -180,40 +214,7 @@ export function CardTitle(props: CardTitleProps) {
                 largeThumbnailUrl={largeThumbnailUrl}
                 target={thumbnailTarget}
             />
-            {/* Shrinks to truncate, but never grows: the build status badge and
-                hidden tag belong beside the name, not at the row's edge. */}
-            <Stack gap={0} miw={0}>
-                <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
-                    {cardTitle}
-                </Text>
-                {(partName || partNumber) && (
-                    <Group
-                        gap={4}
-                        wrap="nowrap"
-                        miw={0}
-                        fz="xs"
-                        lh="xs"
-                        c="dimmed"
-                    >
-                        {partName && (
-                            <Text inherit truncate miw={0}>
-                                <HighlightedText
-                                    text={partName}
-                                    positions={searchHit?.partNamePositions}
-                                />
-                            </Text>
-                        )}
-                        {partName && partNumber && <Text inherit>·</Text>}
-                        {partNumber && (
-                            <CardPartNumber
-                                partNumber={partNumber}
-                                positions={searchHit?.partNumberPositions}
-                                url={searchHit?.url}
-                            />
-                        )}
-                    </Group>
-                )}
-            </Stack>
+            {cardTitleComponent}
             {buildStatusBadge}
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
@@ -229,12 +230,6 @@ export function CardTitle(props: CardTitleProps) {
     );
 }
 
-/**
- * Never shrinks, so the part name gives up every character before the number
- * loses one. Capped at the row, past which there is nothing left to take.
- */
-const PART_NUMBER_FIXED = { flexShrink: 0, maxWidth: "100%" };
-
 /** The part number, linked to the vendor's page for it when there is one. */
 function CardPartNumber(props: {
     partNumber: string;
@@ -245,7 +240,12 @@ function CardPartNumber(props: {
     const text = <HighlightedText text={partNumber} positions={positions} />;
     if (!url) {
         return (
-            <Text inherit truncate miw={0} style={PART_NUMBER_FIXED}>
+            <Text
+                inherit
+                truncate
+                miw={0}
+                style={{ flexShrink: 0, maxWidth: "100%" }}
+            >
                 {text}
             </Text>
         );
@@ -262,7 +262,8 @@ function CardPartNumber(props: {
                 alignItems: "center",
                 gap: 2,
                 minWidth: 0,
-                ...PART_NUMBER_FIXED
+                flexShrink: 0,
+                maxWidth: "100%"
             }}
         >
             <Text component="span" inherit truncate miw={0}>
