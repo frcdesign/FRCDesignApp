@@ -88,7 +88,9 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     }, [modalId, insertable.name, record, soleRecord]);
 
     useEffect(() => {
-        if (!isSignedIn) {
+        // Only once known: pending reads as signed out, which would prompt a
+        // signed-in caller to sign in.
+        if (isSignedIn === false) {
             showSignInPreviewToast();
         }
     }, [isSignedIn]);

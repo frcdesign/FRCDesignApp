@@ -1,6 +1,5 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { queryClient } from "../../../../lib/query-client";
-import { getAccessDataQuery } from "../../../../features/auth/access-level";
 import { getFavoritesQuery } from "../../../../features/favorites/queries";
 import {
     getLibraryQuery,
@@ -49,15 +48,6 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         void queryClient.prefetchQuery(
             getSearchDbQuery(libraryId, cacheVersion)
         );
-        // Favorites are per-user, so the endpoint 401s a signed-out caller.
-        void queryClient
-            .ensureQueryData(getAccessDataQuery())
-            .then((accessData) => {
-                if (accessData.signedIn) {
-                    void queryClient.prefetchQuery(
-                        getFavoritesQuery(libraryId)
-                    );
-                }
-            });
+        void queryClient.prefetchQuery(getFavoritesQuery(libraryId));
     }
 });

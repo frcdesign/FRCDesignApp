@@ -207,10 +207,20 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         refetchInterval: (query) =>
             query.state.data?.isFallback ? PREVIEW_POLL_MS : false,
         retry: 2,
-        enabled: !isFetchingConfiguration && isSignedIn
+        enabled: !isFetchingConfiguration && isSignedIn === true
     });
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
+
+    // Not known yet: the stored thumbnail would be swapped for the live preview
+    // a moment later.
+    if (isSignedIn === undefined) {
+        return (
+            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+                <Loader size={36} />
+            </Center>
+        );
+    }
 
     // Not signed in: no live Onshape preview, so show the stored thumbnail
     // (Thumbnail falls back to a placeholder when there's none).

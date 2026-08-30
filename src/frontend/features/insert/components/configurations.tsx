@@ -88,8 +88,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     // Units come from the current document; empty when not connected to one, in
     // which case each quantity renders in its own unit (see getEvaluateOptions).
     const isConnected = useIsConnectedToOnshape();
-    const unitInfo =
-        useUnitInfoQuery(search, isConnected).data ?? EMPTY_UNIT_INFO;
+    const unitInfoQuery = useUnitInfoQuery(search, isConnected);
+    const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     useEffect(() => {
         // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
@@ -125,7 +125,9 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         onRecord?.(findRecordForConfiguration(configuration, records));
     }, [records, configuration, onRecord]);
 
-    if (query.isPending || !configuration) {
+    // isLoading, not isPending: the units query sits disabled (and so forever
+    // pending) when there is no document to ask.
+    if (query.isPending || unitInfoQuery.isLoading || !configuration) {
         return (
             <Center my="md">
                 <Loader />

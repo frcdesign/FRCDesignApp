@@ -7,11 +7,14 @@ import { Theme } from "@backend/features/settings/settings";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { isWithinAccessLevel } from "@backend/features/auth/access-level";
 import { AccessLevel } from "@backend/features/auth/access-level";
+import { LibraryId } from "@backend/features/library/library-id";
 import { useSaveSettings } from "../settings";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { RequireAccessLevel, useAccessData } from "../../auth/access-level";
 import { useUiState } from "../../../lib/ui-state";
 import { FEEDBACK_FORM_URL } from "../../../lib/url";
+import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { useLibraryId } from "../../library/library-path";
 import { AppSelect } from "../../../components/app-select";
 import {
     makeSelectOption,
@@ -69,11 +72,14 @@ function UserSettings(): ReactNode {
     const location = useRouterState({ select: (state) => state.location });
     const navigate = useNavigate();
     const saveSettings = useSaveSettings();
+    const libraryId = useLibraryId();
+    const isConnected = useIsConnectedToOnshape();
+    const theme = location.search.theme ?? DEFAULT_SETTINGS.theme;
 
     return (
         <>
             <ThemeSelect
-                theme={location.search.theme ?? DEFAULT_SETTINGS.theme}
+                theme={theme}
                 onThemeSelect={(theme) => {
                     // The url renders it; the write-behind decides what the
                     // entry redirect seeds next time.
@@ -84,11 +90,31 @@ function UserSettings(): ReactNode {
                     });
                 }}
             />
+            {/* Only worth offering from inside Onshape's panel, which is what
+                the standalone app is roomier than. */}
+            {isConnected && (
+                <SettingRow label="Open outside Onshape">
+                    <OpenUrlButton
+                        text="Open app"
+                        url={standaloneUrl(libraryId, theme)}
+                    />
+                </SettingRow>
+            )}
             <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </SettingRow>
         </>
     );
+}
+
+/**
+ * The app's own url for the current library, free of the params Onshape
+ * launches it with — carrying those over is what would keep it embedded.
+ */
+function standaloneUrl(libraryId: LibraryId, theme: Theme): string {
+    const url = new URL(`/app/library/${libraryId}`, window.location.origin);
+    url.searchParams.set("theme", theme);
+    return url.toString();
 }
 
 interface ThemeSelectProps {

@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import {
-    EMPTY_UNIT_INFO,
     type ConfigurationResult,
     type UnitInfo
 } from "@backend/features/configurations/models";
@@ -24,8 +23,7 @@ export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
                     instanceType: instancePath.instanceType
                 }
             }),
-        enabled,
-        placeholderData: EMPTY_UNIT_INFO
+        enabled
     });
 }
 
