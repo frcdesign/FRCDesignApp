@@ -13,7 +13,10 @@ import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-char
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
-import { GroupTreemap } from "../../../../features/dashboard/group-treemap";
+import {
+    libraryRoot,
+    UsageTreemap
+} from "../../../../features/dashboard/usage-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { SectionCard } from "../../../../features/dashboard/section";
 
@@ -72,10 +75,10 @@ function LibraryOverview(): ReactNode {
             {parts.data ? (
                 /* Keyed so switching library drops a zoom into a group that
                    the next library does not have. */
-                <GroupTreemap
+                <UsageTreemap
                     key={libraryId}
-                    libraryId={libraryId}
-                    parts={parts.data}
+                    root={libraryRoot(libraryId)}
+                    parts={parts.data.map((part) => ({ ...part, libraryId }))}
                 />
             ) : (
                 <DashboardState query={parts} />

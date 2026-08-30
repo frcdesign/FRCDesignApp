@@ -1,10 +1,14 @@
 import { SimpleGrid } from "@mantine/core";
 import { type ReactNode } from "react";
-import type { GrowthOut } from "@backend/features/analytics/contract";
+import type {
+    DailyMetricPoint,
+    GrowthOut
+} from "@backend/features/analytics/contract";
 import { formatRate } from "./change-indicator";
 import { ComparisonTile } from "./comparison-tile";
 import { perUnit } from "./derived";
 import { Section } from "./section";
+import { toSparkSeries } from "./spark-series";
 
 /**
  * The trailing month against the month before it.
@@ -12,10 +16,24 @@ import { Section } from "./section";
  * The section that says something useful from the first weeks of tracking,
  * before there is a second season to compare against.
  */
-export function RecentSection({ growth }: { growth: GrowthOut }): ReactNode {
+export function RecentSection({
+    growth,
+    series
+}: {
+    growth: GrowthOut;
+    /** Every recorded day; sliced to the window the tiles report on. */
+    series: DailyMetricPoint[];
+}): ReactNode {
     const { recent, trackingSince } = growth;
     const perUser = perUnit(recent.inserts, recent.activeUsers);
-    const perOpen = perUnit(recent.inserts, recent.appOpens);
+    // The sparkline covers exactly the days the number above it counts.
+    const spark = toSparkSeries(
+        series.filter(
+            (point) =>
+                point.day >= recent.inserts.currentFrom &&
+                point.day <= recent.inserts.currentTo
+        )
+    );
 
     return (
         <Section title="Right now">
@@ -24,23 +42,28 @@ export function RecentSection({ growth }: { growth: GrowthOut }): ReactNode {
                     label="Uses"
                     comparison={recent.inserts}
                     trackingSince={trackingSince}
+                    spark={spark.inserts}
                 />
                 <ComparisonTile
                     label="Active users"
                     comparison={recent.activeUsers}
                     trackingSince={trackingSince}
+                    spark={spark.activeUsers}
                 />
                 <ComparisonTile
                     label="Uses per user"
                     comparison={perUser}
                     trackingSince={trackingSince}
                     format={formatRate}
+                    spark={spark.usesPerUser}
                 />
+                {/* Matches the card above it in the Overall row, so the two
+                    rows line up column by column. */}
                 <ComparisonTile
-                    label="Uses per session"
-                    comparison={perOpen}
+                    label="App sessions"
+                    comparison={recent.appOpens}
                     trackingSince={trackingSince}
-                    format={formatRate}
+                    spark={spark.appOpens}
                 />
             </SimpleGrid>
         </Section>

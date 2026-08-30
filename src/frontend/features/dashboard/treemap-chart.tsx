@@ -7,7 +7,7 @@ import { type TreemapNode } from "./treemap-data";
 // Onshape panel bundle entirely.
 import "@mantine/charts/styles.layer.css";
 
-export function GroupTreemapChart({
+export function UsageTreemapChart({
     nodes,
     h,
     onSelect

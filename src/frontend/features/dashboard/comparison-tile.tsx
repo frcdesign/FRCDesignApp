@@ -1,8 +1,16 @@
 import { Card, Text, Title } from "@mantine/core";
-import { type ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { ChangeIndicator } from "./change-indicator";
 import { formatCount } from "./series-utils";
+
+const MiniSparkline = lazy(() =>
+    import("./sparkline").then((module) => ({
+        default: module.MiniSparkline
+    }))
+);
+
+const SPARKLINE_HEIGHT = 40;
 
 /**
  * A number and how it changed, or why it cannot say.
@@ -16,13 +24,16 @@ export function ComparisonTile({
     label,
     comparison,
     trackingSince,
-    format = formatCount
+    format = formatCount,
+    spark
 }: {
     label: string;
     comparison: PeriodComparison;
     trackingSince: string | null;
     /** Rates need a decimal; counts do not. */
     format?: (value: number) => string;
+    /** The measure's shape across exactly the window it reports on. */
+    spark?: number[];
 }): ReactNode {
     return (
         <Card withBorder padding="lg" radius="md">
@@ -35,6 +46,13 @@ export function ComparisonTile({
                 trackingSince={trackingSince}
                 format={format}
             />
+            {spark && (
+                <Suspense
+                    fallback={<div style={{ height: SPARKLINE_HEIGHT }} />}
+                >
+                    <MiniSparkline data={spark} h={SPARKLINE_HEIGHT} />
+                </Suspense>
+            )}
         </Card>
     );
 }

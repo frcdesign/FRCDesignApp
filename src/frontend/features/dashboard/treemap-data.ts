@@ -1,24 +1,42 @@
 import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { LibraryId } from "@backend/features/library/library-id";
+import { getLibraryName } from "../library/library-path";
+import { getLibraryColor } from "../../theme";
+
+/** A part tagged with the library it came from, so one list spans them all. */
+export interface UsagePart extends PartUsageOut {
+    libraryId: LibraryId;
+}
 
 /**
- * One tile. Area is insertions, so a group's share of the library is its share
+ * How far into the hierarchy the treemap is looking.
+ *
+ * An empty path is every library; naming a library shows its groups; naming a
+ * group shows its parts. Parts are leaves — clicking one leaves the chart.
+ */
+export interface TreemapPath {
+    libraryId?: LibraryId;
+    groupName?: string;
+}
+
+/**
+ * One tile. Area is insertions, so a slice's share of its parent is its share
  * of the rectangle.
  *
- * `groupName` and `elementId` ride along to the click handler, which is how a
- * tile knows what it stands for.
+ * The optional keys say what a click does: descend to a library, descend to a
+ * group, or open a part's dashboard.
  */
 export interface TreemapNode {
     name: string;
     value: number;
     color: string;
-    /** On a group tile; drilling down filters on it. */
+    libraryId?: LibraryId;
     groupName?: string;
-    /** On a part tile; clicking opens this part's dashboard. */
     elementId?: string;
 }
 
 /**
- * Shades by rank off the library's own hue, darkest first.
+ * Shades by rank off one hue, darkest first.
  *
  * Monotone rather than cycling: a lighter tile always means a smaller one, so
  * color reinforces area instead of contradicting it. Ranks past the ramp all
@@ -36,46 +54,77 @@ function shade(color: string, rank: number): string {
  * A part with no uses in the window is dropped rather than drawn: a zero-value
  * tile has no area but still sits in the DOM catching clicks.
  */
-function used(parts: PartUsageOut[]): PartUsageOut[] {
-    return parts.filter((part) => part.insertCount > 0);
+function within(parts: UsagePart[], path: TreemapPath): UsagePart[] {
+    return parts.filter(
+        (part) =>
+            part.insertCount > 0 &&
+            (path.libraryId === undefined ||
+                part.libraryId === path.libraryId) &&
+            (path.groupName === undefined || part.groupName === path.groupName)
+    );
 }
 
-/** Every group with at least one insertion, largest first. */
-export function toGroupNodes(
-    parts: PartUsageOut[],
-    color: string
+/** Sums `parts` by a key, largest first, then colors by rank. */
+function rollUp(
+    parts: UsagePart[],
+    keyOf: (part: UsagePart) => string,
+    toNode: (key: string, value: number, rank: number) => TreemapNode
 ): TreemapNode[] {
     const totals = new Map<string, number>();
-    for (const part of used(parts)) {
-        totals.set(
-            part.groupName,
-            (totals.get(part.groupName) ?? 0) + part.insertCount
+    for (const part of parts) {
+        const key = keyOf(part);
+        totals.set(key, (totals.get(key) ?? 0) + part.insertCount);
+    }
+    return [...totals.entries()]
+        .sort(([, a], [, b]) => b - a)
+        .map(([key, value], rank) => toNode(key, value, rank));
+}
+
+/**
+ * The tiles at `path`.
+ *
+ * Libraries keep their own colors, the same ones the charts use for them;
+ * inside a library everything shades off that library's hue, so the level you
+ * are in is legible from the palette alone.
+ */
+export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
+    const shown = within(parts, path);
+
+    if (path.libraryId === undefined) {
+        return rollUp(
+            shown,
+            (part) => part.libraryId,
+            (key, value) => ({
+                name: getLibraryName(key),
+                value,
+                color: `var(--mantine-color-${getLibraryColor(key)}-6)`,
+                libraryId: key as LibraryId
+            })
         );
     }
 
-    return [...totals.entries()]
-        .sort(([, a], [, b]) => b - a)
-        .map(([groupName, value], rank) => ({
-            name: groupName,
-            value,
-            color: shade(color, rank),
-            groupName
-        }));
-}
+    const hue = getLibraryColor(path.libraryId);
 
-/** The parts of one group, largest first; empty when the group is gone. */
-export function toPartNodes(
-    parts: PartUsageOut[],
-    groupName: string,
-    color: string
-): TreemapNode[] {
-    return used(parts)
-        .filter((part) => part.groupName === groupName)
+    if (path.groupName === undefined) {
+        return rollUp(
+            shown,
+            (part) => part.groupName,
+            (key, value, rank) => ({
+                name: key,
+                value,
+                color: shade(hue, rank),
+                groupName: key
+            })
+        );
+    }
+
+    return shown
         .sort((a, b) => b.insertCount - a.insertCount)
         .map((part, rank) => ({
             name: part.name,
             value: part.insertCount,
-            color: shade(color, rank),
-            elementId: part.elementId
+            color: shade(hue, rank),
+            elementId: part.elementId,
+            libraryId: part.libraryId
         }));
 }
