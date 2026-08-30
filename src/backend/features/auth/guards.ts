@@ -25,7 +25,7 @@ export const requireSignInMiddleware: MiddlewareHandler<AppContextEnv> = async (
 
 /**
  * Editing implies a session: access level alone would admit a signed-out caller
- * under a dev `ACCESS_LEVEL_OVERRIDE`, and answer 403 rather than 401 otherwise.
+ * under a dev access-level override, and answer 403 rather than 401 otherwise.
  */
 export const requireEditorMiddleware: MiddlewareHandler<AppContextEnv> = async (
     c,

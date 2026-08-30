@@ -38,9 +38,8 @@ Put this in `.env` (git-ignored). It is the whole set needed to get a signed-in
 admin; the OAuth keys in the README are only for talking to Onshape itself:
 
 ```
-FORCE_SIGNED_IN=true            # a fake user, so no OAuth round trip
-ACCESS_LEVEL_OVERRIDE=admin     # what the server grants
-VITE_DEFAULT_ACCESS_LEVEL=admin # what the client renders as
+FORCE_SIGNED_IN=true             # a fake user, so no OAuth round trip
+VITE_ACCESS_LEVEL_OVERRIDE=admin # granted by the server, and viewed by the client
 ```
 
 Then `npm run dev` (applies local D1 migrations, then serves

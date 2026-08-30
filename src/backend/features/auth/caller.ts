@@ -91,9 +91,21 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
     }
 }
 
-/** FORCE_SIGNED_IN is a dev-only escape hatch, ignored in production. */
+/** The dev-only escape hatches are ignored in production. */
+function isDevelopment(): boolean {
+    return processEnv.NODE_ENV !== "production";
+}
+
 export function isForceSignedIn(c: AppContext): boolean {
-    return !!c.env.FORCE_SIGNED_IN && processEnv.NODE_ENV !== "production";
+    return !!c.env.FORCE_SIGNED_IN && isDevelopment();
+}
+
+/** The access level granted without asking Onshape, in dev only. */
+function getAccessLevelOverride(c: AppContext): AccessLevel | undefined {
+    if (!isDevelopment()) {
+        return undefined;
+    }
+    return c.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined;
 }
 
 /**
@@ -157,8 +169,8 @@ export const productionCaller: CallerFactory = (c) => ({
         return getCachedUserId(c);
     },
     getAccessLevel: async () => {
-        const override = c.env.ACCESS_LEVEL_OVERRIDE;
-        if (override) return override as AccessLevel;
+        const override = getAccessLevelOverride(c);
+        if (override) return override;
         // getCachedAccessLevel needs a real Onshape session, so only call it
         // for a genuinely signed-in caller (not FORCE_SIGNED_IN).
         if (!isForceSignedIn(c) && (await isSignedIn(c))) {
