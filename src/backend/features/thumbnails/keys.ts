@@ -5,11 +5,8 @@ import {
 } from "../configurations/canonical";
 import { ThumbnailSize } from "./types";
 
-/**
- * Shorter than the client's poll, so each poll reaches the worker instead of
- * the browser cache replaying the stand-in the real render has replaced.
- */
-export const THUMBNAIL_FALLBACK_CACHE_TTL = 3;
+/** Short on purpose: the real render can land at any moment and must take over. */
+export const THUMBNAIL_FALLBACK_CACHE_TTL = 60;
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
@@ -37,6 +34,11 @@ export interface ThumbnailUrlOptions {
     warm?: boolean;
     /** Only needed to warm: it is what the render resolves the element from. */
     insertableId?: string;
+    /**
+     * Which poll this is. The worker ignores it; it is what keeps each poll off
+     * the browser's image cache, which serves a url for the page's lifetime.
+     */
+    attempt?: number;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -46,7 +48,8 @@ export function thumbnailUrl({
     size,
     canonicalConfiguration,
     warm,
-    insertableId
+    insertableId,
+    attempt
 }: ThumbnailUrlOptions): string {
     const query = new URLSearchParams({ v: microversionId });
     if (canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION) {
@@ -54,6 +57,11 @@ export function thumbnailUrl({
         if (warm && insertableId) {
             query.set("warm", "true");
             query.set("i", insertableId);
+        }
+        // Omitted on the first, so it shares a url with everything else asking
+        // for this configuration.
+        if (attempt) {
+            query.set("attempt", attempt.toString());
         }
     }
     return `/api/thumbnail/${size}/${elementId}?${query.toString()}`;

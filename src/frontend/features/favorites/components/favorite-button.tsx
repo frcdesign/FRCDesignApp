@@ -11,7 +11,6 @@ import type {
 import type { InsertableOut } from "@backend/features/library/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
-import { useRouter } from "@tanstack/react-router";
 import { appError, handleAppError } from "../../../lib/errors";
 import { getQueryUpdater } from "../../../lib/query-cache";
 import {
@@ -55,7 +54,6 @@ function updateFavorites(
 
 function useUpdateFavoritesMutation() {
     const libraryId = useLibraryId();
-    const router = useRouter();
     const refreshFavorites = useRefreshFavorites();
     const queryKey = favoritesQueryKey(libraryId);
 
@@ -86,7 +84,8 @@ function useUpdateFavoritesMutation() {
                     updateFavorites(data, args, libraryId)
                 )
             );
-            void router.invalidate();
+            // No router.invalidate(): the route loader prefetches favorites,
+            // and that fetch would race the mutation and undo this update.
         },
         onError: (error, args) => {
             const action =

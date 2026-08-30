@@ -5,7 +5,6 @@ import { Button } from "@mantine/core";
 import { FloppyDisk } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useEffect, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { showErrorToast, showSuccessToast } from "../../../lib/notifications";
@@ -39,7 +38,6 @@ export function FavoriteMenuContent(
 ): ReactNode {
     const { favoriteId, modalId, defaultConfiguration } = props;
 
-    const router = useRouter();
     const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
@@ -102,7 +100,8 @@ export function FavoriteMenuContent(
                     return data;
                 })
             );
-            void router.invalidate();
+            // No router.invalidate(): the route loader prefetches favorites,
+            // and that fetch would race the mutation and undo this update.
         },
         onError: () => {
             showErrorToast(

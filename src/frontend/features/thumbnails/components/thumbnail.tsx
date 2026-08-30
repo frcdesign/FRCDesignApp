@@ -8,10 +8,7 @@ import { Question } from "@phosphor-icons/react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
-import {
-    THUMBNAIL_FALLBACK_CACHE_TTL,
-    thumbnailUrl
-} from "@backend/features/thumbnails/keys";
+import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionError } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
@@ -173,11 +170,14 @@ interface PreviewImageProps {
     largeThumbnailUrl?: string;
 }
 
+/** How often to re-check while the worker is still standing in the default. */
+const PREVIEW_POLL_MS = 4000;
+
 /**
- * How often to re-check while the worker is still standing in the default.
- * Past the fallback's cache TTL, or the poll never leaves the browser.
+ * How many polls apart to ask for the render again. One request is meant to
+ * start it; this only covers the run never having been queued at all.
  */
-const PREVIEW_POLL_MS = (THUMBNAIL_FALLBACK_CACHE_TTL + 1) * 1000;
+const WARM_EVERY_POLLS = 15;
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
     const {
@@ -197,20 +197,31 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     );
     const targetElementType = useTargetElementType();
 
-    const url = thumbnailUrl({
-        elementId: path.elementId,
-        microversionId,
-        size,
-        canonicalConfiguration,
-        warm: true,
-        insertableId
-    });
+    // Each poll gets a url of its own. The browser caches images by url for
+    // the life of the page, so reusing one leaves the stand-in on screen
+    // however many times the query refetches past it.
+    const pollUrl = (attempt: number) =>
+        thumbnailUrl({
+            elementId: path.elementId,
+            microversionId,
+            size,
+            canonicalConfiguration,
+            warm: attempt % WARM_EVERY_POLLS === 0,
+            insertableId,
+            attempt
+        });
 
     // The worker renders configurations in a workflow, so the first request
     // starts one and stands in the element default until it lands.
+    const queryKey = ["thumbnail", pollUrl(0)];
     const thumbnailQuery = useQuery({
-        queryKey: ["thumbnail", url],
-        queryFn: ({ signal }) => loadImageResult(url, signal),
+        queryKey,
+        queryFn: ({ signal, client }) =>
+            loadImageResult(
+                // Counts the polls, so a new configuration starts over.
+                pollUrl(client.getQueryState(queryKey)?.dataUpdateCount ?? 0),
+                signal
+            ),
         placeholderData: (previousData) => previousData,
         refetchInterval: (query) =>
             query.state.data?.isFallback ? PREVIEW_POLL_MS : false,
@@ -278,9 +289,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 h={heightAndWidth.height}
             >
                 <img
-                    // The render lands at the url the stand-in came from, so
-                    // remounting is what makes the browser go get it.
-                    key={String(thumbnailQuery.data.isFallback)}
+                    // The url this poll fetched, so the render shows from the
+                    // response that reported it rather than the one before.
                     src={thumbnailQuery.data.url}
                     {...heightAndWidth}
                     style={FIT_INSIDE_BOX}

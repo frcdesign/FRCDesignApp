@@ -8,7 +8,6 @@ import { queryClient } from "../../../lib/query-client";
 import { Menu } from "@mantine/core";
 import { Pencil } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
-import { useRouter } from "@tanstack/react-router";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
@@ -167,7 +166,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
 
 function useSetFavoriteOrderMutation() {
     const libraryId = useLibraryId();
-    const router = useRouter();
     const refreshFavorites = useRefreshFavorites();
 
     const queryKey = favoritesQueryKey(libraryId);
@@ -189,7 +187,8 @@ function useSetFavoriteOrderMutation() {
                     return data;
                 })
             );
-            void router.invalidate();
+            // No router.invalidate(): the route loader prefetches favorites,
+            // and that fetch would race the mutation and undo this update.
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."

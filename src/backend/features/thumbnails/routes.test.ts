@@ -290,6 +290,45 @@ describe("warming a configuration's thumbnail", () => {
         expect(createSpy).not.toHaveBeenCalled();
     });
 
+    // The client polls at a new url each time so the browser cannot replay the
+    // stand-in it already has; the worker has no use for the number itself.
+    it("serves an attempt like any other request", async () => {
+        const elementId = "attempt-element";
+        await seedDefaultOnly(elementId);
+
+        const res = await get(
+            thumbnailUrl({
+                elementId,
+                microversionId: MICROVERSION,
+                size: SIZE,
+                canonicalConfiguration: CANONICAL_CONFIGURATION,
+                attempt: 7
+            })
+        );
+
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe("default-bytes");
+        expect(res.headers.get(THUMBNAIL_FALLBACK_HEADER)).toBe("1");
+    });
+
+    // The first request carries no attempt, so it shares a url with every other
+    // caller asking for that configuration.
+    it("only numbers a poll past the first", () => {
+        const urlFor = (attempt: number) =>
+            new URL(
+                thumbnailUrl({
+                    elementId: "any",
+                    microversionId: MICROVERSION,
+                    size: SIZE,
+                    canonicalConfiguration: CANONICAL_CONFIGURATION,
+                    attempt
+                }),
+                "http://x"
+            ).searchParams.get("attempt");
+        expect(urlFor(0)).toBeNull();
+        expect(urlFor(1)).toBe("1");
+    });
+
     it("rejects a warm that is not a boolean", async () => {
         const res = await get(
             `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&c=x&warm=maybe`
