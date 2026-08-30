@@ -103,6 +103,75 @@ export function isIndexedParameter(
     return !parameter.isCosmetic;
 }
 
+/**
+ * The most combinations counted out for display. Far past the index cap, which
+ * bounds work rather than what an admin is shown.
+ */
+export const MAX_COUNTED_CONFIGURATIONS = 100_000;
+
+/**
+ * The true combination count, which runs past the index cap so the admin card
+ * can show what there is to bring down. Null past {@link MAX_COUNTED_CONFIGURATIONS}.
+ */
+export function countCombinations(
+    parameters: ConfigurationParameter[],
+    cap: number = MAX_COUNTED_CONFIGURATIONS
+): number | null {
+    // Depth-first, unlike enumerateConfigurations: only the count is wanted, so
+    // one path is held at a time rather than every combination at once.
+    const indexed = parameters.filter(isIndexedParameter);
+    let count = 0;
+    let capped = false;
+
+    const walk = (depth: number, configuration: ParameterValues) => {
+        if (depth === indexed.length) {
+            // The lone default that nothing-to-vary reaches is not a
+            // configuration of its own.
+            if (Object.keys(configuration).length > 0) {
+                count++;
+                capped = count > cap;
+            }
+            return;
+        }
+        const parameter = indexed[depth];
+        const values = evaluateCondition(
+            parameter.condition,
+            configuration,
+            parameters
+        )
+            ? parameterValues(parameter, configuration, parameters)
+            : [];
+        // Hidden here, or with nothing to pick: left unset for Onshape to default.
+        if (values.length === 0) {
+            walk(depth + 1, configuration);
+            return;
+        }
+        for (const value of values) {
+            walk(depth + 1, { ...configuration, [parameter.id]: value });
+            if (capped) {
+                return;
+            }
+        }
+    };
+
+    walk(0, {});
+    return capped ? null : count;
+}
+
+/** The values indexing varies this parameter over, given what is set so far. */
+function parameterValues(
+    parameter: EnumParameter | BooleanParameter,
+    configuration: ParameterValues,
+    parameters: ConfigurationParameter[]
+): string[] {
+    if (parameter.type === ParameterType.BOOLEAN) {
+        return ["true", "false"];
+    }
+    return getVisibleOptions(parameter, configuration, parameters).map(
+        (option) => option.id
+    );
+}
+
 export interface EnumerateResult {
     /** The enumerated configurations, or empty when `capped`. */
     configurations: ParameterValues[];
