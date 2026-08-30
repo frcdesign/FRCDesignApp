@@ -1,6 +1,11 @@
 # FRCDesignApp
 
-This repo hosts the code for the FRCDesign Onshape App.
+This repo hosts the code for the FRCDesign Onshape App, which lets users browse
+the FRCDesign part libraries and insert parts into their documents.
+
+The app is a Cloudflare Worker (`src/backend`) serving an API and a React SPA
+(`src/frontend`), which runs both in Onshape's element right panel and directly
+in a browser. See `AGENTS.md` for how `src` is laid out.
 
 ## Overview
 
@@ -32,6 +37,10 @@ ACCESS_LEVEL_OVERRIDE=admin
 
 # One of admin, editor, or user. The level the app is viewed as by default (client-side).
 VITE_DEFAULT_ACCESS_LEVEL=admin
+
+# Signs you in as a fake user, so signed-in UI can be tested without an Onshape
+# session. Onshape calls it reveals won't work, so leave it unset normally.
+FORCE_SIGNED_IN=false
 ```
 
 ## Onshape OAuth App Setup
@@ -124,35 +133,14 @@ You should now be able to run the `Launch dev` VSCode task to launch Vite.
 You should then be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
 To see documents, add one or more documents and push a new app version to rebuild the search database.
-
-To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare UI instance.
-
-## Standalone (not-signed-in) mode
-
-The app also runs without an Onshape login. Opening it directly (e.g.
-`https://localhost:3000/`, rather than launching it from the Onshape panel)
-serves the read-only library UI: browse groups, search, and open the
-configuration menu. Anything that needs Onshape — inserting/deriving, favorites,
-saving settings server-side, and live configuration previews — is hidden and
-guarded server-side behind sign-in. Settings (theme/library) fall back to
-`localStorage`, and the configuration menu uses default units and the stored
-(static) thumbnail.
-
-This needs a populated database. Import a dump of the loaded cert DB into local
-D1, and (optionally) its thumbnails into local R2:
+Alternatively, import a dump of the loaded cert database into local D1, and (optionally) its thumbnails into local R2:
 
 ```
 npx wrangler d1 execute DB --local --file=<cert-dump>.sql
 npx wrangler r2 object put frc-design-app-dev-thumbnails/thumbnails/<size>/<elementId> --file=<thumb>.gif
 ```
 
-To exercise the signed-in-only UI (favorites, insert button) without a real
-Onshape session, set `FORCE_SIGNED_IN=true` in your `.env`. This is a
-testing-only escape hatch — it uses a fake user id and Onshape calls it reveals
-won't actually work, so leave it unset normally. Combine with
-`ACCESS_LEVEL_OVERRIDE=admin` to also show editor/admin controls — editor
-routes require a session as well as the access level, so the override alone
-does not reach them.
+To view the state of Cloudflare, type `e` in Vite to launch the local Cloudflare UI instance.
 
 # Troubleshooting
 

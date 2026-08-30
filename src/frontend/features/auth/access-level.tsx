@@ -59,9 +59,13 @@ export function useAccessData(): ResolvedAccessData {
     }, [serverData, chosenLevel, isPending]);
 }
 
-/** Whether the caller is signed in to Onshape (from access-data). */
-export function useIsSignedIn(): boolean {
-    return useAccessData().signedIn;
+/**
+ * Whether the caller is signed in to Onshape, or undefined until access-data
+ * lands: the placeholder says signed out, which is not yet an answer.
+ */
+export function useIsSignedIn(): boolean | undefined {
+    const { signedIn, isPending } = useAccessData();
+    return isPending ? undefined : signedIn;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {
