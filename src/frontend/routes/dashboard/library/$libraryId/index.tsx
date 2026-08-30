@@ -15,7 +15,7 @@ import { toDayRange } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { GroupTreemap } from "../../../../features/dashboard/group-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
-import { Section, SectionCard } from "../../../../features/dashboard/section";
+import { SectionCard } from "../../../../features/dashboard/section";
 
 /** Enough to see the head of the distribution without a wall of rows. */
 const MOST_USED_LIMIT = 10;
@@ -41,13 +41,11 @@ function LibraryOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Section title="Overall">
-                <LifetimeTiles
-                    totals={totals}
-                    growth={growth}
-                    series={metricSeries}
-                />
-            </Section>
+            <LifetimeTiles
+                totals={totals}
+                growth={growth}
+                series={metricSeries}
+            />
 
             <InsertsOverTimeCard series={metricSeries} libraryId={libraryId} />
 
@@ -65,13 +63,11 @@ function LibraryOverview(): ReactNode {
                 )}
             </SectionCard>
 
-            <Section title="Build status">
-                {health.data ? (
-                    <HealthTiles counts={health.data} />
-                ) : (
-                    <DashboardState query={health} />
-                )}
-            </Section>
+            {health.data ? (
+                <HealthTiles counts={health.data} />
+            ) : (
+                <DashboardState query={health} />
+            )}
 
             {parts.data ? (
                 /* Keyed so switching library drops a zoom into a group that
