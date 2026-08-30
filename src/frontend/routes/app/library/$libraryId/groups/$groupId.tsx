@@ -6,14 +6,14 @@ import {
     useNavigate,
     useParams
 } from "@tanstack/react-router";
-import { Box, Button, Group, Skeleton } from "@mantine/core";
+import { Box, Button, Group } from "@mantine/core";
 import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
     SECTION_HEADER_HEIGHT
 } from "../../../../../lib/style-constants";
-import { PropsWithChildren, ReactNode } from "react";
+import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
@@ -52,17 +52,9 @@ function GroupList(): ReactNode {
     const uiState = useUiState()[0];
 
     if (libraryQuery.isPending) {
-        return (
-            <GroupZeroState>
-                <SectionLoading title="Loading group..." />
-            </GroupZeroState>
-        );
+        return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
-        return (
-            <GroupZeroState>
-                <SectionError title="Failed to load group." />
-            </GroupZeroState>
-        );
+        return <SectionError title="Failed to load group." />;
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
@@ -118,28 +110,10 @@ function GroupList(): ReactNode {
     );
 }
 
-/**
- * The page's frame around a state that has no group to show yet, so the header
- * (and its way back) is up before the data it names lands.
- */
-function GroupZeroState({ children }: PropsWithChildren): ReactNode {
-    return (
-        <>
-            <GroupHeaderRow />
-            <Box style={{ borderBottom: BORDER }}>{children}</Box>
-        </>
-    );
-}
-
-/** Roughly a group name, so the skeleton doesn't resize the row when it lands. */
-const TITLE_SKELETON_WIDTH = 160;
-const TITLE_SKELETON_HEIGHT = 14;
-
-/** The group is absent until the library data it comes from has loaded. */
-function GroupHeaderRow({ group }: { group?: GroupOut }): ReactNode {
+function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
     const navigate = useNavigate();
     const libraryId = useLibraryId();
-    const menuItems = group ? <GroupMenuItems group={group} /> : undefined;
+    const menuItems = <GroupMenuItems group={group} />;
 
     const header = (
         <Box
@@ -159,27 +133,13 @@ function GroupHeaderRow({ group }: { group?: GroupOut }): ReactNode {
             <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
                     icon={<ArrowLeft size={IconSize.MEDIUM} />}
-                    title={
-                        group?.name ?? (
-                            <Skeleton
-                                // A span: the title renders it inside a <p>.
-                                component="span"
-                                display="inline-block"
-                                w={TITLE_SKELETON_WIDTH}
-                                h={TITLE_SKELETON_HEIGHT}
-                            />
-                        )
-                    }
+                    title={group.name}
                 />
-                {menuItems && <MenuButton>{menuItems}</MenuButton>}
+                <MenuButton>{menuItems}</MenuButton>
             </Group>
         </Box>
     );
 
-    // Nothing to act on until the group lands, so no context menu yet.
-    if (!menuItems) {
-        return header;
-    }
     return <AppContextMenu menuItems={menuItems}>{header}</AppContextMenu>;
 }
 
