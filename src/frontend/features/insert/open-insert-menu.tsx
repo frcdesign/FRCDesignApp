@@ -20,6 +20,9 @@ interface OpenInsertMenuProps {
 export function openInsertMenu(props: OpenInsertMenuProps) {
     const { insertable, defaultConfiguration } = props;
     let didInsert = false;
+    // How quickly the insert follows is what says whether the menu was worth
+    // opening, so the quick insert tip is timed from here.
+    const openedAt = Date.now();
     // Minted here so the content can address the modal it lives in, which is
     // what lets the header follow the selected configuration.
     const id = crypto.randomUUID();
@@ -37,6 +40,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
                 insertable={insertable}
                 modalId={id}
                 defaultConfiguration={defaultConfiguration}
+                openedAt={openedAt}
                 onInsert={() => {
                     didInsert = true;
                     modals.close(id);

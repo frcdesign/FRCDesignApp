@@ -35,11 +35,13 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     defaultConfiguration?: ParameterValues;
+    /** When the menu opened, for the quick insert tip. */
+    openedAt: number;
     onInsert: () => void;
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, onInsert } = props;
+    const { insertable, modalId, openedAt, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
 
@@ -155,6 +157,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         )
                     }
                     isFavorite={favorite !== undefined}
+                    openedAt={openedAt}
                     onInsert={onInsert}
                 />
             </AppModalFooter>
@@ -171,6 +174,8 @@ interface InsertButtonsProps {
     insertable: InsertableOut;
     configuration?: ParameterValues;
     isFavorite: boolean;
+    /** When the menu opened, for the quick insert tip. */
+    openedAt: number;
     onInsert: () => void;
 }
 
@@ -178,8 +183,14 @@ interface InsertButtonsProps {
  * The derive/insert button plus the insert and fasten checkbox.
  */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const { insertable, configuration, isUnchanged, isFavorite, onInsert } =
-        props;
+    const {
+        insertable,
+        configuration,
+        isUnchanged,
+        isFavorite,
+        openedAt,
+        onInsert
+    } = props;
 
     const search = useSearch({ from: "/app" });
     // Inserting targets the current Onshape document; there's nothing to insert
@@ -202,10 +213,17 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
         if (isUnchanged) {
-            showQuickInsertTip();
+            showQuickInsertTip(openedAt);
         }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, uiState.fasten, isUnchanged]);
+    }, [
+        insertMutation,
+        onInsert,
+        canFasten,
+        uiState.fasten,
+        isUnchanged,
+        openedAt
+    ]);
 
     if (!isConnected) {
         return null;
