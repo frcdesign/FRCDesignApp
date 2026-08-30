@@ -9,13 +9,13 @@ import { useAccessData } from "../auth/access-level";
 import { toLibraryPath, useLibraryId } from "./library-path";
 import {
     jobStatusQueryKey,
-    libraryQueryKey,
+    libraryDataQueryKey,
     libraryVersionQueryKey
 } from "../../lib/query-keys";
 
 export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryOut>({
-        queryKey: libraryQueryKey(libraryId, cacheVersion),
+        queryKey: libraryDataQueryKey(libraryId, cacheVersion),
         queryFn: async () =>
             apiGet("/library-data/library/" + libraryId, {
                 cacheId: cacheVersion
