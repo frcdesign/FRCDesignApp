@@ -154,10 +154,10 @@ export function CardTitle(props: CardTitleProps) {
         smallThumbnailUrl,
         largeThumbnailUrl,
         thumbnailTarget,
-        buildStatusBadge
+        buildStatusBadge,
+        disabled = false,
+        showHiddenTag = false
     } = props;
-    const disabled = props.disabled ?? false;
-    const isHidden = props.showHiddenTag ?? false;
 
     let cardTitle: ReactNode;
     if (searchHit) {
@@ -217,7 +217,7 @@ export function CardTitle(props: CardTitleProps) {
             {buildStatusBadge}
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
-            {isHidden && (
+            {showHiddenTag && (
                 <Box
                     component={EyeSlash}
                     size={IconSize.SMALL}
