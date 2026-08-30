@@ -19,6 +19,12 @@ export const libraries = sqliteTable("libraries", {
     // keyed by library id, rather than in a D1 column.
 });
 
+/**
+ * The `versionId` a group carries before a load pins a real one, so a group
+ * whose load failed still has a row that can be seen, deleted, and retried.
+ */
+export const PLACEHOLDER_VERSION_ID = "placeholder";
+
 export const group = sqliteTable(
     "groups",
     {

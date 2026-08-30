@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { asc } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
-import { group } from "../../db/schema";
+import { group, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import {
     resetDb,
     seedGroup,
@@ -11,7 +11,7 @@ import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID
 } from "../../../__test_utils__";
-import { placeNewGroup, rebuildSearchDb } from "./db";
+import { getLibraryOut, placeNewGroup, rebuildSearchDb } from "./db";
 
 const db = getDb(env.DB);
 
@@ -94,5 +94,38 @@ describe("rebuildSearchDb", () => {
         const searchDb = await rebuildSearchDb(env.BLOB, db, TEST_LIBRARY_ID);
 
         expect(searchDb).toContain("WCP-0405");
+    });
+});
+
+describe("getLibraryOut", () => {
+    beforeEach(() => resetDb(db));
+
+    it("includes a shell group whose load never finished", async () => {
+        await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID, {
+            versionId: PLACEHOLDER_VERSION_ID,
+            lastLoadedAt: null
+        });
+
+        const library = await getLibraryOut(db, TEST_LIBRARY_ID);
+
+        expect(library.groupOrder).toEqual([TEST_GROUP_ID]);
+        const shell = library.groups[TEST_GROUP_ID];
+        expect(shell.isLoaded).toBe(false);
+        // No version to link to, so the path stops at the document.
+        expect(shell.path).toEqual({ documentId: `doc-${TEST_GROUP_ID}` });
+    });
+
+    it("pins a loaded group's path to its version", async () => {
+        await seedGroup(db);
+
+        const library = await getLibraryOut(db, TEST_LIBRARY_ID);
+
+        const loaded = library.groups[TEST_GROUP_ID];
+        expect(loaded.isLoaded).toBe(true);
+        expect(loaded.path).toEqual({
+            documentId: `doc-${TEST_GROUP_ID}`,
+            instanceId: "inst-1",
+            instanceType: "v"
+        });
     });
 });

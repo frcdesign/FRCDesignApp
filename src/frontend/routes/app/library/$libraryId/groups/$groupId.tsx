@@ -159,10 +159,15 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         .filter((insertable) => !!insertable);
 
     if (groupInsertables.length === 0) {
-        return (
+        return group.isLoaded ? (
             <SectionError
                 title="This group has no visible elements"
                 description={null}
+            />
+        ) : (
+            <SectionError
+                title="This group failed to load."
+                description="Reload documents to try again, or delete the group."
             />
         );
     }

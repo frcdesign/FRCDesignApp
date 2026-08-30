@@ -1,4 +1,8 @@
-import { ElementPath, InstancePath } from "../../lib/onshape/path";
+import {
+    DocumentPath,
+    ElementPath,
+    InstancePath
+} from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "./vendors";
 
@@ -24,10 +28,13 @@ export interface InsertableOut {
 export interface GroupOut {
     id: string;
     documentId: string;
-    path: InstancePath;
+    /** Only a `DocumentPath` until a load pins a version to link to. */
+    path: InstancePath | DocumentPath;
     name: string;
     smallThumbnailUrl?: string;
     largeThumbnailUrl?: string;
+    /** False when no load has ever finished, i.e. the group is an empty shell. */
+    isLoaded: boolean;
     insertableOrder: string[];
 }
 

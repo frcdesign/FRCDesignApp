@@ -79,7 +79,7 @@ export function getIssueDescription(issue: BuildIssue): string {
         case BuildIssueType.INSERTABLES_FAILED:
             return "Some child insertables failed to load";
         case BuildIssueType.LOAD_FAILED:
-            return "This insertable failed to load";
+            return "Failed to load from Onshape";
     }
 }
 

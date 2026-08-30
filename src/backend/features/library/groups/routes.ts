@@ -224,6 +224,7 @@ groupRoutes.post(
             params: {
                 groupId,
                 documentId: body.newDocumentId,
+                documentName,
                 libraryId,
                 sessionId,
                 selectedGroupId: body.selectedGroupId

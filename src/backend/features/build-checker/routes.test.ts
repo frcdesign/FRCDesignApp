@@ -8,6 +8,7 @@ import {
     TEST_PART_STUDIO_ID,
     createTestApp,
     resetDb,
+    seedGroup,
     seedPartStudio
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -62,6 +63,9 @@ describe("GET /build-status", () => {
     });
 
     it("reports a never-loaded entity as null", async () => {
+        await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID, {
+            lastLoadedAt: null
+        });
         await seedPartStudio(db);
 
         const res = await createTestApp().request(

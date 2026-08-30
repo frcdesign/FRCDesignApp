@@ -16,6 +16,7 @@ import { IconSize } from "./style-constants";
 export function makeUrl(path: ConfigurablePath): string;
 export function makeUrl(path: ElementPath): string;
 export function makeUrl(path: InstancePath): string;
+export function makeUrl(path: DocumentPath): string;
 export function makeUrl(path: DocumentPath): string {
     let url = `https://cad.onshape.com/documents/${path.documentId}`;
     if (isInstancePath(path)) {

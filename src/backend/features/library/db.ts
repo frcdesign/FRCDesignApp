@@ -1,6 +1,12 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { libraries, group, insertables, configurations } from "../../db/schema";
+import {
+    libraries,
+    group,
+    insertables,
+    configurations,
+    PLACEHOLDER_VERSION_ID
+} from "../../db/schema";
 import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
 import { ConfigurationRecord } from "../configurations/models";
@@ -56,17 +62,23 @@ export async function getLibraryOut(
             groupInsertables.sort((a, b) => a.name.localeCompare(b.name));
         }
         const insertableOrder = groupInsertables.map((ins) => ins.id);
+        // A shell group has no version to link to, so its path stops at the
+        // document rather than pointing at a `/v/placeholder` that 404s.
+        const hasVersion = group.versionId !== PLACEHOLDER_VERSION_ID;
         groupsOut[group.id] = {
             id: group.id,
             documentId: group.documentId,
-            path: {
-                documentId: group.documentId,
-                instanceId: group.versionId,
-                instanceType: "v"
-            },
+            path: hasVersion
+                ? {
+                      documentId: group.documentId,
+                      instanceId: group.versionId,
+                      instanceType: "v"
+                  }
+                : { documentId: group.documentId },
             name: group.name,
             smallThumbnailUrl: group.smallThumbnailUrl ?? undefined,
             largeThumbnailUrl: group.largeThumbnailUrl ?? undefined,
+            isLoaded: group.lastLoadedAt !== null,
             insertableOrder
         };
     }

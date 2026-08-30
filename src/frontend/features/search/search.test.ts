@@ -85,6 +85,7 @@ function library(name = "Bracket"): LibraryOut {
                 documentId: "d1",
                 path: { documentId: "d1", instanceId: "v1", instanceType: "v" },
                 name: "Group",
+                isLoaded: true,
                 insertableOrder: ["i1"]
             }
         },
