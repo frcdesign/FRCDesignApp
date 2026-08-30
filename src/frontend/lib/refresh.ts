@@ -3,51 +3,38 @@ import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
 import { useJobStatusQuery } from "../features/library/queries";
 import {
-    buildStatusQueryMatchKey,
+    accessDataQueryKey,
     favoritesQueryKey,
-    libraryQueryMatchKey,
-    libraryVersionQueryMatchKey
+    libraryQueryKey
 } from "./query-keys";
-import { accessDataQueryKey } from "./query-keys";
 import { useLibraryId } from "../features/library/library-path";
-import type { LibraryId } from "@backend/features/library/library-id";
-
-/** Refetches the current user's favorites, which aren't version-keyed. */
-function refetchFavorites(libraryId: LibraryId): Promise<void> {
-    return queryClient.invalidateQueries({
-        queryKey: favoritesQueryKey(libraryId)
-    });
-}
 
 /**
- * Refreshes the library view (and favorites). Invalidating the snapshot queries
- * also rolls a failed optimistic update back to server truth on the refetch.
+ * Refreshes the current library and the caller's access. Invalidating the
+ * snapshot queries also rolls a failed optimistic update back to server truth.
  */
 export function useRefreshLibrary(): () => Promise<void> {
     const router = useRouter();
     const libraryId = useLibraryId();
     return useCallback(async () => {
-        await queryClient.refetchQueries({
-            queryKey: libraryVersionQueryMatchKey()
-        });
-        await queryClient.refetchQueries({ queryKey: accessDataQueryKey() });
-        await queryClient.invalidateQueries({
-            queryKey: libraryQueryMatchKey()
-        });
-        await queryClient.invalidateQueries({
-            queryKey: buildStatusQueryMatchKey()
-        });
-        await refetchFavorites(libraryId);
+        await Promise.all([
+            queryClient.invalidateQueries({
+                queryKey: libraryQueryKey(libraryId)
+            }),
+            queryClient.invalidateQueries({ queryKey: accessDataQueryKey() })
+        ]);
         await router.invalidate();
     }, [router, libraryId]);
 }
 
-/** Refreshes just the current user's favorites. */
+/** Refreshes just the current user's favorites, which aren't version-keyed. */
 export function useRefreshFavorites(): () => Promise<void> {
     const router = useRouter();
     const libraryId = useLibraryId();
     return useCallback(async () => {
-        await refetchFavorites(libraryId);
+        await queryClient.invalidateQueries({
+            queryKey: favoritesQueryKey(libraryId)
+        });
         await router.invalidate();
     }, [router, libraryId]);
 }

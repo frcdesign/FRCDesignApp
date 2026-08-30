@@ -52,7 +52,7 @@ function GroupList(): ReactNode {
     const uiState = useUiState()[0];
 
     if (libraryQuery.isPending) {
-        return <SectionLoading title="Loading groups..." />;
+        return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
         return <SectionError title="Failed to load group." />;
     }

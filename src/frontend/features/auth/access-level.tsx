@@ -16,9 +16,9 @@ const DEFAULT_ACCESS_DATA: AccessData = {
     signedIn: false
 };
 
-/** The level the app is viewed as by default; overridable in dev via a Vite var. */
+/** The level the app is viewed as by default; the dev override grants it too. */
 const DEFAULT_ACCESS_LEVEL =
-    (import.meta.env.VITE_DEFAULT_ACCESS_LEVEL as AccessLevel | undefined) ??
+    (import.meta.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined) ??
     AccessLevel.USER;
 
 export function getAccessDataQuery() {

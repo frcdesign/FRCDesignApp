@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     AUTO_INDEX_THRESHOLD,
+    countCombinations,
     countConfigurations,
     enumerateConfigurations,
     IndexingBand,
@@ -175,6 +176,51 @@ describe("countConfigurations", () => {
                 paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS + 1)
             )
         ).toMatchObject({ count: null, band: IndexingBand.EXCEEDED });
+    });
+});
+
+describe("countCombinations", () => {
+    it("counts an insertable with nothing to vary as having none", () => {
+        expect(countCombinations([])).toBe(0);
+        expect(
+            countCombinations([
+                enumParam("A", ["x", "y"], { isCosmetic: true })
+            ])
+        ).toBe(0);
+    });
+
+    it("agrees with countConfigurations under the index cap", () => {
+        for (const configs of [2, 7, AUTO_INDEX_THRESHOLD, 500]) {
+            const params = paramsWithConfigs(configs);
+            expect(countCombinations(params)).toBe(
+                countConfigurations(params).count
+            );
+        }
+    });
+
+    it("counts on past the index cap, which countConfigurations stops at", () => {
+        const params = paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS * 4);
+        expect(countConfigurations(params).count).toBeNull();
+        expect(countCombinations(params)).toBe(
+            MAX_PART_NUMBER_CONFIGURATIONS * 4
+        );
+    });
+
+    it("skips values a visibility condition hides, as enumeration does", () => {
+        const params: ConfigurationParameter[] = [
+            enumParam("A", ["a1", "a2"]),
+            {
+                ...enumParam("B", ["b1", "b2", "b3"]),
+                condition: equals("A", "a1")
+            }
+        ];
+        expect(countCombinations(params)).toBe(
+            enumerateConfigurations(params).configurations.length
+        );
+    });
+
+    it("gives up past its own cap rather than counting forever", () => {
+        expect(countCombinations(paramsWithConfigs(64), 32)).toBeNull();
     });
 });
 

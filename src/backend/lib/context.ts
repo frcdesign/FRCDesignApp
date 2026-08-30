@@ -18,7 +18,8 @@ export interface AppBindings {
     /** Renders a configuration's thumbnails outside a request; see ThumbnailWorkflow. */
     THUMBNAIL_WORKFLOW: Workflow<ThumbnailWorkflowParams>;
     ADMIN_TEAM: string;
-    ACCESS_LEVEL_OVERRIDE?: string;
+    /** Dev-only: the access level granted, bypassing Onshape. */
+    VITE_ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */
     FORCE_SIGNED_IN?: string;
 }

@@ -1,6 +1,6 @@
 /**
- * Every query key in one place: features read their own keys here, and the
- * cross-feature refresh flows invalidate by the match keys.
+ * Every query key in one place. Everything scoped to a library hangs off
+ * {@link libraryQueryKey}, so the refresh flows invalidate that one prefix.
  */
 import { LibraryId } from "@backend/features/library/library-id";
 import { InstancePath } from "@backend/lib/onshape/path";
@@ -20,49 +20,37 @@ export function unitInfoQueryKey(instancePath: InstancePath) {
     return ["unit-info", instancePath];
 }
 
-export function libraryQueryMatchKey() {
-    return ["library"];
+/** The prefix every library-scoped query extends with its endpoint. */
+export function libraryQueryKey(libraryId: LibraryId) {
+    return ["library", libraryId];
 }
 
-export function libraryQueryKey(libraryId: LibraryId, cacheVersion: number) {
-    return ["library", libraryId, cacheVersion];
-}
-
-export function libraryVersionQueryMatchKey() {
-    return ["library-version"];
+export function libraryDataQueryKey(
+    libraryId: LibraryId,
+    cacheVersion: number
+) {
+    return [...libraryQueryKey(libraryId), "library-data", cacheVersion];
 }
 
 export function libraryVersionQueryKey(libraryId: LibraryId) {
-    return ["library-version", libraryId];
-}
-
-export function searchDbQueryMatchKey() {
-    return ["search-db"];
+    return [...libraryQueryKey(libraryId), "library-version"];
 }
 
 export function searchDbQueryKey(libraryId: LibraryId, cacheVersion: number) {
-    return ["search-db", libraryId, cacheVersion];
+    return [...libraryQueryKey(libraryId), "search-db", cacheVersion];
 }
 
 export function favoritesQueryKey(libraryId: LibraryId) {
-    return ["favorites", libraryId];
-}
-
-export function buildStatusQueryMatchKey() {
-    return ["build-status"];
+    return [...libraryQueryKey(libraryId), "favorites"];
 }
 
 export function buildStatusQueryKey(
     libraryId: LibraryId,
     cacheVersion: number
 ) {
-    return ["build-status", libraryId, cacheVersion];
-}
-
-export function jobStatusQueryMatchKey() {
-    return ["job-status"];
+    return [...libraryQueryKey(libraryId), "build-status", cacheVersion];
 }
 
 export function jobStatusQueryKey(libraryId: LibraryId) {
-    return ["job-status", libraryId];
+    return [...libraryQueryKey(libraryId), "job-status"];
 }

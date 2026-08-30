@@ -32,11 +32,9 @@ OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 SESSION_SECRET=gNSzdRbs4dJYz0obHfeRwaD+u5QbZgJx+V8/rgUH6AiOdoppP3wjeaM97nZmxeJa
 
-# One of admin, editor, or user. Sets the max access level granted. Does nothing in production.
-ACCESS_LEVEL_OVERRIDE=admin
-
-# One of admin, editor, or user. The level the app is viewed as by default (client-side).
-VITE_DEFAULT_ACCESS_LEVEL=admin
+# One of admin, editor, or user. Granted by the server and viewed by the client,
+# so both sides agree. Ignored in production.
+VITE_ACCESS_LEVEL_OVERRIDE=admin
 
 # Signs you in as a fake user, so signed-in UI can be tested without an Onshape
 # session. Onshape calls it reveals won't work, so leave it unset normally.

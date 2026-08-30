@@ -14,6 +14,7 @@ import {
 import {
     Check,
     Clock,
+    FileX,
     Info,
     Warning,
     WarningOctagon,
@@ -44,6 +45,7 @@ import {
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     ConfigurationParameter,
     ParameterType
@@ -51,9 +53,10 @@ import {
 import {
     AUTO_INDEX_THRESHOLD,
     type ConfigurationCount,
+    countCombinations,
     countConfigurations,
     IndexingBand,
-    isIndexedParameter,
+    MAX_COUNTED_CONFIGURATIONS,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
@@ -533,10 +536,7 @@ function InsertableHoverMenu({
                 status={status}
                 configurationCount={configurationCount}
             />
-            <InsertableParsedSection
-                status={status}
-                count={configurationCount.count}
-            />
+            <InsertableParsedSection status={status} />
             <ConfigurationSection
                 parameters={status.configuration?.parameters}
             />
@@ -703,11 +703,18 @@ function IndexingRow({
     const mutation = useIndexConfigurationsMutation(insertableId);
 
     let control: ReactNode;
-    if (band === IndexingBand.EXCEEDED) {
+    if (status.elementType === ElementType.ASSEMBLY) {
+        control = (
+            <IndexingIcon
+                severity={null}
+                tooltip="This part is an assembly, so metadata is pulled directly from the assembly tab."
+            />
+        );
+    } else if (band === IndexingBand.EXCEEDED) {
         control = (
             <IndexingIcon
                 severity={BuildIssueSeverity.ERROR}
-                tooltip={`Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so there is nothing to index. Exclude parameters from properties to bring the count down.`}
+                tooltip={`Parts with more than ${MAX_PART_NUMBER_CONFIGURATIONS} configurations are not eligible for indexing. To resolve, exclude configurations from affecting part properties in Onshape.`}
             />
         );
     } else if (band === IndexingBand.AUTOMATIC) {
@@ -788,12 +795,20 @@ function useConfigurationCount(
     return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
 }
 
-/** Open-ended past the cap, where enumeration stops before reaching a total. */
+/** The true total, which runs past the index cap the band is decided by. */
+function useDisplayedConfigurationCount(
+    status: InsertableBuildStatus
+): number | null {
+    const parameters = status.configuration?.parameters;
+    return useMemo(() => countCombinations(parameters ?? []), [parameters]);
+}
+
+/** Open-ended only past the counting cap, which nothing real reaches. */
 function configurationCountValue(count: number | null): StateRowValue {
     if (count === null) {
         return {
             kind: "text",
-            text: `Over ${MAX_PART_NUMBER_CONFIGURATIONS}`
+            text: `Over ${MAX_COUNTED_CONFIGURATIONS.toLocaleString()}`
         };
     }
     if (count === 0) {
@@ -804,12 +819,11 @@ function configurationCountValue(count: number | null): StateRowValue {
 
 /** The read-only auto-detected facts for an insertable. */
 function InsertableParsedSection({
-    status,
-    count
+    status
 }: {
     status: InsertableBuildStatus;
-    count: number | null;
 }): ReactNode {
+    const count = useDisplayedConfigurationCount(status);
     return (
         <>
             <Divider />
@@ -851,7 +865,9 @@ function ConfigurationSection({
                             >
                                 <Text size="sm">{parameter.name}</Text>
                                 <Group gap={4} wrap="nowrap">
-                                    <IndexedBadge parameter={parameter} />
+                                    <ExcludedFromPropertiesIcon
+                                        parameter={parameter}
+                                    />
                                     <ParameterTypeBadge parameter={parameter} />
                                 </Group>
                             </Group>
@@ -863,42 +879,32 @@ function ConfigurationSection({
     );
 }
 
-/** Why a parameter is or isn't varied when indexing, shown on hover. */
-function getIndexedDescription(parameter: ConfigurationParameter): string {
-    if (isIndexedParameter(parameter)) {
-        return "Varied when indexing part numbers, so it multiplies this insertable's configuration count.";
-    }
-    if (
-        parameter.type === ParameterType.QUANTITY ||
-        parameter.type === ParameterType.STRING
-    ) {
-        return "Quantity and text parameters are never varied — they stay at their Onshape default.";
-    }
-    return "Excluded from properties, so it stays at its default instead of multiplying the configuration count.";
-}
-
-/** Whether indexing varies this parameter — the lever on the configuration count. */
-function IndexedBadge({
+/**
+ * Onshape's "exclude from affecting configured properties", the lever on the
+ * count. Part studios only, which Onshape itself enforces.
+ */
+function ExcludedFromPropertiesIcon({
     parameter
 }: {
     parameter: ConfigurationParameter;
 }): ReactNode {
-    const isIndexed = isIndexedParameter(parameter);
+    if (!parameter.isCosmetic) {
+        return null;
+    }
     return (
         <Tooltip
-            label={getIndexedDescription(parameter)}
+            label="Excluded from affecting part properties in Onshape"
             multiline
             maw={260}
             withArrow
             events={{ hover: true, focus: true, touch: true }}
         >
-            <Badge
-                size="xs"
-                variant="light"
-                color={isIndexed ? "blue" : "gray"}
-            >
-                {isIndexed ? "Indexed" : "Not indexed"}
-            </Badge>
+            <Box
+                component={FileX}
+                size={IconSize.SMALL}
+                c="dimmed"
+                style={{ flexShrink: 0 }}
+            />
         </Tooltip>
     );
 }

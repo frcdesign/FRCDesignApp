@@ -55,7 +55,7 @@ describe("requireEditorMiddleware", () => {
     });
 
     // Access level alone would admit a signed-out caller wherever it is
-    // granted without a session, e.g. behind a dev ACCESS_LEVEL_OVERRIDE.
+    // granted without a session, e.g. behind a dev access-level override.
     it("401s an editor-level caller who is not signed in", async () => {
         const app = createTestApp({
             signedIn: false,

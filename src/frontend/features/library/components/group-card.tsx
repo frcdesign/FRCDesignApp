@@ -21,7 +21,7 @@ import { GroupStatusBadge } from "../../build-status/components/build-status";
 import { useRefreshLibrary } from "../../../lib/refresh";
 import { useBuildStatusQuery } from "../../build-status/queries";
 import { useCacheVersion, useLibraryQuery } from "../queries";
-import { libraryQueryKey } from "../../../lib/query-keys";
+import { libraryDataQueryKey } from "../../../lib/query-keys";
 import { toLibraryPath, useIsHome, useLibraryId } from "../library-path";
 import { getQueryUpdater } from "../../../lib/query-cache";
 
@@ -187,7 +187,7 @@ function useSetGroupOrderMutation() {
     const libraryId = useLibraryId();
     const cacheVersion = useCacheVersion();
     const refreshLibrary = useRefreshLibrary();
-    const key = libraryQueryKey(libraryId, cacheVersion);
+    const key = libraryDataQueryKey(libraryId, cacheVersion);
 
     return useMutation({
         mutationKey: ["group-order"],

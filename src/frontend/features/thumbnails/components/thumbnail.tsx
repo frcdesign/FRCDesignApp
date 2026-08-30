@@ -1,12 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { loadImage, loadImageResult } from "../../../lib/api-client";
+import {
+    loadImage,
+    loadImageResult,
+    type LoadedImage
+} from "../../../lib/api-client";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { ThumbnailSize } from "@backend/features/thumbnails/types";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { Question } from "@phosphor-icons/react";
 
-import { ComponentPropsWithRef, ReactNode } from "react";
+import { ComponentPropsWithRef, ReactNode, useState } from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionError } from "../../../components/app-zero-state";
@@ -179,6 +183,18 @@ const PREVIEW_POLL_MS = 4000;
  */
 const WARM_EVERY_POLLS = 15;
 
+/**
+ * The last render actually produced, kept across configuration changes: the
+ * worker stands the element default in until a new one lands.
+ */
+function useLastRenderedUrl(image?: LoadedImage): string | undefined {
+    const [lastRendered, setLastRendered] = useState<string>();
+    if (image && !image.isFallback && image.url !== lastRendered) {
+        setLastRendered(image.url);
+    }
+    return lastRendered;
+}
+
 export function PreviewImage(props: PreviewImageProps): ReactNode {
     const {
         path,
@@ -228,6 +244,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         retry: 2,
         enabled: !isFetchingConfiguration && isSignedIn === true
     });
+    const lastRenderedUrl = useLastRenderedUrl(thumbnailQuery.data);
 
     const heightAndWidth = getHeightAndWidth(size, 0.7);
 
@@ -281,6 +298,12 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
+    // A stand-in must not displace a render the user already has.
+    const previewUrl =
+        thumbnailQuery.data.isFallback && lastRenderedUrl
+            ? lastRenderedUrl
+            : thumbnailQuery.data.url;
+
     return (
         <>
             <Box
@@ -289,9 +312,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 h={heightAndWidth.height}
             >
                 <img
-                    // The url this poll fetched, so the render shows from the
-                    // response that reported it rather than the one before.
-                    src={thumbnailQuery.data.url}
+                    src={previewUrl}
                     {...heightAndWidth}
                     style={FIT_INSIDE_BOX}
                 />
