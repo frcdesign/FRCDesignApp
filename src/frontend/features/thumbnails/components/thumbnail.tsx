@@ -1,4 +1,4 @@
-import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { loadImage, loadImageResult } from "../../../lib/api-client";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { ThumbnailSize } from "@backend/features/thumbnails/types";
@@ -8,10 +8,13 @@ import { Question } from "@phosphor-icons/react";
 
 import { ComponentPropsWithRef, ReactNode } from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
-import { thumbnailUrl } from "@backend/features/thumbnails/keys";
-import { configurationQueryMatchKey } from "../../../lib/query-keys";
+import {
+    THUMBNAIL_FALLBACK_CACHE_TTL,
+    thumbnailUrl
+} from "@backend/features/thumbnails/keys";
 import { SectionError } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
+import { useIsFetchingConfiguration } from "../../insert/queries";
 import { useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
@@ -170,8 +173,11 @@ interface PreviewImageProps {
     largeThumbnailUrl?: string;
 }
 
-/** How often to re-check while the worker is still standing in the default. */
-const PREVIEW_POLL_MS = 4000;
+/**
+ * How often to re-check while the worker is still standing in the default.
+ * Past the fallback's cache TTL, or the poll never leaves the browser.
+ */
+const PREVIEW_POLL_MS = (THUMBNAIL_FALLBACK_CACHE_TTL + 1) * 1000;
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
     const {
@@ -185,8 +191,10 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const size = ThumbnailSize.LARGE;
     const isSignedIn = useIsSignedIn();
     const isConnected = useIsConnectedToOnshape();
-    const isFetchingConfiguration =
-        useIsFetching({ queryKey: configurationQueryMatchKey() }) > 0;
+    const isFetchingConfiguration = useIsFetchingConfiguration(
+        insertableId,
+        microversionId
+    );
     const targetElementType = useTargetElementType();
 
     const url = thumbnailUrl({
@@ -234,6 +242,11 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
+    // Placeholder data is the previous configuration's render, so the spinner
+    // has to cover it too: what is on screen is not what was asked for.
+    const isWaiting =
+        thumbnailQuery.isPlaceholderData || thumbnailQuery.data?.isFallback;
+
     if (thumbnailQuery.isError) {
         const action =
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
@@ -249,7 +262,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 />
             </Center>
         );
-    } else if (thumbnailQuery.isPending && !thumbnailQuery.data) {
+    } else if (!thumbnailQuery.data) {
         return (
             <Center w={heightAndWidth.width} h={heightAndWidth.height}>
                 <Loader size={36} />
@@ -265,12 +278,15 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                 h={heightAndWidth.height}
             >
                 <img
+                    // The render lands at the url the stand-in came from, so
+                    // remounting is what makes the browser go get it.
+                    key={String(thumbnailQuery.data.isFallback)}
                     src={thumbnailQuery.data.url}
                     {...heightAndWidth}
                     style={FIT_INSIDE_BOX}
                 />
             </Box>
-            {thumbnailQuery.data.isFallback && (
+            {isWaiting && (
                 <Loader pos="absolute" bottom={15} right={15} size={18} />
             )}
         </>

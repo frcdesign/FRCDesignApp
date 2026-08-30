@@ -11,6 +11,7 @@ import {
 import { useSearch } from "@tanstack/react-router";
 import {
     type Dispatch,
+    JSX,
     ReactNode,
     type SyntheticEvent,
     useCallback,
@@ -251,6 +252,8 @@ interface InputLabelProps {
      * The id of the input the label describes.
      */
     htmlFor: string;
+    /** True to lead with the input instead of the label. */
+    inputFirst?: boolean;
     children: ReactNode;
 }
 
@@ -259,23 +262,43 @@ interface InputLabelProps {
  * input grows to show an error message.
  */
 function InputLabel(props: InputLabelProps) {
-    const { label, htmlFor, children } = props;
+    const { label, htmlFor, inputFirst = false, children } = props;
+    const text = (
+        <Text
+            size="sm"
+            style={{
+                display: "flex",
+                alignItems: "center",
+                height: INPUT_HEIGHT,
+                cursor: "pointer"
+            }}
+            component="label"
+            htmlFor={htmlFor}
+        >
+            {label}
+        </Text>
+    );
+
+    let result: JSX.Element;
+    if (inputFirst) {
+        result = (
+            <>
+                {children}
+                {text}
+            </>
+        );
+    } else {
+        result = (
+            <>
+                {text}
+                {children}
+            </>
+        );
+    }
+
     return (
         <Group gap="sm" align="flex-start">
-            <Text
-                size="sm"
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    height: INPUT_HEIGHT,
-                    cursor: "pointer"
-                }}
-                component="label"
-                htmlFor={htmlFor}
-            >
-                {label}
-            </Text>
-            {children}
+            {result}
         </Group>
     );
 }
@@ -360,7 +383,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+        <InputLabel label={parameter.name} htmlFor={parameter.id} inputFirst>
             <Checkbox
                 id={parameter.id}
                 checked={(value ?? parameter.default) === "true"}

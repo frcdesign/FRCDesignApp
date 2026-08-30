@@ -5,8 +5,11 @@ import {
 } from "../configurations/canonical";
 import { ThumbnailSize } from "./types";
 
-/** Short on purpose: the real render can land at any moment and must take over. */
-export const THUMBNAIL_FALLBACK_CACHE_TTL = 60;
+/**
+ * Shorter than the client's poll, so each poll reaches the worker instead of
+ * the browser cache replaying the stand-in the real render has replaced.
+ */
+export const THUMBNAIL_FALLBACK_CACHE_TTL = 3;
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";

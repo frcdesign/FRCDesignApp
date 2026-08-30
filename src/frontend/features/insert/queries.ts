@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import {
     type ConfigurationResult,
@@ -45,4 +45,16 @@ export function useConfigurationQuery(
         enabled,
         refetchInterval: false
     });
+}
+
+/** Whether {@link useConfigurationQuery} is in flight for this insertable. */
+export function useIsFetchingConfiguration(
+    insertableId: string,
+    microversionId: string
+): boolean {
+    return (
+        useIsFetching({
+            queryKey: configurationQueryKey(insertableId, microversionId)
+        }) > 0
+    );
 }

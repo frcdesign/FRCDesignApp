@@ -9,24 +9,11 @@ export function accessDataQueryKey() {
     return ["access-data"];
 }
 
-/** Every configuration, whichever insertable and microversion. */
-export function configurationQueryMatchKey() {
-    return ["configuration"];
-}
-
-/** One insertable's configuration, whichever microversion is cached. */
-export function insertableConfigurationQueryMatchKey(insertableId: string) {
-    return ["configuration", insertableId];
-}
-
 export function configurationQueryKey(
     insertableId: string,
     microversionId: string
 ) {
-    return [
-        ...insertableConfigurationQueryMatchKey(insertableId),
-        microversionId
-    ];
+    return ["configuration", insertableId, microversionId];
 }
 
 export function unitInfoQueryKey(instancePath: InstancePath) {

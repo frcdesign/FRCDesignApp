@@ -10,8 +10,6 @@ import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { MenuTitle } from "../../../components/app-title";
 import { modals } from "@mantine/modals";
 import { showQuickInsertTip } from "../quick-insert-tip";
-import { useIsFetching } from "@tanstack/react-query";
-import { insertableConfigurationQueryMatchKey } from "../../../lib/query-keys";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { renderNotification } from "../../../lib/notifications";
@@ -19,7 +17,7 @@ import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
-import { useConfigurationQuery } from "../queries";
+import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
     ParameterValues,
     SearchRecord
@@ -192,10 +190,10 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     });
     const [uiState, setUiState] = useUiState();
 
-    const isLoadingConfiguration =
-        useIsFetching({
-            queryKey: insertableConfigurationQueryMatchKey(insertable.id)
-        }) > 0;
+    const isLoadingConfiguration = useIsFetchingConfiguration(
+        insertable.id,
+        insertable.microversionId
+    );
 
     const canFasten =
         insertable.supportsFasten &&
