@@ -5,6 +5,10 @@ import {
 import { defineConfig } from "vitest/config";
 import { alias } from "./vite.config";
 
+// `.env` is for driving the app locally (see AGENTS.md); letting it reach the
+// test Worker would make FORCE_SIGNED_IN rewrite what the auth tests assert.
+process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
+
 export default defineConfig({
     test: {
         projects: [

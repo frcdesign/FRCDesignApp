@@ -10,9 +10,8 @@ import {
 import { useLibraryId } from "../features/library/library-path";
 
 /**
- * Refreshes everything scoped to the current library, plus the caller's access.
- * Invalidating the snapshot queries also rolls a failed optimistic update back
- * to server truth on the refetch.
+ * Refreshes the current library and the caller's access. Invalidating the
+ * snapshot queries also rolls a failed optimistic update back to server truth.
  */
 export function useRefreshLibrary(): () => Promise<void> {
     const router = useRouter();

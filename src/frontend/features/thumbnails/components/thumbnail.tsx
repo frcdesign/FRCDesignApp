@@ -298,8 +298,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         );
     }
 
-    // The url this poll fetched, so the render shows from the response that
-    // reported it — except a stand-in, which must not displace a real render.
+    // A stand-in must not displace a render the user already has.
     const previewUrl =
         thumbnailQuery.data.isFallback && lastRenderedUrl
             ? lastRenderedUrl

@@ -880,8 +880,8 @@ function ConfigurationSection({
 }
 
 /**
- * Onshape's "exclude from affecting configured properties", which is the lever
- * on the configuration count. Part studios only, and Onshape enforces that.
+ * Onshape's "exclude from affecting configured properties", the lever on the
+ * count. Part studios only, which Onshape itself enforces.
  */
 function ExcludedFromPropertiesIcon({
     parameter

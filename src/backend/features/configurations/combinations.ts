@@ -103,30 +103,22 @@ export function isIndexedParameter(
     return !parameter.isCosmetic;
 }
 
-/**
- * The most combinations counted out for display. Far past the index cap, which
- * bounds work rather than what an admin is shown.
- */
+/** The most combinations counted for display, far past the index cap on work. */
 export const MAX_COUNTED_CONFIGURATIONS = 100_000;
 
-/**
- * The true combination count, which runs past the index cap so the admin card
- * can show what there is to bring down. Null past {@link MAX_COUNTED_CONFIGURATIONS}.
- */
+/** The true count, which runs past the index cap so the admin card can show it. */
 export function countCombinations(
     parameters: ConfigurationParameter[],
     cap: number = MAX_COUNTED_CONFIGURATIONS
 ): number | null {
-    // Depth-first, unlike enumerateConfigurations: only the count is wanted, so
-    // one path is held at a time rather than every combination at once.
+    // Depth-first: only the count is wanted, so one path is held rather than all.
     const indexed = parameters.filter(isIndexedParameter);
     let count = 0;
     let capped = false;
 
     const walk = (depth: number, configuration: ParameterValues) => {
         if (depth === indexed.length) {
-            // The lone default that nothing-to-vary reaches is not a
-            // configuration of its own.
+            // The lone empty default is not a configuration of its own.
             if (Object.keys(configuration).length > 0) {
                 count++;
                 capped = count > cap;
@@ -158,7 +150,6 @@ export function countCombinations(
     return capped ? null : count;
 }
 
-/** The values indexing varies this parameter over, given what is set so far. */
 function parameterValues(
     parameter: EnumParameter | BooleanParameter,
     configuration: ParameterValues,
