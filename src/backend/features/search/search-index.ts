@@ -88,30 +88,18 @@ function canonicalizeNumbers(text: string): string {
 }
 
 /**
- * A size's unit, in the spellings a part name uses. The mark is the form it
- * keeps, so `1 in`, `1in` and `1"` are one size. A trailing `-` or letter means
- * a word that merely starts with "in" (`in-line`, `insert`).
- */
-const INCH_UNIT = /(\d)\s*(?:"|inches|inch|in)(?![\w-])/gi;
-
-/** Numbers and their units in the one spelling everything is stored as. */
-function canonicalize(text: string): string {
-    return canonicalizeNumbers(text).replace(INCH_UNIT, '$1"');
-}
-
-/**
  * For direct, non-tokenized comparison: the index's canonicalization,
  * lowercased, so a `.5` query lines up with a stored `"1/2 Bearing"`.
  */
 export function normalizeForMatch(text: string): string {
-    return canonicalize(text).toLowerCase();
+    return canonicalizeNumbers(text).toLowerCase();
 }
 
 export function tokenize(text: string): string[] {
     // Canonicalize before splitting: fractions span `/` and `-`. Casing stays,
     // since processTerm splits on camelCase.
     return (
-        canonicalize(text)
+        canonicalizeNumbers(text)
             // An inch mark stays on its number and ends the token, so `1"` is a
             // size of its own rather than a prefix of `1.5`, `10`, and `16t`.
             .replace(/(\d")/g, `$1${deliminator}`)
