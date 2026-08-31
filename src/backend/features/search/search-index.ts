@@ -7,7 +7,10 @@ import { LibraryOut } from "../library/contract";
 import { Vendor } from "../library/vendors";
 import { ConfigurationRecord, SearchRecord } from "../configurations/models";
 import { getPartUrl } from "../configurations/utils";
-import { meaningfulPartNumber } from "../configurations/part-number";
+import {
+    isPlaceholderPartNumber,
+    meaningfulPartNumber
+} from "../configurations/part-number";
 import { clean } from "../../lib/text";
 
 /** Where a name breaks: punctuation and space, plus a quote used as a quote. */
@@ -166,7 +169,10 @@ export function tokenizeQuery(text: string): string[] {
     // second term to search.
     const seen = new Set<string>();
     for (const word of text.trim().split(/\s+/)) {
-        if (!word) {
+        // Ingest drops the placeholder, so nothing carries it; typed, it is
+        // still the word for a part number nobody has, and searching its
+        // letters would answer with whatever starts with `n` or `a`.
+        if (!word || isPlaceholderPartNumber(word)) {
             continue;
         }
         // Segments only for something carrying a letter, which is what a part
@@ -176,7 +182,7 @@ export function tokenizeQuery(text: string): string[] {
             ? tokenizePartNumber(word)
             : [word.toLowerCase()];
         for (const token of [...tokenizeName(word), ...literal]) {
-            if (isStrayLetter(token, word) || seen.has(token.toLowerCase())) {
+            if (seen.has(token.toLowerCase())) {
                 continue;
             }
             seen.add(token.toLowerCase());
@@ -184,15 +190,6 @@ export function tokenizeQuery(text: string): string[] {
         }
     }
     return tokens;
-}
-
-/**
- * Whether a token is a letter left behind by splitting a longer word, as `n/a`
- * leaves `n` and `a`: as a prefix it matches most of the library. A letter the
- * caller actually typed is a search, and answering it as they type is the point.
- */
-function isStrayLetter(token: string, word: string): boolean {
-    return word.length > 1 && token.length === 1 && /[a-z]/i.test(token);
 }
 
 /**

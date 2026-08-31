@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { meaningfulPartNumber } from "./part-number";
+import { isPlaceholderPartNumber, meaningfulPartNumber } from "./part-number";
+
+describe("isPlaceholderPartNumber", () => {
+    it.each(["N/A", "n/a", " N/a "])("reads %s as the placeholder", (value) => {
+        expect(isPlaceholderPartNumber(value)).toBe(true);
+    });
+
+    it.each(["NA-1234", "n", "WCP-1025"])(
+        "reads %s as a part number",
+        (value) => {
+            expect(isPlaceholderPartNumber(value)).toBe(false);
+        }
+    );
+});
 
 describe("meaningfulPartNumber", () => {
     it.each(["N/A", "n/a", " N/a "])("hides the placeholder %s", (value) => {

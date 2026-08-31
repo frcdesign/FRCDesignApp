@@ -191,12 +191,15 @@ describe("tokenizeQuery", () => {
 
     // Splitting the placeholder leaves `n` and `a`, and a one-letter prefix
     // matches most of the library.
-    it.each(["n/a", "N/A"])(
-        "drops the letters left over from splitting %s",
-        (query) => {
-            expect(tokenizeQuery(query)).toEqual(["n/a"]);
-        }
-    );
+    // Nothing carries the placeholder, and searching its letters would answer
+    // with whatever starts with `n` or `a`.
+    it.each(["n/a", "N/A"])("has nothing to search for in %s", (query) => {
+        expect(tokenizeQuery(query)).toEqual([]);
+    });
+
+    it("still reads the rest of a query the placeholder is in", () => {
+        expect(tokenizeQuery("n/a bearing")).toEqual(["bearing"]);
+    });
 
     // Answering as the caller types is the point, and the first keystroke is
     // one character.
