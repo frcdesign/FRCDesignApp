@@ -13,7 +13,10 @@ import {
 import { type ReactNode } from "react";
 import { ActionIcon } from "@mantine/core";
 import { IconSize } from "../../lib/style-constants";
-import { FEEDBACK_FORM_URL, openUrlInNewTab } from "../../lib/url";
+import { openUrlInNewTab } from "../../lib/url";
+
+/** The FRCDesign feedback form, kept beside the item that opens it. */
+const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
 const SCHEMES: { value: MantineColorScheme; label: string; icon: ReactNode }[] =
     [

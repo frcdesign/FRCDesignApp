@@ -17,7 +17,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import {
     BORDER,
-    CHROME_BACKGROUND,
+    FRAME_BACKGROUND,
     IconSize,
     PrimaryColor
 } from "../../lib/style-constants";
@@ -49,7 +49,7 @@ export function DashboardNavbar(): ReactNode {
                 px="sm"
                 wrap="nowrap"
                 align="stretch"
-                bg={CHROME_BACKGROUND}
+                bg={FRAME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />

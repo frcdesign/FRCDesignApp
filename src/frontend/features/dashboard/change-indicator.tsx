@@ -8,6 +8,9 @@ import { formatCount } from "./series-utils";
 /**
  * How a measure changed, or why it cannot be said.
  *
+ * Always two right-aligned lines, sat beside the number rather than under it,
+ * so a row of tiles scans as one line of values and one column of changes.
+ *
  * A percentage is never shown without what it is measured against: the tiles
  * that use this mix windows deliberately — an all-time value with a
  * season-over-season change — so a bare "+82%" would be unreadable. The chip
@@ -17,15 +20,12 @@ import { formatCount } from "./series-utils";
 export function ChangeIndicator({
     comparison,
     trackingSince,
-    format = formatCount,
-    stacked = false
+    format = formatCount
 }: {
     comparison: PeriodComparison;
     trackingSince: string | null;
     /** Rates need a decimal; counts do not. */
     format?: (value: number) => string;
-    /** Two right-aligned lines, for the corner a stat tile's icon vacated. */
-    stacked?: boolean;
 }): ReactNode {
     if (comparison.changeRatio === null) {
         return (
@@ -35,12 +35,7 @@ export function ChangeIndicator({
                 w={260}
                 label={explain(comparison, trackingSince)}
             >
-                <Text
-                    size="sm"
-                    c="dimmed"
-                    w="fit-content"
-                    ta={stacked ? "right" : undefined}
-                >
+                <Text size="sm" c="dimmed" w="fit-content" ta="right">
                     {shortReason(comparison)}
                 </Text>
             </Tooltip>
@@ -61,30 +56,18 @@ export function ChangeIndicator({
             </Text>
         </Group>
     );
-    const against = (
-        <Text
-            size={stacked ? "xs" : "sm"}
-            c="dimmed"
-            ta={stacked ? "right" : undefined}
-        >
-            vs {comparison.baselineShort}
-        </Text>
-    );
-    const Layout = stacked ? Stack : Group;
 
     return (
         <Tooltip
             withArrow
             label={`${format(comparison.previous)} in ${comparison.baselineLabel}`}
         >
-            <Layout
-                gap={stacked ? 0 : 4}
-                align={stacked ? "flex-end" : "center"}
-                w="fit-content"
-            >
+            <Stack gap={0} align="flex-end" w="fit-content">
                 {change}
-                {against}
-            </Layout>
+                <Text size="xs" c="dimmed" ta="right">
+                    vs {comparison.baselineShort}
+                </Text>
+            </Stack>
         </Tooltip>
     );
 }

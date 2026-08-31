@@ -1,1 +1,0 @@
-ALTER TABLE `favorites` ADD `created_at` integer;

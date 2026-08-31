@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -148,24 +148,10 @@ async function saveGroup(
     const { thumbnailUrls, removedInsertableIds } = input;
     const hasFailedInsertables = input.failedInsertableIds.length > 0;
 
-    // Read after the insertables saved, so a just-added part counts. Visibility
-    // is an editor toggle rather than load output, so it must come from the row.
-    const visible = await db
-        .select({ id: insertables.id })
-        .from(insertables)
-        .where(
-            and(
-                eq(insertables.groupId, target.groupId),
-                eq(insertables.isVisible, true)
-            )
-        )
-        .get();
-
     const buildIssues = checkGroup({
         hasThumbnailTab: !!target.thumbnailElementId,
         thumbnailUrls,
-        hasFailedInsertables,
-        hasVisibleInsertables: visible !== undefined
+        hasFailedInsertables
     });
     const parsed: ParsedGroup = {
         name: target.name,

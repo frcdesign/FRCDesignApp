@@ -18,11 +18,13 @@ interface StatTileProps {
     label: string;
     /** A count is formatted with separators; a string is shown as given. */
     value: number | string;
+    /** Rates need a decimal; counts do not. Also formats the change tooltip. */
+    format?: (value: number) => string;
     icon?: Icon;
     /**
-     * Season-over-season change, drawn where the icon would be. The value above
-     * it is all-time, so the indicator always names what it is measured
-     * against rather than showing a bare percentage.
+     * How the measure changed, drawn to the right of the number where the icon
+     * would be. Never below it: every tile on these pages puts the two in the
+     * same place, so a row of them scans as one line of numbers.
      */
     change?: PeriodComparison;
     trackingSince?: string | null;
@@ -37,6 +39,7 @@ interface StatTileProps {
 export function StatTile({
     label,
     value,
+    format = formatCount,
     icon: TileIcon,
     change,
     trackingSince = null,
@@ -50,14 +53,14 @@ export function StatTile({
                         {label}
                     </Text>
                     <Title order={2}>
-                        {typeof value === "number" ? formatCount(value) : value}
+                        {typeof value === "number" ? format(value) : value}
                     </Title>
                 </div>
                 {change ? (
                     <ChangeIndicator
                         comparison={change}
                         trackingSince={trackingSince}
-                        stacked
+                        format={format}
                     />
                 ) : (
                     TileIcon && (

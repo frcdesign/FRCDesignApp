@@ -55,7 +55,8 @@ export function LifetimeTiles({
                 value-and-delta split every tile in this row has. */}
             <StatTile
                 label="Uses per user"
-                value={formatRate(perUser)}
+                value={perUser}
+                format={formatRate}
                 change={perUnit(season.inserts, season.activeUsers)}
                 trackingSince={trackingSince}
                 spark={spark.usesPerUser}

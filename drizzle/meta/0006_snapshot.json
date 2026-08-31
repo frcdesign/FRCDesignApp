@@ -383,13 +383,6 @@
                     "notNull": false,
                     "autoincrement": false
                 },
-                "part_metadata": {
-                    "name": "part_metadata",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
                 "build_issues": {
                     "name": "build_issues",
                     "type": "text",
@@ -401,6 +394,13 @@
                 "last_loaded_at": {
                     "name": "last_loaded_at",
                     "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "part_metadata": {
+                    "name": "part_metadata",
+                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false

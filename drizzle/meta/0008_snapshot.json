@@ -1,8 +1,8 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "1f8bcbab-ca01-4fa7-baf1-bde860812267",
-    "prevId": "13b5c686-81fe-47bb-9d94-2ac62aad1feb",
+    "id": "2ac64b16-191b-4af3-bf41-cf88a02969b4",
+    "prevId": "7f0e79d4-3077-4a1f-aeab-4d98a104be46",
     "tables": {
         "configuration_value_stats": {
             "name": "configuration_value_stats",
@@ -949,6 +949,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'frc-design-lib'"
+                },
+                "group_id": {
+                    "name": "group_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {},

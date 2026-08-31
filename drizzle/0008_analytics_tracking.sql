@@ -74,3 +74,5 @@ CREATE TABLE `user_stats` (
 	`last_seen_at` integer NOT NULL,
 	PRIMARY KEY(`user_id`, `library_id`)
 );
+--> statement-breakpoint
+ALTER TABLE `favorites` ADD `created_at` integer;
