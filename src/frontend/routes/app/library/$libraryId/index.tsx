@@ -73,40 +73,37 @@ function HomeList(): ReactNode {
 
     // One slot below favorites, showing search results while a query is active
     // and the library otherwise. The differing `value` remounts it on the swap.
-    sections.push(
-        uiState.searchQuery
-            ? {
-                  value: "search",
-                  icon: (
-                      <MagnifyingGlassIcon
-                          size={IconSize.MEDIUM}
-                          color={PrimaryColor.FILLED}
-                      />
-                  ),
-                  title: <AppTitle title="Search Results" />,
-                  panel: (
-                      <SearchResults
-                          query={uiState.searchQuery}
-                          filters={{ vendors: uiState.vendorFilters }}
-                      />
-                  ),
-                  opened: isSearchOpen,
-                  setOpened: setIsSearchOpen
-              }
-            : {
-                  value: "library",
-                  icon: (
-                      <BooksIcon
-                          size={IconSize.MEDIUM}
-                          color={PrimaryColor.FILLED}
-                      />
-                  ),
-                  title: <LibraryTitle libraryId={libraryId} />,
-                  panel: <LibraryList />,
-                  opened: uiState.isLibraryOpen,
-                  setOpened: (opened) => setUiState({ isLibraryOpen: opened })
-              }
-    );
+    if (uiState.searchQuery) {
+        sections.push({
+            value: "search",
+            icon: (
+                <MagnifyingGlassIcon
+                    size={IconSize.MEDIUM}
+                    color={PrimaryColor.FILLED}
+                />
+            ),
+            title: <AppTitle title="Search Results" />,
+            panel: (
+                <SearchResults
+                    query={uiState.searchQuery}
+                    filters={{ vendors: uiState.vendorFilters }}
+                />
+            ),
+            opened: isSearchOpen,
+            setOpened: setIsSearchOpen
+        });
+    } else {
+        sections.push({
+            value: "library",
+            icon: (
+                <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />
+            ),
+            title: <LibraryTitle libraryId={libraryId} />,
+            panel: <LibraryList />,
+            opened: uiState.isLibraryOpen,
+            setOpened: (opened) => setUiState({ isLibraryOpen: opened })
+        });
+    }
 
     const handleChange = (opened: string[]) => {
         for (const section of sections) {
