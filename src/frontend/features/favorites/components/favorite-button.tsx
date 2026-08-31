@@ -9,6 +9,7 @@ import type {
     FavoritesData
 } from "@backend/features/favorites/contract";
 import type { InsertableOut } from "@backend/features/library/contract";
+import type { ParameterValues } from "@backend/features/configurations/models";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { appError, handleAppError } from "../../../lib/errors";
@@ -30,6 +31,8 @@ interface UpdateFavoritesArgs {
     operation: Operation;
     insertable: InsertableOut;
     favoriteId: string;
+    /** Canonical, as the favorite menu stores it; absent means the default. */
+    defaultConfiguration?: ParameterValues;
 }
 
 function updateFavorites(
@@ -37,10 +40,15 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId } = args;
+    const { favoriteId, defaultConfiguration } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
-        const fav: Favorite = { id: favoriteId, insertableId, libraryId };
+        const fav: Favorite = {
+            id: favoriteId,
+            insertableId,
+            libraryId,
+            defaultConfiguration
+        };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
     } else {
@@ -70,6 +78,9 @@ function useUpdateFavoritesMutation() {
                     query: {
                         insertableId: args.insertable.id,
                         id: args.favoriteId
+                    },
+                    body: {
+                        defaultConfiguration: args.defaultConfiguration
                     }
                 });
             } else {
@@ -103,6 +114,11 @@ interface FavoriteButtonProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /**
+     * The configuration the new favorite opens with: what the caller is
+     * showing, rather than the element's own default.
+     */
+    defaultConfiguration?: ParameterValues;
+    /**
      * Sizes the button to sit beside a full-height button rather than in a card row.
      * @default false
      */
@@ -110,7 +126,7 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { favorite, insertable, large } = props;
+    const { favorite, insertable, defaultConfiguration, large } = props;
     const isFavorite = favorite !== undefined;
 
     const [isHovered, setIsHovered] = useState(false);
@@ -138,7 +154,12 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
             onClick={(event) => {
                 event.stopPropagation();
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
+                mutation.mutate({
+                    operation,
+                    insertable,
+                    favoriteId,
+                    defaultConfiguration
+                });
             }}
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
             onMouseEnter={() => setIsHovered(true)}
@@ -152,13 +173,15 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
+    /** The configuration the new favorite opens with. */
+    defaultConfiguration?: ParameterValues;
 }
 
 /**
  * A menu item which can be used to favorite or unfavorite an insertable.
  */
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
-    const { favorite, insertable } = props;
+    const { favorite, insertable, defaultConfiguration } = props;
     const isFavorite = favorite !== undefined;
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
     const mutation = useUpdateFavoritesMutation();
@@ -175,7 +198,12 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
             color={operation === Operation.ADD ? undefined : "red"}
             onClick={() => {
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
+                mutation.mutate({
+                    operation,
+                    insertable,
+                    favoriteId,
+                    defaultConfiguration
+                });
             }}
         >
             {operation === Operation.ADD ? "Favorite" : "Unfavorite"}

@@ -135,6 +135,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         <FavoriteButton
                             favorite={favorite}
                             insertable={insertable}
+                            defaultConfiguration={canonicalConfiguration}
                             large
                         />
                     </RequireSignIn>
@@ -144,6 +145,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                             insertable={insertable}
                             inInsertMenu
                             configuration={configuration}
+                            canonicalConfiguration={canonicalConfiguration}
                         />
                     </MenuButton>
                 </Group>

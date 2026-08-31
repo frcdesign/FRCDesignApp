@@ -22,6 +22,11 @@ const addFavoriteQuery = z.object({
     id: z.string().min(1)
 });
 
+/** The configuration the favorite opens with, when it was made from one. */
+const addFavoriteBody = z.object({
+    defaultConfiguration: z.record(z.string(), z.string()).optional()
+});
+
 const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
 
 const defaultConfigurationBody = z.object({
@@ -78,10 +83,12 @@ favoriteRoutes.post(
     "/favorites" + libraryRoute(),
     requireSignInMiddleware,
     validate("query", addFavoriteQuery),
+    validate("json", addFavoriteBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
         const { insertableId, id: favoriteId } = c.req.valid("query");
+        const { defaultConfiguration } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
 
@@ -105,6 +112,7 @@ favoriteRoutes.post(
                 userId,
                 libraryId,
                 insertableId,
+                defaultConfiguration,
                 sortOrder: existingCount.length
             })
             .onConflictDoNothing();
