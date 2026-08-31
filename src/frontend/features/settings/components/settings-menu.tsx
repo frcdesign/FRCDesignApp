@@ -1,7 +1,8 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
-import { Divider, Group, Text, Title } from "@mantine/core";
-import { FontWeight } from "../../../lib/style-constants";
+import { Button, Divider, Group, Text, Title } from "@mantine/core";
+import { SignOutIcon } from "@phosphor-icons/react";
+import { FontWeight, IconSize } from "../../../lib/style-constants";
 import { Dispatch, ReactNode, useMemo } from "react";
 import { Theme } from "@backend/features/settings/settings";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
@@ -10,7 +11,12 @@ import { AccessLevel } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useSaveSettings } from "../settings";
 import { OpenUrlButton } from "../../../components/open-url-button";
-import { RequireAccessLevel, useAccessData } from "../../auth/access-level";
+import {
+    RequireAccessLevel,
+    RequireSignIn,
+    useAccessData
+} from "../../auth/access-level";
+import { startSignOut } from "../../auth/sign-out";
 import { useUiState } from "../../../lib/ui-state";
 import { FEEDBACK_FORM_URL } from "../../../lib/url";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
@@ -103,6 +109,22 @@ function UserSettings(): ReactNode {
             <SettingRow label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </SettingRow>
+            {/* Onshape owns the session the panel runs in, so signing out is
+                only the standalone app's to offer. */}
+            {!isConnected && (
+                <RequireSignIn>
+                    <SettingRow label="Onshape account">
+                        <Button
+                            leftSection={<SignOutIcon size={IconSize.SMALL} />}
+                            variant="light"
+                            color="red"
+                            onClick={startSignOut}
+                        >
+                            Sign out
+                        </Button>
+                    </SettingRow>
+                </RequireSignIn>
+            )}
         </>
     );
 }

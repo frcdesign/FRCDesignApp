@@ -17,6 +17,7 @@ import {
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import {
+    accessLevelKey,
     getSession,
     getSessionCompanyId,
     getSessionId,
@@ -130,10 +131,6 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
 
     c.set("signedIn", signedIn);
     return signedIn;
-}
-
-function accessLevelKey(sessionId: string): string {
-    return `access-level:${sessionId}`;
 }
 
 /** Returns the caller's access level, memoized in KV by session. */

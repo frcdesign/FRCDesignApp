@@ -1,7 +1,7 @@
 /** Session cookie plus the KV records it keys: the session and login state. */
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
-import { getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
@@ -38,6 +38,31 @@ export interface Session extends AuthTokens {
 /** Still `tokens:`, so sessions signed in before this held a userId survive. */
 function sessionKey(sessionId: string): string {
     return `tokens:${sessionId}`;
+}
+
+/** Keyed by session, so it is dropped along with one. */
+export function accessLevelKey(sessionId: string): string {
+    return `access-level:${sessionId}`;
+}
+
+/**
+ * Signs the caller out: the tokens and what was resolved from them go, and the
+ * cookie with them, so the next request is simply a stranger's.
+ */
+export async function endSession(c: AppContext): Promise<void> {
+    const sessionId = getCookie(c, SESSION_COOKIE);
+    if (sessionId) {
+        await Promise.all([
+            c.env.KV.delete(sessionKey(sessionId)),
+            c.env.KV.delete(accessLevelKey(sessionId))
+        ]);
+    }
+    // Matched to how it was set, or the browser keeps the cookie.
+    deleteCookie(c, SESSION_COOKIE, {
+        path: "/",
+        secure: true,
+        sameSite: "None"
+    });
 }
 
 export async function saveSession(
