@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Vendor, getVendorPartUrl, toVendor } from "./vendors";
+import { Vendor, getVendorPartUrl, parseVendor } from "./vendors";
 
 describe("getVendorPartUrl", () => {
     // Each vendor writes its own casing, and only some have a per-part page.
@@ -53,7 +53,7 @@ describe("toVendor", () => {
         ["", undefined],
         [undefined, undefined]
     ])("resolves %s", (text, expected) => {
-        expect(toVendor(text)).toBe(expected);
+        expect(parseVendor(text)).toBe(expected);
     });
 });
 

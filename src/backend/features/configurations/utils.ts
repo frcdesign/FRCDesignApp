@@ -16,8 +16,7 @@ import {
 import {
     Vendor,
     getVendorPartUrl,
-    parsePartNumberVendor,
-    toVendor
+    parseVendorFromPartNumber
 } from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
@@ -98,10 +97,11 @@ export function getPartUrl(
     if (record.description && /^https?:\/\//i.test(record.description)) {
         return record.description;
     }
-    const vendor =
-        parsePartNumberVendor(record.partNumber) ??
-        toVendor(record.vendor) ??
-        (vendors.length === 1 ? vendors[0] : undefined);
+    // WCP-123 -> WCP
+    let vendor = parseVendorFromPartNumber(record.partNumber);
+    if (!vendor && vendors.length === 1) {
+        vendor = vendors[0];
+    }
     return getVendorPartUrl(vendor, record.partNumber);
 }
 
