@@ -90,11 +90,14 @@ export function evaluateCondition(
  * The page for a part, in descending precision: a description that is already a
  * url, then the vendor the part number names, then the taggings standing in.
  */
+/** A description holding a link is the link, rather than a description. */
+const ABSOLUTE_URL = new RegExp("^https?://", "i");
+
 export function getPartUrl(
     record: PartMetadata,
     vendors: Vendor[] = []
 ): string | undefined {
-    if (record.description && /^https?:\/\//i.test(record.description)) {
+    if (record.description && ABSOLUTE_URL.test(record.description)) {
         return record.description;
     }
     // WCP-123 -> WCP

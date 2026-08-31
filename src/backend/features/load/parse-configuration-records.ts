@@ -31,6 +31,7 @@ import type {
 } from "../../lib/onshape/types";
 import { type LoadContext, getOnshapeApiFromContext } from "./context";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
+import { clean } from "../../lib/text";
 
 /** Configurations fetched per workflow step. */
 const BATCH_SIZE = 20;
@@ -59,8 +60,7 @@ export const INDEXING_ISSUE_TYPES = [
     BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED,
     BuildIssueType.MANUAL_INDEXING_REQUIRED,
     BuildIssueType.MULTIPLE_PARTS,
-    BuildIssueType.UNSTABLE_COMPOSITE,
-    BuildIssueType.NO_PART_NUMBER
+    BuildIssueType.UNSTABLE_COMPOSITE
 ];
 
 /** Whether to index an insertable, and how to flag it if we don't. */
@@ -105,12 +105,6 @@ export function decideIndexing(
         };
     }
     return { shouldIndex, buildIssues: [], configurations };
-}
-
-/** Trims a raw metadata value; a missing or blank one becomes `null`. */
-function normalizeText(value: string | undefined | null): string | undefined {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : undefined;
 }
 
 /** What a part studio's parts resolve to, before build issues are decided. */
@@ -170,11 +164,11 @@ export function parsePartStudioRecord(
     const part = evaluation.partToUse;
     return {
         configuration,
-        partNumber: normalizeText(part?.partNumber),
-        name: normalizeText(part?.name),
-        description: normalizeText(part?.description),
-        material: normalizeText(part?.material?.displayName),
-        vendor: normalizeText(part?.vendor),
+        partNumber: clean(part?.partNumber),
+        name: clean(part?.name),
+        description: clean(part?.description),
+        material: clean(part?.material?.displayName),
+        vendor: clean(part?.vendor),
         hasMultipleParts: evaluation.hasMultipleParts,
         isOpenComposite: evaluation.isOpenComposite
     };
@@ -192,10 +186,10 @@ const METADATA_FIELDS = {
 /** Reads a metadata property value as text; materials arrive as `{displayName}`. */
 function readMetadataValue(value: unknown): string | undefined {
     if (typeof value === "string") {
-        return normalizeText(value);
+        return clean(value);
     }
     if (value && typeof value === "object" && "displayName" in value) {
-        return normalizeText((value as { displayName?: string }).displayName);
+        return clean((value as { displayName?: string }).displayName);
     }
     return undefined;
 }

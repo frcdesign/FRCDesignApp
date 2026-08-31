@@ -1,3 +1,8 @@
+import { clean } from "../../lib/text";
+
+/** A part number's leading letters, which name the vendor that sells it. */
+const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
+
 /** The vendors an insertable can come from, and how they are displayed. */
 export enum Vendor {
     AM = "AM",
@@ -20,7 +25,7 @@ export enum Vendor {
  * either as its code or as its full name.
  */
 export function parseVendor(vendor: string | undefined): Vendor | undefined {
-    const text = vendor?.trim().toUpperCase();
+    const text = clean(vendor)?.toUpperCase();
     if (!text) {
         return undefined;
     }
@@ -38,7 +43,7 @@ export function parseVendor(vendor: string | undefined): Vendor | undefined {
 export function parseVendorFromPartNumber(
     partNumber: string | undefined
 ): Vendor | undefined {
-    return parseVendor(/^([A-Za-z]+)-/.exec(partNumber?.trim() ?? "")?.[1]);
+    return parseVendor(VENDOR_PREFIX.exec(clean(partNumber) ?? "")?.[1]);
 }
 
 /**
