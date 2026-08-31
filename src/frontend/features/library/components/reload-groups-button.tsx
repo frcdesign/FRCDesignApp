@@ -1,6 +1,6 @@
 import { Button } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { showInfoToast } from "../../../lib/notifications";
@@ -66,7 +66,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
         <Button
             variant="light"
             color={reloadAll ? "red" : "blue"}
-            leftSection={<ArrowsClockwise size={IconSize.SMALL} />}
+            leftSection={<ArrowsClockwiseIcon size={IconSize.SMALL} />}
             onClick={handleClick}
             loading={mutation.isPending}
         >

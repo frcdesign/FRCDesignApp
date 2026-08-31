@@ -1,6 +1,6 @@
 import { Box } from "@mantine/core";
 import { useAccessData } from "../../auth/access-level";
-import { HeartBreak } from "@phosphor-icons/react";
+import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { filterInsertables } from "../../search/filter";
@@ -43,7 +43,7 @@ export function FavoritesList(): ReactNode {
                 title="Failed to load favorites."
                 icon={
                     <Box
-                        component={HeartBreak}
+                        component={HeartBreakIcon}
                         size={IconSize.SECTION}
                         c="red"
                     />

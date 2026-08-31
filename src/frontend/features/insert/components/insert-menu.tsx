@@ -4,7 +4,7 @@ import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
-import { Info, Plus } from "@phosphor-icons/react";
+import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { MenuTitle } from "../../../components/app-title";
@@ -239,7 +239,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                leftSection={<Plus size={IconSize.SMALL} />}
+                leftSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >
@@ -257,7 +257,7 @@ function showSignInPreviewToast() {
     notifications.show({
         id: "sign-in-preview",
         color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
+        icon: <InfoIcon size={IconSize.MEDIUM} />,
         message: renderNotification(
             "Sign in to Onshape to see the configuration preview.",
             { text: "Sign in", onClick: startSignIn }

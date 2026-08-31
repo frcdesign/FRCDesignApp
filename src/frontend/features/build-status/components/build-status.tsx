@@ -12,13 +12,13 @@ import {
     Tooltip
 } from "@mantine/core";
 import {
-    Check,
-    Clock,
-    FileX,
-    Info,
-    Warning,
-    WarningOctagon,
-    X
+    CheckIcon,
+    ClockIcon,
+    FileXIcon,
+    InfoIcon,
+    WarningIcon,
+    WarningOctagonIcon,
+    XIcon
 } from "@phosphor-icons/react";
 import {
     ComponentPropsWithRef,
@@ -133,7 +133,7 @@ export function IssueIcon({
         case BuildIssueSeverity.ERROR:
             return (
                 <Box
-                    component={WarningOctagon}
+                    component={WarningOctagonIcon}
                     ref={ref}
                     size={IconSize.SMALL}
                     c="red"
@@ -143,7 +143,7 @@ export function IssueIcon({
         case BuildIssueSeverity.WARNING:
             return (
                 <Box
-                    component={Warning}
+                    component={WarningIcon}
                     ref={ref}
                     size={IconSize.SMALL}
                     c="yellow"
@@ -153,7 +153,7 @@ export function IssueIcon({
         case BuildIssueSeverity.INFO:
             return (
                 <Box
-                    component={Info}
+                    component={InfoIcon}
                     ref={ref}
                     size={IconSize.SMALL}
                     c="blue"
@@ -163,7 +163,7 @@ export function IssueIcon({
         case null:
             return (
                 <Box
-                    component={Check}
+                    component={CheckIcon}
                     ref={ref}
                     size={IconSize.SMALL}
                     c="green"
@@ -346,7 +346,7 @@ function LastModified({
                 c="dimmed"
                 style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             >
-                <Clock size={IconSize.TINY} />
+                <ClockIcon size={IconSize.TINY} />
                 <Text size="xs">
                     {!lastLoadedAt
                         ? "Unknown"
@@ -365,7 +365,7 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
                 size="sm"
                 variant="light"
                 color="green"
-                leftSection={<Check size={IconSize.TINY} />}
+                leftSection={<CheckIcon size={IconSize.TINY} />}
             >
                 All checks pass
             </Badge>
@@ -900,7 +900,7 @@ function ExcludedFromPropertiesIcon({
             events={{ hover: true, focus: true, touch: true }}
         >
             <Box
-                component={FileX}
+                component={FileXIcon}
                 size={IconSize.SMALL}
                 c="dimmed"
                 style={{ flexShrink: 0 }}
@@ -978,9 +978,9 @@ function ParsedRow({
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
-            <Box component={Check} size={IconSize.SMALL} c="green" />
+            <Box component={CheckIcon} size={IconSize.SMALL} c="green" />
         ) : (
-            <Box component={X} size={IconSize.SMALL} c="red" />
+            <Box component={XIcon} size={IconSize.SMALL} c="red" />
         );
     }
 

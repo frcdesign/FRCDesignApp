@@ -1,10 +1,10 @@
 import { Anchor, Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
-    ArrowSquareOut,
-    EyeSlash,
-    Gear,
-    Link,
-    Plus
+    ArrowSquareOutIcon,
+    EyeSlashIcon,
+    GearIcon,
+    LinkIcon,
+    PlusIcon
 } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { displayPartNumber } from "../../../lib/part-number";
@@ -49,13 +49,13 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     return (
         <>
             <Menu.Item
-                leftSection={<ArrowSquareOut size={IconSize.SMALL} />}
+                leftSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
-                leftSection={<Link size={IconSize.SMALL} />}
+                leftSection={<LinkIcon size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
@@ -106,14 +106,14 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
         <>
             {supportsFasten && (
                 <Menu.Item
-                    leftSection={<Plus size={IconSize.SMALL} />}
+                    leftSection={<PlusIcon size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
                 </Menu.Item>
             )}
             <Menu.Item
-                leftSection={<Plus size={IconSize.SMALL} />}
+                leftSection={<PlusIcon size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert
@@ -220,7 +220,7 @@ export function CardTitle(props: CardTitleProps) {
                 badge, dragging its open hover card out from under the cursor. */}
             {showHiddenTag && (
                 <Box
-                    component={EyeSlash}
+                    component={EyeSlashIcon}
                     size={IconSize.SMALL}
                     c="yellow"
                     alt="Hidden"
@@ -269,7 +269,7 @@ function CardPartNumber(props: {
             <Text component="span" inherit truncate miw={0}>
                 {text}
             </Text>
-            <ArrowSquareOut size={IconSize.TINY} />
+            <ArrowSquareOutIcon size={IconSize.TINY} />
         </Anchor>
     );
 }
@@ -343,7 +343,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
                         color="yellow"
-                        leftSection={<Gear size={IconSize.SMALL} />}
+                        leftSection={<GearIcon size={IconSize.SMALL} />}
                     >
                         Admin options
                     </Menu.Sub.Item>

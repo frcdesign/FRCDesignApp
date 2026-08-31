@@ -8,7 +8,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
 import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
@@ -120,9 +120,9 @@ function PartNumber({
                                 onClick={copy}
                             >
                                 {copied ? (
-                                    <Check size={IconSize.TINY} />
+                                    <CheckIcon size={IconSize.TINY} />
                                 ) : (
-                                    <Copy size={IconSize.TINY} />
+                                    <CopyIcon size={IconSize.TINY} />
                                 )}
                             </ActionIcon>
                         </Tooltip>
@@ -149,7 +149,7 @@ function PartNumber({
             <Text component="span" inherit truncate miw={0}>
                 {partNumber}
             </Text>
-            <ArrowSquareOut size={IconSize.TINY} />
+            <ArrowSquareOutIcon size={IconSize.TINY} />
         </Anchor>
     );
 }

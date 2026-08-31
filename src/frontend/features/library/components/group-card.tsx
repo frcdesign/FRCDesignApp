@@ -1,5 +1,10 @@
 import { Menu } from "@mantine/core";
-import { ArrowRight, Eye, EyeSlash, Trash } from "@phosphor-icons/react";
+import {
+    ArrowRightIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    TrashIcon
+} from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
@@ -58,7 +63,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                     }
                 />
             }
-            rightSection={<ArrowRight size={IconSize.SMALL} />}
+            rightSection={<ArrowRightIcon size={IconSize.SMALL} />}
             moreButton={false}
             menuItems={<GroupMenuItems group={group} />}
         />
@@ -132,7 +137,7 @@ function ShowAllElementsMenuItem({
     return (
         <Menu.Item
             color="blue"
-            leftSection={<Eye size={IconSize.SMALL} />}
+            leftSection={<EyeIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
             Show all elements
@@ -149,7 +154,7 @@ function HideAllElementsMenuItem({
     return (
         <Menu.Item
             color="red"
-            leftSection={<EyeSlash size={IconSize.SMALL} />}
+            leftSection={<EyeSlashIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
             Hide all elements
@@ -174,7 +179,7 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
 
     return (
         <Menu.Item
-            leftSection={<Trash size={IconSize.SMALL} />}
+            leftSection={<TrashIcon size={IconSize.SMALL} />}
             color="red"
             onClick={() => mutation.mutate()}
         >

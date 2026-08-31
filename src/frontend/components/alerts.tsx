@@ -1,6 +1,6 @@
 import { modals } from "@mantine/modals";
 import { Box, Text } from "@mantine/core";
-import { Warning } from "@phosphor-icons/react";
+import { WarningIcon } from "@phosphor-icons/react";
 import { AppTitle } from "./app-title";
 import { IconSize } from "../lib/style-constants";
 
@@ -14,7 +14,11 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
         title: (
             <AppTitle
                 icon={
-                    <Box component={Warning} fz={IconSize.MEDIUM} c="yellow" />
+                    <Box
+                        component={WarningIcon}
+                        fz={IconSize.MEDIUM}
+                        c="yellow"
+                    />
                 }
                 title={props.title}
             />

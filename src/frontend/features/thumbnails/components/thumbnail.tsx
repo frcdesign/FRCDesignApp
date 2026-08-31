@@ -8,7 +8,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { ThumbnailSize } from "@backend/features/thumbnails/types";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
-import { Question } from "@phosphor-icons/react";
+import { QuestionIcon } from "@phosphor-icons/react";
 
 import { ComponentPropsWithRef, ReactNode, useState } from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
@@ -126,7 +126,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     let content;
     if (url === undefined || imageQuery.isError) {
-        content = <Question size={spinnerSize} />;
+        content = <QuestionIcon size={spinnerSize} />;
     } else if (imageQuery.isPending) {
         content = <Loader size={spinnerSize} />;
     } else {

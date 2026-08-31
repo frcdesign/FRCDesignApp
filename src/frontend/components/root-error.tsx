@@ -3,7 +3,7 @@ import { PageError } from "./app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
-import { House } from "@phosphor-icons/react";
+import { HouseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
@@ -50,7 +50,7 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
-            leftSection={<House size={IconSize.MEDIUM} />}
+            leftSection={<HouseIcon size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({
                     to: "/app/library/$libraryId",

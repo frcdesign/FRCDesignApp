@@ -1,5 +1,5 @@
 import { ActionIcon, Box, Menu } from "@mantine/core";
-import { Heart, HeartBreak } from "@phosphor-icons/react";
+import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
@@ -120,12 +120,12 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     let favoriteIcon;
     if (isHovered) {
         favoriteIcon = isFavorite ? (
-            <HeartBrokenIcon size={iconSize} />
+            <UnfavoriteIcon size={iconSize} />
         ) : (
-            <HeartIcon size={iconSize} />
+            <FavoriteIcon size={iconSize} />
         );
     } else {
-        favoriteIcon = <HeartIcon full={isFavorite} size={iconSize} />;
+        favoriteIcon = <FavoriteIcon full={isFavorite} size={iconSize} />;
     }
 
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
@@ -167,9 +167,9 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
         <Menu.Item
             leftSection={
                 operation === Operation.ADD ? (
-                    <HeartIcon />
+                    <FavoriteIcon />
                 ) : (
-                    <HeartBrokenIcon />
+                    <UnfavoriteIcon />
                 )
             }
             color={operation === Operation.ADD ? undefined : "red"}
@@ -183,7 +183,7 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     );
 }
 
-interface HeartIconProps {
+interface FavoriteIconProps {
     /**
      * @default true
      */
@@ -194,25 +194,25 @@ interface HeartIconProps {
     size?: IconSize;
 }
 
-export function HeartIcon(props: HeartIconProps): ReactNode {
+export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
     const { full = true, size = IconSize.SMALL } = props;
     // fz, not size: Box builds its own `style`, dropping the font-size that
     // Phosphor's `size` sets, which shrank the icon to 1em.
     return full ? (
-        <Box component={Heart} fz={size} c="red" weight="fill" />
+        <Box component={HeartIcon} fz={size} c="red" weight="fill" />
     ) : (
-        <Heart size={size} />
+        <HeartIcon size={size} />
     );
 }
 
-interface HeartBrokenIconProps {
+interface UnfavoriteIconProps {
     /**
      * @default IconSize.SMALL
      */
     size?: IconSize;
 }
 
-export function HeartBrokenIcon(props: HeartBrokenIconProps): ReactNode {
+export function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
-    return <Box component={HeartBreak} fz={size} c="red" />;
+    return <Box component={HeartBreakIcon} fz={size} c="red" />;
 }

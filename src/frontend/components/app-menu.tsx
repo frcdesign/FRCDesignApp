@@ -1,6 +1,6 @@
 import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
-import { DotsThree } from "@phosphor-icons/react";
+import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 
 interface AppContextMenuProps {
@@ -82,7 +82,9 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
                 title="View options"
                 onClick={(e) => e.stopPropagation()}
             >
-                <DotsThree size={large ? IconSize.CONTROL : IconSize.MEDIUM} />
+                <DotsThreeIcon
+                    size={large ? IconSize.CONTROL : IconSize.MEDIUM}
+                />
             </ActionIcon>
         </AppContextMenu>
     );

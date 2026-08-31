@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Accordion, Badge } from "@mantine/core";
 import { AppTitle } from "../../../../components/app-title";
-import { Books, MagnifyingGlass } from "@phosphor-icons/react";
+import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
@@ -12,7 +12,7 @@ import {
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../features/library/components/card-components";
-import { HeartIcon } from "../../../../features/favorites/components/favorite-button";
+import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
 import {
     SectionError,
@@ -60,7 +60,7 @@ function HomeList(): ReactNode {
     if (isSignedIn) {
         sections.push({
             value: "favorites",
-            icon: <HeartIcon size={IconSize.MEDIUM} />,
+            icon: <FavoriteIcon size={IconSize.MEDIUM} />,
             title: <AppTitle title="Favorites" />,
             panel: <FavoritesList />,
             opened: uiState.isFavoritesOpen,
@@ -75,7 +75,7 @@ function HomeList(): ReactNode {
             ? {
                   value: "search",
                   icon: (
-                      <MagnifyingGlass
+                      <MagnifyingGlassIcon
                           size={IconSize.MEDIUM}
                           color={PrimaryColor.FILLED}
                       />
@@ -93,7 +93,7 @@ function HomeList(): ReactNode {
             : {
                   value: "library",
                   icon: (
-                      <Books
+                      <BooksIcon
                           size={IconSize.MEDIUM}
                           color={PrimaryColor.FILLED}
                       />

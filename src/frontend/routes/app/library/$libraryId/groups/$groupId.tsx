@@ -7,7 +7,11 @@ import {
     useParams
 } from "@tanstack/react-router";
 import { Box, Button, Group } from "@mantine/core";
-import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    ArrowUUpLeftIcon,
+    WarningIcon
+} from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
@@ -69,7 +73,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        leftSection={<ArrowUUpLeft size={IconSize.SMALL} />}
+                        leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
                                 to: "/app/library/$libraryId",
@@ -132,7 +136,7 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
         >
             <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
-                    icon={<ArrowLeft size={IconSize.MEDIUM} />}
+                    icon={<ArrowLeftIcon size={IconSize.MEDIUM} />}
                     title={group.name}
                 />
                 <MenuButton>{menuItems}</MenuButton>
@@ -182,7 +186,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
             <SectionError
                 icon={
                     <Box
-                        component={Warning}
+                        component={WarningIcon}
                         size={IconSize.SECTION}
                         c="yellow"
                     />

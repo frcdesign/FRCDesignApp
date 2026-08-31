@@ -35,7 +35,7 @@ describe("processTerm", () => {
 
 describe("tokenize", () => {
     it("splits on punctuation, keeping the words whole", () => {
-        expect(tokenize('1" Linear (REV)')).toEqual(["1", "Linear", "REV"]);
+        expect(tokenize('1" Linear (REV)')).toEqual(['1"', "Linear", "REV"]);
         expect(tokenize("10-32 Bearings & Bushings #X-Contact")).toEqual([
             "10",
             "32",
@@ -73,6 +73,21 @@ describe("tokenize", () => {
 
     it("canonicalizes a fraction inside a name", () => {
         expect(tokenize("1/2 Bearing")).toEqual(["0.5", "Bearing"]);
+    });
+
+    // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
+    it("keeps an inch mark on the number it measures", () => {
+        expect(tokenize('1" Hex Shaft')).toEqual(['1"', "Hex", "Shaft"]);
+        expect(tokenize('1/2" Hex')).toEqual(['0.5"', "Hex"]);
+        expect(tokenize('Bearing 1"')).toEqual(["Bearing", '1"']);
+    });
+
+    it("still drops quotes that quote something", () => {
+        expect(tokenize('The "Long" Bracket')).toEqual([
+            "The",
+            "Long",
+            "Bracket"
+        ]);
     });
 });
 
@@ -196,6 +211,53 @@ describe("doSearch configuration matching", () => {
     });
 });
 
+// A bare `1` prefix-matches every 1.5", 10-32 and 16T in the library; typing
+// the inch mark is how a user says they mean one inch exactly.
+describe("doSearch inch sizes", () => {
+    const names = [
+        '1" Hex Shaft',
+        '1/2" Hex Shaft',
+        '1.5" Spacer',
+        "10-32 Screw",
+        "16T Pulley"
+    ];
+
+    /** One library holding all of `names`, so a query has to choose. */
+    function sizeLibrary(): LibraryOut {
+        const base = library();
+        const template = base.insertables.i1;
+        base.insertables = {};
+        base.groups.g1.insertableOrder = names.map((name, index) => {
+            const id = "size" + index;
+            base.insertables[id] = { ...template, id, name };
+            return id;
+        });
+        return base;
+    }
+
+    const searchDb = buildSearchDb(sizeLibrary());
+    const namesFor = (query: string) =>
+        search(searchDb, query).hits.map(
+            (hit) => names[Number(hit.id.slice("size".length))]
+        );
+
+    it("matches only the parts measured in that size", () => {
+        expect(namesFor('1"')).toEqual(['1" Hex Shaft']);
+    });
+
+    it("finds a fractional size by its decimal form", () => {
+        expect(namesFor('.5"')).toEqual(['1/2" Hex Shaft']);
+    });
+
+    // Without the mark there is nothing to say 1 is a size, so it stays a
+    // prefix — of 1.5, 10 and 16 alike, but not of the 1/2 stored as 0.5.
+    it("leaves a bare number matching every number it starts", () => {
+        expect(namesFor("1").sort()).toEqual(
+            ['1" Hex Shaft', '1.5" Spacer', "10-32 Screw", "16T Pulley"].sort()
+        );
+    });
+});
+
 describe("doSearch highlighting", () => {
     /** The characters `positions` underline, merged the way applyRanges does. */
     function highlighted(text: string, positions: Position[]): string {
@@ -228,6 +290,10 @@ describe("doSearch highlighting", () => {
 
     it("underlines a prefix of a later word", () => {
         expect(highlightFor("Motor Mount", "mou")).toBe("Mou");
+    });
+
+    it("underlines the inch mark along with its number", () => {
+        expect(highlightFor('1" Hex Shaft', '1"')).toBe('1"');
     });
 
     it("matches terms literally rather than as patterns", () => {

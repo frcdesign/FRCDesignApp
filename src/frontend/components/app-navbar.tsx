@@ -10,7 +10,7 @@ import {
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { Gear, MagnifyingGlass } from "@phosphor-icons/react";
+import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
     CHROME_BACKGROUND,
@@ -213,7 +213,7 @@ export function SettingsButton() {
             size="lg"
             onClick={() => openSettingsMenu()}
         >
-            <Gear size={IconSize.MEDIUM} />
+            <GearIcon size={IconSize.MEDIUM} />
         </ActionIcon>
     );
 }
@@ -250,7 +250,7 @@ export function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={uiState.searchQuery ?? ""}

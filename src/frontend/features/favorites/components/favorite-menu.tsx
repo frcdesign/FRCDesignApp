@@ -2,7 +2,7 @@ import { modals } from "@mantine/modals";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { MenuTitle } from "../../../components/app-title";
 import { Button } from "@mantine/core";
-import { FloppyDisk } from "@phosphor-icons/react";
+import { FloppyDiskIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { showErrorToast, showSuccessToast } from "../../../lib/notifications";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { ConfigurationWrapper } from "../../insert/components/configurations";
 import type { FavoritesData } from "@backend/features/favorites/contract";
-import { HeartIcon } from "./favorite-button";
+import { FavoriteIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {
     ParameterValues,
@@ -70,7 +70,7 @@ export function FavoriteMenuContent(
                 <MenuTitle
                     name={insertableName}
                     record={record}
-                    icon={<HeartIcon size={IconSize.MEDIUM} />}
+                    icon={<FavoriteIcon size={IconSize.MEDIUM} />}
                 />
             )
         });
@@ -150,7 +150,7 @@ export function FavoriteMenuContent(
             <AppModalFooter>
                 <Button
                     ml="auto"
-                    leftSection={<FloppyDisk size={IconSize.SMALL} />}
+                    leftSection={<FloppyDiskIcon size={IconSize.SMALL} />}
                     // Saving before the wrapper reports would store {}, wiping
                     // the favorite's configuration.
                     disabled={!canonicalConfiguration}

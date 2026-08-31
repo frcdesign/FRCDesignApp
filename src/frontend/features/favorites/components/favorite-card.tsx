@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { queryClient } from "../../../lib/query-client";
 import { Menu } from "@mantine/core";
-import { Pencil } from "@phosphor-icons/react";
+import { PencilIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
@@ -127,7 +127,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 </>
             )}
             <Menu.Item
-                leftSection={<Pencil size={IconSize.SMALL} />}
+                leftSection={<PencilIcon size={IconSize.SMALL} />}
                 onClick={() => {
                     if (!insertable.isConfigurable) {
                         openCannotEditDefaultConfigurationAlert();

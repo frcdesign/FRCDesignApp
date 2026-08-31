@@ -1,6 +1,6 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
-import { CheckCircle, Info, XCircle } from "@phosphor-icons/react";
+import { CheckCircleIcon, InfoIcon, XCircleIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 import { Group, Button } from "@mantine/core";
 
@@ -88,7 +88,7 @@ export function showInfoToast(
 ): string {
     return showToast({
         color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
+        icon: <InfoIcon size={IconSize.MEDIUM} />,
         message,
         ...options
     });
@@ -109,7 +109,7 @@ export function showSuccessToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "green",
-        icon: <CheckCircle size={IconSize.MEDIUM} />,
+        icon: <CheckCircleIcon size={IconSize.MEDIUM} />,
         message
     });
 }
@@ -118,7 +118,7 @@ export function showErrorToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "red",
-        icon: <XCircle size={IconSize.MEDIUM} />,
+        icon: <XCircleIcon size={IconSize.MEDIUM} />,
         message
     });
 }

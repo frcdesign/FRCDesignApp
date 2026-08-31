@@ -1,9 +1,9 @@
 import { Menu } from "@mantine/core";
 import {
-    CaretDoubleDown,
-    CaretDoubleUp,
-    CaretDown,
-    CaretUp
+    CaretDoubleDownIcon,
+    CaretDoubleUpIcon,
+    CaretDownIcon,
+    CaretUpIcon
 } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { type ReactNode } from "react";
@@ -32,7 +32,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
         <>
             {operations.includes(MoveOperation.MOVE_UP) && (
                 <Menu.Item
-                    leftSection={<CaretUp size={IconSize.SMALL} />}
+                    leftSection={<CaretUpIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(id, order, MoveOperation.MOVE_UP)
@@ -44,7 +44,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_DOWN) && (
                 <Menu.Item
-                    leftSection={<CaretDown size={IconSize.SMALL} />}
+                    leftSection={<CaretDownIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -60,7 +60,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_TOP) && (
                 <Menu.Item
-                    leftSection={<CaretDoubleUp size={IconSize.SMALL} />}
+                    leftSection={<CaretDoubleUpIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -76,7 +76,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
                 <Menu.Item
-                    leftSection={<CaretDoubleDown size={IconSize.SMALL} />}
+                    leftSection={<CaretDoubleDownIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(

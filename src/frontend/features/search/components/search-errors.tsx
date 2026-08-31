@@ -1,5 +1,9 @@
 import { Alert, Box, Button, Group, Text } from "@mantine/core";
-import { HeartBreak, Info, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+    HeartBreakIcon,
+    InfoIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
@@ -40,7 +44,7 @@ function Callout(props: { text: string; action: ReactNode }): ReactNode {
         <Alert
             color="blue"
             p="xs"
-            icon={<Info size={IconSize.MEDIUM} />}
+            icon={<InfoIcon size={IconSize.MEDIUM} />}
             styles={{ body: { minWidth: 0 } }}
         >
             <Group justify="space-between" wrap="nowrap" gap="sm">
@@ -89,12 +93,12 @@ export function NoSearchResultError(
     const icon =
         objectLabel === "search result" ? (
             <Box
-                component={MagnifyingGlass}
+                component={MagnifyingGlassIcon}
                 size={IconSize.SECTION}
                 c="yellow"
             />
         ) : (
-            <Box component={HeartBreak} size={IconSize.SECTION} c="red" />
+            <Box component={HeartBreakIcon} size={IconSize.SECTION} c="red" />
         );
 
     if (filtered.byGroup > 0) {
@@ -141,7 +145,7 @@ function SearchAllButton(props: SearchAllButtonProps): ReactNode {
     const small = props.small ?? false;
     return (
         <Button
-            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             // Small means inside the callout, where a filled button would
             // shout over the note it sits in.
             variant={small ? "default" : undefined}

@@ -98,9 +98,14 @@ export function normalizeForMatch(text: string): string {
 export function tokenize(text: string): string[] {
     // Canonicalize before splitting: fractions span `/` and `-`. Casing stays,
     // since processTerm splits on camelCase.
-    return canonicalizeNumbers(text)
-        .split(/[-()"'#&\s^/]+/)
-        .filter(Boolean);
+    return (
+        canonicalizeNumbers(text)
+            // An inch mark stays on its number and ends the token, so `1"` is a
+            // size of its own rather than a prefix of `1.5`, `10`, and `16t`.
+            .replace(/(\d")/g, `$1${deliminator}`)
+            .split(/(?<!\d)"|[-()'#&\s^/]+/)
+            .filter(Boolean)
+    );
 }
 
 export interface SearchDocument {
