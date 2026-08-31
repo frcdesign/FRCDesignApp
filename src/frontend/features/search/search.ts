@@ -191,12 +191,31 @@ interface RecordMatch {
     score: number;
 }
 
-/** Query terms the value covers, prefix-matched the way the index searches. */
+/**
+ * How well one term is answered: a term matched whole beats one matched as a
+ * prefix, which every longer number satisfies too — `1` names the size `1"`,
+ * but only starts `16`.
+ */
+function termScore(valueTerms: string[], queryTerm: string): number {
+    // A unit is not part of the number's spelling, so `1` still names `1"`.
+    if (
+        valueTerms.includes(queryTerm) ||
+        valueTerms.includes(queryTerm + '"')
+    ) {
+        return 2;
+    }
+    return valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
+        ? 1
+        : 0;
+}
+
+/** How much of the query the value covers, term by term. */
 function coveredTerms(value: string, queryTerms: string[]): number {
     const valueTerms = tokenize(value).map((term) => term.toLowerCase());
-    return queryTerms.filter((queryTerm) =>
-        valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
-    ).length;
+    return queryTerms.reduce(
+        (score, queryTerm) => score + termScore(valueTerms, queryTerm),
+        0
+    );
 }
 
 /**
@@ -216,7 +235,10 @@ function matchScore(
     } else if (value.includes(normalizedQuery)) {
         whole = 1;
     }
-    return whole * (queryTerms.length + 1) + coveredTerms(value, queryTerms);
+    // Outweighs full term coverage, which is worth 2 a term.
+    return (
+        whole * (2 * queryTerms.length + 1) + coveredTerms(value, queryTerms)
+    );
 }
 
 /**

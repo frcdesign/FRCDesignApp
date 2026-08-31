@@ -75,6 +75,23 @@ describe("tokenize", () => {
         expect(tokenize("1/2 Bearing")).toEqual(["0.5", "Bearing"]);
     });
 
+    it("spells a size's unit as the mark, however it was written", () => {
+        for (const size of ['1"', "1in", "1 in", "1 inch", "1 inches"]) {
+            expect(tokenize(size + " Standoff")).toEqual(['1"', "Standoff"]);
+        }
+        expect(tokenize("1/2 in Standoff")).toEqual(['0.5"', "Standoff"]);
+    });
+
+    // Only a unit is folded away; a word that merely starts with it is a word.
+    it("leaves a word beginning with the unit alone", () => {
+        expect(tokenize("8 in-line Insert")).toEqual([
+            "8",
+            "in",
+            "line",
+            "Insert"
+        ]);
+    });
+
     // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
     it("keeps an inch mark on the number it measures", () => {
         expect(tokenize('1" Hex Shaft')).toEqual(['1"', "Hex", "Shaft"]);
@@ -255,6 +272,38 @@ describe("doSearch inch sizes", () => {
         expect(namesFor("1").sort()).toEqual(
             ['1" Hex Shaft', '1.5" Spacer', "10-32 Screw", "16T Pulley"].sort()
         );
+    });
+});
+
+// A part number carries digits of its own, so `1` prefix-matches a segment of
+// every one of them; the size in the name is what the query actually named.
+describe("doSearch size matching", () => {
+    const searchDb = buildSearchDb(library("Hex Standoff"), {
+        i1: [
+            record("TTB-0016-025", { length: "0.25 in" }, '0.25" Hex Standoff'),
+            record("TTB-0016-050", { length: "0.5 in" }, '0.5" Hex Standoff'),
+            record("TTB-0016-100", { length: "1 in" }, '1" Hex Standoff')
+        ]
+    });
+
+    it.each(["1", '1"', "1 in", "1 standoff"])(
+        "picks the 1 inch configuration for %s",
+        (query) => {
+            const { hits } = search(searchDb, query);
+            expect(hits[0].partName).toBe('1" Hex Standoff');
+            expect(hits[0].configuration).toEqual({ length: "1 in" });
+        }
+    );
+
+    it("still picks the smaller size when that is what was asked for", () => {
+        const { hits } = search(searchDb, ".25 standoff");
+        expect(hits[0].partName).toBe('0.25" Hex Standoff');
+    });
+
+    // Nothing in the query distinguishes one, so the default still leads.
+    it("keeps the default when no size is named", () => {
+        const { hits } = search(searchDb, "hex standoff");
+        expect(hits[0].partName).toBe('0.25" Hex Standoff');
     });
 });
 
