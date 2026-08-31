@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import MiniSearch from "minisearch";
 import {
     buildSearchDb,
-    processTerm,
-    tokenize,
     type SearchDocument
 } from "@backend/features/search/search-index";
 import { doSearch, type Position } from "./search";
@@ -24,72 +22,6 @@ const record = (
 /** Hidden insertables shown: these tests are about matching, not visibility. */
 const search = (searchDb: MiniSearch<SearchDocument>, query: string) =>
     doSearch(searchDb, query, undefined, undefined, true);
-
-describe("processTerm", () => {
-    it.each(["MAXSpline", "MaxSpline"])("splits %s into its words", (term) => {
-        expect(processTerm(term)).toEqual(
-            expect.arrayContaining(["max", "spline", "maxspline"])
-        );
-    });
-});
-
-describe("tokenize", () => {
-    it("splits on punctuation, keeping the words whole", () => {
-        expect(tokenize('1" Linear (REV)')).toEqual(['1"', "Linear", "REV"]);
-        expect(tokenize("10-32 Bearings & Bushings #X-Contact")).toEqual([
-            "10",
-            "32",
-            "Bearings",
-            "Bushings",
-            "X",
-            "Contact"
-        ]);
-    });
-
-    it("canonicalizes fractions and decimals to a 2-dp decimal", () => {
-        expect(tokenize("1/2")).toEqual(["0.5"]);
-        expect(tokenize(".5")).toEqual(["0.5"]);
-        expect(tokenize("0.50")).toEqual(["0.5"]);
-        expect(tokenize("3/4")).toEqual(["0.75"]);
-        expect(tokenize("1-1/2")).toEqual(["1.5"]);
-        expect(tokenize("1.5")).toEqual(["1.5"]);
-        expect(tokenize("1/3")).toEqual(["0.33"]);
-    });
-
-    it("keeps a leading-zero part segment out of a mixed number", () => {
-        // "0016" numbers the part; only the "5/32" is a size.
-        expect(tokenize("TTB-0016-5/32")).toEqual(["TTB", "16", "0.16"]);
-    });
-
-    it("drops leading zeros so either spelling of a segment matches", () => {
-        expect(tokenize("TTB-0016")).toEqual(["TTB", "16"]);
-        expect(tokenize("TTB-16")).toEqual(["TTB", "16"]);
-    });
-
-    it("leaves thread specs and part numbers untouched", () => {
-        expect(tokenize("10-32")).toEqual(["10", "32"]);
-        expect(tokenize("217-2600")).toEqual(["217", "2600"]);
-    });
-
-    it("canonicalizes a fraction inside a name", () => {
-        expect(tokenize("1/2 Bearing")).toEqual(["0.5", "Bearing"]);
-    });
-
-    // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
-    it("keeps an inch mark on the number it measures", () => {
-        expect(tokenize('1" Hex Shaft')).toEqual(['1"', "Hex", "Shaft"]);
-        expect(tokenize('1/2" Hex')).toEqual(['0.5"', "Hex"]);
-        expect(tokenize('Bearing 1"')).toEqual(["Bearing", '1"']);
-    });
-
-    it("still drops quotes that quote something", () => {
-        expect(tokenize('The "Long" Bracket')).toEqual([
-            "The",
-            "Long",
-            "Bracket"
-        ]);
-    });
-});
 
 function library(name = "Bracket"): LibraryOut {
     return {
@@ -290,6 +222,49 @@ describe("doSearch size matching", () => {
     });
 });
 
+// A part number is a code: it retrieves its part whole, by either half, and
+// with the zeros and separators it was written with.
+describe("doSearch part numbers", () => {
+    const searchDb = buildSearchDb(library("Hex Standoff"), {
+        i1: [
+            record("WCP-1025", {}, "Standoff"),
+            record("TTB-0016-5/32", { size: "small" }, "Small Standoff")
+        ]
+    });
+
+    it.each(["WCP-1025", "wcp-1025", "WCP", "1025"])(
+        "finds the part by %s",
+        (query) => {
+            const { hits } = search(searchDb, query);
+            expect(hits[0]?.id).toBe("i1");
+        }
+    );
+
+    it("keeps the zeros a segment was written with", () => {
+        expect(search(searchDb, "0016").hits[0]?.partNumber).toBe(
+            "TTB-0016-5/32"
+        );
+    });
+
+    it("picks the record whose number was typed out in full", () => {
+        expect(search(searchDb, "WCP-1025").hits[0].partNumber).toBe(
+            "WCP-1025"
+        );
+        expect(search(searchDb, "TTB-0016-5/32").hits[0].partNumber).toBe(
+            "TTB-0016-5/32"
+        );
+    });
+
+    // The placeholder never reaches the index, so it matches nothing rather
+    // than every part an admin left it on.
+    it("returns nothing for the placeholder", () => {
+        const withPlaceholders = buildSearchDb(library("Spacer"), {
+            i1: [record("N/A", {}, "Spacer")]
+        });
+        expect(search(withPlaceholders, "n/a").hits).toEqual([]);
+    });
+});
+
 describe("doSearch highlighting", () => {
     /** The characters `positions` underline, merged the way applyRanges does. */
     function highlighted(text: string, positions: Position[]): string {
@@ -356,8 +331,8 @@ describe("doSearch highlighting", () => {
             ).toBe("217");
         });
 
-        // The segment after a leading-zero one used to be folded into a mixed
-        // number, leaving nothing in the text for the query to underline.
+        // A part number is indexed as typed, so the whole of what was typed
+        // is there in the text to underline, dash and zeros included.
         it("underlines a leading-zero segment of the part number", () => {
             const { hits } = search(
                 buildSearchDb(library(), {
@@ -370,7 +345,7 @@ describe("doSearch highlighting", () => {
                     hits[0].partNumber!,
                     hits[0].partNumberPositions ?? []
                 )
-            ).toBe("TTB0016");
+            ).toBe("TTB-0016");
         });
 
         it("underlines the typed prefix of the part name", () => {
