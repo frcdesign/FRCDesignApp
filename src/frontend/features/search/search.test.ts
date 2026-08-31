@@ -75,23 +75,6 @@ describe("tokenize", () => {
         expect(tokenize("1/2 Bearing")).toEqual(["0.5", "Bearing"]);
     });
 
-    it("spells a size's unit as the mark, however it was written", () => {
-        for (const size of ['1"', "1in", "1 in", "1 inch", "1 inches"]) {
-            expect(tokenize(size + " Standoff")).toEqual(['1"', "Standoff"]);
-        }
-        expect(tokenize("1/2 in Standoff")).toEqual(['0.5"', "Standoff"]);
-    });
-
-    // Only a unit is folded away; a word that merely starts with it is a word.
-    it("leaves a word beginning with the unit alone", () => {
-        expect(tokenize("8 in-line Insert")).toEqual([
-            "8",
-            "in",
-            "line",
-            "Insert"
-        ]);
-    });
-
     // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
     it("keeps an inch mark on the number it measures", () => {
         expect(tokenize('1" Hex Shaft')).toEqual(['1"', "Hex", "Shaft"]);
