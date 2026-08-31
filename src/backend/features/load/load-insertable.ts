@@ -117,11 +117,7 @@ export async function loadInsertable(
 
     const buildIssues = addBuildIssue(
         hasParts
-            ? checkInsertable({
-                  vendors,
-                  thumbnailUrls,
-                  probes: [recordsResult.partMetadata, ...recordsResult.records]
-              })
+            ? checkInsertable({ vendors, thumbnailUrls })
             : parts.buildIssues,
         ...recordsResult.buildIssues,
         ...indexing.buildIssues

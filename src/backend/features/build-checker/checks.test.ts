@@ -5,7 +5,6 @@ import { BuildIssueType } from "./issues";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { thumbnailUrl } from "../thumbnails/keys";
 import { checkGroup, checkInsertable } from "./checks";
-import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
 /** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
@@ -56,14 +55,10 @@ describe("checkGroup", () => {
     });
 });
 
-/** Only the part number matters to these checks. */
-const record = (partNumber?: string) => configurationRecord({ partNumber });
-
 describe("checkInsertable", () => {
     const HEALTHY_INSERTABLE = {
         vendors: [Vendor.REV],
-        thumbnailUrls: THUMBNAILS,
-        probes: [record("217-2600")]
+        thumbnailUrls: THUMBNAILS
     };
 
     it("returns no issues when vendors are parsed and thumbnails generated", () => {
@@ -84,37 +79,5 @@ describe("checkInsertable", () => {
             thumbnailUrls: null
         });
         expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_FAILED }]);
-    });
-
-    it("warns when a vendor part indexed without a part number", () => {
-        const issues = checkInsertable({
-            ...HEALTHY_INSERTABLE,
-            probes: [record(), record()]
-        });
-        expect(issues).toEqual([{ type: BuildIssueType.NO_PART_NUMBER }]);
-    });
-
-    it("does not warn when only some configurations lack one", () => {
-        const issues = checkInsertable({
-            ...HEALTHY_INSERTABLE,
-            probes: [record(), record("217-2600")]
-        });
-        expect(issues).toEqual([]);
-    });
-
-    // Nobody sells it, so having no part number is the expected state.
-    it("does not warn about a custom part", () => {
-        const issues = checkInsertable({
-            ...HEALTHY_INSERTABLE,
-            vendors: [Vendor.CUSTOM],
-            probes: [record()]
-        });
-        expect(issues).toEqual([]);
-    });
-
-    // Nothing was probed, so there is nothing to conclude.
-    it("does not warn when the insertable is not indexed", () => {
-        const issues = checkInsertable({ ...HEALTHY_INSERTABLE, probes: [] });
-        expect(issues).toEqual([]);
     });
 });

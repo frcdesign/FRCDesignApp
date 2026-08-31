@@ -39,7 +39,6 @@ import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-feature
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
-import { checkIndexedPartNumber } from "../../build-checker/checks";
 
 export const insertableRoutes = getApp();
 
@@ -165,12 +164,7 @@ insertableRoutes.post(
         const buildIssues = addBuildIssue(
             clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
             ...indexed.buildIssues,
-            ...indexing.buildIssues,
-            // Vendors are read, not re-derived: the load path wrote them.
-            ...checkIndexedPartNumber(row.vendors, [
-                indexed.partMetadata,
-                ...indexed.records
-            ])
+            ...indexing.buildIssues
         );
 
         // A configurations row exists exactly when the insertable is configurable.

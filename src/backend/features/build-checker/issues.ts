@@ -21,7 +21,6 @@ export enum BuildIssueType {
     THUMBNAIL_FAILED = "thumbnail-failed",
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
-    NO_PART_NUMBER = "no-part-number",
     NO_PARTS = "no-parts",
     NO_UNHIDDEN_INSERTABLES = "no-unhidden-insertables",
     CONFIGURATION_LIMIT_EXCEEDED = "configuration-limit-exceeded",
@@ -43,7 +42,6 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
-    | BuildIssueOf<BuildIssueType.NO_PART_NUMBER>
     | BuildIssueOf<BuildIssueType.NO_PARTS>
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED>
@@ -62,8 +60,6 @@ export function getIssueDescription(issue: BuildIssue): string {
             return "No thumbnail tab set";
         case BuildIssueType.NO_VENDORS:
             return "No vendors could be parsed";
-        case BuildIssueType.NO_PART_NUMBER:
-            return "No part number in any configuration, though a vendor sells this";
         case BuildIssueType.NO_PARTS:
             return "This part studio has no parts";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
@@ -97,7 +93,6 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
-        case BuildIssueType.NO_PART_NUMBER:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;
