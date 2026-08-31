@@ -9,7 +9,7 @@ import {
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
-import { useUiState } from "../../lib/ui-state";
+import { useGetUiState } from "../../lib/ui-state";
 
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: AccessLevel.USER,
@@ -45,7 +45,7 @@ export interface ResolvedAccessData extends AccessData {
 export function useAccessData(): ResolvedAccessData {
     const { data, isPending } = useQuery(getAccessDataQuery());
     const serverData = data ?? DEFAULT_ACCESS_DATA;
-    const chosenLevel = useUiState()[0].accessLevel;
+    const chosenLevel = useGetUiState().accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
         // A stored choice can outlive the access that allowed it; clamp to max.

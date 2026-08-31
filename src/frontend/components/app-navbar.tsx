@@ -13,7 +13,7 @@ import {
 import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
-    CHROME_BACKGROUND,
+    FRAME_BACKGROUND,
     IconSize,
     PrimaryColor
 } from "../lib/style-constants";
@@ -23,7 +23,7 @@ import { useNavigate } from "@tanstack/react-router";
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { useUiState } from "../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../lib/ui-state";
 import {
     getLibraryName,
     isComingSoon,
@@ -55,7 +55,7 @@ export function AppNavbar(): ReactNode {
                 px="sm"
                 wrap="nowrap"
                 align="stretch"
-                bg={CHROME_BACKGROUND}
+                bg={FRAME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />
@@ -238,7 +238,8 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
 
 export function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     const libraryId = useLibraryId();
 
     const clearButton = uiState.searchQuery ? (

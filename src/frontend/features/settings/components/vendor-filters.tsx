@@ -4,7 +4,7 @@ import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "@backend/features/library/vendors";
 import { Vendor } from "@backend/features/library/vendors";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 
 interface ClearFiltersButtonProps {
@@ -19,7 +19,8 @@ interface ClearFiltersButtonProps {
 }
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     const text = props.text ?? "Clear filters";
     const small = props.small ?? false;
 
@@ -46,7 +47,8 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
  * vendor checkbox items. `undefined` filters mean "all vendors active".
  */
 export function VendorMenu(): ReactNode {
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     const hasFilters = uiState.vendorFilters !== undefined;
 
     const menuItems = (

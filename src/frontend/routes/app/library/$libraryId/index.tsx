@@ -27,7 +27,7 @@ import {
     getLibraryStatus,
     useLibraryId
 } from "../../../../features/library/library-path";
-import { useUiState } from "../../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useIsSignedIn } from "../../../../features/auth/access-level";
 
@@ -50,7 +50,8 @@ interface Section {
 }
 
 function HomeList(): ReactNode {
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();

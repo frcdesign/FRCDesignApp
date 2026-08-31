@@ -21,7 +21,7 @@ import { useIsInsertableHidden } from "../../library/card-hooks";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
@@ -114,7 +114,7 @@ interface FavoriteMenuItemsProps {
 function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
     const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();

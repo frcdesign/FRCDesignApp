@@ -25,8 +25,9 @@ export enum FontWeight {
 
 export const BORDER = "1px solid var(--mantine-color-default-border)";
 
-/** A step off the page: the navbar's tab row, a modal's header and footer. */
-export const CHROME_BACKGROUND =
+/** A step off the page, for the bars framing it: the navbar's tab row, a
+ * modal's header and footer. */
+export const FRAME_BACKGROUND =
     "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
 
 /**

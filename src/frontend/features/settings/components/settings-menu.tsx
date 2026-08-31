@@ -1,13 +1,13 @@
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
-import { Button, Divider, Group, Text, Title } from "@mantine/core";
+import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
+import { Button, Divider, Group, Select, Text, Title } from "@mantine/core";
 import { SignOutIcon } from "@phosphor-icons/react";
 import { FontWeight, IconSize } from "../../../lib/style-constants";
-import { Dispatch, ReactNode, useMemo } from "react";
-import { Theme } from "@backend/features/settings/settings";
-import { hasEditorAccess } from "@backend/features/auth/access-level";
-import { isWithinAccessLevel } from "@backend/features/auth/access-level";
-import { AccessLevel } from "@backend/features/auth/access-level";
+import { ReactNode } from "react";
+import {
+    AccessLevel,
+    hasEditorAccess,
+    isWithinAccessLevel
+} from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useSaveSettings } from "../settings";
 import { OpenUrlButton } from "../../../components/open-url-button";
@@ -17,15 +17,10 @@ import {
     useAccessData
 } from "../../auth/access-level";
 import { startSignOut } from "../../auth/sign-out";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { FEEDBACK_FORM_URL } from "../../../lib/url";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { useLibraryId } from "../../library/library-path";
-import { AppSelect } from "../../../components/app-select";
-import {
-    makeSelectOption,
-    useSelectOptions
-} from "../../../components/select-utils";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
 /**
@@ -43,66 +38,76 @@ function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
 }
 
 /** Capitalizes the first letter of a string and lower cases everything else. */
-function capitalize(val: string) {
-    return val[0].toUpperCase() + val.slice(1).toLowerCase();
+function capitalize(value: string) {
+    return value[0].toUpperCase() + value.slice(1).toLowerCase();
+}
+
+interface SettingSelectProps<T extends string> {
+    label: string;
+    value: T;
+    /** Shown capitalized, in the order given. */
+    options: T[];
+    onSelect: (value: T) => void;
+}
+
+/** A setting chosen from a short list of named values. */
+function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
+    const { label, value, options, onSelect } = props;
+    return (
+        <Select
+            label={label}
+            data={options.map((option) => ({
+                value: option,
+                label: capitalize(option)
+            }))}
+            value={value}
+            allowDeselect={false}
+            checkIconPosition="right"
+            comboboxProps={{ withinPortal: true }}
+            onChange={(selected) => {
+                if (selected !== null) {
+                    onSelect(selected);
+                }
+            }}
+        />
+    );
 }
 
 export function SettingsMenuContent(): ReactNode {
-    const accessData = useAccessData();
-
-    let adminSettings: ReactNode = null;
-    // Unlike all other checks, this one uses maxAccessLevel so you can still switch from user to admin
-    if (hasEditorAccess(accessData.maxAccessLevel)) {
-        adminSettings = (
-            <>
-                <Title order={6} mt="md">
-                    Admin Settings
-                </Title>
-                <Divider mb="sm" />
-                <AdminSettings />
-            </>
-        );
-    }
+    const { maxAccessLevel } = useAccessData();
 
     return (
         <>
             <UserSettings />
-            {adminSettings}
+            {/* Unlike all other checks, this one uses maxAccessLevel so you can
+                still switch back up from user to admin. */}
+            {hasEditorAccess(maxAccessLevel) && (
+                <>
+                    <Title order={6} mt="md">
+                        Admin Settings
+                    </Title>
+                    <Divider mb="sm" />
+                    <AdminSettings />
+                </>
+            )}
         </>
     );
 }
 
 function UserSettings(): ReactNode {
-    // The modal renders at the root, outside the route matches, so navigate by
-    // exact path: a bare navigate would resolve to the route `from` names.
-    const location = useRouterState({ select: (state) => state.location });
-    const navigate = useNavigate();
-    const saveSettings = useSaveSettings();
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
-    const theme = location.search.theme ?? DEFAULT_SETTINGS.theme;
 
     return (
         <>
-            <ThemeSelect
-                theme={theme}
-                onThemeSelect={(theme) => {
-                    // The url renders it; the write-behind decides what the
-                    // entry redirect seeds next time.
-                    saveSettings({ theme });
-                    void navigate({
-                        to: location.pathname,
-                        search: (prev) => ({ ...prev, theme })
-                    });
-                }}
-            />
+            <ThemeSelect />
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
                 <SettingRow label="Open outside Onshape">
                     <OpenUrlButton
                         text="Open app"
-                        url={standaloneUrl(libraryId, theme)}
+                        url={standaloneUrl(libraryId)}
                     />
                 </SettingRow>
             )}
@@ -131,34 +136,23 @@ function UserSettings(): ReactNode {
 
 /**
  * The app's own url for the current library, free of the params Onshape
- * launches it with — carrying those over is what would keep it embedded.
+ * launches it with — carrying those over is what would keep it embedded. The
+ * settings come along on their own, being the same browser's.
  */
-function standaloneUrl(libraryId: LibraryId, theme: Theme): string {
-    const url = new URL(`/app/library/${libraryId}`, window.location.origin);
-    url.searchParams.set("theme", theme);
-    return url.toString();
+function standaloneUrl(libraryId: LibraryId): string {
+    return new URL(`/app/library/${libraryId}`, window.location.origin).href;
 }
 
-interface ThemeSelectProps {
-    theme: Theme;
-    onThemeSelect: Dispatch<Theme>;
-}
-
-function ThemeSelect(props: ThemeSelectProps): ReactNode {
-    const { theme, onThemeSelect } = props;
-
-    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const themes = useSelectOptions(
-        [Theme.SYSTEM, Theme.DARK, Theme.LIGHT],
-        capitalize
-    );
+function ThemeSelect(): ReactNode {
+    const theme = useGetUiState().theme;
+    const saveSettings = useSaveSettings();
 
     return (
-        <AppSelect
-            option={makeSelectOption(theme, capitalize)}
-            options={themes}
+        <SettingSelect
             label="Theme"
-            onSelect={(value) => onThemeSelect(value as Theme)}
+            value={theme ?? DEFAULT_SETTINGS.theme}
+            options={[Theme.SYSTEM, Theme.DARK, Theme.LIGHT]}
+            onSelect={(theme) => saveSettings({ theme })}
         />
     );
 }
@@ -181,32 +175,19 @@ function AdminSettings(): ReactNode {
 }
 
 function AccessLevelSelect(): ReactNode {
-    const accessData = useAccessData();
-    const setUiState = useUiState()[1];
-
-    const { maxAccessLevel, currentAccessLevel } = accessData;
-    // Use a memo to stabilize access levels so Select's activeItem tracks properly between renders
-    const accessLevels = useSelectOptions(
-        useMemo(
-            () =>
-                [
-                    AccessLevel.ADMIN,
-                    AccessLevel.EDITOR,
-                    AccessLevel.USER
-                ].filter((level) => isWithinAccessLevel(level, maxAccessLevel)),
-            [maxAccessLevel]
-        ),
-        capitalize
-    );
+    const { maxAccessLevel, currentAccessLevel } = useAccessData();
+    const setUiState = useSetUiState();
 
     return (
-        <AppSelect
+        <SettingSelect
             label="Access level"
-            option={makeSelectOption(currentAccessLevel, capitalize)}
-            options={accessLevels}
-            onSelect={(value) => {
-                setUiState({ accessLevel: value as AccessLevel });
-            }}
+            value={currentAccessLevel}
+            options={[
+                AccessLevel.ADMIN,
+                AccessLevel.EDITOR,
+                AccessLevel.USER
+            ].filter((level) => isWithinAccessLevel(level, maxAccessLevel))}
+            onSelect={(accessLevel) => setUiState({ accessLevel })}
         />
     );
 }

@@ -13,7 +13,7 @@ import { useColorScheme } from "@mantine/hooks";
 import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
+import { useGetUiState } from "../lib/ui-state";
 import { NotFoundError, RootCrash } from "../components/root-error";
 
 export const Route = createRootRoute({
@@ -26,21 +26,21 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    // Both come off the url — the entry redirect seeds them and a switch
-    // rewrites them — so the first paint is already the right colors.
+    // The library comes off the url, so the first paint is already its color.
     const search = useSearch({ strict: false });
     const params = useParams({ strict: false });
+    const { theme: savedTheme, libraryId } = useGetUiState();
 
     const theme = useMemo(
-        () => createAppTheme(params.libraryId ?? DEFAULT_SETTINGS.libraryId),
-        [params.libraryId]
+        () => createAppTheme(params.libraryId ?? libraryId),
+        [params.libraryId, libraryId]
     );
 
     // Onshape puts its own scheme on the url when it launches us; standalone
     // there is none, and the OS is what "system" means.
     const osColorScheme = useColorScheme();
     const colorTheme = getColorTheme(
-        search.theme ?? DEFAULT_SETTINGS.theme,
+        savedTheme,
         search.systemTheme ?? osColorScheme
     );
 

@@ -1,13 +1,17 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
 import { AccessLevel } from "@backend/features/auth/access-level";
+import { LibraryId } from "@backend/features/library/library-id";
 import { Vendor } from "@backend/features/library/vendors";
+import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 
 // Increment this when a breaking change is made to the schema
 const LATEST_VERSION = 3;
 
 const VendorType = z.enum(Object.values(Vendor));
 const AccessLevelType = z.enum(Object.values(AccessLevel));
+const ThemeType = z.enum(Object.values(Theme));
+const LibraryIdType = z.enum(Object.values(LibraryId));
 
 const UiStateSchema = z.object({
     version: z.number().default(1), // We can't default the parsed version to LATEST_VERSION because of old versions floating around
@@ -17,10 +21,19 @@ const UiStateSchema = z.object({
     searchQuery: z.string().default(""),
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
-    accessLevel: AccessLevelType.optional()
+    accessLevel: AccessLevelType.optional(),
+    /** Set on leaving for Onshape, so the app can confirm the sign-in on return. */
+    justSignedIn: z.boolean().default(false),
+    // The caller's settings, which this is the source of truth for. A signed-in
+    // caller also has them server-side, which is what a browser that has never
+    // run the app starts from.
+    theme: ThemeType.default(DEFAULT_SETTINGS.theme),
+    libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
+    /** The group last opened in that library; null for the library itself. */
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
 });
 
-type UiState = z.infer<typeof UiStateSchema>;
+export type UiState = z.infer<typeof UiStateSchema>;
 
 type Subscriber = () => void;
 
@@ -108,9 +121,15 @@ export function updateUiState(partialState: Partial<UiState>): UiState {
 
 export type SetUiState = (uiState: Partial<UiState>) => void;
 
-export function useUiState(): [UiState, SetUiState] {
-    // Create a react version of the state to trigger re-renders
-    const reactUiState = useSyncExternalStore(subscribeToUiState, getUiState);
+/** The current state, re-rendering the caller whenever it changes. */
+export function useGetUiState(): UiState {
+    return useSyncExternalStore(subscribeToUiState, getUiState);
+}
 
-    return [reactUiState, updateUiState];
+/** Merges into the state; every reader of it re-renders. */
+// The setter half of the pair above: a component reaches for one or the other,
+// so both read as hooks even though setting needs no state of its own.
+// eslint-disable-next-line react-x/no-unnecessary-use-prefix
+export function useSetUiState(): SetUiState {
+    return updateUiState;
 }

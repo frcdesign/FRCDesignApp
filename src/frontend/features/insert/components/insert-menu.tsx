@@ -24,7 +24,7 @@ import {
 } from "@backend/features/configurations/models";
 import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
 import { useFavoritesQuery } from "../../favorites/queries";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
@@ -73,7 +73,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         !insertable.isConfigurable
     ).data?.records[0];
 
-    // The title lives in the modal's chrome, so it's updated rather than
+    // The title lives in the modal's header, so it's updated rather than
     // rendered: the header follows the configuration as the user changes it.
     useEffect(() => {
         modals.updateModal({
@@ -201,7 +201,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,

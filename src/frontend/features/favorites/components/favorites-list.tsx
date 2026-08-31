@@ -11,7 +11,7 @@ import {
 import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
 import type { FavoritesData } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState } from "../../../lib/ui-state";
 import {
     SectionError,
     SectionLoading
@@ -32,7 +32,7 @@ import { hasEditorAccess } from "@backend/features/auth/access-level";
  * Unlike the normal DocumentList, this list can be searched directly.
  */
 export function FavoritesList(): ReactNode {
-    const { searchQuery, vendorFilters } = useUiState()[0];
+    const { searchQuery, vendorFilters } = useGetUiState();
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
@@ -94,7 +94,7 @@ interface FavoriteSearchResultsProps {
 function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     const { query, insertables, favoritesData } = props;
 
-    const vendorFilters = useUiState()[0].vendorFilters;
+    const vendorFilters = useGetUiState().vendorFilters;
     const accessData = useAccessData();
     const searchDbQuery = useSearchDbQuery();
 

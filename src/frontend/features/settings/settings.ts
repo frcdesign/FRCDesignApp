@@ -4,17 +4,20 @@ import { showErrorToast } from "../../lib/notifications";
 import { apiPost } from "../../lib/api-client";
 import { getAccessDataQuery } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
-import { writeLocalSettings } from "./local-settings";
+import { updateUiState } from "../../lib/ui-state";
 
+/**
+ * Applies a setting locally, where the app reads it from, and saves it to the
+ * caller's row when they have one — which is what a browser running the app for
+ * the first time, and the Onshape launch, start from.
+ */
 async function saveSettings(newSettings: SettingsUpdate): Promise<void> {
+    updateUiState(newSettings);
     // Resolved here rather than read off a render: a placeholder that says
-    // signed out would silently persist locally for a user who has a
-    // server-side row.
+    // signed out would skip the save for a user who has a server-side row.
     const { signedIn } =
         await queryClient.ensureQueryData(getAccessDataQuery());
-    // Not signed in: no server-side user row; persist locally instead.
     if (!signedIn) {
-        writeLocalSettings(newSettings);
         return;
     }
     await apiPost("/settings", { body: newSettings });

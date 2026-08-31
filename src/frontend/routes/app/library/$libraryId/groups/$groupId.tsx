@@ -35,7 +35,7 @@ import {
 import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../features/library/library-path";
-import { useUiState } from "../../../../../lib/ui-state";
+import { useGetUiState } from "../../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../../features/settings/settings";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
@@ -54,7 +54,7 @@ function GroupList(): ReactNode {
         from: "/app/library/$libraryId/groups/$groupId"
     });
 
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
@@ -157,7 +157,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
     const accessData = useAccessData();
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
 
     const groupInsertables = group.insertableOrder
         .map((insertableId) => insertables[insertableId])

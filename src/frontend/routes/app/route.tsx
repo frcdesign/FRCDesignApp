@@ -1,6 +1,7 @@
 import {
     createFileRoute,
     Outlet,
+    redirect,
     retainSearchParams,
     type SearchSchemaInput
 } from "@tanstack/react-router";
@@ -12,7 +13,7 @@ import { OnshapeParams } from "../../lib/onshape-params";
 import { AppNavbar } from "../../components/app-navbar";
 import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
-import { useSignInToast } from "../../features/auth/sign-in";
+import { updateUiState } from "../../lib/ui-state";
 import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
@@ -21,7 +22,32 @@ export const Route = createFileRoute("/app")({
         return search as unknown as OnshapeParams;
     },
     search: {
-        middlewares: [retainSearchParams(true)]
+        // What Onshape launched us with, which every navigation keeps. The
+        // theme rides along too, but only as far as beforeLoad below.
+        middlewares: [
+            retainSearchParams([
+                "documentId",
+                "instanceId",
+                "instanceType",
+                "elementId",
+                "elementType",
+                "systemTheme",
+                "server"
+            ])
+        ]
+    },
+    beforeLoad: ({ search, location }) => {
+        // The entry redirect seeds the theme the account last saved; ui-state
+        // is what the app reads from here on, so take it and drop the
+        // parameter rather than leave a second answer in the url.
+        if (search.theme) {
+            updateUiState({ theme: search.theme });
+            throw redirect({
+                to: location.pathname,
+                search: { ...search, theme: undefined },
+                replace: true
+            });
+        }
     },
     errorComponent: RootAppError
 });
@@ -32,7 +58,6 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
-    useSignInToast();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
