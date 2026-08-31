@@ -176,12 +176,12 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         );
     }
 
-    const filterResult = filterInsertables(groupInsertables, {
+    const result = filterInsertables(groupInsertables, {
         vendors: uiState.vendorFilters,
         isVisible: !hasEditorAccess(accessData.currentAccessLevel)
     });
 
-    if (filterResult.insertables.length === 0) {
+    if (result.insertables.length === 0) {
         return (
             <SectionError
                 icon={
@@ -197,17 +197,13 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         );
     }
 
-    const insertableCards = filterResult.insertables.map((insertable) => (
+    const insertableCards = result.insertables.map((insertable) => (
         <InsertableCard key={insertable.id} insertable={insertable} />
     ));
 
-    const callout = (
-        <SearchCallout objectLabel="element" filtered={filterResult.filtered} />
-    );
-
     return (
         <>
-            {callout}
+            <SearchCallout objectLabel="element" filtered={result.filtered} />
             <ItemTable>{insertableCards}</ItemTable>
         </>
     );

@@ -1,6 +1,7 @@
 import { useAccessData } from "../../auth/access-level";
 import { ReactNode } from "react";
-import { Position, SearchFilters, SearchHit, doSearch } from "../search";
+import { Position, SearchFilters, SearchHit } from "../search";
+import { searchInsertables } from "../filter";
 import { InsertableCard } from "../../library/components/insertable-card";
 import { ItemTable } from "../../library/components/card-components";
 import {
@@ -36,48 +37,37 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     } else if (!searchDbQuery.data) {
         return <SectionError title="The search database is empty." />;
     }
-    const insertables = libraryQuery.data.insertables;
-    const searchResults = doSearch(
-        searchDbQuery.data,
+    const result = searchInsertables({
+        searchDb: searchDbQuery.data,
+        insertables: libraryQuery.data.insertables,
         query,
         filters,
-        undefined,
-        hasEditorAccess(accessData.currentAccessLevel)
-    );
+        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+    });
 
-    if (searchResults.hits.length === 0) {
+    if (result.insertables.length === 0) {
         return (
             <NoSearchResultError
                 objectLabel="search result"
-                filtered={searchResults.filtered}
+                filtered={result.filtered}
             />
         );
     }
 
-    const callout = (
-        <SearchCallout
-            objectLabel="search result"
-            filtered={searchResults.filtered}
+    const resultCards = result.insertables.map((insertable) => (
+        <InsertableCard
+            key={insertable.id}
+            insertable={insertable}
+            searchHit={result.hits[insertable.id]}
         />
-    );
-    const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
-        const insertableId = searchHit.id;
-        const insertable = insertables[insertableId];
-        if (!insertable) {
-            return null;
-        }
-        return (
-            <InsertableCard
-                key={insertableId}
-                insertable={insertable}
-                searchHit={searchHit}
-            />
-        );
-    });
+    ));
 
     return (
         <>
-            {callout}
+            <SearchCallout
+                objectLabel="search result"
+                filtered={result.filtered}
+            />
             <ItemTable>{resultCards}</ItemTable>
         </>
     );
