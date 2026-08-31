@@ -17,10 +17,6 @@ import {
     SearchHitTitle
 } from "../../search/components/search-results";
 import {
-    CardThumbnail,
-    type ThumbnailTarget
-} from "../../thumbnails/components/thumbnail";
-import {
     ConfigurablePath,
     DocumentPath,
     InstancePath
@@ -139,10 +135,8 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    smallThumbnailUrl?: string;
-    largeThumbnailUrl?: string;
-    /** Set to show a specific configuration's thumbnail instead of the default. */
-    thumbnailTarget?: ThumbnailTarget;
+    /** The row's `CardThumbnail`, which only the caller knows how to address. */
+    thumbnail: ReactNode;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
@@ -151,9 +145,7 @@ export function CardTitle(props: CardTitleProps) {
     const {
         searchHit,
         title,
-        smallThumbnailUrl,
-        largeThumbnailUrl,
-        thumbnailTarget,
+        thumbnail,
         buildStatusBadge,
         disabled = false,
         showHiddenTag = false
@@ -166,54 +158,19 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
-    // The hit's best-matching configuration, minus a value repeating the title.
-    const partName =
-        searchHit?.partName?.toLowerCase() !== title.toLowerCase()
-            ? searchHit?.partName
-            : undefined;
-    const partNumber = displayPartNumber(searchHit?.partNumber, title);
-
-    let partNameAndNumberComponent = null;
-    if (partName || partNumber) {
-        partNameAndNumberComponent = (
-            <Group gap={4} wrap="nowrap" miw={0} fz="xs" lh="xs" c="dimmed">
-                {partName && (
-                    <Text inherit truncate miw={0}>
-                        <HighlightedText
-                            text={partName}
-                            positions={searchHit?.partNamePositions}
-                        />
-                    </Text>
-                )}
-                {partName && partNumber && <Text inherit>·</Text>}
-                {partNumber && (
-                    <CardPartNumber
-                        partNumber={partNumber}
-                        positions={searchHit?.partNumberPositions}
-                        url={searchHit?.url}
-                    />
-                )}
-            </Group>
-        );
-    }
-
     // Shrinks to truncate, but never grows: the build status badge and hidden tag belong beside the name, not at the row's edge.
     const cardTitleComponent = (
         <Stack gap={0} miw={0}>
             <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                 {cardTitle}
-                {partNameAndNumberComponent}
+                <PartNameAndNumber title={title} searchHit={searchHit} />
             </Text>
         </Stack>
     );
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <CardThumbnail
-                smallThumbnailUrl={smallThumbnailUrl}
-                largeThumbnailUrl={largeThumbnailUrl}
-                target={thumbnailTarget}
-            />
+            {thumbnail}
             {cardTitleComponent}
             {buildStatusBadge}
             {/* After the badge: toggling visibility would otherwise shift the
@@ -224,6 +181,49 @@ export function CardTitle(props: CardTitleProps) {
                     size={IconSize.SMALL}
                     c="yellow"
                     alt="Hidden"
+                />
+            )}
+        </Group>
+    );
+}
+
+interface PartNameAndNumberProps {
+    /** The row's own title, which neither line repeats. */
+    title: string;
+    searchHit?: SearchHit;
+}
+
+/** The matched configuration's name and part number, beneath the title. */
+function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
+    const { title, searchHit } = props;
+
+    // The hit's best-matching configuration, minus a value repeating the title.
+    const partName =
+        searchHit?.partName?.toLowerCase() !== title.toLowerCase()
+            ? searchHit?.partName
+            : undefined;
+    const partNumber = displayPartNumber(searchHit?.partNumber, title);
+
+    if (!partName && !partNumber) {
+        return null;
+    }
+
+    return (
+        <Group gap={4} wrap="nowrap" miw={0} fz="xs" lh="xs" c="dimmed">
+            {partName && (
+                <Text inherit truncate miw={0}>
+                    <HighlightedText
+                        text={partName}
+                        positions={searchHit?.partNamePositions}
+                    />
+                </Text>
+            )}
+            {partName && partNumber && <Text inherit>·</Text>}
+            {partNumber && (
+                <CardPartNumber
+                    partNumber={partNumber}
+                    positions={searchHit?.partNumberPositions}
+                    url={searchHit?.url}
                 />
             )}
         </Group>

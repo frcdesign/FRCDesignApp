@@ -22,6 +22,7 @@ import {
     OpenDocumentItems
 } from "./card-components";
 import { AddGroupItem } from "./add-group-menu";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
 import { useRefreshLibrary } from "../../../lib/refresh";
 import { useBuildStatusQuery } from "../../build-status/queries";
@@ -53,8 +54,12 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                 <CardTitle
                     title={group.name}
                     disabled={!group.isLoaded}
-                    smallThumbnailUrl={group.smallThumbnailUrl}
-                    largeThumbnailUrl={group.largeThumbnailUrl}
+                    thumbnail={
+                        <CardThumbnail
+                            smallThumbnailUrl={group.smallThumbnailUrl}
+                            largeThumbnailUrl={group.largeThumbnailUrl}
+                        />
+                    }
                     buildStatusBadge={
                         <GroupStatusBadge
                             groupId={group.id}

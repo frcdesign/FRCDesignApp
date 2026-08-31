@@ -18,6 +18,7 @@ import {
     QuickInsertItems
 } from "../../library/components/card-components";
 import { useIsInsertableHidden } from "../../library/card-hooks";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { useUiState } from "../../../lib/ui-state";
@@ -73,17 +74,22 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     title={insertable.name}
-                    smallThumbnailUrl={insertable.smallThumbnailUrl}
-                    largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    thumbnailTarget={{
-                        elementId: insertable.elementId,
-                        microversionId: insertable.microversionId,
-                        canonicalConfiguration: encodeCanonicalConfiguration(
-                            favorite.defaultConfiguration ?? {}
-                        ),
-                        warm: true,
-                        insertableId: insertable.id
-                    }}
+                    thumbnail={
+                        <CardThumbnail
+                            smallThumbnailUrl={insertable.smallThumbnailUrl}
+                            largeThumbnailUrl={insertable.largeThumbnailUrl}
+                            target={{
+                                elementId: insertable.elementId,
+                                microversionId: insertable.microversionId,
+                                canonicalConfiguration:
+                                    encodeCanonicalConfiguration(
+                                        favorite.defaultConfiguration ?? {}
+                                    ),
+                                warm: true,
+                                insertableId: insertable.id
+                            }}
+                        />
+                    }
                     searchHit={searchHit}
                 />
             }

@@ -13,6 +13,7 @@ import {
     FavoriteInsertableItem
 } from "../../favorites/components/favorite-button";
 import { useIsInsertableHidden } from "../card-hooks";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { InsertableStatusBadge } from "../../build-status/components/build-status";
 import {
     CardTitle,
@@ -75,17 +76,23 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}
-                    smallThumbnailUrl={insertable.smallThumbnailUrl}
-                    largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    thumbnailTarget={{
-                        elementId: insertable.elementId,
-                        microversionId: insertable.microversionId,
-                        canonicalConfiguration: encodeCanonicalConfiguration(
-                            searchHit?.configuration ?? {}
-                        ),
-                        // A cold search would otherwise start a render per row.
-                        warm: false
-                    }}
+                    thumbnail={
+                        <CardThumbnail
+                            smallThumbnailUrl={insertable.smallThumbnailUrl}
+                            largeThumbnailUrl={insertable.largeThumbnailUrl}
+                            target={{
+                                elementId: insertable.elementId,
+                                microversionId: insertable.microversionId,
+                                canonicalConfiguration:
+                                    encodeCanonicalConfiguration(
+                                        searchHit?.configuration ?? {}
+                                    ),
+                                // A cold search would otherwise start a render
+                                // per row.
+                                warm: false
+                            }}
+                        />
+                    }
                     showHiddenTag={!insertable.isVisible}
                     buildStatusBadge={
                         <InsertableStatusBadge
@@ -100,6 +107,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
+                        defaultConfiguration={searchHit?.configuration}
                     />
                 </RequireSignIn>
             }
@@ -121,12 +129,23 @@ interface InsertableMenuItemsProps {
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
     configuration?: ParameterValues;
+    /**
+     * What favoriting stores, where the caller knows the canonical spelling of
+     * the selection. Defaults to `configuration`, which a card's already is.
+     */
+    canonicalConfiguration?: ParameterValues;
 }
 
 export function InsertableMenuItems(
     props: InsertableMenuItemsProps
 ): ReactNode {
-    const { favorite, insertable, inInsertMenu, configuration } = props;
+    const {
+        favorite,
+        insertable,
+        inInsertMenu,
+        configuration,
+        canonicalConfiguration
+    } = props;
     const isConnected = useIsConnectedToOnshape();
 
     return (
@@ -145,6 +164,9 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
+                    defaultConfiguration={
+                        canonicalConfiguration ?? configuration
+                    }
                 />
                 <Menu.Divider />
             </RequireSignIn>
