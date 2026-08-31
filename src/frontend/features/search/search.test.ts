@@ -222,6 +222,29 @@ describe("doSearch size matching", () => {
     });
 });
 
+// The same measurement is written .196, .2 and .19 across the library, so a
+// part is stored as both spellings and either one finds it.
+describe("doSearch measurements", () => {
+    const searchDb = buildSearchDb(library("MotionX Hub"), {
+        i1: [record("WCP-1", {}, ".196 ID x SplineXL OD")]
+    });
+
+    it.each([".196", ".19", ".2", "0.19"])("finds the part by %s", (query) => {
+        expect(search(searchDb, query).hits[0]?.id).toBe("i1");
+    });
+});
+
+// Results arrive as the caller types, and the first keystroke is one letter.
+describe("doSearch single letters", () => {
+    const searchDb = buildSearchDb(library("Hex Standoff"), {
+        i1: [record("TTB-0016", {}, "Standoff")]
+    });
+
+    it.each(["h", "s", "t"])("answers a typed %s", (query) => {
+        expect(search(searchDb, query).hits[0]?.id).toBe("i1");
+    });
+});
+
 // A part number is a code: it retrieves its part whole, by either half, and
 // with the zeros and separators it was written with.
 describe("doSearch part numbers", () => {

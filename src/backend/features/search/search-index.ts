@@ -33,17 +33,28 @@ function withoutLeadingZeros(digits: string): string {
     return digits.replace(/^0+(?=\d)/, "");
 }
 
-/** One 2-dp decimal, the single form every number is stored and queried as. */
-function toDecimal(value: number): string {
-    return String(Math.round(value * 100) / 100);
-}
+/** How a measurement is spelled to 2dp: what it rounds to, and what it starts. */
+type DecimalSpelling = (value: number) => string;
+
+const rounded: DecimalSpelling = (value) =>
+    String(Math.round(value * 100) / 100);
+const truncated: DecimalSpelling = (value) =>
+    String(Math.trunc(value * 100) / 100);
+
+/**
+ * Both spellings of a measurement, since the library writes the same one either
+ * way: `.196` is written `.2` by one vendor and `.19` by the next. Storing and
+ * searching both is what lets either find the part. Most numbers spell the same
+ * both ways and so cost nothing.
+ */
+const DECIMAL_SPELLINGS: DecimalSpelling[] = [rounded, truncated];
 
 /**
  * Rewrites numbers and fractions to one 2-dp decimal, at index and query time
  * alike — which is what lets the raw fragments go unstored. Names only: a part
  * number is an identifier, and 217-2600 is not two thousand six hundred.
  */
-function canonicalizeNumbers(text: string): string {
+function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
     return text.replace(
         NUMERIC_PATTERN,
         (match, mixedWhole, mixedNum, mixedDen, fracNum, fracDen) => {
@@ -82,7 +93,7 @@ function canonicalizeNumbers(text: string): string {
  * lowercased, so a `.5` query lines up with a stored `"1/2 Bearing"`.
  */
 export function normalizeForMatch(text: string): string {
-    return canonicalizeNumbers(text).toLowerCase();
+    return canonicalizeNumbers(text, rounded).toLowerCase();
 }
 
 /**
@@ -90,9 +101,17 @@ export function normalizeForMatch(text: string): string {
  * stays on its number, so `1"` is a size rather than a prefix of `1.5` and `16t`.
  */
 export function tokenizeName(text: string): string[] {
+    const tokens = new Set<string>();
     // Canonicalized before splitting: fractions span `/` and `-`. Casing stays,
     // since processTerm splits on camelCase.
-    return splitWithMarks(canonicalizeNumbers(text));
+    for (const toDecimal of DECIMAL_SPELLINGS) {
+        for (const token of splitWithMarks(
+            canonicalizeNumbers(text, toDecimal)
+        )) {
+            tokens.add(token);
+        }
+    }
+    return Array.from(tokens);
 }
 
 /** Splits on `NAME_SEPARATORS`, keeping a `"` that measures its number. */
@@ -141,23 +160,39 @@ export function tokenize(text: string, field?: string): string[] {
  * text: the words of a name, and the literal a part number is indexed as.
  */
 export function tokenizeQuery(text: string): string[] {
-    const tokens = new Set(tokenizeName(text));
-    for (const word of text.trim().toLowerCase().split(/\s+/)) {
+    const tokens: string[] = [];
+    // The name reading keeps its case, for processTerm to split camelCase on,
+    // so the literal reading of the same word is a duplicate rather than a
+    // second term to search.
+    const seen = new Set<string>();
+    for (const word of text.trim().split(/\s+/)) {
         if (!word) {
             continue;
         }
         // Segments only for something carrying a letter, which is what a part
         // number does: splitting a bare `1/2` would search `1`, and a prefix
         // that short matches every number in the library.
-        for (const token of /[a-z]/.test(word)
+        const literal = /[a-z]/i.test(word)
             ? tokenizePartNumber(word)
-            : [word]) {
-            tokens.add(token);
+            : [word.toLowerCase()];
+        for (const token of [...tokenizeName(word), ...literal]) {
+            if (isStrayLetter(token, word) || seen.has(token.toLowerCase())) {
+                continue;
+            }
+            seen.add(token.toLowerCase());
+            tokens.push(token);
         }
     }
-    // A lone letter is the leftover of splitting something like `n/a`, and as a
-    // prefix it matches most of the library. A lone digit is a size, so it stays.
-    return Array.from(tokens).filter((token) => !/^[a-z]$/i.test(token));
+    return tokens;
+}
+
+/**
+ * Whether a token is a letter left behind by splitting a longer word, as `n/a`
+ * leaves `n` and `a`: as a prefix it matches most of the library. A letter the
+ * caller actually typed is a search, and answering it as they type is the point.
+ */
+function isStrayLetter(token: string, word: string): boolean {
+    return word.length > 1 && token.length === 1 && /[a-z]/i.test(token);
 }
 
 /**

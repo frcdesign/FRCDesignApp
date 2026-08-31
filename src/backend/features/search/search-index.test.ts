@@ -103,8 +103,21 @@ describe("tokenizeName", () => {
         expect(tokenizeName('1.125" OD, Flanged')).toEqual([
             '1.13"',
             "OD",
-            "Flanged"
+            "Flanged",
+            '1.12"'
         ]);
+    });
+
+    // One vendor writes .196 as .2 and the next writes .19, so the part is
+    // stored as both and either spelling finds it.
+    it("spells a measurement as what it rounds to and what it starts", () => {
+        expect(tokenizeName(".196 ID Hub")).toEqual([
+            "0.2",
+            "ID",
+            "Hub",
+            "0.19"
+        ]);
+        expect(tokenizeName('2.140" L')).toEqual(['2.14"', "L"]);
     });
 
     // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
@@ -151,7 +164,8 @@ describe("tokenize", () => {
         expect(tokenize("TTB-0016-5/32", "partNames")).toEqual([
             "TTB",
             "16",
-            "0.16"
+            "0.16",
+            "0.15"
         ]);
     });
 });
@@ -160,9 +174,9 @@ describe("tokenize", () => {
 // typed a size or a part number.
 describe("tokenizeQuery", () => {
     it("offers the part number as typed, and as a name would read it", () => {
-        expect(tokenizeQuery("TTB-0016")).toEqual(
-            expect.arrayContaining(["ttb", "0016", "ttb-0016"])
-        );
+        expect(
+            tokenizeQuery("TTB-0016").map((term) => term.toLowerCase())
+        ).toEqual(expect.arrayContaining(["ttb", "16", "0016", "ttb-0016"]));
     });
 
     // `1` prefix-matches every number in the library, so a size is not split
@@ -184,8 +198,14 @@ describe("tokenizeQuery", () => {
         }
     );
 
-    it("keeps a lone digit, which names a size", () => {
-        expect(tokenizeQuery("1")).toEqual(["1"]);
+    // Answering as the caller types is the point, and the first keystroke is
+    // one character.
+    it.each(["l", "L", "1"])("still searches for a typed %s", (query) => {
+        expect(tokenizeQuery(query)).toEqual([query]);
+    });
+
+    it("keeps a letter typed beside another word", () => {
+        expect(tokenizeQuery("L bracket")).toEqual(["L", "bracket"]);
     });
 });
 
