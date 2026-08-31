@@ -114,7 +114,7 @@ export function showSuccessToast(message: string, id?: string): string {
     });
 }
 
-export function showErrorToast(message: string, id?: string): string {
+export function showErrorToast(message: ReactNode, id?: string): string {
     return showToast({
         id,
         color: "red",

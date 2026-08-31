@@ -203,10 +203,11 @@ describe("insertable routes", () => {
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );
-        // Surfaced to the client rather than silently enabling.
+        // Surfaced to the client rather than silently enabling. How long to
+        // wait is the loader's business; the caller is told to try again.
         expect(res.status).toBe(429);
-        const body: { retryAfterSeconds: number } = await res.json();
-        expect(body.retryAfterSeconds).toBe(450);
+        const body: { message: string } = await res.json();
+        expect(body.message).toContain("rate limit");
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);

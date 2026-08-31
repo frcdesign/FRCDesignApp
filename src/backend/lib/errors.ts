@@ -5,9 +5,10 @@ import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
 import {
     ApiError,
     ApiErrorKind,
+    forbiddenError,
     handledError,
     internalError,
-    rateLimitedError
+    signInRequiredError
 } from "./api-error";
 import type { AppContextEnv } from "./context";
 
@@ -17,19 +18,21 @@ import type { AppContextEnv } from "./context";
  */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
-        return rateLimitedError(
+        // How long to wait is the loader's business, not the caller's: all
+        // they can do is try again.
+        return handledError(
             "Onshape rate limit reached. Please try again shortly.",
-            HttpStatus.TOO_MANY_REQUESTS,
-            error.retryAfterSeconds
+            HttpStatus.TOO_MANY_REQUESTS
         );
     }
-    if (
-        error.status === HttpStatus.UNAUTHORIZED ||
-        error.status === HttpStatus.FORBIDDEN
-    ) {
-        return handledError(
-            "Onshape refused the request. Try signing in again.",
-            error.status
+    if (error.status === HttpStatus.UNAUTHORIZED) {
+        return signInRequiredError(
+            "Onshape did not accept the session. Signing in again should fix it."
+        );
+    }
+    if (error.status === HttpStatus.FORBIDDEN) {
+        return forbiddenError(
+            "Onshape would not allow that. Your account may not have access to this document."
         );
     }
     return internalError(

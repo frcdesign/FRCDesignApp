@@ -1,5 +1,6 @@
 import { ApiErrorKind, type ApiErrorBody } from "@backend/lib/api-error";
-import { showErrorToast } from "./notifications";
+import { renderNotification, showErrorToast } from "./notifications";
+import { startSignIn } from "../features/auth/sign-in";
 
 /**
  * A failure worth telling the user about, from the backend or raised here.
@@ -18,27 +19,22 @@ export function appError(message: string): AppError {
     return new AppError({ kind: ApiErrorKind.HANDLED, message });
 }
 
+/** The kinds whose message was written for the user to read. */
+const SPOKEN_KINDS: ApiErrorBody["kind"][] = [
+    ApiErrorKind.HANDLED,
+    ApiErrorKind.SIGN_IN_REQUIRED,
+    ApiErrorKind.FORBIDDEN
+];
+
 /** Builds an {@link AppError} from a failed /api response body. */
 export function fromApiErrorBody(body: unknown): AppError {
     const parsed = body as Partial<ApiErrorBody> | undefined;
-    switch (parsed?.kind) {
-        case ApiErrorKind.HANDLED:
-            return new AppError({
-                kind: ApiErrorKind.HANDLED,
-                message: parsed.message ?? ""
-            });
-        case ApiErrorKind.RATE_LIMITED:
-            return new AppError({
-                kind: ApiErrorKind.RATE_LIMITED,
-                message: parsed.message ?? "",
-                retryAfterSeconds: parsed.retryAfterSeconds ?? 0
-            });
-        default:
-            return new AppError({
-                kind: ApiErrorKind.INTERNAL,
-                message: parsed?.message ?? ""
-            });
-    }
+    const kind = SPOKEN_KINDS.find((spoken) => spoken === parsed?.kind);
+    // Anything unrecognized is a failure we did not write wording for.
+    return new AppError({
+        kind: kind ?? ApiErrorKind.INTERNAL,
+        message: parsed?.message ?? ""
+    });
 }
 
 export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
@@ -47,7 +43,8 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
 
 /**
  * Only an error carrying wording meant for the user shows its own message;
- * anything else gets `defaultMessage`, written for the caller's context.
+ * anything else gets `defaultMessage`, written for the caller's context. A
+ * failure the caller can act on says so, and offers them the action.
  */
 export function handleAppError(
     error: Error,
@@ -56,8 +53,17 @@ export function handleAppError(
 ) {
     if (error instanceof AppError) {
         switch (error.body.kind) {
+            case ApiErrorKind.SIGN_IN_REQUIRED:
+                showErrorToast(
+                    renderNotification(error.body.message, {
+                        text: "Sign in",
+                        onClick: startSignIn
+                    }),
+                    toastKey
+                );
+                return;
             case ApiErrorKind.HANDLED:
-            case ApiErrorKind.RATE_LIMITED:
+            case ApiErrorKind.FORBIDDEN:
                 showErrorToast(error.body.message, toastKey);
                 return;
             case ApiErrorKind.INTERNAL:
