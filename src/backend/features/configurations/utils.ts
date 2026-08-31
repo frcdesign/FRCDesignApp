@@ -16,6 +16,7 @@ import {
 import {
     Vendor,
     getVendorPartUrl,
+    parseVendor,
     parseVendorFromPartNumber
 } from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
@@ -100,8 +101,10 @@ export function getPartUrl(
     if (record.description && ABSOLUTE_URL.test(record.description)) {
         return record.description;
     }
-    // WCP-123 -> WCP
+    // WCP-123 -> WCP, then what the part says it is, then the insertable's
+    // tagging when it names one vendor and one only.
     let vendor = parseVendorFromPartNumber(record.partNumber);
+    vendor ??= parseVendor(record.vendor);
     if (!vendor && vendors.length === 1) {
         vendor = vendors[0];
     }
