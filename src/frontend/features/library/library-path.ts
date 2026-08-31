@@ -45,11 +45,16 @@ export function getLibraryName(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
+/** Announced, but with nothing to show yet. */
+export function isComingSoon(libraryId: string): boolean {
+    return libraryId === LibraryId.FTC_DESIGN_LIB;
+}
+
 /** Where a library is in its life; undefined once it is simply supported. */
 export function getLibraryStatus(libraryId: string): string | undefined {
     switch (libraryId) {
         case LibraryId.FTC_DESIGN_LIB:
-            return "Beta";
+            return "Coming soon";
         case LibraryId.MKCAD:
             return "Deprecated";
     }

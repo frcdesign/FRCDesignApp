@@ -24,7 +24,11 @@ import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../features/library/library-path";
+import {
+    getLibraryName,
+    isComingSoon,
+    useLibraryId
+} from "../features/library/library-path";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
 import { useAccessData } from "../features/auth/access-level";
@@ -39,6 +43,9 @@ import { getLibraryVersionQuery } from "../features/library/queries";
  * brand and settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
+    // Nothing to search until the library opens.
+    const showSearch = !isComingSoon(useLibraryId());
+
     return (
         <Stack gap={0}>
             {/* Stretched so the tabs run the full height and their underline
@@ -59,10 +66,12 @@ export function AppNavbar(): ReactNode {
                     <SettingsButton />
                 </Group>
             </Group>
-            <Group gap="xs" p="sm" wrap="nowrap">
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {showSearch && (
+                <Group gap="xs" p="sm" wrap="nowrap">
+                    <SearchBar />
+                    <VendorMenu />
+                </Group>
+            )}
         </Stack>
     );
 }

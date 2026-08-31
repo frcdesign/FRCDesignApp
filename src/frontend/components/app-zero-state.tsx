@@ -93,6 +93,18 @@ export function SectionError(props: ErrorProps): ReactNode {
     );
 }
 
+interface PageMessageProps extends ZeroStateProps {
+    /** Pass true to keep the message closer to the top of the page. */
+    justifyUp?: boolean;
+}
+
+/** A page-level zero state that is not an error, so it carries no fallback. */
+export function PageMessage(props: PageMessageProps): ReactNode {
+    const { justifyUp, ...zeroState } = props;
+    const message = <ZeroState {...zeroState} />;
+    return justifyUp ? message : <Center mih="80vh">{message}</Center>;
+}
+
 interface PageErrorProps extends ErrorProps {
     /**
      * Pass in true to keep the error closer to the top of the page.
