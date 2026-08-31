@@ -15,7 +15,6 @@ const UiStateSchema = z.object({
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().default(""),
-    openGroupId: z.string().optional(),
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
     accessLevel: AccessLevelType.optional()

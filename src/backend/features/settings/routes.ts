@@ -12,7 +12,9 @@ export const settingsRoutes = getApp();
 
 const settingsBody = z.object({
     theme: z.enum(Theme).optional(),
-    libraryId: z.enum(LibraryId).optional()
+    libraryId: z.enum(LibraryId).optional(),
+    // Null on leaving a group: the caller resumes in the library itself.
+    groupId: z.string().nullable().optional()
 });
 
 /** POST /api/settings — update the caller's stored settings */

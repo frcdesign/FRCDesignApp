@@ -35,13 +35,14 @@ import {
 import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../features/library/library-path";
-import { useUiState, updateUiState } from "../../../../../lib/ui-state";
+import { useUiState } from "../../../../../lib/ui-state";
+import { rememberOpenGroup } from "../../../../../features/settings/settings";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
         component: GroupList,
         onEnter: (match) => {
-            updateUiState({ openGroupId: match.params.groupId });
+            rememberOpenGroup(match.params.groupId);
         }
     }
 );

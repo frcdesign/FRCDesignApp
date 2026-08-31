@@ -27,13 +27,15 @@ import {
     getLibraryStatus,
     useLibraryId
 } from "../../../../features/library/library-path";
-import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import { useUiState } from "../../../../lib/ui-state";
+import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useIsSignedIn } from "../../../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
+    // Back in the library itself, which is where entry should resume.
     onEnter: () => {
-        updateUiState({ openGroupId: undefined });
+        rememberOpenGroup(null);
     }
 });
 

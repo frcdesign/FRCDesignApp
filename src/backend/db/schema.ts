@@ -145,7 +145,10 @@ export const users = sqliteTable("users", {
     libraryId: text("library_id")
         .$type<LibraryId>()
         .notNull()
-        .default(DEFAULT_SETTINGS.libraryId)
+        .default(DEFAULT_SETTINGS.libraryId),
+    // The group last opened in that library, which entry resumes in. Null for
+    // the library itself; a stale one resolves to that, so it is never cleaned.
+    groupId: text("group_id")
 });
 
 export const favorites = sqliteTable(

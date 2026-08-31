@@ -6,7 +6,14 @@ import { RootAppError } from "../components/root-error";
 // is handled server-side, so it never reaches this route.
 export const Route = createFileRoute("/")({
     beforeLoad: () => {
-        const { libraryId, theme } = readLocalSettings();
+        const { libraryId, theme, groupId } = readLocalSettings();
+        if (groupId) {
+            throw redirect({
+                to: "/app/library/$libraryId/groups/$groupId",
+                params: { libraryId, groupId },
+                search: { theme }
+            });
+        }
         throw redirect({
             to: "/app/library/$libraryId",
             params: { libraryId },

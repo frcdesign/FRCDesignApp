@@ -2,9 +2,9 @@
  * `/init` is where Onshape lands. It gates on auth, then resumes the caller in
  * the library and theme they last used.
  */
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { users } from "../../db/schema";
+import { group, users } from "../../db/schema";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getSessionCompanyId } from "../auth/session";
@@ -19,9 +19,22 @@ function getRelativeUrl(requestUrl: string) {
 /** Builds the url the caller resumes at, seeded with the library and theme they last used. */
 async function getEntryUrl(c: AppContext): Promise<string> {
     const db = getDb(c.env.DB);
+    // The join is the check on the stored group: one deleted, or left behind by
+    // a library switch, comes back null and lands the caller in the library.
     const user = await db
-        .select({ libraryId: users.libraryId, theme: users.theme })
+        .select({
+            libraryId: users.libraryId,
+            theme: users.theme,
+            groupId: group.id
+        })
         .from(users)
+        .leftJoin(
+            group,
+            and(
+                eq(group.id, users.groupId),
+                eq(group.libraryId, users.libraryId)
+            )
+        )
         .where(eq(users.id, await c.var.getUserId()))
         .get();
 
@@ -33,7 +46,9 @@ async function getEntryUrl(c: AppContext): Promise<string> {
     search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
 
     const libraryId = user?.libraryId ?? DEFAULT_SETTINGS.libraryId;
-    return `/app/library/${libraryId}?${search.toString()}`;
+    const path = `/app/library/${libraryId}`;
+    const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
+    return `${groupPath}?${search.toString()}`;
 }
 
 export const entryRoutes = getApp();

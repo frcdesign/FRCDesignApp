@@ -1,8 +1,7 @@
-import { type LibraryId } from "@backend/features/library/library-id";
 import {
     DEFAULT_SETTINGS,
-    type SettingsUpdate,
-    type Theme
+    type Settings,
+    type SettingsUpdate
 } from "@backend/features/settings/settings";
 
 const SETTINGS_STORAGE_KEY = "frc-design-app-settings";
@@ -17,11 +16,12 @@ function readStored(): SettingsUpdate {
 }
 
 /** Locally-persisted settings (used when not signed in), with defaults filled. */
-export function readLocalSettings(): { theme: Theme; libraryId: LibraryId } {
+export function readLocalSettings(): Settings {
     const stored = readStored();
     return {
         theme: stored.theme ?? DEFAULT_SETTINGS.theme,
-        libraryId: stored.libraryId ?? DEFAULT_SETTINGS.libraryId
+        libraryId: stored.libraryId ?? DEFAULT_SETTINGS.libraryId,
+        groupId: stored.groupId ?? DEFAULT_SETTINGS.groupId
     };
 }
 
