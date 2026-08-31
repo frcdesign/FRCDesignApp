@@ -5,7 +5,7 @@ import {
     EyeSlashIcon,
     TrashIcon
 } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "@backend/features/library/contract";
@@ -141,7 +141,7 @@ function ShowAllElementsMenuItem({
     const mutation = useSetVisibilityMutation(insertableOrder, true);
     return (
         <Menu.Item
-            color="blue"
+            color={StatusColor.INFO}
             leftSection={<EyeIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
@@ -158,7 +158,7 @@ function HideAllElementsMenuItem({
     const mutation = useSetVisibilityMutation(insertableOrder, false);
     return (
         <Menu.Item
-            color="red"
+            color={StatusColor.ERROR}
             leftSection={<EyeSlashIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
@@ -185,7 +185,7 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
     return (
         <Menu.Item
             leftSection={<TrashIcon size={IconSize.SMALL} />}
-            color="red"
+            color={StatusColor.ERROR}
             onClick={() => mutation.mutate()}
         >
             Delete

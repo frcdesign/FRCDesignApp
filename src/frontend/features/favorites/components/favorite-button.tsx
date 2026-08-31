@@ -1,6 +1,6 @@
-import { ActionIcon, Box, Menu } from "@mantine/core";
+import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { apiDelete, apiPost } from "../../../lib/api-client";
@@ -21,6 +21,7 @@ import {
 } from "../../library/library-path";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
+import { AppIcon } from "../../../components/app-icon";
 
 enum Operation {
     ADD,
@@ -149,7 +150,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={StatusColor.NEUTRAL}
             size={large ? "input-sm" : undefined}
             onClick={(event) => {
                 event.stopPropagation();
@@ -227,7 +228,12 @@ export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
     // fz, not size: Box builds its own `style`, dropping the font-size that
     // Phosphor's `size` sets, which shrank the icon to 1em.
     return full ? (
-        <Box component={HeartIcon} fz={size} c="red" weight="fill" />
+        <AppIcon
+            icon={HeartIcon}
+            size={size}
+            color={StatusColor.ERROR}
+            weight="fill"
+        />
     ) : (
         <HeartIcon size={size} />
     );
@@ -242,5 +248,7 @@ interface UnfavoriteIconProps {
 
 export function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
-    return <Box component={HeartBreakIcon} fz={size} c="red" />;
+    return (
+        <AppIcon icon={HeartBreakIcon} size={size} color={StatusColor.ERROR} />
+    );
 }

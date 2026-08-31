@@ -11,8 +11,13 @@ import {
 import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/models";
-import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
-import { displayPartNumber } from "../lib/part-number";
+import {
+    FontWeight,
+    IconSize,
+    StatusColor,
+    TITLE_ICON_NUDGE
+} from "../lib/style-constants";
+import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 
 interface AppTitleProps {
     title: ReactNode;
@@ -51,7 +56,7 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                         miw={0}
                         fz="xs"
                         lh="xs"
-                        c="dimmed"
+                        c={StatusColor.DIMMED}
                     >
                         {subtitle}
                     </Group>
@@ -72,7 +77,7 @@ interface MenuTitleProps {
  * number is what identifies what gets inserted. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
-    const partNumber = displayPartNumber(record?.partNumber, name);
+    const partNumber = meaningfulPartNumber(record?.partNumber, name);
     return (
         <AppTitle
             icon={icon}

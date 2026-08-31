@@ -1,7 +1,11 @@
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 import { Button, Divider, Group, Select, Text, Title } from "@mantine/core";
 import { SignOutIcon } from "@phosphor-icons/react";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import {
+    FontWeight,
+    IconSize,
+    StatusColor
+} from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import {
     AccessLevel,
@@ -18,10 +22,12 @@ import {
 } from "../../auth/access-level";
 import { startSignOut } from "../../auth/sign-out";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
-import { FEEDBACK_FORM_URL } from "../../../lib/url";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { useLibraryId } from "../../library/library-path";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
+
+/** The FRCDesign feedback form, which the setting below opens. */
+const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
 /**
  * A labeled row holding a single setting control.
@@ -122,7 +128,7 @@ function UserSettings(): ReactNode {
                         <Button
                             leftSection={<SignOutIcon size={IconSize.SMALL} />}
                             variant="light"
-                            color="red"
+                            color={StatusColor.ERROR}
                             onClick={startSignOut}
                         >
                             Sign out

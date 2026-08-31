@@ -1,7 +1,6 @@
-import { Box } from "@mantine/core";
 import { useAccessData } from "../../auth/access-level";
 import { HeartBreakIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import {
     FilteredInsertables,
@@ -26,6 +25,7 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { AppIcon } from "../../../components/app-icon";
 
 /**
  * A list of current favorite cards.
@@ -44,10 +44,10 @@ export function FavoritesList(): ReactNode {
             <SectionError
                 title="Failed to load favorites."
                 icon={
-                    <Box
-                        component={HeartBreakIcon}
+                    <AppIcon
+                        icon={HeartBreakIcon}
                         size={IconSize.SECTION}
-                        c="red"
+                        color={StatusColor.ERROR}
                     />
                 }
             />

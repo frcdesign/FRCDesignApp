@@ -15,7 +15,8 @@ import {
 import {
     BORDER,
     IconSize,
-    SECTION_HEADER_HEIGHT
+    SECTION_HEADER_HEIGHT,
+    StatusColor
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
@@ -37,6 +38,7 @@ import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../features/library/library-path";
 import { useGetUiState } from "../../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../../features/settings/settings";
+import { AppIcon } from "../../../../../components/app-icon";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
@@ -186,10 +188,10 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionError
                 icon={
-                    <Box
-                        component={WarningIcon}
+                    <AppIcon
+                        icon={WarningIcon}
                         size={IconSize.SECTION}
-                        c="yellow"
+                        color={StatusColor.WARNING}
                     />
                 }
                 title="All elements are hidden by filters"

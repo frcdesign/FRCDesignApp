@@ -1,16 +1,17 @@
-import { Alert, Box, Button, Group, Text } from "@mantine/core";
+import { Alert, Button, Group, Text } from "@mantine/core";
 import {
     HeartBreakIcon,
     InfoIcon,
     MagnifyingGlassIcon
 } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "../search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../../../components/app-zero-state";
 import { useLibraryId } from "../../library/library-path";
+import { AppIcon } from "../../../components/app-icon";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {
@@ -42,7 +43,7 @@ interface FilterCalloutProps {
 function Callout(props: { text: string; action: ReactNode }): ReactNode {
     return (
         <Alert
-            color="blue"
+            color={StatusColor.INFO}
             p="xs"
             icon={<InfoIcon size={IconSize.MEDIUM} />}
             styles={{ body: { minWidth: 0 } }}
@@ -92,13 +93,17 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <Box
-                component={MagnifyingGlassIcon}
+            <AppIcon
+                icon={MagnifyingGlassIcon}
                 size={IconSize.SECTION}
-                c="yellow"
+                color={StatusColor.WARNING}
             />
         ) : (
-            <Box component={HeartBreakIcon} size={IconSize.SECTION} c="red" />
+            <AppIcon
+                icon={HeartBreakIcon}
+                size={IconSize.SECTION}
+                color={StatusColor.ERROR}
+            />
         );
 
     if (filtered.byGroup > 0) {

@@ -15,7 +15,9 @@ import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
-    PrimaryColor
+    PrimaryColor,
+    RADIUS,
+    StatusColor
 } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -129,7 +131,7 @@ function FrcDesignBookIcon(): ReactNode {
             bg={PrimaryColor.FILLED}
             c={PrimaryColor.CONTRAST}
             style={{
-                borderRadius: "var(--mantine-radius-sm)",
+                borderRadius: RADIUS,
                 display: "grid",
                 placeItems: "center"
             }}
@@ -216,7 +218,7 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
             size="lg"

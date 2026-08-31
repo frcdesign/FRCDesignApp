@@ -1,4 +1,4 @@
-import { Anchor, Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
+import { Anchor, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     EyeSlashIcon,
@@ -6,8 +6,8 @@ import {
     LinkIcon,
     PlusIcon
 } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
-import { displayPartNumber } from "../../../lib/part-number";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../../../components/app-menu";
@@ -32,6 +32,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
+import { AppIcon } from "../../../components/app-icon";
 
 interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
@@ -176,11 +177,11 @@ export function CardTitle(props: CardTitleProps) {
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
             {showHiddenTag && (
-                <Box
-                    component={EyeSlashIcon}
+                <AppIcon
+                    icon={EyeSlashIcon}
                     size={IconSize.SMALL}
-                    c="yellow"
-                    alt="Hidden"
+                    color={StatusColor.WARNING}
+                    label="Hidden"
                 />
             )}
         </Group>
@@ -202,14 +203,21 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
         searchHit?.partName?.toLowerCase() !== title.toLowerCase()
             ? searchHit?.partName
             : undefined;
-    const partNumber = displayPartNumber(searchHit?.partNumber, title);
+    const partNumber = meaningfulPartNumber(searchHit?.partNumber, title);
 
     if (!partName && !partNumber) {
         return null;
     }
 
     return (
-        <Group gap={4} wrap="nowrap" miw={0} fz="xs" lh="xs" c="dimmed">
+        <Group
+            gap={4}
+            wrap="nowrap"
+            miw={0}
+            fz="xs"
+            lh="xs"
+            c={StatusColor.DIMMED}
+        >
             {partName && (
                 <Text inherit truncate miw={0}>
                     <HighlightedText
@@ -342,7 +350,7 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
             <Menu.Sub>
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
-                        color="yellow"
+                        color={StatusColor.WARNING}
                         leftSection={<GearIcon size={IconSize.SMALL} />}
                     >
                         Admin options

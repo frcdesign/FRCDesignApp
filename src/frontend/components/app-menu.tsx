@@ -1,7 +1,7 @@
 import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
 import { DotsThreeIcon } from "@phosphor-icons/react";
-import { IconSize } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
@@ -77,7 +77,7 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
         <AppContextMenu controlledByButton menuItems={children}>
             <ActionIcon
                 variant="subtle"
-                color="gray"
+                color={StatusColor.NEUTRAL}
                 size={large ? "input-sm" : undefined}
                 title="View options"
                 onClick={(e) => e.stopPropagation()}

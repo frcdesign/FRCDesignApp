@@ -25,6 +25,29 @@ export enum FontWeight {
 
 export const BORDER = "1px solid var(--mantine-color-default-border)";
 
+/** The corner every box of ours is cut with, matching the theme's default. */
+export const RADIUS = "var(--mantine-radius-sm)";
+
+/**
+ * The colors state is spoken in, as Mantine names them. Named here rather than
+ * written at each control, so an error looks like an error everywhere.
+ */
+export enum StatusColor {
+    ERROR = "red",
+    WARNING = "yellow",
+    INFO = "blue",
+    SUCCESS = "green",
+    /** A control that should not compete with the library's accent. */
+    NEUTRAL = "gray",
+    /** Secondary text: the metadata beside a name. */
+    DIMMED = "dimmed"
+}
+
+/** The same color as a tint to sit content on, e.g. a callout's background. */
+export function statusBackground(color: StatusColor): string {
+    return `var(--mantine-color-${color}-light)`;
+}
+
 /** A step off the page, for the bars framing it: the navbar's tab row, a
  * modal's header and footer. */
 export const FRAME_BACKGROUND =

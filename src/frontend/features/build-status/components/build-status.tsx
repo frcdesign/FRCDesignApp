@@ -1,6 +1,5 @@
 import {
     Badge,
-    Box,
     Divider,
     Group,
     HoverCard,
@@ -21,7 +20,6 @@ import {
     XIcon
 } from "@phosphor-icons/react";
 import {
-    ComponentPropsWithRef,
     ReactNode,
     createContext,
     use,
@@ -59,10 +57,17 @@ import {
     MAX_COUNTED_CONFIGURATIONS,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import {
+    FontWeight,
+    IconSize,
+    RADIUS,
+    StatusColor,
+    statusBackground
+} from "../../../lib/style-constants";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";
-import { useJobStatusQuery } from "../../library/queries";
+import { useIsJobRunning } from "../../library/queries";
+import { AppIcon, type AppIconProps } from "../../../components/app-icon";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
@@ -114,63 +119,42 @@ function useGroupBuildIssues(
     }, [groupStatus, insertableStatuses]);
 }
 
-interface IssueIconProps
-    // Rendered through Box, which owns these two as style props.
-    extends Omit<ComponentPropsWithRef<"svg">, "color" | "display"> {
+interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
     /** The severity to render, or null if all checks pass. */
     severity: BuildIssueSeverity | null;
-    /** @default IconSize.SMALL */
-    size?: number;
+}
+
+/** The icon each severity is drawn as; `ok` is a build with nothing to say. */
+const SEVERITY_ICONS = {
+    [BuildIssueSeverity.ERROR]: WarningOctagonIcon,
+    [BuildIssueSeverity.WARNING]: WarningIcon,
+    [BuildIssueSeverity.INFO]: InfoIcon,
+    ok: CheckIcon
+};
+
+/** The color a severity is spoken in; null is a build with nothing to say. */
+function severityColor(severity: BuildIssueSeverity | null): StatusColor {
+    switch (severity) {
+        case BuildIssueSeverity.ERROR:
+            return StatusColor.ERROR;
+        case BuildIssueSeverity.WARNING:
+            return StatusColor.WARNING;
+        case BuildIssueSeverity.INFO:
+            return StatusColor.INFO;
+        case null:
+            return StatusColor.SUCCESS;
+    }
 }
 
 /** Renders the icon for a build-issue severity in its severity color. */
-export function IssueIcon({
-    severity,
-    ref,
-    ...others
-}: IssueIconProps): ReactNode {
-    switch (severity) {
-        case BuildIssueSeverity.ERROR:
-            return (
-                <Box
-                    component={WarningOctagonIcon}
-                    ref={ref}
-                    size={IconSize.SMALL}
-                    c="red"
-                    {...others}
-                />
-            );
-        case BuildIssueSeverity.WARNING:
-            return (
-                <Box
-                    component={WarningIcon}
-                    ref={ref}
-                    size={IconSize.SMALL}
-                    c="yellow"
-                    {...others}
-                />
-            );
-        case BuildIssueSeverity.INFO:
-            return (
-                <Box
-                    component={InfoIcon}
-                    ref={ref}
-                    size={IconSize.SMALL}
-                    c="blue"
-                    {...others}
-                />
-            );
-        case null:
-            return (
-                <Box
-                    component={CheckIcon}
-                    ref={ref}
-                    size={IconSize.SMALL}
-                    c="green"
-                    {...others}
-                />
-            );
-    }
+export function IssueIcon({ severity, ...others }: IssueIconProps): ReactNode {
+    return (
+        <AppIcon
+            icon={SEVERITY_ICONS[severity ?? "ok"]}
+            color={severityColor(severity)}
+            {...others}
+        />
+    );
 }
 
 interface BuildStatusCardProps {
@@ -249,7 +233,7 @@ function BuildStatusHoverCard({
     hoverMenu
 }: BuildStatusBadgeProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
-    const jobRunning = useJobStatusQuery().data?.running ?? false;
+    const jobRunning = useIsJobRunning();
 
     // Remounting is the only way to close an uncontrolled HoverCard on demand.
     const [cardKey, setCardKey] = useState(0);
@@ -327,7 +311,7 @@ function LastModified({
 }: {
     lastLoadedAt: number | null;
 }): ReactNode {
-    const jobRunning = useJobStatusQuery().data?.running ?? false;
+    const jobRunning = useIsJobRunning();
     if (jobRunning) {
         return (
             <Tooltip label="The library is being loaded from Onshape in the background">
@@ -343,7 +327,7 @@ function LastModified({
             <Group
                 gap={4}
                 wrap="nowrap"
-                c="dimmed"
+                c={StatusColor.DIMMED}
                 style={{ whiteSpace: "nowrap", flexShrink: 0 }}
             >
                 <ClockIcon size={IconSize.TINY} />
@@ -364,7 +348,7 @@ function SeverityBadges({ issues }: { issues: BuildIssue[] }): ReactNode {
             <Badge
                 size="sm"
                 variant="light"
-                color="green"
+                color={StatusColor.SUCCESS}
                 leftSection={<CheckIcon size={IconSize.TINY} />}
             >
                 All checks pass
@@ -424,11 +408,14 @@ function CountBadge({
     );
 }
 
-function countSeverities(issues: BuildIssue[]): {
+/** How many issues of each severity a build carries. */
+interface SeverityCounts {
     error: number;
     warning: number;
     info: number;
-} {
+}
+
+function countSeverities(issues: BuildIssue[]): SeverityCounts {
     const counts = { error: 0, warning: 0, info: 0 };
     for (const issue of issues) {
         switch (getIssueSeverity(issue)) {
@@ -469,7 +456,7 @@ function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
             p="xs"
             style={{
                 backgroundColor: severityBackground(severity),
-                borderRadius: "var(--mantine-radius-sm)"
+                borderRadius: RADIUS
             }}
         >
             {/* Nudge the icon down so it aligns with the first line of text. */}
@@ -484,14 +471,7 @@ function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
 
 /** The light background tint for a build-issue callout. */
 function severityBackground(severity: BuildIssueSeverity): string {
-    switch (severity) {
-        case BuildIssueSeverity.ERROR:
-            return "var(--mantine-color-red-light)";
-        case BuildIssueSeverity.WARNING:
-            return "var(--mantine-color-yellow-light)";
-        case BuildIssueSeverity.INFO:
-            return "var(--mantine-color-blue-light)";
-    }
+    return statusBackground(severityColor(severity));
 }
 
 /** Build-status badge pre-wired for an insertable. */
@@ -571,7 +551,7 @@ export function GroupStatusBadge({
 /** A dimmed section header, e.g. "Admin" or "Parsed". */
 function SectionHeader({ children }: { children: ReactNode }): ReactNode {
     return (
-        <Text size="xs" fw={FontWeight.SEMI_BOLD} c="dimmed">
+        <Text size="xs" fw={FontWeight.SEMI_BOLD} c={StatusColor.DIMMED}>
             {children}
         </Text>
     );
@@ -590,7 +570,7 @@ function ControlRow(props: {
         <Group justify="space-between" wrap="nowrap" gap="md" align="center">
             <div style={{ minWidth: 0 }}>
                 <Text size="sm">{props.label}</Text>
-                <Text size="xs" c="dimmed">
+                <Text size="xs" c={StatusColor.DIMMED}>
                     {props.description}
                 </Text>
             </div>
@@ -899,10 +879,10 @@ function ExcludedFromPropertiesIcon({
             withArrow
             events={{ hover: true, focus: true, touch: true }}
         >
-            <Box
-                component={FileXIcon}
+            <AppIcon
+                icon={FileXIcon}
                 size={IconSize.SMALL}
-                c="dimmed"
+                color={StatusColor.DIMMED}
                 style={{ flexShrink: 0 }}
             />
         </Tooltip>
@@ -924,7 +904,7 @@ function ParameterTypeBadge({
         : getParameterTypeLabel(parameter.type);
 
     const badge = (
-        <Badge size="xs" variant="light" color="gray">
+        <Badge size="xs" variant="light" color={StatusColor.NEUTRAL}>
             {label}
         </Badge>
     );
@@ -978,9 +958,17 @@ function ParsedRow({
 function StateValue({ value }: { value: StateRowValue }): ReactNode {
     if (value.kind === "bool") {
         return value.value ? (
-            <Box component={CheckIcon} size={IconSize.SMALL} c="green" />
+            <AppIcon
+                icon={CheckIcon}
+                size={IconSize.SMALL}
+                color={StatusColor.SUCCESS}
+            />
         ) : (
-            <Box component={XIcon} size={IconSize.SMALL} c="red" />
+            <AppIcon
+                icon={XIcon}
+                size={IconSize.SMALL}
+                color={StatusColor.ERROR}
+            />
         );
     }
 
@@ -994,7 +982,7 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
 
     if (value.vendors.length === 0) {
         return (
-            <Text size="sm" c="dimmed">
+            <Text size="sm" c={StatusColor.DIMMED}>
                 None
             </Text>
         );
@@ -1006,7 +994,7 @@ function StateValue({ value }: { value: StateRowValue }): ReactNode {
                     key={vendor}
                     size="sm"
                     variant="light"
-                    color="blue"
+                    color={StatusColor.INFO}
                     title={getVendorName(vendor)}
                 >
                     {vendor}

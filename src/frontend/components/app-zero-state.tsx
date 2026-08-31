@@ -1,10 +1,11 @@
-import { Box, Center, EmptyState, Loader } from "@mantine/core";
+import { Center, EmptyState, Loader } from "@mantine/core";
 import { XIcon } from "@phosphor-icons/react";
-import { IconSize } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 import { type JSX, ReactNode } from "react";
+import { AppIcon } from "./app-icon";
 
 const DEFAULT_ERROR_ICON = (
-    <Box component={XIcon} size={IconSize.PAGE} c="red" />
+    <AppIcon icon={XIcon} size={IconSize.PAGE} color={StatusColor.ERROR} />
 );
 
 interface ZeroStateProps {
