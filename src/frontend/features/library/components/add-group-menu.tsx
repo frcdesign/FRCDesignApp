@@ -7,7 +7,7 @@ import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
-import { parseUrl } from "../../../lib/url";
+import { parseOnshapeUrl } from "../../../lib/url";
 import { appError, getAppErrorHandler } from "../../../lib/errors";
 import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
@@ -34,7 +34,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const mutation = useMutation({
         mutationKey: ["add-group"],
         mutationFn: async () => {
-            const newDocumentId = parseUrl(url)?.documentId;
+            const newDocumentId = parseOnshapeUrl(url)?.documentId;
             if (!newDocumentId) {
                 throw appError("Failed to parse url.");
             }

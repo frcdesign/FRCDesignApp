@@ -3,23 +3,26 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import {
     AccessLevel,
     type AccessData,
-    hasAdminAccess,
-    hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
 import { useGetUiState } from "../../lib/ui-state";
 
-const DEFAULT_ACCESS_DATA: AccessData = {
-    maxAccessLevel: AccessLevel.USER,
-    signedIn: false
-};
-
 /** The level the app is viewed as by default; the dev override grants it too. */
 const DEFAULT_ACCESS_LEVEL =
     (import.meta.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined) ??
     AccessLevel.USER;
+
+/**
+ * What the app assumes until the server answers. The default level is granted
+ * as well as viewed, or the clamp below would drop the dev override back to
+ * user for as long as the query is pending.
+ */
+const DEFAULT_ACCESS_DATA: AccessData = {
+    maxAccessLevel: DEFAULT_ACCESS_LEVEL,
+    signedIn: false
+};
 
 export function getAccessDataQuery() {
     return queryOptions<AccessData>({
@@ -82,18 +85,10 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
         ? accessData.maxAccessLevel
         : accessData.currentAccessLevel;
 
-    if (
-        requiredAccessLevel === AccessLevel.ADMIN &&
-        hasAdminAccess(currentAccessLevel)
-    ) {
-        return props.children;
-    } else if (
-        requiredAccessLevel === AccessLevel.EDITOR &&
-        hasEditorAccess(currentAccessLevel)
-    ) {
-        return props.children;
-    }
-    return null;
+    // Reads backwards: the level held is the ceiling the requirement fits under.
+    return isWithinAccessLevel(requiredAccessLevel, currentAccessLevel)
+        ? props.children
+        : null;
 }
 
 export function RequireSignIn(props: PropsWithChildren) {

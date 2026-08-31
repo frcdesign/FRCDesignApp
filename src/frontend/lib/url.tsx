@@ -39,7 +39,7 @@ export function makeUrl(path: DocumentPath): string {
  * Parses an Onshape document URL into an ElementPath.
  * Returns `undefined` if the URL could not be parsed successfully.
  */
-export function parseUrl(urlString: string): ElementPath | undefined {
+export function parseOnshapeUrl(urlString: string): ElementPath | undefined {
     try {
         // Example pathname: /documents/769b556baf61d32b18813fd0/w/e6d6c2b3a472b97a7e352949/e/8a0c13d3b2b68a99502dc436
         const url = new URL(urlString);
@@ -73,8 +73,3 @@ export async function copyUrlToClipboard(url: string): Promise<void> {
         autoClose: 3000
     });
 }
-
-/**
- * URL of the FRCDesign feedback Google Form.
- */
-export const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
