@@ -198,16 +198,16 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /default-configuration/favorite/:favoriteId", () => {
-        it("persists the default configuration", async () => {
+    describe("POST /canonical-configuration/favorite/:favoriteId", () => {
+        it("persists the selection the favorite opens with", async () => {
             await seedPartStudio(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             const app = createTestApp();
 
-            const defaultConfiguration = { "param-id": "value" };
+            const canonicalConfiguration = "param-id=value";
             const res = await app.request(
-                `/api/default-configuration/favorite/${favoriteId}`,
-                jsonRequest("POST", { defaultConfiguration }),
+                `/api/canonical-configuration/favorite/${favoriteId}`,
+                jsonRequest("POST", { canonicalConfiguration }),
                 env
             );
             expect(res.status).toBe(200);
@@ -217,7 +217,7 @@ describe("favorites routes", () => {
                 .from(favorites)
                 .where(eq(favorites.id, favoriteId))
                 .get();
-            expect(row?.defaultConfiguration).toEqual(defaultConfiguration);
+            expect(row?.canonicalConfiguration).toBe(canonicalConfiguration);
         });
     });
 });

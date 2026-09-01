@@ -22,7 +22,7 @@ import {
     ParameterValues,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
@@ -50,20 +50,17 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     >(props.defaultConfiguration);
     // Reported by ConfigurationWrapper, which has the parameters and units the
     // canonical form needs. Empty means the element's default configuration.
-    const [canonicalConfiguration, setCanonicalConfiguration] =
-        useState<ParameterValues>({});
+    const [canonicalConfiguration, setCanonicalConfiguration] = useState(
+        DEFAULT_CANONICAL_CONFIGURATION
+    );
     // The first report is what the menu opened with, and so what a right-click
     // on the card would have inserted. Absent until the parameters load.
-    const [openedWithConfiguration, setOpenedWithConfiguration] =
-        useState<ParameterValues>();
+    const [openedWith, setOpenedWith] = useState<string>();
 
-    const handleCanonicalConfiguration = useCallback(
-        (canonical: ParameterValues) => {
-            setCanonicalConfiguration(canonical);
-            setOpenedWithConfiguration((opened) => opened ?? canonical);
-        },
-        []
-    );
+    const handleCanonicalConfiguration = useCallback((canonical: string) => {
+        setCanonicalConfiguration(canonical);
+        setOpenedWith((opened) => opened ?? canonical);
+    }, []);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
@@ -123,9 +120,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    canonicalConfiguration={encodeCanonicalConfiguration(
-                        canonicalConfiguration
-                    )}
+                    canonicalConfiguration={canonicalConfiguration}
                 />
                 {parameters}
             </AppModalBody>
@@ -135,7 +130,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         <FavoriteButton
                             favorite={favorite}
                             insertable={insertable}
-                            defaultConfiguration={canonicalConfiguration}
+                            canonicalConfiguration={canonicalConfiguration}
                             large
                         />
                     </RequireSignIn>
@@ -153,10 +148,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     insertable={insertable}
                     configuration={configuration}
                     isUnchanged={
-                        encodeCanonicalConfiguration(canonicalConfiguration) ===
-                        encodeCanonicalConfiguration(
-                            openedWithConfiguration ?? {}
-                        )
+                        canonicalConfiguration ===
+                        (openedWith ?? DEFAULT_CANONICAL_CONFIGURATION)
                     }
                     isFavorite={favorite !== undefined}
                     openedAt={openedAt}

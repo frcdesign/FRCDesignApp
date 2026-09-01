@@ -1,52 +1,71 @@
 import { describe, expect, it } from "vitest";
-import { findRecordForConfiguration, getPartUrl } from "./utils";
+import {
+    decodeConfiguration,
+    encodeConfiguration,
+    findRecordForConfiguration,
+    getPartUrl
+} from "./utils";
 import { PartMetadata, SearchRecord } from "./models";
 import { Vendor } from "../library/vendors";
 
-function rec(
-    canonicalConfiguration: Record<string, string>,
-    partNumber = "PN"
-): SearchRecord {
+function rec(canonicalConfiguration: string, partNumber = "PN"): SearchRecord {
     return { partNumber, canonicalConfiguration };
 }
 
 describe("findRecordForConfiguration", () => {
     it("returns the record whose enumerated values match the selection", () => {
-        const records = [
-            rec({ size: "s" }, "PN-S"),
-            rec({ size: "l" }, "PN-L")
-        ];
+        const records = [rec("size=s", "PN-S"), rec("size=l", "PN-L")];
         // The selection also carries a non-enumerated (quantity) param, ignored.
         expect(
-            findRecordForConfiguration({ size: "l", qty: "3" }, records)
-                ?.partNumber
+            findRecordForConfiguration("size=l;qty=3", records)?.partNumber
         ).toBe("PN-L");
     });
 
     it("prefers the most specific match when several apply", () => {
-        const records = [rec({}, "default"), rec({ size: "l" }, "PN-L")];
-        expect(
-            findRecordForConfiguration({ size: "l" }, records)?.partNumber
-        ).toBe("PN-L");
+        const records = [rec("", "default"), rec("size=l", "PN-L")];
+        expect(findRecordForConfiguration("size=l", records)?.partNumber).toBe(
+            "PN-L"
+        );
     });
 
-    it("falls back to a shorter key-set when a parameter is hidden", () => {
+    it("falls back to a less specific record when a parameter is hidden", () => {
         const records = [
-            rec({ mode: "a", detail: "x" }, "A-X"),
+            rec("mode=a;detail=x", "A-X"),
             // `detail` is hidden when mode=b, so this record omits it.
-            rec({ mode: "b" }, "B")
+            rec("mode=b", "B")
         ];
         expect(
-            findRecordForConfiguration({ mode: "b", detail: "x" }, records)
-                ?.partNumber
+            findRecordForConfiguration("mode=b;detail=x", records)?.partNumber
         ).toBe("B");
     });
 
     it("returns undefined when nothing matches", () => {
-        const records = [rec({ size: "s" }, "PN-S")];
-        expect(
-            findRecordForConfiguration({ size: "l" }, records)
-        ).toBeUndefined();
+        const records = [rec("size=s", "PN-S")];
+        expect(findRecordForConfiguration("size=l", records)).toBeUndefined();
+    });
+});
+
+describe("configuration text", () => {
+    it("encodes the empty configuration as the empty string", () => {
+        expect(encodeConfiguration({})).toBe("");
+        expect(encodeConfiguration(undefined)).toBe("");
+    });
+
+    it("joins values in the order they were set", () => {
+        expect(encodeConfiguration({ size: "l", flag: "true" })).toBe(
+            "size=l;flag=true"
+        );
+    });
+
+    it("round-trips the values it names", () => {
+        const configuration = { size: "l", length: "0.0508 m" };
+        expect(decodeConfiguration(encodeConfiguration(configuration))).toEqual(
+            configuration
+        );
+    });
+
+    it("decodes the empty string as no values at all", () => {
+        expect(decodeConfiguration("")).toEqual({});
     });
 });
 

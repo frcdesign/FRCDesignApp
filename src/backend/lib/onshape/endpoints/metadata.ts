@@ -1,7 +1,7 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { encodeConfigurationForQuery } from "../../../features/configurations/utils";
+import { encodeConfiguration } from "../../../features/configurations/utils";
 import { ParameterValues } from "../../../features/configurations/models";
 import type { OnshapeMetadataObject } from "../types";
 
@@ -11,7 +11,7 @@ export function getElementMetadata(
     elementPath: ElementPath,
     configuration: ParameterValues
 ): Promise<OnshapeMetadataObject> {
-    const encoded = encodeConfigurationForQuery(configuration);
+    const encoded = encodeConfiguration(configuration);
     // Computed properties are expensive and unused, and indexing probes this
     // once per configuration.
     const query: Record<string, string> = {

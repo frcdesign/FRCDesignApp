@@ -69,7 +69,6 @@ interface AlwaysShownVisibilityCondition {
 }
 
 export interface ConfigurationResult {
-    // defaultConfiguration: string;
     parameters: ConfigurationParameter[];
     /** The insertable's search records, so the insert menu can show the part
      * number + name of the selected configuration. Empty when not indexed. */
@@ -86,10 +85,10 @@ export interface SearchRecord {
     /** The vendor's page for this part, when one can be resolved. */
     url?: string;
     /**
-     * The (enumerated) parameter values that produce it, canonical so it keys
-     * the same render the insert menu asks for; empty for the default.
+     * The (enumerated) values that produce it, canonical so it names the same
+     * render the insert menu asks for; empty for the element's default.
      */
-    canonicalConfiguration: ParameterValues;
+    canonicalConfiguration: string;
 }
 
 export type ConfigurationParameter =
@@ -174,8 +173,8 @@ export interface ProbedRecord extends PartMetadata {
 
 /** A probe as it is stored. Kept only for an indexed insertable. */
 export interface ConfigurationRecord extends PartMetadata {
-    /** The parameter values that produce it, in their canonical spelling. */
-    canonicalConfiguration: ParameterValues;
+    /** The selection that produces it, in its canonical spelling. */
+    canonicalConfiguration: string;
 }
 
 /**

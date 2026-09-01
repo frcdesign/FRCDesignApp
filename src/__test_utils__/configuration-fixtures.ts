@@ -87,7 +87,7 @@ export function configurationRecord(
     overrides: Partial<ConfigurationRecord> = {}
 ): ConfigurationRecord {
     return {
-        canonicalConfiguration: {},
+        canonicalConfiguration: "",
         hasMultipleParts: false,
         isOpenComposite: false,
         ...overrides

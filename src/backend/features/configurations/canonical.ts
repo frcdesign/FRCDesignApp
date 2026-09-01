@@ -1,16 +1,19 @@
 /**
- * A `canonicalConfiguration` addresses a render — thumbnails, R2 keys, search
- * records. Only insert/derive needs the user's literal `configuration`.
+ * A `configuration` is the selection a user made, and is what insert and derive
+ * send to Onshape. A `canonicalConfiguration` is the one text spelling every
+ * equivalent selection shares, and is the only form that addresses a render —
+ * thumbnails, R2 keys, stored records. It is always text; nothing holds a
+ * half-canonical map.
  */
 import {
     type ConfigurationParameter,
     ParameterType,
     type ParameterValues
 } from "./models";
-import { evaluateCondition } from "./utils";
+import { encodeConfiguration, evaluateCondition } from "./utils";
 import { evaluateBaseValue, formatBaseValue } from "./input-parser";
 
-/** The element default, which is what an empty canonical configuration encodes. */
+/** The element default, which is what a canonical configuration overriding nothing is. */
 export const DEFAULT_CANONICAL_CONFIGURATION = "";
 
 /** The key for an element's default configuration (what everything falls back to). */
@@ -41,13 +44,14 @@ function canonicalizeValue(
 
 /**
  * Reduces a configuration to the one spelling every equivalent selection shares,
- * so their thumbnails resolve to one cache entry. Drops defaults and hidden values.
+ * so their thumbnails resolve to one cache entry. Drops defaults and hidden
+ * values, and so names only what a selection actually overrides.
  */
 export function canonicalizeConfiguration(
     configuration: ParameterValues,
     parameters: ConfigurationParameter[]
-): ParameterValues {
-    const canonicalConfiguration: ParameterValues = {};
+): string {
+    const overrides: ParameterValues = {};
     for (const parameter of parameters) {
         const value = configuration[parameter.id];
         if (value === undefined) {
@@ -67,42 +71,27 @@ export function canonicalizeConfiguration(
         if (canonicalValue === canonicalDefault) {
             continue;
         }
-        canonicalConfiguration[parameter.id] = canonicalValue;
+        overrides[parameter.id] = canonicalValue;
     }
-    return canonicalConfiguration;
-}
-
-/** Encodes canonical values for a url, an R2 key, or Onshape's `configuration`. */
-export function encodeCanonicalConfiguration(
-    canonicalConfiguration: ParameterValues
-): string {
-    return Object.entries(canonicalConfiguration)
-        .map(([id, value]) => `${id}=${value}`)
-        .join(";");
+    // Built in parameter order, so equivalent selections spell it the same way.
+    return encodeConfiguration(overrides);
 }
 
 /**
- * A short, stable key for a url or R2 key, since a configuration is unbounded.
- * Only avoids collisions within one element, so a fast sync hash is plenty.
+ * A short, stable key for an R2 key, since a configuration is unbounded. It only
+ * has to avoid collisions within one element, so a truncated digest is plenty.
  */
-export function canonicalConfigurationKey(
+export async function toConfigurationKey(
     canonicalConfiguration: string
-): string {
+): Promise<string> {
     if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
         return DEFAULT_CONFIGURATION_KEY;
     }
-    // cyrb53
-    let h1 = 0xdeadbeef;
-    let h2 = 0x41c6ce57;
-    for (let i = 0; i < canonicalConfiguration.length; i++) {
-        const ch = canonicalConfiguration.charCodeAt(i);
-        h1 = Math.imul(h1 ^ ch, 2654435761);
-        h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    const hash = 4294967296 * (2097151 & h2) + (h1 >>> 0);
-    return hash.toString(36);
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(canonicalConfiguration)
+    );
+    return [...new Uint8Array(digest, 0, 8)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
 }

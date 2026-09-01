@@ -5,7 +5,7 @@ import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
-    canonicalConfigurationKey
+    toConfigurationKey
 } from "../configurations/canonical";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
@@ -90,7 +90,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                await toConfigurationKey(CANONICAL_CONFIGURATION)
             ),
             "config-bytes"
         );
@@ -154,7 +154,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                await toConfigurationKey(CANONICAL_CONFIGURATION)
             ),
             "configured-bytes"
         );
@@ -365,12 +365,15 @@ describe("uploadConfigurationThumbnails", () => {
             CANONICAL_CONFIGURATION
         );
 
+        const configurationKey = await toConfigurationKey(
+            CANONICAL_CONFIGURATION
+        );
         const key = (size: ThumbnailSize) =>
             thumbnailKey(
                 elementPath.elementId,
                 MICROVERSION,
                 size,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                configurationKey
             );
         expect(await env.BLOB.head(key(ThumbnailSize.SMALL))).not.toBeNull();
         expect(await env.BLOB.head(key(ThumbnailSize.LARGE))).not.toBeNull();
@@ -386,7 +389,7 @@ describe("uploadConfigurationThumbnails", () => {
                     storedPath.elementId,
                     MICROVERSION,
                     size,
-                    canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                    await toConfigurationKey(CANONICAL_CONFIGURATION)
                 ),
                 "bytes"
             );
@@ -412,7 +415,7 @@ describe("uploadConfigurationThumbnails", () => {
                 partialPath.elementId,
                 MICROVERSION,
                 ThumbnailSize.SMALL,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                await toConfigurationKey(CANONICAL_CONFIGURATION)
             ),
             "bytes"
         );

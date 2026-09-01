@@ -6,10 +6,7 @@ import {
     tokenizeName,
     tokenizePartNumber
 } from "@backend/features/search/search-index";
-import {
-    ParameterValues,
-    SearchRecord
-} from "@backend/features/configurations/models";
+import { SearchRecord } from "@backend/features/configurations/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -37,9 +34,9 @@ export interface SearchHit {
     positions: Position[];
     /**
      * The best-matching record for this hit, used to pre-fill the insert menu —
-     * its part number, name, and the canonical values that produce it.
+     * its part number, name, and the canonical selection that produces it.
      */
-    canonicalConfiguration?: ParameterValues;
+    canonicalConfiguration?: string;
     partNumber?: string;
     partName?: string;
     /** The vendor's page for the part number, when one can be derived. */

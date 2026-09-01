@@ -8,8 +8,7 @@ import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
-    DEFAULT_CONFIGURATION_KEY,
-    canonicalConfigurationKey
+    toConfigurationKey
 } from "../configurations/canonical";
 
 import type { AppContext } from "../../lib/context";
@@ -57,7 +56,7 @@ thumbnailRoutes.get(
             renderThumbnail,
             insertableId
         } = c.req.valid("query");
-        const configurationKey = canonicalConfigurationKey(
+        const configurationKey = await toConfigurationKey(
             canonicalConfiguration
         );
 
@@ -73,7 +72,7 @@ thumbnailRoutes.get(
             );
         }
 
-        if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
+        if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
             return notRenderedYet();
         }
 

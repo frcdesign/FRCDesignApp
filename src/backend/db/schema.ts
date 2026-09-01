@@ -5,7 +5,6 @@ import { LibraryId } from "../features/library/library-id";
 import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
-    ParameterValues,
     ConfigurationParameter,
     ConfigurationRecord,
     PartMetadata
@@ -167,9 +166,9 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        defaultConfiguration: text("default_configuration", {
-            mode: "json"
-        }).$type<ParameterValues | null>(),
+        // The selection the favorite opens with, canonical so its thumbnail
+        // names the same render everyone else's does. Null for the default.
+        canonicalConfiguration: text("canonical_configuration"),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

@@ -23,7 +23,10 @@ import {
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
-import { canonicalizeConfiguration } from "../configurations/canonical";
+import {
+    DEFAULT_CANONICAL_CONFIGURATION,
+    canonicalizeConfiguration
+} from "../configurations/canonical";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
@@ -311,8 +314,8 @@ function planBatches(
     // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
         (configuration) =>
-            Object.keys(canonicalizeConfiguration(configuration, parameters))
-                .length > 0
+            canonicalizeConfiguration(configuration, parameters) !==
+            DEFAULT_CANONICAL_CONFIGURATION
     );
 
     const batches: ParameterValues[][] = [];

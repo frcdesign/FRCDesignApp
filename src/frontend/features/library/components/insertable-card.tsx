@@ -1,4 +1,5 @@
-import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -53,6 +54,11 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     }
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
+    // What the hit names, for inserting and for prefilling the menu; the
+    // canonical form itself is what names its thumbnail.
+    const hitConfiguration = searchHit?.canonicalConfiguration
+        ? decodeConfiguration(searchHit.canonicalConfiguration)
+        : undefined;
 
     return (
         <ItemRow
@@ -68,7 +74,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
                 openInsertMenu({
                     insertable,
-                    defaultConfiguration: searchHit?.canonicalConfiguration
+                    defaultConfiguration: hitConfiguration
                 });
             }}
             left={
@@ -84,9 +90,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                                 elementId: insertable.elementId,
                                 microversionId: insertable.microversionId,
                                 canonicalConfiguration:
-                                    encodeCanonicalConfiguration(
-                                        searchHit?.canonicalConfiguration ?? {}
-                                    ),
+                                    searchHit?.canonicalConfiguration ??
+                                    DEFAULT_CANONICAL_CONFIGURATION,
                                 // A cold search would otherwise start a render
                                 // per row.
                                 renderThumbnail: false
@@ -107,7 +112,9 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={searchHit?.canonicalConfiguration}
+                        canonicalConfiguration={
+                            searchHit?.canonicalConfiguration
+                        }
                     />
                 </RequireSignIn>
             }
@@ -115,7 +122,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={searchHit?.canonicalConfiguration}
+                    configuration={hitConfiguration}
                 />
             }
         />
@@ -129,11 +136,8 @@ interface InsertableMenuItemsProps {
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
     configuration?: ParameterValues;
-    /**
-     * What favoriting stores, where the caller knows the canonical spelling of
-     * the selection. Defaults to `configuration`, which a card's already is.
-     */
-    canonicalConfiguration?: ParameterValues;
+    /** What favoriting stores: the same selection, in its canonical spelling. */
+    canonicalConfiguration?: string;
 }
 
 export function InsertableMenuItems(
@@ -164,9 +168,7 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
-                    defaultConfiguration={
-                        canonicalConfiguration ?? configuration
-                    }
+                    canonicalConfiguration={canonicalConfiguration}
                 />
                 <Menu.Divider />
             </RequireSignIn>

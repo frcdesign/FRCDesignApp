@@ -60,9 +60,7 @@ interface ConfigurationWrapperProps {
      * Reported here because only this component has the parameters and units
      * canonicalizing needs.
      */
-    onCanonicalConfiguration?: (
-        canonicalConfiguration: ParameterValues
-    ) => void;
+    onCanonicalConfiguration?: (canonicalConfiguration: string) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
 }
@@ -109,22 +107,28 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     }, [query.data, configuration, setConfiguration]);
 
     const parameters = query.data?.parameters;
+    const records = query.data?.records;
     useEffect(() => {
         if (!parameters || !configuration) {
             return;
         }
-        onCanonicalConfiguration?.(
-            canonicalizeConfiguration(configuration, parameters)
+        const canonicalConfiguration = canonicalizeConfiguration(
+            configuration,
+            parameters
         );
-    }, [parameters, configuration, onCanonicalConfiguration]);
-
-    const records = query.data?.records;
-    useEffect(() => {
-        if (!records || !configuration) {
-            return;
+        onCanonicalConfiguration?.(canonicalConfiguration);
+        if (records) {
+            onRecord?.(
+                findRecordForConfiguration(canonicalConfiguration, records)
+            );
         }
-        onRecord?.(findRecordForConfiguration(configuration, records));
-    }, [records, configuration, onRecord]);
+    }, [
+        parameters,
+        records,
+        configuration,
+        onCanonicalConfiguration,
+        onRecord
+    ]);
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.

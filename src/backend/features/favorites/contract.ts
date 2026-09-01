@@ -1,11 +1,11 @@
-import { ParameterValues } from "../configurations/models";
 import { LibraryId } from "../library/library-id";
 
 export interface Favorite {
     id: string;
     insertableId: string;
     libraryId: LibraryId;
-    defaultConfiguration?: ParameterValues;
+    /** The selection it opens with, canonical; absent for the element default. */
+    canonicalConfiguration?: string;
 }
 
 export interface FavoritesData {

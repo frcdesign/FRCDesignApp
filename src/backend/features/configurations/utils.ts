@@ -23,23 +23,23 @@ import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
 /**
- * The record a selection produces. Records key only on enumerated parameters, so
- * several can match; the most specific (most keys) wins.
+ * The record a selection produces. Records name only enumerated parameters, so
+ * several can match; the most specific (the most named) wins. Both sides are
+ * canonical and built in parameter order, so this compares whole assignments.
  */
 export function findRecordForConfiguration(
-    configuration: ParameterValues,
+    canonicalConfiguration: string,
     records: SearchRecord[]
 ): SearchRecord | undefined {
+    const selected = new Set(splitConfiguration(canonicalConfiguration));
     let best: SearchRecord | undefined;
-    let bestKeys = -1;
+    let bestNamed = -1;
     for (const record of records) {
-        const keys = Object.keys(record.canonicalConfiguration);
-        const matches = keys.every(
-            (key) => configuration[key] === record.canonicalConfiguration[key]
-        );
-        if (matches && keys.length > bestKeys) {
+        const named = splitConfiguration(record.canonicalConfiguration);
+        const matches = named.every((assignment) => selected.has(assignment));
+        if (matches && named.length > bestNamed) {
             best = record;
-            bestKeys = keys.length;
+            bestNamed = named.length;
         }
     }
     return best;
@@ -111,15 +111,39 @@ export function getPartUrl(
     return getVendorPartUrl(vendor, record.partNumber);
 }
 
-export function encodeConfigurationForQuery(
-    configuration?: ParameterValues
-): string {
+/**
+ * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
+ * Values never carry a `;` or an `=`, which is what lets this round-trip.
+ */
+export function encodeConfiguration(configuration?: ParameterValues): string {
     if (!configuration) {
         return "";
     }
     return Object.entries(configuration)
         .map(([id, value]) => `${id}=${value}`)
         .join(";");
+}
+
+/** The assignments a configuration text names, each still `id=value`. */
+export function splitConfiguration(configuration: string): string[] {
+    return configuration.split(";").filter((assignment) => assignment !== "");
+}
+
+/**
+ * The values a configuration text names. A canonical one names only what it
+ * overrides, so what it omits is the parameter's own default.
+ */
+export function decodeConfiguration(configuration: string): ParameterValues {
+    const values: ParameterValues = {};
+    for (const assignment of splitConfiguration(configuration)) {
+        const separator = assignment.indexOf("=");
+        if (separator > 0) {
+            values[assignment.slice(0, separator)] = assignment.slice(
+                separator + 1
+            );
+        }
+    }
+    return values;
 }
 
 export function getOption(
@@ -229,5 +253,5 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [{ ...partMetadata, canonicalConfiguration: {} }, ...records];
+    return [{ ...partMetadata, canonicalConfiguration: "" }, ...records];
 }

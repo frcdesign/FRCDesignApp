@@ -9,7 +9,6 @@ import type {
     FavoritesData
 } from "@backend/features/favorites/contract";
 import type { InsertableOut } from "@backend/features/library/contract";
-import type { ParameterValues } from "@backend/features/configurations/models";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { appError, handleAppError } from "../../../lib/errors";
@@ -32,8 +31,8 @@ interface UpdateFavoritesArgs {
     operation: Operation;
     insertable: InsertableOut;
     favoriteId: string;
-    /** Canonical, as the favorite menu stores it; absent means the default. */
-    defaultConfiguration?: ParameterValues;
+    /** The selection to store, canonical; absent means the element default. */
+    canonicalConfiguration?: string;
 }
 
 function updateFavorites(
@@ -41,14 +40,14 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId, defaultConfiguration } = args;
+    const { favoriteId, canonicalConfiguration } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
         const fav: Favorite = {
             id: favoriteId,
             insertableId,
             libraryId,
-            defaultConfiguration
+            canonicalConfiguration
         };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
@@ -81,7 +80,7 @@ function useUpdateFavoritesMutation() {
                         id: args.favoriteId
                     },
                     body: {
-                        defaultConfiguration: args.defaultConfiguration
+                        canonicalConfiguration: args.canonicalConfiguration
                     }
                 });
             } else {
@@ -115,10 +114,10 @@ interface FavoriteButtonProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /**
-     * The configuration the new favorite opens with: what the caller is
-     * showing, rather than the element's own default.
+     * The selection the new favorite opens with — what the caller is showing,
+     * rather than the element's own default — canonical, as it is stored.
      */
-    defaultConfiguration?: ParameterValues;
+    canonicalConfiguration?: string;
     /**
      * Sizes the button to sit beside a full-height button rather than in a card row.
      * @default false
@@ -127,7 +126,7 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { favorite, insertable, defaultConfiguration, large } = props;
+    const { favorite, insertable, canonicalConfiguration, large } = props;
     const isFavorite = favorite !== undefined;
 
     const [isHovered, setIsHovered] = useState(false);
@@ -159,7 +158,7 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                     operation,
                     insertable,
                     favoriteId,
-                    defaultConfiguration
+                    canonicalConfiguration
                 });
             }}
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
@@ -174,15 +173,15 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
-    /** The configuration the new favorite opens with. */
-    defaultConfiguration?: ParameterValues;
+    /** The selection the new favorite opens with, canonical. */
+    canonicalConfiguration?: string;
 }
 
 /**
  * A menu item which can be used to favorite or unfavorite an insertable.
  */
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
-    const { favorite, insertable, defaultConfiguration } = props;
+    const { favorite, insertable, canonicalConfiguration } = props;
     const isFavorite = favorite !== undefined;
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
     const mutation = useUpdateFavoritesMutation();
@@ -203,7 +202,7 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
                     operation,
                     insertable,
                     favoriteId,
-                    defaultConfiguration
+                    canonicalConfiguration
                 });
             }}
         >

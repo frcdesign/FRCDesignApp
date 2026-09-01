@@ -8,7 +8,7 @@ import {
     ConfigurablePath,
     isConfigurablePath
 } from "@backend/lib/onshape/path";
-import { encodeConfigurationForQuery } from "@backend/features/configurations/utils";
+import { encodeConfiguration } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
@@ -30,7 +30,7 @@ export function makeUrl(path: DocumentPath): string {
         // what Onshape's api takes; a url needs its own escaping.
         url +=
             "?configuration=" +
-            encodeURIComponent(encodeConfigurationForQuery(path.configuration));
+            encodeURIComponent(encodeConfiguration(path.configuration));
     }
     return url;
 }
