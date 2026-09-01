@@ -18,10 +18,7 @@ import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./types";
 import { thumbnailKey, thumbnailUrl } from "./keys";
-import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    toConfigurationKey
-} from "../configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**
@@ -120,11 +117,15 @@ export async function uploadConfigurationThumbnails(
     microversionId: string,
     canonicalConfiguration: string
 ): Promise<void> {
-    const configurationKey = await toConfigurationKey(canonicalConfiguration);
     const { elementId } = elementPath;
     const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({
         size,
-        key: thumbnailKey(elementId, microversionId, size, configurationKey)
+        key: thumbnailKey(
+            elementId,
+            microversionId,
+            size,
+            canonicalConfiguration
+        )
     }));
     const keys = targets.map((target) => target.key);
 

@@ -3,10 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
-import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    toConfigurationKey
-} from "../configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 
@@ -28,6 +25,30 @@ function get(url: string, sessionId?: string) {
     }
     return createTestApp().request(url, init, env);
 }
+
+describe("thumbnailKey", () => {
+    it("gives the element default its own prefix", () => {
+        expect(thumbnailKey("e1", MICROVERSION, SIZE)).toBe(
+            `thumbnails/default/e1/${MICROVERSION}/${SIZE}`
+        );
+    });
+
+    // A configuration's separators would otherwise open path segments of their
+    // own, so two different selections could name one key.
+    it("encodes a configuration into a single segment", () => {
+        const key = thumbnailKey("e1", MICROVERSION, SIZE, "a=1;b=2/3");
+        expect(key).toBe(
+            `thumbnails/config/e1/${MICROVERSION}/a%3D1%3Bb%3D2%2F3/${SIZE}`
+        );
+        expect(key.split("/")).toHaveLength(6);
+    });
+
+    it("gives different configurations different keys", () => {
+        expect(thumbnailKey("e1", MICROVERSION, SIZE, "a=1")).not.toBe(
+            thumbnailKey("e1", MICROVERSION, SIZE, "a=2")
+        );
+    });
+});
 
 describe("thumbnail serving", () => {
     afterEach(() => vi.restoreAllMocks());
@@ -90,7 +111,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                await toConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "config-bytes"
         );
@@ -154,7 +175,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                await toConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "configured-bytes"
         );
@@ -365,15 +386,12 @@ describe("uploadConfigurationThumbnails", () => {
             CANONICAL_CONFIGURATION
         );
 
-        const configurationKey = await toConfigurationKey(
-            CANONICAL_CONFIGURATION
-        );
         const key = (size: ThumbnailSize) =>
             thumbnailKey(
                 elementPath.elementId,
                 MICROVERSION,
                 size,
-                configurationKey
+                CANONICAL_CONFIGURATION
             );
         expect(await env.BLOB.head(key(ThumbnailSize.SMALL))).not.toBeNull();
         expect(await env.BLOB.head(key(ThumbnailSize.LARGE))).not.toBeNull();
@@ -389,7 +407,7 @@ describe("uploadConfigurationThumbnails", () => {
                     storedPath.elementId,
                     MICROVERSION,
                     size,
-                    await toConfigurationKey(CANONICAL_CONFIGURATION)
+                    CANONICAL_CONFIGURATION
                 ),
                 "bytes"
             );
@@ -415,7 +433,7 @@ describe("uploadConfigurationThumbnails", () => {
                 partialPath.elementId,
                 MICROVERSION,
                 ThumbnailSize.SMALL,
-                await toConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "bytes"
         );

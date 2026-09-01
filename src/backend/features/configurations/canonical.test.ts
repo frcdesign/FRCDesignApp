@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
-    DEFAULT_CONFIGURATION_KEY,
-    canonicalizeConfiguration,
-    toConfigurationKey
+    canonicalizeConfiguration
 } from "./canonical";
 import { ParameterValues, VisibilityType } from "./models";
 import { QuantityType, Unit } from "./enums";
@@ -12,11 +10,6 @@ import {
     enumParam,
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
-
-/** The key a canonical selection resolves to, which is what callers compare. */
-function keyOf(canonicalConfiguration: string): Promise<string> {
-    return toConfigurationKey(canonicalConfiguration);
-}
 
 describe("canonicalizeConfiguration", () => {
     const size = enumParam("size", ["s", "l"]);
@@ -47,15 +40,13 @@ describe("canonicalizeConfiguration", () => {
         expect(canon({ size: "l", flag: "true" })).toBe(a);
     });
 
-    it("collapses equivalent quantity spellings", async () => {
-        const keys = await Promise.all(
-            ["2in", "2 in", "(1 + 1) in"].map((value) =>
-                keyOf(canon({ length: value }))
-            )
+    it("collapses equivalent quantity spellings", () => {
+        const spellings = ["2in", "2 in", "(1 + 1) in"].map((value) =>
+            canon({ length: value })
         );
-        expect(new Set(keys).size).toBe(1);
-        // ...and it is not the default key, since 2 in != the 1 in default.
-        expect(keys[0]).not.toBe(await keyOf(DEFAULT_CANONICAL_CONFIGURATION));
+        expect(new Set(spellings).size).toBe(1);
+        // ...and it is not the default, since 2 in != the 1 in default.
+        expect(spellings[0]).not.toBe(DEFAULT_CANONICAL_CONFIGURATION);
     });
 
     it("drops a parameter hidden by its visibility condition", () => {
@@ -79,7 +70,7 @@ describe("canonicalizeConfiguration", () => {
 
 // An indexed record holds enumerated values only; the insert menu holds the whole
 // selection. Canonicalizing both is what makes the two agree on a thumbnail.
-describe("canonical keys agree across surfaces", () => {
+describe("canonical forms agree across surfaces", () => {
     const size = enumParam("size", ["s", "l"]);
     const flag = boolParam("flag");
     const finish = enumParam("finish", ["matte", "gloss"], {
@@ -88,7 +79,7 @@ describe("canonical keys agree across surfaces", () => {
     const length = quantityParam("length");
     const parameters = [size, flag, finish, length];
 
-    it("keys an enumerated record and the equivalent selection alike", async () => {
+    it("spells an enumerated record and the equivalent selection alike", () => {
         // What indexing stores: enumerated values, no cosmetic/quantity params.
         const record = canonicalizeConfiguration(
             { size: "l", flag: "false" },
@@ -99,10 +90,10 @@ describe("canonical keys agree across surfaces", () => {
             { size: "l", flag: "false", finish: "matte", length: "1 in" },
             parameters
         );
-        expect(await keyOf(record)).toBe(await keyOf(selection));
+        expect(record).toBe(selection);
     });
 
-    it("keys a non-default cosmetic or quantity value differently", async () => {
+    it("spells a non-default cosmetic or quantity value differently", () => {
         // Enumeration never varies these, but they do change what renders, so
         // the selection must not collide with the enumerated record.
         const record = canonicalizeConfiguration({ size: "l" }, parameters);
@@ -111,9 +102,9 @@ describe("canonical keys agree across surfaces", () => {
             { size: "l", length: "2 in" }
         ];
         for (const selection of selections) {
-            expect(
-                await keyOf(canonicalizeConfiguration(selection, parameters))
-            ).not.toBe(await keyOf(record));
+            expect(canonicalizeConfiguration(selection, parameters)).not.toBe(
+                record
+            );
         }
     });
 });
@@ -173,24 +164,6 @@ describe("quantity canonicalization", () => {
     it("keeps an unparseable value as typed", () => {
         expect(canonicalizeConfiguration({ length: "#value" }, [length])).toBe(
             "length=#value"
-        );
-    });
-});
-
-describe("toConfigurationKey", () => {
-    it("maps the element default to the default key", async () => {
-        expect(await keyOf(DEFAULT_CANONICAL_CONFIGURATION)).toBe(
-            DEFAULT_CONFIGURATION_KEY
-        );
-    });
-
-    it("gives different configurations different keys", async () => {
-        expect(await keyOf("a=1")).not.toBe(await keyOf("a=2"));
-    });
-
-    it("gives one configuration one key, every time", async () => {
-        expect(await keyOf("size=l;flag=true")).toBe(
-            await keyOf("size=l;flag=true")
         );
     });
 });

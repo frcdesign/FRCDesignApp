@@ -1,24 +1,26 @@
 /** Thumbnail addressing, shared so the client builds the urls the worker serves. */
-import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    DEFAULT_CONFIGURATION_KEY
-} from "../configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { ThumbnailSize } from "./types";
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
 
-/** Defaults get their own prefix: everything falls back to them, so they never expire. */
+/**
+ * Defaults get their own prefix: everything falls back to them, so they never
+ * expire. A configuration is url-encoded into its segment, the way Onshape
+ * spells one, which keeps `/` and `;` out of the path.
+ */
 export function thumbnailKey(
     elementId: string,
     microversionId: string,
     size: ThumbnailSize,
-    configurationKey: string = DEFAULT_CONFIGURATION_KEY
+    canonicalConfiguration: string = DEFAULT_CANONICAL_CONFIGURATION
 ): string {
-    if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
+    if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
         return `thumbnails/default/${elementId}/${microversionId}/${size}`;
     }
-    return `thumbnails/config/${elementId}/${microversionId}/${configurationKey}/${size}`;
+    const segment = encodeURIComponent(canonicalConfiguration);
+    return `thumbnails/config/${elementId}/${microversionId}/${segment}/${size}`;
 }
 
 export interface ThumbnailUrlOptions {

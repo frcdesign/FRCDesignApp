@@ -6,10 +6,7 @@ import { getApp } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    toConfigurationKey
-} from "../configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 
 import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";
@@ -56,12 +53,13 @@ thumbnailRoutes.get(
             renderThumbnail,
             insertableId
         } = c.req.valid("query");
-        const configurationKey = await toConfigurationKey(
-            canonicalConfiguration
-        );
-
         const object = await c.env.BLOB.get(
-            thumbnailKey(elementId, microversionId, size, configurationKey)
+            thumbnailKey(
+                elementId,
+                microversionId,
+                size,
+                canonicalConfiguration
+            )
         );
         if (object) {
             // The microversion and the configuration are both in the url, so

@@ -4,6 +4,9 @@
  * equivalent selection shares, and is the only form that addresses a render —
  * thumbnails, R2 keys, stored records. It is always text; nothing holds a
  * half-canonical map.
+ *
+ * Canonicalizing is lossy — "2 + 3 in" evaluates away — so anything that hands
+ * a selection back to the user stores the configuration and derives this.
  */
 import {
     type ConfigurationParameter,
@@ -15,9 +18,6 @@ import { evaluateBaseValue, formatBaseValue } from "./input-parser";
 
 /** The element default, which is what a canonical configuration overriding nothing is. */
 export const DEFAULT_CANONICAL_CONFIGURATION = "";
-
-/** The key for an element's default configuration (what everything falls back to). */
-export const DEFAULT_CONFIGURATION_KEY = "default";
 
 /** Normalizes one parameter's raw value to its canonical spelling. */
 function canonicalizeValue(
@@ -75,23 +75,4 @@ export function canonicalizeConfiguration(
     }
     // Built in parameter order, so equivalent selections spell it the same way.
     return encodeConfiguration(overrides);
-}
-
-/**
- * A short, stable key for an R2 key, since a configuration is unbounded. It only
- * has to avoid collisions within one element, so a truncated digest is plenty.
- */
-export async function toConfigurationKey(
-    canonicalConfiguration: string
-): Promise<string> {
-    if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
-        return DEFAULT_CONFIGURATION_KEY;
-    }
-    const digest = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(canonicalConfiguration)
-    );
-    return [...new Uint8Array(digest, 0, 8)]
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("");
 }
