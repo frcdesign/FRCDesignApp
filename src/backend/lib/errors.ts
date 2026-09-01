@@ -18,21 +18,19 @@ import type { AppContextEnv } from "./context";
  */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
-        // How long to wait is the loader's business, not the caller's: all
-        // they can do is try again.
         return handledError(
-            "Onshape rate limit reached. Please try again shortly.",
+            "Onshape rate limit reached. Please try again later.",
             HttpStatus.TOO_MANY_REQUESTS
         );
     }
     if (error.status === HttpStatus.UNAUTHORIZED) {
         return signInRequiredError(
-            "Onshape did not accept the session. Signing in again should fix it."
+            "Onshape did not accept the session. Try signing in again."
         );
     }
     if (error.status === HttpStatus.FORBIDDEN) {
         return forbiddenError(
-            "Onshape would not allow that. Your account may not have access to this document."
+            "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise."
         );
     }
     return internalError(
