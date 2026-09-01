@@ -41,14 +41,14 @@ function fromOnshapeError(error: OnshapeApiError): ApiError {
 
 export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     if (err instanceof ApiError) {
-        return c.json(err.body, err.status as never);
+        return c.json(err.body, err.status);
     }
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
         if (apiError.body.kind === ApiErrorKind.INTERNAL) {
             console.error(err);
         }
-        return c.json(apiError.body, apiError.status as never);
+        return c.json(apiError.body, apiError.status);
     }
     // A raw HTTPException is a validator rejecting a malformed request, which
     // is our bug rather than something the user can act on.
@@ -56,12 +56,12 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
         console.error(err);
         return c.json(
             { kind: ApiErrorKind.INTERNAL, message: err.message },
-            err.status as never
+            err.status
         );
     }
     console.error(err);
     return c.json(
         { kind: ApiErrorKind.INTERNAL, message: "Internal Server Error" },
-        HttpStatus.INTERNAL_SERVER_ERROR as never
+        HttpStatus.INTERNAL_SERVER_ERROR
     );
 };

@@ -3,6 +3,9 @@
  * to do about it. A leaf module the frontend imports.
  */
 import { HttpStatus } from "http-status-ts";
+// Type-only, so this stays a leaf the frontend can import: the statuses that
+// can carry a body, which is every status an error of ours is sent with.
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 export enum ApiErrorKind {
     /** `message` is written for the user; show it. */
@@ -30,7 +33,7 @@ export type ApiErrorBody =
 export class ApiError extends Error {
     constructor(
         readonly body: ApiErrorBody,
-        readonly status: number
+        readonly status: ContentfulStatusCode
     ) {
         super(body.message);
         this.name = "ApiError";
@@ -39,12 +42,18 @@ export class ApiError extends Error {
 }
 
 /** The wording reaches the user, so write it for them. */
-export function handledError(message: string, status: number): ApiError {
+export function handledError(
+    message: string,
+    status: ContentfulStatusCode
+): ApiError {
     return new ApiError({ kind: ApiErrorKind.HANDLED, message }, status);
 }
 
 /** The client will show its own wording; this text is only for the logs. */
-export function internalError(message: string, status: number): ApiError {
+export function internalError(
+    message: string,
+    status: ContentfulStatusCode
+): ApiError {
     return new ApiError({ kind: ApiErrorKind.INTERNAL, message }, status);
 }
 
