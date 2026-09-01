@@ -52,7 +52,7 @@ export function thumbnailUrl({
     // carries, and a render is pinned to the microversion it was taken from.
     const query = new URLSearchParams({ v: microversionId });
     if (canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION) {
-        query.set("configuration", canonicalConfiguration);
+        query.set("canonicalConfiguration", canonicalConfiguration);
         if (renderThumbnail && insertableId) {
             query.set("renderThumbnail", "true");
             query.set("insertableId", insertableId);
