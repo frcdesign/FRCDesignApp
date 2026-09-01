@@ -1,6 +1,7 @@
 /**
- * Resolves who is calling from their session, memoized in KV. `createApp` binds
- * `productionCaller` onto every request; guards and routes read it via `c.var`.
+ * Answers a request's auth questions from its session, memoized in KV.
+ * `createApp` binds `productionAuth` onto every request; guards and routes ask
+ * it through `c.var`.
  */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
@@ -9,7 +10,7 @@ import {
     getSessionInfo,
     getUserId
 } from "../../lib/onshape/endpoints/users";
-import { type AppContext, type CallerFactory } from "../../lib/context";
+import { type AppContext, type AuthResolver } from "../../lib/context";
 import { AccessLevel } from "./access-level";
 import {
     getOauthClient,
@@ -152,10 +153,10 @@ export async function getCachedAccessLevel(
 }
 
 /**
- * Production wiring. getUserId only runs behind requireSignInMiddleware;
+ * The real answers. getUserId only runs behind requireSignInMiddleware;
  * getAccessLevel falls back to USER for anyone without a real Onshape session.
  */
-export const productionCaller: CallerFactory = (c) => ({
+export const productionAuth: AuthResolver = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),
     getUserId: () => {
         // FORCE_SIGNED_IN has no real Onshape session; use a stable fake id.

@@ -2,11 +2,11 @@ import { env } from "cloudflare:workers";
 import { env as processEnv } from "process";
 import { afterEach, describe, expect, it } from "vitest";
 import { AccessLevel } from "./access-level";
-import { productionCaller } from "./caller";
+import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
 import { jsonRequest } from "../../../__test_utils__";
 
-const app = createApp(productionCaller);
+const app = createApp(productionAuth);
 
 /** What the real caller resolves for a request carrying no Onshape session. */
 async function getMaxAccessLevel(override?: AccessLevel): Promise<AccessLevel> {

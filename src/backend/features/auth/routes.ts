@@ -3,7 +3,7 @@ import { internalError } from "../../lib/api-error";
 import { getApp } from "../../lib/context";
 import { cacheMiddleware } from "../../lib/cache";
 import { type AccessData } from "./access-level";
-import { isSignedIn } from "./caller";
+import { isSignedIn } from "./request-auth";
 import { doCallback, doSignIn } from "./onshape-oauth";
 import { endSession } from "./session";
 

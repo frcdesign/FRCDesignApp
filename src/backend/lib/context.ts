@@ -25,12 +25,11 @@ export interface AppBindings {
 }
 
 interface AppVariables {
-    /** Internal cache for `getOnshapeApi` in features/auth/caller.ts. */
+    /** Internal cache for `getOnshapeApi` in features/auth/request-auth.ts. */
     onshapeApi?: OAuthApi;
-    /** Internal cache for `isSignedIn` in features/auth/caller.ts. */
+    /** Internal cache for `isSignedIn` in features/auth/request-auth.ts. */
     signedIn?: boolean;
-    /** Set by `setCacheTtl`; read by `cacheMiddleware`. */
-    /** Injected by {@link bindCaller}; see {@link Caller}. */
+    /** Injected by {@link bindAuth}; see {@link RequestAuth}. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
@@ -45,28 +44,31 @@ export interface AppContextEnv {
 export type AppContext = Context<AppContextEnv>;
 
 /**
- * Who is making the request, injected per request so tests can substitute a
- * caller without an Onshape session. `productionCaller` is the real one.
+ * What a route may ask about the request it is serving: who is making it, and
+ * what they are allowed to do. Resolved lazily, so a route that asks nothing
+ * calls Onshape not at all, and answered per request, so a test can answer
+ * without a session. `productionAuth` answers for real.
  */
-export interface Caller {
+export interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 
-export type CallerFactory = (c: AppContext) => Caller;
+/** How one request's answers are resolved; the app is built with one. */
+export type AuthResolver = (c: AppContext) => RequestAuth;
 
-/** Binds the caller's lookups onto each request, behind `c.var`. */
-export function bindCaller(
-    makeCaller: CallerFactory
+/** Puts the request's own answers behind `c.var`, for routes to ask. */
+export function bindAuth(
+    resolveAuth: AuthResolver
 ): MiddlewareHandler<AppContextEnv> {
     return async (c, next) => {
-        const caller = makeCaller(c);
-        c.set("getOnshapeApi", caller.getOnshapeApi);
-        c.set("getUserId", caller.getUserId);
-        c.set("getAccessLevel", caller.getAccessLevel);
-        c.set("isAuthenticated", caller.isAuthenticated);
+        const auth = resolveAuth(c);
+        c.set("getOnshapeApi", auth.getOnshapeApi);
+        c.set("getUserId", auth.getUserId);
+        c.set("getAccessLevel", auth.getAccessLevel);
+        c.set("isAuthenticated", auth.isAuthenticated);
         await next();
     };
 }

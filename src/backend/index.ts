@@ -4,6 +4,6 @@ export {
 } from "./features/load/workflows";
 export { ThumbnailWorkflow } from "./features/thumbnails/workflow";
 import { createApp } from "./app";
-import { productionCaller } from "./features/auth/caller";
+import { productionAuth } from "./features/auth/request-auth";
 
-export default createApp(productionCaller);
+export default createApp(productionAuth);

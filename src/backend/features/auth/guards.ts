@@ -3,7 +3,7 @@ import type { MiddlewareHandler } from "hono";
 import { forbiddenError, signInRequiredError } from "../../lib/api-error";
 import type { AppContext, AppContextEnv } from "../../lib/context";
 import { hasEditorAccess } from "./access-level";
-import { isSignedIn } from "./caller";
+import { isSignedIn } from "./request-auth";
 
 async function requireSignIn(c: AppContext): Promise<void> {
     if (!(await isSignedIn(c))) {
