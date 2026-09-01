@@ -17,7 +17,6 @@ import {
     ParameterValues,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";
@@ -30,14 +29,14 @@ interface FavoriteMenuContentProps {
     favoriteId: string;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    /** What the favorite opens with today, canonical as it is stored. */
-    canonicalConfiguration?: string;
+    /** What the favorite opens with today. */
+    defaultConfiguration?: ParameterValues;
 }
 
 export function FavoriteMenuContent(
     props: FavoriteMenuContentProps
 ): ReactNode {
-    const { favoriteId, modalId, canonicalConfiguration } = props;
+    const { favoriteId, modalId, defaultConfiguration } = props;
 
     const libraryId = useLibraryId();
     const insertables = useLibraryQuery().data?.insertables;
@@ -46,14 +45,10 @@ export function FavoriteMenuContent(
 
     const [configuration, setConfiguration] = useState<
         ParameterValues | undefined
-    >(() =>
-        canonicalConfiguration === undefined
-            ? undefined
-            : decodeConfiguration(canonicalConfiguration)
-    );
+    >(defaultConfiguration);
     // Reported by ConfigurationWrapper; names this selection's thumbnail.
     // Undefined until it reports, which is what gates saving.
-    const [selected, setSelected] = useState<string | undefined>(undefined);
+    const [canonical, setCanonical] = useState<string | undefined>(undefined);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
 
     const favorite = favoritesData?.favorites[favoriteId];
@@ -79,14 +74,14 @@ export function FavoriteMenuContent(
         });
     }, [modalId, insertableName, record]);
 
-    const setCanonicalConfigurationMutation = useMutation({
-        mutationKey: ["set-canonical-configuration"],
+    const setDefaultConfigurationMutation = useMutation({
+        mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
-            // Canonical, so it names the thumbnail the favorites row asks for;
-            // Onshape applies defaults for what it omits.
+            // The selection as made, not its canonical form, which would drop
+            // a value that is the parameter's default or a hidden one.
             return apiPost(
-                "/canonical-configuration" + toFavoritePath(favoriteId),
-                { body: { canonicalConfiguration: selected } }
+                "/default-configuration" + toFavoritePath(favoriteId),
+                { body: { defaultConfiguration: configuration } }
             );
         },
 
@@ -97,7 +92,10 @@ export function FavoriteMenuContent(
                 queryKey,
                 getQueryUpdater((data: FavoritesData) => {
                     const fav = data.favorites[favoriteId];
-                    if (fav) fav.canonicalConfiguration = selected;
+                    if (fav) {
+                        fav.defaultConfiguration = configuration;
+                        fav.canonicalConfiguration = canonical;
+                    }
                     return data;
                 })
             );
@@ -135,10 +133,10 @@ export function FavoriteMenuContent(
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    canonicalConfiguration={selected ?? ""}
+                    canonicalConfiguration={canonical ?? ""}
                 />
                 <ConfigurationWrapper
-                    onCanonicalConfiguration={setSelected}
+                    onCanonicalConfiguration={setCanonical}
                     onRecord={setRecord}
                     configuration={configuration}
                     setConfiguration={setConfiguration}
@@ -152,9 +150,9 @@ export function FavoriteMenuContent(
                     leftSection={<FloppyDiskIcon size={IconSize.SMALL} />}
                     // Saving before the wrapper reports would store nothing,
                     // wiping the favorite's selection.
-                    disabled={selected === undefined}
+                    disabled={canonical === undefined}
                     onClick={() => {
-                        setCanonicalConfigurationMutation.mutate();
+                        setDefaultConfigurationMutation.mutate();
                         modals.closeAll();
                     }}
                 >

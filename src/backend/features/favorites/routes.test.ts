@@ -10,6 +10,7 @@ import {
     jsonRequest,
     resetDb,
     seedAssembly,
+    seedConfiguration,
     seedFavorite,
     seedPartStudio,
     seedTestData
@@ -20,8 +21,20 @@ const db = getDb(env.DB);
 const favoritesUrl = `/api/favorites/library/${TEST_LIBRARY_ID}`;
 
 interface FavoritesBody {
-    favorites: Record<string, { insertableId: string }>;
+    favorites: Record<
+        string,
+        {
+            insertableId: string;
+            defaultConfiguration?: Record<string, string>;
+            canonicalConfiguration?: string;
+        }
+    >;
     favoriteOrder: string[];
+}
+
+/** The one favorite a body holds, for the derived-canonical tests. */
+function soleFavorite(body: FavoritesBody) {
+    return body.favorites[body.favoriteOrder[0]];
 }
 
 describe("favorites routes", () => {
@@ -51,6 +64,51 @@ describe("favorites routes", () => {
             ]);
             // Per-user, and Workers Cache keys ignore cookies.
             expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+        });
+
+        // Derived per response rather than stored, so it cannot go stale when a
+        // reload changes what the parameters default to.
+        it("derives each favorite's canonical form from what it stores", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            await db
+                .update(favorites)
+                .set({ defaultConfiguration: { boolean: "false" } })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            expect(soleFavorite(await res.json()).canonicalConfiguration).toBe(
+                "boolean=false"
+            );
+        });
+
+        // The whole reason the selection is stored as it was made: canonicalizing
+        // drops a value that is the parameter's default, which for a string
+        // parameter is text the user typed.
+        it("keeps a stored value that canonicalizing drops", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            const defaultConfiguration = { boolean: "true" };
+            await db
+                .update(favorites)
+                .set({ defaultConfiguration })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const favorite = soleFavorite(await res.json());
+            expect(favorite.defaultConfiguration).toEqual(defaultConfiguration);
+            // "true" is the parameter default, so it names no override at all.
+            expect(favorite.canonicalConfiguration).toBe("");
         });
 
         it("only returns the current user's favorites", async () => {
@@ -198,16 +256,16 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /canonical-configuration/favorite/:favoriteId", () => {
+    describe("POST /default-configuration/favorite/:favoriteId", () => {
         it("persists the selection the favorite opens with", async () => {
             await seedPartStudio(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             const app = createTestApp();
 
-            const canonicalConfiguration = "param-id=value";
+            const defaultConfiguration = { "param-id": "value" };
             const res = await app.request(
-                `/api/canonical-configuration/favorite/${favoriteId}`,
-                jsonRequest("POST", { canonicalConfiguration }),
+                `/api/default-configuration/favorite/${favoriteId}`,
+                jsonRequest("POST", { defaultConfiguration }),
                 env
             );
             expect(res.status).toBe(200);
@@ -217,7 +275,7 @@ describe("favorites routes", () => {
                 .from(favorites)
                 .where(eq(favorites.id, favoriteId))
                 .get();
-            expect(row?.canonicalConfiguration).toBe(canonicalConfiguration);
+            expect(row?.defaultConfiguration).toEqual(defaultConfiguration);
         });
     });
 });

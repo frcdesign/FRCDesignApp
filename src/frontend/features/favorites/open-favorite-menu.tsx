@@ -1,4 +1,5 @@
 import { openAppModal } from "../../components/open-app-modal";
+import { type ParameterValues } from "@backend/features/configurations/models";
 import { FavoriteMenuContent } from "./components/favorite-menu";
 import { MenuTitle } from "../../components/app-title";
 import { FavoriteIcon } from "./components/favorite-button";
@@ -7,12 +8,12 @@ import { IconSize } from "../../lib/style-constants";
 interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
-    /** What the favorite opens with today, canonical as it is stored. */
-    canonicalConfiguration?: string;
+    /** What the favorite opens with today. */
+    defaultConfiguration?: ParameterValues;
 }
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
-    const { favoriteId, insertableName, canonicalConfiguration } = props;
+    const { favoriteId, insertableName, defaultConfiguration } = props;
     // Minted here so the content can update the header as the selection changes.
     const modalId = crypto.randomUUID();
     openAppModal({
@@ -28,7 +29,7 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
             <FavoriteMenuContent
                 favoriteId={favoriteId}
                 modalId={modalId}
-                canonicalConfiguration={canonicalConfiguration}
+                defaultConfiguration={defaultConfiguration}
             />
         )
     });

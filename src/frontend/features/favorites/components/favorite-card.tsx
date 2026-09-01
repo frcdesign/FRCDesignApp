@@ -1,5 +1,4 @@
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
-import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -59,12 +58,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    // What the favorite inserts and prefills the menu with; the canonical form
-    // itself is what names its thumbnail.
-    const favoriteConfiguration = favorite.canonicalConfiguration
-        ? decodeConfiguration(favorite.canonicalConfiguration)
-        : undefined;
-
     return (
         <ItemRow
             onClick={() => {
@@ -74,7 +67,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 }
                 openInsertMenu({
                     insertable,
-                    defaultConfiguration: favoriteConfiguration
+                    defaultConfiguration: favorite.defaultConfiguration
                 });
             }}
             left={
@@ -119,11 +112,6 @@ interface FavoriteMenuItemsProps {
 
 function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
-    // What the favorite inserts and prefills the menu with; the canonical form
-    // itself is what names its thumbnail.
-    const favoriteConfiguration = favorite.canonicalConfiguration
-        ? decodeConfiguration(favorite.canonicalConfiguration)
-        : undefined;
 
     const uiState = useGetUiState();
     const isConnected = useIsConnectedToOnshape();
@@ -137,7 +125,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 <>
                     <QuickInsertItems
                         insertable={insertable}
-                        configuration={favoriteConfiguration}
+                        configuration={favorite.defaultConfiguration}
                         isFavorite
                     />
                     <Menu.Divider />
@@ -153,7 +141,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     openFavoriteMenu({
                         favoriteId: favorite.id,
                         insertableName: insertable.name,
-                        canonicalConfiguration: favorite.canonicalConfiguration
+                        defaultConfiguration: favorite.defaultConfiguration
                     });
                 }}
             >

@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import {
@@ -8,8 +8,10 @@ import {
     libraryRoute
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
-import { users, favorites } from "../../db/schema";
+import { users, favorites, configurations } from "../../db/schema";
+import { canonicalizeConfiguration } from "../configurations/canonical";
 import type { Favorite, FavoritesData } from "./contract";
+import type { ConfigurationParameter } from "../configurations/models";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
@@ -24,13 +26,13 @@ const addFavoriteQuery = z.object({
 
 /** The configuration the favorite opens with, when it was made from one. */
 const addFavoriteBody = z.object({
-    canonicalConfiguration: z.string().optional()
+    defaultConfiguration: z.record(z.string(), z.string()).optional()
 });
 
 const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
 
-const canonicalConfigurationBody = z.object({
-    canonicalConfiguration: z.string()
+const defaultConfigurationBody = z.object({
+    defaultConfiguration: z.record(z.string(), z.string())
 });
 
 async function getFavorites(
@@ -50,19 +52,52 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
+    // Canonicalized here rather than stored: the parameters a selection is
+    // canonical against move with the library, and only the row is ours to keep.
+    const parameters = await getParameters(
+        db,
+        rows.map((row) => row.insertableId)
+    );
+
     const favoritesOut: Record<string, Favorite> = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
+        const defaultConfiguration = row.defaultConfiguration ?? undefined;
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
-            canonicalConfiguration: row.canonicalConfiguration ?? undefined
+            defaultConfiguration,
+            canonicalConfiguration: defaultConfiguration
+                ? canonicalizeConfiguration(
+                      defaultConfiguration,
+                      parameters.get(row.insertableId) ?? []
+                  )
+                : undefined
         };
         favoritesOut[row.id] = fav;
         favoriteOrder.push(row.id);
     }
     return { favorites: favoritesOut, favoriteOrder };
+}
+
+/** The parameters of each insertable named, for canonicalizing against. */
+async function getParameters(
+    db: Db,
+    insertableIds: string[]
+): Promise<Map<string, ConfigurationParameter[]>> {
+    if (insertableIds.length === 0) {
+        return new Map();
+    }
+    const rows = await db
+        .select({
+            id: configurations.id,
+            parameters: configurations.parameters
+        })
+        .from(configurations)
+        .where(inArray(configurations.id, insertableIds))
+        .all();
+    return new Map(rows.map((row) => [row.id, row.parameters]));
 }
 
 /** GET /api/favorites/library/:libraryId */
@@ -88,7 +123,7 @@ favoriteRoutes.post(
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
         const { insertableId, id: favoriteId } = c.req.valid("query");
-        const { canonicalConfiguration } = c.req.valid("json");
+        const { defaultConfiguration } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
 
@@ -112,7 +147,7 @@ favoriteRoutes.post(
                 userId,
                 libraryId,
                 insertableId,
-                canonicalConfiguration,
+                defaultConfiguration,
                 sortOrder: existingCount.length
             })
             .onConflictDoNothing();
@@ -162,20 +197,20 @@ favoriteRoutes.post(
     }
 );
 
-/** POST /api/canonical-configuration/favorite/:favoriteId */
+/** POST /api/default-configuration/favorite/:favoriteId */
 favoriteRoutes.post(
-    "/canonical-configuration" + favoriteRoute(),
+    "/default-configuration" + favoriteRoute(),
     requireSignInMiddleware,
-    validate("json", canonicalConfigurationBody),
+    validate("json", defaultConfigurationBody),
     async (c) => {
         const favoriteId = getFavoriteParam(c);
-        const { canonicalConfiguration } = c.req.valid("json");
+        const { defaultConfiguration } = c.req.valid("json");
         const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
         await db
             .update(favorites)
-            .set({ canonicalConfiguration })
+            .set({ defaultConfiguration })
             .where(
                 and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
             );

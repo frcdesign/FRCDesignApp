@@ -112,6 +112,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
+                        defaultConfiguration={hitConfiguration}
                         canonicalConfiguration={
                             searchHit?.canonicalConfiguration
                         }
@@ -136,7 +137,7 @@ interface InsertableMenuItemsProps {
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
     configuration?: ParameterValues;
-    /** What favoriting stores: the same selection, in its canonical spelling. */
+    /** The same selection canonicalized, so favoriting can key its thumbnail. */
     canonicalConfiguration?: string;
 }
 
@@ -168,6 +169,7 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
+                    defaultConfiguration={configuration}
                     canonicalConfiguration={canonicalConfiguration}
                 />
                 <Menu.Divider />

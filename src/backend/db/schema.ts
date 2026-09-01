@@ -7,6 +7,7 @@ import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
+    ParameterValues,
     PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
@@ -166,9 +167,12 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, canonical so its thumbnail
-        // names the same render everyone else's does. Null for the default.
-        canonicalConfiguration: text("canonical_configuration"),
+        // The selection the favorite opens with, as the user made it: a
+        // canonical one would drop a default-valued or hidden parameter,
+        // including a string they typed. Null for the element's own default.
+        defaultConfiguration: text("default_configuration", {
+            mode: "json"
+        }).$type<ParameterValues | null>(),
         sortOrder: integer("sort_order").notNull().default(0)
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]

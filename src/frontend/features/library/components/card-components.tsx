@@ -164,8 +164,10 @@ export function CardTitle(props: CardTitleProps) {
         <Stack gap={0} miw={0}>
             <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                 {cardTitle}
-                <PartNameAndNumber title={title} searchHit={searchHit} />
             </Text>
+            {/* The line under the title, so it sits beside it in the stack
+                rather than inside the paragraph the title renders as. */}
+            <PartNameAndNumber title={title} searchHit={searchHit} />
         </Stack>
     );
 

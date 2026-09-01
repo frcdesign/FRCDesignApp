@@ -130,6 +130,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         <FavoriteButton
                             favorite={favorite}
                             insertable={insertable}
+                            defaultConfiguration={configuration}
                             canonicalConfiguration={canonicalConfiguration}
                             large
                         />
