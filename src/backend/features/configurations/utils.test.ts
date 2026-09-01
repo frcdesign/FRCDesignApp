@@ -4,10 +4,10 @@ import { PartMetadata, SearchRecord } from "./models";
 import { Vendor } from "../library/vendors";
 
 function rec(
-    configuration: Record<string, string>,
+    canonicalConfiguration: Record<string, string>,
     partNumber = "PN"
 ): SearchRecord {
-    return { partNumber, configuration };
+    return { partNumber, canonicalConfiguration };
 }
 
 describe("findRecordForConfiguration", () => {

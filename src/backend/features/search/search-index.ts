@@ -279,7 +279,7 @@ export function toSearchRecords(
             partNumber,
             name,
             url: getPartUrl({ ...raw, partNumber }, vendors),
-            configuration: raw.configuration
+            canonicalConfiguration: raw.canonicalConfiguration
         });
     }
     return searchRecords;

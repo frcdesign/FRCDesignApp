@@ -36,10 +36,10 @@ export interface SearchHit {
     id: string;
     positions: Position[];
     /**
-     * The best-matching configuration for this hit, used to pre-fill the insert
-     * menu — its part number, name, and the parameter values that produce it.
+     * The best-matching record for this hit, used to pre-fill the insert menu —
+     * its part number, name, and the canonical values that produce it.
      */
-    configuration?: ParameterValues;
+    canonicalConfiguration?: ParameterValues;
     partNumber?: string;
     partName?: string;
     /** The vendor's page for the part number, when one can be derived. */
@@ -138,7 +138,7 @@ export function doSearch(
                     document.name,
                     "name"
                 ),
-                configuration: record?.configuration,
+                canonicalConfiguration: record?.canonicalConfiguration,
                 partNumber,
                 partName,
                 url: record?.url,

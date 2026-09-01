@@ -10,7 +10,8 @@ import {
     ParameterValues,
     ConfigurationParameter,
     PartMetadata,
-    ConfigurationRecord
+    ConfigurationRecord,
+    ProbedRecord
 } from "../configurations/models";
 import {
     addBuildIssue,
@@ -150,7 +151,7 @@ export function parsePartStudioRecord(
     parts: OnshapePart[],
     configuration: ParameterValues,
     isOpenComposite: boolean
-): ConfigurationRecord {
+): ProbedRecord {
     const evaluation = evaluateParts(parts);
     // An element that is an open composite everywhere else has no part to read
     // in a configuration that loses it; toResult raises the build issue.
@@ -198,9 +199,9 @@ function readMetadataValue(value: unknown): string | undefined {
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
     configuration: ParameterValues
-): ConfigurationRecord {
+): ProbedRecord {
     // An assembly is never a composite, so it reads nothing about one.
-    const record: ConfigurationRecord = {
+    const record: ProbedRecord = {
         configuration,
         hasMultipleParts: false,
         isOpenComposite: false
@@ -236,7 +237,7 @@ export async function parseConfigurationRecords(
     );
     const batches = planBatches(configurations, parameters);
 
-    const batchRecords: ConfigurationRecord[][] = [];
+    const batchRecords: ProbedRecord[][] = [];
     for (const batch of batches) {
         batchRecords.push(
             await fetchBatch(
@@ -278,7 +279,7 @@ export async function loadConfigurationRecords(
     );
     const batches = planBatches(configurations, parameters);
 
-    const batchRecords: ConfigurationRecord[][] = [];
+    const batchRecords: ProbedRecord[][] = [];
     for (const [index, batch] of batches.entries()) {
         batchRecords.push(
             await ctx.step.do(
@@ -328,7 +329,7 @@ async function probeConfiguration(
     elementType: ElementType,
     configuration: ParameterValues,
     isOpenComposite: boolean
-): Promise<ConfigurationRecord> {
+): Promise<ProbedRecord> {
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
             await getElementMetadata(client, elementPath, configuration),
@@ -349,8 +350,8 @@ async function fetchBatch(
     elementType: ElementType,
     batch: ParameterValues[],
     isOpenComposite: boolean
-): Promise<ConfigurationRecord[]> {
-    const records: ConfigurationRecord[] = [];
+): Promise<ProbedRecord[]> {
+    const records: ProbedRecord[] = [];
     for (const configuration of batch) {
         records.push(
             await probeConfiguration(
@@ -367,7 +368,7 @@ async function fetchBatch(
 
 /** Onshape's vendor when a part carries one, otherwise the parsed one. */
 function resolveVendor(
-    record: ConfigurationRecord,
+    record: ProbedRecord,
     parameters: ConfigurationParameter[]
 ): string | undefined {
     return (
@@ -378,8 +379,8 @@ function resolveVendor(
 
 /** Folds the default probe and every batch together, the default first. */
 function toResult(
-    defaultRecord: ConfigurationRecord,
-    batches: ConfigurationRecord[][],
+    defaultRecord: ProbedRecord,
+    batches: ProbedRecord[][],
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
     // The element's own probe describes the element, not a configuration of it,
@@ -396,12 +397,12 @@ function toResult(
 
     // Canonical, so a record addresses the same thumbnail the insert menu does
     // for the same selection.
-    const records = batches.flat().map((record) => ({
+    const records: ConfigurationRecord[] = batches.flat().map((record) => ({
         ...record,
         // Read before canonicalizing, which drops a selection that is the
         // default — including a default vendor option.
         vendor: resolveVendor(record, parameters),
-        configuration: canonicalizeConfiguration(
+        canonicalConfiguration: canonicalizeConfiguration(
             record.configuration,
             parameters
         )

@@ -33,9 +33,9 @@ export function findRecordForConfiguration(
     let best: SearchRecord | undefined;
     let bestKeys = -1;
     for (const record of records) {
-        const keys = Object.keys(record.configuration);
+        const keys = Object.keys(record.canonicalConfiguration);
         const matches = keys.every(
-            (key) => configuration[key] === record.configuration[key]
+            (key) => configuration[key] === record.canonicalConfiguration[key]
         );
         if (matches && keys.length > bestKeys) {
             best = record;
@@ -229,5 +229,5 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [{ ...partMetadata, configuration: {} }, ...records];
+    return [{ ...partMetadata, canonicalConfiguration: {} }, ...records];
 }

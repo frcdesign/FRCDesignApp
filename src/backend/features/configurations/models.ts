@@ -85,8 +85,11 @@ export interface SearchRecord {
     name?: string;
     /** The vendor's page for this part, when one can be resolved. */
     url?: string;
-    /** The (enumerated) parameter values that produce it; empty for the default. */
-    configuration: ParameterValues;
+    /**
+     * The (enumerated) parameter values that produce it, canonical so it keys
+     * the same render the insert menu asks for; empty for the default.
+     */
+    canonicalConfiguration: ParameterValues;
 }
 
 export type ConfigurationParameter =
@@ -161,12 +164,18 @@ export interface PartMetadata {
 }
 
 /**
- * {@link PartMetadata} for one specific configuration — the same fields, plus
- * the parameter values that produced them. Stored only for an indexed insertable.
+ * {@link PartMetadata} for one selection, as it came back from Onshape — keyed
+ * by the selection as written rather than as it is stored.
  */
-export interface ConfigurationRecord extends PartMetadata {
-    /** The parameter values that produce it. */
+export interface ProbedRecord extends PartMetadata {
+    /** The selection probed, before it is canonicalized for storage. */
     configuration: ParameterValues;
+}
+
+/** A probe as it is stored. Kept only for an indexed insertable. */
+export interface ConfigurationRecord extends PartMetadata {
+    /** The parameter values that produce it, in their canonical spelling. */
+    canonicalConfiguration: ParameterValues;
 }
 
 /**

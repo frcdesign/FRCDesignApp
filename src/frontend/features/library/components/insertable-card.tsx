@@ -68,7 +68,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
                 openInsertMenu({
                     insertable,
-                    defaultConfiguration: searchHit?.configuration
+                    defaultConfiguration: searchHit?.canonicalConfiguration
                 });
             }}
             left={
@@ -85,7 +85,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                                 microversionId: insertable.microversionId,
                                 canonicalConfiguration:
                                     encodeCanonicalConfiguration(
-                                        searchHit?.configuration ?? {}
+                                        searchHit?.canonicalConfiguration ?? {}
                                     ),
                                 // A cold search would otherwise start a render
                                 // per row.
@@ -107,7 +107,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={searchHit?.configuration}
+                        defaultConfiguration={searchHit?.canonicalConfiguration}
                     />
                 </RequireSignIn>
             }
@@ -115,7 +115,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={searchHit?.configuration}
+                    configuration={searchHit?.canonicalConfiguration}
                 />
             }
         />
