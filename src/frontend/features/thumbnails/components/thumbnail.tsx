@@ -49,11 +49,11 @@ export interface ThumbnailTarget {
     /** Empty means the element default. */
     canonicalConfiguration: string;
     /**
-     * Surfaces where the user picked the configuration warm it; a cold search
-     * would otherwise start a render per row.
+     * Whether a miss should start rendering: surfaces where the user picked the
+     * configuration do, where a search would otherwise render a row at a time.
      */
-    warm: boolean;
-    /** Only needed to warm: what the render resolves the element from. */
+    renderThumbnail: boolean;
+    /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
 }
 
@@ -181,7 +181,7 @@ const PREVIEW_POLL_MS = 4000;
  * How many polls apart to ask for the render again. One request is meant to
  * start it; this only covers the run never having been queued at all.
  */
-const WARM_EVERY_POLLS = 15;
+const RENDER_EVERY_POLLS = 15;
 
 /**
  * The last render actually produced, kept across configuration changes: the
@@ -222,7 +222,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             microversionId,
             size,
             canonicalConfiguration,
-            warm: attempt % WARM_EVERY_POLLS === 0,
+            renderThumbnail: attempt % RENDER_EVERY_POLLS === 0,
             insertableId,
             attempt
         });

@@ -85,7 +85,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                     encodeCanonicalConfiguration(
                                         favorite.defaultConfiguration ?? {}
                                     ),
-                                warm: true,
+                                renderThumbnail: true,
                                 insertableId: insertable.id
                             }}
                         />

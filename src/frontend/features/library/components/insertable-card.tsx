@@ -89,7 +89,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                                     ),
                                 // A cold search would otherwise start a render
                                 // per row.
-                                warm: false
+                                renderThumbnail: false
                             }}
                         />
                     }

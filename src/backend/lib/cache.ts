@@ -23,9 +23,12 @@ export function immutableCacheControl(
     return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
 }
 
-/** Overrides the route's immutable default for a body its url does not pin. */
-export function setCacheTtl(c: AppContext, maxAge: number): void {
-    c.set("cacheTtl", maxAge);
+/**
+ * Marks a body the url does not pin: a stand-in for something not rendered yet.
+ * Nothing stores it, so the next request is the one that sees past it.
+ */
+export function setUncacheable(c: AppContext): void {
+    c.set("uncacheable", true);
 }
 
 /** Declares how a route's response may be cached, and enforces what that takes. */
@@ -56,10 +59,9 @@ export function cacheMiddleware(
             c.header("Cache-Control", NO_STORE);
             return;
         }
-        const ttl = c.get("cacheTtl");
         c.header(
             "Cache-Control",
-            ttl === undefined ? cacheControl : `${policy}, max-age=${ttl}`
+            c.get("uncacheable") ? NO_STORE : cacheControl
         );
     };
 }

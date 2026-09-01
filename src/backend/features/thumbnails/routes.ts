@@ -1,14 +1,10 @@
 import { z } from "zod";
 import { validate } from "../../lib/validate";
-import { CachePolicy, cacheMiddleware, setCacheTtl } from "../../lib/cache";
+import { CachePolicy, cacheMiddleware, setUncacheable } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
-import {
-    THUMBNAIL_FALLBACK_CACHE_TTL,
-    THUMBNAIL_FALLBACK_HEADER,
-    thumbnailKey
-} from "./keys";
+import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
 import {
     DEFAULT_CANONICAL_CONFIGURATION,
     DEFAULT_CONFIGURATION_KEY,
@@ -34,15 +30,16 @@ const canonicalConfigurationQuery = z
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
-    c: canonicalConfigurationQuery,
-    warm: z.stringbool().default(false),
-    /** The insertable to render from; only sent with `warm`. */
-    i: z.string().optional()
+    configuration: canonicalConfigurationQuery,
+    renderThumbnail: z.stringbool().default(false),
+    /** The insertable to render from; only sent with `renderThumbnail`. */
+    insertableId: z.string().optional()
 });
 
 /**
- * GET /api/thumbnail/:size/:elementId?v=&c=&warm= — an unrendered configuration
- * falls back to the element default, and `warm` kicks off the real render.
+ * GET /api/thumbnail/:size/:elementId?v=&configuration=&renderThumbnail= — an
+ * unrendered configuration falls back to the element default, and
+ * `renderThumbnail` starts the real render.
  */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
@@ -53,9 +50,9 @@ thumbnailRoutes.get(
         const { size, elementId } = c.req.valid("param");
         const {
             v: microversionId,
-            c: canonicalConfiguration,
-            warm,
-            i: insertableId
+            configuration: canonicalConfiguration,
+            renderThumbnail,
+            insertableId
         } = c.req.valid("query");
         const configurationKey = canonicalConfigurationKey(
             canonicalConfiguration
@@ -72,8 +69,8 @@ thumbnailRoutes.get(
             return c.notFound();
         }
 
-        if (warm && insertableId) {
-            await warmConfigurationThumbnail(c, {
+        if (renderThumbnail && insertableId) {
+            await startConfigurationRender(c, {
                 insertableId,
                 canonicalConfiguration
             });
@@ -86,8 +83,9 @@ thumbnailRoutes.get(
         if (!fallback) {
             return c.notFound();
         }
-        // Unlike a hit, this url does not pin these bytes.
-        setCacheTtl(c, THUMBNAIL_FALLBACK_CACHE_TTL);
+        // Unlike a hit, this url does not pin these bytes: the real render can
+        // land at any moment, and whoever asks next should see it.
+        setUncacheable(c);
         const response = thumbnailResponse(fallback);
         response.headers.set(THUMBNAIL_FALLBACK_HEADER, "1");
         return response;
@@ -104,7 +102,7 @@ function thumbnailResponse(object: R2ObjectBody): Response {
  * Concurrent requests can each start a run. Rare, and the workflow skips a
  * render that is already stored, which a reused id would rule out permanently.
  */
-async function warmConfigurationThumbnail(
+async function startConfigurationRender(
     c: AppContext,
     params: Omit<ThumbnailWorkflowParams, "sessionId">
 ): Promise<void> {

@@ -5,9 +5,6 @@ import {
 } from "../configurations/canonical";
 import { ThumbnailSize } from "./types";
 
-/** Short on purpose: the real render can land at any moment and must take over. */
-export const THUMBNAIL_FALLBACK_CACHE_TTL = 60;
-
 /** Marks a response as the element default standing in for an unrendered configuration. */
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
 
@@ -30,9 +27,9 @@ export interface ThumbnailUrlOptions {
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
     canonicalConfiguration: string;
-    /** Whether a miss should kick off generating this configuration. */
-    warm?: boolean;
-    /** Only needed to warm: it is what the render resolves the element from. */
+    /** Whether a miss should start rendering this configuration. */
+    renderThumbnail?: boolean;
+    /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
     /**
      * Which poll this is. The worker ignores it; it is what keeps each poll off
@@ -47,16 +44,18 @@ export function thumbnailUrl({
     microversionId,
     size,
     canonicalConfiguration,
-    warm,
+    renderThumbnail,
     insertableId,
     attempt
 }: ThumbnailUrlOptions): string {
+    // `v` is the one abbreviation: it is the cache version every immutable url
+    // carries, and a render is pinned to the microversion it was taken from.
     const query = new URLSearchParams({ v: microversionId });
     if (canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION) {
-        query.set("c", canonicalConfiguration);
-        if (warm && insertableId) {
-            query.set("warm", "true");
-            query.set("i", insertableId);
+        query.set("configuration", canonicalConfiguration);
+        if (renderThumbnail && insertableId) {
+            query.set("renderThumbnail", "true");
+            query.set("insertableId", insertableId);
         }
         // Omitted on the first, so it shares a url with everything else asking
         // for this configuration.

@@ -30,7 +30,7 @@ interface AppVariables {
     /** Internal cache for `isSignedIn` in features/auth/caller.ts. */
     signedIn?: boolean;
     /** Set by `setCacheTtl`; read by `cacheMiddleware`. */
-    cacheTtl?: number;
+    uncacheable?: boolean;
     /** Injected by {@link bindCaller}; see {@link Caller}. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
