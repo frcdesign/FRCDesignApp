@@ -7,9 +7,8 @@ import {
     ParameterType,
     type ParameterValues
 } from "./models";
-import { QuantityType, Unit, getUnitDisplayStr } from "./enums";
 import { evaluateCondition } from "./utils";
-import { evaluateBaseValue } from "./input-parser";
+import { evaluateBaseValue, formatBaseValue } from "./input-parser";
 
 /** The element default, which is what an empty canonical configuration encodes. */
 export const DEFAULT_CANONICAL_CONFIGURATION = "";
@@ -17,36 +16,22 @@ export const DEFAULT_CANONICAL_CONFIGURATION = "";
 /** The key for an element's default configuration (what everything falls back to). */
 export const DEFAULT_CONFIGURATION_KEY = "default";
 
-/** Decimals kept on a base-unit value: 0.1 µm, past any real CAD tolerance. */
-const BASE_UNIT_PRECISION = 7;
-
-/** Base units, so the spelling never depends on the document's display units. */
-function baseUnit(quantityType: QuantityType): Unit {
-    if (quantityType === QuantityType.LENGTH) return Unit.METER;
-    if (quantityType === QuantityType.ANGLE) return Unit.RADIAN;
-    return Unit.UNITLESS;
-}
-
 /** Normalizes one parameter's raw value to its canonical spelling. */
 function canonicalizeValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
     if (parameter.type === ParameterType.QUANTITY) {
-        // "1in", "1 in", "(0.5 + 0.5) in" and "25.4 mm" are one configuration.
-        // Unparseable values ride as-is.
+        // "1in", "1 in", "(0.5 + 0.5) in" and "25.4 mm" are one configuration:
+        // the parser reads them all to the same base value, which spells it in
+        // the units and precision Onshape itself compares in. Unparseable
+        // values ride as-is.
         const base = evaluateBaseValue(
             value,
             parameter.quantityType,
             parameter.unit
         );
-        if (base === undefined) {
-            return value.trim();
-        }
-        const unit = baseUnit(parameter.quantityType);
-        const rounded = Number(base.toFixed(BASE_UNIT_PRECISION));
-        const suffix = getUnitDisplayStr(unit);
-        return suffix ? `${rounded} ${suffix}` : `${rounded}`;
+        return base === undefined ? value.trim() : formatBaseValue(base);
     }
     if (parameter.type === ParameterType.BOOLEAN) {
         return value.trim().toLowerCase();

@@ -140,9 +140,23 @@ describe("quantity canonicalization", () => {
     });
 
     it("spells an angle in radians", () => {
+        const spelled = canonicalizeConfiguration({ angle: "180 deg" }, [
+            angle
+        ]).angle;
+        expect(spelled).toMatch(/ rad$/);
+        // To the decimals the parser's angle tolerance distinguishes, rather
+        // than a precision of this module's own.
+        expect(Number.parseFloat(spelled)).toBeCloseTo(Math.PI, 10);
+    });
+
+    // Values the parser reads as equal have to spell the same, or they key two
+    // renders of one configuration.
+    it("spells a difference below the tolerance the same way", () => {
         expect(
-            canonicalizeConfiguration({ angle: "180 deg" }, [angle])
-        ).toEqual({ angle: `${Number(Math.PI.toFixed(7))} rad` });
+            canonicalizeConfiguration({ length: "0.02540000000001 m" }, [
+                length
+            ])
+        ).toEqual(canonicalizeConfiguration({ length: "1 in" }, [length]));
     });
 
     // The document's display units used to decide the spelling, so the same
