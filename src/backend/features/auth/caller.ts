@@ -109,26 +109,25 @@ function getAccessLevelOverride(c: AppContext): AccessLevel | undefined {
     return c.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined;
 }
 
+/** Whether the session resolves to tokens Onshape will take. */
+async function hasOnshapeSession(c: AppContext): Promise<boolean> {
+    try {
+        await c.var.getOnshapeApi();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Whether the caller has a valid Onshape session, memoized on the request.
- * `FORCE_SIGNED_IN` forces it true for testing.
+ * `FORCE_SIGNED_IN` stands in for the session it cannot have in development.
  */
 export async function isSignedIn(c: AppContext): Promise<boolean> {
     const cached = c.get("signedIn");
     if (cached !== undefined) return cached;
 
-    let signedIn: boolean;
-    if (isForceSignedIn(c)) {
-        signedIn = true;
-    } else {
-        try {
-            await c.var.getOnshapeApi();
-            signedIn = true;
-        } catch {
-            signedIn = false;
-        }
-    }
-
+    const signedIn = isForceSignedIn(c) || (await hasOnshapeSession(c));
     c.set("signedIn", signedIn);
     return signedIn;
 }

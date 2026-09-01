@@ -17,6 +17,8 @@ export const buildStatusRoutes = getApp();
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
+    // The same for every editor, but only for an editor: a shared cache would
+    // hand it to whoever asked for the url next.
     cacheMiddleware(CachePolicy.PRIVATE_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -82,7 +84,6 @@ buildStatusRoutes.get(
 
         const insertablesOut: Record<string, InsertableBuildStatus> = {};
         for (const ins of allInsertables) {
-            const config = configMap.get(ins.id);
             insertablesOut[ins.id] = {
                 buildIssues: ins.buildIssues,
                 elementType: ins.elementType,
@@ -90,12 +91,7 @@ buildStatusRoutes.get(
                 supportsFasten: ins.supportsFasten,
                 indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
-                configuration: config
-                    ? {
-                          buildIssues: config.buildIssues,
-                          parameters: config.parameters
-                      }
-                    : undefined,
+                configuration: configMap.get(ins.id),
                 lastLoadedAt: ins.lastLoadedAt
             };
         }

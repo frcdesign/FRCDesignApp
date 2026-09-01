@@ -2,8 +2,7 @@
 
 /** A value's meaningful text, or nothing when it is blank. */
 export function clean(text: string | undefined | null): string | undefined {
-    const trimmed = text?.trim();
-    return trimmed ? trimmed : undefined;
+    return text?.trim() || undefined;
 }
 
 /** Whether two values say the same thing, ignoring case and surrounding space. */

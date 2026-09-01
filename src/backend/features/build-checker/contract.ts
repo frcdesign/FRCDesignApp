@@ -4,6 +4,8 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "../library/vendors";
 
 export interface ConfigurationBuildStatus {
+    /** The insertable's id, which a configuration row is keyed by. */
+    id: string;
     buildIssues: BuildIssue[];
     parameters: ConfigurationParameter[];
 }
