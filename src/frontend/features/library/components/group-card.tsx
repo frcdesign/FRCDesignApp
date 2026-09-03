@@ -130,12 +130,12 @@ export function GroupAdminContextMenu({
     );
 }
 
-function ShowAllElementsMenuItem({
-    insertableOrder
-}: {
+interface AllElementsVisibilityProps {
     insertableOrder: string[];
-}): ReactNode {
-    const mutation = useSetVisibilityMutation(insertableOrder, true);
+}
+
+function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
+    const mutation = useSetVisibilityMutation(props.insertableOrder, true);
     return (
         <Menu.Item
             color={StatusColor.INFO}
@@ -147,12 +147,8 @@ function ShowAllElementsMenuItem({
     );
 }
 
-function HideAllElementsMenuItem({
-    insertableOrder
-}: {
-    insertableOrder: string[];
-}): ReactNode {
-    const mutation = useSetVisibilityMutation(insertableOrder, false);
+function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
+    const mutation = useSetVisibilityMutation(props.insertableOrder, false);
     return (
         <Menu.Item
             color={StatusColor.ERROR}

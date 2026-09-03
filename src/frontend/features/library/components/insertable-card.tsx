@@ -60,44 +60,40 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         ? decodeConfiguration(searchHit.canonicalConfiguration)
         : undefined;
 
+    const openMenu = () => {
+        props.onClick?.();
+        if (isAssemblyInPartStudio) {
+            openCannotDeriveAssemblyAlert();
+            return;
+        }
+        openInsertMenu({ insertable, defaultConfiguration: hitConfiguration });
+    };
+
+    const thumbnail = (
+        <CardThumbnail
+            smallThumbnailUrl={insertable.smallThumbnailUrl}
+            largeThumbnailUrl={insertable.largeThumbnailUrl}
+            target={{
+                elementId: insertable.elementId,
+                microversionId: insertable.microversionId,
+                canonicalConfiguration:
+                    searchHit?.canonicalConfiguration ??
+                    DEFAULT_CANONICAL_CONFIGURATION,
+                // A cold search would otherwise start a render per row.
+                renderThumbnail: false
+            }}
+        />
+    );
+
     return (
         <ItemRow
-            onClick={() => {
-                if (props.onClick) {
-                    props.onClick();
-                }
-
-                if (isAssemblyInPartStudio) {
-                    openCannotDeriveAssemblyAlert();
-                    return;
-                }
-
-                openInsertMenu({
-                    insertable,
-                    defaultConfiguration: hitConfiguration
-                });
-            }}
+            onClick={openMenu}
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}
-                    thumbnail={
-                        <CardThumbnail
-                            smallThumbnailUrl={insertable.smallThumbnailUrl}
-                            largeThumbnailUrl={insertable.largeThumbnailUrl}
-                            target={{
-                                elementId: insertable.elementId,
-                                microversionId: insertable.microversionId,
-                                canonicalConfiguration:
-                                    searchHit?.canonicalConfiguration ??
-                                    DEFAULT_CANONICAL_CONFIGURATION,
-                                // A cold search would otherwise start a render
-                                // per row.
-                                renderThumbnail: false
-                            }}
-                        />
-                    }
+                    thumbnail={thumbnail}
                     showHiddenTag={!insertable.isVisible}
                     buildStatusBadge={
                         <InsertableStatusBadge

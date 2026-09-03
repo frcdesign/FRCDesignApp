@@ -71,43 +71,33 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
         handler((event.target as HTMLInputElement).checked);
 }
 
-export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
-    const {
-        insertableId,
-        microversionId,
-        configuration,
-        setConfiguration,
-        onCanonicalConfiguration,
-        onRecord
-    } = props;
-
-    const query = useConfigurationQuery(insertableId, microversionId);
-
-    const search = useSearch({ from: "/app" });
-    // Units come from the current document; empty when not connected to one, in
-    // which case each quantity renders in its own unit (see getEvaluateOptions).
-    const isConnected = useIsConnectedToOnshape();
-    const unitInfoQuery = useUnitInfoQuery(search, isConnected);
-    const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
-
+/** Seeds an unset configuration with every parameter's own default. */
+function useDefaultConfiguration(
+    parameters: ConfigurationParameter[] | undefined,
+    configuration: ParameterValues | undefined,
+    setConfiguration: Dispatch<ParameterValues>
+) {
     useEffect(() => {
-        // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
-        // Only fill in the configuration if it isn't already set
-        if (!query.data || configuration) {
+        // In an effect rather than a .then inside useQuery, which misbehaved.
+        if (!parameters || configuration) {
             return;
         }
-        const defaultConfiguration = query.data.parameters.reduce(
-            (configuration, parameter) => {
-                configuration[parameter.id] = parameter.default;
-                return configuration;
-            },
-            {} as ParameterValues
+        setConfiguration(
+            Object.fromEntries(
+                parameters.map((parameter) => [parameter.id, parameter.default])
+            )
         );
-        setConfiguration(defaultConfiguration);
-    }, [query.data, configuration, setConfiguration]);
+    }, [parameters, configuration, setConfiguration]);
+}
 
-    const parameters = query.data?.parameters;
-    const records = query.data?.records;
+/** Reports the selection's canonical form, and the record it resolves to. */
+function useReportSelection(
+    parameters: ConfigurationParameter[] | undefined,
+    records: SearchRecord[] | undefined,
+    configuration: ParameterValues | undefined,
+    onCanonicalConfiguration?: (canonicalConfiguration: string) => void,
+    onRecord?: (record: SearchRecord | undefined) => void
+) {
     useEffect(() => {
         if (!parameters || !configuration) {
             return;
@@ -129,6 +119,36 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         onCanonicalConfiguration,
         onRecord
     ]);
+}
+
+export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
+    const {
+        insertableId,
+        microversionId,
+        configuration,
+        setConfiguration,
+        onCanonicalConfiguration,
+        onRecord
+    } = props;
+
+    const query = useConfigurationQuery(insertableId, microversionId);
+
+    const search = useSearch({ from: "/app" });
+    // Units come from the current document; empty when not connected to one, in
+    // which case each quantity renders in its own unit (see getEvaluateOptions).
+    const isConnected = useIsConnectedToOnshape();
+    const unitInfoQuery = useUnitInfoQuery(search, isConnected);
+    const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
+
+    const parameters = query.data?.parameters;
+    useDefaultConfiguration(parameters, configuration, setConfiguration);
+    useReportSelection(
+        parameters,
+        query.data?.records,
+        configuration,
+        onCanonicalConfiguration,
+        onRecord
+    );
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.

@@ -9,7 +9,8 @@ import {
     Tooltip
 } from "@mantine/core";
 import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
+import { modals } from "@mantine/modals";
 import type { SearchRecord } from "@backend/features/configurations/models";
 import {
     FontWeight,
@@ -90,17 +91,39 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
     );
 }
 
+interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
+    /** Undefined until known, which leaves the title the opener set. */
+    name: string | undefined;
+}
+
+/**
+ * Keeps a modal's header on the selection in view. The header is updated rather
+ * than rendered, being the modal's rather than the content's.
+ */
+export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
+    const { name, record, icon } = props;
+    useEffect(() => {
+        if (name === undefined) {
+            return;
+        }
+        modals.updateModal({
+            modalId,
+            title: <MenuTitle name={name} record={record} icon={icon} />
+        });
+    }, [modalId, name, record, icon]);
+}
+
 /** The xs line box the subtitle row is otherwise sized by, floored. */
 const COPY_BUTTON_SIZE = 16;
 
 /** The part number, linked to the vendor's page for it when there is one. */
-function PartNumber({
-    partNumber,
-    url
-}: {
+interface PartNumberProps {
     partNumber: string;
     url?: string;
-}): ReactNode {
+}
+
+function PartNumber(props: PartNumberProps): ReactNode {
+    const { partNumber, url } = props;
     // Nowhere to send them, so offer the number itself to search with.
     if (!url) {
         return (

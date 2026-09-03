@@ -87,14 +87,15 @@ export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
 }
 
 /** Underlines wherever the query matched inside `text`. */
-export function HighlightedText({
-    text,
-    positions
-}: {
+interface HighlightedTextProps {
     text: string;
+    /** Where the query matched; nothing highlights when absent. */
     positions?: Position[];
-}): ReactNode {
-    return <>{applyRanges(text, positions ?? [])}</>;
+}
+
+export function HighlightedText(props: HighlightedTextProps): ReactNode {
+    const { text, positions = [] } = props;
+    return <>{applyRanges(text, positions)}</>;
 }
 
 function applyRanges(str: string, ranges: Position[]) {

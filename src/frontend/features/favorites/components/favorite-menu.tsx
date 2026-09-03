@@ -1,10 +1,10 @@
 import { modals } from "@mantine/modals";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
-import { MenuTitle } from "../../../components/app-title";
+import { useMenuTitle } from "../../../components/app-title";
 import { Button } from "@mantine/core";
 import { FloppyDiskIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { showErrorToast, showSuccessToast } from "../../../lib/notifications";
@@ -33,58 +33,27 @@ interface FavoriteMenuContentProps {
     defaultConfiguration?: ParameterValues;
 }
 
-export function FavoriteMenuContent(
-    props: FavoriteMenuContentProps
-): ReactNode {
-    const { favoriteId, modalId, defaultConfiguration } = props;
-
+/**
+ * Saves what the favorite opens with. Takes the canonical form too, so the
+ * cached row names the right thumbnail before the refetch answers.
+ */
+function useSetDefaultConfigurationMutation(
+    favoriteId: string,
+    defaultConfiguration: ParameterValues | undefined,
+    canonicalConfiguration: string | undefined
+) {
     const libraryId = useLibraryId();
-    const insertables = useLibraryQuery().data?.insertables;
-    const favoritesData = useFavoritesQuery().data;
     const refreshFavorites = useRefreshFavorites();
-
-    const [configuration, setConfiguration] = useState<
-        ParameterValues | undefined
-    >(defaultConfiguration);
-    // Reported by ConfigurationWrapper; names this selection's thumbnail.
-    // Undefined until it reports, which is what gates saving.
-    const [canonical, setCanonical] = useState<string | undefined>(undefined);
-    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
-
-    const favorite = favoritesData?.favorites[favoriteId];
-    const insertable =
-        favorite && insertables
-            ? insertables[favorite.insertableId]
-            : undefined;
-
-    const insertableName = insertable?.name;
-    useEffect(() => {
-        if (insertableName === undefined) {
-            return;
-        }
-        modals.updateModal({
-            modalId,
-            title: (
-                <MenuTitle
-                    name={insertableName}
-                    record={record}
-                    icon={<FavoriteIcon size={IconSize.MEDIUM} />}
-                />
-            )
-        });
-    }, [modalId, insertableName, record]);
-
-    const setDefaultConfigurationMutation = useMutation({
+    return useMutation({
         mutationKey: ["set-default-configuration"],
         mutationFn: async () => {
             // The selection as made, not its canonical form, which would drop
             // a value that is the parameter's default or a hidden one.
             return apiPost(
                 "/default-configuration" + toFavoritePath(favoriteId),
-                { body: { defaultConfiguration: configuration } }
+                { body: { defaultConfiguration } }
             );
         },
-
         onMutate: async () => {
             const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
@@ -93,8 +62,8 @@ export function FavoriteMenuContent(
                 getQueryUpdater((data: FavoritesData) => {
                     const fav = data.favorites[favoriteId];
                     if (fav) {
-                        fav.defaultConfiguration = configuration;
-                        fav.canonicalConfiguration = canonical;
+                        fav.defaultConfiguration = defaultConfiguration;
+                        fav.canonicalConfiguration = canonicalConfiguration;
                     }
                     return data;
                 })
@@ -112,6 +81,41 @@ export function FavoriteMenuContent(
         },
         onSettled: refreshFavorites
     });
+}
+
+export function FavoriteMenuContent(
+    props: FavoriteMenuContentProps
+): ReactNode {
+    const { favoriteId, modalId, defaultConfiguration } = props;
+
+    const insertables = useLibraryQuery().data?.insertables;
+    const favoritesData = useFavoritesQuery().data;
+
+    const [configuration, setConfiguration] = useState<
+        ParameterValues | undefined
+    >(defaultConfiguration);
+    // Reported by ConfigurationWrapper; names this selection's thumbnail.
+    // Undefined until it reports, which is what gates saving.
+    const [canonical, setCanonical] = useState<string | undefined>(undefined);
+    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
+
+    const favorite = favoritesData?.favorites[favoriteId];
+    const insertable =
+        favorite && insertables
+            ? insertables[favorite.insertableId]
+            : undefined;
+
+    useMenuTitle(modalId, {
+        name: insertable?.name,
+        record,
+        icon: <FavoriteIcon size={IconSize.MEDIUM} />
+    });
+
+    const setDefaultConfigurationMutation = useSetDefaultConfigurationMutation(
+        favoriteId,
+        configuration,
+        canonical
+    );
 
     if (!insertable) {
         return null;
