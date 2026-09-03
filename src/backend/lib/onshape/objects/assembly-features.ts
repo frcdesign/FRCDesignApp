@@ -2,7 +2,7 @@
 
 /** A dummy ID which allows features to bypass validation. */
 export function dummyId(): string {
-    return "M" + "0".repeat(16);
+    return "0".repeat(17);
 }
 
 /** A query for a mate connector feature in a part studio. */
@@ -104,11 +104,11 @@ export function fastenMate(
         btType: "BTMMate-64",
         featureType: "mate",
         name,
+        mateConnectors,
         parameters: [
             mateTypeParameter("FASTENED"),
             queryParameter("mateConnectorsQuery", queries)
-        ],
-        mateConnectors
+        ]
     };
     return result;
 }
@@ -160,7 +160,6 @@ export function makeMateConnector(
 ): Record<string, unknown> {
     return {
         btType: "BTMMateConnector-66",
-        version: 9,
         name,
         implicit,
         parameters: [

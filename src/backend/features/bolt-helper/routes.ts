@@ -82,11 +82,7 @@ boltHelperRoutes.post(
             const mateConnector = implicitMateConnector(query);
             console.log(JSON.stringify(mateConnector, null, 2));
 
-            // const response = await addAssemblyFeature(
-            //     onshapeApi,
-            //     targetPath,
-            //     mateConnector
-            // );
+            await addAssemblyFeature(onshapeApi, targetPath, mateConnector);
 
             // const featureId = response.feature.featureId;
             builder.addMateConnector(mateConnector);

@@ -8,7 +8,7 @@ import {
 // Constant across all environments (dev/cert/production), so hardcoded here
 // rather than duplicated as a per-environment var in wrangler.jsonc.
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
-const ONSHAPE_API_VERSION = 16;
+const ONSHAPE_API_VERSION = 17;
 
 export function getBaseUrl(): string {
     return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
