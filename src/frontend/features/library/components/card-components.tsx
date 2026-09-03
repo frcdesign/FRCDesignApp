@@ -235,11 +235,14 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
 }
 
 /** The part number, linked to the vendor's page for it when there is one. */
-function CardPartNumber(props: {
+interface CardPartNumberProps {
     partNumber: string;
+    /** Where the query matched inside it, for underlining. */
     positions?: Position[];
     url?: string;
-}): ReactNode {
+}
+
+function CardPartNumber(props: CardPartNumberProps): ReactNode {
     const { partNumber, positions, url } = props;
     const text = <HighlightedText text={partNumber} positions={positions} />;
     if (!url) {

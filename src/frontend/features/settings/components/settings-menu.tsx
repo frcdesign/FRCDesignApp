@@ -6,7 +6,7 @@ import {
     IconSize,
     StatusColor
 } from "../../../lib/style-constants";
-import { ReactNode } from "react";
+import { PropsWithChildren, ReactNode } from "react";
 import {
     AccessLevel,
     hasEditorAccess,
@@ -29,13 +29,18 @@ import { ReloadGroupsButton } from "../../library/components/reload-groups-butto
 /** The FRCDesign feedback form, which the setting below opens. */
 const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
-function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
+interface SettingRowProps extends PropsWithChildren {
+    label: string;
+}
+
+function SettingRow(props: SettingRowProps): ReactNode {
+    const { label, children } = props;
     return (
         <Group justify="space-between" wrap="nowrap" my="sm">
             <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                {props.label}
+                {label}
             </Text>
-            {props.children}
+            {children}
         </Group>
     );
 }

@@ -117,7 +117,12 @@ function GroupList(): ReactNode {
     );
 }
 
-function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
+interface GroupHeaderRowProps {
+    group: GroupOut;
+}
+
+function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
+    const { group } = props;
     const navigate = useNavigate();
     const libraryId = useLibraryId();
     const menuItems = <GroupMenuItems group={group} />;

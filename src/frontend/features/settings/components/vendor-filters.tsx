@@ -8,21 +8,16 @@ import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 
 interface ClearFiltersButtonProps {
-    /**
-     * @default "Clear filters"
-     */
+    /** @default "Clear filters" */
     text?: string;
-    /**
-     * @default false
-     */
+    /** @default false */
     small?: boolean;
 }
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
+    const { text = "Clear filters", small = false } = props;
     const uiState = useGetUiState();
     const setUiState = useSetUiState();
-    const text = props.text ?? "Clear filters";
-    const small = props.small ?? false;
 
     const vendorFilters = uiState.vendorFilters;
     const areAllTagsActive = vendorFilters === undefined;

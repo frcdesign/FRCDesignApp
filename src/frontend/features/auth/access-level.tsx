@@ -78,15 +78,19 @@ interface RequireAccessLevelProps extends PropsWithChildren {
 }
 
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
+    const {
+        accessLevel = AccessLevel.EDITOR,
+        useMaxAccessLevel = false,
+        children
+    } = props;
     const accessData = useAccessData();
-    const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
-    const currentAccessLevel = props.useMaxAccessLevel
+    const currentAccessLevel = useMaxAccessLevel
         ? accessData.maxAccessLevel
         : accessData.currentAccessLevel;
 
     // Reads backwards: the level held is the ceiling the requirement fits under.
-    return isWithinAccessLevel(requiredAccessLevel, currentAccessLevel)
-        ? props.children
+    return isWithinAccessLevel(accessLevel, currentAccessLevel)
+        ? children
         : null;
 }
 

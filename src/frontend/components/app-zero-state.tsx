@@ -63,12 +63,12 @@ function resolveDescription(description: ErrorProps["description"]): ReactNode {
 }
 
 export function SectionError(props: ErrorProps): ReactNode {
-    const { title, action, className } = props;
+    const { title, action, className, icon = DEFAULT_ERROR_ICON } = props;
     return (
         <ZeroState
             className={className}
             title={title}
-            icon={props.icon ?? DEFAULT_ERROR_ICON}
+            icon={icon}
             description={resolveDescription(props.description)}
             action={action}
         />
@@ -93,14 +93,19 @@ interface PageErrorProps extends ErrorProps {
 }
 
 export function PageError(props: PageErrorProps): ReactNode {
-    const { title, action, className } = props;
-    const justifyUp = props.justifyUp ?? false;
+    const {
+        title,
+        action,
+        className,
+        icon = DEFAULT_ERROR_ICON,
+        justifyUp = false
+    } = props;
 
     const error = (
         <ZeroState
             className={className}
             title={title}
-            icon={props.icon ?? DEFAULT_ERROR_ICON}
+            icon={icon}
             description={resolveDescription(props.description)}
             action={action}
         />

@@ -151,7 +151,12 @@ function HomeList(): ReactNode {
 }
 
 /** The library's name, and a badge when it is not simply supported. */
-function LibraryTitle({ libraryId }: { libraryId: string }): ReactNode {
+interface LibraryTitleProps {
+    libraryId: string;
+}
+
+function LibraryTitle(props: LibraryTitleProps): ReactNode {
+    const { libraryId } = props;
     const status = getLibraryStatus(libraryId);
     return (
         <AppTitle

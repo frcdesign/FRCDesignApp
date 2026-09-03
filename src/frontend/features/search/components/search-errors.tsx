@@ -40,7 +40,12 @@ interface FilterCalloutProps {
  * Blue rather than the library accent: the strip reports on the results, so it
  * should read as a note beside them rather than as part of the library.
  */
-function Callout(props: { text: string; action: ReactNode }): ReactNode {
+interface CalloutProps {
+    text: string;
+    action: ReactNode;
+}
+
+function Callout(props: CalloutProps): ReactNode {
     return (
         <Alert
             color={StatusColor.INFO}
@@ -142,9 +147,9 @@ interface SearchAllButtonProps {
 }
 
 function SearchAllButton(props: SearchAllButtonProps): ReactNode {
+    const { small = false } = props;
     const navigate = useNavigate();
     const libraryId = useLibraryId();
-    const small = props.small ?? false;
     return (
         <Button
             leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}

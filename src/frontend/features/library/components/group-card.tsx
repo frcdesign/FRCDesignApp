@@ -164,7 +164,12 @@ function HideAllElementsMenuItem({
     );
 }
 
-function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
+interface DeleteGroupMenuItemProps {
+    groupId: string;
+}
+
+function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
+    const { groupId } = props;
     const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
 

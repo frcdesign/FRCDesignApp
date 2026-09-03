@@ -9,9 +9,10 @@ interface AppModalBodyProps extends PropsWithChildren {
 
 /** A modal's content, padded away from the header and footer framing it. */
 export function AppModalBody(props: AppModalBodyProps): ReactNode {
+    const { gap = "sm", children } = props;
     return (
-        <Stack p="sm" gap={props.gap ?? "sm"}>
-            {props.children}
+        <Stack p="sm" gap={gap}>
+            {children}
         </Stack>
     );
 }

@@ -17,7 +17,7 @@ interface ReloadGroupsButtonProps {
 }
 
 export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
-    const reloadAll = props.reloadAll ?? false;
+    const { reloadAll = false } = props;
 
     const libraryId = useLibraryId();
 
