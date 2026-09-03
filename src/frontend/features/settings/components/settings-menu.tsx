@@ -29,9 +29,6 @@ import { ReloadGroupsButton } from "../../library/components/reload-groups-butto
 /** The FRCDesign feedback form, which the setting below opens. */
 const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
-/**
- * A labeled row holding a single setting control.
- */
 function SettingRow(props: { label: string; children: ReactNode }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" my="sm">
@@ -141,9 +138,8 @@ function UserSettings(): ReactNode {
 }
 
 /**
- * The app's own url for the current library, free of the params Onshape
- * launches it with — carrying those over is what would keep it embedded. The
- * settings come along on their own, being the same browser's.
+ * The app's own url for the library, free of Onshape's launch params, which are
+ * what would keep it embedded. Settings follow on their own, being this browser's.
  */
 function standaloneUrl(libraryId: LibraryId): string {
     return new URL(`/app/library/${libraryId}`, window.location.origin).href;

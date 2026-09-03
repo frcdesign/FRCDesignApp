@@ -38,9 +38,6 @@ interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
     path: DocumentPath | InstancePath | ConfigurablePath;
 }
-/**
- * Menu items which can be used to open or copy a link to a document.
- */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
@@ -69,9 +66,6 @@ interface QuickInsertItemProps {
     isFavorite: boolean;
 }
 
-/**
- * Menu items which can be used to quick insert a document.
- */
 export function QuickInsertItems(props: QuickInsertItemProps) {
     const { insertable, configuration, isFavorite } = props;
     const search = useSearch({ from: "/app" });

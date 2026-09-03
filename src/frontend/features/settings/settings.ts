@@ -7,9 +7,8 @@ import { queryClient } from "../../lib/query-client";
 import { updateUiState } from "../../lib/ui-state";
 
 /**
- * Applies a setting locally, where the app reads it from, and saves it to the
- * caller's row when they have one — which is what a browser running the app for
- * the first time, and the Onshape launch, start from.
+ * Applies a setting where the app reads it, and saves it to the caller's row,
+ * which a first-run browser and the Onshape launch start from.
  */
 async function saveSettings(newSettings: SettingsUpdate): Promise<void> {
     updateUiState(newSettings);

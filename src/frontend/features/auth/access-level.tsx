@@ -15,9 +15,8 @@ const DEFAULT_ACCESS_LEVEL =
     AccessLevel.USER;
 
 /**
- * What the app assumes until the server answers. The default level is granted
- * as well as viewed, or the clamp below would drop the dev override back to
- * user for as long as the query is pending.
+ * What the app assumes until the server answers. Granted as well as viewed, or
+ * the clamp below would drop a dev override while the query is pending.
  */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: DEFAULT_ACCESS_LEVEL,

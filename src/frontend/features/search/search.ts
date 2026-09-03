@@ -118,10 +118,8 @@ export function doSearch(
         }
     });
 
-    // Add highlighting
     const hits: SearchHit[] = miniSearchResults
         .map((miniSearchResult) => {
-            // Stored fields should be the same as SearchDocument
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
@@ -211,9 +209,8 @@ const DESCRIPTIVE: FieldReader = {
 };
 
 /**
- * How well one term is answered: a term matched whole beats one matched as a
- * prefix, which every longer number satisfies too — `1` names the size `1"`,
- * but only starts `16`.
+ * A term matched whole beats one matched as a prefix, which every longer number
+ * satisfies too: `1` names the size `1"`, but only starts `16`.
  */
 function termScore(valueTerms: string[], queryTerm: string): number {
     // A unit is not part of the number's spelling, so `1` still names `1"`.

@@ -107,7 +107,6 @@ export function NoSearchResultError(
         );
 
     if (filtered.byGroup > 0) {
-        // User is in a subgroup
         return (
             <SectionError
                 icon={icon}
@@ -117,7 +116,6 @@ export function NoSearchResultError(
             />
         );
     } else if (filtered.byVendor > 0) {
-        // User has vendor filters selected
         return (
             <SectionError
                 icon={icon}
@@ -127,7 +125,6 @@ export function NoSearchResultError(
             />
         );
     }
-    // User has a bad search query
     return (
         <SectionError
             icon={icon}

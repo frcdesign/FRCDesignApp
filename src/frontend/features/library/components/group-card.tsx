@@ -35,9 +35,6 @@ interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
 }
 
-/**
- * A card representing a single group.
- */
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();

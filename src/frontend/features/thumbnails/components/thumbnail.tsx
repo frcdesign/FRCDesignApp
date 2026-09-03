@@ -213,9 +213,8 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     );
     const targetElementType = useTargetElementType();
 
-    // Each poll gets a url of its own. The browser caches images by url for
-    // the life of the page, so reusing one leaves the stand-in on screen
-    // however many times the query refetches past it.
+    // A url per poll: the browser caches images by url for the life of the
+    // page, so reusing one leaves the stand-in up however often we refetch.
     const pollUrl = (attempt: number) =>
         thumbnailUrl({
             elementId: path.elementId,

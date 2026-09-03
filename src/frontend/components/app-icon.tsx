@@ -18,9 +18,8 @@ export interface AppIconProps
 }
 
 /**
- * A Phosphor icon in a theme color. Box is what resolves the color name, and
- * sizing goes through `fz` because Box writes its own `style`, which is what
- * would drop the icon's own.
+ * A Phosphor icon in a theme color. Box resolves the name, and sizes through
+ * `fz` because its own `style` would drop the icon's.
  */
 export function AppIcon({
     icon,

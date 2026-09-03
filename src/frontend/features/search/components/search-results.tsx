@@ -109,19 +109,15 @@ function applyRanges(str: string, ranges: Position[]) {
         const { start, length } = range;
         const end = start + length;
 
-        // Add non-highlighted part before this range
         if (currentIndex < start) {
             result.push(str.slice(currentIndex, start));
         }
 
-        // Add highlighted part
-        // Array elements must have a key to avoid a warning
         result.push(<u key={currentIndex}>{str.slice(start, end)}</u>);
 
         currentIndex = end;
     }
 
-    // Add the remaining non-highlighted part
     if (currentIndex < str.length) {
         result.push(str.slice(currentIndex));
     }

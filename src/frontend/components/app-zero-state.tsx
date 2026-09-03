@@ -16,10 +16,7 @@ interface ZeroStateProps {
     className?: string;
 }
 
-/**
- * A centered icon/title/description/action block used to indicate empty,
- * loading, or error states.
- */
+/** The centered block every empty, loading and error state is built from. */
 function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
 
@@ -39,34 +36,21 @@ function ZeroState(props: ZeroStateProps): ReactNode {
 }
 
 interface SectionLoadingProps {
-    /**
-     * This should take the form "Loading {thing}...".
-     */
+    /** Takes the form "Loading {thing}...". */
     title: string;
 }
 
-/**
- * Used to indicate a section of the UI is loading.
- */
 export function SectionLoading(props: SectionLoadingProps): ReactNode {
     return <ZeroState title={props.title} icon={<Loader />} />;
 }
 
 interface ErrorProps {
-    /**
-     * The title should always end with a period when there's a description.
-     */
+    /** Ends with a period whenever there is a description. */
     title: string;
-    /**
-     * If omitted, will default to "If the problem persists, contact the FRCDesignApp developers."
-     *
-     * Pass in null to override the default.
-     */
+    /** Null for none at all; omitted falls back to the contact-us line. */
     description?: string | null | JSX.Element;
     className?: string;
-    /**
-     * Defaults to a danger-colored cross icon.
-     */
+    /** @default a danger-colored cross */
     icon?: ReactNode;
     action?: JSX.Element;
 }
@@ -78,9 +62,6 @@ function resolveDescription(description: ErrorProps["description"]): ReactNode {
     return description;
 }
 
-/**
- * Indicates an error with a section of the UI.
- */
 export function SectionError(props: ErrorProps): ReactNode {
     const { title, action, className } = props;
     return (
@@ -95,7 +76,7 @@ export function SectionError(props: ErrorProps): ReactNode {
 }
 
 interface PageMessageProps extends ZeroStateProps {
-    /** Pass true to keep the message closer to the top of the page. */
+    /** Keeps the message nearer the top of the page. @default false */
     justifyUp?: boolean;
 }
 
@@ -107,17 +88,10 @@ export function PageMessage(props: PageMessageProps): ReactNode {
 }
 
 interface PageErrorProps extends ErrorProps {
-    /**
-     * Pass in true to keep the error closer to the top of the page.
-     *
-     * @default false
-     */
+    /** Keeps the error nearer the top of the page. @default false */
     justifyUp?: boolean;
 }
 
-/**
- * Indicates an error with a page in the UI.
- */
 export function PageError(props: PageErrorProps): ReactNode {
     const { title, action, className } = props;
     const justifyUp = props.justifyUp ?? false;

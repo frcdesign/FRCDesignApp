@@ -16,9 +16,8 @@ export interface FilterArgs {
 }
 
 /**
- * A list of insertables narrowed down for display, plus what the narrowing
- * cost. Searching and plain filtering both produce one, so a list renders the
- * same either way.
+ * Insertables narrowed for display, plus what the narrowing cost. Searching and
+ * plain filtering both produce one, so a list renders the same either way.
  */
 export interface FilteredInsertables {
     insertables: InsertableOut[];
@@ -35,12 +34,10 @@ export function filterInsertables(
 ): FilteredInsertables {
     let filtered = [...insertables];
 
-    // Filter by visibility
     if (args.isVisible) {
         filtered = filtered.filter((ins) => ins.isVisible);
     }
 
-    // Filter by vendors and track how many were removed
     let filteredByVendor = 0;
     if (args.vendors && args.vendors.length > 0) {
         const vendorSet = new Set(args.vendors);

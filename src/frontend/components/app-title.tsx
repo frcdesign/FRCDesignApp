@@ -45,9 +45,8 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     {rightSection}
                 </Group>
                 {subtitle && (
-                    // lh, because the title's own is 1: inheriting that
-                    // leaves no leading under the last line, and the block
-                    // reads low against a header padded evenly.
+                    // lh, because inheriting the title's 1 leaves no leading
+                    // under the last line, reading low in an evenly padded header.
                     <Group
                         gap={4}
                         wrap="nowrap"

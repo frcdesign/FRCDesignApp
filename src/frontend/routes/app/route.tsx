@@ -37,9 +37,8 @@ export const Route = createFileRoute("/app")({
         ]
     },
     beforeLoad: ({ search, location }) => {
-        // The entry redirect seeds the theme the account last saved; ui-state
-        // is what the app reads from here on, so take it and drop the
-        // parameter rather than leave a second answer in the url.
+        // The entry redirect seeds the account's saved theme; ui-state is what
+        // the app reads, so take it rather than leave a second answer in the url.
         if (search.theme) {
             updateUiState({ theme: search.theme });
             throw redirect({

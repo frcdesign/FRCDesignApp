@@ -193,9 +193,6 @@ interface FavoriteInsertableItemProps {
     canonicalConfiguration?: string;
 }
 
-/**
- * A menu item which can be used to favorite or unfavorite an insertable.
- */
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     const {
         favorite,

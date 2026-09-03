@@ -4,10 +4,8 @@ import { showInfoToast } from "../../lib/notifications";
 const QUICK_INSERT_WINDOW_MS = 1500;
 
 /**
- * After an insert that changed nothing in the menu, points out that a
- * right-click would have done it. Only when the menu was dismissed as fast as
- * a right-click: a slower one was spent looking at the part, which the tip
- * has no better answer for.
+ * Points out that a right-click would have done it — only when the menu was
+ * dismissed that fast, a slower one having been spent looking at the part.
  */
 export function showQuickInsertTip(openedAt: number): void {
     if (Date.now() - openedAt >= QUICK_INSERT_WINDOW_MS) {

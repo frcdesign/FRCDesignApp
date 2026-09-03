@@ -10,9 +10,8 @@ import { favoritesQueryKey } from "../../lib/query-keys";
 const EMPTY_FAVORITES: FavoritesData = { favorites: {}, favoriteOrder: [] };
 
 /**
- * Resolved in the query rather than gating it with `enabled`: a disabled query
- * reports pending forever, and the access-data placeholder says signed out, so
- * a signed-in caller would be shown no favorites until both land.
+ * Resolved here rather than gated by `enabled`: a disabled query is pending
+ * forever, so a signed-in caller would see no favorites until access lands.
  */
 export function getFavoritesQuery(libraryId: LibraryId) {
     return queryOptions<FavoritesData>({

@@ -14,11 +14,7 @@ interface ChangeOrderMenuProps {
     onOrderChange: (newOrder: string[]) => void;
 }
 
-/**
- * MenuItems that allow users to move a given item in a list up or down.
- *
- * Includes a trailing divider (when any options are actually shown).
- */
+/** Move-up/move-down items, with a trailing divider when either is shown. */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
 
@@ -110,7 +106,6 @@ function applyMoveOperation(
     const index = order.indexOf(target);
     if (index === -1) return order; // target not found, return unchanged
 
-    // Make a shallow copy so we don't mutate input
     const result = [...order];
 
     switch (operation) {

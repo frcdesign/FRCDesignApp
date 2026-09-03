@@ -16,11 +16,7 @@ export interface OnshapeParams extends ElementPath {
     server: string;
 }
 
-/**
- * An actual color theme, as provided by Onshape.
- *
- * See also Theme, which is a superset of ColorTheme that also includes "system".
- */
+/** A resolved theme, as Onshape provides it; Theme adds "system" on top. */
 export type ColorTheme = "light" | "dark";
 
 /**

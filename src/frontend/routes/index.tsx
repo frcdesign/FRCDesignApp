@@ -3,9 +3,8 @@ import { getUiState, updateUiState } from "../lib/ui-state";
 import { showSuccessToast } from "../lib/notifications";
 import { RootAppError } from "../components/root-error";
 
-// Direct entry for a user opening the app outside Onshape, and where signing in
-// returns to. Onshape's own launch is handled server-side, so it never reaches
-// this route.
+// Direct entry from outside Onshape, and where signing in returns to; Onshape's
+// own launch is served before this route.
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { libraryId, groupId, justSignedIn } = getUiState();

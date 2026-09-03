@@ -28,9 +28,8 @@ const UiStateSchema = z.object({
     accessLevel: AccessLevelType.optional(),
     /** Set on leaving for Onshape, so the app can confirm the sign-in on return. */
     justSignedIn: z.boolean().default(false),
-    // The caller's settings, which this is the source of truth for. A signed-in
-    // caller also has them server-side, which is what a browser that has never
-    // run the app starts from.
+    // The caller's settings, and the source of truth for them; a signed-in
+    // caller's row is what a browser that has never run the app starts from.
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
     libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
     /** The group last opened in that library; null for the library itself. */
@@ -66,9 +65,8 @@ function writeStorage(value: string): void {
 }
 
 /**
- * What was stored, or the defaults when it cannot be used: written by an older
- * version, hand-edited, or naming something the app has since dropped. Losing a
- * preference beats failing to start.
+ * What was stored, or the defaults when it cannot be used — older, hand-edited,
+ * or naming something dropped. Losing a preference beats failing to start.
  */
 function readStoredState(): UiState {
     const raw = readStorage();
@@ -124,7 +122,7 @@ export function useGetUiState(): UiState {
 
 /** Merges into the state; every reader of it re-renders. */
 // The setter half of the pair above: a component reaches for one or the other,
-// so both read as hooks even though setting needs no state of its own.
+// so both read as hooks though setting needs no state of its own.
 // eslint-disable-next-line react-x/no-unnecessary-use-prefix
 export function useSetUiState(): SetUiState {
     return updateUiState;
