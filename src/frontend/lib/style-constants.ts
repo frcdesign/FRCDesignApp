@@ -59,6 +59,23 @@ export const FRAME_BACKGROUND =
  */
 export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
 
+/** Holds an icon or badge at its own size beside text that can outgrow the row. */
+export const NO_SHRINK = { flexShrink: 0 };
+
+/**
+ * Paints an image in the current text color rather than its own. The url needs
+ * quoting: Vite inlines an asset as a data uri, which can contain apostrophes.
+ */
+export function maskedImage(url: string) {
+    return {
+        backgroundColor: "currentColor",
+        maskImage: `url("${url}")`,
+        maskSize: "contain",
+        maskRepeat: "no-repeat",
+        maskPosition: "center"
+    };
+}
+
 /**
  * One height for a section header, set rather than left to the content: an
  * accordion is sized by its label, a group header by its menu button.

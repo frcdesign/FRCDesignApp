@@ -270,12 +270,9 @@ function InputLabel(props: InputLabelProps) {
     const text = (
         <Text
             size="sm"
-            style={{
-                display: "flex",
-                alignItems: "center",
-                height: INPUT_HEIGHT,
-                cursor: "pointer"
-            }}
+            display="flex"
+            h={INPUT_HEIGHT}
+            style={{ alignItems: "center", cursor: "pointer" }}
             component="label"
             htmlFor={htmlFor}
         >
@@ -369,7 +366,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     label: option.name
                 }))}
                 value={currentOption.id}
-                style={{ flex: 1 }}
+                flex={1}
                 allowDeselect={false}
                 checkIconPosition="right"
                 maxDropdownHeight={250}
@@ -411,7 +408,7 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
             <TextInput
                 id={parameter.id}
                 value={value ?? parameter.default}
-                style={{ flex: 1 }}
+                flex={1}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
         </InputLabel>
@@ -476,7 +473,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                 ref={ref}
                 value={focused ? expression : display}
                 error={errorMessage}
-                style={{ flex: 1 }}
+                flex={1}
                 onFocus={(event) => {
                     setFocused(true);
                     event.currentTarget.select();

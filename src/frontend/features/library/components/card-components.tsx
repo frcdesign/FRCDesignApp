@@ -6,7 +6,7 @@ import {
     LinkIcon,
     PlusIcon
 } from "@phosphor-icons/react";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
@@ -244,12 +244,7 @@ function CardPartNumber(props: {
     const text = <HighlightedText text={partNumber} positions={positions} />;
     if (!url) {
         return (
-            <Text
-                inherit
-                truncate
-                miw={0}
-                style={{ flexShrink: 0, maxWidth: "100%" }}
-            >
+            <Text inherit truncate miw={0} maw="100%" style={NO_SHRINK}>
                 {text}
             </Text>
         );
@@ -261,14 +256,10 @@ function CardPartNumber(props: {
             inherit
             // The row inserts on click, which is not what the link is for.
             onClick={(event) => event.stopPropagation()}
-            style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 2,
-                minWidth: 0,
-                flexShrink: 0,
-                maxWidth: "100%"
-            }}
+            display="inline-flex"
+            miw={0}
+            maw="100%"
+            style={{ alignItems: "center", gap: 2, ...NO_SHRINK }}
         >
             <Text component="span" inherit truncate miw={0}>
                 {text}
@@ -288,9 +279,7 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
             highlightOnHover
             verticalSpacing="xs"
             layout="fixed"
-            style={{
-                cursor: "pointer"
-            }}
+            style={{ cursor: "pointer" }}
         >
             <Table.Tbody>{props.children}</Table.Tbody>
         </Table>

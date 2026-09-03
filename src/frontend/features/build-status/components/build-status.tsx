@@ -1,5 +1,6 @@
 import {
     Badge,
+    Box,
     Divider,
     Group,
     HoverCard,
@@ -60,6 +61,7 @@ import {
 import {
     FontWeight,
     IconSize,
+    NO_SHRINK,
     RADIUS,
     StatusColor,
     statusBackground
@@ -292,7 +294,8 @@ function CardHeader({
                     fw={FontWeight.SEMI_BOLD}
                     size="sm"
                     lineClamp={2}
-                    style={{ flex: 1, minWidth: 0 }}
+                    flex={1}
+                    miw={0}
                 >
                     {name}
                 </Text>
@@ -315,7 +318,7 @@ function LastModified({
     if (jobRunning) {
         return (
             <Tooltip label="The library is being loaded from Onshape in the background">
-                <Loader size="xs" style={{ flexShrink: 0 }} />
+                <Loader size="xs" style={NO_SHRINK} />
             </Tooltip>
         );
     }
@@ -328,7 +331,7 @@ function LastModified({
                 gap={4}
                 wrap="nowrap"
                 c={StatusColor.DIMMED}
-                style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                style={{ whiteSpace: "nowrap", ...NO_SHRINK }}
             >
                 <ClockIcon size={IconSize.TINY} />
                 <Text size="xs">
@@ -462,7 +465,7 @@ function IssueCallout({ issue }: { issue: BuildIssue }): ReactNode {
             {/* Nudge the icon down so it aligns with the first line of text. */}
             <IssueIcon
                 severity={severity}
-                style={{ flexShrink: 0, marginTop: 2 }}
+                style={{ ...NO_SHRINK, marginTop: 2 }}
             />
             <Text size="sm">{getIssueDescription(issue)}</Text>
         </Group>
@@ -568,12 +571,12 @@ function ControlRow(props: {
 }): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="md" align="center">
-            <div style={{ minWidth: 0 }}>
+            <Box miw={0}>
                 <Text size="sm">{props.label}</Text>
                 <Text size="xs" c={StatusColor.DIMMED}>
                     {props.description}
                 </Text>
-            </div>
+            </Box>
             {props.control}
         </Group>
     );
@@ -737,7 +740,7 @@ function IndexingIcon({
 }): ReactNode {
     return (
         <Tooltip label={tooltip} withArrow multiline w={260}>
-            <IssueIcon severity={severity} style={{ flexShrink: 0 }} />
+            <IssueIcon severity={severity} style={NO_SHRINK} />
         </Tooltip>
     );
 }
@@ -883,7 +886,7 @@ function ExcludedFromPropertiesIcon({
                 icon={FileXIcon}
                 size={IconSize.SMALL}
                 color={StatusColor.DIMMED}
-                style={{ flexShrink: 0 }}
+                style={NO_SHRINK}
             />
         </Tooltip>
     );

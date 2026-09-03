@@ -2,6 +2,7 @@ import {
     ActionIcon,
     Box,
     Button,
+    Center,
     Group,
     Input,
     Loader,
@@ -15,6 +16,7 @@ import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
+    maskedImage,
     PrimaryColor,
     RADIUS,
     StatusColor
@@ -120,7 +122,7 @@ function RunningJobLoader(): ReactNode {
 
 function FrcDesignBookIcon(): ReactNode {
     return (
-        <Box
+        <Center
             component="a"
             href="https://frcdesign.org"
             target="_blank"
@@ -130,27 +132,16 @@ function FrcDesignBookIcon(): ReactNode {
             my="auto"
             bg={PrimaryColor.FILLED}
             c={PrimaryColor.CONTRAST}
-            style={{
-                borderRadius: RADIUS,
-                display: "grid",
-                placeItems: "center"
-            }}
+            style={{ borderRadius: RADIUS }}
         >
             {/* Masked, not drawn, so the book takes the tile's contrast color
-                rather than the gray in the file. The url needs quoting: Vite
-                inlines the asset as a data uri containing apostrophes. */}
+                rather than the gray in the file. */}
             <Box
                 w={IconSize.SMALL}
                 h={IconSize.SMALL}
-                style={{
-                    backgroundColor: "currentColor",
-                    maskImage: `url("${frcDesignBook}")`,
-                    maskSize: "contain",
-                    maskRepeat: "no-repeat",
-                    maskPosition: "center"
-                }}
+                style={maskedImage(frcDesignBook)}
             />
-        </Box>
+        </Center>
     );
 }
 
