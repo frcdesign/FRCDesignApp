@@ -21,10 +21,10 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
-    ParameterValues,
+    Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
@@ -37,7 +37,7 @@ interface InsertMenuContentProps {
     insertable: InsertableOut;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    defaultConfiguration?: ParameterValues;
+    initialSelection?: Selection;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
@@ -45,33 +45,30 @@ interface InsertMenuContentProps {
 }
 
 /**
- * The selection the menu holds, in both the form insert sends and the canonical
- * one that names a thumbnail, plus whether it still stands where it opened.
+ * The selection the menu holds and its key, plus whether it still stands where
+ * it opened.
  */
-function useInsertSelection(defaultConfiguration?: ParameterValues) {
-    const [configuration, setConfiguration] = useState(defaultConfiguration);
-    // Reported by ConfigurationWrapper, which has the parameters and units the
-    // canonical form needs. Empty means the element's default configuration.
-    const [canonicalConfiguration, setCanonicalConfiguration] = useState(
-        DEFAULT_CANONICAL_CONFIGURATION
-    );
+function useInsertSelection(initialSelection?: Selection) {
+    const [configuration, setConfiguration] = useState(initialSelection);
+    // Reported by ConfigurationWrapper, which has the parameters the key is
+    // measured against. Empty means the element's own defaults.
+    const [configurationKey, setConfigurationKey] =
+        useState(ELEMENT_DEFAULT_KEY);
     // The first report is what the menu opened with, and so what a right-click
     // on the card would have inserted. Absent until the parameters load.
     const [openedWith, setOpenedWith] = useState<string>();
 
-    const onCanonicalConfiguration = useCallback((canonical: string) => {
-        setCanonicalConfiguration(canonical);
-        setOpenedWith((opened) => opened ?? canonical);
+    const onConfigurationKey = useCallback((key: string) => {
+        setConfigurationKey(key);
+        setOpenedWith((opened) => opened ?? key);
     }, []);
 
     return {
         configuration,
         setConfiguration,
-        canonicalConfiguration,
-        onCanonicalConfiguration,
-        isUnchanged:
-            canonicalConfiguration ===
-            (openedWith ?? DEFAULT_CANONICAL_CONFIGURATION)
+        configurationKey,
+        onConfigurationKey,
+        isUnchanged: configurationKey === (openedWith ?? ELEMENT_DEFAULT_KEY)
     };
 }
 
@@ -83,10 +80,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const {
         configuration,
         setConfiguration,
-        canonicalConfiguration,
-        onCanonicalConfiguration,
+        configurationKey,
+        onConfigurationKey,
         isUnchanged
-    } = useInsertSelection(props.defaultConfiguration);
+    } = useInsertSelection(props.initialSelection);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
@@ -123,7 +120,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
-                onCanonicalConfiguration={onCanonicalConfiguration}
+                onConfigurationKey={onConfigurationKey}
                 onRecord={setRecord}
             />
         );
@@ -137,7 +134,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    canonicalConfiguration={canonicalConfiguration}
+                    configurationKey={configurationKey}
                 />
                 {parameters}
             </AppModalBody>
@@ -145,7 +142,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 insertable={insertable}
                 favorite={favorite}
                 configuration={configuration}
-                canonicalConfiguration={canonicalConfiguration}
+                configurationKey={configurationKey}
                 isUnchanged={isUnchanged}
                 openedAt={openedAt}
                 source={source}
@@ -158,8 +155,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
-    configuration?: ParameterValues;
-    canonicalConfiguration: string;
+    configuration?: Selection;
+    configurationKey: string;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
     openedAt: number;
@@ -174,7 +171,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         insertable,
         favorite,
         configuration,
-        canonicalConfiguration,
+        configurationKey,
         isUnchanged,
         openedAt,
         source,
@@ -187,8 +184,8 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={configuration}
-                        canonicalConfiguration={canonicalConfiguration}
+                        configuration={configuration}
+                        configurationKey={configurationKey}
                         large
                     />
                 </RequireSignIn>
@@ -198,7 +195,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         insertable={insertable}
                         inInsertMenu
                         configuration={configuration}
-                        canonicalConfiguration={canonicalConfiguration}
+                        configurationKey={configurationKey}
                         source={source}
                     />
                 </MenuButton>
@@ -223,7 +220,7 @@ interface InsertButtonsProps {
      */
     isUnchanged: boolean;
     insertable: InsertableOut;
-    configuration?: ParameterValues;
+    configuration?: Selection;
     isFavorite: boolean;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;

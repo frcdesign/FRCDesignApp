@@ -1,4 +1,4 @@
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -68,7 +68,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 }
                 openInsertMenu({
                     insertable,
-                    defaultConfiguration: favorite.defaultConfiguration,
+                    initialSelection: favorite.configuration,
                     source: InsertSource.FAVORITES
                 });
             }}
@@ -83,9 +83,9 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             target={{
                                 elementId: insertable.elementId,
                                 microversionId: insertable.microversionId,
-                                canonicalConfiguration:
-                                    favorite.canonicalConfiguration ??
-                                    DEFAULT_CANONICAL_CONFIGURATION,
+                                configurationKey:
+                                    favorite.configurationKey ??
+                                    ELEMENT_DEFAULT_KEY,
                                 renderThumbnail: true,
                                 insertableId: insertable.id
                             }}
@@ -127,7 +127,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 <>
                     <QuickInsertItems
                         insertable={insertable}
-                        configuration={favorite.defaultConfiguration}
+                        configuration={favorite.configuration}
                         isFavorite
                         source={InsertSource.FAVORITES}
                     />
@@ -144,7 +144,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     openFavoriteMenu({
                         favoriteId: favorite.id,
                         insertableName: insertable.name,
-                        defaultConfiguration: favorite.defaultConfiguration
+                        configuration: favorite.configuration
                     });
                 }}
             >

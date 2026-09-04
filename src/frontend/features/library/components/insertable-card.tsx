@@ -1,4 +1,4 @@
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
@@ -7,7 +7,7 @@ import {
     getFavoriteForInsertable
 } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { ParameterValues } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,
@@ -57,10 +57,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     }
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
-    // What the hit names, for inserting and for prefilling the menu; the
-    // canonical form itself is what names its thumbnail.
-    const hitConfiguration = searchHit?.canonicalConfiguration
-        ? decodeConfiguration(searchHit.canonicalConfiguration)
+    // What the hit names, for inserting and for prefilling the menu; its key
+    // is what names the thumbnail.
+    const hitConfiguration = searchHit?.configurationKey
+        ? decodeConfiguration(searchHit.configurationKey)
         : undefined;
 
     const openMenu = () => {
@@ -71,7 +71,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         }
         openInsertMenu({
             insertable,
-            defaultConfiguration: hitConfiguration,
+            initialSelection: hitConfiguration,
             source
         });
     };
@@ -83,9 +83,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             target={{
                 elementId: insertable.elementId,
                 microversionId: insertable.microversionId,
-                canonicalConfiguration:
-                    searchHit?.canonicalConfiguration ??
-                    DEFAULT_CANONICAL_CONFIGURATION,
+                configurationKey:
+                    searchHit?.configurationKey ?? ELEMENT_DEFAULT_KEY,
                 // A cold search would otherwise start a render per row.
                 renderThumbnail: false
             }}
@@ -115,10 +114,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={hitConfiguration}
-                        canonicalConfiguration={
-                            searchHit?.canonicalConfiguration
-                        }
+                        configuration={hitConfiguration}
+                        configurationKey={searchHit?.configurationKey}
                     />
                 </RequireSignIn>
             }
@@ -140,9 +137,9 @@ interface InsertableMenuItemsProps {
     inInsertMenu?: boolean;
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
-    configuration?: ParameterValues;
-    /** The same selection canonicalized, so favoriting can key its thumbnail. */
-    canonicalConfiguration?: string;
+    configuration?: Selection;
+    /** That selection's key, so favoriting can name its thumbnail. */
+    configurationKey?: string;
     source: InsertSource;
 }
 
@@ -154,7 +151,7 @@ export function InsertableMenuItems(
         insertable,
         inInsertMenu,
         configuration,
-        canonicalConfiguration,
+        configurationKey,
         source
     } = props;
     const isConnected = useIsConnectedToOnshape();
@@ -176,8 +173,8 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
-                    defaultConfiguration={configuration}
-                    canonicalConfiguration={canonicalConfiguration}
+                    configuration={configuration}
+                    configurationKey={configurationKey}
                 />
                 <Menu.Divider />
             </RequireSignIn>

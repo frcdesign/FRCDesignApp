@@ -25,8 +25,8 @@ interface FavoritesBody {
         string,
         {
             insertableId: string;
-            defaultConfiguration?: Record<string, string>;
-            canonicalConfiguration?: string;
+            configuration?: Record<string, string>;
+            configurationKey?: string;
         }
     >;
     favoriteOrder: string[];
@@ -68,7 +68,7 @@ describe("favorites routes", () => {
 
         // Derived per response rather than stored, so it cannot go stale when a
         // reload changes what the parameters default to.
-        it("derives each favorite's canonical form from what it stores", async () => {
+        it("derives each favorite's key from the selection it stores", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
@@ -82,22 +82,21 @@ describe("favorites routes", () => {
                 jsonRequest("GET"),
                 env
             );
-            expect(soleFavorite(await res.json()).canonicalConfiguration).toBe(
+            expect(soleFavorite(await res.json()).configurationKey).toBe(
                 "boolean=false"
             );
         });
 
-        // The whole reason the selection is stored as it was made: canonicalizing
-        // drops a value that is the parameter's default, which for a string
-        // parameter is text the user typed.
-        it("keeps a stored value that canonicalizing drops", async () => {
+        // The selection is what the favorite opens with, so it keeps a value
+        // the key drops for matching the parameter's default.
+        it("answers with a whole selection, not only its overrides", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
-            const defaultConfiguration = { boolean: "true" };
+            const configuration = { boolean: "true" };
             await db
                 .update(favorites)
-                .set({ defaultConfiguration })
+                .set({ defaultConfiguration: configuration })
                 .where(eq(favorites.id, favoriteId));
 
             const res = await createTestApp().request(
@@ -106,9 +105,9 @@ describe("favorites routes", () => {
                 env
             );
             const favorite = soleFavorite(await res.json());
-            expect(favorite.defaultConfiguration).toEqual(defaultConfiguration);
+            expect(favorite.configuration).toEqual(configuration);
             // "true" is the parameter default, so it names no override at all.
-            expect(favorite.canonicalConfiguration).toBe("");
+            expect(favorite.configurationKey).toBe("");
         });
 
         it("only returns the current user's favorites", async () => {
@@ -279,25 +278,40 @@ describe("favorites routes", () => {
     });
 
     describe("POST /default-configuration/favorite/:favoriteId", () => {
-        it("persists the selection the favorite opens with", async () => {
-            await seedPartStudio(db);
+        async function post(configuration: Record<string, string>) {
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
-            const app = createTestApp();
-
-            const defaultConfiguration = { "param-id": "value" };
-            const res = await app.request(
+            const res = await createTestApp().request(
                 `/api/default-configuration/favorite/${favoriteId}`,
-                jsonRequest("POST", { defaultConfiguration }),
+                jsonRequest("POST", { configuration }),
                 env
             );
             expect(res.status).toBe(200);
-
             const row = await db
                 .select()
                 .from(favorites)
                 .where(eq(favorites.id, favoriteId))
                 .get();
-            expect(row?.defaultConfiguration).toEqual(defaultConfiguration);
+            return row?.defaultConfiguration;
+        }
+
+        it("persists the selection the favorite opens with", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+
+            expect(await post({ boolean: "false" })).toEqual({
+                boolean: "false"
+            });
+        });
+
+        // Stored as a selection, so what is written is what the insertable
+        // declares — not whatever the request happened to name.
+        it("drops a value for a parameter the insertable does not have", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+
+            expect(await post({ "param-id": "value" })).toEqual({
+                boolean: "true"
+            });
         });
     });
 });

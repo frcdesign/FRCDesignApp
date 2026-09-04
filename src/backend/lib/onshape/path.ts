@@ -1,4 +1,4 @@
-import { ParameterValues } from "../../features/configurations/models";
+import { Selection } from "../../features/configurations/models";
 
 /** The instance kinds an Onshape path can address, as one definition: the type
  * and the runtime list validators check against both derive from it. */
@@ -25,7 +25,7 @@ export interface PartPath extends ElementPath {
 }
 
 export interface ConfigurablePath extends ElementPath {
-    configuration: ParameterValues;
+    configuration: Selection;
 }
 
 export function isDocumentPath(path: any): path is DocumentPath {

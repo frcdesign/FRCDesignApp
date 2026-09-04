@@ -6,7 +6,7 @@ import { getApp } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
 
 import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";
@@ -20,21 +20,19 @@ const storedThumbnailParams = z.object({
 });
 
 /** Absent means the element default, which is what `""` encodes. */
-const canonicalConfigurationQuery = z
-    .string()
-    .default(DEFAULT_CANONICAL_CONFIGURATION);
+const configurationKeyQuery = z.string().default(ELEMENT_DEFAULT_KEY);
 
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
-    canonicalConfiguration: canonicalConfigurationQuery,
+    configurationKey: configurationKeyQuery,
     renderThumbnail: z.stringbool().default(false),
     /** The insertable to render from; only sent with `renderThumbnail`. */
     insertableId: z.string().optional()
 });
 
 /**
- * GET /api/thumbnail/:size/:elementId?v=&canonicalConfiguration=&renderThumbnail=
+ * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderThumbnail=
  * — an unrendered configuration falls back to the element default, and
  * `renderThumbnail` starts the real render.
  *
@@ -49,17 +47,12 @@ thumbnailRoutes.get(
         const { size, elementId } = c.req.valid("param");
         const {
             v: microversionId,
-            canonicalConfiguration,
+            configurationKey,
             renderThumbnail,
             insertableId
         } = c.req.valid("query");
         const object = await c.env.BLOB.get(
-            thumbnailKey(
-                elementId,
-                microversionId,
-                size,
-                canonicalConfiguration
-            )
+            thumbnailKey(elementId, microversionId, size, configurationKey)
         );
         if (object) {
             // The microversion and the configuration are both in the url, so
@@ -70,14 +63,14 @@ thumbnailRoutes.get(
             );
         }
 
-        if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
+        if (configurationKey === ELEMENT_DEFAULT_KEY) {
             return notRenderedYet();
         }
 
         if (renderThumbnail && insertableId) {
             await startConfigurationRender(c, {
                 insertableId,
-                canonicalConfiguration
+                configurationKey
             });
         }
 

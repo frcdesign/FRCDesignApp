@@ -3,7 +3,7 @@ import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import type { ParameterValues } from "@backend/features/configurations/models";
+import type { Selection } from "@backend/features/configurations/models";
 import { apiDelete, apiPost } from "../../../lib/api-client";
 import type {
     Favorite,
@@ -33,10 +33,10 @@ interface UpdateFavoritesArgs {
     insertable: InsertableOut;
     favoriteId: string;
     /** The selection to store; absent means the element's own default. */
-    defaultConfiguration?: ParameterValues;
-    /** That selection's canonical form, so the new row's thumbnail is right
-     * before the refetch answers. */
-    canonicalConfiguration?: string;
+    configuration?: Selection;
+    /** That selection's key, so the new row's thumbnail is right before the
+     * refetch answers. */
+    configurationKey?: string;
 }
 
 function updateFavorites(
@@ -44,15 +44,15 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId, defaultConfiguration, canonicalConfiguration } = args;
+    const { favoriteId, configuration, configurationKey } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
         const fav: Favorite = {
             id: favoriteId,
             insertableId,
             libraryId,
-            defaultConfiguration,
-            canonicalConfiguration
+            configuration,
+            configurationKey
         };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
@@ -85,7 +85,7 @@ function useUpdateFavoritesMutation() {
                         id: args.favoriteId
                     },
                     body: {
-                        defaultConfiguration: args.defaultConfiguration
+                        configuration: args.configuration
                     }
                 });
             } else {
@@ -122,9 +122,9 @@ interface FavoriteButtonProps {
      * The selection the new favorite opens with: what the caller is showing,
      * rather than the element's own default.
      */
-    defaultConfiguration?: ParameterValues;
-    /** The same selection canonicalized, when the caller knows it. */
-    canonicalConfiguration?: string;
+    configuration?: Selection;
+    /** That selection's key, when the caller knows it. */
+    configurationKey?: string;
     /**
      * Sizes the button to sit beside a full-height button rather than in a card row.
      * @default false
@@ -133,13 +133,8 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const {
-        favorite,
-        insertable,
-        defaultConfiguration,
-        canonicalConfiguration,
-        large
-    } = props;
+    const { favorite, insertable, configuration, configurationKey, large } =
+        props;
     const isFavorite = favorite !== undefined;
 
     const [isHovered, setIsHovered] = useState(false);
@@ -171,8 +166,8 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
                     operation,
                     insertable,
                     favoriteId,
-                    defaultConfiguration,
-                    canonicalConfiguration
+                    configuration,
+                    configurationKey
                 });
             }}
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
@@ -188,18 +183,13 @@ interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /** The selection the new favorite opens with. */
-    defaultConfiguration?: ParameterValues;
-    /** The same selection canonicalized, when the caller knows it. */
-    canonicalConfiguration?: string;
+    configuration?: Selection;
+    /** That selection's key, when the caller knows it. */
+    configurationKey?: string;
 }
 
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
-    const {
-        favorite,
-        insertable,
-        defaultConfiguration,
-        canonicalConfiguration
-    } = props;
+    const { favorite, insertable, configuration, configurationKey } = props;
     const isFavorite = favorite !== undefined;
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
     const mutation = useUpdateFavoritesMutation();
@@ -220,8 +210,8 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
                     operation,
                     insertable,
                     favoriteId,
-                    defaultConfiguration,
-                    canonicalConfiguration
+                    configuration,
+                    configurationKey
                 });
             }}
         >

@@ -13,7 +13,7 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type ElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
-    type ParameterValues
+    type Selection
 } from "../../configurations/models";
 import {
     INDEXING_ISSUE_TYPES,
@@ -37,6 +37,7 @@ import {
     type OnshapeElementType
 } from "../../../lib/onshape/endpoints/documents";
 import { encodeConfiguration } from "../../../lib/onshape/endpoints/configurations";
+import { toSelection } from "../../configurations/selection";
 import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -220,7 +221,7 @@ function indexRecords(
         elementType: ElementType;
         isOpenComposite: boolean;
         parameters: ConfigurationParameter[];
-        configurations: ParameterValues[];
+        configurations: Selection[];
     }
 ): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
@@ -251,6 +252,35 @@ const targetPathSchema = z.object({
 });
 
 const configurationSchema = z.record(z.string(), z.string()).optional();
+
+/**
+ * What an insert applies: whatever the request named, made whole against the
+ * insertable's own parameters. Every configuration crosses the boundary here,
+ * so nothing past it holds a partial or as-typed map.
+ */
+async function readSelection(
+    db: Db,
+    insertableId: string,
+    requested: Selection | undefined
+): Promise<{
+    selection: Selection | undefined;
+    parameters: ConfigurationParameter[];
+}> {
+    const row = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+
+    const parameters = row?.parameters ?? [];
+    return {
+        selection:
+            parameters.length === 0
+                ? undefined
+                : toSelection(requested ?? {}, parameters),
+        parameters
+    };
+}
 
 const insertBodySchema = z.object({
     targetPath: targetPathSchema,
@@ -299,23 +329,18 @@ insertableRoutes.post(
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
-        // Look up parsed configuration parameters from D1 if configuration is provided
-        let parameters: ConfigurationParameter[] | undefined;
-        if (body.configuration) {
-            const configRow = await db
-                .select({ parameters: configurations.parameters })
-                .from(configurations)
-                .where(eq(configurations.id, insertableId))
-                .get();
-            parameters = configRow?.parameters;
-        }
+        const { selection, parameters } = await readSelection(
+            db,
+            insertableId,
+            body.configuration
+        );
 
         const feature = new DerivedFeature(
             insertable.name,
             sourcePath,
             insertable.microversionId,
             body.useMateConnector,
-            body.configuration,
+            selection,
             parameters
         );
 
@@ -332,7 +357,8 @@ insertableRoutes.post(
                 elementId: insertable.elementId,
                 insertableId,
                 targetElementType: ElementType.PART_STUDIO,
-                configuration: body.configuration,
+                selection,
+                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -389,23 +415,14 @@ insertableRoutes.post(
             ? [PartType.COMPOSITE_PARTS]
             : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        // Apply default configuration when element is configurable and none was provided
-        let configuration = body.configuration;
-        if (configuration === undefined) {
-            const configRow = await db
-                .select({ parameters: configurations.parameters })
-                .from(configurations)
-                .where(eq(configurations.id, insertableId))
-                .get();
-            if (configRow && configRow.parameters.length > 0) {
-                configuration = Object.fromEntries(
-                    configRow.parameters.map((p) => [p.id, p.default])
-                );
-            }
-        }
+        const { selection, parameters } = await readSelection(
+            db,
+            insertableId,
+            body.configuration
+        );
 
-        const encodedConfiguration = configuration
-            ? encodeConfiguration(configuration)
+        const encodedConfiguration = selection
+            ? encodeConfiguration(selection)
             : undefined;
 
         const result = await addElementToAssembly(
@@ -420,7 +437,7 @@ insertableRoutes.post(
         );
 
         // Recorded here so a later fasten failure doesn't lose an insert that
-        // did land. `configuration` is already resolved to the defaults above.
+        // did land.
         await trackInBackground(c, async () =>
             trackInsert(c, {
                 libraryId: row.libraryId,
@@ -428,7 +445,8 @@ insertableRoutes.post(
                 elementId: row.elementId,
                 insertableId,
                 targetElementType: ElementType.ASSEMBLY,
-                configuration,
+                selection,
+                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,

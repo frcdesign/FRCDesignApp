@@ -33,10 +33,7 @@ import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/models";
-import {
-    canonicalizeValue,
-    formatCanonicalValue
-} from "../configurations/canonical";
+import { formatValue } from "../configurations/selection";
 import { SPARKLINE_DAYS, usesPerMonth } from "./contract";
 import type {
     AnalyticsOverviewOut,
@@ -667,12 +664,6 @@ export function buildParameterUsage(
         const counts =
             countsByParameter.get(parameter.id) ?? new Map<string, number>();
 
-        // Values are recorded canonically, so the default must be read the
-        // same way to be recognized as one.
-        const canonicalDefault = canonicalizeValue(
-            parameter,
-            parameter.default
-        );
         const values =
             parameter.type === ParameterType.ENUM
                 ? // Seed from the declared options so a never-picked one is visible.
@@ -680,17 +671,15 @@ export function buildParameterUsage(
                       value: option.id,
                       label: option.name,
                       count: counts.get(option.id) ?? 0,
-                      isDefault: option.id === canonicalDefault
+                      isDefault: option.id === parameter.default
                   }))
-                : toFreeFormValues(counts, parameter, canonicalDefault);
+                : toFreeFormValues(counts, parameter, parameter.default);
 
         return {
             parameterId: parameter.id,
             name: parameter.name,
             type: parameter.type,
-            // Canonical, so it names one of the values below rather than a
-            // spelling that may match none of them.
-            defaultValue: canonicalDefault,
+            defaultValue: parameter.default,
             total: sumCounts(counts),
             values: values.sort((a, b) => b.count - a.count)
         };
@@ -713,7 +702,7 @@ function toFreeFormValues(
         .slice(0, MAX_FREE_FORM_VALUES)
         .map(([value, count]) => ({
             value,
-            label: formatCanonicalValue(parameter, value),
+            label: formatValue(parameter, value),
             count,
             isDefault: value === defaultValue
         }));
@@ -721,7 +710,7 @@ function toFreeFormValues(
     if (!top.some((entry) => entry.isDefault)) {
         top.push({
             value: defaultValue,
-            label: formatCanonicalValue(parameter, defaultValue),
+            label: formatValue(parameter, defaultValue),
             count: counts.get(defaultValue) ?? 0,
             isDefault: true
         });

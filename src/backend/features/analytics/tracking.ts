@@ -1,9 +1,8 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import {
-    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -17,8 +16,11 @@ import {
 import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
-import { type ParameterValues } from "../configurations/models";
-import { canonicalizeValues } from "../configurations/canonical";
+import {
+    type ConfigurationParameter,
+    type Selection
+} from "../configurations/models";
+import { applied } from "../configurations/selection";
 
 /** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
 export function toDayKey(timestamp: number): string {
@@ -33,8 +35,10 @@ export interface InsertEvent {
     insertableId: string;
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
-    /** The values the user chose, or undefined when they took the defaults. */
-    configuration: ParameterValues | undefined;
+    /** The whole selection the insert applied; undefined when it has none. */
+    selection: Selection | undefined;
+    /** Its parameters, so the hidden ones can be left out of the counts. */
+    parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
     isQuickInsert: boolean;
@@ -76,7 +80,11 @@ export async function trackInsert(
     const db = getDb(c.env.DB);
     const now = Date.now();
     const day = toDayKey(now);
-    const configuration = await canonicalConfiguration(db, event);
+    // What Onshape actually applied: the selection minus the parameters it
+    // hides, which is what a count of chosen values means.
+    const configuration = event.selection
+        ? applied(event.selection, event.parameters)
+        : null;
 
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values({
@@ -320,44 +328,12 @@ function incrementSourceMetric(db: Db, day: string, event: InsertEvent) {
         });
 }
 
-/**
- * What the insert is recorded as having configured: every value it applies, in
- * its canonical spelling, or null when the insertable has no configuration.
- *
- * Canonical rather than as-typed so "4in", "4 in" and "101.6 mm" are one value
- * rather than three, and so a parameter the selection hides is not counted as
- * having been chosen. Defaults are resolved here rather than on the insert
- * path, since this runs after the response.
- */
-async function canonicalConfiguration(
-    db: Db,
-    event: InsertEvent
-): Promise<ParameterValues | null> {
-    const configRow = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, event.insertableId))
-        .get();
-
-    const parameters = configRow?.parameters ?? [];
-    if (parameters.length === 0) return null;
-
-    // Layered over the defaults rather than taken as given: a quick insert from
-    // a search hit carries only the values that hit overrides, and the rest are
-    // as much a part of what was inserted as the ones it names.
-    const selected = {
-        ...Object.fromEntries(parameters.map((p) => [p.id, p.default])),
-        ...event.configuration
-    };
-    return canonicalizeValues(selected, parameters);
-}
-
 /** One counter per parameter value the insert used. */
 function configurationWrites(
     db: Db,
     day: string,
     event: InsertEvent,
-    configuration: ParameterValues | null
+    configuration: Selection | null
 ): BatchItem<"sqlite">[] {
     if (!configuration) return [];
 

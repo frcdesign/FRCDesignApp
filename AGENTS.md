@@ -27,6 +27,27 @@ Anything the frontend imports from a backend feature must be a leaf module —
 pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
+## Configurations
+
+A configuration takes exactly two forms, and `features/configurations/selection.ts`
+is the only place either is built:
+
+- A **`Selection`** is what someone picked: every parameter the insertable
+  declares, each value canonically spelled (base units, trimmed, lowercase
+  booleans). `toSelection` makes one out of whatever arrived — a partial map
+  from a search hit, a stored favorite, a request body — and every boundary
+  calls it. Parameter defaults are canonical too, from `parse-configuration`, so
+  nothing has to canonicalize one to compare against it.
+- A **`ConfigurationKey`** is that selection's identity: what it overrides,
+  encoded as `id=value;id=value`, with hidden parameters left out. It addresses
+  a render — R2 keys, thumbnail urls, stored records, Onshape itself — and
+  `ELEMENT_DEFAULT_KEY` (the empty string) is a selection that overrides
+  nothing.
+
+Raw text lives only inside the input a user is typing into. Don't add a third
+form: if something needs a different view of a selection, it wants a function in
+`selection.ts`, not a new shape.
+
 # Running the app
 
 Onshape launches the app at `/init`, which needs a real Onshape session and

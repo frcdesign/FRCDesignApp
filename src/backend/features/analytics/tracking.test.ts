@@ -37,7 +37,11 @@ import {
     enumParam,
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
-import { VisibilityType } from "../configurations/models";
+import {
+    VisibilityType,
+    type ConfigurationParameter
+} from "../configurations/models";
+import { toSelection } from "../configurations/selection";
 import { ElementType } from "../../lib/onshape/element-type";
 
 const db = getDb(env.DB);
@@ -53,17 +57,16 @@ function fakeContext(): AppContext {
     return { env } as unknown as AppContext;
 }
 
-function insertEvent(
-    configuration: Record<string, string> | undefined,
-    overrides: Partial<InsertEvent> = {}
-): InsertEvent {
+/** An insert of an unconfigurable part. */
+function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
         userId: TEST_USER_ID,
         elementId,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
-        configuration,
+        selection: undefined,
+        parameters: [],
         isFavorite: false,
         isQuickInsert: false,
         source: InsertSource.BROWSE,
@@ -73,22 +76,37 @@ function insertEvent(
 }
 
 /** An enum, a length and a parameter only shown for the "large" size. */
+const SIZE_PARAMETERS: ConfigurationParameter[] = [
+    enumParam("size", ["small", "large"]),
+    quantityParam("length"),
+    {
+        ...boolParam("reinforced"),
+        condition: {
+            type: VisibilityType.EQUAL,
+            id: "size",
+            value: "large"
+        }
+    }
+];
+
+/**
+ * An insert of a configured part, whole against its parameters — which is what
+ * the insert routes hand tracking.
+ */
+function configuredEvent(
+    values: Record<string, string>,
+    overrides: Partial<InsertEvent> = {}
+): InsertEvent {
+    return insertEvent({
+        selection: toSelection(values, SIZE_PARAMETERS),
+        parameters: SIZE_PARAMETERS,
+        ...overrides
+    });
+}
+
 async function seedSizeConfiguration() {
     await seedConfiguration(db);
-    await db.update(configurations).set({
-        parameters: [
-            enumParam("size", ["small", "large"]),
-            quantityParam("length"),
-            {
-                ...boolParam("reinforced"),
-                condition: {
-                    type: VisibilityType.EQUAL,
-                    id: "size",
-                    value: "large"
-                }
-            }
-        ]
-    });
+    await db.update(configurations).set({ parameters: SIZE_PARAMETERS });
 }
 
 describe("tracking", () => {
@@ -100,7 +118,10 @@ describe("tracking", () => {
     describe("trackInsert", () => {
         it("writes a raw event and seeds every rollup", async () => {
             await seedSizeConfiguration();
-            await trackInsert(fakeContext(), insertEvent({ size: "large" }));
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "large" })
+            );
 
             const event = await db.select().from(events).get();
             expect(event).toMatchObject({
@@ -124,9 +145,18 @@ describe("tracking", () => {
 
         it("increments the rollups rather than duplicating rows", async () => {
             await seedSizeConfiguration();
-            await trackInsert(fakeContext(), insertEvent({ size: "large" }));
-            await trackInsert(fakeContext(), insertEvent({ size: "large" }));
-            await trackInsert(fakeContext(), insertEvent({ size: "small" }));
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "large" })
+            );
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "large" })
+            );
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "small" })
+            );
 
             const stats = await db.select().from(insertableStats).all();
             expect(stats).toHaveLength(1);
@@ -146,10 +176,10 @@ describe("tracking", () => {
         });
 
         it("rolls the part's own day up, split by the tab it landed in", async () => {
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     targetElementType: ElementType.ASSEMBLY
                 })
             );
@@ -165,11 +195,11 @@ describe("tracking", () => {
         });
 
         it("records a part's user once a day, however often they insert it", async () => {
-            await trackInsert(fakeContext(), insertEvent(undefined));
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
+            await trackInsert(fakeContext(), insertEvent());
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, { userId: "someone-else" })
+                insertEvent({ userId: "someone-else" })
             );
 
             const rows = await db.select().from(dailyInsertableUsers).all();
@@ -182,9 +212,18 @@ describe("tracking", () => {
 
         it("counts each configuration value separately", async () => {
             await seedSizeConfiguration();
-            await trackInsert(fakeContext(), insertEvent({ size: "large" }));
-            await trackInsert(fakeContext(), insertEvent({ size: "large" }));
-            await trackInsert(fakeContext(), insertEvent({ size: "small" }));
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "large" })
+            );
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "large" })
+            );
+            await trackInsert(
+                fakeContext(),
+                configuredEvent({ size: "small" })
+            );
 
             const values = await db
                 .select()
@@ -210,7 +249,7 @@ describe("tracking", () => {
         it("counts one value however the user spelled it", async () => {
             await seedSizeConfiguration();
             for (const length of ["1in", "1 in", "25.4 mm", "(0.5 + 0.5) in"]) {
-                await trackInsert(fakeContext(), insertEvent({ length }));
+                await trackInsert(fakeContext(), configuredEvent({ length }));
             }
 
             const values = await db
@@ -229,11 +268,11 @@ describe("tracking", () => {
             // applies nothing it does not show.
             await trackInsert(
                 fakeContext(),
-                insertEvent({ size: "small", reinforced: "true" })
+                configuredEvent({ size: "small", reinforced: "true" })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent({ size: "large", reinforced: "true" })
+                configuredEvent({ size: "large", reinforced: "true" })
             );
 
             const values = await db
@@ -250,7 +289,7 @@ describe("tracking", () => {
             await seedSizeConfiguration();
             await trackInsert(
                 fakeContext(),
-                insertEvent({ size: "large", removedLongAgo: "1" })
+                configuredEvent({ size: "large", removedLongAgo: "1" })
             );
 
             const values = await db
@@ -265,37 +304,39 @@ describe("tracking", () => {
             ]);
         });
 
-        it("records the stored defaults when the user chose nothing", async () => {
-            await seedConfiguration(db);
+        // A quick insert chooses nothing, and the route hands over the whole
+        // selection anyway — every parameter at its default.
+        it("counts the defaults of a selection nobody touched", async () => {
+            await seedSizeConfiguration();
 
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), configuredEvent({}));
 
             const values = await db
                 .select()
                 .from(dailyConfigurationMetrics)
                 .all();
-            // TEST_PARAMETERS declares one boolean defaulting to "true".
-            expect(values).toHaveLength(1);
-            expect(values[0]).toMatchObject({
-                parameterId: "boolean",
-                value: "true",
-                count: 1
-            });
+            expect(
+                Object.fromEntries(
+                    values.map((row) => [row.parameterId, row.value])
+                )
+                // No "reinforced": the small default hides it, so it applied
+                // nothing.
+            ).toEqual({ size: "small", length: "0.0254 m" });
         });
 
         it("counts the flag subsets against the day's inserts", async () => {
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, { isFavorite: true, fasten: true })
+                insertEvent({ isFavorite: true, fasten: true })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     isFavorite: true,
                     isQuickInsert: true
                 })
             );
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
 
             const daily = await db.select().from(dailyMetrics).get();
             expect(daily).toMatchObject({
@@ -309,14 +350,14 @@ describe("tracking", () => {
         it("counts assembly targets separately, as the fasten denominator", async () => {
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     targetElementType: ElementType.ASSEMBLY,
                     fasten: true
                 })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     targetElementType: ElementType.ASSEMBLY
                 })
             );
@@ -324,7 +365,7 @@ describe("tracking", () => {
             // dilute the denominator.
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     targetElementType: ElementType.PART_STUDIO
                 })
             );
@@ -340,18 +381,18 @@ describe("tracking", () => {
         it("splits inserts by source, tracking quick insert within each", async () => {
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, { source: InsertSource.SEARCH })
+                insertEvent({ source: InsertSource.SEARCH })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     source: InsertSource.SEARCH,
                     isQuickInsert: true
                 })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, { source: InsertSource.FAVORITES })
+                insertEvent({ source: InsertSource.FAVORITES })
             );
 
             const rows = await db.select().from(dailySourceMetrics).all();
@@ -372,7 +413,7 @@ describe("tracking", () => {
             // began. Conflating them would misreport the favorites list.
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, {
+                insertEvent({
                     isFavorite: true,
                     source: InsertSource.SEARCH
                 })
@@ -390,7 +431,7 @@ describe("tracking", () => {
         });
 
         it("records nothing extra for an insertable with no configuration", async () => {
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
 
             expect(
                 await db.select().from(dailyConfigurationMetrics).all()
@@ -402,8 +443,8 @@ describe("tracking", () => {
 
     describe("daily user activity", () => {
         it("writes one row per user per day however much they do", async () => {
-            await trackInsert(fakeContext(), insertEvent(undefined));
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
+            await trackInsert(fakeContext(), insertEvent());
             await trackAppOpen(fakeContext(), {
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID
@@ -419,10 +460,10 @@ describe("tracking", () => {
         });
 
         it("keeps a row per user", async () => {
-            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent());
             await trackInsert(
                 fakeContext(),
-                insertEvent(undefined, { userId: "someone-else" })
+                insertEvent({ userId: "someone-else" })
             );
 
             const rows = await db.select().from(dailyUserActivity).all();

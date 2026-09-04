@@ -20,7 +20,7 @@ import {
     useState
 } from "react";
 import {
-    ParameterValues,
+    Selection,
     ConfigurationResult,
     ConfigurationParameter,
     ParameterType,
@@ -40,7 +40,11 @@ import {
     getOption,
     getVisibleOptions
 } from "@backend/features/configurations/utils";
-import { canonicalizeConfiguration } from "@backend/features/configurations/canonical";
+import {
+    canonicalizeValue,
+    toKey,
+    toSelection
+} from "@backend/features/configurations/selection";
 import {
     formatValueWithUnits,
     valueWithUnits,
@@ -54,13 +58,13 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    configuration?: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    configuration?: Selection;
+    setConfiguration: Dispatch<Selection>;
     /**
-     * Reported here because only this component has the parameters and units
-     * canonicalizing needs.
+     * Reported here because only this component has the parameters the key is
+     * measured against.
      */
-    onCanonicalConfiguration?: (canonicalConfiguration: string) => void;
+    onConfigurationKey?: (configurationKey: string) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
 }
@@ -71,54 +75,46 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
         handler((event.target as HTMLInputElement).checked);
 }
 
-/** Seeds an unset configuration with every parameter's own default. */
-function useDefaultConfiguration(
+/**
+ * Makes what the menu opened with a whole selection.
+ *
+ * Runs for a prefill too, not only for an unset one: a search hit names the
+ * values that hit overrides and nothing else, and the menu holds selections.
+ */
+function useWholeSelection(
     parameters: ConfigurationParameter[] | undefined,
-    configuration: ParameterValues | undefined,
-    setConfiguration: Dispatch<ParameterValues>
+    configuration: Selection | undefined,
+    setConfiguration: Dispatch<Selection>
 ) {
+    const settled = useRef(false);
     useEffect(() => {
         // In an effect rather than a .then inside useQuery, which misbehaved.
-        if (!parameters || configuration) {
+        if (!parameters || settled.current) {
             return;
         }
-        setConfiguration(
-            Object.fromEntries(
-                parameters.map((parameter) => [parameter.id, parameter.default])
-            )
-        );
+        settled.current = true;
+        setConfiguration(toSelection(configuration ?? {}, parameters));
     }, [parameters, configuration, setConfiguration]);
 }
 
-/** Reports the selection's canonical form, and the record it resolves to. */
+/** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
     records: SearchRecord[] | undefined,
-    configuration: ParameterValues | undefined,
-    onCanonicalConfiguration?: (canonicalConfiguration: string) => void,
+    configuration: Selection | undefined,
+    onConfigurationKey?: (configurationKey: string) => void,
     onRecord?: (record: SearchRecord | undefined) => void
 ) {
     useEffect(() => {
         if (!parameters || !configuration) {
             return;
         }
-        const canonicalConfiguration = canonicalizeConfiguration(
-            configuration,
-            parameters
-        );
-        onCanonicalConfiguration?.(canonicalConfiguration);
+        const configurationKey = toKey(configuration, parameters);
+        onConfigurationKey?.(configurationKey);
         if (records) {
-            onRecord?.(
-                findRecordForConfiguration(canonicalConfiguration, records)
-            );
+            onRecord?.(findRecordForConfiguration(configurationKey, records));
         }
-    }, [
-        parameters,
-        records,
-        configuration,
-        onCanonicalConfiguration,
-        onRecord
-    ]);
+    }, [parameters, records, configuration, onConfigurationKey, onRecord]);
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -127,7 +123,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
         microversionId,
         configuration,
         setConfiguration,
-        onCanonicalConfiguration,
+        onConfigurationKey,
         onRecord
     } = props;
 
@@ -141,12 +137,12 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
-    useDefaultConfiguration(parameters, configuration, setConfiguration);
+    useWholeSelection(parameters, configuration, setConfiguration);
     useReportSelection(
         parameters,
         query.data?.records,
         configuration,
-        onCanonicalConfiguration,
+        onConfigurationKey,
         onRecord
     );
 
@@ -174,8 +170,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    configuration: Selection;
+    setConfiguration: Dispatch<Selection>;
     unitInfo: UnitInfo;
 }
 
@@ -221,7 +217,7 @@ interface ParameterProps<T extends ConfigurationParameter> {
     /** Absent when the configuration omits it, which means the default. */
     value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: ParameterValues;
+    configuration: Selection;
     parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }
@@ -481,10 +477,12 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
             setDisplay(result.expression);
         } else {
             setErrorMessage(undefined);
-            onValueChange(result.expression);
+            // Canonical, so the menu holds a selection like everywhere else;
+            // `expression` keeps what was typed for as long as this input lives.
+            onValueChange(canonicalizeValue(parameter, result.expression));
             setDisplay(result.displayExpression);
         }
-    }, [evaluateOptions, expression, onValueChange]);
+    }, [evaluateOptions, expression, onValueChange, parameter]);
 
     return (
         <InputLabel label={parameter.name} htmlFor={parameter.id}>

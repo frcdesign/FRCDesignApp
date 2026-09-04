@@ -9,7 +9,7 @@ import {
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
 import { users, favorites, configurations } from "../../db/schema";
-import { canonicalizeConfiguration } from "../configurations/canonical";
+import { toKey, toSelection } from "../configurations/selection";
 import type { Favorite, FavoritesData } from "./contract";
 import type { ConfigurationParameter } from "../configurations/models";
 import type { LibraryId } from "../library/library-id";
@@ -26,13 +26,13 @@ const addFavoriteQuery = z.object({
 
 /** The configuration the favorite opens with, when it was made from one. */
 const addFavoriteBody = z.object({
-    defaultConfiguration: z.record(z.string(), z.string()).optional()
+    configuration: z.record(z.string(), z.string()).optional()
 });
 
 const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
 
 const defaultConfigurationBody = z.object({
-    defaultConfiguration: z.record(z.string(), z.string())
+    configuration: z.record(z.string(), z.string())
 });
 
 async function getFavorites(
@@ -52,8 +52,8 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
-    // Canonicalized here rather than stored: the parameters a selection is
-    // canonical against move with the library, and only the row is ours to keep.
+    // Keyed here rather than stored: the parameters a selection is canonical
+    // against move with the library, and only the row is ours to keep.
     const parameters = await getParameters(
         db,
         rows.map((row) => row.insertableId)
@@ -62,17 +62,19 @@ async function getFavorites(
     const favoritesOut: Record<string, Favorite> = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
-        const defaultConfiguration = row.defaultConfiguration ?? undefined;
+        const stored = row.defaultConfiguration ?? undefined;
+        // Made whole on the way out as well as in: a row written before a
+        // parameter existed still has to answer as a selection.
+        const configuration = stored
+            ? toSelection(stored, parameters.get(row.insertableId) ?? [])
+            : undefined;
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
-            defaultConfiguration,
-            canonicalConfiguration: defaultConfiguration
-                ? canonicalizeConfiguration(
-                      defaultConfiguration,
-                      parameters.get(row.insertableId) ?? []
-                  )
+            configuration,
+            configurationKey: configuration
+                ? toKey(configuration, parameters.get(row.insertableId) ?? [])
                 : undefined
         };
         favoritesOut[row.id] = fav;
@@ -81,7 +83,20 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
-/** The parameters of each insertable named, for canonicalizing against. */
+/** One insertable's parameters, for making a selection whole. */
+async function getInsertableParameters(
+    db: Db,
+    insertableId: string
+): Promise<ConfigurationParameter[]> {
+    const row = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+    return row?.parameters ?? [];
+}
+
+/** The parameters of each insertable named, for keying against. */
 async function getParameters(
     db: Db,
     insertableIds: string[]
@@ -123,7 +138,7 @@ favoriteRoutes.post(
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
         const { insertableId, id: favoriteId } = c.req.valid("query");
-        const { defaultConfiguration } = c.req.valid("json");
+        const { configuration } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
 
@@ -147,7 +162,12 @@ favoriteRoutes.post(
                 userId,
                 libraryId,
                 insertableId,
-                defaultConfiguration,
+                defaultConfiguration: configuration
+                    ? toSelection(
+                          configuration,
+                          await getInsertableParameters(db, insertableId)
+                      )
+                    : undefined,
                 sortOrder: existingCount.length,
                 createdAt: Date.now()
             })
@@ -205,13 +225,29 @@ favoriteRoutes.post(
     validate("json", defaultConfigurationBody),
     async (c) => {
         const favoriteId = getFavoriteParam(c);
-        const { defaultConfiguration } = c.req.valid("json");
+        const { configuration } = c.req.valid("json");
         const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
+        const row = await db
+            .select({ insertableId: favorites.insertableId })
+            .from(favorites)
+            .where(
+                and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
+            )
+            .get();
+        if (!row) {
+            return c.json({ success: true });
+        }
+
         await db
             .update(favorites)
-            .set({ defaultConfiguration })
+            .set({
+                defaultConfiguration: toSelection(
+                    configuration,
+                    await getInsertableParameters(db, row.insertableId)
+                )
+            })
             .where(
                 and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
             );

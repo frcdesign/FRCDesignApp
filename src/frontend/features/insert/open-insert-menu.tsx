@@ -2,7 +2,7 @@ import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
-import { type ParameterValues } from "@backend/features/configurations/models";
+import { type Selection } from "@backend/features/configurations/models";
 
 import {
     type NotificationAction,
@@ -15,12 +15,12 @@ import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    defaultConfiguration?: ParameterValues;
+    initialSelection?: Selection;
     source: InsertSource;
 }
 
 export function openInsertMenu(props: OpenInsertMenuProps) {
-    const { insertable, defaultConfiguration, source } = props;
+    const { insertable, initialSelection, source } = props;
     let didInsert = false;
     // How quickly the insert follows is what says whether the menu was worth
     // opening, so the quick insert tip is timed from here.
@@ -34,14 +34,14 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         size: 500,
         onClose: () => {
             if (!didInsert) {
-                showRestoreToast(insertable, source, defaultConfiguration);
+                showRestoreToast(insertable, source, initialSelection);
             }
         },
         children: (
             <InsertMenuContent
                 insertable={insertable}
                 modalId={id}
-                defaultConfiguration={defaultConfiguration}
+                initialSelection={initialSelection}
                 openedAt={openedAt}
                 source={source}
                 onInsert={() => {
@@ -61,14 +61,14 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 function showRestoreToast(
     insertable: InsertableOut,
     source: InsertSource,
-    configuration?: ParameterValues
+    configuration?: Selection
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",
         onClick: () =>
             openInsertMenu({
                 insertable,
-                defaultConfiguration: configuration,
+                initialSelection: configuration,
                 source
             })
     };

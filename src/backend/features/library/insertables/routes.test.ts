@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { configurations, insertables } from "../../../db/schema";
+import {
+    configurations,
+    dailyConfigurationMetrics,
+    insertables
+} from "../../../db/schema";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import { BuildIssueType } from "../../build-checker/issues";
@@ -14,6 +18,7 @@ import {
     jsonRequest,
     resetDb,
     seedAssembly,
+    seedConfiguration,
     seedGroup,
     seedInsertable,
     seedPartStudio
@@ -102,6 +107,36 @@ describe("insertable routes", () => {
             targetPath,
             expect.anything() // DerivedFeature payload
         );
+    });
+
+    // The one place a request's configuration is made whole, so an insert that
+    // names nothing still applies — and records — every parameter.
+    it("POST /add-to-part-studio fills the selection it was not given", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+        vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
+            { feature: { featureId: "feat-1" } }
+        );
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                useMateConnector: false,
+                isFavorite: false,
+                isQuickInsert: false
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        // TEST_PARAMETERS declares one boolean defaulting to "true".
+        const values = await db.select().from(dailyConfigurationMetrics).all();
+        expect(values).toHaveLength(1);
+        expect(values[0]).toMatchObject({
+            parameterId: "boolean",
+            value: "true"
+        });
     });
 
     // A half-built target used to reach Onshape as a nonsense URL and fail

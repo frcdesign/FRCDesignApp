@@ -1,18 +1,19 @@
-import { ParameterValues } from "../configurations/models";
+import { ConfigurationKey, Selection } from "../configurations/models";
 import { LibraryId } from "../library/library-id";
 
 export interface Favorite {
     id: string;
     insertableId: string;
     libraryId: LibraryId;
-    /** The selection it opens with, as stored; absent for the element default. */
-    defaultConfiguration?: ParameterValues;
+    /** The selection it opens with; absent for the element's own defaults. */
+    configuration?: Selection;
     /**
-     * That selection canonicalized against the insertable's parameters, which
-     * is what names its thumbnail. Derived per response rather than stored, so
-     * a reload that changes a parameter's default can't leave it stale.
+     * That selection's key, which is what names its thumbnail. Derived per
+     * response rather than stored, both because a reload can move the defaults
+     * it is measured against and because a card has no parameters to derive it
+     * from.
      */
-    canonicalConfiguration?: string;
+    configurationKey?: ConfigurationKey;
 }
 
 export interface FavoritesData {

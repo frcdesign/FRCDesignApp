@@ -8,7 +8,7 @@ import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useMemo } from "react";
-import { ParameterValues } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/models";
 import { toInsertablePath } from "../library/library-path";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { InsertSource } from "@backend/features/analytics/events";
@@ -22,7 +22,7 @@ export interface InsertArgs {
 
 export function useInsertMutation(
     insertable: InsertableOut,
-    configuration: ParameterValues | undefined,
+    configuration: Selection | undefined,
     insertArgs: InsertArgs
 ) {
     const search = useSearch({ from: "/app" });
