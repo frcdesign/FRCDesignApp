@@ -13,14 +13,22 @@ import {
     ParameterType,
     type ParameterValues
 } from "./models";
-import { encodeConfiguration, evaluateCondition } from "./utils";
-import { evaluateBaseValue, formatBaseValue } from "./input-parser";
+import {
+    DEFAULT_QUANTITY_PRECISION,
+    encodeConfiguration,
+    evaluateCondition
+} from "./utils";
+import {
+    evaluateBaseValue,
+    formatBaseValue,
+    formatValueWithUnits
+} from "./input-parser";
 
 /** The element default, which is what a canonical configuration overriding nothing is. */
 export const DEFAULT_CANONICAL_CONFIGURATION = "";
 
 /** Normalizes one parameter's raw value to its canonical spelling. */
-function canonicalizeValue(
+export function canonicalizeValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
@@ -43,36 +51,81 @@ function canonicalizeValue(
 }
 
 /**
- * Reduces a configuration to the one spelling every equivalent selection shares,
- * so their thumbnails resolve to one cache entry. Drops defaults and hidden
- * values, and so names only what a selection actually overrides.
+ * Every value the selection actually applies, canonically spelled.
+ *
+ * Onshape doesn't apply a hidden parameter, so one that its condition rules out
+ * is left off — it changes neither the render nor what the user chose. Defaults
+ * stay: a render is the same whether a value was picked or defaulted, but a
+ * record of what people pick is not.
+ *
+ * In parameter order, so equivalent selections come out spelled the same way.
  */
-export function canonicalizeConfiguration(
+export function canonicalizeValues(
     configuration: ParameterValues,
     parameters: ConfigurationParameter[]
-): string {
-    const overrides: ParameterValues = {};
+): ParameterValues {
+    const values: ParameterValues = {};
     for (const parameter of parameters) {
         const value = configuration[parameter.id];
         if (value === undefined) {
             continue;
         }
-        // Onshape doesn't apply a hidden parameter, so it can't change the render.
         if (
             !evaluateCondition(parameter.condition, configuration, parameters)
         ) {
             continue;
         }
-        const canonicalValue = canonicalizeValue(parameter, value);
-        const canonicalDefault = canonicalizeValue(
-            parameter,
-            parameter.default
-        );
-        if (canonicalValue === canonicalDefault) {
+        values[parameter.id] = canonicalizeValue(parameter, value);
+    }
+    return values;
+}
+
+/**
+ * Reduces a configuration to the one spelling every equivalent selection shares,
+ * so their thumbnails resolve to one cache entry. Drops defaults on top of
+ * {@link canonicalizeValues}, and so names only what a selection overrides.
+ */
+export function canonicalizeConfiguration(
+    configuration: ParameterValues,
+    parameters: ConfigurationParameter[]
+): string {
+    const values = canonicalizeValues(configuration, parameters);
+    const overrides: ParameterValues = {};
+    for (const parameter of parameters) {
+        const value = values[parameter.id];
+        if (
+            value === undefined ||
+            value === canonicalizeValue(parameter, parameter.default)
+        ) {
             continue;
         }
-        overrides[parameter.id] = canonicalValue;
+        overrides[parameter.id] = value;
     }
-    // Built in parameter order, so equivalent selections spell it the same way.
     return encodeConfiguration(overrides);
+}
+
+/**
+ * A canonical value spelled for a reader: a quantity in the unit its parameter
+ * declares, rather than the base unit it is keyed in. Everything else already
+ * reads as it is stored.
+ */
+export function formatCanonicalValue(
+    parameter: ConfigurationParameter,
+    value: string
+): string {
+    if (parameter.type !== ParameterType.QUANTITY) {
+        return value;
+    }
+    const base = evaluateBaseValue(
+        value,
+        parameter.quantityType,
+        parameter.unit
+    );
+    return base === undefined
+        ? value
+        : formatValueWithUnits(
+              base,
+              parameter.unit,
+              DEFAULT_QUANTITY_PRECISION
+          );
 }

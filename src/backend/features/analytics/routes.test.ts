@@ -29,6 +29,7 @@ import {
 import { getDb } from "../../db/client";
 import { createApp } from "../../app";
 import { EventType, InsertSource } from "./events";
+import { quantityParam } from "../../../__test_utils__/configuration-fixtures";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
@@ -1011,6 +1012,21 @@ describe("buildParameterUsage", () => {
         );
 
         expect(usage.map((entry) => entry.parameterId)).toEqual(["size"]);
+    });
+
+    it("labels a quantity in its own unit, not the one it is keyed in", () => {
+        const [usage] = buildParameterUsage(
+            [quantityParam("length")],
+            [
+                { parameterId: "length", value: "0.0254 m", count: 5 },
+                { parameterId: "length", value: "0.0508 m", count: 2 }
+            ]
+        );
+
+        expect(usage.values).toEqual([
+            { value: "0.0254 m", label: "1 in", count: 5, isDefault: true },
+            { value: "0.0508 m", label: "2 in", count: 2, isDefault: false }
+        ]);
     });
 
     it("always shows a free-form parameter's default, even unused", () => {

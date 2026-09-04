@@ -1,65 +1,9 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "2ac64b16-191b-4af3-bf41-cf88a02969b4",
+    "id": "90268fe0-eccf-4eae-9baa-3ccfc70495b0",
     "prevId": "7f0e79d4-3077-4a1f-aeab-4d98a104be46",
     "tables": {
-        "configuration_value_stats": {
-            "name": "configuration_value_stats",
-            "columns": {
-                "library_id": {
-                    "name": "library_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "element_id": {
-                    "name": "element_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "parameter_id": {
-                    "name": "parameter_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "value": {
-                    "name": "value",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "count": {
-                    "name": "count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {},
-            "compositePrimaryKeys": {
-                "configuration_value_stats_library_id_element_id_parameter_id_value_pk": {
-                    "columns": [
-                        "library_id",
-                        "element_id",
-                        "parameter_id",
-                        "value"
-                    ],
-                    "name": "configuration_value_stats_library_id_element_id_parameter_id_value_pk"
-                }
-            },
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
         "configurations": {
             "name": "configurations",
             "columns": {
@@ -108,6 +52,185 @@
                 }
             },
             "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_configuration_metrics": {
+            "name": "daily_configuration_metrics",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "element_id": {
+                    "name": "element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "parameter_id": {
+                    "name": "parameter_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "value": {
+                    "name": "value",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "count": {
+                    "name": "count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {
+                "daily_configuration_metrics_day_idx": {
+                    "name": "daily_configuration_metrics_day_idx",
+                    "columns": ["library_id", "day"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_configuration_metrics_library_id_element_id_parameter_id_value_day_pk": {
+                    "columns": [
+                        "library_id",
+                        "element_id",
+                        "parameter_id",
+                        "value",
+                        "day"
+                    ],
+                    "name": "daily_configuration_metrics_library_id_element_id_parameter_id_value_day_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_insertable_metrics": {
+            "name": "daily_insertable_metrics",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "element_id": {
+                    "name": "element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "count": {
+                    "name": "count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "part_studio_count": {
+                    "name": "part_studio_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "assembly_count": {
+                    "name": "assembly_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {
+                "daily_insertable_metrics_day_idx": {
+                    "name": "daily_insertable_metrics_day_idx",
+                    "columns": ["library_id", "day"],
+                    "isUnique": false
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_insertable_metrics_library_id_element_id_day_pk": {
+                    "columns": ["library_id", "element_id", "day"],
+                    "name": "daily_insertable_metrics_library_id_element_id_day_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_insertable_users": {
+            "name": "daily_insertable_users",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "element_id": {
+                    "name": "element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_insertable_users_library_id_element_id_day_user_id_pk": {
+                    "columns": ["library_id", "element_id", "day", "user_id"],
+                    "name": "daily_insertable_users_library_id_element_id_day_user_id_pk"
+                }
+            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -387,11 +510,6 @@
                 "events_day_idx": {
                     "name": "events_day_idx",
                     "columns": ["day"],
-                    "isUnique": false
-                },
-                "events_element_day_idx": {
-                    "name": "events_element_day_idx",
-                    "columns": ["library_id", "element_id", "day"],
                     "isUnique": false
                 }
             },

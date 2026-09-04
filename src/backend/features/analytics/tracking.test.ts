@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -31,6 +32,12 @@ import {
     type InsertEvent
 } from "./tracking";
 import { InsertSource } from "./events";
+import {
+    boolParam,
+    enumParam,
+    quantityParam
+} from "../../../__test_utils__/configuration-fixtures";
+import { VisibilityType } from "../configurations/models";
 import { ElementType } from "../../lib/onshape/element-type";
 
 const db = getDb(env.DB);
@@ -65,6 +72,25 @@ function insertEvent(
     };
 }
 
+/** An enum, a length and a parameter only shown for the "large" size. */
+async function seedSizeConfiguration() {
+    await seedConfiguration(db);
+    await db.update(configurations).set({
+        parameters: [
+            enumParam("size", ["small", "large"]),
+            quantityParam("length"),
+            {
+                ...boolParam("reinforced"),
+                condition: {
+                    type: VisibilityType.EQUAL,
+                    id: "size",
+                    value: "large"
+                }
+            }
+        ]
+    });
+}
+
 describe("tracking", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -73,6 +99,7 @@ describe("tracking", () => {
 
     describe("trackInsert", () => {
         it("writes a raw event and seeds every rollup", async () => {
+            await seedSizeConfiguration();
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
 
             const event = await db.select().from(events).get();
@@ -96,6 +123,7 @@ describe("tracking", () => {
         });
 
         it("increments the rollups rather than duplicating rows", async () => {
+            await seedSizeConfiguration();
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
             await trackInsert(fakeContext(), insertEvent({ size: "small" }));
@@ -153,6 +181,7 @@ describe("tracking", () => {
         });
 
         it("counts each configuration value separately", async () => {
+            await seedSizeConfiguration();
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
             await trackInsert(fakeContext(), insertEvent({ size: "small" }));
@@ -166,7 +195,8 @@ describe("tracking", () => {
                             dailyConfigurationMetrics.libraryId,
                             TEST_LIBRARY_ID
                         ),
-                        eq(dailyConfigurationMetrics.elementId, elementId)
+                        eq(dailyConfigurationMetrics.elementId, elementId),
+                        eq(dailyConfigurationMetrics.parameterId, "size")
                     )
                 )
                 .all();
@@ -175,6 +205,64 @@ describe("tracking", () => {
                 values.map((row) => [row.value, row.count])
             );
             expect(counts).toEqual({ large: 2, small: 1 });
+        });
+
+        it("counts one value however the user spelled it", async () => {
+            await seedSizeConfiguration();
+            for (const length of ["1in", "1 in", "25.4 mm", "(0.5 + 0.5) in"]) {
+                await trackInsert(fakeContext(), insertEvent({ length }));
+            }
+
+            const values = await db
+                .select()
+                .from(dailyConfigurationMetrics)
+                .where(eq(dailyConfigurationMetrics.parameterId, "length"))
+                .all();
+
+            expect(values).toHaveLength(1);
+            expect(values[0]).toMatchObject({ value: "0.0254 m", count: 4 });
+        });
+
+        it("leaves out a parameter the selection hides", async () => {
+            await seedSizeConfiguration();
+            // "reinforced" is only shown for the large size, and Onshape
+            // applies nothing it does not show.
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ size: "small", reinforced: "true" })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ size: "large", reinforced: "true" })
+            );
+
+            const values = await db
+                .select()
+                .from(dailyConfigurationMetrics)
+                .where(eq(dailyConfigurationMetrics.parameterId, "reinforced"))
+                .all();
+
+            expect(values).toHaveLength(1);
+            expect(values[0]).toMatchObject({ value: "true", count: 1 });
+        });
+
+        it("ignores a value for a parameter the part does not declare", async () => {
+            await seedSizeConfiguration();
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ size: "large", removedLongAgo: "1" })
+            );
+
+            const values = await db
+                .select()
+                .from(dailyConfigurationMetrics)
+                .all();
+            // Every declared parameter the selection applies, and nothing else.
+            expect(values.map((row) => row.parameterId).sort()).toEqual([
+                "length",
+                "reinforced",
+                "size"
+            ]);
         });
 
         it("records the stored defaults when the user chose nothing", async () => {

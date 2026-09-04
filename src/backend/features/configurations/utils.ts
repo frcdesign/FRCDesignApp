@@ -196,7 +196,7 @@ export function getVisibleOptions(
 }
 
 /** Display precision used when the document's units aren't available. */
-const DEFAULT_QUANTITY_PRECISION = 3;
+export const DEFAULT_QUANTITY_PRECISION = 3;
 
 /**
  * The evaluation settings for a quantity parameter: its own bounds, plus the
