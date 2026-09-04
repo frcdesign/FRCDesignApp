@@ -10,6 +10,8 @@ import {
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { OptionsTable } from "../../../../features/dashboard/options-table";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
+import { toDayRange } from "../../../../features/dashboard/range";
+import { useRangePreset } from "../../../../features/dashboard/range-control";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
     component: LowUsage
@@ -19,9 +21,12 @@ function LowUsage(): ReactNode {
     const { libraryId } = Route.useParams();
     // Set from the navbar, so it stays beside the library it filters.
     const threshold = Route.useSearch().threshold ?? DEFAULT_THRESHOLD;
+    const range = toDayRange(useRangePreset());
 
-    const parts = useQuery(getUnusedQuery(libraryId, threshold));
-    const options = useQuery(getUnusedOptionsQuery(libraryId, threshold));
+    const parts = useQuery(getUnusedQuery(libraryId, threshold, range));
+    const options = useQuery(
+        getUnusedOptionsQuery(libraryId, threshold, range)
+    );
 
     return (
         <Stack gap="xl">

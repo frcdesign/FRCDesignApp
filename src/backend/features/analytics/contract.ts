@@ -224,8 +224,6 @@ export interface ConfigurationParameterUsage {
     /** Total recorded values for this parameter, the base for percentages. */
     total: number;
     values: ConfigurationValueUsage[];
-    /** True when the parameter no longer exists on the insertable. */
-    isRetired: boolean;
 }
 
 /**

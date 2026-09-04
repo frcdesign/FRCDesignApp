@@ -81,16 +81,12 @@ export function DashboardNavbar(): ReactNode {
                 ) : (
                     <LibraryMenu dashboard={current} />
                 )}
-                {/* Only the library view has anything the range drives; the
+                {/* Every library-scoped dashboard counts over the range; the
                     app dashboard's cards each state their own window. */}
-                {current === "library" && (
-                    <Group ml="auto">
+                {current !== "app" && (
+                    <Group gap="sm" ml="auto">
+                        {current === "unused" && <ThresholdControl />}
                         <RangeControl />
-                    </Group>
-                )}
-                {current === "unused" && (
-                    <Group ml="auto">
-                        <ThresholdControl />
                     </Group>
                 )}
             </Group>

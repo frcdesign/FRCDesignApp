@@ -3,6 +3,7 @@ import {
     Card,
     Group,
     Progress,
+    ScrollArea,
     Stack,
     Text,
     Title
@@ -49,18 +50,6 @@ function ParameterCard({
 }: {
     parameter: ConfigurationParameterUsage;
 }): ReactNode {
-    const used = parameter.values.filter((value) => value.count > 0);
-    const topValue = used.reduce<ConfigurationValueUsage | null>(
-        (best, value) =>
-            best === null || value.count > best.count ? value : best,
-        null
-    );
-
-    const defaultIsWrong =
-        topValue !== null && !topValue.isDefault && parameter.total > 0;
-    const neverChanged =
-        parameter.total > 0 && used.length === 1 && used[0].isDefault;
-
     return (
         <Card withBorder padding="md" radius="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
@@ -69,39 +58,35 @@ function ParameterCard({
                     <Badge variant="light" color="gray" size="sm">
                         {parameter.type}
                     </Badge>
-                    {parameter.isRetired && (
-                        <Badge variant="light" color="gray" size="sm">
-                            No longer defined
-                        </Badge>
-                    )}
-                    {defaultIsWrong && (
-                        <Badge variant="light" color="orange" size="sm">
-                            Default may be wrong
-                        </Badge>
-                    )}
-                    {neverChanged && (
-                        <Badge variant="light" color="blue" size="sm">
-                            Never changed
-                        </Badge>
-                    )}
                 </Group>
                 <Text size="sm" c="dimmed">
                     {formatCount(parameter.total)} recorded
                 </Text>
             </Group>
 
-            <Stack gap="xs">
-                {parameter.values.map((value) => (
-                    <ValueRow
-                        key={value.value}
-                        value={value}
-                        total={parameter.total}
-                    />
-                ))}
-            </Stack>
+            {/* A quantity takes any number the user types, so the list of
+                values it was given has no bound worth laying out for. */}
+            <ScrollArea.Autosize
+                mah={VALUES_HEIGHT}
+                type="auto"
+                offsetScrollbars
+            >
+                <Stack gap="xs">
+                    {parameter.values.map((value) => (
+                        <ValueRow
+                            key={value.value}
+                            value={value}
+                            total={parameter.total}
+                        />
+                    ))}
+                </Stack>
+            </ScrollArea.Autosize>
         </Card>
     );
 }
+
+/** Six rows or so, past which the card scrolls rather than the page. */
+const VALUES_HEIGHT = 260;
 
 function ValueRow({
     value,
@@ -111,7 +96,6 @@ function ValueRow({
     total: number;
 }): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
-    const unused = value.count === 0;
 
     return (
         <div>
@@ -119,7 +103,7 @@ function ValueRow({
                 <Group gap="xs">
                     <Text
                         size="sm"
-                        c={unused ? "dimmed" : undefined}
+                        c={value.count === 0 ? "dimmed" : undefined}
                         fw={value.isDefault ? FontWeight.SEMI_BOLD : undefined}
                     >
                         {value.label}
@@ -127,11 +111,6 @@ function ValueRow({
                     {value.isDefault && (
                         <Badge size="xs" variant="light">
                             Default
-                        </Badge>
-                    )}
-                    {unused && (
-                        <Badge size="xs" variant="light" color="gray">
-                            Never used
                         </Badge>
                     )}
                 </Group>

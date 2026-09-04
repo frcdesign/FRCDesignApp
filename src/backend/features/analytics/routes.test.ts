@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
     configurations,
-    configurationValueStats,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -72,6 +71,29 @@ async function seedMetric(day: string, count: number, type = EventType.INSERT) {
         type,
         count
     });
+}
+
+/** Wide enough to cover every day these tests seed. */
+const ALL_TIME = "from=2000-01-01&to=2099-12-31";
+
+/** Insert events, which is what every windowed endpoint counts. */
+async function seedInsertEvents(
+    count: number,
+    overrides: Partial<typeof events.$inferInsert> = {}
+) {
+    const rows = Array.from({ length: count }, (_, i) => ({
+        type: EventType.INSERT,
+        createdAt: i + 1,
+        day: "2026-03-01",
+        libraryId: TEST_LIBRARY_ID,
+        userId: "user-a",
+        elementId,
+        ...overrides
+    }));
+    // D1 caps the variables one statement may bind.
+    for (let i = 0; i < rows.length; i += 10) {
+        await db.insert(events).values(rows.slice(i, i + 10));
+    }
 }
 
 async function seedInsertableStats(count: number, insertedAt = Date.now()) {
@@ -352,8 +374,6 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/parts/library/:libraryId", () => {
-        const ALL_TIME = "?from=2000-01-01&to=2099-12-31";
-
         /** `count` insert events on one element, all on the same day. */
         async function seedInserts(
             count: number,
@@ -374,7 +394,7 @@ describe("analytics routes", () => {
             }
         }
 
-        function partsUrl(query = ALL_TIME) {
+        function partsUrl(query = `?${ALL_TIME}`) {
             return `/api/analytics/parts/library/${TEST_LIBRARY_ID}${query}`;
         }
 
@@ -633,18 +653,10 @@ describe("analytics routes", () => {
 
         it("surfaces an option nobody has ever picked", async () => {
             await seedEnumPart();
-            await db.insert(configurationValueStats).values([
-                {
-                    libraryId: TEST_LIBRARY_ID,
-                    elementId,
-                    parameterId: "stages",
-                    value: "two",
-                    count: 40
-                }
-            ]);
+            await seedInsertEvents(4, { configuration: { stages: "two" } });
 
             const res = await anonymousGet(
-                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
             );
             const body: UnusedOptionOut[] = await res.json();
 
@@ -653,22 +665,16 @@ describe("analytics routes", () => {
                 partName: "Test PARTSTUDIO",
                 parameterName: "Stages",
                 count: 0,
-                parameterTotal: 40
+                parameterTotal: 4
             });
         });
 
         it("flags a default that nobody picks", async () => {
             await seedEnumPart();
-            await db.insert(configurationValueStats).values({
-                libraryId: TEST_LIBRARY_ID,
-                elementId,
-                parameterId: "stages",
-                value: "two",
-                count: 12
-            });
+            await seedInsertEvents(3, { configuration: { stages: "two" } });
 
             const res = await anonymousGet(
-                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
             );
             const body: UnusedOptionOut[] = await res.json();
 
@@ -679,16 +685,10 @@ describe("analytics routes", () => {
 
         it("leaves out an option used more than the threshold", async () => {
             await seedEnumPart();
-            await db.insert(configurationValueStats).values({
-                libraryId: TEST_LIBRARY_ID,
-                elementId,
-                parameterId: "stages",
-                value: "one",
-                count: 6
-            });
+            await seedInsertEvents(6, { configuration: { stages: "one" } });
 
             const res = await anonymousGet(
-                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=5`
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=5&${ALL_TIME}`
             );
             const body: UnusedOptionOut[] = await res.json();
 
@@ -703,7 +703,7 @@ describe("analytics routes", () => {
             await seedConfiguration(db);
 
             const res = await anonymousGet(
-                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0`
+                `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
             );
             expect(await res.json()).toEqual([]);
         });
@@ -715,30 +715,46 @@ describe("analytics routes", () => {
             await db.update(insertables).set({ isVisible: true });
 
             const never = await anonymousGet(
-                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0`
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
             );
             const neverBody: PartUsageOut[] = await never.json();
             expect(neverBody).toHaveLength(1);
             expect(neverBody[0].insertCount).toBe(0);
 
-            await seedInsertableStats(4);
+            await seedInsertEvents(4);
 
             const under = await anonymousGet(
-                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=5`
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=5&${ALL_TIME}`
             );
             expect(await under.json<PartUsageOut[]>()).toHaveLength(1);
 
             const over = await anonymousGet(
-                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=3`
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=3&${ALL_TIME}`
             );
             expect(await over.json<PartUsageOut[]>()).toHaveLength(0);
+        });
+
+        it("reads a part nobody has used lately as low usage", async () => {
+            await seedPartStudio(db);
+            await db.update(insertables).set({ isVisible: true });
+            await seedInsertEvents(20, { day: "2026-03-01" });
+
+            const stale = await anonymousGet(
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0&from=2026-04-01&to=2026-04-30`
+            );
+            expect(await stale.json<PartUsageOut[]>()).toHaveLength(1);
+
+            const lifetime = await anonymousGet(
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
+            );
+            expect(await lifetime.json<PartUsageOut[]>()).toHaveLength(0);
         });
 
         it("ignores hidden parts", async () => {
             await seedPartStudio(db);
 
             const res = await anonymousGet(
-                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0`
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
             );
             expect(await res.json<PartUsageOut[]>()).toHaveLength(0);
         });
@@ -802,35 +818,14 @@ describe("analytics routes", () => {
         it("reports usage, unique users and the configuration breakdown", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
-            await seedInsertableStats(3);
-            await db.insert(configurationValueStats).values({
-                libraryId: TEST_LIBRARY_ID,
-                elementId,
-                parameterId: "boolean",
-                value: "false",
-                count: 3
+            await seedInsertEvents(2, { configuration: { boolean: "false" } });
+            await seedInsertEvents(1, {
+                userId: "user-b",
+                configuration: { boolean: "false" }
             });
-            await db.insert(events).values([
-                {
-                    type: EventType.INSERT,
-                    createdAt: 1,
-                    day: "2026-03-01",
-                    libraryId: TEST_LIBRARY_ID,
-                    userId: "user-a",
-                    elementId
-                },
-                {
-                    type: EventType.INSERT,
-                    createdAt: 2,
-                    day: "2026-03-01",
-                    libraryId: TEST_LIBRARY_ID,
-                    userId: "user-b",
-                    elementId
-                }
-            ]);
 
             const res = await anonymousGet(
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             );
             const body: InsertableReportOut = await res.json();
 
@@ -842,7 +837,6 @@ describe("analytics routes", () => {
 
             const parameter = body.parameters[0];
             expect(parameter.parameterId).toBe("boolean");
-            expect(parameter.isRetired).toBe(false);
             expect(parameter.defaultValue).toBe("true");
         });
 
@@ -850,12 +844,30 @@ describe("analytics routes", () => {
             await seedPartStudio(db);
 
             const res = await anonymousGet(
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             );
             const body: InsertableReportOut = await res.json();
 
             expect(body.insertCount).toBe(0);
             expect(body.parameters).toEqual([]);
+        });
+
+        it("counts only the uses the window covers", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await seedInsertEvents(2, {
+                day: "2026-03-01",
+                configuration: { boolean: "false" }
+            });
+
+            const res = await anonymousGet(
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?from=2026-04-01&to=2026-04-30`
+            );
+            const body: InsertableReportOut = await res.json();
+
+            expect(body.insertCount).toBe(0);
+            // The parameter is still listed; nothing was recorded against it.
+            expect(body.parameters[0].total).toBe(0);
         });
 
         it("counts how many users have the part favorited", async () => {
@@ -873,46 +885,34 @@ describe("analytics routes", () => {
 
         it("splits inserts by the tab they landed in", async () => {
             await seedPartStudio(db);
-            const base = {
-                type: EventType.INSERT,
-                createdAt: 1,
-                day: "2026-03-01",
-                libraryId: TEST_LIBRARY_ID,
-                userId: "user-a",
-                elementId
-            };
-            await db.insert(events).values([
-                { ...base, targetElementType: ElementType.PART_STUDIO },
-                { ...base, targetElementType: ElementType.PART_STUDIO },
-                { ...base, targetElementType: ElementType.PART_STUDIO },
-                { ...base, targetElementType: ElementType.ASSEMBLY }
-            ]);
+            await seedInsertEvents(3, {
+                targetElementType: ElementType.PART_STUDIO
+            });
+            await seedInsertEvents(1, {
+                targetElementType: ElementType.ASSEMBLY
+            });
 
             const res = await anonymousGet(
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             );
             const body: InsertableReportOut = await res.json();
 
             expect(body.targets).toEqual({ partStudio: 3, assembly: 1 });
         });
 
-        it("reports the rate alongside the lifetime total", async () => {
+        it("rates uses over the span the part has been in use", async () => {
             await seedPartStudio(db);
-            await db.insert(insertableStats).values({
-                libraryId: TEST_LIBRARY_ID,
-                elementId,
-                insertCount: 60,
-                firstInsertedAt: Date.now() - 180 * 24 * 3600 * 1000,
-                lastInsertedAt: Date.now()
-            });
+            await seedInsertableStats(0, Date.now() - 90 * 24 * 3600 * 1000);
+            await seedInsertEvents(12, { day: toDayKey(Date.now()) });
 
             const res = await anonymousGet(
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             );
             const body: InsertableReportOut = await res.json();
 
-            expect(body.insertCount).toBe(60);
-            expect(body.usesPerMonth).toBe(10);
+            // Twelve uses over the 90 days since its first, not over a month.
+            expect(body.insertCount).toBe(12);
+            expect(body.usesPerMonth).toBe(4);
         });
     });
 });
@@ -952,14 +952,13 @@ describe("buildParameterUsage", () => {
         expect(usage.values[0].value).toBe("large");
     });
 
-    it("keeps values recorded against parameters that no longer exist", () => {
+    it("drops values recorded against a parameter the part no longer has", () => {
         const usage = buildParameterUsage(
             [enumParameter],
             [{ parameterId: "removed", value: "1", count: 4 }]
         );
 
-        const retired = usage.find((entry) => entry.parameterId === "removed");
-        expect(retired).toMatchObject({ isRetired: true, total: 4 });
+        expect(usage.map((entry) => entry.parameterId)).toEqual(["size"]);
     });
 
     it("always shows a free-form parameter's default, even unused", () => {

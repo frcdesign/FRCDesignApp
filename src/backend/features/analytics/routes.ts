@@ -16,7 +16,6 @@ import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb, type Db } from "../../db/client";
 import {
     configurations,
-    configurationValueStats,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -173,7 +172,6 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
         db
             .select({
                 elementId: insertables.elementId,
-                insertCount: insertableStats.insertCount,
                 firstInsertedAt: insertableStats.firstInsertedAt,
                 insertableId: insertables.id,
                 name: insertables.name,
@@ -198,33 +196,8 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
         getWindowedInsertCounts(db, libraryId, range)
     ]);
 
-    // A part first used inside the window is rated over the days it has
-    // actually existed, not over the whole window, so arriving late is not
-    // read as being unpopular.
-    const from = Date.parse(`${range.from}T00:00:00Z`);
-    const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
-
     const out: PartUsageOut[] = rows
-        .map((row) => {
-            const insertCount = windowed.get(row.elementId) ?? 0;
-            const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
-            return {
-                elementId: row.elementId,
-                insertableId: row.insertableId,
-                name: row.name,
-                groupName: row.groupName,
-                documentId: row.documentId,
-                versionId: row.versionId,
-                isVisible: row.isVisible,
-                insertCount,
-                usesPerMonth: usesPerMonth(
-                    insertCount,
-                    insertCount === 0 ? null : firstUsed,
-                    to
-                ),
-                recent: series.get(row.elementId) ?? emptySparkline()
-            };
-        })
+        .map((row) => toWindowedPart(row, windowed, series, range))
         // Most used first; unused parts fall to the bottom in name order.
         .sort(
             (a, b) =>
@@ -232,6 +205,50 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
         );
     return c.json(out);
 });
+
+interface PartRow {
+    elementId: string;
+    insertableId: string;
+    name: string;
+    groupName: string;
+    documentId: string;
+    versionId: string;
+    isVisible: boolean;
+    firstInsertedAt: number | null;
+}
+
+/** One part counted over the window rather than over its whole history. */
+function toWindowedPart(
+    row: PartRow,
+    windowed: Map<string, number>,
+    series: Map<string, number[]>,
+    range: DayRange
+): PartUsageOut {
+    const from = Date.parse(`${range.from}T00:00:00Z`);
+    const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
+    const insertCount = windowed.get(row.elementId) ?? 0;
+    // A part first used inside the window is rated over the days it has
+    // actually existed, not over the whole window, so arriving late is not
+    // read as being unpopular.
+    const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
+
+    return {
+        elementId: row.elementId,
+        insertableId: row.insertableId,
+        name: row.name,
+        groupName: row.groupName,
+        documentId: row.documentId,
+        versionId: row.versionId,
+        isVisible: row.isVisible,
+        insertCount,
+        usesPerMonth: usesPerMonth(
+            insertCount,
+            insertCount === 0 ? null : firstUsed,
+            to
+        ),
+        recent: series.get(row.elementId) ?? emptySparkline()
+    };
+}
 
 /**
  * Inserts per element inside the window, keyed by element id.
@@ -265,6 +282,49 @@ async function getWindowedInsertCounts(
         if (row.elementId !== null) counts.set(row.elementId, row.count);
     }
     return counts;
+}
+
+interface ConfigurationCount {
+    elementId: string;
+    parameterId: string;
+    value: string;
+    count: number;
+}
+
+/**
+ * How often each configuration value was chosen inside the window.
+ *
+ * Expanded out of the event log with `json_each` rather than read from
+ * `configuration_value_stats`: that rollup is lifetime-only, and these pages
+ * now follow the range picker. Both count the same thing — the rollup is a
+ * fold of exactly these rows.
+ */
+async function getConfigurationCounts(
+    db: Db,
+    libraryId: LibraryId,
+    range: DayRange,
+    elementId?: string
+): Promise<ConfigurationCount[]> {
+    const rows = await db.all<ConfigurationCount>(sql`
+        select
+            ${events.elementId} as elementId,
+            cfg.key as parameterId,
+            cfg.value as value,
+            count(*) as count
+        from ${events}, json_each(${events.configuration}) as cfg
+        where ${events.libraryId} = ${libraryId}
+            and ${events.type} = ${EventType.INSERT}
+            and ${events.day} >= ${range.from}
+            and ${events.day} <= ${range.to}
+            and ${events.configuration} is not null
+            ${
+                elementId === undefined
+                    ? sql``
+                    : sql`and ${events.elementId} = ${elementId}`
+            }
+        group by elementId, parameterId, value
+    `);
+    return rows;
 }
 
 function emptySparkline(): number[] {
@@ -321,6 +381,7 @@ async function getPartSparklines(
 analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
+    const range = getRange(c);
 
     const parsed = z.coerce
         .number()
@@ -331,58 +392,46 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
 
     // Drives off insertables (not the stats table) so parts with no events at
     // all — the ones that matter most here — are included.
-    const rows = await db
-        .select({
-            elementId: insertables.elementId,
-            insertableId: insertables.id,
-            name: insertables.name,
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            groupName: group.name,
-            isVisible: insertables.isVisible,
-            insertCount: insertableStats.insertCount,
-            firstInsertedAt: insertableStats.firstInsertedAt
-        })
-        .from(insertables)
-        .leftJoin(
-            insertableStats,
-            and(
-                eq(insertableStats.libraryId, insertables.libraryId),
-                eq(insertableStats.elementId, insertables.elementId)
+    const [rows, series, windowed] = await Promise.all([
+        db
+            .select({
+                elementId: insertables.elementId,
+                insertableId: insertables.id,
+                name: insertables.name,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                groupName: group.name,
+                isVisible: insertables.isVisible,
+                firstInsertedAt: insertableStats.firstInsertedAt
+            })
+            .from(insertables)
+            .leftJoin(
+                insertableStats,
+                and(
+                    eq(insertableStats.libraryId, insertables.libraryId),
+                    eq(insertableStats.elementId, insertables.elementId)
+                )
             )
-        )
-        .innerJoin(group, eq(group.id, insertables.groupId))
-        .where(
-            and(
-                eq(insertables.libraryId, libraryId),
-                eq(insertables.isVisible, true),
-                sql`coalesce(${insertableStats.insertCount}, 0) <= ${threshold}`
+            .innerJoin(group, eq(group.id, insertables.groupId))
+            .where(
+                and(
+                    eq(insertables.libraryId, libraryId),
+                    eq(insertables.isVisible, true)
+                )
             )
-        )
-        .orderBy(
-            asc(sql`coalesce(${insertableStats.insertCount}, 0)`),
-            asc(insertables.name)
-        )
-        .all();
+            .all(),
+        getPartSparklines(db, libraryId),
+        getWindowedInsertCounts(db, libraryId, range)
+    ]);
 
-    const series = await getPartSparklines(db, libraryId);
-    const now = Date.now();
-    const out: PartUsageOut[] = rows.map((row) => ({
-        elementId: row.elementId,
-        insertableId: row.insertableId,
-        name: row.name,
-        groupName: row.groupName,
-        documentId: row.documentId,
-        versionId: row.versionId,
-        isVisible: row.isVisible,
-        insertCount: row.insertCount ?? 0,
-        usesPerMonth: usesPerMonth(
-            row.insertCount ?? 0,
-            row.firstInsertedAt,
-            now
-        ),
-        recent: series.get(row.elementId) ?? emptySparkline()
-    }));
+    const out: PartUsageOut[] = rows
+        .map((row) => toWindowedPart(row, windowed, series, range))
+        // Least used first: the point of the page is the bottom of the list.
+        .filter((part) => part.insertCount <= threshold)
+        .sort(
+            (a, b) =>
+                a.insertCount - b.insertCount || a.name.localeCompare(b.name)
+        );
     return c.json(out);
 });
 
@@ -390,6 +439,7 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
 analyticsRoutes.get("/analytics/unused-options" + libraryRoute(), async (c) => {
     const libraryId = getLibraryParam(c);
     const db = getDb(c.env.DB);
+    const range = getRange(c);
 
     const parsed = z.coerce
         .number()
@@ -414,16 +464,7 @@ analyticsRoutes.get("/analytics/unused-options" + libraryRoute(), async (c) => {
                 )
             )
             .all(),
-        db
-            .select({
-                elementId: configurationValueStats.elementId,
-                parameterId: configurationValueStats.parameterId,
-                value: configurationValueStats.value,
-                count: configurationValueStats.count
-            })
-            .from(configurationValueStats)
-            .where(eq(configurationValueStats.libraryId, libraryId))
-            .all()
+        getConfigurationCounts(db, libraryId, range)
     ]);
 
     const byElement = new Map<string, typeof valueRows>();
@@ -479,6 +520,15 @@ analyticsRoutes.get(
         const libraryId = getLibraryParam(c);
         const elementId = c.req.param("elementId")!;
         const db = getDb(c.env.DB);
+        const range = getRange(c);
+
+        const inWindow = and(
+            eq(events.libraryId, libraryId),
+            eq(events.elementId, elementId),
+            eq(events.type, EventType.INSERT),
+            gte(events.day, range.from),
+            lte(events.day, range.to)
+        );
 
         const [
             stats,
@@ -513,26 +563,11 @@ analyticsRoutes.get(
                     )
                 )
                 .get(),
-            db
-                .select()
-                .from(configurationValueStats)
-                .where(
-                    and(
-                        eq(configurationValueStats.libraryId, libraryId),
-                        eq(configurationValueStats.elementId, elementId)
-                    )
-                )
-                .all(),
+            getConfigurationCounts(db, libraryId, range, elementId),
             db
                 .select({ value: countDistinct(events.userId) })
                 .from(events)
-                .where(
-                    and(
-                        eq(events.libraryId, libraryId),
-                        eq(events.elementId, elementId),
-                        eq(events.type, EventType.INSERT)
-                    )
-                )
+                .where(inWindow)
                 .get(),
             db
                 .select({
@@ -540,13 +575,7 @@ analyticsRoutes.get(
                     count: count()
                 })
                 .from(events)
-                .where(
-                    and(
-                        eq(events.libraryId, libraryId),
-                        eq(events.elementId, elementId),
-                        eq(events.type, EventType.INSERT)
-                    )
-                )
+                .where(inWindow)
                 .groupBy(events.targetElementType)
                 .all(),
             // Favorites are keyed by insertable id, so a part that left
@@ -567,6 +596,22 @@ analyticsRoutes.get(
                 .get()
         ]);
 
+        const insertCount = targetRows.reduce(
+            (total, row) => total + row.count,
+            0
+        );
+        // Rated over the days the part has existed inside the window, as the
+        // parts table rates it.
+        const windowStart = Date.parse(`${range.from}T00:00:00Z`);
+        const windowEnd = Math.min(
+            Date.now(),
+            Date.parse(`${range.to}T23:59:59Z`)
+        );
+        const firstUsed = Math.max(
+            stats?.firstInsertedAt ?? windowStart,
+            windowStart
+        );
+
         // The 1:1 configurations table is keyed by insertable id, so the
         // current parameter definitions are only reachable via a live row.
         const parameters = insertable
@@ -584,11 +629,11 @@ analyticsRoutes.get(
             name: insertable?.name ?? null,
             documentId: insertable?.documentId ?? null,
             versionId: insertable?.versionId ?? null,
-            insertCount: stats?.insertCount ?? 0,
+            insertCount,
             usesPerMonth: usesPerMonth(
-                stats?.insertCount ?? 0,
-                stats?.firstInsertedAt ?? null,
-                Date.now()
+                insertCount,
+                insertCount === 0 ? null : firstUsed,
+                windowEnd
             ),
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
@@ -620,8 +665,10 @@ function toTargetSplit(
 
 /**
  * Merges recorded value counts with the insertable's current parameters, so
- * declared-but-unused enum options still surface and stale parameter ids are
- * kept rather than dropped.
+ * declared-but-unused enum options still surface.
+ *
+ * Values recorded against a parameter the insertable no longer declares are
+ * dropped: they describe a configuration nobody can pick any more.
  */
 export function buildParameterUsage(
     parameters: ConfigurationParameter[],
@@ -635,10 +682,9 @@ export function buildParameterUsage(
         countsByParameter.set(row.parameterId, values);
     }
 
-    const usage: ConfigurationParameterUsage[] = parameters.map((parameter) => {
+    return parameters.map((parameter) => {
         const counts =
             countsByParameter.get(parameter.id) ?? new Map<string, number>();
-        countsByParameter.delete(parameter.id);
 
         const values =
             parameter.type === ParameterType.ENUM
@@ -657,28 +703,9 @@ export function buildParameterUsage(
             type: parameter.type,
             defaultValue: parameter.default,
             total: sumCounts(counts),
-            values: values.sort((a, b) => b.count - a.count),
-            isRetired: false
+            values: values.sort((a, b) => b.count - a.count)
         };
     });
-
-    // Whatever is left was recorded against a parameter the insertable no
-    // longer declares (renamed or removed since).
-    for (const [parameterId, counts] of countsByParameter) {
-        usage.push({
-            parameterId,
-            name: parameterId,
-            type: "unknown",
-            defaultValue: null,
-            total: sumCounts(counts),
-            values: toFreeFormValues(counts, null).sort(
-                (a, b) => b.count - a.count
-            ),
-            isRetired: true
-        });
-    }
-
-    return usage;
 }
 
 /**

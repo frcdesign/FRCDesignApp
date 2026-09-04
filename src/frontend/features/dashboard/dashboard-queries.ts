@@ -57,38 +57,77 @@ export function getPartsQuery(libraryId: LibraryId, range: DayRange) {
     });
 }
 
-export function getUnusedQuery(libraryId: LibraryId, threshold: number) {
+export function getUnusedQuery(
+    libraryId: LibraryId,
+    threshold: number,
+    range: DayRange
+) {
     return queryOptions<PartUsageOut[]>({
-        queryKey: ["analytics", "unused", libraryId, threshold],
+        queryKey: [
+            "analytics",
+            "unused",
+            libraryId,
+            threshold,
+            range.from,
+            range.to
+        ],
         queryFn: () =>
             apiGet("/analytics/unused" + toLibraryPath(libraryId), {
-                query: { threshold: threshold.toString() }
+                query: {
+                    threshold: threshold.toString(),
+                    from: range.from,
+                    to: range.to
+                }
             })
     });
 }
 
-export function getUnusedOptionsQuery(libraryId: LibraryId, threshold: number) {
+export function getUnusedOptionsQuery(
+    libraryId: LibraryId,
+    threshold: number,
+    range: DayRange
+) {
     return queryOptions<UnusedOptionOut[]>({
-        queryKey: ["analytics", "unused-options", libraryId, threshold],
+        queryKey: [
+            "analytics",
+            "unused-options",
+            libraryId,
+            threshold,
+            range.from,
+            range.to
+        ],
         queryFn: () =>
             apiGet("/analytics/unused-options" + toLibraryPath(libraryId), {
-                query: { threshold: threshold.toString() }
+                query: {
+                    threshold: threshold.toString(),
+                    from: range.from,
+                    to: range.to
+                }
             })
     });
 }
 
 export function getInsertableReportQuery(
     libraryId: LibraryId,
-    elementId: string
+    elementId: string,
+    range: DayRange
 ) {
     return queryOptions<InsertableReportOut>({
-        queryKey: ["analytics", "insertable", libraryId, elementId],
+        queryKey: [
+            "analytics",
+            "insertable",
+            libraryId,
+            elementId,
+            range.from,
+            range.to
+        ],
         queryFn: () =>
             apiGet(
                 "/analytics/insertable" +
                     toLibraryPath(libraryId) +
                     "/element/" +
-                    elementId
+                    elementId,
+                { query: { from: range.from, to: range.to } }
             )
     });
 }

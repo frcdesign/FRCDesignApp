@@ -20,11 +20,13 @@ import { makeUrl } from "../../../../lib/url";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
 import {
     getInsertableReportQuery,
-    getPartsQuery
+    getPartsQuery,
+    type DayRange
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
+import { useRangePreset } from "../../../../features/dashboard/range-control";
 import {
     formatCount,
     formatPercent
@@ -46,13 +48,17 @@ function PartReport(): ReactNode {
     const { libraryId } = Route.useParams();
     const { element } = Route.useSearch();
     const [search, setSearch] = useState("");
-    // This page has no range picker, so it reports on everything recorded.
-    const parts = useQuery(getPartsQuery(libraryId, toDayRange("all")));
+    const range = toDayRange(useRangePreset());
+    const parts = useQuery(getPartsQuery(libraryId, range));
 
     return (
         <Stack gap="xl">
             {element !== undefined && (
-                <ReportBody libraryId={libraryId} elementId={element} />
+                <ReportBody
+                    libraryId={libraryId}
+                    elementId={element}
+                    range={range}
+                />
             )}
 
             {/* Kept below the report so another part is always one click away. */}
@@ -82,12 +88,16 @@ function PartReport(): ReactNode {
 
 function ReportBody({
     libraryId,
-    elementId
+    elementId,
+    range
 }: {
     libraryId: LibraryId;
     elementId: string;
+    range: DayRange;
 }): ReactNode {
-    const query = useQuery(getInsertableReportQuery(libraryId, elementId));
+    const query = useQuery(
+        getInsertableReportQuery(libraryId, elementId, range)
+    );
 
     if (!query.data) {
         return <DashboardState query={query} />;
@@ -109,7 +119,7 @@ function ReportBody({
                     value={formatCount(report.usesPerMonth)}
                 />
                 <SummaryCard
-                    label="Total uses"
+                    label="Uses"
                     value={formatCount(report.insertCount)}
                 />
                 <SummaryCard
@@ -131,7 +141,7 @@ function ReportBody({
 
             <div>
                 <Title order={4} mb="md">
-                    Configuration values used
+                    Configuration values
                 </Title>
                 <ConfigurationBreakdown parameters={report.parameters} />
             </div>
