@@ -7,7 +7,6 @@ import {
     eq,
     gte,
     lte,
-    sql,
     sum
 } from "drizzle-orm";
 import z from "zod";
@@ -16,10 +15,12 @@ import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb, type Db } from "../../db/client";
 import {
     configurations,
+    dailyConfigurationMetrics,
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
-    events,
     favorites,
     group,
     insertables,
@@ -28,7 +29,6 @@ import {
 } from "../../db/schema";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
-import { ElementType } from "../../lib/onshape/element-type";
 import {
     ParameterType,
     type ConfigurationParameter
@@ -47,7 +47,6 @@ import type {
     LibraryHealthCounts,
     LibrarySummary,
     PartUsageOut,
-    TargetSplit,
     UnusedOptionOut
 } from "./contract";
 import {
@@ -253,10 +252,8 @@ function toWindowedPart(
 /**
  * Inserts per element inside the window, keyed by element id.
  *
- * Counted from raw events rather than a rollup because the parts table and the
- * treemap both follow the range picker, which is what `events_element_day_idx`
- * exists for: the library leads the index, so one library's inserts are a range
- * scan, and grouping by element comes back in index order.
+ * Folded out of the per-part daily rollup, which `daily_insertable_metrics_day_idx`
+ * makes a range scan over one library's window.
  */
 async function getWindowedInsertCounts(
     db: Db,
@@ -264,24 +261,25 @@ async function getWindowedInsertCounts(
     range: DayRange
 ): Promise<Map<string, number>> {
     const rows = await db
-        .select({ elementId: events.elementId, count: count() })
-        .from(events)
-        .where(
-            and(
-                eq(events.libraryId, libraryId),
-                eq(events.type, EventType.INSERT),
-                gte(events.day, range.from),
-                lte(events.day, range.to)
-            )
-        )
-        .groupBy(events.elementId)
+        .select({
+            elementId: dailyInsertableMetrics.elementId,
+            count: sum(dailyInsertableMetrics.count)
+        })
+        .from(dailyInsertableMetrics)
+        .where(inWindow(libraryId, range))
+        .groupBy(dailyInsertableMetrics.elementId)
         .all();
 
-    const counts = new Map<string, number>();
-    for (const row of rows) {
-        if (row.elementId !== null) counts.set(row.elementId, row.count);
-    }
-    return counts;
+    return new Map(rows.map((row) => [row.elementId, Number(row.count ?? 0)]));
+}
+
+/** The day-range filter every per-part rollup read shares. */
+function inWindow(libraryId: LibraryId, range: DayRange) {
+    return and(
+        eq(dailyInsertableMetrics.libraryId, libraryId),
+        gte(dailyInsertableMetrics.day, range.from),
+        lte(dailyInsertableMetrics.day, range.to)
+    );
 }
 
 interface ConfigurationCount {
@@ -291,40 +289,39 @@ interface ConfigurationCount {
     count: number;
 }
 
-/**
- * How often each configuration value was chosen inside the window.
- *
- * Expanded out of the event log with `json_each` rather than read from
- * `configuration_value_stats`: that rollup is lifetime-only, and these pages
- * now follow the range picker. Both count the same thing — the rollup is a
- * fold of exactly these rows.
- */
+/** How often each configuration value was chosen inside the window. */
 async function getConfigurationCounts(
     db: Db,
     libraryId: LibraryId,
     range: DayRange,
     elementId?: string
 ): Promise<ConfigurationCount[]> {
-    const rows = await db.all<ConfigurationCount>(sql`
-        select
-            ${events.elementId} as elementId,
-            cfg.key as parameterId,
-            cfg.value as value,
-            count(*) as count
-        from ${events}, json_each(${events.configuration}) as cfg
-        where ${events.libraryId} = ${libraryId}
-            and ${events.type} = ${EventType.INSERT}
-            and ${events.day} >= ${range.from}
-            and ${events.day} <= ${range.to}
-            and ${events.configuration} is not null
-            ${
+    const rows = await db
+        .select({
+            elementId: dailyConfigurationMetrics.elementId,
+            parameterId: dailyConfigurationMetrics.parameterId,
+            value: dailyConfigurationMetrics.value,
+            count: sum(dailyConfigurationMetrics.count)
+        })
+        .from(dailyConfigurationMetrics)
+        .where(
+            and(
+                eq(dailyConfigurationMetrics.libraryId, libraryId),
+                gte(dailyConfigurationMetrics.day, range.from),
+                lte(dailyConfigurationMetrics.day, range.to),
                 elementId === undefined
-                    ? sql``
-                    : sql`and ${events.elementId} = ${elementId}`
-            }
-        group by elementId, parameterId, value
-    `);
-    return rows;
+                    ? undefined
+                    : eq(dailyConfigurationMetrics.elementId, elementId)
+            )
+        )
+        .groupBy(
+            dailyConfigurationMetrics.elementId,
+            dailyConfigurationMetrics.parameterId,
+            dailyConfigurationMetrics.value
+        )
+        .all();
+
+    return rows.map((row) => ({ ...row, count: Number(row.count ?? 0) }));
 }
 
 function emptySparkline(): number[] {
@@ -334,9 +331,6 @@ function emptySparkline(): number[] {
 /**
  * Daily insert counts per part over the trailing window, as dense arrays the
  * table can plot directly.
- *
- * Read from the raw event log rather than a rollup: this is the one query
- * narrow enough not to need one, since it is a single library over a month.
  */
 async function getPartSparklines(
     db: Db,
@@ -350,24 +344,21 @@ async function getPartSparklines(
 
     const rows = await db
         .select({
-            elementId: events.elementId,
-            day: events.day,
-            count: count()
+            elementId: dailyInsertableMetrics.elementId,
+            day: dailyInsertableMetrics.day,
+            count: dailyInsertableMetrics.count
         })
-        .from(events)
+        .from(dailyInsertableMetrics)
         .where(
             and(
-                eq(events.libraryId, libraryId),
-                eq(events.type, EventType.INSERT),
-                gte(events.day, days[0])
+                eq(dailyInsertableMetrics.libraryId, libraryId),
+                gte(dailyInsertableMetrics.day, days[0])
             )
         )
-        .groupBy(events.elementId, events.day)
         .all();
 
     const byElement = new Map<string, number[]>();
     for (const row of rows) {
-        if (row.elementId === null) continue;
         const index = dayIndex.get(row.day);
         if (index === undefined) continue;
         const counts = byElement.get(row.elementId) ?? emptySparkline();
@@ -522,20 +513,12 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const range = getRange(c);
 
-        const inWindow = and(
-            eq(events.libraryId, libraryId),
-            eq(events.elementId, elementId),
-            eq(events.type, EventType.INSERT),
-            gte(events.day, range.from),
-            lte(events.day, range.to)
-        );
-
         const [
             stats,
             insertable,
             valueRows,
             uniqueUsers,
-            targetRows,
+            totals,
             favoriteCount
         ] = await Promise.all([
             db
@@ -565,19 +548,31 @@ analyticsRoutes.get(
                 .get(),
             getConfigurationCounts(db, libraryId, range, elementId),
             db
-                .select({ value: countDistinct(events.userId) })
-                .from(events)
-                .where(inWindow)
+                .select({ value: countDistinct(dailyInsertableUsers.userId) })
+                .from(dailyInsertableUsers)
+                .where(
+                    and(
+                        eq(dailyInsertableUsers.libraryId, libraryId),
+                        eq(dailyInsertableUsers.elementId, elementId),
+                        gte(dailyInsertableUsers.day, range.from),
+                        lte(dailyInsertableUsers.day, range.to)
+                    )
+                )
                 .get(),
             db
                 .select({
-                    targetElementType: events.targetElementType,
-                    count: count()
+                    inserts: sum(dailyInsertableMetrics.count),
+                    partStudio: sum(dailyInsertableMetrics.partStudioCount),
+                    assembly: sum(dailyInsertableMetrics.assemblyCount)
                 })
-                .from(events)
-                .where(inWindow)
-                .groupBy(events.targetElementType)
-                .all(),
+                .from(dailyInsertableMetrics)
+                .where(
+                    and(
+                        inWindow(libraryId, range),
+                        eq(dailyInsertableMetrics.elementId, elementId)
+                    )
+                )
+                .get(),
             // Favorites are keyed by insertable id, so a part that left
             // the library has none to count.
             db
@@ -596,10 +591,7 @@ analyticsRoutes.get(
                 .get()
         ]);
 
-        const insertCount = targetRows.reduce(
-            (total, row) => total + row.count,
-            0
-        );
+        const insertCount = Number(totals?.inserts ?? 0);
         // Rated over the days the part has existed inside the window, as the
         // parts table rates it.
         const windowStart = Date.parse(`${range.from}T00:00:00Z`);
@@ -638,30 +630,15 @@ analyticsRoutes.get(
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
             favorites: favoriteCount?.value ?? 0,
-            targets: toTargetSplit(targetRows),
+            targets: {
+                partStudio: Number(totals?.partStudio ?? 0),
+                assembly: Number(totals?.assembly ?? 0)
+            },
             parameters: buildParameterUsage(parameters, valueRows)
         };
         return c.json(out);
     }
 );
-
-/**
- * Splits inserts by the tab they landed in. A part studio target means the
- * part was derived; an assembly target means it was inserted as an instance.
- */
-function toTargetSplit(
-    rows: { targetElementType: ElementType | null; count: number }[]
-): TargetSplit {
-    const split: TargetSplit = { partStudio: 0, assembly: 0 };
-    for (const row of rows) {
-        if (row.targetElementType === ElementType.PART_STUDIO) {
-            split.partStudio += row.count;
-        } else if (row.targetElementType === ElementType.ASSEMBLY) {
-            split.assembly += row.count;
-        }
-    }
-    return split;
-}
 
 /**
  * Merges recorded value counts with the insertable's current parameters, so

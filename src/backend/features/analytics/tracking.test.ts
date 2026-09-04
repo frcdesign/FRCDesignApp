@@ -2,7 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    configurationValueStats,
+    dailyConfigurationMetrics,
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -115,6 +117,41 @@ describe("tracking", () => {
             expect(await db.select().from(events).all()).toHaveLength(3);
         });
 
+        it("rolls the part's own day up, split by the tab it landed in", async () => {
+            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(
+                fakeContext(),
+                insertEvent(undefined, {
+                    targetElementType: ElementType.ASSEMBLY
+                })
+            );
+
+            const daily = await db.select().from(dailyInsertableMetrics).all();
+            expect(daily).toHaveLength(1);
+            expect(daily[0]).toMatchObject({
+                elementId,
+                count: 2,
+                partStudioCount: 1,
+                assemblyCount: 1
+            });
+        });
+
+        it("records a part's user once a day, however often they insert it", async () => {
+            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(fakeContext(), insertEvent(undefined));
+            await trackInsert(
+                fakeContext(),
+                insertEvent(undefined, { userId: "someone-else" })
+            );
+
+            const rows = await db.select().from(dailyInsertableUsers).all();
+            expect(rows).toHaveLength(2);
+            expect(rows.map((row) => row.elementId)).toEqual([
+                elementId,
+                elementId
+            ]);
+        });
+
         it("counts each configuration value separately", async () => {
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
             await trackInsert(fakeContext(), insertEvent({ size: "large" }));
@@ -122,11 +159,14 @@ describe("tracking", () => {
 
             const values = await db
                 .select()
-                .from(configurationValueStats)
+                .from(dailyConfigurationMetrics)
                 .where(
                     and(
-                        eq(configurationValueStats.libraryId, TEST_LIBRARY_ID),
-                        eq(configurationValueStats.elementId, elementId)
+                        eq(
+                            dailyConfigurationMetrics.libraryId,
+                            TEST_LIBRARY_ID
+                        ),
+                        eq(dailyConfigurationMetrics.elementId, elementId)
                     )
                 )
                 .all();
@@ -144,7 +184,7 @@ describe("tracking", () => {
 
             const values = await db
                 .select()
-                .from(configurationValueStats)
+                .from(dailyConfigurationMetrics)
                 .all();
             // TEST_PARAMETERS declares one boolean defaulting to "true".
             expect(values).toHaveLength(1);
@@ -265,7 +305,7 @@ describe("tracking", () => {
             await trackInsert(fakeContext(), insertEvent(undefined));
 
             expect(
-                await db.select().from(configurationValueStats).all()
+                await db.select().from(dailyConfigurationMetrics).all()
             ).toEqual([]);
             const event = await db.select().from(events).get();
             expect(event?.configuration).toBeNull();

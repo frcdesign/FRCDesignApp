@@ -225,12 +225,9 @@ export const events = sqliteTable(
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" })
     },
-    (t) => [
-        index("events_day_idx").on(t.day),
-        // Lets a single insertable's trend be read from raw events, so no
-        // per-insertable daily rollup is needed.
-        index("events_element_day_idx").on(t.libraryId, t.elementId, t.day)
-    ]
+    // Indexed by day alone: nothing reads the log to report a metric, so this
+    // exists to rebuild the rollups below, which is a walk through time.
+    (t) => [index("events_day_idx").on(t.day)]
 );
 
 /**
@@ -288,12 +285,59 @@ export const insertableStats = sqliteTable(
 );
 
 /**
- * How often each configuration value was chosen, so a default that nobody wants
- * (or an option nobody picks) is visible.
+ * Per-day counts for one part: the rollup behind the parts table, its sparkline
+ * and the part report.
+ *
+ * The two target counters are subsets of `count`, the same way the flag
+ * counters on `dailyMetrics` are, which is what makes the derived share
+ * readable without a second table. Keyed part-first so one part's history is a
+ * range scan, with the day index for the other direction — a whole library's
+ * window, which is what the parts table asks for.
  */
-export const configurationValueStats = sqliteTable(
-    "configuration_value_stats",
+export const dailyInsertableMetrics = sqliteTable(
+    "daily_insertable_metrics",
     {
+        day: text("day").notNull(),
+        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        elementId: text("element_id").notNull(),
+        count: integer("count").notNull().default(0),
+        partStudioCount: integer("part_studio_count").notNull().default(0),
+        assemblyCount: integer("assembly_count").notNull().default(0)
+    },
+    (t) => [
+        primaryKey({ columns: [t.libraryId, t.elementId, t.day] }),
+        index("daily_insertable_metrics_day_idx").on(t.libraryId, t.day)
+    ]
+);
+
+/**
+ * One row per user per part per day, so a part's unique users can be counted
+ * over any window. A distinct-user count is the one measure a counter cannot
+ * accumulate; this is {@link dailyUserActivity} narrowed to a single part.
+ */
+export const dailyInsertableUsers = sqliteTable(
+    "daily_insertable_users",
+    {
+        day: text("day").notNull(),
+        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        elementId: text("element_id").notNull(),
+        userId: text("user_id").notNull()
+    },
+    (t) => [
+        primaryKey({
+            columns: [t.libraryId, t.elementId, t.day, t.userId]
+        })
+    ]
+);
+
+/**
+ * How often each configuration value was chosen, per day, so a default that
+ * nobody wants (or an option nobody picks) is visible over any window.
+ */
+export const dailyConfigurationMetrics = sqliteTable(
+    "daily_configuration_metrics",
+    {
+        day: text("day").notNull(),
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         elementId: text("element_id").notNull(),
         parameterId: text("parameter_id").notNull(),
@@ -302,8 +346,9 @@ export const configurationValueStats = sqliteTable(
     },
     (t) => [
         primaryKey({
-            columns: [t.libraryId, t.elementId, t.parameterId, t.value]
-        })
+            columns: [t.libraryId, t.elementId, t.parameterId, t.value, t.day]
+        }),
+        index("daily_configuration_metrics_day_idx").on(t.libraryId, t.day)
     ]
 );
 

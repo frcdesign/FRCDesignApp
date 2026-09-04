@@ -1,7 +1,9 @@
 import { type Db } from "@backend/db/client";
 import {
-    configurationValueStats,
     configurations,
+    dailyConfigurationMetrics,
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -70,7 +72,9 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(dailySourceMetrics);
     await db.delete(dailyUserActivity);
     await db.delete(insertableStats);
-    await db.delete(configurationValueStats);
+    await db.delete(dailyInsertableMetrics);
+    await db.delete(dailyInsertableUsers);
+    await db.delete(dailyConfigurationMetrics);
     await db.delete(userStats);
 }
 

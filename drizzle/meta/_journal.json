@@ -64,6 +64,20 @@
             "when": 1788535627038,
             "tag": "0008_analytics_tracking",
             "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "6",
+            "when": 1788551458539,
+            "tag": "0009_daily_part_rollups",
+            "breakpoints": true
+        },
+        {
+            "idx": 10,
+            "version": "6",
+            "when": 1788551485510,
+            "tag": "0010_drop_event_log_reads",
+            "breakpoints": true
         }
     ]
 }

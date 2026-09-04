@@ -4,7 +4,9 @@ import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import {
     configurations,
-    configurationValueStats,
+    dailyConfigurationMetrics,
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -104,7 +106,9 @@ export async function trackInsert(
             assembly: event.targetElementType === ElementType.ASSEMBLY
         }),
         incrementSourceMetric(db, day, event),
+        incrementInsertableMetric(db, day, event),
         markUserActive(db, day, event.libraryId, event.userId),
+        markInsertableUserActive(db, day, event),
         db
             .insert(insertableStats)
             .values({
@@ -137,7 +141,7 @@ export async function trackInsert(
                     lastSeenAt: now
                 }
             }),
-        ...configurationWrites(db, event, configuration)
+        ...configurationWrites(db, day, event, configuration)
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -194,6 +198,49 @@ function markUserActive(
     return db
         .insert(dailyUserActivity)
         .values({ day, libraryId, userId })
+        .onConflictDoNothing();
+}
+
+/** The day's counters for the part itself, including its target split. */
+function incrementInsertableMetric(db: Db, day: string, event: InsertEvent) {
+    const partStudio =
+        event.targetElementType === ElementType.PART_STUDIO ? 1 : 0;
+    const assembly = event.targetElementType === ElementType.ASSEMBLY ? 1 : 0;
+
+    return db
+        .insert(dailyInsertableMetrics)
+        .values({
+            day,
+            libraryId: event.libraryId,
+            elementId: event.elementId,
+            count: 1,
+            partStudioCount: partStudio,
+            assemblyCount: assembly
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyInsertableMetrics.libraryId,
+                dailyInsertableMetrics.elementId,
+                dailyInsertableMetrics.day
+            ],
+            set: {
+                count: sql`${dailyInsertableMetrics.count} + 1`,
+                partStudioCount: sql`${dailyInsertableMetrics.partStudioCount} + ${partStudio}`,
+                assemblyCount: sql`${dailyInsertableMetrics.assemblyCount} + ${assembly}`
+            }
+        });
+}
+
+/** As {@link markUserActive}, but for one part rather than the library. */
+function markInsertableUserActive(db: Db, day: string, event: InsertEvent) {
+    return db
+        .insert(dailyInsertableUsers)
+        .values({
+            day,
+            libraryId: event.libraryId,
+            elementId: event.elementId,
+            userId: event.userId
+        })
         .onConflictDoNothing();
 }
 
@@ -301,6 +348,7 @@ async function getDefaultConfiguration(
 /** One counter per parameter value the insert used. */
 function configurationWrites(
     db: Db,
+    day: string,
     event: InsertEvent,
     configuration: ParameterValues | null
 ): BatchItem<"sqlite">[] {
@@ -308,8 +356,9 @@ function configurationWrites(
 
     return Object.entries(configuration).map(([parameterId, value]) =>
         db
-            .insert(configurationValueStats)
+            .insert(dailyConfigurationMetrics)
             .values({
+                day,
                 libraryId: event.libraryId,
                 elementId: event.elementId,
                 parameterId,
@@ -318,12 +367,13 @@ function configurationWrites(
             })
             .onConflictDoUpdate({
                 target: [
-                    configurationValueStats.libraryId,
-                    configurationValueStats.elementId,
-                    configurationValueStats.parameterId,
-                    configurationValueStats.value
+                    dailyConfigurationMetrics.libraryId,
+                    dailyConfigurationMetrics.elementId,
+                    dailyConfigurationMetrics.parameterId,
+                    dailyConfigurationMetrics.value,
+                    dailyConfigurationMetrics.day
                 ],
-                set: { count: sql`${configurationValueStats.count} + 1` }
+                set: { count: sql`${dailyConfigurationMetrics.count} + 1` }
             })
     );
 }

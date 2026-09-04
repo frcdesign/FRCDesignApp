@@ -1,11 +1,14 @@
+import { sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
     configurations,
+    dailyConfigurationMetrics,
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
-    events,
     insertables,
     insertableStats,
     userStats
@@ -76,23 +79,90 @@ async function seedMetric(day: string, count: number, type = EventType.INSERT) {
 /** Wide enough to cover every day these tests seed. */
 const ALL_TIME = "from=2000-01-01&to=2099-12-31";
 
-/** Insert events, which is what every windowed endpoint counts. */
-async function seedInsertEvents(
+interface SeedInsertOptions {
+    day?: string;
+    element?: string;
+    userId?: string;
+    /** The values chosen, counted once per insert. */
+    configuration?: Record<string, string>;
+    /** The tab the inserts landed in; left out of the split when absent. */
+    target?: ElementType;
+}
+
+/**
+ * The rollups `count` inserts of one part on one day would leave behind, which
+ * is all any endpoint reads.
+ */
+async function seedInserts(
     count: number,
-    overrides: Partial<typeof events.$inferInsert> = {}
-) {
-    const rows = Array.from({ length: count }, (_, i) => ({
-        type: EventType.INSERT,
-        createdAt: i + 1,
-        day: "2026-03-01",
-        libraryId: TEST_LIBRARY_ID,
-        userId: "user-a",
-        elementId,
-        ...overrides
-    }));
-    // D1 caps the variables one statement may bind.
-    for (let i = 0; i < rows.length; i += 10) {
-        await db.insert(events).values(rows.slice(i, i + 10));
+    options: SeedInsertOptions = {}
+): Promise<void> {
+    const {
+        day = toDayKey(Date.now()),
+        element = elementId,
+        userId = "user-a",
+        configuration = {},
+        target
+    } = options;
+    const partStudio = target === ElementType.PART_STUDIO ? count : 0;
+    const assembly = target === ElementType.ASSEMBLY ? count : 0;
+
+    await db
+        .insert(dailyInsertableMetrics)
+        .values({
+            day,
+            libraryId: TEST_LIBRARY_ID,
+            elementId: element,
+            count,
+            partStudioCount: partStudio,
+            assemblyCount: assembly
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyInsertableMetrics.libraryId,
+                dailyInsertableMetrics.elementId,
+                dailyInsertableMetrics.day
+            ],
+            set: {
+                count: sql`${dailyInsertableMetrics.count} + ${count}`,
+                partStudioCount: sql`${dailyInsertableMetrics.partStudioCount} + ${partStudio}`,
+                assemblyCount: sql`${dailyInsertableMetrics.assemblyCount} + ${assembly}`
+            }
+        });
+
+    await db
+        .insert(dailyInsertableUsers)
+        .values({
+            day,
+            libraryId: TEST_LIBRARY_ID,
+            elementId: element,
+            userId
+        })
+        .onConflictDoNothing();
+
+    for (const [parameterId, value] of Object.entries(configuration)) {
+        await db
+            .insert(dailyConfigurationMetrics)
+            .values({
+                day,
+                libraryId: TEST_LIBRARY_ID,
+                elementId: element,
+                parameterId,
+                value,
+                count
+            })
+            .onConflictDoUpdate({
+                target: [
+                    dailyConfigurationMetrics.libraryId,
+                    dailyConfigurationMetrics.elementId,
+                    dailyConfigurationMetrics.parameterId,
+                    dailyConfigurationMetrics.value,
+                    dailyConfigurationMetrics.day
+                ],
+                set: {
+                    count: sql`${dailyConfigurationMetrics.count} + ${count}`
+                }
+            });
     }
 }
 
@@ -374,26 +444,6 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/parts/library/:libraryId", () => {
-        /** `count` insert events on one element, all on the same day. */
-        async function seedInserts(
-            count: number,
-            day = toDayKey(Date.now()),
-            element = elementId
-        ) {
-            const rows = Array.from({ length: count }, (_, index) => ({
-                type: EventType.INSERT,
-                createdAt: Date.parse(`${day}T00:00:00Z`) + index,
-                day,
-                libraryId: TEST_LIBRARY_ID,
-                userId: `user-${index}`,
-                elementId: element
-            }));
-            // Chunked: D1 caps the bound variables one statement may carry.
-            for (let at = 0; at < rows.length; at += 10) {
-                await db.insert(events).values(rows.slice(at, at + 10));
-            }
-        }
-
         function partsUrl(query = `?${ALL_TIME}`) {
             return `/api/analytics/parts/library/${TEST_LIBRARY_ID}${query}`;
         }
@@ -419,8 +469,8 @@ describe("analytics routes", () => {
 
         it("counts only inserts inside the window", async () => {
             await seedPartStudio(db);
-            await seedInserts(3, "2026-03-01");
-            await seedInserts(7, "2025-03-01");
+            await seedInserts(3, { day: "2026-03-01" });
+            await seedInserts(7, { day: "2025-03-01" });
 
             const inWindow = await anonymousGet(
                 partsUrl("?from=2026-01-01&to=2026-12-31")
@@ -437,7 +487,7 @@ describe("analytics routes", () => {
             // Zero here means "not used lately", which is the interesting
             // reading — dropping the row would hide it.
             await seedPartStudio(db);
-            await seedInserts(4, "2025-03-01");
+            await seedInserts(4, { day: "2025-03-01" });
 
             const res = await anonymousGet(
                 partsUrl("?from=2026-01-01&to=2026-12-31")
@@ -479,7 +529,7 @@ describe("analytics routes", () => {
             await seedInserts(9);
             // Usage with no insertable behind it: the tab was deleted. It would
             // otherwise top the table with a part nobody can open.
-            await seedInserts(30, toDayKey(Date.now()), "e-gone");
+            await seedInserts(30, { element: "e-gone" });
 
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
@@ -516,8 +566,11 @@ describe("analytics routes", () => {
                     lastInsertedAt: Date.now()
                 }
             ]);
-            await seedInserts(60, ago(700));
-            await seedInserts(20, ago(30), TEST_ASSEMBLY_PATH.elementId);
+            await seedInserts(60, { day: ago(700) });
+            await seedInserts(20, {
+                day: ago(30),
+                element: TEST_ASSEMBLY_PATH.elementId
+            });
 
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
@@ -551,8 +604,11 @@ describe("analytics routes", () => {
                     lastInsertedAt: Date.now()
                 }
             ]);
-            await seedInserts(10, ago(200));
-            await seedInserts(10, ago(20), TEST_ASSEMBLY_PATH.elementId);
+            await seedInserts(10, { day: ago(200) });
+            await seedInserts(10, {
+                day: ago(20),
+                element: TEST_ASSEMBLY_PATH.elementId
+            });
 
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
@@ -653,7 +709,7 @@ describe("analytics routes", () => {
 
         it("surfaces an option nobody has ever picked", async () => {
             await seedEnumPart();
-            await seedInsertEvents(4, { configuration: { stages: "two" } });
+            await seedInserts(4, { configuration: { stages: "two" } });
 
             const res = await anonymousGet(
                 `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
@@ -671,7 +727,7 @@ describe("analytics routes", () => {
 
         it("flags a default that nobody picks", async () => {
             await seedEnumPart();
-            await seedInsertEvents(3, { configuration: { stages: "two" } });
+            await seedInserts(3, { configuration: { stages: "two" } });
 
             const res = await anonymousGet(
                 `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=0&${ALL_TIME}`
@@ -685,7 +741,7 @@ describe("analytics routes", () => {
 
         it("leaves out an option used more than the threshold", async () => {
             await seedEnumPart();
-            await seedInsertEvents(6, { configuration: { stages: "one" } });
+            await seedInserts(6, { configuration: { stages: "one" } });
 
             const res = await anonymousGet(
                 `/api/analytics/unused-options/library/${TEST_LIBRARY_ID}?threshold=5&${ALL_TIME}`
@@ -721,7 +777,7 @@ describe("analytics routes", () => {
             expect(neverBody).toHaveLength(1);
             expect(neverBody[0].insertCount).toBe(0);
 
-            await seedInsertEvents(4);
+            await seedInserts(4);
 
             const under = await anonymousGet(
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=5&${ALL_TIME}`
@@ -737,7 +793,7 @@ describe("analytics routes", () => {
         it("reads a part nobody has used lately as low usage", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({ isVisible: true });
-            await seedInsertEvents(20, { day: "2026-03-01" });
+            await seedInserts(20, { day: "2026-03-01" });
 
             const stale = await anonymousGet(
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}?threshold=0&from=2026-04-01&to=2026-04-30`
@@ -818,8 +874,8 @@ describe("analytics routes", () => {
         it("reports usage, unique users and the configuration breakdown", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
-            await seedInsertEvents(2, { configuration: { boolean: "false" } });
-            await seedInsertEvents(1, {
+            await seedInserts(2, { configuration: { boolean: "false" } });
+            await seedInserts(1, {
                 userId: "user-b",
                 configuration: { boolean: "false" }
             });
@@ -855,7 +911,7 @@ describe("analytics routes", () => {
         it("counts only the uses the window covers", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
-            await seedInsertEvents(2, {
+            await seedInserts(2, {
                 day: "2026-03-01",
                 configuration: { boolean: "false" }
             });
@@ -885,12 +941,8 @@ describe("analytics routes", () => {
 
         it("splits inserts by the tab they landed in", async () => {
             await seedPartStudio(db);
-            await seedInsertEvents(3, {
-                targetElementType: ElementType.PART_STUDIO
-            });
-            await seedInsertEvents(1, {
-                targetElementType: ElementType.ASSEMBLY
-            });
+            await seedInserts(3, { target: ElementType.PART_STUDIO });
+            await seedInserts(1, { target: ElementType.ASSEMBLY });
 
             const res = await anonymousGet(
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
@@ -903,7 +955,7 @@ describe("analytics routes", () => {
         it("rates uses over the span the part has been in use", async () => {
             await seedPartStudio(db);
             await seedInsertableStats(0, Date.now() - 90 * 24 * 3600 * 1000);
-            await seedInsertEvents(12, { day: toDayKey(Date.now()) });
+            await seedInserts(12);
 
             const res = await anonymousGet(
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
