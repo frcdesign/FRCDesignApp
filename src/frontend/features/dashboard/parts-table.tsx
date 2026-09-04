@@ -27,6 +27,21 @@ const MiniSparkline = lazy(() =>
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
 
+/**
+ * Widths for every column but the first, which takes what is left.
+ *
+ * Without them the browser hands the two text columns all the slack and strands
+ * the numbers, the sparkline and the link far apart from each other.
+ */
+const COLUMN_WIDTH = {
+    group: 180,
+    // Wide enough that the two longest headings stay on one line.
+    usesPerMonth: 150,
+    uses: 100,
+    sparkline: 130,
+    onshape: 90
+} as const;
+
 interface PartsTableProps {
     libraryId: LibraryId;
     parts: PartUsageOut[];
@@ -77,6 +92,7 @@ export function PartsTable({
                             column="groupName"
                             sort={sort}
                             onToggle={toggle}
+                            width={COLUMN_WIDTH.group}
                         />
                         <SortableTh
                             label="Uses per month"
@@ -84,6 +100,7 @@ export function PartsTable({
                             sort={sort}
                             onToggle={toggle}
                             align="right"
+                            width={COLUMN_WIDTH.usesPerMonth}
                         />
                         {/* Not "total": this is the selected window's count. */}
                         <SortableTh
@@ -92,9 +109,14 @@ export function PartsTable({
                             sort={sort}
                             onToggle={toggle}
                             align="right"
+                            width={COLUMN_WIDTH.uses}
                         />
-                        <Table.Th>Last {SPARKLINE_DAYS} days</Table.Th>
-                        <Table.Th ta="center">Onshape</Table.Th>
+                        <Table.Th w={COLUMN_WIDTH.sparkline}>
+                            Last {SPARKLINE_DAYS} days
+                        </Table.Th>
+                        <Table.Th w={COLUMN_WIDTH.onshape} ta="center">
+                            Onshape
+                        </Table.Th>
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -116,19 +138,23 @@ function SortableTh({
     column,
     sort,
     onToggle,
-    align
+    align,
+    width
 }: {
     label: string;
     column: SortColumn;
     sort: SortState;
     onToggle: (column: SortColumn) => void;
     align?: "right";
+    /** Left off the first column, which absorbs the leftover width. */
+    width?: number;
 }): ReactNode {
     const active = sort.column === column;
     const Caret = sort.descending ? CaretDown : CaretUp;
 
     return (
         <Table.Th
+            w={width}
             ta={align}
             onClick={() => onToggle(column)}
             style={{ cursor: "pointer", userSelect: "none" }}

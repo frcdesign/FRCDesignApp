@@ -42,6 +42,9 @@ export const DASHBOARDS: DashboardDefinition[] = [
 /** The library a scoped dashboard falls back to when none is selected yet. */
 export const DEFAULT_LIBRARY = LibraryId.FRC_DESIGN_LIB;
 
+/** The uses a part must be at or below before the low-usage dashboard lists it. */
+export const DEFAULT_THRESHOLD = 5;
+
 /** Which dashboard a path belongs to, for highlighting the current one. */
 export function toDashboardKey(pathname: string): DashboardKey {
     if (pathname.endsWith("/unused")) return "unused";

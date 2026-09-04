@@ -1,7 +1,8 @@
-import { Card, Group, NumberInput, Stack, Title } from "@mantine/core";
+import { Card, Stack, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { DEFAULT_THRESHOLD } from "../../../../features/dashboard/dashboard-nav";
 import {
     getUnusedOptionsQuery,
     getUnusedQuery
@@ -14,33 +15,16 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
     component: LowUsage
 });
 
-const DEFAULT_THRESHOLD = 5;
-
 function LowUsage(): ReactNode {
     const { libraryId } = Route.useParams();
-    const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
+    // Set from the navbar, so it stays beside the library it filters.
+    const threshold = Route.useSearch().threshold ?? DEFAULT_THRESHOLD;
 
     const parts = useQuery(getUnusedQuery(libraryId, threshold));
     const options = useQuery(getUnusedOptionsQuery(libraryId, threshold));
 
     return (
         <Stack gap="xl">
-            <Group justify="flex-end">
-                <NumberInput
-                    label="Threshold"
-                    min={0}
-                    w={120}
-                    value={threshold}
-                    onChange={(value) =>
-                        setThreshold(
-                            typeof value === "number"
-                                ? value
-                                : DEFAULT_THRESHOLD
-                        )
-                    }
-                />
-            </Group>
-
             <Card withBorder padding="lg" radius="md">
                 <Title order={4} mb="md">
                     Low-usage parts

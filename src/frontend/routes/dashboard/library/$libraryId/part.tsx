@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
+import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
 import { makeUrl } from "../../../../lib/url";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
@@ -96,26 +97,9 @@ function ReportBody({
     return (
         <Stack gap="xl">
             <Group gap="sm">
-                <Title order={3}>{report.name ?? elementId}</Title>
+                <PartTitle report={report} elementId={elementId} />
                 {report.name === null && (
                     <Badge color="gray">No longer in library</Badge>
-                )}
-                {report.documentId && report.versionId && (
-                    <Anchor
-                        href={makeUrl({
-                            documentId: report.documentId,
-                            instanceId: report.versionId,
-                            instanceType: "v",
-                            elementId
-                        })}
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        <Group gap={4}>
-                            Open in Onshape
-                            <ArrowSquareOut size={IconSize.SMALL} />
-                        </Group>
-                    </Anchor>
                 )}
             </Group>
 
@@ -152,6 +136,41 @@ function ReportBody({
                 <ConfigurationBreakdown parameters={report.parameters} />
             </div>
         </Stack>
+    );
+}
+
+/** The part's name, linked into Onshape like a part number is to its vendor. */
+function PartTitle({
+    report,
+    elementId
+}: {
+    report: InsertableReportOut;
+    elementId: string;
+}): ReactNode {
+    const name = report.name ?? elementId;
+    if (!report.documentId || !report.versionId) {
+        return <Title order={2}>{name}</Title>;
+    }
+
+    return (
+        <Title order={2}>
+            <Anchor
+                inherit
+                href={makeUrl({
+                    documentId: report.documentId,
+                    instanceId: report.versionId,
+                    instanceType: "v",
+                    elementId
+                })}
+                target="_blank"
+                rel="noreferrer"
+                // Centres the icon on the text rather than on its baseline.
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+                {name}
+                <ArrowSquareOut size={IconSize.MEDIUM} />
+            </Anchor>
+        </Title>
     );
 }
 

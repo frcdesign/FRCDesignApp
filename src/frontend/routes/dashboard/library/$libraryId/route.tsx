@@ -1,8 +1,6 @@
-import { Stack, Title } from "@mantine/core";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../../../../features/library/library-path";
 import { UnknownLibrary } from "../../../../features/dashboard/unknown-library";
 
 function isLibraryId(libraryId: string): libraryId is LibraryId {
@@ -30,12 +28,5 @@ export const Route = createFileRoute("/dashboard/library/$libraryId")({
 });
 
 function LibraryLayout(): ReactNode {
-    const { libraryId } = Route.useParams();
-
-    return (
-        <Stack gap="lg">
-            <Title order={2}>{getLibraryName(libraryId)}</Title>
-            <Outlet />
-        </Stack>
-    );
+    return <Outlet />;
 }

@@ -1,7 +1,13 @@
-import { Stack } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import { Stack, Title } from "@mantine/core";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
+import type {
+    LibraryHealthCounts,
+    LibrarySummaryOut,
+    PartUsageOut
+} from "@backend/features/analytics/contract";
+import { LibraryId } from "@backend/features/library/library-id";
 import {
     getHealthQuery,
     getLibrarySummaryQuery,
@@ -12,6 +18,7 @@ import { HealthTiles } from "../../../../features/dashboard/health-report";
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
+import { getLibraryName } from "../../../../features/library/library-path";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import {
     libraryRoot,
@@ -37,13 +44,38 @@ function LibraryOverview(): ReactNode {
     const parts = useQuery(getPartsQuery(libraryId, range));
     const health = useQuery(getHealthQuery(libraryId));
 
-    if (!summary.data) {
-        return <DashboardState query={summary} />;
-    }
-    const { totals, metricSeries, growth } = summary.data;
-
     return (
         <Stack gap="xl">
+            <Title order={2}>{getLibraryName(libraryId)}</Title>
+            {summary.data ? (
+                <LibraryBody
+                    libraryId={libraryId}
+                    summary={summary.data}
+                    parts={parts}
+                    health={health}
+                />
+            ) : (
+                <DashboardState query={summary} />
+            )}
+        </Stack>
+    );
+}
+
+function LibraryBody({
+    libraryId,
+    summary,
+    parts,
+    health
+}: {
+    libraryId: LibraryId;
+    summary: LibrarySummaryOut;
+    parts: UseQueryResult<PartUsageOut[]>;
+    health: UseQueryResult<LibraryHealthCounts>;
+}): ReactNode {
+    const { totals, metricSeries, growth } = summary;
+
+    return (
+        <>
             <LifetimeTiles
                 totals={totals}
                 growth={growth}
@@ -83,6 +115,6 @@ function LibraryOverview(): ReactNode {
             ) : (
                 <DashboardState query={parts} />
             )}
-        </Stack>
+        </>
     );
 }

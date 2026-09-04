@@ -14,15 +14,21 @@ import {
 export interface DashboardSearch {
     /** Preset window for the range chart; kept in the URL so views are shareable. */
     range?: RangePreset;
+    /** The uses a part must be at or below to count as low usage. */
+    threshold?: number;
 }
 
 export const Route = createFileRoute("/dashboard")({
     component: DashboardLayout,
     validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
-        range: isRangePreset(search.range) ? search.range : undefined
+        range: isRangePreset(search.range) ? search.range : undefined,
+        threshold:
+            typeof search.threshold === "number" && search.threshold >= 0
+                ? search.threshold
+                : undefined
     }),
     search: {
-        middlewares: [retainSearchParams(["range"])]
+        middlewares: [retainSearchParams(["range", "threshold"])]
     }
 });
 

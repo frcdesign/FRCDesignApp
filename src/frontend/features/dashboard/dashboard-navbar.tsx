@@ -4,6 +4,7 @@ import {
     Button,
     Group,
     Menu,
+    NumberInput,
     Stack,
     Text,
     Tabs,
@@ -11,7 +12,12 @@ import {
 } from "@mantine/core";
 import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import {
+    useNavigate,
+    useParams,
+    useRouterState,
+    useSearch
+} from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
@@ -29,6 +35,7 @@ import { formatDay } from "./series-utils";
 import {
     DASHBOARDS,
     DEFAULT_LIBRARY,
+    DEFAULT_THRESHOLD,
     toDashboardKey,
     type DashboardKey
 } from "./dashboard-nav";
@@ -79,6 +86,11 @@ export function DashboardNavbar(): ReactNode {
                 {current === "library" && (
                     <Group ml="auto">
                         <RangeControl />
+                    </Group>
+                )}
+                {current === "unused" && (
+                    <Group ml="auto">
+                        <ThresholdControl />
                     </Group>
                 )}
             </Group>
@@ -163,6 +175,43 @@ function LibraryMenu({ dashboard }: { dashboard: DashboardKey }): ReactNode {
         </Menu>
     );
 }
+
+/** The cutoff the low-usage dashboard lists at or below. */
+function ThresholdControl(): ReactNode {
+    const navigate = useNavigate();
+    const threshold = useSearch({ strict: false }).threshold;
+
+    return (
+        <NumberInput
+            size="xs"
+            w={140}
+            min={0}
+            leftSection={
+                <Text size="xs" c="dimmed" ml="xs">
+                    Uses ≤
+                </Text>
+            }
+            leftSectionWidth={THRESHOLD_LABEL_WIDTH}
+            aria-label="Low-usage threshold"
+            value={threshold ?? DEFAULT_THRESHOLD}
+            onChange={(value) =>
+                void navigate({
+                    to: ".",
+                    search: (prev) => ({
+                        ...prev,
+                        threshold:
+                            typeof value === "number"
+                                ? value
+                                : DEFAULT_THRESHOLD
+                    })
+                })
+            }
+        />
+    );
+}
+
+/** Wide enough for the "Uses ≤" prefix to sit clear of the number. */
+const THRESHOLD_LABEL_WIDTH = 52;
 
 /**
  * How much history there is.
