@@ -151,6 +151,17 @@ export interface AnalyticsOverviewOut {
 /** The trailing days each parts-table row's sparkline plots. */
 export const SPARKLINE_DAYS = 30;
 
+/**
+ * The trailing window the recent comparisons cover. 28 rather than 30 so it is
+ * whole weeks: a 30-day window contains four of some weekdays and five of
+ * others, and the ratio between two of them wobbles with the calendar rather
+ * than with usage.
+ *
+ * Lives here rather than beside the query so the dashboard can name its own
+ * heading from it and never drift from the window it reports.
+ */
+export const RECENT_DAYS = 28;
+
 /** The days a "month" stands for in the per-month usage rate. */
 const MONTH_DAYS = 30;
 

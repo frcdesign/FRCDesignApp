@@ -1,8 +1,9 @@
 import { SimpleGrid } from "@mantine/core";
 import { type ReactNode } from "react";
-import type {
-    DailyMetricPoint,
-    GrowthOut
+import {
+    RECENT_DAYS,
+    type DailyMetricPoint,
+    type GrowthOut
 } from "@backend/features/analytics/contract";
 import { formatRate } from "./change-indicator";
 import { ComparisonTile } from "./comparison-tile";
@@ -36,16 +37,16 @@ export function RecentSection({
     );
 
     return (
-        <Section title="Right now">
+        <Section title={`Last ${RECENT_DAYS} days`}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <ComparisonTile
-                    label="Uses"
+                    label="Total uses"
                     comparison={recent.inserts}
                     trackingSince={trackingSince}
                     spark={spark.inserts}
                 />
                 <ComparisonTile
-                    label="Active users"
+                    label="Total users"
                     comparison={recent.activeUsers}
                     trackingSince={trackingSince}
                     spark={spark.activeUsers}

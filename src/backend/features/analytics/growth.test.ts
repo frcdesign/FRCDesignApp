@@ -5,7 +5,8 @@ import { EventType } from "./events";
 import { LibraryId } from "../library/library-id";
 import { resetDb, seedLibrary, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { getGrowth, recentWindows, RECENT_DAYS, toComparison } from "./growth";
+import { getGrowth, recentWindows, toComparison } from "./growth";
+import { RECENT_DAYS } from "./contract";
 
 const db = getDb(env.DB);
 

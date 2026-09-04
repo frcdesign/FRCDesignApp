@@ -9,14 +9,12 @@ import {
     Program,
     seasonWindow
 } from "./seasons";
-import type { GrowthMeasure, GrowthOut, PeriodComparison } from "./contract";
-
-/**
- * Trailing window length. 28 rather than 30 so it is whole weeks: a 30-day
- * window contains four of some weekdays and five of others, and the ratio
- * between two of them wobbles with the calendar rather than with usage.
- */
-export const RECENT_DAYS = 28;
+import {
+    RECENT_DAYS,
+    type GrowthMeasure,
+    type GrowthOut,
+    type PeriodComparison
+} from "./contract";
 
 interface Window {
     from: string;
