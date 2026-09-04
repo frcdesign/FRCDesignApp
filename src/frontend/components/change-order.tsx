@@ -1,9 +1,9 @@
 import { Menu } from "@mantine/core";
 import {
-    CaretDoubleDown,
-    CaretDoubleUp,
-    CaretDown,
-    CaretUp
+    CaretDoubleDownIcon,
+    CaretDoubleUpIcon,
+    CaretDownIcon,
+    CaretUpIcon
 } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { type ReactNode } from "react";
@@ -14,11 +14,7 @@ interface ChangeOrderMenuProps {
     onOrderChange: (newOrder: string[]) => void;
 }
 
-/**
- * MenuItems that allow users to move a given item in a list up or down.
- *
- * Includes a trailing divider (when any options are actually shown).
- */
+/** Move-up/move-down items, with a trailing divider when either is shown. */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
 
@@ -32,7 +28,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
         <>
             {operations.includes(MoveOperation.MOVE_UP) && (
                 <Menu.Item
-                    leftSection={<CaretUp size={IconSize.SMALL} />}
+                    leftSection={<CaretUpIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(id, order, MoveOperation.MOVE_UP)
@@ -44,7 +40,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_DOWN) && (
                 <Menu.Item
-                    leftSection={<CaretDown size={IconSize.SMALL} />}
+                    leftSection={<CaretDownIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -60,7 +56,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_TOP) && (
                 <Menu.Item
-                    leftSection={<CaretDoubleUp size={IconSize.SMALL} />}
+                    leftSection={<CaretDoubleUpIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -76,7 +72,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
             )}
             {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
                 <Menu.Item
-                    leftSection={<CaretDoubleDown size={IconSize.SMALL} />}
+                    leftSection={<CaretDoubleDownIcon size={IconSize.SMALL} />}
                     onClick={() => {
                         onOrderChange(
                             applyMoveOperation(
@@ -110,7 +106,6 @@ function applyMoveOperation(
     const index = order.indexOf(target);
     if (index === -1) return order; // target not found, return unchanged
 
-    // Make a shallow copy so we don't mutate input
     const result = [...order];
 
     switch (operation) {

@@ -1,4 +1,5 @@
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
+import { ReactNode } from "react";
 import { queryClient } from "../../../../lib/query-client";
 import { getFavoritesQuery } from "../../../../features/favorites/queries";
 import {
@@ -7,13 +8,15 @@ import {
 } from "../../../../features/library/queries";
 import { getSearchDbQuery } from "../../../../features/search/queries";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getUiState } from "../../../../lib/ui-state";
-import { isLibraryId } from "../../../../features/library/library-path";
-
-/** Restoring the last group is an entry behavior, so it happens once per load. */
-let restoredGroup = false;
+import {
+    isComingSoon,
+    isLibraryId,
+    useLibraryId
+} from "../../../../features/library/library-path";
+import { ComingSoon } from "../../../../features/library/components/coming-soon";
 
 export const Route = createFileRoute("/app/library/$libraryId")({
+    component: LibraryRoute,
     params: {
         // Narrowed by beforeLoad, which 404s an unknown library.
         parse: ({ libraryId }) => ({ libraryId: libraryId as LibraryId }),
@@ -25,19 +28,13 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         if (!isLibraryId(params.libraryId)) {
             throw notFound();
         }
-        // Client state, so the entry redirect can't restore it.
-        const { openGroupId } = getUiState();
-        if (openGroupId && !restoredGroup) {
-            restoredGroup = true;
-            throw redirect({
-                to: "/app/library/$libraryId/groups/$groupId",
-                params: { libraryId: params.libraryId, groupId: openGroupId }
-            });
-        }
-        restoredGroup = true;
     },
     loader: async ({ params }) => {
         const { libraryId } = params;
+        // Nothing below is rendered, so nothing below is worth fetching.
+        if (isComingSoon(libraryId)) {
+            return;
+        }
         // The only awaited fetch: everything below keys its url off the version.
         const cacheVersion = await queryClient.ensureQueryData(
             getLibraryVersionQuery(libraryId)
@@ -51,3 +48,8 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         void queryClient.prefetchQuery(getFavoritesQuery(libraryId));
     }
 });
+
+/** One gate for the whole library: its groups and search render inside it. */
+function LibraryRoute(): ReactNode {
+    return isComingSoon(useLibraryId()) ? <ComingSoon /> : <Outlet />;
+}

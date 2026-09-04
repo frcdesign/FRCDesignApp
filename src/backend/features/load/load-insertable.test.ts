@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
-import type { ParameterValues, PartMetadata } from "../configurations/models";
+import type { PartMetadata } from "../configurations/models";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 import {
     TEST_PARAMETERS,
@@ -30,8 +30,8 @@ function readInsertable() {
 const partMetadata = (partNumber?: string): PartMetadata =>
     configurationRecord({ partNumber });
 
-const record = (partNumber?: string, configuration: ParameterValues = {}) =>
-    configurationRecord({ partNumber, configuration });
+const record = (partNumber?: string, canonicalConfiguration = "") =>
+    configurationRecord({ partNumber, canonicalConfiguration });
 
 describe("saveInsertable", () => {
     beforeEach(async () => {
@@ -99,10 +99,7 @@ describe("saveInsertable", () => {
     });
 
     it("writes the computed configuration records", async () => {
-        const records = [
-            record("PN-1", { p: "v1" }),
-            record("PN-2", { p: "v2" })
-        ];
+        const records = [record("PN-1", "p=v1"), record("PN-2", "p=v2")];
         await saveInsertable(
             db,
             insertableTarget(),

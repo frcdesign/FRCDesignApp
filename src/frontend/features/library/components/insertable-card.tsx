@@ -1,4 +1,5 @@
-import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import {
@@ -13,6 +14,7 @@ import {
     FavoriteInsertableItem
 } from "../../favorites/components/favorite-button";
 import { useIsInsertableHidden } from "../card-hooks";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { InsertableStatusBadge } from "../../build-status/components/build-status";
 import {
     CardTitle,
@@ -52,40 +54,46 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     }
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
+    // What the hit names, for inserting and for prefilling the menu; the
+    // canonical form itself is what names its thumbnail.
+    const hitConfiguration = searchHit?.canonicalConfiguration
+        ? decodeConfiguration(searchHit.canonicalConfiguration)
+        : undefined;
+
+    const openMenu = () => {
+        props.onClick?.();
+        if (isAssemblyInPartStudio) {
+            openCannotDeriveAssemblyAlert();
+            return;
+        }
+        openInsertMenu({ insertable, defaultConfiguration: hitConfiguration });
+    };
+
+    const thumbnail = (
+        <CardThumbnail
+            smallThumbnailUrl={insertable.smallThumbnailUrl}
+            largeThumbnailUrl={insertable.largeThumbnailUrl}
+            target={{
+                elementId: insertable.elementId,
+                microversionId: insertable.microversionId,
+                canonicalConfiguration:
+                    searchHit?.canonicalConfiguration ??
+                    DEFAULT_CANONICAL_CONFIGURATION,
+                // A cold search would otherwise start a render per row.
+                renderThumbnail: false
+            }}
+        />
+    );
 
     return (
         <ItemRow
-            onClick={() => {
-                if (props.onClick) {
-                    props.onClick();
-                }
-
-                if (isAssemblyInPartStudio) {
-                    openCannotDeriveAssemblyAlert();
-                    return;
-                }
-
-                openInsertMenu({
-                    insertable,
-                    defaultConfiguration: searchHit?.configuration
-                });
-            }}
+            onClick={openMenu}
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     searchHit={searchHit}
                     title={insertable.name}
-                    smallThumbnailUrl={insertable.smallThumbnailUrl}
-                    largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    thumbnailTarget={{
-                        elementId: insertable.elementId,
-                        microversionId: insertable.microversionId,
-                        canonicalConfiguration: encodeCanonicalConfiguration(
-                            searchHit?.configuration ?? {}
-                        ),
-                        // A cold search would otherwise start a render per row.
-                        warm: false
-                    }}
+                    thumbnail={thumbnail}
                     showHiddenTag={!insertable.isVisible}
                     buildStatusBadge={
                         <InsertableStatusBadge
@@ -100,6 +108,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
+                        defaultConfiguration={hitConfiguration}
+                        canonicalConfiguration={
+                            searchHit?.canonicalConfiguration
+                        }
                     />
                 </RequireSignIn>
             }
@@ -107,7 +119,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={searchHit?.configuration}
+                    configuration={hitConfiguration}
                 />
             }
         />
@@ -121,12 +133,20 @@ interface InsertableMenuItemsProps {
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
     configuration?: ParameterValues;
+    /** The same selection canonicalized, so favoriting can key its thumbnail. */
+    canonicalConfiguration?: string;
 }
 
 export function InsertableMenuItems(
     props: InsertableMenuItemsProps
 ): ReactNode {
-    const { favorite, insertable, inInsertMenu, configuration } = props;
+    const {
+        favorite,
+        insertable,
+        inInsertMenu,
+        configuration,
+        canonicalConfiguration
+    } = props;
     const isConnected = useIsConnectedToOnshape();
 
     return (
@@ -145,6 +165,8 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
+                    defaultConfiguration={configuration}
+                    canonicalConfiguration={canonicalConfiguration}
                 />
                 <Menu.Divider />
             </RequireSignIn>

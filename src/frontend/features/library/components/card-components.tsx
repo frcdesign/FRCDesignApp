@@ -1,13 +1,13 @@
-import { Anchor, Box, Group, Menu, Stack, Table, Text } from "@mantine/core";
+import { Anchor, Group, Menu, Stack, Table, Text } from "@mantine/core";
 import {
-    ArrowSquareOut,
-    EyeSlash,
-    Gear,
-    Link,
-    Plus
+    ArrowSquareOutIcon,
+    EyeSlashIcon,
+    GearIcon,
+    LinkIcon,
+    PlusIcon
 } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
-import { displayPartNumber } from "../../../lib/part-number";
+import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
+import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { PropsWithChildren, ReactNode, useCallback } from "react";
 import { AppContextMenu, MenuButton } from "../../../components/app-menu";
@@ -16,10 +16,6 @@ import {
     HighlightedText,
     SearchHitTitle
 } from "../../search/components/search-results";
-import {
-    CardThumbnail,
-    type ThumbnailTarget
-} from "../../thumbnails/components/thumbnail";
 import {
     ConfigurablePath,
     DocumentPath,
@@ -36,26 +32,24 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
+import { AppIcon } from "../../../components/app-icon";
 
 interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
     path: DocumentPath | InstancePath | ConfigurablePath;
 }
-/**
- * Menu items which can be used to open or copy a link to a document.
- */
 export function OpenDocumentItems(props: OpenDocumentItemsProps) {
     const url = makeUrl(props.path);
     return (
         <>
             <Menu.Item
-                leftSection={<ArrowSquareOut size={IconSize.SMALL} />}
+                leftSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
-                leftSection={<Link size={IconSize.SMALL} />}
+                leftSection={<LinkIcon size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}
@@ -72,9 +66,6 @@ interface QuickInsertItemProps {
     isFavorite: boolean;
 }
 
-/**
- * Menu items which can be used to quick insert a document.
- */
 export function QuickInsertItems(props: QuickInsertItemProps) {
     const { insertable, configuration, isFavorite } = props;
     const search = useSearch({ from: "/app" });
@@ -106,14 +97,14 @@ export function QuickInsertItems(props: QuickInsertItemProps) {
         <>
             {supportsFasten && (
                 <Menu.Item
-                    leftSection={<Plus size={IconSize.SMALL} />}
+                    leftSection={<PlusIcon size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
                 </Menu.Item>
             )}
             <Menu.Item
-                leftSection={<Plus size={IconSize.SMALL} />}
+                leftSection={<PlusIcon size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert
@@ -139,10 +130,8 @@ interface CardTitleProps {
      */
     title: string;
     searchHit?: SearchHit;
-    smallThumbnailUrl?: string;
-    largeThumbnailUrl?: string;
-    /** Set to show a specific configuration's thumbnail instead of the default. */
-    thumbnailTarget?: ThumbnailTarget;
+    /** The row's `CardThumbnail`, which only the caller knows how to address. */
+    thumbnail: ReactNode;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
@@ -151,9 +140,7 @@ export function CardTitle(props: CardTitleProps) {
     const {
         searchHit,
         title,
-        smallThumbnailUrl,
-        largeThumbnailUrl,
-        thumbnailTarget,
+        thumbnail,
         buildStatusBadge,
         disabled = false,
         showHiddenTag = false
@@ -166,64 +153,81 @@ export function CardTitle(props: CardTitleProps) {
         cardTitle = title;
     }
 
-    // The hit's best-matching configuration, minus a value repeating the title.
-    const partName =
-        searchHit?.partName?.toLowerCase() !== title.toLowerCase()
-            ? searchHit?.partName
-            : undefined;
-    const partNumber = displayPartNumber(searchHit?.partNumber, title);
-
-    let partNameAndNumberComponent = null;
-    if (partName || partNumber) {
-        partNameAndNumberComponent = (
-            <Group gap={4} wrap="nowrap" miw={0} fz="xs" lh="xs" c="dimmed">
-                {partName && (
-                    <Text inherit truncate miw={0}>
-                        <HighlightedText
-                            text={partName}
-                            positions={searchHit?.partNamePositions}
-                        />
-                    </Text>
-                )}
-                {partName && partNumber && <Text inherit>·</Text>}
-                {partNumber && (
-                    <CardPartNumber
-                        partNumber={partNumber}
-                        positions={searchHit?.partNumberPositions}
-                        url={searchHit?.url}
-                    />
-                )}
-            </Group>
-        );
-    }
-
     // Shrinks to truncate, but never grows: the build status badge and hidden tag belong beside the name, not at the row's edge.
     const cardTitleComponent = (
         <Stack gap={0} miw={0}>
             <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
                 {cardTitle}
-                {partNameAndNumberComponent}
             </Text>
+            {/* The line under the title, so it sits beside it in the stack
+                rather than inside the paragraph the title renders as. */}
+            <PartNameAndNumber title={title} searchHit={searchHit} />
         </Stack>
     );
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <CardThumbnail
-                smallThumbnailUrl={smallThumbnailUrl}
-                largeThumbnailUrl={largeThumbnailUrl}
-                target={thumbnailTarget}
-            />
+            {thumbnail}
             {cardTitleComponent}
             {buildStatusBadge}
             {/* After the badge: toggling visibility would otherwise shift the
                 badge, dragging its open hover card out from under the cursor. */}
             {showHiddenTag && (
-                <Box
-                    component={EyeSlash}
+                <AppIcon
+                    icon={EyeSlashIcon}
                     size={IconSize.SMALL}
-                    c="yellow"
-                    alt="Hidden"
+                    color={StatusColor.WARNING}
+                    label="Hidden"
+                />
+            )}
+        </Group>
+    );
+}
+
+interface PartNameAndNumberProps {
+    /** The row's own title, which neither line repeats. */
+    title: string;
+    searchHit?: SearchHit;
+}
+
+/** The matched configuration's name and part number, beneath the title. */
+function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
+    const { title, searchHit } = props;
+
+    // The hit's best-matching configuration, minus a value repeating the title.
+    const partName =
+        searchHit?.partName?.toLowerCase() !== title.toLowerCase()
+            ? searchHit?.partName
+            : undefined;
+    const partNumber = meaningfulPartNumber(searchHit?.partNumber, title);
+
+    if (!partName && !partNumber) {
+        return null;
+    }
+
+    return (
+        <Group
+            gap={4}
+            wrap="nowrap"
+            miw={0}
+            fz="xs"
+            lh="xs"
+            c={StatusColor.DIMMED}
+        >
+            {partName && (
+                <Text inherit truncate miw={0}>
+                    <HighlightedText
+                        text={partName}
+                        positions={searchHit?.partNamePositions}
+                    />
+                </Text>
+            )}
+            {partName && partNumber && <Text inherit>·</Text>}
+            {partNumber && (
+                <CardPartNumber
+                    partNumber={partNumber}
+                    positions={searchHit?.partNumberPositions}
+                    url={searchHit?.url}
                 />
             )}
         </Group>
@@ -231,21 +235,19 @@ export function CardTitle(props: CardTitleProps) {
 }
 
 /** The part number, linked to the vendor's page for it when there is one. */
-function CardPartNumber(props: {
+interface CardPartNumberProps {
     partNumber: string;
+    /** Where the query matched inside it, for underlining. */
     positions?: Position[];
     url?: string;
-}): ReactNode {
+}
+
+function CardPartNumber(props: CardPartNumberProps): ReactNode {
     const { partNumber, positions, url } = props;
     const text = <HighlightedText text={partNumber} positions={positions} />;
     if (!url) {
         return (
-            <Text
-                inherit
-                truncate
-                miw={0}
-                style={{ flexShrink: 0, maxWidth: "100%" }}
-            >
+            <Text inherit truncate miw={0} maw="100%" style={NO_SHRINK}>
                 {text}
             </Text>
         );
@@ -257,19 +259,15 @@ function CardPartNumber(props: {
             inherit
             // The row inserts on click, which is not what the link is for.
             onClick={(event) => event.stopPropagation()}
-            style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 2,
-                minWidth: 0,
-                flexShrink: 0,
-                maxWidth: "100%"
-            }}
+            display="inline-flex"
+            miw={0}
+            maw="100%"
+            style={{ alignItems: "center", gap: 2, ...NO_SHRINK }}
         >
             <Text component="span" inherit truncate miw={0}>
                 {text}
             </Text>
-            <ArrowSquareOut size={IconSize.TINY} />
+            <ArrowSquareOutIcon size={IconSize.TINY} />
         </Anchor>
     );
 }
@@ -284,9 +282,7 @@ export function ItemTable(props: PropsWithChildren): ReactNode {
             highlightOnHover
             verticalSpacing="xs"
             layout="fixed"
-            style={{
-                cursor: "pointer"
-            }}
+            style={{ cursor: "pointer" }}
         >
             <Table.Tbody>{props.children}</Table.Tbody>
         </Table>
@@ -342,8 +338,8 @@ export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
             <Menu.Sub>
                 <Menu.Sub.Target>
                     <Menu.Sub.Item
-                        color="yellow"
-                        leftSection={<Gear size={IconSize.SMALL} />}
+                        color={StatusColor.WARNING}
+                        leftSection={<GearIcon size={IconSize.SMALL} />}
                     >
                         Admin options
                     </Menu.Sub.Item>

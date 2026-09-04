@@ -1,4 +1,4 @@
-import { Vendor, toVendor } from "../library/vendors";
+import { Vendor, parseVendor } from "../library/vendors";
 import {
     ParameterType,
     type ConfigurationParameter,
@@ -18,7 +18,7 @@ export function parseNameVendor(name: string): Vendor | undefined {
 
 /** A vendor an option names, as a token within its label or as the whole of it. */
 function parseOptionVendor(optionName: string): Vendor | undefined {
-    return parseNameVendor(optionName) ?? toVendor(optionName);
+    return parseNameVendor(optionName) ?? parseVendor(optionName);
 }
 
 export function parseVendors(

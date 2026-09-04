@@ -1,6 +1,6 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
-import { getOnshapeApiFromSessionId } from "../auth/caller";
+import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";

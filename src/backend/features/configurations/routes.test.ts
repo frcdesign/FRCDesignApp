@@ -69,7 +69,7 @@ describe("configuration routes", () => {
                     partNumber: "WCP-0405",
                     name: "2x1 Tube",
                     url: "https://wcproducts.com/products/wcp-0405",
-                    configuration: {}
+                    canonicalConfiguration: ""
                 }
             ]
         });

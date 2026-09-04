@@ -2,12 +2,12 @@ import { Button, Menu, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { openAppModal } from "../../../components/open-app-modal";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
-import { Plus } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
-import { parseUrl } from "../../../lib/url";
+import { parseOnshapeUrl } from "../../../lib/url";
 import { appError, getAppErrorHandler } from "../../../lib/errors";
 import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
@@ -34,7 +34,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const mutation = useMutation({
         mutationKey: ["add-group"],
         mutationFn: async () => {
-            const newDocumentId = parseUrl(url)?.documentId;
+            const newDocumentId = parseOnshapeUrl(url)?.documentId;
             if (!newDocumentId) {
                 throw appError("Failed to parse url.");
             }
@@ -73,7 +73,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             <AppModalFooter>
                 <Button
                     ml="auto"
-                    leftSection={<Plus size={IconSize.SMALL} />}
+                    leftSection={<PlusIcon size={IconSize.SMALL} />}
                     onClick={() => mutation.mutate()}
                     loading={mutation.isPending}
                 >
@@ -87,7 +87,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
 export function AddGroupButton(): ReactNode {
     return (
         <Button
-            leftSection={<Plus size={IconSize.SMALL} />}
+            leftSection={<PlusIcon size={IconSize.SMALL} />}
             onClick={() => openAddGroupMenu()}
         >
             Add group
@@ -102,7 +102,7 @@ interface AddGroupItemProps {
 export function AddGroupItem(props: AddGroupItemProps): ReactNode {
     return (
         <Menu.Item
-            leftSection={<Plus size={IconSize.SMALL} />}
+            leftSection={<PlusIcon size={IconSize.SMALL} />}
             onClick={() => openAddGroupMenu(props.selectedGroupId)}
         >
             Add group

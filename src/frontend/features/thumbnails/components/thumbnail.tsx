@@ -8,9 +8,14 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { ThumbnailSize } from "@backend/features/thumbnails/types";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
-import { Question } from "@phosphor-icons/react";
+import { QuestionIcon } from "@phosphor-icons/react";
 
-import { ComponentPropsWithRef, ReactNode, useState } from "react";
+import {
+    ComponentPropsWithRef,
+    PropsWithChildren,
+    ReactNode,
+    useState
+} from "react";
 import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionError } from "../../../components/app-zero-state";
@@ -49,11 +54,11 @@ export interface ThumbnailTarget {
     /** Empty means the element default. */
     canonicalConfiguration: string;
     /**
-     * Surfaces where the user picked the configuration warm it; a cold search
-     * would otherwise start a render per row.
+     * Whether a miss should start rendering: surfaces where the user picked the
+     * configuration do, where a search would otherwise render a row at a time.
      */
-    warm: boolean;
-    /** Only needed to warm: what the render resolves the element from. */
+    renderThumbnail: boolean;
+    /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
 }
 
@@ -126,7 +131,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     let content;
     if (url === undefined || imageQuery.isError) {
-        content = <Question size={spinnerSize} />;
+        content = <QuestionIcon size={spinnerSize} />;
     } else if (imageQuery.isPending) {
         content = <Loader size={spinnerSize} />;
     } else {
@@ -174,6 +179,12 @@ interface PreviewImageProps {
     largeThumbnailUrl?: string;
 }
 
+/** A stored size, so the bytes a preview fetch returns are worth caching. */
+const PREVIEW_SIZE = ThumbnailSize.LARGE;
+
+/** Sized to the preview's footprint rather than to a row's. */
+const PREVIEW_SPINNER_SIZE = 36;
+
 /** How often to re-check while the worker is still standing in the default. */
 const PREVIEW_POLL_MS = 4000;
 
@@ -181,7 +192,7 @@ const PREVIEW_POLL_MS = 4000;
  * How many polls apart to ask for the render again. One request is meant to
  * start it; this only covers the run never having been queued at all.
  */
-const WARM_EVERY_POLLS = 15;
+const RENDER_EVERY_POLLS = 15;
 
 /**
  * The last render actually produced, kept across configuration changes: the
@@ -195,42 +206,29 @@ function useLastRenderedUrl(image?: LoadedImage): string | undefined {
     return lastRendered;
 }
 
-export function PreviewImage(props: PreviewImageProps): ReactNode {
-    const {
-        path,
-        insertableId,
-        microversionId,
-        canonicalConfiguration,
-        largeThumbnailUrl
-    } = props;
-    // A stored size, so the bytes this fetch returns are worth caching.
-    const size = ThumbnailSize.LARGE;
-    const isSignedIn = useIsSignedIn();
-    const isConnected = useIsConnectedToOnshape();
-    const isFetchingConfiguration = useIsFetchingConfiguration(
-        insertableId,
-        microversionId
-    );
-    const targetElementType = useTargetElementType();
-
-    // Each poll gets a url of its own. The browser caches images by url for
-    // the life of the page, so reusing one leaves the stand-in on screen
-    // however many times the query refetches past it.
+/**
+ * Polls for the configuration's render, which the worker produces in a
+ * workflow: the first request starts one, and the element default stands in
+ * until it lands.
+ */
+function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
+    const { path, insertableId, microversionId, canonicalConfiguration } =
+        props;
+    // A url per poll: the browser caches images by url for the life of the
+    // page, so reusing one leaves the stand-in up however often we refetch.
     const pollUrl = (attempt: number) =>
         thumbnailUrl({
             elementId: path.elementId,
             microversionId,
-            size,
+            size: PREVIEW_SIZE,
             canonicalConfiguration,
-            warm: attempt % WARM_EVERY_POLLS === 0,
+            renderThumbnail: attempt % RENDER_EVERY_POLLS === 0,
             insertableId,
             attempt
         });
 
-    // The worker renders configurations in a workflow, so the first request
-    // starts one and stands in the element default until it lands.
     const queryKey = ["thumbnail", pollUrl(0)];
-    const thumbnailQuery = useQuery({
+    const query = useQuery({
         queryKey,
         queryFn: ({ signal, client }) =>
             loadImageResult(
@@ -242,20 +240,50 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
         refetchInterval: (query) =>
             query.state.data?.isFallback ? PREVIEW_POLL_MS : false,
         retry: 2,
-        enabled: !isFetchingConfiguration && isSignedIn === true
+        enabled
     });
-    const lastRenderedUrl = useLastRenderedUrl(thumbnailQuery.data);
+    return { query, lastRenderedUrl: useLastRenderedUrl(query.data) };
+}
 
-    const heightAndWidth = getHeightAndWidth(size, 0.7);
+interface PreviewBoxProps extends PropsWithChildren {
+    heightAndWidth: HeightAndWidth;
+}
+
+/** Holds the preview's own footprint, whatever is being shown in it. */
+function PreviewBox(props: PreviewBoxProps): ReactNode {
+    const { heightAndWidth, children } = props;
+    return (
+        <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+            {children}
+        </Center>
+    );
+}
+
+export function PreviewImage(props: PreviewImageProps): ReactNode {
+    const { insertableId, microversionId, largeThumbnailUrl } = props;
+    const isSignedIn = useIsSignedIn();
+    const isConnected = useIsConnectedToOnshape();
+    const isFetchingConfiguration = useIsFetchingConfiguration(
+        insertableId,
+        microversionId
+    );
+    const targetElementType = useTargetElementType();
+    const { query, lastRenderedUrl } = usePreviewThumbnail(
+        props,
+        !isFetchingConfiguration && isSignedIn === true
+    );
+
+    const heightAndWidth = getHeightAndWidth(PREVIEW_SIZE, 0.7);
+    const spinner = (
+        <PreviewBox heightAndWidth={heightAndWidth}>
+            <Loader size={PREVIEW_SPINNER_SIZE} />
+        </PreviewBox>
+    );
 
     // Not known yet: the stored thumbnail would be swapped for the live preview
     // a moment later.
     if (isSignedIn === undefined) {
-        return (
-            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
-                <Loader size={36} />
-            </Center>
-        );
+        return spinner;
     }
 
     // Not signed in: no live Onshape preview, so show the stored thumbnail
@@ -265,21 +293,16 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             <Thumbnail
                 url={largeThumbnailUrl}
                 heightAndWidth={heightAndWidth}
-                spinnerSize={36}
+                spinnerSize={PREVIEW_SPINNER_SIZE}
             />
         );
     }
 
-    // Placeholder data is the previous configuration's render, so the spinner
-    // has to cover it too: what is on screen is not what was asked for.
-    const isWaiting =
-        thumbnailQuery.isPlaceholderData || thumbnailQuery.data?.isFallback;
-
-    if (thumbnailQuery.isError) {
+    if (query.isError) {
         const action =
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
-            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
+            <PreviewBox heightAndWidth={heightAndWidth}>
                 <SectionError
                     title="The thumbnail could not be loaded."
                     // Standalone has no insert button to fall back on, and
@@ -288,21 +311,21 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
                         isConnected ? `You can still ${action} the part.` : null
                     }
                 />
-            </Center>
+            </PreviewBox>
         );
-    } else if (!thumbnailQuery.data) {
-        return (
-            <Center w={heightAndWidth.width} h={heightAndWidth.height}>
-                <Loader size={36} />
-            </Center>
-        );
+    }
+    if (!query.data) {
+        return spinner;
     }
 
     // A stand-in must not displace a render the user already has.
     const previewUrl =
-        thumbnailQuery.data.isFallback && lastRenderedUrl
+        query.data.isFallback && lastRenderedUrl
             ? lastRenderedUrl
-            : thumbnailQuery.data.url;
+            : query.data.url;
+    // Placeholder data is the previous configuration's render, so the spinner
+    // has to cover it too: what is on screen is not what was asked for.
+    const isWaiting = query.isPlaceholderData || query.data.isFallback;
 
     return (
         <>

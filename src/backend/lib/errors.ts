@@ -5,9 +5,10 @@ import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
 import {
     ApiError,
     ApiErrorKind,
+    forbiddenError,
     handledError,
     internalError,
-    rateLimitedError
+    signInRequiredError
 } from "./api-error";
 import type { AppContextEnv } from "./context";
 
@@ -17,19 +18,19 @@ import type { AppContextEnv } from "./context";
  */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
-        return rateLimitedError(
-            "Onshape rate limit reached. Please try again shortly.",
-            HttpStatus.TOO_MANY_REQUESTS,
-            error.retryAfterSeconds
+        return handledError(
+            "Onshape rate limit reached. Please try again later.",
+            HttpStatus.TOO_MANY_REQUESTS
         );
     }
-    if (
-        error.status === HttpStatus.UNAUTHORIZED ||
-        error.status === HttpStatus.FORBIDDEN
-    ) {
-        return handledError(
-            "Onshape refused the request. Try signing in again.",
-            error.status
+    if (error.status === HttpStatus.UNAUTHORIZED) {
+        return signInRequiredError(
+            "Onshape did not accept the session. Try signing in again."
+        );
+    }
+    if (error.status === HttpStatus.FORBIDDEN) {
+        return forbiddenError(
+            "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise."
         );
     }
     return internalError(
@@ -40,14 +41,14 @@ function fromOnshapeError(error: OnshapeApiError): ApiError {
 
 export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     if (err instanceof ApiError) {
-        return c.json(err.body, err.status as never);
+        return c.json(err.body, err.status);
     }
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
         if (apiError.body.kind === ApiErrorKind.INTERNAL) {
             console.error(err);
         }
-        return c.json(apiError.body, apiError.status as never);
+        return c.json(apiError.body, apiError.status);
     }
     // A raw HTTPException is a validator rejecting a malformed request, which
     // is our bug rather than something the user can act on.
@@ -55,12 +56,12 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
         console.error(err);
         return c.json(
             { kind: ApiErrorKind.INTERNAL, message: err.message },
-            err.status as never
+            err.status
         );
     }
     console.error(err);
     return c.json(
         { kind: ApiErrorKind.INTERNAL, message: "Internal Server Error" },
-        HttpStatus.INTERNAL_SERVER_ERROR as never
+        HttpStatus.INTERNAL_SERVER_ERROR
     );
 };

@@ -2,6 +2,7 @@ import {
     ActionIcon,
     Box,
     Button,
+    Center,
     Group,
     Input,
     Loader,
@@ -10,12 +11,15 @@ import {
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { Gear, MagnifyingGlass } from "@phosphor-icons/react";
+import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
-    CHROME_BACKGROUND,
+    FRAME_BACKGROUND,
     IconSize,
-    PrimaryColor
+    maskedImage,
+    PrimaryColor,
+    RADIUS,
+    StatusColor
 } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -23,8 +27,12 @@ import { useNavigate } from "@tanstack/react-router";
 import frcDesignBook from "/frc-design-book.svg";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { useUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../features/library/library-path";
+import { useGetUiState, useSetUiState } from "../lib/ui-state";
+import {
+    getLibraryName,
+    isComingSoon,
+    useLibraryId
+} from "../features/library/library-path";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
 import { useAccessData } from "../features/auth/access-level";
@@ -39,6 +47,9 @@ import { getLibraryVersionQuery } from "../features/library/queries";
  * brand and settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
+    // Nothing to search until the library opens.
+    const showSearch = !isComingSoon(useLibraryId());
+
     return (
         <Stack gap={0}>
             {/* Stretched so the tabs run the full height and their underline
@@ -48,7 +59,7 @@ export function AppNavbar(): ReactNode {
                 px="sm"
                 wrap="nowrap"
                 align="stretch"
-                bg={CHROME_BACKGROUND}
+                bg={FRAME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
                 <FrcDesignBookIcon />
@@ -59,10 +70,12 @@ export function AppNavbar(): ReactNode {
                     <SettingsButton />
                 </Group>
             </Group>
-            <Group gap="xs" p="sm" wrap="nowrap">
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {showSearch && (
+                <Group gap="xs" p="sm" wrap="nowrap">
+                    <SearchBar />
+                    <VendorMenu />
+                </Group>
+            )}
         </Stack>
     );
 }
@@ -109,7 +122,7 @@ function RunningJobLoader(): ReactNode {
 
 function FrcDesignBookIcon(): ReactNode {
     return (
-        <Box
+        <Center
             component="a"
             href="https://frcdesign.org"
             target="_blank"
@@ -119,27 +132,16 @@ function FrcDesignBookIcon(): ReactNode {
             my="auto"
             bg={PrimaryColor.FILLED}
             c={PrimaryColor.CONTRAST}
-            style={{
-                borderRadius: "var(--mantine-radius-sm)",
-                display: "grid",
-                placeItems: "center"
-            }}
+            style={{ borderRadius: RADIUS }}
         >
             {/* Masked, not drawn, so the book takes the tile's contrast color
-                rather than the gray in the file. The url needs quoting: Vite
-                inlines the asset as a data uri containing apostrophes. */}
+                rather than the gray in the file. */}
             <Box
                 w={IconSize.SMALL}
                 h={IconSize.SMALL}
-                style={{
-                    backgroundColor: "currentColor",
-                    maskImage: `url("${frcDesignBook}")`,
-                    maskSize: "contain",
-                    maskRepeat: "no-repeat",
-                    maskPosition: "center"
-                }}
+                style={maskedImage(frcDesignBook)}
             />
-        </Box>
+        </Center>
     );
 }
 
@@ -207,13 +209,13 @@ export function SettingsButton() {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
             size="lg"
             onClick={() => openSettingsMenu()}
         >
-            <Gear size={IconSize.MEDIUM} />
+            <GearIcon size={IconSize.MEDIUM} />
         </ActionIcon>
     );
 }
@@ -229,7 +231,8 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
 
 export function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     const libraryId = useLibraryId();
 
     const clearButton = uiState.searchQuery ? (
@@ -250,7 +253,7 @@ export function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={uiState.searchQuery ?? ""}

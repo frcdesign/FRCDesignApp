@@ -1,12 +1,16 @@
-import { Box } from "@mantine/core";
 import { useAccessData } from "../../auth/access-level";
-import { HeartBreak } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { HeartBreakIcon } from "@phosphor-icons/react";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import { filterInsertables } from "../../search/filter";
+import {
+    FilteredInsertables,
+    filterInsertables,
+    searchInsertables
+} from "../../search/filter";
 import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
-import { InsertableOut } from "@backend/features/library/contract";
-import { useUiState } from "../../../lib/ui-state";
+import type { FavoritesData } from "@backend/features/favorites/contract";
+import type { Insertables } from "@backend/features/library/contract";
+import { useGetUiState } from "../../../lib/ui-state";
 import {
     SectionError,
     SectionLoading
@@ -20,20 +24,18 @@ import { ItemTable } from "../../library/components/card-components";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
-import { doSearch, FilterResult, SearchHit } from "../../search/search";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { AppIcon } from "../../../components/app-icon";
 
 /**
  * A list of current favorite cards.
  * Unlike the normal DocumentList, this list can be searched directly.
  */
 export function FavoritesList(): ReactNode {
-    const uiState = useUiState()[0];
-    const accessData = useAccessData();
+    const { searchQuery, vendorFilters } = useGetUiState();
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
-    const searchDbQuery = useSearchDbQuery();
 
     if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
@@ -42,10 +44,10 @@ export function FavoritesList(): ReactNode {
             <SectionError
                 title="Failed to load favorites."
                 icon={
-                    <Box
-                        component={HeartBreak}
+                    <AppIcon
+                        icon={HeartBreakIcon}
                         size={IconSize.SECTION}
-                        c="red"
+                        color={StatusColor.ERROR}
                     />
                 }
             />
@@ -53,84 +55,90 @@ export function FavoritesList(): ReactNode {
     }
 
     const insertables = libraryQuery.data.insertables;
+    const favoritesData = favoritesQuery.data;
 
-    const orderedFavorites = favoritesQuery.data.favoriteOrder
-        .map((favoriteId) => favoritesQuery.data.favorites[favoriteId])
-        .filter((favorite) => !!favorite);
-
-    const favoriteInsertables = orderedFavorites
-        .map((favorite) => insertables[favorite.insertableId])
-        .filter((insertable) => !!insertable);
-
-    let filteredInsertables: InsertableOut[];
-    let filterResult: FilterResult;
-    let searchHits: Record<string, SearchHit> = {};
-    if (uiState.searchQuery) {
-        if (searchDbQuery.isLoading) {
-            return <SectionLoading title="Searching..." />;
-        } else if (searchDbQuery.isError) {
-            return <SectionError title="Failed to load search database." />;
-        } else if (!searchDbQuery.data) {
-            return <SectionError title="The search database is empty." />;
-        }
-        const favoriteInsertableIds = new Set(
-            Object.values(favoritesQuery.data.favorites).map(
-                (f) => f.insertableId
-            )
-        );
-        const searchResults = doSearch(
-            searchDbQuery.data,
-            uiState.searchQuery,
-            {
-                vendors: uiState.vendorFilters,
-                isFavorite: true
-            },
-            favoriteInsertableIds,
-            hasEditorAccess(accessData.currentAccessLevel)
-        );
-
-        filteredInsertables = searchResults.hits
-            .map((hit) => insertables[hit.id])
-            .filter((insertable) => !!insertable);
-
-        filterResult = searchResults.filtered;
-
-        searchHits = searchResults.hits.reduce(
-            (acc, hit) => {
-                acc[hit.id] = hit;
-                return acc;
-            },
-            {} as Record<string, SearchHit>
-        );
-    } else {
-        const filterResult2 = filterInsertables(favoriteInsertables, {
-            vendors: uiState.vendorFilters,
-            isVisible: true
-        });
-
-        filteredInsertables = filterResult2.insertables;
-        filterResult = filterResult2.filtered;
-    }
-
-    if (filteredInsertables.length === 0) {
+    if (searchQuery) {
         return (
-            <NoSearchResultError
-                objectLabel="favorite"
-                filtered={filterResult}
+            <FavoriteSearchResults
+                query={searchQuery}
+                insertables={insertables}
+                favoritesData={favoritesData}
             />
         );
     }
 
-    let callout: ReactNode = null;
-    if (filterResult.byGroup > 0 || filterResult.byVendor > 0) {
-        callout = (
-            <SearchCallout objectLabel="favorite" filtered={filterResult} />
+    const favoriteInsertables = favoritesData.favoriteOrder
+        .map((favoriteId) => favoritesData.favorites[favoriteId])
+        .filter((favorite) => !!favorite)
+        .map((favorite) => insertables[favorite.insertableId])
+        .filter((insertable) => !!insertable);
+
+    return (
+        <FavoriteCards
+            result={filterInsertables(favoriteInsertables, {
+                vendors: vendorFilters,
+                isVisible: true
+            })}
+            favoritesData={favoritesData}
+        />
+    );
+}
+
+interface FavoriteSearchResultsProps {
+    query: string;
+    insertables: Insertables;
+    favoritesData: FavoritesData;
+}
+
+/** The favorites the query matches, which the search index is what knows. */
+function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
+    const { query, insertables, favoritesData } = props;
+
+    const vendorFilters = useGetUiState().vendorFilters;
+    const accessData = useAccessData();
+    const searchDbQuery = useSearchDbQuery();
+
+    if (searchDbQuery.isLoading) {
+        return <SectionLoading title="Searching..." />;
+    } else if (searchDbQuery.isError) {
+        return <SectionError title="Failed to load search database." />;
+    } else if (!searchDbQuery.data) {
+        return <SectionError title="The search database is empty." />;
+    }
+
+    const result = searchInsertables({
+        searchDb: searchDbQuery.data,
+        insertables,
+        query,
+        filters: { vendors: vendorFilters, isFavorite: true },
+        favoritedInsertableIds: new Set(
+            Object.values(favoritesData.favorites).map((f) => f.insertableId)
+        ),
+        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+    });
+
+    return <FavoriteCards result={result} favoritesData={favoritesData} />;
+}
+
+interface FavoriteCardsProps {
+    result: FilteredInsertables;
+    favoritesData: FavoritesData;
+}
+
+/** The rows themselves, however the list they show was narrowed down. */
+function FavoriteCards(props: FavoriteCardsProps): ReactNode {
+    const { result, favoritesData } = props;
+    const { insertables, filtered, hits } = result;
+
+    if (insertables.length === 0) {
+        return (
+            <NoSearchResultError objectLabel="favorite" filtered={filtered} />
         );
     }
 
-    const cards = filteredInsertables.map((insertable: InsertableOut) => {
+    const cards = insertables.map((insertable) => {
         const favorite = getFavoriteForInsertable(
-            favoritesQuery.data.favorites,
+            favoritesData.favorites,
             insertable.id
         );
         if (!favorite) {
@@ -141,14 +149,14 @@ export function FavoritesList(): ReactNode {
                 key={favorite.id}
                 insertable={insertable}
                 favorite={favorite}
-                searchHit={searchHits[insertable.id]}
+                searchHit={hits[insertable.id]}
             />
         );
     });
 
     return (
         <>
-            {callout}
+            <SearchCallout objectLabel="favorite" filtered={filtered} />
             <ItemTable>{cards}</ItemTable>
         </>
     );

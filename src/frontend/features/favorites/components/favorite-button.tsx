@@ -1,8 +1,9 @@
-import { ActionIcon, Box, Menu } from "@mantine/core";
-import { Heart, HeartBreak } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { ActionIcon, Menu } from "@mantine/core";
+import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
+import type { ParameterValues } from "@backend/features/configurations/models";
 import { apiDelete, apiPost } from "../../../lib/api-client";
 import type {
     Favorite,
@@ -20,6 +21,7 @@ import {
 } from "../../library/library-path";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
+import { AppIcon } from "../../../components/app-icon";
 
 enum Operation {
     ADD,
@@ -30,6 +32,11 @@ interface UpdateFavoritesArgs {
     operation: Operation;
     insertable: InsertableOut;
     favoriteId: string;
+    /** The selection to store; absent means the element's own default. */
+    defaultConfiguration?: ParameterValues;
+    /** That selection's canonical form, so the new row's thumbnail is right
+     * before the refetch answers. */
+    canonicalConfiguration?: string;
 }
 
 function updateFavorites(
@@ -37,10 +44,16 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId } = args;
+    const { favoriteId, defaultConfiguration, canonicalConfiguration } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
-        const fav: Favorite = { id: favoriteId, insertableId, libraryId };
+        const fav: Favorite = {
+            id: favoriteId,
+            insertableId,
+            libraryId,
+            defaultConfiguration,
+            canonicalConfiguration
+        };
         data.favorites[favoriteId] = fav;
         data.favoriteOrder.push(favoriteId);
     } else {
@@ -70,6 +83,9 @@ function useUpdateFavoritesMutation() {
                     query: {
                         insertableId: args.insertable.id,
                         id: args.favoriteId
+                    },
+                    body: {
+                        defaultConfiguration: args.defaultConfiguration
                     }
                 });
             } else {
@@ -103,6 +119,13 @@ interface FavoriteButtonProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /**
+     * The selection the new favorite opens with: what the caller is showing,
+     * rather than the element's own default.
+     */
+    defaultConfiguration?: ParameterValues;
+    /** The same selection canonicalized, when the caller knows it. */
+    canonicalConfiguration?: string;
+    /**
      * Sizes the button to sit beside a full-height button rather than in a card row.
      * @default false
      */
@@ -110,7 +133,13 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
-    const { favorite, insertable, large } = props;
+    const {
+        favorite,
+        insertable,
+        defaultConfiguration,
+        canonicalConfiguration,
+        large
+    } = props;
     const isFavorite = favorite !== undefined;
 
     const [isHovered, setIsHovered] = useState(false);
@@ -120,12 +149,12 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     let favoriteIcon;
     if (isHovered) {
         favoriteIcon = isFavorite ? (
-            <HeartBrokenIcon size={iconSize} />
+            <UnfavoriteIcon size={iconSize} />
         ) : (
-            <HeartIcon size={iconSize} />
+            <FavoriteIcon size={iconSize} />
         );
     } else {
-        favoriteIcon = <HeartIcon full={isFavorite} size={iconSize} />;
+        favoriteIcon = <FavoriteIcon full={isFavorite} size={iconSize} />;
     }
 
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
@@ -133,12 +162,18 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
     return (
         <ActionIcon
             variant="subtle"
-            color="gray"
+            color={StatusColor.NEUTRAL}
             size={large ? "input-sm" : undefined}
             onClick={(event) => {
                 event.stopPropagation();
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
+                mutation.mutate({
+                    operation,
+                    insertable,
+                    favoriteId,
+                    defaultConfiguration,
+                    canonicalConfiguration
+                });
             }}
             title={operation === Operation.ADD ? "Favorite" : "Unfavorite"}
             onMouseEnter={() => setIsHovered(true)}
@@ -152,13 +187,19 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
+    /** The selection the new favorite opens with. */
+    defaultConfiguration?: ParameterValues;
+    /** The same selection canonicalized, when the caller knows it. */
+    canonicalConfiguration?: string;
 }
 
-/**
- * A menu item which can be used to favorite or unfavorite an insertable.
- */
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
-    const { favorite, insertable } = props;
+    const {
+        favorite,
+        insertable,
+        defaultConfiguration,
+        canonicalConfiguration
+    } = props;
     const isFavorite = favorite !== undefined;
     const operation = isFavorite ? Operation.REMOVE : Operation.ADD;
     const mutation = useUpdateFavoritesMutation();
@@ -167,15 +208,21 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
         <Menu.Item
             leftSection={
                 operation === Operation.ADD ? (
-                    <HeartIcon />
+                    <FavoriteIcon />
                 ) : (
-                    <HeartBrokenIcon />
+                    <UnfavoriteIcon />
                 )
             }
             color={operation === Operation.ADD ? undefined : "red"}
             onClick={() => {
                 const favoriteId = favorite?.id ?? crypto.randomUUID();
-                mutation.mutate({ operation, insertable, favoriteId });
+                mutation.mutate({
+                    operation,
+                    insertable,
+                    favoriteId,
+                    defaultConfiguration,
+                    canonicalConfiguration
+                });
             }}
         >
             {operation === Operation.ADD ? "Favorite" : "Unfavorite"}
@@ -183,7 +230,7 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
     );
 }
 
-interface HeartIconProps {
+interface FavoriteIconProps {
     /**
      * @default true
      */
@@ -194,25 +241,32 @@ interface HeartIconProps {
     size?: IconSize;
 }
 
-export function HeartIcon(props: HeartIconProps): ReactNode {
+export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
     const { full = true, size = IconSize.SMALL } = props;
     // fz, not size: Box builds its own `style`, dropping the font-size that
     // Phosphor's `size` sets, which shrank the icon to 1em.
     return full ? (
-        <Box component={Heart} fz={size} c="red" weight="fill" />
+        <AppIcon
+            icon={HeartIcon}
+            size={size}
+            color={StatusColor.ERROR}
+            weight="fill"
+        />
     ) : (
-        <Heart size={size} />
+        <HeartIcon size={size} />
     );
 }
 
-interface HeartBrokenIconProps {
+interface UnfavoriteIconProps {
     /**
      * @default IconSize.SMALL
      */
     size?: IconSize;
 }
 
-export function HeartBrokenIcon(props: HeartBrokenIconProps): ReactNode {
+export function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
-    return <Box component={HeartBreak} fz={size} c="red" />;
+    return (
+        <AppIcon icon={HeartBreakIcon} size={size} color={StatusColor.ERROR} />
+    );
 }

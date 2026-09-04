@@ -10,18 +10,13 @@ export interface OnshapeParams extends ElementPath {
     elementType: ElementType;
     /** The color scheme Onshape is using, forwarded by the entry redirect. */
     systemTheme: ColorTheme;
-    /** The caller's saved theme, seeded by the entry redirect. */
-    theme: Theme;
+    /** The account's saved theme, seeded by the entry redirect and then taken
+     * into ui-state, which is where the app reads it from. */
+    theme?: Theme;
     server: string;
-    /** Set on the sign-in redirect so the app confirms success once. */
-    justSignedIn?: string;
 }
 
-/**
- * An actual color theme, as provided by Onshape.
- *
- * See also Theme, which is a superset of ColorTheme that also includes "system".
- */
+/** A resolved theme, as Onshape provides it; Theme adds "system" on top. */
 export type ColorTheme = "light" | "dark";
 
 /**

@@ -7,11 +7,16 @@ import {
     useParams
 } from "@tanstack/react-router";
 import { Box, Button, Group } from "@mantine/core";
-import { ArrowLeft, ArrowUUpLeft, Warning } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    ArrowUUpLeftIcon,
+    WarningIcon
+} from "@phosphor-icons/react";
 import {
     BORDER,
     IconSize,
-    SECTION_HEADER_HEIGHT
+    SECTION_HEADER_HEIGHT,
+    StatusColor
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
@@ -31,13 +36,15 @@ import {
 import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../features/library/library-path";
-import { useUiState, updateUiState } from "../../../../../lib/ui-state";
+import { useGetUiState } from "../../../../../lib/ui-state";
+import { rememberOpenGroup } from "../../../../../features/settings/settings";
+import { AppIcon } from "../../../../../components/app-icon";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
         component: GroupList,
         onEnter: (match) => {
-            updateUiState({ openGroupId: match.params.groupId });
+            rememberOpenGroup(match.params.groupId);
         }
     }
 );
@@ -49,7 +56,7 @@ function GroupList(): ReactNode {
         from: "/app/library/$libraryId/groups/$groupId"
     });
 
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
@@ -69,7 +76,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        leftSection={<ArrowUUpLeft size={IconSize.SMALL} />}
+                        leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
                                 to: "/app/library/$libraryId",
@@ -110,7 +117,12 @@ function GroupList(): ReactNode {
     );
 }
 
-function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
+interface GroupHeaderRowProps {
+    group: GroupOut;
+}
+
+function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
+    const { group } = props;
     const navigate = useNavigate();
     const libraryId = useLibraryId();
     const menuItems = <GroupMenuItems group={group} />;
@@ -132,7 +144,7 @@ function GroupHeaderRow({ group }: { group: GroupOut }): ReactNode {
         >
             <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
-                    icon={<ArrowLeft size={IconSize.MEDIUM} />}
+                    icon={<ArrowLeftIcon size={IconSize.MEDIUM} />}
                     title={group.name}
                 />
                 <MenuButton>{menuItems}</MenuButton>
@@ -152,7 +164,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
     const accessData = useAccessData();
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
 
     const groupInsertables = group.insertableOrder
         .map((insertableId) => insertables[insertableId])
@@ -172,19 +184,19 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         );
     }
 
-    const filterResult = filterInsertables(groupInsertables, {
+    const result = filterInsertables(groupInsertables, {
         vendors: uiState.vendorFilters,
         isVisible: !hasEditorAccess(accessData.currentAccessLevel)
     });
 
-    if (filterResult.insertables.length === 0) {
+    if (result.insertables.length === 0) {
         return (
             <SectionError
                 icon={
-                    <Box
-                        component={Warning}
+                    <AppIcon
+                        icon={WarningIcon}
                         size={IconSize.SECTION}
-                        c="yellow"
+                        color={StatusColor.WARNING}
                     />
                 }
                 title="All elements are hidden by filters"
@@ -193,17 +205,13 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
         );
     }
 
-    const insertableCards = filterResult.insertables.map((insertable) => (
+    const insertableCards = result.insertables.map((insertable) => (
         <InsertableCard key={insertable.id} insertable={insertable} />
     ));
 
-    const callout = (
-        <SearchCallout objectLabel="element" filtered={filterResult.filtered} />
-    );
-
     return (
         <>
-            {callout}
+            <SearchCallout objectLabel="element" filtered={result.filtered} />
             <ItemTable>{insertableCards}</ItemTable>
         </>
     );

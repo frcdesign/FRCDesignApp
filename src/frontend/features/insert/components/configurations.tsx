@@ -60,9 +60,7 @@ interface ConfigurationWrapperProps {
      * Reported here because only this component has the parameters and units
      * canonicalizing needs.
      */
-    onCanonicalConfiguration?: (
-        canonicalConfiguration: ParameterValues
-    ) => void;
+    onCanonicalConfiguration?: (canonicalConfiguration: string) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
 }
@@ -71,6 +69,56 @@ interface ConfigurationWrapperProps {
 function handleBooleanChange(handler: Dispatch<boolean>) {
     return (event: SyntheticEvent<HTMLElement>) =>
         handler((event.target as HTMLInputElement).checked);
+}
+
+/** Seeds an unset configuration with every parameter's own default. */
+function useDefaultConfiguration(
+    parameters: ConfigurationParameter[] | undefined,
+    configuration: ParameterValues | undefined,
+    setConfiguration: Dispatch<ParameterValues>
+) {
+    useEffect(() => {
+        // In an effect rather than a .then inside useQuery, which misbehaved.
+        if (!parameters || configuration) {
+            return;
+        }
+        setConfiguration(
+            Object.fromEntries(
+                parameters.map((parameter) => [parameter.id, parameter.default])
+            )
+        );
+    }, [parameters, configuration, setConfiguration]);
+}
+
+/** Reports the selection's canonical form, and the record it resolves to. */
+function useReportSelection(
+    parameters: ConfigurationParameter[] | undefined,
+    records: SearchRecord[] | undefined,
+    configuration: ParameterValues | undefined,
+    onCanonicalConfiguration?: (canonicalConfiguration: string) => void,
+    onRecord?: (record: SearchRecord | undefined) => void
+) {
+    useEffect(() => {
+        if (!parameters || !configuration) {
+            return;
+        }
+        const canonicalConfiguration = canonicalizeConfiguration(
+            configuration,
+            parameters
+        );
+        onCanonicalConfiguration?.(canonicalConfiguration);
+        if (records) {
+            onRecord?.(
+                findRecordForConfiguration(canonicalConfiguration, records)
+            );
+        }
+    }, [
+        parameters,
+        records,
+        configuration,
+        onCanonicalConfiguration,
+        onRecord
+    ]);
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
@@ -92,39 +140,15 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfoQuery = useUnitInfoQuery(search, isConnected);
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
-    useEffect(() => {
-        // Doing this in a useEffect rather than a .then inside useQuery to prevent some buggy behavior
-        // Only fill in the configuration if it isn't already set
-        if (!query.data || configuration) {
-            return;
-        }
-        const defaultConfiguration = query.data.parameters.reduce(
-            (configuration, parameter) => {
-                configuration[parameter.id] = parameter.default;
-                return configuration;
-            },
-            {} as ParameterValues
-        );
-        setConfiguration(defaultConfiguration);
-    }, [query.data, configuration, setConfiguration]);
-
     const parameters = query.data?.parameters;
-    useEffect(() => {
-        if (!parameters || !configuration) {
-            return;
-        }
-        onCanonicalConfiguration?.(
-            canonicalizeConfiguration(configuration, parameters)
-        );
-    }, [parameters, configuration, onCanonicalConfiguration]);
-
-    const records = query.data?.records;
-    useEffect(() => {
-        if (!records || !configuration) {
-            return;
-        }
-        onRecord?.(findRecordForConfiguration(configuration, records));
-    }, [records, configuration, onRecord]);
+    useDefaultConfiguration(parameters, configuration, setConfiguration);
+    useReportSelection(
+        parameters,
+        query.data?.records,
+        configuration,
+        onCanonicalConfiguration,
+        onRecord
+    );
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.
@@ -266,12 +290,9 @@ function InputLabel(props: InputLabelProps) {
     const text = (
         <Text
             size="sm"
-            style={{
-                display: "flex",
-                alignItems: "center",
-                height: INPUT_HEIGHT,
-                cursor: "pointer"
-            }}
+            display="flex"
+            h={INPUT_HEIGHT}
+            style={{ alignItems: "center", cursor: "pointer" }}
             component="label"
             htmlFor={htmlFor}
         >
@@ -365,7 +386,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     label: option.name
                 }))}
                 value={currentOption.id}
-                style={{ flex: 1 }}
+                flex={1}
                 allowDeselect={false}
                 checkIconPosition="right"
                 maxDropdownHeight={250}
@@ -407,7 +428,7 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
             <TextInput
                 id={parameter.id}
                 value={value ?? parameter.default}
-                style={{ flex: 1 }}
+                flex={1}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
         </InputLabel>
@@ -472,7 +493,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                 ref={ref}
                 value={focused ? expression : display}
                 error={errorMessage}
-                style={{ flex: 1 }}
+                flex={1}
                 onFocus={(event) => {
                     setFocused(true);
                     event.currentTarget.select();

@@ -1,6 +1,11 @@
 import { Menu } from "@mantine/core";
-import { ArrowRight, Eye, EyeSlash, Trash } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import {
+    ArrowRightIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    TrashIcon
+} from "@phosphor-icons/react";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut, LibraryOut } from "@backend/features/library/contract";
@@ -17,6 +22,7 @@ import {
     OpenDocumentItems
 } from "./card-components";
 import { AddGroupItem } from "./add-group-menu";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
 import { useRefreshLibrary } from "../../../lib/refresh";
 import { useBuildStatusQuery } from "../../build-status/queries";
@@ -29,9 +35,6 @@ interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
 }
 
-/**
- * A card representing a single group.
- */
 export function GroupCard(props: GroupCardProps): ReactNode {
     const { group } = props;
     const navigate = useNavigate();
@@ -48,8 +51,12 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                 <CardTitle
                     title={group.name}
                     disabled={!group.isLoaded}
-                    smallThumbnailUrl={group.smallThumbnailUrl}
-                    largeThumbnailUrl={group.largeThumbnailUrl}
+                    thumbnail={
+                        <CardThumbnail
+                            smallThumbnailUrl={group.smallThumbnailUrl}
+                            largeThumbnailUrl={group.largeThumbnailUrl}
+                        />
+                    }
                     buildStatusBadge={
                         <GroupStatusBadge
                             groupId={group.id}
@@ -58,7 +65,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                     }
                 />
             }
-            rightSection={<ArrowRight size={IconSize.SMALL} />}
+            rightSection={<ArrowRightIcon size={IconSize.SMALL} />}
             moreButton={false}
             menuItems={<GroupMenuItems group={group} />}
         />
@@ -123,16 +130,16 @@ export function GroupAdminContextMenu({
     );
 }
 
-function ShowAllElementsMenuItem({
-    insertableOrder
-}: {
+interface AllElementsVisibilityProps {
     insertableOrder: string[];
-}): ReactNode {
-    const mutation = useSetVisibilityMutation(insertableOrder, true);
+}
+
+function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
+    const mutation = useSetVisibilityMutation(props.insertableOrder, true);
     return (
         <Menu.Item
-            color="blue"
-            leftSection={<Eye size={IconSize.SMALL} />}
+            color={StatusColor.INFO}
+            leftSection={<EyeIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
             Show all elements
@@ -140,16 +147,12 @@ function ShowAllElementsMenuItem({
     );
 }
 
-function HideAllElementsMenuItem({
-    insertableOrder
-}: {
-    insertableOrder: string[];
-}): ReactNode {
-    const mutation = useSetVisibilityMutation(insertableOrder, false);
+function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
+    const mutation = useSetVisibilityMutation(props.insertableOrder, false);
     return (
         <Menu.Item
-            color="red"
-            leftSection={<EyeSlash size={IconSize.SMALL} />}
+            color={StatusColor.ERROR}
+            leftSection={<EyeSlashIcon size={IconSize.SMALL} />}
             onClick={() => mutation.mutate()}
         >
             Hide all elements
@@ -157,7 +160,12 @@ function HideAllElementsMenuItem({
     );
 }
 
-function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
+interface DeleteGroupMenuItemProps {
+    groupId: string;
+}
+
+function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
+    const { groupId } = props;
     const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
 
@@ -174,8 +182,8 @@ function DeleteGroupMenuItem({ groupId }: { groupId: string }): ReactNode {
 
     return (
         <Menu.Item
-            leftSection={<Trash size={IconSize.SMALL} />}
-            color="red"
+            leftSection={<TrashIcon size={IconSize.SMALL} />}
+            color={StatusColor.ERROR}
             onClick={() => mutation.mutate()}
         >
             Delete

@@ -1,7 +1,7 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { encodeConfigurationForQuery } from "../../../features/configurations/utils";
+import { encodeConfiguration } from "../../../features/configurations/utils";
 import { ParameterValues } from "../../../features/configurations/models";
 import type { OnshapeAssemblyDefinition, OnshapePart } from "../types";
 
@@ -12,7 +12,7 @@ import type { OnshapeAssemblyDefinition, OnshapePart } from "../types";
 function configurationQuery(
     configuration: ParameterValues
 ): Record<string, string> {
-    const encoded = encodeConfigurationForQuery(configuration);
+    const encoded = encodeConfiguration(configuration);
     return encoded ? { configuration: encoded } : {};
 }
 

@@ -33,7 +33,7 @@ function getLibraryColor(libraryId: string): string {
     }
 }
 
-/** The chrome stays neutral; a library's color is an accent on its controls. */
+/** The frame stays neutral; a library's color is an accent on its controls. */
 export function createAppTheme(libraryId: string) {
     return createTheme({
         colors: { frcGreen },

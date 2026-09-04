@@ -13,8 +13,8 @@ describe("api error responses", () => {
         await resetDb(db);
     });
 
-    // Written for the user, so the client shows it verbatim.
-    it("marks a gate's refusal as handled", async () => {
+    // Written for the user, and the kind tells the client what to offer them.
+    it("marks a signed-out caller's refusal as needing a sign-in", async () => {
         const app = createTestApp({ signedIn: false });
 
         const res = await app.request(
@@ -25,8 +25,24 @@ describe("api error responses", () => {
 
         expect(res.status).toBe(401);
         expect(await res.json()).toMatchObject({
-            kind: ApiErrorKind.HANDLED,
+            kind: ApiErrorKind.SIGN_IN_REQUIRED,
             message: expect.stringContaining("signed in")
+        });
+    });
+
+    it("marks a caller without the access as forbidden", async () => {
+        const app = createTestApp({ accessLevel: AccessLevel.USER });
+
+        const res = await app.request(
+            `/api/reload-groups/library/${LibraryId.FRC_DESIGN_LIB}`,
+            jsonRequest("POST"),
+            env
+        );
+
+        expect(res.status).toBe(403);
+        expect(await res.json()).toMatchObject({
+            kind: ApiErrorKind.FORBIDDEN,
+            message: expect.stringContaining("admin team")
         });
     });
 

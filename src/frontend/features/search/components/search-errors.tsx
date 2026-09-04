@@ -1,12 +1,17 @@
-import { Alert, Box, Button, Group, Text } from "@mantine/core";
-import { HeartBreak, Info, MagnifyingGlass } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { Alert, Button, Group, Text } from "@mantine/core";
+import {
+    HeartBreakIcon,
+    InfoIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "../search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionError } from "../../../components/app-zero-state";
 import { useLibraryId } from "../../library/library-path";
+import { AppIcon } from "../../../components/app-icon";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {
@@ -35,12 +40,17 @@ interface FilterCalloutProps {
  * Blue rather than the library accent: the strip reports on the results, so it
  * should read as a note beside them rather than as part of the library.
  */
-function Callout(props: { text: string; action: ReactNode }): ReactNode {
+interface CalloutProps {
+    text: string;
+    action: ReactNode;
+}
+
+function Callout(props: CalloutProps): ReactNode {
     return (
         <Alert
-            color="blue"
+            color={StatusColor.INFO}
             p="xs"
-            icon={<Info size={IconSize.MEDIUM} />}
+            icon={<InfoIcon size={IconSize.MEDIUM} />}
             styles={{ body: { minWidth: 0 } }}
         >
             <Group justify="space-between" wrap="nowrap" gap="sm">
@@ -88,17 +98,20 @@ export function NoSearchResultError(
 
     const icon =
         objectLabel === "search result" ? (
-            <Box
-                component={MagnifyingGlass}
+            <AppIcon
+                icon={MagnifyingGlassIcon}
                 size={IconSize.SECTION}
-                c="yellow"
+                color={StatusColor.WARNING}
             />
         ) : (
-            <Box component={HeartBreak} size={IconSize.SECTION} c="red" />
+            <AppIcon
+                icon={HeartBreakIcon}
+                size={IconSize.SECTION}
+                color={StatusColor.ERROR}
+            />
         );
 
     if (filtered.byGroup > 0) {
-        // User is in a subgroup
         return (
             <SectionError
                 icon={icon}
@@ -108,7 +121,6 @@ export function NoSearchResultError(
             />
         );
     } else if (filtered.byVendor > 0) {
-        // User has vendor filters selected
         return (
             <SectionError
                 icon={icon}
@@ -118,7 +130,6 @@ export function NoSearchResultError(
             />
         );
     }
-    // User has a bad search query
     return (
         <SectionError
             icon={icon}
@@ -136,12 +147,12 @@ interface SearchAllButtonProps {
 }
 
 function SearchAllButton(props: SearchAllButtonProps): ReactNode {
+    const { small = false } = props;
     const navigate = useNavigate();
     const libraryId = useLibraryId();
-    const small = props.small ?? false;
     return (
         <Button
-            leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             // Small means inside the callout, where a filled button would
             // shout over the note it sits in.
             variant={small ? "default" : undefined}

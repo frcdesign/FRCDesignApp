@@ -2,12 +2,13 @@ import { openAppModal } from "../../components/open-app-modal";
 import { type ParameterValues } from "@backend/features/configurations/models";
 import { FavoriteMenuContent } from "./components/favorite-menu";
 import { MenuTitle } from "../../components/app-title";
-import { HeartIcon } from "./components/favorite-button";
+import { FavoriteIcon } from "./components/favorite-button";
 import { IconSize } from "../../lib/style-constants";
 
 interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
+    /** What the favorite opens with today. */
     defaultConfiguration?: ParameterValues;
 }
 
@@ -20,7 +21,7 @@ export function openFavoriteMenu(props: OpenFavoriteMenuProps) {
         title: (
             <MenuTitle
                 name={insertableName}
-                icon={<HeartIcon size={IconSize.MEDIUM} />}
+                icon={<FavoriteIcon size={IconSize.MEDIUM} />}
             />
         ),
         size: 500,

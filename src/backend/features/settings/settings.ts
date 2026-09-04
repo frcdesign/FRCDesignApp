@@ -11,11 +11,14 @@ export interface Settings {
     theme: Theme;
     /** The library the caller last opened, and lands in next time. */
     libraryId: LibraryId;
+    /** The group they last opened in it; null for the library itself. */
+    groupId: string | null;
 }
 
 export type SettingsUpdate = Partial<Settings>;
 
 export const DEFAULT_SETTINGS: Settings = {
     theme: Theme.SYSTEM,
-    libraryId: LibraryId.FRC_DESIGN_LIB
+    libraryId: LibraryId.FRC_DESIGN_LIB,
+    groupId: null
 };

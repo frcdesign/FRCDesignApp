@@ -5,9 +5,9 @@ import { LibraryId } from "../features/library/library-id";
 import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
-    ParameterValues,
     ConfigurationParameter,
     ConfigurationRecord,
+    ParameterValues,
     PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
@@ -145,7 +145,10 @@ export const users = sqliteTable("users", {
     libraryId: text("library_id")
         .$type<LibraryId>()
         .notNull()
-        .default(DEFAULT_SETTINGS.libraryId)
+        .default(DEFAULT_SETTINGS.libraryId),
+    // The group last opened in that library, which entry resumes in. Null for
+    // the library itself; a stale one resolves to that, so it is never cleaned.
+    groupId: text("group_id")
 });
 
 export const favorites = sqliteTable(
@@ -164,6 +167,9 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
+        // The selection the favorite opens with, as the user made it: a
+        // canonical one would drop a default-valued or hidden parameter,
+        // including a string they typed. Null for the element's own default.
         defaultConfiguration: text("default_configuration", {
             mode: "json"
         }).$type<ParameterValues | null>(),

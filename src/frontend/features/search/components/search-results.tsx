@@ -1,6 +1,7 @@
 import { useAccessData } from "../../auth/access-level";
 import { ReactNode } from "react";
-import { Position, SearchFilters, SearchHit, doSearch } from "../search";
+import { Position, SearchFilters, SearchHit } from "../search";
+import { searchInsertables } from "../filter";
 import { InsertableCard } from "../../library/components/insertable-card";
 import { ItemTable } from "../../library/components/card-components";
 import {
@@ -36,48 +37,37 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     } else if (!searchDbQuery.data) {
         return <SectionError title="The search database is empty." />;
     }
-    const insertables = libraryQuery.data.insertables;
-    const searchResults = doSearch(
-        searchDbQuery.data,
+    const result = searchInsertables({
+        searchDb: searchDbQuery.data,
+        insertables: libraryQuery.data.insertables,
         query,
         filters,
-        undefined,
-        hasEditorAccess(accessData.currentAccessLevel)
-    );
+        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+    });
 
-    if (searchResults.hits.length === 0) {
+    if (result.insertables.length === 0) {
         return (
             <NoSearchResultError
                 objectLabel="search result"
-                filtered={searchResults.filtered}
+                filtered={result.filtered}
             />
         );
     }
 
-    const callout = (
-        <SearchCallout
-            objectLabel="search result"
-            filtered={searchResults.filtered}
+    const resultCards = result.insertables.map((insertable) => (
+        <InsertableCard
+            key={insertable.id}
+            insertable={insertable}
+            searchHit={result.hits[insertable.id]}
         />
-    );
-    const resultCards = searchResults.hits.map((searchHit: SearchHit) => {
-        const insertableId = searchHit.id;
-        const insertable = insertables[insertableId];
-        if (!insertable) {
-            return null;
-        }
-        return (
-            <InsertableCard
-                key={insertableId}
-                insertable={insertable}
-                searchHit={searchHit}
-            />
-        );
-    });
+    ));
 
     return (
         <>
-            {callout}
+            <SearchCallout
+                objectLabel="search result"
+                filtered={result.filtered}
+            />
             <ItemTable>{resultCards}</ItemTable>
         </>
     );
@@ -97,14 +87,15 @@ export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
 }
 
 /** Underlines wherever the query matched inside `text`. */
-export function HighlightedText({
-    text,
-    positions
-}: {
+interface HighlightedTextProps {
     text: string;
+    /** Where the query matched; nothing highlights when absent. */
     positions?: Position[];
-}): ReactNode {
-    return <>{applyRanges(text, positions ?? [])}</>;
+}
+
+export function HighlightedText(props: HighlightedTextProps): ReactNode {
+    const { text, positions = [] } = props;
+    return <>{applyRanges(text, positions)}</>;
 }
 
 function applyRanges(str: string, ranges: Position[]) {
@@ -119,19 +110,15 @@ function applyRanges(str: string, ranges: Position[]) {
         const { start, length } = range;
         const end = start + length;
 
-        // Add non-highlighted part before this range
         if (currentIndex < start) {
             result.push(str.slice(currentIndex, start));
         }
 
-        // Add highlighted part
-        // Array elements must have a key to avoid a warning
         result.push(<u key={currentIndex}>{str.slice(start, end)}</u>);
 
         currentIndex = end;
     }
 
-    // Add the remaining non-highlighted part
     if (currentIndex < str.length) {
         result.push(str.slice(currentIndex));
     }

@@ -1,14 +1,16 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
+import {
+    type Favorite,
+    getFavoriteForInsertable
+} from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
-import { Info, Plus } from "@phosphor-icons/react";
+import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
-import { MenuTitle } from "../../../components/app-title";
-import { modals } from "@mantine/modals";
+import { useMenuTitle } from "../../../components/app-title";
 import { showQuickInsertTip } from "../quick-insert-tip";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
@@ -22,9 +24,9 @@ import {
     ParameterValues,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
 import { useFavoritesQuery } from "../../favorites/queries";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
@@ -35,33 +37,54 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     defaultConfiguration?: ParameterValues;
+    /** When the menu opened, for the quick insert tip. */
+    openedAt: number;
     onInsert: () => void;
 }
 
+/**
+ * The selection the menu holds, in both the form insert sends and the canonical
+ * one that names a thumbnail, plus whether it still stands where it opened.
+ */
+function useInsertSelection(defaultConfiguration?: ParameterValues) {
+    const [configuration, setConfiguration] = useState(defaultConfiguration);
+    // Reported by ConfigurationWrapper, which has the parameters and units the
+    // canonical form needs. Empty means the element's default configuration.
+    const [canonicalConfiguration, setCanonicalConfiguration] = useState(
+        DEFAULT_CANONICAL_CONFIGURATION
+    );
+    // The first report is what the menu opened with, and so what a right-click
+    // on the card would have inserted. Absent until the parameters load.
+    const [openedWith, setOpenedWith] = useState<string>();
+
+    const onCanonicalConfiguration = useCallback((canonical: string) => {
+        setCanonicalConfiguration(canonical);
+        setOpenedWith((opened) => opened ?? canonical);
+    }, []);
+
+    return {
+        configuration,
+        setConfiguration,
+        canonicalConfiguration,
+        onCanonicalConfiguration,
+        isUnchanged:
+            canonicalConfiguration ===
+            (openedWith ?? DEFAULT_CANONICAL_CONFIGURATION)
+    };
+}
+
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, onInsert } = props;
+    const { insertable, modalId, openedAt, onInsert } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
 
-    const [configuration, setConfiguration] = useState<
-        ParameterValues | undefined
-    >(props.defaultConfiguration);
-    // Reported by ConfigurationWrapper, which has the parameters and units the
-    // canonical form needs. Empty means the element's default configuration.
-    const [canonicalConfiguration, setCanonicalConfiguration] =
-        useState<ParameterValues>({});
-    // The first report is what the menu opened with, and so what a right-click
-    // on the card would have inserted. Absent until the parameters load.
-    const [openedWithConfiguration, setOpenedWithConfiguration] =
-        useState<ParameterValues>();
-
-    const handleCanonicalConfiguration = useCallback(
-        (canonical: ParameterValues) => {
-            setCanonicalConfiguration(canonical);
-            setOpenedWithConfiguration((opened) => opened ?? canonical);
-        },
-        []
-    );
+    const {
+        configuration,
+        setConfiguration,
+        canonicalConfiguration,
+        onCanonicalConfiguration,
+        isUnchanged
+    } = useInsertSelection(props.defaultConfiguration);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
@@ -71,19 +94,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         !insertable.isConfigurable
     ).data?.records[0];
 
-    // The title lives in the modal's chrome, so it's updated rather than
-    // rendered: the header follows the configuration as the user changes it.
-    useEffect(() => {
-        modals.updateModal({
-            modalId,
-            title: (
-                <MenuTitle
-                    name={insertable.name}
-                    record={record ?? soleRecord}
-                />
-            )
-        });
-    }, [modalId, insertable.name, record, soleRecord]);
+    useMenuTitle(modalId, {
+        name: insertable.name,
+        record: record ?? soleRecord
+    });
 
     useEffect(() => {
         // Only once known: pending reads as signed out, which would prompt a
@@ -107,7 +121,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 configuration={configuration}
                 setConfiguration={setConfiguration}
-                onCanonicalConfiguration={handleCanonicalConfiguration}
+                onCanonicalConfiguration={onCanonicalConfiguration}
                 onRecord={setRecord}
             />
         );
@@ -121,44 +135,76 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    canonicalConfiguration={encodeCanonicalConfiguration(
-                        canonicalConfiguration
-                    )}
+                    canonicalConfiguration={canonicalConfiguration}
                 />
                 {parameters}
             </AppModalBody>
-            <AppModalFooter>
-                <Group gap={4}>
-                    <RequireSignIn>
-                        <FavoriteButton
-                            favorite={favorite}
-                            insertable={insertable}
-                            large
-                        />
-                    </RequireSignIn>
-                    <MenuButton large>
-                        <InsertableMenuItems
-                            favorite={favorite}
-                            insertable={insertable}
-                            inInsertMenu
-                            configuration={configuration}
-                        />
-                    </MenuButton>
-                </Group>
-                <InsertButtons
-                    insertable={insertable}
-                    configuration={configuration}
-                    isUnchanged={
-                        encodeCanonicalConfiguration(canonicalConfiguration) ===
-                        encodeCanonicalConfiguration(
-                            openedWithConfiguration ?? {}
-                        )
-                    }
-                    isFavorite={favorite !== undefined}
-                    onInsert={onInsert}
-                />
-            </AppModalFooter>
+            <InsertMenuFooter
+                insertable={insertable}
+                favorite={favorite}
+                configuration={configuration}
+                canonicalConfiguration={canonicalConfiguration}
+                isUnchanged={isUnchanged}
+                openedAt={openedAt}
+                onInsert={onInsert}
+            />
         </>
+    );
+}
+
+interface InsertMenuFooterProps {
+    insertable: InsertableOut;
+    favorite: Favorite | undefined;
+    configuration?: ParameterValues;
+    canonicalConfiguration: string;
+    /** Whether the selection still stands where the menu opened. */
+    isUnchanged: boolean;
+    openedAt: number;
+    onInsert: () => void;
+}
+
+/** Favoriting and the row's own menu, then the buttons that do the inserting. */
+function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
+    const {
+        insertable,
+        favorite,
+        configuration,
+        canonicalConfiguration,
+        isUnchanged,
+        openedAt,
+        onInsert
+    } = props;
+    return (
+        <AppModalFooter>
+            <Group gap={4}>
+                <RequireSignIn>
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                        defaultConfiguration={configuration}
+                        canonicalConfiguration={canonicalConfiguration}
+                        large
+                    />
+                </RequireSignIn>
+                <MenuButton large>
+                    <InsertableMenuItems
+                        favorite={favorite}
+                        insertable={insertable}
+                        inInsertMenu
+                        configuration={configuration}
+                        canonicalConfiguration={canonicalConfiguration}
+                    />
+                </MenuButton>
+            </Group>
+            <InsertButtons
+                insertable={insertable}
+                configuration={configuration}
+                isUnchanged={isUnchanged}
+                isFavorite={favorite !== undefined}
+                openedAt={openedAt}
+                onInsert={onInsert}
+            />
+        </AppModalFooter>
     );
 }
 
@@ -171,6 +217,8 @@ interface InsertButtonsProps {
     insertable: InsertableOut;
     configuration?: ParameterValues;
     isFavorite: boolean;
+    /** When the menu opened, for the quick insert tip. */
+    openedAt: number;
     onInsert: () => void;
 }
 
@@ -178,8 +226,14 @@ interface InsertButtonsProps {
  * The derive/insert button plus the insert and fasten checkbox.
  */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const { insertable, configuration, isUnchanged, isFavorite, onInsert } =
-        props;
+    const {
+        insertable,
+        configuration,
+        isUnchanged,
+        isFavorite,
+        openedAt,
+        onInsert
+    } = props;
 
     const search = useSearch({ from: "/app" });
     // Inserting targets the current Onshape document; there's nothing to insert
@@ -188,7 +242,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const insertMutation = useInsertMutation(insertable, configuration, {
         isFavorite
     });
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -202,10 +257,17 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
         if (isUnchanged) {
-            showQuickInsertTip();
+            showQuickInsertTip(openedAt);
         }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, uiState.fasten, isUnchanged]);
+    }, [
+        insertMutation,
+        onInsert,
+        canFasten,
+        uiState.fasten,
+        isUnchanged,
+        openedAt
+    ]);
 
     if (!isConnected) {
         return null;
@@ -221,7 +283,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                leftSection={<Plus size={IconSize.SMALL} />}
+                leftSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >
@@ -239,7 +301,7 @@ function showSignInPreviewToast() {
     notifications.show({
         id: "sign-in-preview",
         color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
+        icon: <InfoIcon size={IconSize.MEDIUM} />,
         message: renderNotification(
             "Sign in to Onshape to see the configuration preview.",
             { text: "Sign in", onClick: startSignIn }

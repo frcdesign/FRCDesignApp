@@ -2,16 +2,8 @@ import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { ThumbnailSize } from "./types";
-import {
-    THUMBNAIL_FALLBACK_CACHE_TTL,
-    THUMBNAIL_FALLBACK_HEADER,
-    thumbnailKey,
-    thumbnailUrl
-} from "./keys";
-import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    canonicalConfigurationKey
-} from "../configurations/canonical";
+import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 
@@ -33,6 +25,30 @@ function get(url: string, sessionId?: string) {
     }
     return createTestApp().request(url, init, env);
 }
+
+describe("thumbnailKey", () => {
+    it("gives the element default its own prefix", () => {
+        expect(thumbnailKey("e1", MICROVERSION, SIZE)).toBe(
+            `thumbnails/default/e1/${MICROVERSION}/${SIZE}`
+        );
+    });
+
+    // A configuration's separators would otherwise open path segments of their
+    // own, so two different selections could name one key.
+    it("encodes a configuration into a single segment", () => {
+        const key = thumbnailKey("e1", MICROVERSION, SIZE, "a=1;b=2/3");
+        expect(key).toBe(
+            `thumbnails/config/e1/${MICROVERSION}/a%3D1%3Bb%3D2%2F3/${SIZE}`
+        );
+        expect(key.split("/")).toHaveLength(6);
+    });
+
+    it("gives different configurations different keys", () => {
+        expect(thumbnailKey("e1", MICROVERSION, SIZE, "a=1")).not.toBe(
+            thumbnailKey("e1", MICROVERSION, SIZE, "a=2")
+        );
+    });
+});
 
 describe("thumbnail serving", () => {
     afterEach(() => vi.restoreAllMocks());
@@ -95,7 +111,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "config-bytes"
         );
@@ -126,9 +142,9 @@ describe("thumbnail serving", () => {
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 
-    // A configuration we haven't rendered stands in with the element's default,
-    // cached briefly so the real render can take over as soon as it lands.
-    it("falls back to the default thumbnail, cached only briefly", async () => {
+    // A configuration we haven't rendered stands in with the element's default.
+    // Nothing stores it, so the real render is seen the moment it lands.
+    it("falls back to the default thumbnail, stored by nobody", async () => {
         const elementId = "fallback-element";
         await env.BLOB.put(
             thumbnailKey(elementId, MICROVERSION, SIZE),
@@ -145,9 +161,7 @@ describe("thumbnail serving", () => {
         );
         expect(res.status).toBe(200);
         expect(await res.text()).toBe("default-bytes");
-        expect(res.headers.get("Cache-Control")).toBe(
-            `public, max-age=${THUMBNAIL_FALLBACK_CACHE_TTL}`
-        );
+        expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     });
 
     it("prefers the configuration's own thumbnail once it exists", async () => {
@@ -161,7 +175,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 MICROVERSION,
                 SIZE,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "configured-bytes"
         );
@@ -180,7 +194,7 @@ describe("thumbnail serving", () => {
     });
 });
 
-describe("warming a configuration's thumbnail", () => {
+describe("rendering a configuration's thumbnail", () => {
     afterEach(() => vi.restoreAllMocks());
 
     /** Seeds only the default, so a configuration request always misses. */
@@ -191,29 +205,33 @@ describe("warming a configuration's thumbnail", () => {
         );
     }
 
-    it("passes warm as a boolean the validator accepts", () => {
+    it("passes renderThumbnail as a boolean the validator accepts", () => {
         const url = thumbnailUrl({
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
             canonicalConfiguration: CANONICAL_CONFIGURATION,
-            warm: true,
+            renderThumbnail: true,
             insertableId: INSERTABLE_ID
         });
-        expect(new URL(url, "http://x").searchParams.get("warm")).toBe("true");
+        expect(
+            new URL(url, "http://x").searchParams.get("renderThumbnail")
+        ).toBe("true");
     });
 
-    // Without one there is nothing to resolve the element from, so warming is
-    // simply not requested.
-    it("omits warm when no insertable is named", () => {
+    // Without one there is nothing to resolve the element from, so the render
+    // is simply not requested.
+    it("omits renderThumbnail when no insertable is named", () => {
         const url = thumbnailUrl({
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
             canonicalConfiguration: CANONICAL_CONFIGURATION,
-            warm: true
+            renderThumbnail: true
         });
-        expect(new URL(url, "http://x").searchParams.get("warm")).toBeNull();
+        expect(
+            new URL(url, "http://x").searchParams.get("renderThumbnail")
+        ).toBeNull();
     });
 
     it("starts the render on a miss", async () => {
@@ -229,7 +247,7 @@ describe("warming a configuration's thumbnail", () => {
                 microversionId: MICROVERSION,
                 size: SIZE,
                 canonicalConfiguration: CANONICAL_CONFIGURATION,
-                warm: true,
+                renderThumbnail: true,
                 insertableId: INSERTABLE_ID
             }),
             SESSION_ID
@@ -260,7 +278,7 @@ describe("warming a configuration's thumbnail", () => {
                 microversionId: MICROVERSION,
                 size: SIZE,
                 canonicalConfiguration: CANONICAL_CONFIGURATION,
-                warm: true,
+                renderThumbnail: true,
                 insertableId: INSERTABLE_ID
             })
         );
@@ -272,7 +290,7 @@ describe("warming a configuration's thumbnail", () => {
 
     // Search results show many configurations at once; one cold search must not
     // kick off a render per row.
-    it("does not start the render when warm is absent", async () => {
+    it("does not start the render when renderThumbnail is absent", async () => {
         const elementId = "cold-element";
         await seedDefaultOnly(elementId);
         const createSpy = vi.spyOn(env.THUMBNAIL_WORKFLOW, "create");
@@ -329,9 +347,9 @@ describe("warming a configuration's thumbnail", () => {
         expect(urlFor(1)).toBe("1");
     });
 
-    it("rejects a warm that is not a boolean", async () => {
+    it("rejects a renderThumbnail that is not a boolean", async () => {
         const res = await get(
-            `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&c=x&warm=maybe`
+            `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&configuration=x&renderThumbnail=maybe`
         );
         expect(res.status).toBe(400);
     });
@@ -373,7 +391,7 @@ describe("uploadConfigurationThumbnails", () => {
                 elementPath.elementId,
                 MICROVERSION,
                 size,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             );
         expect(await env.BLOB.head(key(ThumbnailSize.SMALL))).not.toBeNull();
         expect(await env.BLOB.head(key(ThumbnailSize.LARGE))).not.toBeNull();
@@ -389,7 +407,7 @@ describe("uploadConfigurationThumbnails", () => {
                     storedPath.elementId,
                     MICROVERSION,
                     size,
-                    canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                    CANONICAL_CONFIGURATION
                 ),
                 "bytes"
             );
@@ -415,7 +433,7 @@ describe("uploadConfigurationThumbnails", () => {
                 partialPath.elementId,
                 MICROVERSION,
                 ThumbnailSize.SMALL,
-                canonicalConfigurationKey(CANONICAL_CONFIGURATION)
+                CANONICAL_CONFIGURATION
             ),
             "bytes"
         );

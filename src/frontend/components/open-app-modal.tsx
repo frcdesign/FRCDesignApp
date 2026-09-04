@@ -1,6 +1,6 @@
 import { modals } from "@mantine/modals";
 import type { ReactNode } from "react";
-import { BORDER, CHROME_BACKGROUND } from "../lib/style-constants";
+import { BORDER, FRAME_BACKGROUND } from "../lib/style-constants";
 
 interface OpenAppModalProps {
     title: ReactNode;
@@ -12,7 +12,7 @@ interface OpenAppModalProps {
 }
 
 /**
- * Opens a modal wearing the app's chrome. Its body is unpadded, so content
+ * Opens a modal framed like the rest of the app. Its body is unpadded, so content
  * belongs in an `AppModalBody` and actions in an `AppModalFooter`.
  */
 export function openAppModal(props: OpenAppModalProps): void {
@@ -34,7 +34,7 @@ export function openAppModal(props: OpenAppModalProps): void {
             // Drawn, not just shadowed, so the card reads as one panel.
             content: { border: BORDER },
             header: {
-                background: CHROME_BACKGROUND,
+                background: FRAME_BACKGROUND,
                 borderBottom: BORDER,
                 padding: "var(--mantine-spacing-sm)",
                 // Otherwise a Mantine minimum, not the padding, sets the height.

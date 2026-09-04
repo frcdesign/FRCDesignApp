@@ -16,30 +16,30 @@ import {
 import {
     Vendor,
     getVendorPartUrl,
-    parsePartNumberVendor,
-    toVendor
+    parseVendor,
+    parseVendorFromPartNumber
 } from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
 /**
- * The record a selection produces. Records key only on enumerated parameters, so
- * several can match; the most specific (most keys) wins.
+ * The record a selection produces. Records name only enumerated parameters, so
+ * several can match; the most specific (the most named) wins. Both sides are
+ * canonical and built in parameter order, so this compares whole assignments.
  */
 export function findRecordForConfiguration(
-    configuration: ParameterValues,
+    canonicalConfiguration: string,
     records: SearchRecord[]
 ): SearchRecord | undefined {
+    const selected = new Set(splitConfiguration(canonicalConfiguration));
     let best: SearchRecord | undefined;
-    let bestKeys = -1;
+    let bestNamed = -1;
     for (const record of records) {
-        const keys = Object.keys(record.configuration);
-        const matches = keys.every(
-            (key) => configuration[key] === record.configuration[key]
-        );
-        if (matches && keys.length > bestKeys) {
+        const named = splitConfiguration(record.canonicalConfiguration);
+        const matches = named.every((assignment) => selected.has(assignment));
+        if (matches && named.length > bestNamed) {
             best = record;
-            bestKeys = keys.length;
+            bestNamed = named.length;
         }
     }
     return best;
@@ -91,29 +91,59 @@ export function evaluateCondition(
  * The page for a part, in descending precision: a description that is already a
  * url, then the vendor the part number names, then the taggings standing in.
  */
+/** A description holding a link is the link, rather than a description. */
+const ABSOLUTE_URL = new RegExp("^https?://", "i");
+
 export function getPartUrl(
     record: PartMetadata,
     vendors: Vendor[] = []
 ): string | undefined {
-    if (record.description && /^https?:\/\//i.test(record.description)) {
+    if (record.description && ABSOLUTE_URL.test(record.description)) {
         return record.description;
     }
-    const vendor =
-        parsePartNumberVendor(record.partNumber) ??
-        toVendor(record.vendor) ??
-        (vendors.length === 1 ? vendors[0] : undefined);
+    // WCP-123 -> WCP, then what the part says it is, then the insertable's
+    // tagging when it names one vendor and one only.
+    let vendor = parseVendorFromPartNumber(record.partNumber);
+    vendor ??= parseVendor(record.vendor);
+    if (!vendor && vendors.length === 1) {
+        vendor = vendors[0];
+    }
     return getVendorPartUrl(vendor, record.partNumber);
 }
 
-export function encodeConfigurationForQuery(
-    configuration?: ParameterValues
-): string {
+/**
+ * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
+ * Values never carry a `;` or an `=`, which is what lets this round-trip.
+ */
+export function encodeConfiguration(configuration?: ParameterValues): string {
     if (!configuration) {
         return "";
     }
     return Object.entries(configuration)
         .map(([id, value]) => `${id}=${value}`)
         .join(";");
+}
+
+/** The assignments a configuration text names, each still `id=value`. */
+export function splitConfiguration(configuration: string): string[] {
+    return configuration.split(";").filter((assignment) => assignment !== "");
+}
+
+/**
+ * The values a configuration text names. A canonical one names only what it
+ * overrides, so what it omits is the parameter's own default.
+ */
+export function decodeConfiguration(configuration: string): ParameterValues {
+    const values: ParameterValues = {};
+    for (const assignment of splitConfiguration(configuration)) {
+        const separator = assignment.indexOf("=");
+        if (separator > 0) {
+            values[assignment.slice(0, separator)] = assignment.slice(
+                separator + 1
+            );
+        }
+    }
+    return values;
 }
 
 export function getOption(
@@ -223,5 +253,5 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [{ ...partMetadata, configuration: {} }, ...records];
+    return [{ ...partMetadata, canonicalConfiguration: "" }, ...records];
 }

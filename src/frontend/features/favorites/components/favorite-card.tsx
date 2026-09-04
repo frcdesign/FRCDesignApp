@@ -1,4 +1,4 @@
-import { encodeCanonicalConfiguration } from "@backend/features/configurations/canonical";
+import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../lib/api-client";
 import { queryClient } from "../../../lib/query-client";
 import { Menu } from "@mantine/core";
-import { Pencil } from "@phosphor-icons/react";
+import { PencilIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
@@ -18,9 +18,10 @@ import {
     QuickInsertItems
 } from "../../library/components/card-components";
 import { useIsInsertableHidden } from "../../library/card-hooks";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
@@ -73,17 +74,21 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     title={insertable.name}
-                    smallThumbnailUrl={insertable.smallThumbnailUrl}
-                    largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    thumbnailTarget={{
-                        elementId: insertable.elementId,
-                        microversionId: insertable.microversionId,
-                        canonicalConfiguration: encodeCanonicalConfiguration(
-                            favorite.defaultConfiguration ?? {}
-                        ),
-                        warm: true,
-                        insertableId: insertable.id
-                    }}
+                    thumbnail={
+                        <CardThumbnail
+                            smallThumbnailUrl={insertable.smallThumbnailUrl}
+                            largeThumbnailUrl={insertable.largeThumbnailUrl}
+                            target={{
+                                elementId: insertable.elementId,
+                                microversionId: insertable.microversionId,
+                                canonicalConfiguration:
+                                    favorite.canonicalConfiguration ??
+                                    DEFAULT_CANONICAL_CONFIGURATION,
+                                renderThumbnail: true,
+                                insertableId: insertable.id
+                            }}
+                        />
+                    }
                     searchHit={searchHit}
                 />
             }
@@ -108,7 +113,7 @@ interface FavoriteMenuItemsProps {
 function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
-    const uiState = useUiState()[0];
+    const uiState = useGetUiState();
     const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
@@ -127,7 +132,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 </>
             )}
             <Menu.Item
-                leftSection={<Pencil size={IconSize.SMALL} />}
+                leftSection={<PencilIcon size={IconSize.SMALL} />}
                 onClick={() => {
                     if (!insertable.isConfigurable) {
                         openCannotEditDefaultConfigurationAlert();

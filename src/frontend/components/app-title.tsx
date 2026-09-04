@@ -8,11 +8,17 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
+import { type ReactNode, useEffect } from "react";
+import { modals } from "@mantine/modals";
 import type { SearchRecord } from "@backend/features/configurations/models";
-import { FontWeight, IconSize, TITLE_ICON_NUDGE } from "../lib/style-constants";
-import { displayPartNumber } from "../lib/part-number";
+import {
+    FontWeight,
+    IconSize,
+    StatusColor,
+    TITLE_ICON_NUDGE
+} from "../lib/style-constants";
+import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 
 interface AppTitleProps {
     title: ReactNode;
@@ -40,9 +46,8 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     {rightSection}
                 </Group>
                 {subtitle && (
-                    // lh, because the title's own is 1: inheriting that
-                    // leaves no leading under the last line, and the block
-                    // reads low against a header padded evenly.
+                    // lh, because inheriting the title's 1 leaves no leading
+                    // under the last line, reading low in an evenly padded header.
                     <Group
                         gap={4}
                         wrap="nowrap"
@@ -51,7 +56,7 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                         miw={0}
                         fz="xs"
                         lh="xs"
-                        c="dimmed"
+                        c={StatusColor.DIMMED}
                     >
                         {subtitle}
                     </Group>
@@ -72,7 +77,7 @@ interface MenuTitleProps {
  * number is what identifies what gets inserted. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
-    const partNumber = displayPartNumber(record?.partNumber, name);
+    const partNumber = meaningfulPartNumber(record?.partNumber, name);
     return (
         <AppTitle
             icon={icon}
@@ -86,17 +91,39 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
     );
 }
 
+interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
+    /** Undefined until known, which leaves the title the opener set. */
+    name: string | undefined;
+}
+
+/**
+ * Keeps a modal's header on the selection in view. The header is updated rather
+ * than rendered, being the modal's rather than the content's.
+ */
+export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
+    const { name, record, icon } = props;
+    useEffect(() => {
+        if (name === undefined) {
+            return;
+        }
+        modals.updateModal({
+            modalId,
+            title: <MenuTitle name={name} record={record} icon={icon} />
+        });
+    }, [modalId, name, record, icon]);
+}
+
 /** The xs line box the subtitle row is otherwise sized by, floored. */
 const COPY_BUTTON_SIZE = 16;
 
 /** The part number, linked to the vendor's page for it when there is one. */
-function PartNumber({
-    partNumber,
-    url
-}: {
+interface PartNumberProps {
     partNumber: string;
     url?: string;
-}): ReactNode {
+}
+
+function PartNumber(props: PartNumberProps): ReactNode {
+    const { partNumber, url } = props;
     // Nowhere to send them, so offer the number itself to search with.
     if (!url) {
         return (
@@ -120,9 +147,9 @@ function PartNumber({
                                 onClick={copy}
                             >
                                 {copied ? (
-                                    <Check size={IconSize.TINY} />
+                                    <CheckIcon size={IconSize.TINY} />
                                 ) : (
-                                    <Copy size={IconSize.TINY} />
+                                    <CopyIcon size={IconSize.TINY} />
                                 )}
                             </ActionIcon>
                         </Tooltip>
@@ -149,7 +176,7 @@ function PartNumber({
             <Text component="span" inherit truncate miw={0}>
                 {partNumber}
             </Text>
-            <ArrowSquareOut size={IconSize.TINY} />
+            <ArrowSquareOutIcon size={IconSize.TINY} />
         </Anchor>
     );
 }

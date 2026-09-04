@@ -3,23 +3,25 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import {
     AccessLevel,
     type AccessData,
-    hasAdminAccess,
-    hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
-import { useUiState } from "../../lib/ui-state";
-
-const DEFAULT_ACCESS_DATA: AccessData = {
-    maxAccessLevel: AccessLevel.USER,
-    signedIn: false
-};
+import { useGetUiState } from "../../lib/ui-state";
 
 /** The level the app is viewed as by default; the dev override grants it too. */
 const DEFAULT_ACCESS_LEVEL =
     (import.meta.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined) ??
     AccessLevel.USER;
+
+/**
+ * What the app assumes until the server answers. Granted as well as viewed, or
+ * the clamp below would drop a dev override while the query is pending.
+ */
+const DEFAULT_ACCESS_DATA: AccessData = {
+    maxAccessLevel: DEFAULT_ACCESS_LEVEL,
+    signedIn: false
+};
 
 export function getAccessDataQuery() {
     return queryOptions<AccessData>({
@@ -45,7 +47,7 @@ export interface ResolvedAccessData extends AccessData {
 export function useAccessData(): ResolvedAccessData {
     const { data, isPending } = useQuery(getAccessDataQuery());
     const serverData = data ?? DEFAULT_ACCESS_DATA;
-    const chosenLevel = useUiState()[0].accessLevel;
+    const chosenLevel = useGetUiState().accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
         // A stored choice can outlive the access that allowed it; clamp to max.
@@ -76,24 +78,20 @@ interface RequireAccessLevelProps extends PropsWithChildren {
 }
 
 export function RequireAccessLevel(props: RequireAccessLevelProps) {
+    const {
+        accessLevel = AccessLevel.EDITOR,
+        useMaxAccessLevel = false,
+        children
+    } = props;
     const accessData = useAccessData();
-    const requiredAccessLevel = props.accessLevel ?? AccessLevel.EDITOR;
-    const currentAccessLevel = props.useMaxAccessLevel
+    const currentAccessLevel = useMaxAccessLevel
         ? accessData.maxAccessLevel
         : accessData.currentAccessLevel;
 
-    if (
-        requiredAccessLevel === AccessLevel.ADMIN &&
-        hasAdminAccess(currentAccessLevel)
-    ) {
-        return props.children;
-    } else if (
-        requiredAccessLevel === AccessLevel.EDITOR &&
-        hasEditorAccess(currentAccessLevel)
-    ) {
-        return props.children;
-    }
-    return null;
+    // Reads backwards: the level held is the ceiling the requirement fits under.
+    return isWithinAccessLevel(accessLevel, currentAccessLevel)
+        ? children
+        : null;
 }
 
 export function RequireSignIn(props: PropsWithChildren) {

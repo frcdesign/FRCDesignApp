@@ -1,27 +1,23 @@
 import { ActionIcon, Button, Menu } from "@mantine/core";
-import { Funnel, FunnelX } from "@phosphor-icons/react";
+import { FunnelIcon, FunnelXIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { getVendorName } from "@backend/features/library/vendors";
 import { Vendor } from "@backend/features/library/vendors";
-import { useUiState } from "../../../lib/ui-state";
+import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 
 interface ClearFiltersButtonProps {
-    /**
-     * @default "Clear filters"
-     */
+    /** @default "Clear filters" */
     text?: string;
-    /**
-     * @default false
-     */
+    /** @default false */
     small?: boolean;
 }
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
-    const [uiState, setUiState] = useUiState();
-    const text = props.text ?? "Clear filters";
-    const small = props.small ?? false;
+    const { text = "Clear filters", small = false } = props;
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
 
     const vendorFilters = uiState.vendorFilters;
     const areAllTagsActive = vendorFilters === undefined;
@@ -31,7 +27,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
             disabled={areAllTagsActive}
             variant="default"
             size={small ? "xs" : undefined}
-            leftSection={<FunnelX size={IconSize.SMALL} />}
+            leftSection={<FunnelXIcon size={IconSize.SMALL} />}
             onClick={() => {
                 setUiState({ vendorFilters: undefined });
             }}
@@ -46,7 +42,8 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
  * vendor checkbox items. `undefined` filters mean "all vendors active".
  */
 export function VendorMenu(): ReactNode {
-    const [uiState, setUiState] = useUiState();
+    const uiState = useGetUiState();
+    const setUiState = useSetUiState();
     const hasFilters = uiState.vendorFilters !== undefined;
 
     const menuItems = (
@@ -69,7 +66,7 @@ export function VendorMenu(): ReactNode {
             </Menu.CheckboxGroup>
             <Menu.Divider />
             <Menu.Item
-                leftSection={<FunnelX size={IconSize.SMALL} />}
+                leftSection={<FunnelXIcon size={IconSize.SMALL} />}
                 disabled={!hasFilters}
                 onClick={() => setUiState({ vendorFilters: undefined })}
             >
@@ -87,7 +84,7 @@ export function VendorMenu(): ReactNode {
                 size="input-sm"
                 title="Filter vendors"
             >
-                <Funnel size={IconSize.CONTROL} />
+                <FunnelIcon size={IconSize.CONTROL} />
             </ActionIcon>
         </AppContextMenu>
     );

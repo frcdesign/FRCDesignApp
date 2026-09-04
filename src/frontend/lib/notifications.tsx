@@ -1,8 +1,8 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
-import { CheckCircle, Info, XCircle } from "@phosphor-icons/react";
-import { IconSize } from "./style-constants";
-import { Group, Button } from "@mantine/core";
+import { CheckCircleIcon, InfoIcon, XCircleIcon } from "@phosphor-icons/react";
+import { IconSize, NO_SHRINK } from "./style-constants";
+import { Box, Group, Button } from "@mantine/core";
 
 export interface NotificationAction {
     text: string;
@@ -23,12 +23,14 @@ export function renderNotification(
         <Group justify="space-between" wrap="nowrap" gap="sm">
             {/* Only reachable on a window too narrow for the row: the message
                 is what gives, and the button keeps its label intact. */}
-            <span style={{ minWidth: 0 }}>{message}</span>
+            <Box component="span" miw={0}>
+                {message}
+            </Box>
             <Button
                 size="compact-sm"
                 variant="subtle"
                 onClick={action.onClick}
-                style={{ flexShrink: 0 }}
+                style={NO_SHRINK}
             >
                 {action.text}
             </Button>
@@ -88,7 +90,7 @@ export function showInfoToast(
 ): string {
     return showToast({
         color: "blue",
-        icon: <Info size={IconSize.MEDIUM} />,
+        icon: <InfoIcon size={IconSize.MEDIUM} />,
         message,
         ...options
     });
@@ -109,16 +111,16 @@ export function showSuccessToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "green",
-        icon: <CheckCircle size={IconSize.MEDIUM} />,
+        icon: <CheckCircleIcon size={IconSize.MEDIUM} />,
         message
     });
 }
 
-export function showErrorToast(message: string, id?: string): string {
+export function showErrorToast(message: ReactNode, id?: string): string {
     return showToast({
         id,
         color: "red",
-        icon: <XCircle size={IconSize.MEDIUM} />,
+        icon: <XCircleIcon size={IconSize.MEDIUM} />,
         message
     });
 }

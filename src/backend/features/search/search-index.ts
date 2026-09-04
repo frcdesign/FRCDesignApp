@@ -7,31 +7,23 @@ import { LibraryOut } from "../library/contract";
 import { Vendor } from "../library/vendors";
 import { ConfigurationRecord, SearchRecord } from "../configurations/models";
 import { getPartUrl } from "../configurations/utils";
+import {
+    isPlaceholderPartNumber,
+    meaningfulPartNumber
+} from "../configurations/part-number";
+import { clean } from "../../lib/text";
 
-const deliminator = "^";
+/** Where a name breaks: punctuation and space, plus a quote used as a quote. */
+const NAME_SEPARATORS = new RegExp("(?<!\\d)\"|[-()',#&\\s/]+");
 
-/**
- * Adds spaces to a given string so prefix matching is more efficient.
- */
-export function processTerm(term: string): string[] {
-    // Split between lowercase-to-uppercase (camelCase -> camel case)
-    const camelSplit = term
-        .replace(/([a-z])([A-Z])/g, `$1${deliminator}$2`)
-        .split(deliminator);
+/** Where a part number breaks into segments, keeping the whole alongside. */
+const PART_NUMBER_SEPARATORS = new RegExp("[-/]+");
 
-    // Insert spaces to handle MAXTube->MAX Tube, VEXpro->VEX pro
-    const pascalSplit = term
-        .replace(/([A-Z])([A-Z][a-z])/g, `$1${deliminator}$2`)
-        .split(deliminator);
-
-    const base = term.toLowerCase();
-
-    const terms = [...camelSplit, ...pascalSplit, base].map((t) =>
-        t.toLowerCase()
-    );
-    // Deduplicate
-    return Array.from(new Set(terms));
-}
+/** camelCase and PascalCase boundaries: MAXSpline -> max spline, MAXTube -> max tube. */
+const WORD_BOUNDARIES = new RegExp(
+    "(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])",
+    "g"
+);
 
 // A mixed number, simple fraction, decimal (incl. leading-dot), or plain
 // integer. Alternatives are ordered longest-first so `1-1/2` is consumed whole,
@@ -44,16 +36,28 @@ function withoutLeadingZeros(digits: string): string {
     return digits.replace(/^0+(?=\d)/, "");
 }
 
-/** One 2-dp decimal, the single form every number is stored and queried as. */
-function toDecimal(value: number): string {
-    return String(Math.round(value * 100) / 100);
-}
+/** How a measurement is spelled to 2dp: what it rounds to, and what it starts. */
+type DecimalSpelling = (value: number) => string;
+
+const rounded: DecimalSpelling = (value) =>
+    String(Math.round(value * 100) / 100);
+const truncated: DecimalSpelling = (value) =>
+    String(Math.trunc(value * 100) / 100);
+
+/**
+ * Both spellings of a measurement, since the library writes the same one either
+ * way: `.196` is written `.2` by one vendor and `.19` by the next. Storing and
+ * searching both is what lets either find the part. Most numbers spell the same
+ * both ways and so cost nothing.
+ */
+const DECIMAL_SPELLINGS: DecimalSpelling[] = [rounded, truncated];
 
 /**
  * Rewrites numbers and fractions to one 2-dp decimal, at index and query time
- * alike — which is what lets the raw fragments go unstored.
+ * alike — which is what lets the raw fragments go unstored. Names only: a part
+ * number is an identifier, and 217-2600 is not two thousand six hundred.
  */
-function canonicalizeNumbers(text: string): string {
+function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
     return text.replace(
         NUMERIC_PATTERN,
         (match, mixedWhole, mixedNum, mixedDen, fracNum, fracDen) => {
@@ -88,19 +92,117 @@ function canonicalizeNumbers(text: string): string {
 }
 
 /**
- * For direct, non-tokenized comparison: the index's number canonicalization,
+ * For direct, non-tokenized comparison: the index's canonicalization,
  * lowercased, so a `.5` query lines up with a stored `"1/2 Bearing"`.
  */
 export function normalizeForMatch(text: string): string {
-    return canonicalizeNumbers(text).toLowerCase();
+    return canonicalizeNumbers(text, rounded).toLowerCase();
 }
 
-export function tokenize(text: string): string[] {
-    // Canonicalize before splitting: fractions span `/` and `-`. Casing stays,
+/**
+ * A name's words, with its sizes in the one decimal spelling. The inch mark
+ * stays on its number, so `1"` is a size rather than a prefix of `1.5` and `16t`.
+ */
+export function tokenizeName(text: string): string[] {
+    const tokens = new Set<string>();
+    // Canonicalized before splitting: fractions span `/` and `-`. Casing stays,
     // since processTerm splits on camelCase.
-    return canonicalizeNumbers(text)
-        .split(/[-()"'#&\s^/]+/)
-        .filter(Boolean);
+    for (const toDecimal of DECIMAL_SPELLINGS) {
+        for (const token of splitWithMarks(
+            canonicalizeNumbers(text, toDecimal)
+        )) {
+            tokens.add(token);
+        }
+    }
+    return Array.from(tokens);
+}
+
+/** Splits on `NAME_SEPARATORS`, keeping a `"` that measures its number. */
+function splitWithMarks(text: string): string[] {
+    const tokens: string[] = [];
+    for (const piece of text.split(NAME_SEPARATORS)) {
+        // The split consumed the separators, so an inch mark left inside a
+        // piece ends the token it measures: `1"x2"` is two sizes.
+        for (const token of piece.split(/(?<=")/)) {
+            if (token) tokens.push(token);
+        }
+    }
+    return tokens;
+}
+
+/**
+ * A part number identifies, it does not describe: it is indexed as typed, plus
+ * its segments, so `WCP-1025` is found by the whole number or either half.
+ */
+export function tokenizePartNumber(text: string): string[] {
+    const whole = clean(text)?.toLowerCase();
+    if (!whole) {
+        return [];
+    }
+    const segments = whole.split(PART_NUMBER_SEPARATORS).filter(Boolean);
+    return Array.from(new Set([whole, ...segments]));
+}
+
+/** The fields holding an identifier rather than a description. */
+function isPartNumberField(field?: string): boolean {
+    return field === "partNumbers";
+}
+
+/** Splits a field's text the way that field reads; a query has no field. */
+export function tokenize(text: string, field?: string): string[] {
+    if (field === undefined) {
+        return tokenizeQuery(text);
+    }
+    return isPartNumberField(field)
+        ? tokenizePartNumber(text)
+        : tokenizeName(text);
+}
+
+/**
+ * A query is split both ways, since the caller may have typed either kind of
+ * text: the words of a name, and the literal a part number is indexed as.
+ */
+export function tokenizeQuery(text: string): string[] {
+    const tokens: string[] = [];
+    // The name reading keeps its case, for processTerm to split camelCase on,
+    // so the literal reading of the same word is a duplicate rather than a
+    // second term to search.
+    const seen = new Set<string>();
+    for (const word of text.trim().split(/\s+/)) {
+        // Ingest drops the placeholder, so nothing carries it; typed, it is
+        // still the word for a part number nobody has, and searching its
+        // letters would answer with whatever starts with `n` or `a`.
+        if (!word || isPlaceholderPartNumber(word)) {
+            continue;
+        }
+        // Segments only for something carrying a letter, which is what a part
+        // number does: splitting a bare `1/2` would search `1`, and a prefix
+        // that short matches every number in the library.
+        const literal = /[a-z]/i.test(word)
+            ? tokenizePartNumber(word)
+            : [word.toLowerCase()];
+        for (const token of [...tokenizeName(word), ...literal]) {
+            if (seen.has(token.toLowerCase())) {
+                continue;
+            }
+            seen.add(token.toLowerCase());
+            tokens.push(token);
+        }
+    }
+    return tokens;
+}
+
+/**
+ * Adds the words inside a compound term, so `MAXSpline` is found by `spline`.
+ * A part number is left whole: its segments are already separate tokens.
+ */
+export function processTerm(term: string, field?: string): string[] {
+    const base = term.toLowerCase();
+    if (isPartNumberField(field)) {
+        return [base];
+    }
+    const words = term.split(WORD_BOUNDARIES).map((word) => word.toLowerCase());
+    return Array.from(new Set([...words, base]));
 }
 
 export interface SearchDocument {
@@ -151,21 +253,10 @@ function uniqueJoin(values: (string | undefined)[]): string {
 }
 
 /**
- * A part number repeating the name identifies nothing — it is what a generic
- * part is given for want of a real one — so it is neither shown nor searched.
- */
-function withoutRepeatedPartNumber(
-    record: ConfigurationRecord
-): ConfigurationRecord {
-    const repeated =
-        record.partNumber?.trim().toLowerCase() ===
-        record.name?.trim().toLowerCase();
-    return repeated ? { ...record, partNumber: undefined } : record;
-}
-
-/**
  * Keeps the first of each distinct (part number, name) in enumeration order and
- * drops records with neither. First-wins is what keeps the latest revision.
+ * drops records with neither. First-wins is what keeps the latest revision. A
+ * number that identifies nothing is dropped here, so it never reaches the
+ * index, the stored records, or a vendor url.
  */
 export function toSearchRecords(
     records: ConfigurationRecord[],
@@ -174,20 +265,21 @@ export function toSearchRecords(
     const seen = new Set<string>();
     const searchRecords: SearchRecord[] = [];
     for (const raw of records) {
-        const record = withoutRepeatedPartNumber(raw);
-        if (!record.partNumber && !record.name) {
+        const partNumber = meaningfulPartNumber(raw.partNumber, raw.name);
+        const name = clean(raw.name);
+        if (!partNumber && !name) {
             continue;
         }
-        const key = JSON.stringify([record.partNumber, record.name]);
+        const key = JSON.stringify([partNumber, name]);
         if (seen.has(key)) {
             continue;
         }
         seen.add(key);
         searchRecords.push({
-            partNumber: record.partNumber,
-            name: record.name,
-            url: getPartUrl(record, vendors),
-            configuration: record.configuration
+            partNumber,
+            name,
+            url: getPartUrl({ ...raw, partNumber }, vendors),
+            canonicalConfiguration: raw.canonicalConfiguration
         });
     }
     return searchRecords;

@@ -1,13 +1,19 @@
 /**
  * The one shape every failed /api response takes; `kind` tells the client what
- * to do and carries what that kind needs. A leaf module the frontend imports.
+ * to do about it. A leaf module the frontend imports.
  */
+import { HttpStatus } from "http-status-ts";
+// Type-only, so this stays a leaf the frontend can import: the statuses that
+// can carry a body, which is every status an error of ours is sent with.
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 export enum ApiErrorKind {
     /** `message` is written for the user; show it. */
     HANDLED = "handled",
-    /** Onshape is rate limiting us, and said how long to wait. */
-    RATE_LIMITED = "rate-limited",
+    /** No usable Onshape session: the client can offer to sign in again. */
+    SIGN_IN_REQUIRED = "sign-in-required",
+    /** Signed in, but this caller is not allowed to do it. */
+    FORBIDDEN = "forbidden",
     /** `message` is for the logs. The client shows its own wording instead. */
     INTERNAL = "internal"
 }
@@ -19,14 +25,15 @@ interface ApiErrorOf<K extends ApiErrorKind> {
 
 export type ApiErrorBody =
     | ApiErrorOf<ApiErrorKind.HANDLED>
-    | ApiErrorOf<ApiErrorKind.INTERNAL>
-    | (ApiErrorOf<ApiErrorKind.RATE_LIMITED> & { retryAfterSeconds: number });
+    | ApiErrorOf<ApiErrorKind.SIGN_IN_REQUIRED>
+    | ApiErrorOf<ApiErrorKind.FORBIDDEN>
+    | ApiErrorOf<ApiErrorKind.INTERNAL>;
 
 /** Thrown by a route; the app's error handler turns it into the response. */
 export class ApiError extends Error {
     constructor(
         readonly body: ApiErrorBody,
-        readonly status: number
+        readonly status: ContentfulStatusCode
     ) {
         super(body.message);
         this.name = "ApiError";
@@ -35,22 +42,33 @@ export class ApiError extends Error {
 }
 
 /** The wording reaches the user, so write it for them. */
-export function handledError(message: string, status: number): ApiError {
+export function handledError(
+    message: string,
+    status: ContentfulStatusCode
+): ApiError {
     return new ApiError({ kind: ApiErrorKind.HANDLED, message }, status);
 }
 
 /** The client will show its own wording; this text is only for the logs. */
-export function internalError(message: string, status: number): ApiError {
+export function internalError(
+    message: string,
+    status: ContentfulStatusCode
+): ApiError {
     return new ApiError({ kind: ApiErrorKind.INTERNAL, message }, status);
 }
 
-export function rateLimitedError(
-    message: string,
-    status: number,
-    retryAfterSeconds: number
-): ApiError {
+/** The caller has no session Onshape accepts; the client can offer them one. */
+export function signInRequiredError(message: string): ApiError {
     return new ApiError(
-        { kind: ApiErrorKind.RATE_LIMITED, message, retryAfterSeconds },
-        status
+        { kind: ApiErrorKind.SIGN_IN_REQUIRED, message },
+        HttpStatus.UNAUTHORIZED
+    );
+}
+
+/** The caller is known, and this is not theirs to do. */
+export function forbiddenError(message: string): ApiError {
+    return new ApiError(
+        { kind: ApiErrorKind.FORBIDDEN, message },
+        HttpStatus.FORBIDDEN
     );
 }

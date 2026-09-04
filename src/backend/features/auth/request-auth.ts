@@ -1,6 +1,7 @@
 /**
- * Resolves who is calling from their session, memoized in KV. `createApp` binds
- * `productionCaller` onto every request; guards and routes read it via `c.var`.
+ * Answers a request's auth questions from its session, memoized in KV.
+ * `createApp` binds `productionAuth` onto every request; guards and routes ask
+ * it through `c.var`.
  */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
@@ -9,7 +10,7 @@ import {
     getSessionInfo,
     getUserId
 } from "../../lib/onshape/endpoints/users";
-import { type AppContext, type CallerFactory } from "../../lib/context";
+import { type AppContext, type AuthResolver } from "../../lib/context";
 import { AccessLevel } from "./access-level";
 import {
     getOauthClient,
@@ -17,6 +18,7 @@ import {
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import {
+    accessLevelKey,
     getSession,
     getSessionCompanyId,
     getSessionId,
@@ -108,32 +110,27 @@ function getAccessLevelOverride(c: AppContext): AccessLevel | undefined {
     return c.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined;
 }
 
+/** Whether the session resolves to tokens Onshape will take. */
+async function hasOnshapeSession(c: AppContext): Promise<boolean> {
+    try {
+        await c.var.getOnshapeApi();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Whether the caller has a valid Onshape session, memoized on the request.
- * `FORCE_SIGNED_IN` forces it true for testing.
+ * `FORCE_SIGNED_IN` stands in for the session it cannot have in development.
  */
 export async function isSignedIn(c: AppContext): Promise<boolean> {
     const cached = c.get("signedIn");
     if (cached !== undefined) return cached;
 
-    let signedIn: boolean;
-    if (isForceSignedIn(c)) {
-        signedIn = true;
-    } else {
-        try {
-            await c.var.getOnshapeApi();
-            signedIn = true;
-        } catch {
-            signedIn = false;
-        }
-    }
-
+    const signedIn = isForceSignedIn(c) || (await hasOnshapeSession(c));
     c.set("signedIn", signedIn);
     return signedIn;
-}
-
-function accessLevelKey(sessionId: string): string {
-    return `access-level:${sessionId}`;
 }
 
 /** Returns the caller's access level, memoized in KV by session. */
@@ -156,10 +153,10 @@ export async function getCachedAccessLevel(
 }
 
 /**
- * Production wiring. getUserId only runs behind requireSignInMiddleware;
+ * The real answers. getUserId only runs behind requireSignInMiddleware;
  * getAccessLevel falls back to USER for anyone without a real Onshape session.
  */
-export const productionCaller: CallerFactory = (c) => ({
+export const productionAuth: AuthResolver = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),
     getUserId: () => {
         // FORCE_SIGNED_IN has no real Onshape session; use a stable fake id.

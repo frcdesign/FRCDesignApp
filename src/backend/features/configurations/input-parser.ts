@@ -30,6 +30,28 @@ export function valueWithUnits(value: number, unit: Unit): ValueWithUnits {
     return { value: value * getUnitFactor(unit), type: getUnitType(unit) };
 }
 
+/** What a type is measured in once parsed, which is what Onshape stores. */
+function baseUnit(type: UnitType): Unit {
+    switch (type) {
+        case "length":
+            return Unit.METER;
+        case "angle":
+            return Unit.RADIAN;
+        case "number":
+            return Unit.UNITLESS;
+    }
+}
+
+/**
+ * The one spelling of a value: its base unit, to the decimals its tolerance
+ * distinguishes. Two values this module reads as equal spell the same, which
+ * is what makes the spelling worth keying on.
+ */
+export function formatBaseValue(value: ValueWithUnits): string {
+    const precision = Math.round(-Math.log10(TOLERANCE[value.type]));
+    return formatValueWithUnits(value, baseUnit(value.type), precision);
+}
+
 function tolerantEqualsZero(value: ValueWithUnits) {
     return tolerantEquals(value, { value: 0, type: value.type });
 }
@@ -83,7 +105,7 @@ type UnitType = "length" | "angle" | "number";
 
 type Operator = "+" | "-" | "*" | "/";
 
-interface ValueWithUnits {
+export interface ValueWithUnits {
     value: number;
     type: UnitType;
 }
@@ -660,7 +682,7 @@ export function evaluateBaseValue(
     input: string,
     quantityType: QuantityType,
     defaultUnit: Unit
-): number | undefined {
+): ValueWithUnits | undefined {
     let value: ValueWithUnits;
     try {
         value = evaluateExpressionValue(parseExpression(input), quantityType);
@@ -674,7 +696,7 @@ export function evaluateBaseValue(
     ) {
         value = applyDefaultUnit(value, defaultUnit);
     }
-    return value.value;
+    return value;
 }
 
 export function evaluateExpression(

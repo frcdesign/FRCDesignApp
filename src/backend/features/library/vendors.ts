@@ -1,3 +1,8 @@
+import { clean } from "../../lib/text";
+
+/** A part number's leading letters, which name the vendor that sells it. */
+const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
+
 /** The vendors an insertable can come from, and how they are displayed. */
 export enum Vendor {
     AM = "AM",
@@ -19,8 +24,8 @@ export enum Vendor {
  * Resolves the free text Onshape carries as a vendor to one we know, written
  * either as its code or as its full name.
  */
-export function toVendor(vendor: string | undefined): Vendor | undefined {
-    const text = vendor?.trim().toUpperCase();
+export function parseVendor(vendor: string | undefined): Vendor | undefined {
+    const text = clean(vendor)?.toUpperCase();
     if (!text) {
         return undefined;
     }
@@ -35,10 +40,10 @@ export function toVendor(vendor: string | undefined): Vendor | undefined {
  * The vendor a part number names itself, e.g. `WCP-1025` — more precise than an
  * insertable's tagging, which is generic wherever one part spans vendors.
  */
-export function parsePartNumberVendor(
+export function parseVendorFromPartNumber(
     partNumber: string | undefined
 ): Vendor | undefined {
-    return toVendor(/^([A-Za-z]+)-/.exec(partNumber?.trim() ?? "")?.[1]);
+    return parseVendor(VENDOR_PREFIX.exec(clean(partNumber) ?? "")?.[1]);
 }
 
 /**

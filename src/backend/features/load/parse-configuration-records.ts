@@ -10,7 +10,8 @@ import {
     ParameterValues,
     ConfigurationParameter,
     PartMetadata,
-    ConfigurationRecord
+    ConfigurationRecord,
+    ProbedRecord
 } from "../configurations/models";
 import {
     addBuildIssue,
@@ -22,7 +23,10 @@ import {
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
-import { canonicalizeConfiguration } from "../configurations/canonical";
+import {
+    DEFAULT_CANONICAL_CONFIGURATION,
+    canonicalizeConfiguration
+} from "../configurations/canonical";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
@@ -31,6 +35,7 @@ import type {
 } from "../../lib/onshape/types";
 import { type LoadContext, getOnshapeApiFromContext } from "./context";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
+import { clean } from "../../lib/text";
 
 /** Configurations fetched per workflow step. */
 const BATCH_SIZE = 20;
@@ -59,8 +64,7 @@ export const INDEXING_ISSUE_TYPES = [
     BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED,
     BuildIssueType.MANUAL_INDEXING_REQUIRED,
     BuildIssueType.MULTIPLE_PARTS,
-    BuildIssueType.UNSTABLE_COMPOSITE,
-    BuildIssueType.NO_PART_NUMBER
+    BuildIssueType.UNSTABLE_COMPOSITE
 ];
 
 /** Whether to index an insertable, and how to flag it if we don't. */
@@ -107,12 +111,6 @@ export function decideIndexing(
     return { shouldIndex, buildIssues: [], configurations };
 }
 
-/** Trims a raw metadata value; a missing or blank one becomes `null`. */
-function normalizeText(value: string | undefined | null): string | undefined {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : undefined;
-}
-
 /** What a part studio's parts resolve to, before build issues are decided. */
 export interface PartsEvaluation {
     /** True when more than one part could be the one to index. */
@@ -156,7 +154,7 @@ export function parsePartStudioRecord(
     parts: OnshapePart[],
     configuration: ParameterValues,
     isOpenComposite: boolean
-): ConfigurationRecord {
+): ProbedRecord {
     const evaluation = evaluateParts(parts);
     // An element that is an open composite everywhere else has no part to read
     // in a configuration that loses it; toResult raises the build issue.
@@ -170,11 +168,11 @@ export function parsePartStudioRecord(
     const part = evaluation.partToUse;
     return {
         configuration,
-        partNumber: normalizeText(part?.partNumber),
-        name: normalizeText(part?.name),
-        description: normalizeText(part?.description),
-        material: normalizeText(part?.material?.displayName),
-        vendor: normalizeText(part?.vendor),
+        partNumber: clean(part?.partNumber),
+        name: clean(part?.name),
+        description: clean(part?.description),
+        material: clean(part?.material?.displayName),
+        vendor: clean(part?.vendor),
         hasMultipleParts: evaluation.hasMultipleParts,
         isOpenComposite: evaluation.isOpenComposite
     };
@@ -192,10 +190,10 @@ const METADATA_FIELDS = {
 /** Reads a metadata property value as text; materials arrive as `{displayName}`. */
 function readMetadataValue(value: unknown): string | undefined {
     if (typeof value === "string") {
-        return normalizeText(value);
+        return clean(value);
     }
     if (value && typeof value === "object" && "displayName" in value) {
-        return normalizeText((value as { displayName?: string }).displayName);
+        return clean((value as { displayName?: string }).displayName);
     }
     return undefined;
 }
@@ -204,9 +202,9 @@ function readMetadataValue(value: unknown): string | undefined {
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
     configuration: ParameterValues
-): ConfigurationRecord {
+): ProbedRecord {
     // An assembly is never a composite, so it reads nothing about one.
-    const record: ConfigurationRecord = {
+    const record: ProbedRecord = {
         configuration,
         hasMultipleParts: false,
         isOpenComposite: false
@@ -242,7 +240,7 @@ export async function parseConfigurationRecords(
     );
     const batches = planBatches(configurations, parameters);
 
-    const batchRecords: ConfigurationRecord[][] = [];
+    const batchRecords: ProbedRecord[][] = [];
     for (const batch of batches) {
         batchRecords.push(
             await fetchBatch(
@@ -284,7 +282,7 @@ export async function loadConfigurationRecords(
     );
     const batches = planBatches(configurations, parameters);
 
-    const batchRecords: ConfigurationRecord[][] = [];
+    const batchRecords: ProbedRecord[][] = [];
     for (const [index, batch] of batches.entries()) {
         batchRecords.push(
             await ctx.step.do(
@@ -316,8 +314,8 @@ function planBatches(
     // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
         (configuration) =>
-            Object.keys(canonicalizeConfiguration(configuration, parameters))
-                .length > 0
+            canonicalizeConfiguration(configuration, parameters) !==
+            DEFAULT_CANONICAL_CONFIGURATION
     );
 
     const batches: ParameterValues[][] = [];
@@ -334,7 +332,7 @@ async function probeConfiguration(
     elementType: ElementType,
     configuration: ParameterValues,
     isOpenComposite: boolean
-): Promise<ConfigurationRecord> {
+): Promise<ProbedRecord> {
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
             await getElementMetadata(client, elementPath, configuration),
@@ -355,8 +353,8 @@ async function fetchBatch(
     elementType: ElementType,
     batch: ParameterValues[],
     isOpenComposite: boolean
-): Promise<ConfigurationRecord[]> {
-    const records: ConfigurationRecord[] = [];
+): Promise<ProbedRecord[]> {
+    const records: ProbedRecord[] = [];
     for (const configuration of batch) {
         records.push(
             await probeConfiguration(
@@ -373,7 +371,7 @@ async function fetchBatch(
 
 /** Onshape's vendor when a part carries one, otherwise the parsed one. */
 function resolveVendor(
-    record: ConfigurationRecord,
+    record: ProbedRecord,
     parameters: ConfigurationParameter[]
 ): string | undefined {
     return (
@@ -384,8 +382,8 @@ function resolveVendor(
 
 /** Folds the default probe and every batch together, the default first. */
 function toResult(
-    defaultRecord: ConfigurationRecord,
-    batches: ConfigurationRecord[][],
+    defaultRecord: ProbedRecord,
+    batches: ProbedRecord[][],
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
     // The element's own probe describes the element, not a configuration of it,
@@ -402,12 +400,12 @@ function toResult(
 
     // Canonical, so a record addresses the same thumbnail the insert menu does
     // for the same selection.
-    const records = batches.flat().map((record) => ({
+    const records: ConfigurationRecord[] = batches.flat().map((record) => ({
         ...record,
         // Read before canonicalizing, which drops a selection that is the
         // default — including a default vendor option.
         vendor: resolveVendor(record, parameters),
-        configuration: canonicalizeConfiguration(
+        canonicalConfiguration: canonicalizeConfiguration(
             record.configuration,
             parameters
         )

@@ -90,6 +90,11 @@ export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
  * Job status for the current library. The endpoint is editor-only and needs an
  * Onshape session, so callers who have neither don't poll it at all.
  */
+/** Whether a library load is running, which several places show a spinner for. */
+export function useIsJobRunning(): boolean {
+    return useJobStatusQuery().data?.running ?? false;
+}
+
 export function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();

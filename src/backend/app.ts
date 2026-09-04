@@ -1,5 +1,5 @@
 /**
- * Composition root: binds the caller onto every request and mounts each
+ * Composition root: binds the request's auth onto every request and mounts each
  * feature's routes. Everything it wires lives in a feature or in lib.
  */
 import { accessRoutes, authRoutes } from "./features/auth/routes";
@@ -14,7 +14,7 @@ import { settingsRoutes } from "./features/settings/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
-import { bindCaller, getApp, type CallerFactory } from "./lib/context";
+import { bindAuth, getApp, type AuthResolver } from "./lib/context";
 import { errorHandler } from "./lib/errors";
 
 const apiRoutes = [
@@ -29,14 +29,14 @@ const apiRoutes = [
     buildStatusRoutes
 ];
 
-export function createApp(makeCaller: CallerFactory) {
+export function createApp(resolveAuth: AuthResolver) {
     const app = getApp();
 
     // Reaches Workers Logs, which wrangler.jsonc enables. Only /init, /api/*
     // and /auth/* run the Worker, so static assets are not logged.
     app.use("*", logger());
 
-    app.use("*", bindCaller(makeCaller));
+    app.use("*", bindAuth(resolveAuth));
 
     for (const routes of apiRoutes) {
         app.route("/api", routes);

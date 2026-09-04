@@ -3,12 +3,10 @@ import { Vendor } from "@backend/features/library/vendors";
 import {
     SearchDocument,
     normalizeForMatch,
-    tokenize
+    tokenizeName,
+    tokenizePartNumber
 } from "@backend/features/search/search-index";
-import {
-    ParameterValues,
-    SearchRecord
-} from "@backend/features/configurations/models";
+import { SearchRecord } from "@backend/features/configurations/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -35,10 +33,10 @@ export interface SearchHit {
     id: string;
     positions: Position[];
     /**
-     * The best-matching configuration for this hit, used to pre-fill the insert
-     * menu — its part number, name, and the parameter values that produce it.
+     * The best-matching record for this hit, used to pre-fill the insert menu —
+     * its part number, name, and the canonical selection that produces it.
      */
-    configuration?: ParameterValues;
+    canonicalConfiguration?: string;
     partNumber?: string;
     partName?: string;
     /** The vendor's page for the part number, when one can be derived. */
@@ -120,10 +118,8 @@ export function doSearch(
         }
     });
 
-    // Add highlighting
     const hits: SearchHit[] = miniSearchResults
         .map((miniSearchResult) => {
-            // Stored fields should be the same as SearchDocument
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
@@ -137,7 +133,7 @@ export function doSearch(
                     document.name,
                     "name"
                 ),
-                configuration: record?.configuration,
+                canonicalConfiguration: record?.canonicalConfiguration,
                 partNumber,
                 partName,
                 url: record?.url,
@@ -173,10 +169,10 @@ function matchedRecord(
 ): SearchRecord | undefined {
     const matchedFields = Object.values(result.match).flat();
     const byNumber = matchedFields.includes("partNumbers")
-        ? findBestRecord(query, document.records, (r) => r.partNumber)
+        ? findBestRecord(query, document.records, (r) => r.partNumber, LITERAL)
         : undefined;
     const byName = matchedFields.includes("partNames")
-        ? findBestRecord(query, document.records, (r) => r.name)
+        ? findBestRecord(query, document.records, (r) => r.name, DESCRIPTIVE)
         : undefined;
 
     const best = [byNumber, byName]
@@ -191,12 +187,55 @@ interface RecordMatch {
     score: number;
 }
 
-/** Query terms the value covers, prefix-matched the way the index searches. */
-function coveredTerms(value: string, queryTerms: string[]): number {
-    const valueTerms = tokenize(value).map((term) => term.toLowerCase());
-    return queryTerms.filter((queryTerm) =>
-        valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
-    ).length;
+/**
+ * How a field's text is read for scoring: a part number is compared as typed,
+ * a name around the decimals its sizes are indexed as.
+ */
+interface FieldReader {
+    normalize: (text: string) => string;
+    terms: (text: string) => string[];
+}
+
+/** A part number identifies: `217-2600` is a code, not a number. */
+const LITERAL: FieldReader = {
+    normalize: (text) => text.trim().toLowerCase(),
+    terms: tokenizePartNumber
+};
+
+/** A name describes, so `1/2`, `.5` and `0.5` are one size. */
+const DESCRIPTIVE: FieldReader = {
+    normalize: normalizeForMatch,
+    terms: (text) => tokenizeName(text).map((term) => term.toLowerCase())
+};
+
+/**
+ * A term matched whole beats one matched as a prefix, which every longer number
+ * satisfies too: `1` names the size `1"`, but only starts `16`.
+ */
+function termScore(valueTerms: string[], queryTerm: string): number {
+    // A unit is not part of the number's spelling, so `1` still names `1"`.
+    if (
+        valueTerms.includes(queryTerm) ||
+        valueTerms.includes(queryTerm + '"')
+    ) {
+        return 2;
+    }
+    return valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
+        ? 1
+        : 0;
+}
+
+/** How much of the query the value covers, term by term. */
+function coveredTerms(
+    value: string,
+    queryTerms: string[],
+    field: FieldReader
+): number {
+    const valueTerms = field.terms(value);
+    return queryTerms.reduce(
+        (score, queryTerm) => score + termScore(valueTerms, queryTerm),
+        0
+    );
 }
 
 /**
@@ -206,7 +245,8 @@ function coveredTerms(value: string, queryTerms: string[]): number {
 function matchScore(
     value: string,
     normalizedQuery: string,
-    queryTerms: string[]
+    queryTerms: string[],
+    field: FieldReader
 ): number {
     let whole = 0;
     if (value === normalizedQuery) {
@@ -216,7 +256,11 @@ function matchScore(
     } else if (value.includes(normalizedQuery)) {
         whole = 1;
     }
-    return whole * (queryTerms.length + 1) + coveredTerms(value, queryTerms);
+    // Outweighs full term coverage, which is worth 2 a term.
+    return (
+        whole * (2 * queryTerms.length + 1) +
+        coveredTerms(value, queryTerms, field)
+    );
 }
 
 /**
@@ -226,21 +270,22 @@ function matchScore(
 function findBestRecord(
     query: string,
     records: SearchRecord[],
-    selector: (record: SearchRecord) => string | undefined
+    selector: (record: SearchRecord) => string | undefined,
+    field: FieldReader
 ): RecordMatch | undefined {
-    // Canonicalize the same way the index did, so a fraction/decimal query lines
-    // up with the stored original (e.g. `.5` matches a `"1/2 Bearing"` name).
-    const normalizedQuery = normalizeForMatch(query.trim());
+    // Read the query the way the field was indexed, so a `.5` query lines up
+    // with a stored "1/2 Bearing" and a typed part number with itself.
+    const normalizedQuery = field.normalize(query.trim());
     if (records.length === 0 || normalizedQuery === "") {
         return undefined;
     }
-    const queryTerms = tokenize(query).map((term) => term.toLowerCase());
+    const queryTerms = field.terms(query);
 
     let best: RecordMatch | undefined;
     for (const record of records) {
-        const value = normalizeForMatch(selector(record) ?? "");
+        const value = field.normalize(selector(record) ?? "");
         if (!value) continue;
-        const score = matchScore(value, normalizedQuery, queryTerms);
+        const score = matchScore(value, normalizedQuery, queryTerms, field);
         if (score > (best?.score ?? 0)) {
             best = { record, score };
         }
@@ -288,15 +333,7 @@ function generateHighlightPositions(
             new RegExp(escapeRegExp(term), "g")
         );
         for (const match of matchedLocations) {
-            // A number is indexed without its leading zeros, so underline the
-            // digits it landed inside too: `16` should light up all of `0016`.
-            const leadingZeros = /^\d+$/.test(term)
-                ? /0*$/.exec(haystack.slice(0, match.index))![0].length
-                : 0;
-            positions.push({
-                start: match.index - leadingZeros,
-                length: length + leadingZeros
-            });
+            positions.push({ start: match.index, length });
         }
     }
 

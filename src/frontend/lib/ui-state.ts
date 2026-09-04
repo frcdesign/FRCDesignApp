@@ -1,57 +1,56 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
 import { AccessLevel } from "@backend/features/auth/access-level";
+import { LibraryId } from "@backend/features/library/library-id";
 import { Vendor } from "@backend/features/library/vendors";
+import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 
-// Increment this when a breaking change is made to the schema
+/** Bumped when a change to the schema makes stored state unusable. */
 const LATEST_VERSION = 3;
+
+const STORAGE_KEY = "uiState";
 
 const VendorType = z.enum(Object.values(Vendor));
 const AccessLevelType = z.enum(Object.values(AccessLevel));
+const ThemeType = z.enum(Object.values(Theme));
+const LibraryIdType = z.enum(Object.values(LibraryId));
 
 const UiStateSchema = z.object({
-    version: z.number().default(1), // We can't default the parsed version to LATEST_VERSION because of old versions floating around
+    // Defaulted to the first version rather than the latest: state stored
+    // before the field existed is old state, not current state.
+    version: z.number().default(1),
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
     vendorFilters: z.array(VendorType).optional(),
     searchQuery: z.string().default(""),
-    openGroupId: z.string().optional(),
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
     accessLevel: AccessLevelType.optional(),
-    /** Whether the quick-insert tip has been shown; it is only worth saying once. */
-    hasSeenQuickInsertTip: z.boolean().default(false)
+    /** Set on leaving for Onshape, so the app can confirm the sign-in on return. */
+    justSignedIn: z.boolean().default(false),
+    // The caller's settings, and the source of truth for them; a signed-in
+    // caller's row is what a browser that has never run the app starts from.
+    theme: ThemeType.default(DEFAULT_SETTINGS.theme),
+    libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
+    /** The group last opened in that library; null for the library itself. */
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
 });
 
-type UiState = z.infer<typeof UiStateSchema>;
+export type UiState = z.infer<typeof UiStateSchema>;
 
 type Subscriber = () => void;
 
 const subscribers = new Set<Subscriber>();
 
-let uiStateCache: UiState | null = null;
+/** The state this session is working from; the store is written behind it. */
+let currentState: UiState | null = null;
 
-function setUiState(uiState: UiState) {
-    const parsed = UiStateSchema.parse(uiState);
-
-    // Sets always set latest version
-    parsed.version = LATEST_VERSION;
-
-    // Only update if changed
-    if (
-        uiStateCache === null ||
-        JSON.stringify(parsed) !== JSON.stringify(uiStateCache)
-    ) {
-        uiStateCache = parsed;
-        writeStorage(JSON.stringify(parsed));
-        subscribers.forEach((callback) => callback());
-    }
-}
+const defaultState = (): UiState => UiStateSchema.parse({});
 
 /** Blocked or partitioned storage must not break the app, only its memory. */
 function readStorage(): string | null {
     try {
-        return window.localStorage.getItem("uiState");
+        return window.localStorage.getItem(STORAGE_KEY);
     } catch {
         return null;
     }
@@ -59,36 +58,37 @@ function readStorage(): string | null {
 
 function writeStorage(value: string): void {
     try {
-        window.localStorage.setItem("uiState", value);
+        window.localStorage.setItem(STORAGE_KEY, value);
     } catch {
         // Nothing to do; the in-memory cache still serves this session.
     }
 }
 
 /**
- * Asynchronously retrieves the current UI state.
+ * What was stored, or the defaults when it cannot be used — older, hand-edited,
+ * or naming something dropped. Losing a preference beats failing to start.
  */
-export function getUiState(): UiState {
-    if (uiStateCache) return uiStateCache;
-
+function readStoredState(): UiState {
     const raw = readStorage();
-    // Nothing in storage, initialize with defaults
     if (!raw) {
-        uiStateCache = UiStateSchema.parse({});
-        return uiStateCache;
+        return defaultState();
     }
-
-    uiStateCache = UiStateSchema.parse(
-        // Convert null to undefined for optional fields
-        JSON.parse(raw, (_key, value) => value ?? undefined)
-    );
-
-    if (uiStateCache.version < LATEST_VERSION) {
-        // Always reset to defaults for simplicity
-        // Updated version will get set in the next version
-        uiStateCache = UiStateSchema.parse({});
+    try {
+        const parsed = UiStateSchema.safeParse(
+            // A stored null reads as absent, which is what a default fills.
+            JSON.parse(raw, (_key, value) => value ?? undefined)
+        );
+        return parsed.success && parsed.data.version >= LATEST_VERSION
+            ? parsed.data
+            : defaultState();
+    } catch {
+        return defaultState();
     }
-    return uiStateCache;
+}
+
+export function getUiState(): UiState {
+    currentState ??= readStoredState();
+    return currentState;
 }
 
 function subscribeToUiState(callback: Subscriber) {
@@ -96,24 +96,34 @@ function subscribeToUiState(callback: Subscriber) {
     return () => subscribers.delete(callback);
 }
 
-/**
- * Asynchronously updates the current UI state.
- */
+/** Merges into the state, stores it, and tells every reader it changed. */
 export function updateUiState(partialState: Partial<UiState>): UiState {
-    const newState = {
+    const newState: UiState = {
         ...getUiState(),
         ...partialState,
+        // Writing always stamps the version the shape actually has.
         version: LATEST_VERSION
     };
-    setUiState(newState);
+    if (JSON.stringify(newState) === JSON.stringify(currentState)) {
+        return newState;
+    }
+    currentState = newState;
+    writeStorage(JSON.stringify(newState));
+    subscribers.forEach((callback) => callback());
     return newState;
 }
 
 export type SetUiState = (uiState: Partial<UiState>) => void;
 
-export function useUiState(): [UiState, SetUiState] {
-    // Create a react version of the state to trigger re-renders
-    const reactUiState = useSyncExternalStore(subscribeToUiState, getUiState);
+/** The current state, re-rendering the caller whenever it changes. */
+export function useGetUiState(): UiState {
+    return useSyncExternalStore(subscribeToUiState, getUiState);
+}
 
-    return [reactUiState, updateUiState];
+/** Merges into the state; every reader of it re-renders. */
+// The setter half of the pair above: a component reaches for one or the other,
+// so both read as hooks though setting needs no state of its own.
+// eslint-disable-next-line react-x/no-unnecessary-use-prefix
+export function useSetUiState(): SetUiState {
+    return updateUiState;
 }

@@ -1,7 +1,7 @@
 import { type MiddlewareHandler } from "hono";
 import { internalError } from "./api-error";
 import { HttpStatus } from "http-status-ts";
-import { type AppContext, type AppContextEnv } from "./context";
+import { type AppContextEnv } from "./context";
 
 /** A year — a versioned url's content never changes, only its version does. */
 const IMMUTABLE_CACHE_TTL = 365 * 24 * 3600;
@@ -23,9 +23,21 @@ export function immutableCacheControl(
     return `${policy}, max-age=${IMMUTABLE_CACHE_TTL}, immutable`;
 }
 
-/** Overrides the route's immutable default for a body its url does not pin. */
-export function setCacheTtl(c: AppContext, maxAge: number): void {
-    c.set("cacheTtl", maxAge);
+/** What a policy says, as the header says it. */
+function cacheControl(policy: CachePolicy): string {
+    return policy === CachePolicy.NO_CACHE
+        ? NO_STORE
+        : immutableCacheControl(policy);
+}
+
+/**
+ * Declares how one response may be cached, for a route whose answers differ:
+ * the same url can serve bytes it pins and a stand-in it does not. Routes
+ * whose every answer is alike take {@link cacheMiddleware} instead.
+ */
+export function setCache(response: Response, policy: CachePolicy): Response {
+    response.headers.set("Cache-Control", cacheControl(policy));
+    return response;
 }
 
 /** Declares how a route's response may be cached, and enforces what that takes. */
@@ -38,8 +50,6 @@ export function cacheMiddleware(
             c.header("Cache-Control", NO_STORE);
         };
     }
-
-    const cacheControl = immutableCacheControl(policy);
 
     return async (c, next) => {
         // An immutable response has to be pinned by something, or the next
@@ -56,10 +66,6 @@ export function cacheMiddleware(
             c.header("Cache-Control", NO_STORE);
             return;
         }
-        const ttl = c.get("cacheTtl");
-        c.header(
-            "Cache-Control",
-            ttl === undefined ? cacheControl : `${policy}, max-age=${ttl}`
-        );
+        c.header("Cache-Control", cacheControl(policy));
     };
 }
