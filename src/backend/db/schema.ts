@@ -175,10 +175,9 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, as the user made it: a
-        // canonical one would drop a default-valued or hidden parameter,
-        // including a string they typed. Null for the element's own default.
-        defaultConfiguration: text("default_configuration", {
+        // The whole selection the favorite opens with, canonical like every
+        // stored one. Null for an insertable with nothing to configure.
+        configuration: text("configuration", {
             mode: "json"
         }).$type<ParameterValues | null>(),
         sortOrder: integer("sort_order").notNull().default(0),

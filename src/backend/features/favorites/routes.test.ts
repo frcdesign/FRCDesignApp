@@ -74,7 +74,7 @@ describe("favorites routes", () => {
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             await db
                 .update(favorites)
-                .set({ defaultConfiguration: { boolean: "false" } })
+                .set({ configuration: { boolean: "false" } })
                 .where(eq(favorites.id, favoriteId));
 
             const res = await createTestApp().request(
@@ -96,7 +96,7 @@ describe("favorites routes", () => {
             const configuration = { boolean: "true" };
             await db
                 .update(favorites)
-                .set({ defaultConfiguration: configuration })
+                .set({ configuration: configuration })
                 .where(eq(favorites.id, favoriteId));
 
             const res = await createTestApp().request(
@@ -277,11 +277,11 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /default-configuration/favorite/:favoriteId", () => {
+    describe("POST /favorite-configuration/favorite/:favoriteId", () => {
         async function post(configuration: Record<string, string>) {
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             const res = await createTestApp().request(
-                `/api/default-configuration/favorite/${favoriteId}`,
+                `/api/favorite-configuration/favorite/${favoriteId}`,
                 jsonRequest("POST", { configuration }),
                 env
             );
@@ -291,7 +291,7 @@ describe("favorites routes", () => {
                 .from(favorites)
                 .where(eq(favorites.id, favoriteId))
                 .get();
-            return row?.defaultConfiguration;
+            return row?.configuration;
         }
 
         it("persists the selection the favorite opens with", async () => {

@@ -46,12 +46,12 @@ function useSetDefaultConfigurationMutation(
     const libraryId = useLibraryId();
     const refreshFavorites = useRefreshFavorites();
     return useMutation({
-        mutationKey: ["set-default-configuration"],
+        mutationKey: ["set-favorite-configuration"],
         mutationFn: async () => {
             // The whole selection, not its key: the key names only what the
             // selection overrides, and the favorite opens on all of it.
             return apiPost(
-                "/default-configuration" + toFavoritePath(favoriteId),
+                "/favorite-configuration" + toFavoritePath(favoriteId),
                 { body: { configuration } }
             );
         },
