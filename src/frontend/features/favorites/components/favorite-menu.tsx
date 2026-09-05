@@ -14,7 +14,7 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import { FavoriteIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {
-    Selection,
+    ParameterValues,
     SearchRecord
 } from "@backend/features/configurations/models";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
@@ -31,7 +31,7 @@ interface FavoriteMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     /** What the favorite opens with today. */
-    initialSelection?: Selection;
+    initialSelection?: ParameterValues;
 }
 
 /**
@@ -40,7 +40,7 @@ interface FavoriteMenuContentProps {
  */
 function useSetDefaultConfigurationMutation(
     favoriteId: string,
-    configuration: Selection | undefined,
+    configuration: ParameterValues | undefined,
     configurationKey: string | undefined
 ) {
     const libraryId = useLibraryId();
@@ -92,9 +92,9 @@ export function FavoriteMenuContent(
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
 
-    const [configuration, setConfiguration] = useState<Selection | undefined>(
-        initialSelection
-    );
+    const [configuration, setConfiguration] = useState<
+        ParameterValues | undefined
+    >(initialSelection);
     // Reported by ConfigurationWrapper; names this selection's thumbnail.
     // Undefined until it reports, which is what gates saving.
     const [configurationKey, setConfigurationKey] = useState<string>();

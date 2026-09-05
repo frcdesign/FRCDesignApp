@@ -29,7 +29,7 @@ import {
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 
-import { Selection } from "@backend/features/configurations/models";
+import { ParameterValues } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
@@ -63,7 +63,7 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 
 interface QuickInsertItemProps {
     insertable: InsertableOut;
-    configuration?: Selection;
+    configuration?: ParameterValues;
     isFavorite: boolean;
     source: InsertSource;
 }

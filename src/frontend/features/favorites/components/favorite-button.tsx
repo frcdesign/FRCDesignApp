@@ -3,7 +3,7 @@ import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import type { Selection } from "@backend/features/configurations/models";
+import type { ParameterValues } from "@backend/features/configurations/models";
 import { apiDelete, apiPost } from "../../../lib/api-client";
 import type {
     Favorite,
@@ -33,7 +33,7 @@ interface UpdateFavoritesArgs {
     insertable: InsertableOut;
     favoriteId: string;
     /** The selection to store; absent means the element's own default. */
-    configuration?: Selection;
+    configuration?: ParameterValues;
     /** That selection's key, so the new row's thumbnail is right before the
      * refetch answers. */
     configurationKey?: string;
@@ -122,7 +122,7 @@ interface FavoriteButtonProps {
      * The selection the new favorite opens with: what the caller is showing,
      * rather than the element's own default.
      */
-    configuration?: Selection;
+    configuration?: ParameterValues;
     /** That selection's key, when the caller knows it. */
     configurationKey?: string;
     /**
@@ -183,7 +183,7 @@ interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /** The selection the new favorite opens with. */
-    configuration?: Selection;
+    configuration?: ParameterValues;
     /** That selection's key, when the caller knows it. */
     configurationKey?: string;
 }

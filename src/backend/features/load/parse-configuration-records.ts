@@ -7,7 +7,7 @@ import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
-    Selection,
+    ParameterValues,
     ConfigurationParameter,
     PartMetadata,
     ConfigurationRecord,
@@ -75,7 +75,7 @@ export interface IndexingDecision {
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
     /** The combinations to probe, already enumerated by the count. */
-    configurations: Selection[];
+    configurations: ParameterValues[];
 }
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
@@ -159,7 +159,7 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
-    configuration: Selection,
+    configuration: ParameterValues,
     isOpenComposite: boolean
 ): ProbedRecord {
     const evaluation = evaluateParts(parts);
@@ -208,7 +208,7 @@ function readMetadataValue(value: unknown): string | undefined {
 /** Builds a record from an assembly's element metadata for one configuration. */
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
-    configuration: Selection
+    configuration: ParameterValues
 ): ProbedRecord {
     // An assembly is never a composite, so it reads nothing about one.
     const record: ProbedRecord = {
@@ -235,7 +235,7 @@ export async function parseConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
-    configurations: Selection[],
+    configurations: ParameterValues[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await probeConfiguration(
@@ -272,7 +272,7 @@ export async function loadConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
-    configurations: Selection[],
+    configurations: ParameterValues[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await ctx.step.do(
@@ -314,9 +314,9 @@ export async function loadConfigurationRecords(
  * default probe already covers.
  */
 function planBatches(
-    configurations: Selection[],
+    configurations: ParameterValues[],
     parameters: ConfigurationParameter[]
-): Selection[][] {
+): ParameterValues[][] {
     // Canonicalizing to the default means landing on the default probe's record,
     // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
@@ -324,7 +324,7 @@ function planBatches(
             toKey(configuration, parameters) !== ELEMENT_DEFAULT_KEY
     );
 
-    const batches: Selection[][] = [];
+    const batches: ParameterValues[][] = [];
     for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
         batches.push(toFetch.slice(i, i + BATCH_SIZE));
     }
@@ -336,7 +336,7 @@ async function probeConfiguration(
     client: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    configuration: Selection,
+    configuration: ParameterValues,
     isOpenComposite: boolean
 ): Promise<ProbedRecord> {
     if (elementType === ElementType.ASSEMBLY) {
@@ -357,7 +357,7 @@ async function fetchBatch(
     client: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    batch: Selection[],
+    batch: ParameterValues[],
     isOpenComposite: boolean
 ): Promise<ProbedRecord[]> {
     const records: ProbedRecord[] = [];

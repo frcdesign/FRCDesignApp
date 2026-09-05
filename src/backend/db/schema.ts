@@ -14,7 +14,7 @@ import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
-    Selection,
+    ParameterValues,
     PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
@@ -180,7 +180,7 @@ export const favorites = sqliteTable(
         // including a string they typed. Null for the element's own default.
         defaultConfiguration: text("default_configuration", {
             mode: "json"
-        }).$type<Selection | null>(),
+        }).$type<ParameterValues | null>(),
         sortOrder: integer("sort_order").notNull().default(0),
         // Null on every row that predates this column. Deliberately not
         // backfilled: stamping them all with the migration date would draw a
@@ -216,7 +216,7 @@ export const events = sqliteTable(
         targetElementType: text("target_element_type").$type<ElementType>(),
         configuration: text("configuration", {
             mode: "json"
-        }).$type<Selection | null>(),
+        }).$type<ParameterValues | null>(),
         // Whether the part was favorited at insert time — not where the insert
         // came from; `source` carries that.
         isFavorite: integer("is_favorite", { mode: "boolean" }),

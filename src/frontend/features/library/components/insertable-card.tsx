@@ -7,7 +7,7 @@ import {
     getFavoriteForInsertable
 } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Selection } from "@backend/features/configurations/models";
+import { ParameterValues } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,
@@ -137,7 +137,7 @@ interface InsertableMenuItemsProps {
     inInsertMenu?: boolean;
     /** What quick insert inserts and "Open document" opens: a search hit's
      * configuration on a card, the selected one inside the insert menu. */
-    configuration?: Selection;
+    configuration?: ParameterValues;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: string;
     source: InsertSource;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     OptionVisibilityType,
     ParameterType,
-    Selection,
+    ParameterValues,
     VisibilityCondition,
     VisibilityType
 } from "../configurations/models";
@@ -251,7 +251,7 @@ describe("evaluateCondition", () => {
     const cases: [
         string,
         VisibilityCondition | undefined,
-        Selection,
+        ParameterValues,
         boolean
     ][] = [
         ["no condition", undefined, {}, true],

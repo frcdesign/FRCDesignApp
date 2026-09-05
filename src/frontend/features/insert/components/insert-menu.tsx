@@ -21,7 +21,7 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
-    Selection,
+    ParameterValues,
     SearchRecord
 } from "@backend/features/configurations/models";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
@@ -37,7 +37,7 @@ interface InsertMenuContentProps {
     insertable: InsertableOut;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    initialSelection?: Selection;
+    initialSelection?: ParameterValues;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
@@ -48,7 +48,7 @@ interface InsertMenuContentProps {
  * The selection the menu holds and its key, plus whether it still stands where
  * it opened.
  */
-function useInsertSelection(initialSelection?: Selection) {
+function useInsertSelection(initialSelection?: ParameterValues) {
     const [configuration, setConfiguration] = useState(initialSelection);
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
@@ -155,7 +155,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
-    configuration?: Selection;
+    configuration?: ParameterValues;
     configurationKey: string;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
@@ -220,7 +220,7 @@ interface InsertButtonsProps {
      */
     isUnchanged: boolean;
     insertable: InsertableOut;
-    configuration?: Selection;
+    configuration?: ParameterValues;
     isFavorite: boolean;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;

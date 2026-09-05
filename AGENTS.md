@@ -32,9 +32,9 @@ bundle.
 A configuration takes exactly two forms, and `features/configurations/selection.ts`
 is the only place either is built:
 
-- A **`Selection`** is what someone picked: every parameter the insertable
-  declares, each value canonically spelled (base units, trimmed, lowercase
-  booleans). `toSelection` makes one out of whatever arrived — a partial map
+- A **selection** (`ParameterValues`) is what someone picked: every parameter
+  the insertable declares, each value canonically spelled (base units, trimmed,
+  lowercase booleans). `toSelection` makes one out of whatever arrived — a partial map
   from a search hit, a stored favorite, a request body — and every boundary
   calls it. Parameter defaults are canonical too, from `parse-configuration`, so
   nothing has to canonicalize one to compare against it.

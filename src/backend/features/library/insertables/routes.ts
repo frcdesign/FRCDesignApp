@@ -13,7 +13,7 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type ElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
-    type Selection
+    type ParameterValues
 } from "../../configurations/models";
 import {
     INDEXING_ISSUE_TYPES,
@@ -221,7 +221,7 @@ function indexRecords(
         elementType: ElementType;
         isOpenComposite: boolean;
         parameters: ConfigurationParameter[];
-        configurations: Selection[];
+        configurations: ParameterValues[];
     }
 ): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
@@ -261,9 +261,9 @@ const configurationSchema = z.record(z.string(), z.string()).optional();
 async function readSelection(
     db: Db,
     insertableId: string,
-    requested: Selection | undefined
+    requested: ParameterValues | undefined
 ): Promise<{
-    selection: Selection | undefined;
+    selection: ParameterValues | undefined;
     parameters: ConfigurationParameter[];
 }> {
     const row = await db

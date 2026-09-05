@@ -1,6 +1,6 @@
 import {
     ParameterType,
-    type Selection,
+    type ParameterValues,
     type ConfigurationParameter
 } from "../../../features/configurations/models";
 import { type ElementPath } from "../path";
@@ -28,7 +28,7 @@ export class DerivedFeature {
         sourcePath: ElementPath,
         microversionId: string,
         useMateConnector: boolean,
-        configuration: Selection | undefined,
+        configuration: ParameterValues | undefined,
         parameters: ConfigurationParameter[] | undefined
     ) {
         this.escapedName = escapeFeatureName(name);
@@ -48,7 +48,7 @@ export class DerivedFeature {
     }
 
     private buildPartConfiguration(
-        configuration: Selection,
+        configuration: ParameterValues,
         parameters: ConfigurationParameter[]
     ): object[] {
         return parameters.map((parameter) => {

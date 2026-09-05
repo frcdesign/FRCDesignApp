@@ -1,4 +1,4 @@
-import { ConfigurationKey, Selection } from "../configurations/models";
+import { ConfigurationKey, ParameterValues } from "../configurations/models";
 import { LibraryId } from "../library/library-id";
 
 export interface Favorite {
@@ -6,7 +6,7 @@ export interface Favorite {
     insertableId: string;
     libraryId: LibraryId;
     /** The selection it opens with; absent for the element's own defaults. */
-    configuration?: Selection;
+    configuration?: ParameterValues;
     /**
      * That selection's key, which is what names its thumbnail. Derived per
      * response rather than stored, both because a reload can move the defaults

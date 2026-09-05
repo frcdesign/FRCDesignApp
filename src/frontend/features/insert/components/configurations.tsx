@@ -20,7 +20,7 @@ import {
     useState
 } from "react";
 import {
-    Selection,
+    ParameterValues,
     ConfigurationResult,
     ConfigurationParameter,
     ParameterType,
@@ -58,8 +58,8 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    configuration?: Selection;
-    setConfiguration: Dispatch<Selection>;
+    configuration?: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
     /**
      * Reported here because only this component has the parameters the key is
      * measured against.
@@ -83,8 +83,8 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
  */
 function useWholeSelection(
     parameters: ConfigurationParameter[] | undefined,
-    configuration: Selection | undefined,
-    setConfiguration: Dispatch<Selection>
+    configuration: ParameterValues | undefined,
+    setConfiguration: Dispatch<ParameterValues>
 ) {
     const settled = useRef(false);
     useEffect(() => {
@@ -101,7 +101,7 @@ function useWholeSelection(
 function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
     records: SearchRecord[] | undefined,
-    configuration: Selection | undefined,
+    configuration: ParameterValues | undefined,
     onConfigurationKey?: (configurationKey: string) => void,
     onRecord?: (record: SearchRecord | undefined) => void
 ) {
@@ -170,8 +170,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: Selection;
-    setConfiguration: Dispatch<Selection>;
+    configuration: ParameterValues;
+    setConfiguration: Dispatch<ParameterValues>;
     unitInfo: UnitInfo;
 }
 
@@ -217,7 +217,7 @@ interface ParameterProps<T extends ConfigurationParameter> {
     /** Absent when the configuration omits it, which means the default. */
     value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: Selection;
+    configuration: ParameterValues;
     parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }

@@ -18,7 +18,7 @@ import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type ConfigurationParameter,
-    type Selection
+    type ParameterValues
 } from "../configurations/models";
 import { applied } from "../configurations/selection";
 
@@ -36,7 +36,7 @@ export interface InsertEvent {
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
-    selection: Selection | undefined;
+    selection: ParameterValues | undefined;
     /** Its parameters, so the hidden ones can be left out of the counts. */
     parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
@@ -333,7 +333,7 @@ function configurationWrites(
     db: Db,
     day: string,
     event: InsertEvent,
-    configuration: Selection | null
+    configuration: ParameterValues | null
 ): BatchItem<"sqlite">[] {
     if (!configuration) return [];
 

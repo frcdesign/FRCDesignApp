@@ -134,14 +134,14 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 }
 
 /**
- * One choice of values for an insertable's parameters, keyed by parameter id.
+ * One selection of values for an insertable's parameters, keyed by parameter id.
  *
  * Always complete and always canonical: every parameter the insertable declares
  * is named, and each value is spelled the one way every equivalent selection
  * shares. `toSelection` is what makes one; nothing else may build a map that
  * claims to be this.
  */
-export type Selection = Record<string, string>;
+export type ParameterValues = Record<string, string>;
 
 /**
  * A selection's identity: the text spelling of what it overrides, which is what
@@ -180,7 +180,7 @@ export interface PartMetadata {
  */
 export interface ProbedRecord extends PartMetadata {
     /** The selection probed, before it is keyed for storage. */
-    configuration: Selection;
+    configuration: ParameterValues;
 }
 
 /** A probe as it is stored. Kept only for an indexed insertable. */

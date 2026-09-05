@@ -2,7 +2,7 @@ import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
-import { type Selection } from "@backend/features/configurations/models";
+import { type ParameterValues } from "@backend/features/configurations/models";
 
 import {
     type NotificationAction,
@@ -15,7 +15,7 @@ import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    initialSelection?: Selection;
+    initialSelection?: ParameterValues;
     source: InsertSource;
 }
 
@@ -61,7 +61,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 function showRestoreToast(
     insertable: InsertableOut,
     source: InsertSource,
-    configuration?: Selection
+    configuration?: ParameterValues
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",
