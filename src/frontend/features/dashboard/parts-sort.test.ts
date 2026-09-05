@@ -9,12 +9,14 @@ import {
 
 function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
     return {
-        elementId: overrides.name ?? "e-1",
-        insertableId: "i-1",
+        path: {
+            documentId: "doc-1",
+            instanceId: "v-1",
+            instanceType: "v",
+            elementId: overrides.name ?? "e-1"
+        },
         name: "Part",
         groupName: "Gearboxes",
-        documentId: "doc-1",
-        versionId: "v-1",
         isVisible: true,
         insertCount: 0,
         usesPerMonth: 0,

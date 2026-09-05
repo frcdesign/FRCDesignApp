@@ -3,17 +3,8 @@ import { BuildIssueType } from "../build-checker/issues";
 import { summarizeHealth } from "./health";
 
 describe("summarizeHealth", () => {
-    const cleanGroup = {
-        id: "g1",
-        buildIssues: [],
-        lastLoadedAt: 1
-    };
-    const insertable = {
-        id: "i1",
-        groupId: "g1",
-        buildIssues: [],
-        lastLoadedAt: 1
-    };
+    const cleanGroup = { buildIssues: [] };
+    const insertable = { id: "i1", buildIssues: [] };
 
     it("counts every issue, including a lesser one on the same item", () => {
         const counts = summarizeHealth(

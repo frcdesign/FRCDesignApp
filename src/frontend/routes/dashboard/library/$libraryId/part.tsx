@@ -158,7 +158,7 @@ function PartTitle({
     elementId: string;
 }): ReactNode {
     const name = report.name ?? elementId;
-    if (!report.documentId || !report.versionId) {
+    if (!report.path) {
         return <Title order={2}>{name}</Title>;
     }
 
@@ -166,12 +166,7 @@ function PartTitle({
         <Title order={2}>
             <Anchor
                 inherit
-                href={makeUrl({
-                    documentId: report.documentId,
-                    instanceId: report.versionId,
-                    instanceType: "v",
-                    elementId
-                })}
+                href={makeUrl(report.path)}
                 target="_blank"
                 rel="noreferrer"
                 // Centres the icon on the text rather than on its baseline.

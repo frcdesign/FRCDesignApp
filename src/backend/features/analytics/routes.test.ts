@@ -454,13 +454,16 @@ describe("analytics routes", () => {
 
             expect(body).toHaveLength(1);
             expect(body[0]).toMatchObject({
-                elementId,
                 name: "Test PARTSTUDIO",
                 insertCount: 0
             });
-            // Enough to build both links the picker offers.
-            expect(body[0].documentId).toBeTruthy();
-            expect(body[0].versionId).toBeTruthy();
+            // The whole path, which is what the picker's link opens.
+            expect(body[0].path).toMatchObject({
+                elementId,
+                instanceType: "v"
+            });
+            expect(body[0].path.documentId).toBeTruthy();
+            expect(body[0].path.instanceId).toBeTruthy();
         });
 
         it("counts only inserts inside the window", async () => {
@@ -505,7 +508,8 @@ describe("analytics routes", () => {
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
-            expect(body[0]).toMatchObject({ elementId, insertCount: 9 });
+            expect(body[0]).toMatchObject({ insertCount: 9 });
+            expect(body[0].path.elementId).toBe(elementId);
         });
 
         it("does not list a part twice", async () => {
@@ -530,7 +534,7 @@ describe("analytics routes", () => {
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body.map((row) => row.elementId)).toEqual([elementId]);
+            expect(body.map((row) => row.path.elementId)).toEqual([elementId]);
             expect(body[0]).toMatchObject({
                 name: "Test PARTSTUDIO",
                 groupName: "Test Group",
@@ -571,7 +575,7 @@ describe("analytics routes", () => {
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body[0].elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
+            expect(body[0].path.elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
             expect(body[0].usesPerMonth).toBeGreaterThan(body[1].usesPerMonth);
             // The window's total is still reported alongside the rate.
             expect(body.map((row) => row.insertCount)).toEqual([20, 60]);
@@ -609,7 +613,7 @@ describe("analytics routes", () => {
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body[0].elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
+            expect(body[0].path.elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
         });
 
         it("plots recent inserts per day, oldest first", async () => {
@@ -712,11 +716,14 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            expect(body.map((row) => row.value)).toEqual(["one", "three"]);
+            expect(body.map((row) => row.option.value)).toEqual([
+                "one",
+                "three"
+            ]);
             expect(body[0]).toMatchObject({
                 partName: "Test PARTSTUDIO",
                 parameterName: "Stages",
-                count: 0,
+                option: { count: 0 },
                 parameterTotal: 4
             });
         });
@@ -730,9 +737,9 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            const defaults = body.filter((row) => row.isDefault);
+            const defaults = body.filter((row) => row.option.isDefault);
             expect(defaults).toHaveLength(1);
-            expect(defaults[0].value).toBe("one");
+            expect(defaults[0].option.value).toBe("one");
         });
 
         it("leaves out an option used more than the threshold", async () => {
@@ -744,7 +751,10 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            expect(body.map((row) => row.value)).toEqual(["two", "three"]);
+            expect(body.map((row) => row.option.value)).toEqual([
+                "two",
+                "three"
+            ]);
         });
 
         it("ignores a parameter with no declared options", async () => {

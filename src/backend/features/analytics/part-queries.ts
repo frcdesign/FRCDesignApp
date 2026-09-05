@@ -13,16 +13,30 @@ import { type PartUsageOut } from "./contract";
 import { SPARKLINE_DAYS, usesPerMonth } from "./measures";
 import { toDayKey } from "./tracking";
 import { type DayRange } from "./range";
+import { type ElementPath } from "../../lib/onshape/path";
 
 export interface PartRow {
     elementId: string;
-    insertableId: string;
     name: string;
     groupName: string;
     documentId: string;
     versionId: string;
     isVisible: boolean;
     firstInsertedAt: number | null;
+}
+
+/** The version-pinned tab a row addresses, which is what a link opens. */
+export function toElementPath(row: {
+    documentId: string;
+    versionId: string;
+    elementId: string;
+}): ElementPath {
+    return {
+        documentId: row.documentId,
+        instanceId: row.versionId,
+        instanceType: "v",
+        elementId: row.elementId
+    };
 }
 
 /** One part counted over the window rather than over its whole history. */
@@ -40,12 +54,9 @@ export function toWindowedPart(
     const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
 
     return {
-        elementId: row.elementId,
-        insertableId: row.insertableId,
+        path: toElementPath(row),
         name: row.name,
         groupName: row.groupName,
-        documentId: row.documentId,
-        versionId: row.versionId,
         isVisible: row.isVisible,
         insertCount,
         usesPerMonth: usesPerMonth(

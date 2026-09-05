@@ -112,7 +112,7 @@ export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
             name: part.name,
             value: part.insertCount,
             color: shade(hue, rank),
-            elementId: part.elementId,
+            elementId: part.path.elementId,
             libraryId: part.libraryId
         }));
 }

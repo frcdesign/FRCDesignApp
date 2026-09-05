@@ -1,4 +1,5 @@
 import { LibraryId } from "../library/library-id";
+import type { ElementPath } from "../../lib/onshape/path";
 import { InsertSource } from "./events";
 
 /** Lifetime counts, either overall or scoped to one library. */
@@ -138,12 +139,10 @@ export interface AnalyticsOverviewOut {
 
 /** A row of the parts table. Only parts still in the library are listed. */
 export interface PartUsageOut {
-    elementId: string;
-    insertableId: string;
+    /** The version-pinned tab, which is both the analytics key and the link. */
+    path: ElementPath;
     name: string;
     groupName: string;
-    documentId: string;
-    versionId: string;
     /** Hidden parts stay listed: they are in the library, just not insertable. */
     isVisible: boolean;
     /** Inserts inside the reported window; 0 for a part unused in it. */
@@ -183,10 +182,7 @@ export interface UnusedOptionOut {
     partName: string;
     parameterId: string;
     parameterName: string;
-    value: string;
-    label: string;
-    count: number;
-    isDefault: boolean;
+    option: ConfigurationValueUsage;
     /** Recorded values for this parameter, so a count reads as a share. */
     parameterTotal: number;
 }
@@ -200,8 +196,8 @@ export interface TargetSplit {
 export interface InsertableReportOut {
     elementId: string;
     name: string | null;
-    documentId: string | null;
-    versionId: string | null;
+    /** Null once the part has left the library: there is nothing left to open. */
+    path: ElementPath | null;
     insertCount: number;
     /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;

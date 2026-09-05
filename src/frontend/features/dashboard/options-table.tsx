@@ -39,7 +39,7 @@ export function OptionsTable({
                 <Table.Tbody>
                     {options.map((option) => (
                         <Table.Tr
-                            key={`${option.elementId}-${option.parameterId}-${option.value}`}
+                            key={`${option.elementId}-${option.parameterId}-${option.option.value}`}
                         >
                             <Table.Td>
                                 <DashboardLink
@@ -56,15 +56,15 @@ export function OptionsTable({
                             <Table.Td>{option.parameterName}</Table.Td>
                             <Table.Td>
                                 <Group gap="xs">
-                                    {option.label}
-                                    {option.count === 0 && (
+                                    {option.option.label}
+                                    {option.option.count === 0 && (
                                         <Badge color="gray" size="sm">
                                             Never used
                                         </Badge>
                                     )}
                                     {/* A default nobody picks is the strongest
                                         signal the parameter is wrong. */}
-                                    {option.isDefault && (
+                                    {option.option.isDefault && (
                                         <Badge color="yellow" size="sm">
                                             Default
                                         </Badge>
@@ -72,13 +72,13 @@ export function OptionsTable({
                                 </Group>
                             </Table.Td>
                             <Table.Td ta="right">
-                                {formatCount(option.count)}
+                                {formatCount(option.option.count)}
                             </Table.Td>
                             <Table.Td ta="right" c="dimmed">
                                 {option.parameterTotal === 0
                                     ? "—"
                                     : formatPercent(
-                                          option.count,
+                                          option.option.count,
                                           option.parameterTotal
                                       )}
                             </Table.Td>

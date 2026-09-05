@@ -2,15 +2,20 @@ import { describe, expect, it } from "vitest";
 import { LibraryId } from "@backend/features/library/library-id";
 import { toNodes, type UsagePart } from "./treemap-data";
 
-function part(overrides: Partial<UsagePart> = {}): UsagePart {
+function part({
+    elementId = "e-1",
+    ...overrides
+}: Partial<UsagePart> & { elementId?: string } = {}): UsagePart {
     return {
         libraryId: LibraryId.FRC_DESIGN_LIB,
-        elementId: "e-1",
-        insertableId: "i-1",
+        path: {
+            documentId: "doc-1",
+            instanceId: "v-1",
+            instanceType: "v",
+            elementId
+        },
         name: "Part",
         groupName: "Gearboxes",
-        documentId: "doc-1",
-        versionId: "v-1",
         isVisible: true,
         insertCount: 0,
         usesPerMonth: 0,

@@ -118,7 +118,7 @@ export function PartsTable({
                 <Table.Tbody>
                     {shown.map((part) => (
                         <PartRow
-                            key={part.elementId}
+                            key={part.path.elementId}
                             libraryId={libraryId}
                             part={part}
                         />
@@ -188,7 +188,10 @@ function PartRow({
                 void navigate({
                     to: "/dashboard/library/$libraryId/part",
                     params: { libraryId },
-                    search: (prev) => ({ ...prev, element: part.elementId })
+                    search: (prev) => ({
+                        ...prev,
+                        element: part.path.elementId
+                    })
                 })
             }
         >
@@ -215,12 +218,7 @@ function PartRow({
             {/* Stops the row's own navigation: this link leaves the app. */}
             <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>
                 <Anchor
-                    href={makeUrl({
-                        documentId: part.documentId,
-                        instanceId: part.versionId,
-                        instanceType: "v",
-                        elementId: part.elementId
-                    })}
+                    href={makeUrl(part.path)}
                     target="_blank"
                     rel="noreferrer"
                     aria-label={`Open ${part.name} in Onshape`}

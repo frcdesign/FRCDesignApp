@@ -25,27 +25,21 @@ function visibleIn(libraryId: LibraryId) {
     );
 }
 
-/** Selects only what the counts need; names and paths are the item list's cost. */
+/** Selects only what the counting reads: the issues, and an id to merge on. */
 export async function getHealthCounts(
     db: Db,
     libraryId: LibraryId
 ): Promise<LibraryHealthCounts> {
     const [groups, allInsertables] = await Promise.all([
         db
-            .select({
-                id: group.id,
-                buildIssues: group.buildIssues,
-                lastLoadedAt: group.lastLoadedAt
-            })
+            .select({ buildIssues: group.buildIssues })
             .from(group)
             .where(eq(group.libraryId, libraryId))
             .all(),
         db
             .select({
                 id: insertables.id,
-                groupId: insertables.groupId,
-                buildIssues: insertables.buildIssues,
-                lastLoadedAt: insertables.lastLoadedAt
+                buildIssues: insertables.buildIssues
             })
             .from(insertables)
             .where(visibleIn(libraryId))
@@ -80,36 +74,12 @@ async function getConfigurationIssues(
 }
 
 /**
- * A group as the health summary needs it. `name`/paths are optional so the
- * overview can count without paying to fetch them.
- */
-export interface HealthGroupRow {
-    id: string;
-    name?: string;
-    documentId?: string;
-    versionId?: string;
-    buildIssues: BuildIssue[];
-    lastLoadedAt: number | null;
-}
-
-export interface HealthInsertableRow {
-    id: string;
-    groupId: string;
-    name?: string;
-    elementId?: string;
-    documentId?: string;
-    versionId?: string;
-    buildIssues: BuildIssue[];
-    lastLoadedAt: number | null;
-}
-
-/**
  * An insertable's configuration issues count as its own, matching the panel.
  * Hidden ones are filtered upstream: exempt from the checks, so never healthy.
  */
 export function summarizeHealth(
-    groups: HealthGroupRow[],
-    insertables: HealthInsertableRow[],
+    groups: { buildIssues: BuildIssue[] }[],
+    insertables: { id: string; buildIssues: BuildIssue[] }[],
     configurationIssues: Map<string, BuildIssue[]>
 ): LibraryHealthCounts {
     const counts: LibraryHealthCounts = {

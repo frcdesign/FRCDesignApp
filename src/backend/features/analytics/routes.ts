@@ -27,6 +27,7 @@ import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
 import {
     getConfigurationCounts,
+    toElementPath,
     getPartSparklines,
     getWindowedInsertCounts,
     inWindow,
@@ -126,7 +127,6 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
             .select({
                 elementId: insertables.elementId,
                 firstInsertedAt: insertableStats.firstInsertedAt,
-                insertableId: insertables.id,
                 name: insertables.name,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
@@ -178,7 +178,6 @@ analyticsRoutes.get("/analytics/unused" + libraryRoute(), async (c) => {
         db
             .select({
                 elementId: insertables.elementId,
-                insertableId: insertables.id,
                 name: insertables.name,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
@@ -274,10 +273,7 @@ analyticsRoutes.get("/analytics/unused-options" + libraryRoute(), async (c) => {
                     partName: part.name,
                     parameterId: parameter.parameterId,
                     parameterName: parameter.name,
-                    value: value.value,
-                    label: value.label,
-                    count: value.count,
-                    isDefault: value.isDefault,
+                    option: value,
                     parameterTotal: parameter.total
                 });
             }
@@ -288,7 +284,7 @@ analyticsRoutes.get("/analytics/unused-options" + libraryRoute(), async (c) => {
     // an option skipped on a heavily configured part is the stronger signal.
     out.sort(
         (a, b) =>
-            a.count - b.count ||
+            a.option.count - b.option.count ||
             b.parameterTotal - a.parameterTotal ||
             a.partName.localeCompare(b.partName)
     );
@@ -410,8 +406,9 @@ analyticsRoutes.get(
         const out: InsertableReportOut = {
             elementId,
             name: insertable?.name ?? null,
-            documentId: insertable?.documentId ?? null,
-            versionId: insertable?.versionId ?? null,
+            path: insertable
+                ? toElementPath({ ...insertable, elementId })
+                : null,
             insertCount,
             usesPerMonth: usesPerMonth(
                 insertCount,

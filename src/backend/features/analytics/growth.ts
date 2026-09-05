@@ -16,11 +16,16 @@ import {
 } from "./contract";
 import { RECENT_DAYS } from "./measures";
 
+/** Both bounds inclusive, as every day key in this file is. */
 interface Window {
     from: string;
     to: string;
 }
 
+/**
+ * Shifts a `YYYY-MM-DD` key by whole days. UTC throughout, which is what the
+ * rollups are keyed on, so no local midnight can move a day.
+ */
 function addDays(day: string, count: number): string {
     const at = Date.parse(`${day}T00:00:00Z`) + count * 24 * 3600 * 1000;
     return new Date(at).toISOString().slice(0, 10);
@@ -34,8 +39,13 @@ export function recentWindows(today: string): {
     current: Window;
     previous: Window;
 } {
+    // Yesterday back RECENT_DAYS, inclusive: the -1 is what makes the span the
+    // count rather than one more than it.
     const to = addDays(today, -1);
     const from = addDays(to, -(RECENT_DAYS - 1));
+
+    // The equal window immediately before, ending the day before `from`, so the
+    // two are the same length and share no day.
     return {
         current: { from, to },
         previous: {
