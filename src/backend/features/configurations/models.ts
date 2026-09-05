@@ -85,10 +85,10 @@ export interface SearchRecord {
     /** The vendor's page for this part, when one can be resolved. */
     url?: string;
     /**
-     * The (enumerated) values that produce it, canonical so it names the same
-     * render the insert menu asks for; empty for the element's default.
+     * The key of the selection producing it, so it names the same render the
+     * insert menu asks for; empty for the element's own defaults.
      */
-    canonicalConfiguration: string;
+    configurationKey: string;
 }
 
 export type ConfigurationParameter =
@@ -134,19 +134,24 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 }
 
 /**
- * A specific choice of values for an insertable's parameters, as a mapping of
- * parameterId to value.
+ * One selection, keyed by parameter id: always complete, always canonical.
+ * `toSelection` is what makes one; nothing else may claim to.
  */
-export type ParameterValues = Record<string, string>;
+export type Selection = Record<string, string>;
+
+/**
+ * A selection's identity: what it overrides, which is what addresses a render.
+ * `ELEMENT_DEFAULT_KEY` — empty — overrides nothing, and so is the default.
+ */
+export type ConfigurationKey = string;
 
 /**
  * What one probed configuration resolves to. Stored per probe, so search and the
  * UI can read it back without re-querying Onshape.
  */
 /**
- * The part an element resolves to, as one probe read it: from the element's own
- * defaults it describes the element, from one configuration a
- * {@link ConfigurationRecord}.
+ * The part one probe resolved to: the element itself from its own defaults, a
+ * {@link ConfigurationRecord} from any other selection.
  */
 export interface PartMetadata {
     partNumber?: string;
@@ -167,14 +172,14 @@ export interface PartMetadata {
  * by the selection as written rather than as it is stored.
  */
 export interface ProbedRecord extends PartMetadata {
-    /** The selection probed, before it is canonicalized for storage. */
-    configuration: ParameterValues;
+    /** The selection probed, before it is keyed for storage. */
+    configuration: Selection;
 }
 
 /** A probe as it is stored. Kept only for an indexed insertable. */
 export interface ConfigurationRecord extends PartMetadata {
-    /** The selection that produces it, in its canonical spelling. */
-    canonicalConfiguration: string;
+    /** The key of the selection that produces it. */
+    configurationKey: string;
 }
 
 /**

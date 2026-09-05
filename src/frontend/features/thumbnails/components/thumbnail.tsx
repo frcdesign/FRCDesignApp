@@ -16,7 +16,7 @@ import {
     ReactNode,
     useState
 } from "react";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionError } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
@@ -52,7 +52,7 @@ export interface ThumbnailTarget {
     elementId: string;
     microversionId: string;
     /** Empty means the element default. */
-    canonicalConfiguration: string;
+    configurationKey: string;
     /**
      * Whether a miss should start rendering: surfaces where the user picked the
      * configuration do, where a search would otherwise render a row at a time.
@@ -74,8 +74,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        target &&
-        target.canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION
+        target && target.configurationKey !== ELEMENT_DEFAULT_KEY
             ? thumbnailUrl({ ...target, size })
             : stored;
 
@@ -170,7 +169,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 interface PreviewImageProps {
     path: ElementPath;
     /** The selection to preview; Onshape applies defaults for what it omits. */
-    canonicalConfiguration: string;
+    configurationKey: string;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;
     /** What the render resolves the element from. */
@@ -212,8 +211,7 @@ function useLastRenderedUrl(image?: LoadedImage): string | undefined {
  * until it lands.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
-    const { path, insertableId, microversionId, canonicalConfiguration } =
-        props;
+    const { path, insertableId, microversionId, configurationKey } = props;
     // A url per poll: the browser caches images by url for the life of the
     // page, so reusing one leaves the stand-in up however often we refetch.
     const pollUrl = (attempt: number) =>
@@ -221,7 +219,7 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
             elementId: path.elementId,
             microversionId,
             size: PREVIEW_SIZE,
-            canonicalConfiguration,
+            configurationKey,
             renderThumbnail: attempt % RENDER_EVERY_POLLS === 0,
             insertableId,
             attempt

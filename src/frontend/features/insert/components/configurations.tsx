@@ -16,11 +16,12 @@ import {
     type SyntheticEvent,
     useCallback,
     useEffect,
+    useMemo,
     useRef,
     useState
 } from "react";
 import {
-    ParameterValues,
+    Selection,
     ConfigurationResult,
     ConfigurationParameter,
     ParameterType,
@@ -40,7 +41,11 @@ import {
     getOption,
     getVisibleOptions
 } from "@backend/features/configurations/utils";
-import { canonicalizeConfiguration } from "@backend/features/configurations/canonical";
+import {
+    canonicalizeValue,
+    toKey,
+    toSelection
+} from "@backend/features/configurations/selection";
 import {
     formatValueWithUnits,
     valueWithUnits,
@@ -54,13 +59,13 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    configuration?: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    selection?: Selection;
+    setSelection: Dispatch<Selection>;
     /**
-     * Reported here because only this component has the parameters and units
-     * canonicalizing needs.
+     * Reported here because only this component has the parameters the key is
+     * measured against.
      */
-    onCanonicalConfiguration?: (canonicalConfiguration: string) => void;
+    onConfigurationKey?: (configurationKey: string) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
 }
@@ -71,63 +76,33 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
         handler((event.target as HTMLInputElement).checked);
 }
 
-/** Seeds an unset configuration with every parameter's own default. */
-function useDefaultConfiguration(
-    parameters: ConfigurationParameter[] | undefined,
-    configuration: ParameterValues | undefined,
-    setConfiguration: Dispatch<ParameterValues>
-) {
-    useEffect(() => {
-        // In an effect rather than a .then inside useQuery, which misbehaved.
-        if (!parameters || configuration) {
-            return;
-        }
-        setConfiguration(
-            Object.fromEntries(
-                parameters.map((parameter) => [parameter.id, parameter.default])
-            )
-        );
-    }, [parameters, configuration, setConfiguration]);
-}
-
-/** Reports the selection's canonical form, and the record it resolves to. */
+/** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
     records: SearchRecord[] | undefined,
-    configuration: ParameterValues | undefined,
-    onCanonicalConfiguration?: (canonicalConfiguration: string) => void,
+    selection: Selection | undefined,
+    onConfigurationKey?: (configurationKey: string) => void,
     onRecord?: (record: SearchRecord | undefined) => void
 ) {
     useEffect(() => {
-        if (!parameters || !configuration) {
+        if (!parameters || !selection) {
             return;
         }
-        const canonicalConfiguration = canonicalizeConfiguration(
-            configuration,
-            parameters
-        );
-        onCanonicalConfiguration?.(canonicalConfiguration);
+        const configurationKey = toKey(selection, parameters);
+        onConfigurationKey?.(configurationKey);
         if (records) {
-            onRecord?.(
-                findRecordForConfiguration(canonicalConfiguration, records)
-            );
+            onRecord?.(findRecordForConfiguration(configurationKey, records));
         }
-    }, [
-        parameters,
-        records,
-        configuration,
-        onCanonicalConfiguration,
-        onRecord
-    ]);
+    }, [parameters, records, selection, onConfigurationKey, onRecord]);
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const {
         insertableId,
         microversionId,
-        configuration,
-        setConfiguration,
-        onCanonicalConfiguration,
+        selection,
+        setSelection,
+        onConfigurationKey,
         onRecord
     } = props;
 
@@ -141,32 +116,38 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
-    useDefaultConfiguration(parameters, configuration, setConfiguration);
+    // Whole the moment the parameters are known, since a search hit names only
+    // its overrides. Derived, so no render holds a partial selection.
+    const whole = useMemo(
+        () =>
+            parameters ? toSelection(selection ?? {}, parameters) : undefined,
+        [parameters, selection]
+    );
     useReportSelection(
         parameters,
         query.data?.records,
-        configuration,
-        onCanonicalConfiguration,
+        whole,
+        onConfigurationKey,
         onRecord
     );
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.
-    if (query.isPending || unitInfoQuery.isLoading || !configuration) {
+    if (query.isPending || unitInfoQuery.isLoading || !whole) {
         return (
             <Center my="md">
                 <Loader />
             </Center>
         );
     } else if (query.isError) {
-        return <SectionError title="Failed to load configuration." />;
+        return <SectionError title="Failed to load selection." />;
     }
 
     return (
         <ConfigurationParameters
             configurationResult={query.data}
-            configuration={configuration}
-            setConfiguration={setConfiguration}
+            selection={whole}
+            setSelection={setSelection}
             unitInfo={unitInfo}
         />
     );
@@ -174,26 +155,25 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    selection: Selection;
+    setSelection: Dispatch<Selection>;
     unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
-    const { configurationResult, configuration, setConfiguration, unitInfo } =
-        props;
+    const { configurationResult, selection, setSelection, unitInfo } = props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
         const handleValueChange = (newValue: string | undefined) => {
             if (newValue === undefined) {
-                if (!(parameter.id in configuration)) return;
-                const next = { ...configuration };
+                if (!(parameter.id in selection)) return;
+                const next = { ...selection };
                 delete next[parameter.id];
-                setConfiguration(next);
+                setSelection(next);
             } else {
-                if (configuration[parameter.id] === newValue) return;
-                setConfiguration({
-                    ...configuration,
+                if (selection[parameter.id] === newValue) return;
+                setSelection({
+                    ...selection,
                     [parameter.id]: newValue
                 });
             }
@@ -203,8 +183,8 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             <ParameterInput
                 key={parameter.id}
                 parameter={parameter}
-                value={configuration[parameter.id]}
-                configuration={configuration}
+                value={selection[parameter.id]}
+                selection={selection}
                 parameters={configurationResult.parameters}
                 onValueChange={handleValueChange}
                 unitInfo={unitInfo}
@@ -218,10 +198,10 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
 interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
-    /** Absent when the configuration omits it, which means the default. */
+    /** Absent when the selection omits it, which means the default. */
     value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: ParameterValues;
+    selection: Selection;
     parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }
@@ -235,7 +215,7 @@ function ParameterInput(
         if (
             !evaluateCondition(
                 parameter.condition,
-                props.configuration,
+                props.selection,
                 props.parameters
             )
         ) {
@@ -246,7 +226,7 @@ function ParameterInput(
     if (
         !evaluateCondition(
             parameter.condition,
-            props.configuration,
+            props.selection,
             props.parameters
         )
     ) {
@@ -346,14 +326,9 @@ function getFirstVisibleOption(
 }
 
 function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
-    const { parameter, value, onValueChange, configuration, parameters } =
-        props;
+    const { parameter, value, onValueChange, selection, parameters } = props;
 
-    const visibleOptions = getVisibleOptions(
-        parameter,
-        configuration,
-        parameters
-    );
+    const visibleOptions = getVisibleOptions(parameter, selection, parameters);
 
     useEffect(() => {
         const option = getFirstVisibleOption(
@@ -481,10 +456,12 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
             setDisplay(result.expression);
         } else {
             setErrorMessage(undefined);
-            onValueChange(result.expression);
+            // Canonical, so the menu holds a selection like everywhere else;
+            // `expression` keeps what was typed for as long as this input lives.
+            onValueChange(canonicalizeValue(parameter, result.expression));
             setDisplay(result.displayExpression);
         }
-    }, [evaluateOptions, expression, onValueChange]);
+    }, [evaluateOptions, expression, onValueChange, parameter]);
 
     return (
         <InputLabel label={parameter.name} htmlFor={parameter.id}>

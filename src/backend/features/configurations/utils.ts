@@ -1,7 +1,7 @@
 import {
     type ConfigurationRecord,
     type PartMetadata,
-    ParameterValues,
+    Selection,
     EnumOption,
     EnumParameter,
     OptionVisibilityType,
@@ -23,19 +23,18 @@ import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
 /**
- * The record a selection produces. Records name only enumerated parameters, so
- * several can match; the most specific (the most named) wins. Both sides are
- * canonical and built in parameter order, so this compares whole assignments.
+ * The record a selection produces. Several can match, since records name only
+ * enumerated parameters, so the most specific wins.
  */
 export function findRecordForConfiguration(
-    canonicalConfiguration: string,
+    configurationKey: string,
     records: SearchRecord[]
 ): SearchRecord | undefined {
-    const selected = new Set(splitConfiguration(canonicalConfiguration));
+    const selected = new Set(splitConfiguration(configurationKey));
     let best: SearchRecord | undefined;
     let bestNamed = -1;
     for (const record of records) {
-        const named = splitConfiguration(record.canonicalConfiguration);
+        const named = splitConfiguration(record.configurationKey);
         const matches = named.every((assignment) => selected.has(assignment));
         if (matches && named.length > bestNamed) {
             best = record;
@@ -115,7 +114,7 @@ export function getPartUrl(
  * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
  * Values never carry a `;` or an `=`, which is what lets this round-trip.
  */
-export function encodeConfiguration(configuration?: ParameterValues): string {
+export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
         return "";
     }
@@ -130,11 +129,11 @@ export function splitConfiguration(configuration: string): string[] {
 }
 
 /**
- * The values a configuration text names. A canonical one names only what it
- * overrides, so what it omits is the parameter's own default.
+ * The values a configuration text names. A key names only what it overrides, so
+ * what it omits is the parameter's own default — `fromKey` fills those in.
  */
-export function decodeConfiguration(configuration: string): ParameterValues {
-    const values: ParameterValues = {};
+export function decodeConfiguration(configuration: string): Selection {
+    const values: Selection = {};
     for (const assignment of splitConfiguration(configuration)) {
         const separator = assignment.indexOf("=");
         if (separator > 0) {
@@ -159,7 +158,7 @@ export function getOption(
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
-    configuration: ParameterValues,
+    configuration: Selection,
     parameters: ConfigurationParameter[]
 ): EnumOption[] {
     // No conditions means everything is shown
@@ -196,7 +195,7 @@ export function getVisibleOptions(
 }
 
 /** Display precision used when the document's units aren't available. */
-const DEFAULT_QUANTITY_PRECISION = 3;
+export const DEFAULT_QUANTITY_PRECISION = 3;
 
 /**
  * The evaluation settings for a quantity parameter: its own bounds, plus the
@@ -253,5 +252,5 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [{ ...partMetadata, canonicalConfiguration: "" }, ...records];
+    return [{ ...partMetadata, configurationKey: "" }, ...records];
 }

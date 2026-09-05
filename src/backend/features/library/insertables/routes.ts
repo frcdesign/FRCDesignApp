@@ -13,7 +13,7 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type ElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
-    type ParameterValues
+    type Selection
 } from "../../configurations/models";
 import {
     INDEXING_ISSUE_TYPES,
@@ -24,6 +24,8 @@ import {
 } from "../../load/parse-configuration-records";
 import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
+import { InsertSource } from "../../analytics/events";
+import { trackInBackground, trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -35,6 +37,7 @@ import {
     type OnshapeElementType
 } from "../../../lib/onshape/endpoints/documents";
 import { encodeConfiguration } from "../../../lib/onshape/endpoints/configurations";
+import { toSelection } from "../../configurations/selection";
 import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -218,7 +221,7 @@ function indexRecords(
         elementType: ElementType;
         isOpenComposite: boolean;
         parameters: ConfigurationParameter[];
-        configurations: ParameterValues[];
+        configurations: Selection[];
     }
 ): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
@@ -250,11 +253,42 @@ const targetPathSchema = z.object({
 
 const configurationSchema = z.record(z.string(), z.string()).optional();
 
+/**
+ * What an insert applies, made whole against the insertable's parameters. Every
+ * request crosses here, so nothing past it holds a partial or as-typed map.
+ */
+async function readSelection(
+    db: Db,
+    insertableId: string,
+    requested: Selection | undefined
+): Promise<{
+    selection: Selection | undefined;
+    parameters: ConfigurationParameter[];
+}> {
+    const row = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+
+    const parameters = row?.parameters ?? [];
+    return {
+        selection:
+            parameters.length === 0
+                ? undefined
+                : toSelection(requested ?? {}, parameters),
+        parameters
+    };
+}
+
 const insertBodySchema = z.object({
     targetPath: targetPathSchema,
-    configuration: configurationSchema,
+    selection: configurationSchema,
     isFavorite: z.boolean().default(false),
-    isQuickInsert: z.boolean().default(false)
+    isQuickInsert: z.boolean().default(false),
+    // Where the insert began, which `isFavorite` does not answer. Defaulted so
+    // an older client cannot drop the whole tracking batch on a NOT NULL.
+    source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
 const addToPartStudioBody = insertBodySchema.extend({
@@ -282,7 +316,9 @@ insertableRoutes.post(
         const insertable = await db
             .select({
                 name: insertables.name,
-                microversionId: insertables.microversionId
+                microversionId: insertables.microversionId,
+                libraryId: insertables.libraryId,
+                elementId: insertables.elementId
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -292,23 +328,18 @@ insertableRoutes.post(
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
-        // Look up parsed configuration parameters from D1 if configuration is provided
-        let parameters: ConfigurationParameter[] | undefined;
-        if (body.configuration) {
-            const configRow = await db
-                .select({ parameters: configurations.parameters })
-                .from(configurations)
-                .where(eq(configurations.id, insertableId))
-                .get();
-            parameters = configRow?.parameters;
-        }
+        const { selection, parameters } = await readSelection(
+            db,
+            insertableId,
+            body.selection
+        );
 
         const feature = new DerivedFeature(
             insertable.name,
             sourcePath,
             insertable.microversionId,
             body.useMateConnector,
-            body.configuration,
+            selection,
             parameters
         );
 
@@ -317,6 +348,23 @@ insertableRoutes.post(
             targetPath,
             feature.getFeature()
         );
+
+        await trackInBackground(c, async () =>
+            trackInsert(c, {
+                libraryId: insertable.libraryId,
+                userId: await c.var.getUserId(),
+                elementId: insertable.elementId,
+                insertableId,
+                targetElementType: ElementType.PART_STUDIO,
+                selection,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                // Insert-and-fasten is only offered for assembly targets.
+                fasten: false
+            })
+        );
+
         return c.json({ featureId: result.feature?.featureId });
     }
 );
@@ -340,6 +388,7 @@ insertableRoutes.post(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
+                libraryId: insertables.libraryId,
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
@@ -364,23 +413,14 @@ insertableRoutes.post(
             ? [PartType.COMPOSITE_PARTS]
             : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        // Apply default configuration when element is configurable and none was provided
-        let configuration = body.configuration;
-        if (configuration === undefined) {
-            const configRow = await db
-                .select({ parameters: configurations.parameters })
-                .from(configurations)
-                .where(eq(configurations.id, insertableId))
-                .get();
-            if (configRow && configRow.parameters.length > 0) {
-                configuration = Object.fromEntries(
-                    configRow.parameters.map((p) => [p.id, p.default])
-                );
-            }
-        }
+        const { selection } = await readSelection(
+            db,
+            insertableId,
+            body.selection
+        );
 
-        const encodedConfiguration = configuration
-            ? encodeConfiguration(configuration)
+        const encodedConfiguration = selection
+            ? encodeConfiguration(selection)
             : undefined;
 
         const result = await addElementToAssembly(
@@ -392,6 +432,23 @@ insertableRoutes.post(
                 configuration: encodedConfiguration,
                 partTypes
             }
+        );
+
+        // Recorded here so a later fasten failure doesn't lose an insert that
+        // did land.
+        await trackInBackground(c, async () =>
+            trackInsert(c, {
+                libraryId: row.libraryId,
+                userId: await c.var.getUserId(),
+                elementId: row.elementId,
+                insertableId,
+                targetElementType: ElementType.ASSEMBLY,
+                selection,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                fasten: body.fasten
+            })
         );
 
         if (!body.fasten) {

@@ -343,7 +343,7 @@ describe("buildSearchDb", () => {
                 record({
                     partNumber: "N/A",
                     name: "Spacer",
-                    canonicalConfiguration: ""
+                    configurationKey: ""
                 })
             ]
         });
@@ -361,7 +361,7 @@ describe("buildSearchDb", () => {
                     partNumber: "WCP-1025",
                     name: "Spacer",
                     vendor: "WestCoast Products",
-                    canonicalConfiguration: ""
+                    configurationKey: ""
                 })
             ]
         });

@@ -18,7 +18,7 @@ import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./types";
 import { thumbnailKey, thumbnailUrl } from "./keys";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**
@@ -28,7 +28,7 @@ import { OnshapeApi } from "../../lib/onshape/client";
 export interface ThumbnailMetadata extends Record<string, string> {
     microversionId: string;
     /** Empty for an element's own thumbnail, as everywhere else. */
-    canonicalConfiguration: string;
+    configurationKey: string;
 }
 
 /** Stores one rendered thumbnail, tagging it with what produced it. */
@@ -70,7 +70,7 @@ export async function uploadThumbnails(
             small,
             {
                 microversionId,
-                canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+                configurationKey: ELEMENT_DEFAULT_KEY
             }
         ),
         putThumbnail(
@@ -79,7 +79,7 @@ export async function uploadThumbnails(
             large,
             {
                 microversionId,
-                canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+                configurationKey: ELEMENT_DEFAULT_KEY
             }
         )
     ]);
@@ -89,13 +89,13 @@ export async function uploadThumbnails(
             elementId,
             microversionId,
             size: ThumbnailSize.SMALL,
-            canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+            configurationKey: ELEMENT_DEFAULT_KEY
         }),
         large: thumbnailUrl({
             elementId,
             microversionId,
             size: ThumbnailSize.LARGE,
-            canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+            configurationKey: ELEMENT_DEFAULT_KEY
         })
     };
 }
@@ -115,17 +115,12 @@ export async function uploadConfigurationThumbnails(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     microversionId: string,
-    canonicalConfiguration: string
+    configurationKey: string
 ): Promise<void> {
     const { elementId } = elementPath;
     const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({
         size,
-        key: thumbnailKey(
-            elementId,
-            microversionId,
-            size,
-            canonicalConfiguration
-        )
+        key: thumbnailKey(elementId, microversionId, size, configurationKey)
     }));
     const keys = targets.map((target) => target.key);
 
@@ -137,7 +132,7 @@ export async function uploadConfigurationThumbnails(
     const thumbnailId = await getThumbnailId(
         onshapeApi,
         elementPath,
-        canonicalConfiguration
+        configurationKey
     );
     const rendered = await Promise.all(
         targets.map(async ({ size, key }) => ({
@@ -155,7 +150,7 @@ export async function uploadConfigurationThumbnails(
         rendered.map(({ key, thumbnail }) =>
             putThumbnail(bucket, key, thumbnail, {
                 microversionId,
-                canonicalConfiguration
+                configurationKey
             })
         )
     );

@@ -12,6 +12,7 @@ import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface SearchResultsProps {
     query: string;
@@ -59,6 +60,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
             key={insertable.id}
             insertable={insertable}
             searchHit={result.hits[insertable.id]}
+            source={InsertSource.SEARCH}
         />
     ));
 
