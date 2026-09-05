@@ -67,7 +67,7 @@ CREATE TABLE `events` (
 	`element_id` text,
 	`insertable_id` text,
 	`target_element_type` text,
-	`configuration` text,
+	`selection` text,
 	`is_favorite` integer,
 	`is_quick_insert` integer,
 	`source` text,
@@ -96,3 +96,5 @@ CREATE TABLE `user_stats` (
 );
 --> statement-breakpoint
 ALTER TABLE `favorites` ADD `created_at` integer;
+--> statement-breakpoint
+ALTER TABLE `favorites` RENAME COLUMN `default_configuration` TO `default_selection`;

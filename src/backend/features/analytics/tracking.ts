@@ -18,7 +18,7 @@ import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type ConfigurationParameter,
-    type ParameterValues
+    type Selection
 } from "../configurations/models";
 import { applied } from "../configurations/selection";
 
@@ -36,7 +36,7 @@ export interface InsertEvent {
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
-    selection: ParameterValues | undefined;
+    selection: Selection | undefined;
     /** Its parameters, so the hidden ones can be left out of the counts. */
     parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
@@ -82,7 +82,7 @@ export async function trackInsert(
     const day = toDayKey(now);
     // What Onshape actually applied: the selection minus the parameters it
     // hides, which is what a count of chosen values means.
-    const configuration = event.selection
+    const selection = event.selection
         ? applied(event.selection, event.parameters)
         : null;
 
@@ -96,7 +96,7 @@ export async function trackInsert(
             elementId: event.elementId,
             insertableId: event.insertableId,
             targetElementType: event.targetElementType,
-            configuration,
+            selection,
             isFavorite: event.isFavorite,
             isQuickInsert: event.isQuickInsert,
             source: event.source,
@@ -144,7 +144,7 @@ export async function trackInsert(
                     lastSeenAt: now
                 }
             }),
-        ...configurationWrites(db, day, event, configuration)
+        ...configurationWrites(db, day, event, selection)
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -333,11 +333,11 @@ function configurationWrites(
     db: Db,
     day: string,
     event: InsertEvent,
-    configuration: ParameterValues | null
+    selection: Selection | null
 ): BatchItem<"sqlite">[] {
-    if (!configuration) return [];
+    if (!selection) return [];
 
-    return Object.entries(configuration).map(([parameterId, value]) =>
+    return Object.entries(selection).map(([parameterId, value]) =>
         db
             .insert(dailyConfigurationMetrics)
             .values({

@@ -470,13 +470,6 @@
                     "notNull": false,
                     "autoincrement": false
                 },
-                "configuration": {
-                    "name": "configuration",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
                 "is_favorite": {
                     "name": "is_favorite",
                     "type": "integer",
@@ -501,6 +494,13 @@
                 "fasten": {
                     "name": "fasten",
                     "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "selection": {
+                    "name": "selection",
+                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
@@ -549,13 +549,6 @@
                     "notNull": true,
                     "autoincrement": false
                 },
-                "default_configuration": {
-                    "name": "default_configuration",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
                 "sort_order": {
                     "name": "sort_order",
                     "type": "integer",
@@ -567,6 +560,13 @@
                 "created_at": {
                     "name": "created_at",
                     "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "default_selection": {
+                    "name": "default_selection",
+                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false

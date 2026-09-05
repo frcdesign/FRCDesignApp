@@ -1,7 +1,7 @@
 import {
     type ConfigurationRecord,
     type PartMetadata,
-    ParameterValues,
+    Selection,
     EnumOption,
     EnumParameter,
     OptionVisibilityType,
@@ -115,7 +115,7 @@ export function getPartUrl(
  * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
  * Values never carry a `;` or an `=`, which is what lets this round-trip.
  */
-export function encodeConfiguration(configuration?: ParameterValues): string {
+export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
         return "";
     }
@@ -133,8 +133,8 @@ export function splitConfiguration(configuration: string): string[] {
  * The values a configuration text names. A key names only what it overrides, so
  * what it omits is the parameter's own default — `fromKey` fills those in.
  */
-export function decodeConfiguration(configuration: string): ParameterValues {
-    const values: ParameterValues = {};
+export function decodeConfiguration(configuration: string): Selection {
+    const values: Selection = {};
     for (const assignment of splitConfiguration(configuration)) {
         const separator = assignment.indexOf("=");
         if (separator > 0) {
@@ -159,7 +159,7 @@ export function getOption(
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
-    configuration: ParameterValues,
+    configuration: Selection,
     parameters: ConfigurationParameter[]
 ): EnumOption[] {
     // No conditions means everything is shown

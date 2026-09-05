@@ -7,7 +7,7 @@ import {
     getFavoriteForInsertable
 } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { ParameterValues } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,
@@ -59,7 +59,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
     // What the hit names, for inserting and for prefilling the menu; its key
     // is what names the thumbnail.
-    const hitConfiguration = searchHit?.configurationKey
+    const hitSelection = searchHit?.configurationKey
         ? decodeConfiguration(searchHit.configurationKey)
         : undefined;
 
@@ -71,7 +71,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         }
         openInsertMenu({
             insertable,
-            initialSelection: hitConfiguration,
+            initialSelection: hitSelection,
             source
         });
     };
@@ -114,7 +114,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        configuration={hitConfiguration}
+                        selection={hitSelection}
                         configurationKey={searchHit?.configurationKey}
                     />
                 </RequireSignIn>
@@ -123,7 +123,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={hitConfiguration}
+                    selection={hitSelection}
                     source={source}
                 />
             }
@@ -136,8 +136,8 @@ interface InsertableMenuItemsProps {
     insertable: InsertableOut;
     inInsertMenu?: boolean;
     /** What quick insert inserts and "Open document" opens: a search hit's
-     * configuration on a card, the selected one inside the insert menu. */
-    configuration?: ParameterValues;
+     * selection on a card, the selected one inside the insert menu. */
+    selection?: Selection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: string;
     source: InsertSource;
@@ -150,7 +150,7 @@ export function InsertableMenuItems(
         favorite,
         insertable,
         inInsertMenu,
-        configuration,
+        selection,
         configurationKey,
         source
     } = props;
@@ -162,7 +162,7 @@ export function InsertableMenuItems(
                 <>
                     <QuickInsertItems
                         insertable={insertable}
-                        configuration={configuration}
+                        selection={selection}
                         isFavorite={favorite !== undefined}
                         source={source}
                     />
@@ -173,12 +173,12 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={configuration}
+                    selection={selection}
                     configurationKey={configurationKey}
                 />
                 <Menu.Divider />
             </RequireSignIn>
-            <OpenDocumentItems path={{ ...insertable.path, configuration }} />
+            <OpenDocumentItems path={{ ...insertable.path, selection }} />
         </>
     );
 }

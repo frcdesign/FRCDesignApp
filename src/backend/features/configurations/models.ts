@@ -141,7 +141,7 @@ export interface QuantityParameter extends ConfigurationParameterBase {
  * shares. `toSelection` is what makes one; nothing else may build a map that
  * claims to be this.
  */
-export type ParameterValues = Record<string, string>;
+export type Selection = Record<string, string>;
 
 /**
  * A selection's identity: the text spelling of what it overrides, which is what
@@ -180,7 +180,7 @@ export interface PartMetadata {
  */
 export interface ProbedRecord extends PartMetadata {
     /** The selection probed, before it is keyed for storage. */
-    configuration: ParameterValues;
+    configuration: Selection;
 }
 
 /** A probe as it is stored. Kept only for an indexed insertable. */

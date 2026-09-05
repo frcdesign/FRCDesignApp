@@ -129,7 +129,7 @@ describe("tracking", () => {
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID,
                 elementId,
-                configuration: { size: "large" }
+                selection: { size: "large" }
             });
             expect(event?.day).toBe(toDayKey(Date.now()));
 
@@ -437,7 +437,7 @@ describe("tracking", () => {
                 await db.select().from(dailyConfigurationMetrics).all()
             ).toEqual([]);
             const event = await db.select().from(events).get();
-            expect(event?.configuration).toBeNull();
+            expect(event?.selection).toBeNull();
         });
     });
 

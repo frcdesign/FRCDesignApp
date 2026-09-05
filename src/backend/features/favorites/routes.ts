@@ -24,15 +24,15 @@ const addFavoriteQuery = z.object({
     id: z.string().min(1)
 });
 
-/** The configuration the favorite opens with, when it was made from one. */
+/** The selection the favorite opens with, when it was made from one. */
 const addFavoriteBody = z.object({
-    configuration: z.record(z.string(), z.string()).optional()
+    selection: z.record(z.string(), z.string()).optional()
 });
 
 const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
 
-const configurationBody = z.object({
-    configuration: z.record(z.string(), z.string())
+const defaultSelectionBody = z.object({
+    selection: z.record(z.string(), z.string())
 });
 
 async function getFavorites(
@@ -62,19 +62,22 @@ async function getFavorites(
     const favoritesOut: Record<string, Favorite> = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
-        const stored = row.configuration ?? undefined;
+        const stored = row.defaultSelection ?? undefined;
         // Made whole on the way out as well as in: a row written before a
         // parameter existed still has to answer as a selection.
-        const configuration = stored
+        const defaultSelection = stored
             ? toSelection(stored, parameters.get(row.insertableId) ?? [])
             : undefined;
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
-            configuration,
-            configurationKey: configuration
-                ? toKey(configuration, parameters.get(row.insertableId) ?? [])
+            defaultSelection,
+            configurationKey: defaultSelection
+                ? toKey(
+                      defaultSelection,
+                      parameters.get(row.insertableId) ?? []
+                  )
                 : undefined
         };
         favoritesOut[row.id] = fav;
@@ -138,7 +141,7 @@ favoriteRoutes.post(
         const libraryId = getLibraryParam(c);
         const userId = await c.var.getUserId();
         const { insertableId, id: favoriteId } = c.req.valid("query");
-        const { configuration } = c.req.valid("json");
+        const { selection } = c.req.valid("json");
 
         const db = getDb(c.env.DB);
 
@@ -162,9 +165,9 @@ favoriteRoutes.post(
                 userId,
                 libraryId,
                 insertableId,
-                configuration: configuration
+                defaultSelection: selection
                     ? toSelection(
-                          configuration,
+                          selection,
                           await getInsertableParameters(db, insertableId)
                       )
                     : undefined,
@@ -218,14 +221,14 @@ favoriteRoutes.post(
     }
 );
 
-/** POST /api/favorite-configuration/favorite/:favoriteId */
+/** POST /api/default-selection/favorite/:favoriteId */
 favoriteRoutes.post(
-    "/favorite-configuration" + favoriteRoute(),
+    "/default-selection" + favoriteRoute(),
     requireSignInMiddleware,
-    validate("json", configurationBody),
+    validate("json", defaultSelectionBody),
     async (c) => {
         const favoriteId = getFavoriteParam(c);
-        const { configuration } = c.req.valid("json");
+        const { selection } = c.req.valid("json");
         const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
@@ -243,8 +246,8 @@ favoriteRoutes.post(
         await db
             .update(favorites)
             .set({
-                configuration: toSelection(
-                    configuration,
+                defaultSelection: toSelection(
+                    selection,
                     await getInsertableParameters(db, row.insertableId)
                 )
             })

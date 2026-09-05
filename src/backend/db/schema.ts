@@ -14,7 +14,7 @@ import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
-    ParameterValues,
+    Selection,
     PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
@@ -175,11 +175,11 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The whole selection the favorite opens with, canonical like every
-        // stored one. Null for an insertable with nothing to configure.
-        configuration: text("configuration", {
+        // The selection the favorite opens with, whole and canonical like
+        // every stored one. Null for an insertable with nothing to configure.
+        defaultSelection: text("default_selection", {
             mode: "json"
-        }).$type<ParameterValues | null>(),
+        }).$type<Selection | null>(),
         sortOrder: integer("sort_order").notNull().default(0),
         // Null on every row that predates this column. Deliberately not
         // backfilled: stamping them all with the migration date would draw a
@@ -213,9 +213,10 @@ export const events = sqliteTable(
         insertableId: text("insertable_id"),
         // The type of tab the user inserted into, not the insertable's own type
         targetElementType: text("target_element_type").$type<ElementType>(),
-        configuration: text("configuration", {
+        // What the insert applied, minus the parameters it hid.
+        selection: text("selection", {
             mode: "json"
-        }).$type<ParameterValues | null>(),
+        }).$type<Selection | null>(),
         // Whether the part was favorited at insert time — not where the insert
         // came from; `source` carries that.
         isFavorite: integer("is_favorite", { mode: "boolean" }),

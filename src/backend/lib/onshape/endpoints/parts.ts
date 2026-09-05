@@ -2,16 +2,14 @@ import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { encodeConfiguration } from "../../../features/configurations/utils";
-import { ParameterValues } from "../../../features/configurations/models";
+import { Selection } from "../../../features/configurations/models";
 import type { OnshapeAssemblyDefinition, OnshapePart } from "../types";
 
 /**
  * Builds the `configuration` query for an element request. The value is the
  * raw `id=value;…` form; `createSearchParams` URL-encodes it.
  */
-function configurationQuery(
-    configuration: ParameterValues
-): Record<string, string> {
+function configurationQuery(configuration: Selection): Record<string, string> {
     const encoded = encodeConfiguration(configuration);
     return encoded ? { configuration: encoded } : {};
 }
@@ -20,7 +18,7 @@ function configurationQuery(
 export function getParts(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration: ParameterValues
+    configuration: Selection
 ): Promise<OnshapePart[]> {
     return client.get(apiPath("parts", elementPath, toElementApiPath), {
         query: configurationQuery(configuration)
@@ -31,7 +29,7 @@ export function getParts(
 export function getAssemblyDefinition(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration: ParameterValues
+    configuration: Selection
 ): Promise<OnshapeAssemblyDefinition> {
     return client.get(apiPath("assemblies", elementPath, toElementApiPath), {
         query: configurationQuery(configuration)

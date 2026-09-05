@@ -2,7 +2,7 @@ import { Vendor, parseVendor } from "../library/vendors";
 import {
     ParameterType,
     type ConfigurationParameter,
-    type ParameterValues
+    type Selection
 } from "../configurations/models";
 
 export function parseNameVendor(name: string): Vendor | undefined {
@@ -45,7 +45,7 @@ export function parseVendors(
  */
 export function parseRecordVendor(
     partName: string | undefined,
-    configuration: ParameterValues,
+    configuration: Selection,
     parameters: ConfigurationParameter[]
 ): Vendor | undefined {
     for (const param of parameters) {

@@ -21,7 +21,7 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
-    ParameterValues,
+    Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
@@ -37,7 +37,7 @@ interface InsertMenuContentProps {
     insertable: InsertableOut;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    initialSelection?: ParameterValues;
+    initialSelection?: Selection;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
@@ -48,8 +48,8 @@ interface InsertMenuContentProps {
  * The selection the menu holds and its key, plus whether it still stands where
  * it opened.
  */
-function useInsertSelection(initialSelection?: ParameterValues) {
-    const [configuration, setConfiguration] = useState(initialSelection);
+function useInsertSelection(initialSelection?: Selection) {
+    const [selection, setSelection] = useState(initialSelection);
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
     const [configurationKey, setConfigurationKey] =
@@ -64,8 +64,8 @@ function useInsertSelection(initialSelection?: ParameterValues) {
     }, []);
 
     return {
-        configuration,
-        setConfiguration,
+        selection,
+        setSelection,
         configurationKey,
         onConfigurationKey,
         isUnchanged: configurationKey === (openedWith ?? ELEMENT_DEFAULT_KEY)
@@ -78,8 +78,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const isSignedIn = useIsSignedIn();
 
     const {
-        configuration,
-        setConfiguration,
+        selection,
+        setSelection,
         configurationKey,
         onConfigurationKey,
         isUnchanged
@@ -118,8 +118,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <ConfigurationWrapper
                 insertableId={insertable.id}
                 microversionId={insertable.microversionId}
-                configuration={configuration}
-                setConfiguration={setConfiguration}
+                selection={selection}
+                setSelection={setSelection}
                 onConfigurationKey={onConfigurationKey}
                 onRecord={setRecord}
             />
@@ -141,7 +141,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
-                configuration={configuration}
+                selection={selection}
                 configurationKey={configurationKey}
                 isUnchanged={isUnchanged}
                 openedAt={openedAt}
@@ -155,7 +155,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
-    configuration?: ParameterValues;
+    selection?: Selection;
     configurationKey: string;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
@@ -170,7 +170,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
     const {
         insertable,
         favorite,
-        configuration,
+        selection,
         configurationKey,
         isUnchanged,
         openedAt,
@@ -184,7 +184,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        configuration={configuration}
+                        selection={selection}
                         configurationKey={configurationKey}
                         large
                     />
@@ -194,7 +194,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         favorite={favorite}
                         insertable={insertable}
                         inInsertMenu
-                        configuration={configuration}
+                        selection={selection}
                         configurationKey={configurationKey}
                         source={source}
                     />
@@ -202,7 +202,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
             </Group>
             <InsertButtons
                 insertable={insertable}
-                configuration={configuration}
+                selection={selection}
                 isUnchanged={isUnchanged}
                 isFavorite={favorite !== undefined}
                 openedAt={openedAt}
@@ -215,12 +215,12 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
 
 interface InsertButtonsProps {
     /**
-     * Whether the configuration is still the one the menu opened with, which a
+     * Whether the selection is still the one the menu opened with, which a
      * right-click on the card would have inserted without opening anything.
      */
     isUnchanged: boolean;
     insertable: InsertableOut;
-    configuration?: ParameterValues;
+    selection?: Selection;
     isFavorite: boolean;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
@@ -234,7 +234,7 @@ interface InsertButtonsProps {
 function InsertButtons(props: InsertButtonsProps): ReactNode {
     const {
         insertable,
-        configuration,
+        selection,
         isUnchanged,
         isFavorite,
         openedAt,
@@ -246,7 +246,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     // Inserting targets the current Onshape document; there's nothing to insert
     // into when the app is open standalone.
     const isConnected = useIsConnectedToOnshape();
-    const insertMutation = useInsertMutation(insertable, configuration, {
+    const insertMutation = useInsertMutation(insertable, selection, {
         isFavorite,
         source
     });
@@ -311,7 +311,7 @@ function showSignInPreviewToast() {
         color: "blue",
         icon: <InfoIcon size={IconSize.MEDIUM} />,
         message: renderNotification(
-            "Sign in to Onshape to see the configuration preview.",
+            "Sign in to Onshape to see the selection preview.",
             { text: "Sign in", onClick: startSignIn }
         )
     });

@@ -68,7 +68,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 }
                 openInsertMenu({
                     insertable,
-                    initialSelection: favorite.configuration,
+                    initialSelection: favorite.defaultSelection,
                     source: InsertSource.FAVORITES
                 });
             }}
@@ -127,7 +127,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 <>
                     <QuickInsertItems
                         insertable={insertable}
-                        configuration={favorite.configuration}
+                        selection={favorite.defaultSelection}
                         isFavorite
                         source={InsertSource.FAVORITES}
                     />
@@ -144,11 +144,11 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     openFavoriteMenu({
                         favoriteId: favorite.id,
                         insertableName: insertable.name,
-                        configuration: favorite.configuration
+                        selection: favorite.defaultSelection
                     });
                 }}
             >
-                Edit default configuration
+                Edit default selection
             </Menu.Item>
             <Menu.Divider />
             <ChangeOrderItems

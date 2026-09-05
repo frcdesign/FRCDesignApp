@@ -14,7 +14,7 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import { FavoriteIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {
-    ParameterValues,
+    Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
@@ -31,7 +31,7 @@ interface FavoriteMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     /** What the favorite opens with today. */
-    initialSelection?: ParameterValues;
+    initialSelection?: Selection;
 }
 
 /**
@@ -40,20 +40,19 @@ interface FavoriteMenuContentProps {
  */
 function useSetDefaultConfigurationMutation(
     favoriteId: string,
-    configuration: ParameterValues | undefined,
+    selection: Selection | undefined,
     configurationKey: string | undefined
 ) {
     const libraryId = useLibraryId();
     const refreshFavorites = useRefreshFavorites();
     return useMutation({
-        mutationKey: ["set-favorite-configuration"],
+        mutationKey: ["set-default-selection"],
         mutationFn: async () => {
             // The whole selection, not its key: the key names only what the
             // selection overrides, and the favorite opens on all of it.
-            return apiPost(
-                "/favorite-configuration" + toFavoritePath(favoriteId),
-                { body: { configuration } }
-            );
+            return apiPost("/default-selection" + toFavoritePath(favoriteId), {
+                body: { selection: selection }
+            });
         },
         onMutate: async () => {
             const queryKey = favoritesQueryKey(libraryId);
@@ -63,7 +62,7 @@ function useSetDefaultConfigurationMutation(
                 getQueryUpdater((data: FavoritesData) => {
                     const fav = data.favorites[favoriteId];
                     if (fav) {
-                        fav.configuration = configuration;
+                        fav.defaultSelection = selection;
                         fav.configurationKey = configurationKey;
                     }
                     return data;
@@ -73,12 +72,10 @@ function useSetDefaultConfigurationMutation(
             // and that fetch would race the mutation and undo this update.
         },
         onError: () => {
-            showErrorToast(
-                "Unexpectedly failed to update default configuration."
-            );
+            showErrorToast("Unexpectedly failed to update default selection.");
         },
         onSuccess: () => {
-            showSuccessToast("Successfully updated default configuration.");
+            showSuccessToast("Successfully updated default selection.");
         },
         onSettled: refreshFavorites
     });
@@ -92,9 +89,9 @@ export function FavoriteMenuContent(
     const insertables = useLibraryQuery().data?.insertables;
     const favoritesData = useFavoritesQuery().data;
 
-    const [configuration, setConfiguration] = useState<
-        ParameterValues | undefined
-    >(initialSelection);
+    const [selection, setSelection] = useState<Selection | undefined>(
+        initialSelection
+    );
     // Reported by ConfigurationWrapper; names this selection's thumbnail.
     // Undefined until it reports, which is what gates saving.
     const [configurationKey, setConfigurationKey] = useState<string>();
@@ -114,7 +111,7 @@ export function FavoriteMenuContent(
 
     const setDefaultConfigurationMutation = useSetDefaultConfigurationMutation(
         favoriteId,
-        configuration,
+        selection,
         configurationKey
     );
 
@@ -143,8 +140,8 @@ export function FavoriteMenuContent(
                 <ConfigurationWrapper
                     onConfigurationKey={setConfigurationKey}
                     onRecord={setRecord}
-                    configuration={configuration}
-                    setConfiguration={setConfiguration}
+                    selection={selection}
+                    setSelection={setSelection}
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                 />

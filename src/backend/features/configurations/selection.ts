@@ -1,7 +1,7 @@
 /**
  * The two forms a configuration takes, and the only place either is built.
  *
- * A selection — {@link ParameterValues} — is what someone picked: every
+ * A selection — {@link Selection} — is what someone picked: every
  * parameter the insertable declares, each value canonically spelled. A
  * {@link ConfigurationKey} is that selection's identity: what it overrides,
  * encoded. The key is what addresses a render, so `toKey` is the one function
@@ -14,7 +14,7 @@ import {
     type ConfigurationKey,
     type ConfigurationParameter,
     ParameterType,
-    type ParameterValues
+    type Selection
 } from "./models";
 import {
     DEFAULT_QUANTITY_PRECISION,
@@ -63,10 +63,10 @@ export function canonicalizeValue(
  * out whole. In parameter order, so equivalent selections spell the same way.
  */
 export function toSelection(
-    values: Partial<ParameterValues>,
+    values: Partial<Selection>,
     parameters: ConfigurationParameter[]
-): ParameterValues {
-    const selection: ParameterValues = {};
+): Selection {
+    const selection: Selection = {};
     for (const parameter of parameters) {
         selection[parameter.id] = canonicalizeValue(
             parameter,
@@ -82,10 +82,10 @@ export function toSelection(
  * what the user chose, and is left off.
  */
 export function applied(
-    selection: ParameterValues,
+    selection: Selection,
     parameters: ConfigurationParameter[]
-): ParameterValues {
-    const values: ParameterValues = {};
+): Selection {
+    const values: Selection = {};
     for (const parameter of parameters) {
         const value = selection[parameter.id];
         if (
@@ -104,11 +104,11 @@ export function applied(
  * entry serve both.
  */
 export function toKey(
-    selection: ParameterValues,
+    selection: Selection,
     parameters: ConfigurationParameter[]
 ): ConfigurationKey {
     const values = applied(selection, parameters);
-    const overrides: ParameterValues = {};
+    const overrides: Selection = {};
     for (const parameter of parameters) {
         const value = values[parameter.id];
         if (value !== undefined && value !== parameter.default) {
@@ -122,7 +122,7 @@ export function toKey(
 export function fromKey(
     key: ConfigurationKey,
     parameters: ConfigurationParameter[]
-): ParameterValues {
+): Selection {
     return toSelection(decodeConfiguration(key), parameters);
 }
 

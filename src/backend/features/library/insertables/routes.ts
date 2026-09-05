@@ -13,7 +13,7 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type ElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
-    type ParameterValues
+    type Selection
 } from "../../configurations/models";
 import {
     INDEXING_ISSUE_TYPES,
@@ -221,7 +221,7 @@ function indexRecords(
         elementType: ElementType;
         isOpenComposite: boolean;
         parameters: ConfigurationParameter[];
-        configurations: ParameterValues[];
+        configurations: Selection[];
     }
 ): Promise<ConfigurationRecordsResult> {
     const sourcePath: ElementPath = {
@@ -261,9 +261,9 @@ const configurationSchema = z.record(z.string(), z.string()).optional();
 async function readSelection(
     db: Db,
     insertableId: string,
-    requested: ParameterValues | undefined
+    requested: Selection | undefined
 ): Promise<{
-    selection: ParameterValues | undefined;
+    selection: Selection | undefined;
     parameters: ConfigurationParameter[];
 }> {
     const row = await db
@@ -284,7 +284,7 @@ async function readSelection(
 
 const insertBodySchema = z.object({
     targetPath: targetPathSchema,
-    configuration: configurationSchema,
+    selection: configurationSchema,
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Where the insert began, which `isFavorite` does not answer. Defaulted so
@@ -332,7 +332,7 @@ insertableRoutes.post(
         const { selection, parameters } = await readSelection(
             db,
             insertableId,
-            body.configuration
+            body.selection
         );
 
         const feature = new DerivedFeature(
@@ -418,7 +418,7 @@ insertableRoutes.post(
         const { selection, parameters } = await readSelection(
             db,
             insertableId,
-            body.configuration
+            body.selection
         );
 
         const encodedConfiguration = selection

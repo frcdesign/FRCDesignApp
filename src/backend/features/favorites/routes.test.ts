@@ -25,14 +25,14 @@ interface FavoritesBody {
         string,
         {
             insertableId: string;
-            configuration?: Record<string, string>;
+            defaultSelection?: Record<string, string>;
             configurationKey?: string;
         }
     >;
     favoriteOrder: string[];
 }
 
-/** The one favorite a body holds, for the derived-canonical tests. */
+/** The one favorite a body holds, for the derived-key tests. */
 function soleFavorite(body: FavoritesBody) {
     return body.favorites[body.favoriteOrder[0]];
 }
@@ -74,7 +74,7 @@ describe("favorites routes", () => {
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             await db
                 .update(favorites)
-                .set({ configuration: { boolean: "false" } })
+                .set({ defaultSelection: { boolean: "false" } })
                 .where(eq(favorites.id, favoriteId));
 
             const res = await createTestApp().request(
@@ -96,7 +96,7 @@ describe("favorites routes", () => {
             const configuration = { boolean: "true" };
             await db
                 .update(favorites)
-                .set({ configuration: configuration })
+                .set({ defaultSelection: configuration })
                 .where(eq(favorites.id, favoriteId));
 
             const res = await createTestApp().request(
@@ -105,7 +105,7 @@ describe("favorites routes", () => {
                 env
             );
             const favorite = soleFavorite(await res.json());
-            expect(favorite.configuration).toEqual(configuration);
+            expect(favorite.defaultSelection).toEqual(configuration);
             // "true" is the parameter default, so it names no override at all.
             expect(favorite.configurationKey).toBe("");
         });
@@ -277,12 +277,12 @@ describe("favorites routes", () => {
         });
     });
 
-    describe("POST /favorite-configuration/favorite/:favoriteId", () => {
-        async function post(configuration: Record<string, string>) {
+    describe("POST /default-selection/favorite/:favoriteId", () => {
+        async function post(selection: Record<string, string>) {
             const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
             const res = await createTestApp().request(
-                `/api/favorite-configuration/favorite/${favoriteId}`,
-                jsonRequest("POST", { configuration }),
+                `/api/default-selection/favorite/${favoriteId}`,
+                jsonRequest("POST", { selection }),
                 env
             );
             expect(res.status).toBe(200);
@@ -291,7 +291,7 @@ describe("favorites routes", () => {
                 .from(favorites)
                 .where(eq(favorites.id, favoriteId))
                 .get();
-            return row?.configuration;
+            return row?.defaultSelection;
         }
 
         it("persists the selection the favorite opens with", async () => {

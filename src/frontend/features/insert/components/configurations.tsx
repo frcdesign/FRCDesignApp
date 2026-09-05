@@ -20,7 +20,7 @@ import {
     useState
 } from "react";
 import {
-    ParameterValues,
+    Selection,
     ConfigurationResult,
     ConfigurationParameter,
     ParameterType,
@@ -58,8 +58,8 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    configuration?: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    selection?: Selection;
+    setSelection: Dispatch<Selection>;
     /**
      * Reported here because only this component has the parameters the key is
      * measured against.
@@ -83,8 +83,8 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
  */
 function useWholeSelection(
     parameters: ConfigurationParameter[] | undefined,
-    configuration: ParameterValues | undefined,
-    setConfiguration: Dispatch<ParameterValues>
+    selection: Selection | undefined,
+    setSelection: Dispatch<Selection>
 ) {
     const settled = useRef(false);
     useEffect(() => {
@@ -93,36 +93,36 @@ function useWholeSelection(
             return;
         }
         settled.current = true;
-        setConfiguration(toSelection(configuration ?? {}, parameters));
-    }, [parameters, configuration, setConfiguration]);
+        setSelection(toSelection(selection ?? {}, parameters));
+    }, [parameters, selection, setSelection]);
 }
 
 /** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
     records: SearchRecord[] | undefined,
-    configuration: ParameterValues | undefined,
+    selection: Selection | undefined,
     onConfigurationKey?: (configurationKey: string) => void,
     onRecord?: (record: SearchRecord | undefined) => void
 ) {
     useEffect(() => {
-        if (!parameters || !configuration) {
+        if (!parameters || !selection) {
             return;
         }
-        const configurationKey = toKey(configuration, parameters);
+        const configurationKey = toKey(selection, parameters);
         onConfigurationKey?.(configurationKey);
         if (records) {
             onRecord?.(findRecordForConfiguration(configurationKey, records));
         }
-    }, [parameters, records, configuration, onConfigurationKey, onRecord]);
+    }, [parameters, records, selection, onConfigurationKey, onRecord]);
 }
 
 export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const {
         insertableId,
         microversionId,
-        configuration,
-        setConfiguration,
+        selection,
+        setSelection,
         onConfigurationKey,
         onRecord
     } = props;
@@ -137,32 +137,32 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
-    useWholeSelection(parameters, configuration, setConfiguration);
+    useWholeSelection(parameters, selection, setSelection);
     useReportSelection(
         parameters,
         query.data?.records,
-        configuration,
+        selection,
         onConfigurationKey,
         onRecord
     );
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.
-    if (query.isPending || unitInfoQuery.isLoading || !configuration) {
+    if (query.isPending || unitInfoQuery.isLoading || !selection) {
         return (
             <Center my="md">
                 <Loader />
             </Center>
         );
     } else if (query.isError) {
-        return <SectionError title="Failed to load configuration." />;
+        return <SectionError title="Failed to load selection." />;
     }
 
     return (
         <ConfigurationParameters
             configurationResult={query.data}
-            configuration={configuration}
-            setConfiguration={setConfiguration}
+            selection={selection}
+            setSelection={setSelection}
             unitInfo={unitInfo}
         />
     );
@@ -170,26 +170,25 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
 
 interface ConfigurationParameterProps {
     configurationResult: ConfigurationResult;
-    configuration: ParameterValues;
-    setConfiguration: Dispatch<ParameterValues>;
+    selection: Selection;
+    setSelection: Dispatch<Selection>;
     unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(props: ConfigurationParameterProps) {
-    const { configurationResult, configuration, setConfiguration, unitInfo } =
-        props;
+    const { configurationResult, selection, setSelection, unitInfo } = props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
         const handleValueChange = (newValue: string | undefined) => {
             if (newValue === undefined) {
-                if (!(parameter.id in configuration)) return;
-                const next = { ...configuration };
+                if (!(parameter.id in selection)) return;
+                const next = { ...selection };
                 delete next[parameter.id];
-                setConfiguration(next);
+                setSelection(next);
             } else {
-                if (configuration[parameter.id] === newValue) return;
-                setConfiguration({
-                    ...configuration,
+                if (selection[parameter.id] === newValue) return;
+                setSelection({
+                    ...selection,
                     [parameter.id]: newValue
                 });
             }
@@ -199,8 +198,8 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
             <ParameterInput
                 key={parameter.id}
                 parameter={parameter}
-                value={configuration[parameter.id]}
-                configuration={configuration}
+                value={selection[parameter.id]}
+                selection={selection}
                 parameters={configurationResult.parameters}
                 onValueChange={handleValueChange}
                 unitInfo={unitInfo}
@@ -214,10 +213,10 @@ function ConfigurationParameters(props: ConfigurationParameterProps) {
 
 interface ParameterProps<T extends ConfigurationParameter> {
     parameter: T;
-    /** Absent when the configuration omits it, which means the default. */
+    /** Absent when the selection omits it, which means the default. */
     value: string | undefined;
     onValueChange: (newValue: string | undefined) => void;
-    configuration: ParameterValues;
+    selection: Selection;
     parameters: ConfigurationParameter[];
     unitInfo: UnitInfo;
 }
@@ -231,7 +230,7 @@ function ParameterInput(
         if (
             !evaluateCondition(
                 parameter.condition,
-                props.configuration,
+                props.selection,
                 props.parameters
             )
         ) {
@@ -242,7 +241,7 @@ function ParameterInput(
     if (
         !evaluateCondition(
             parameter.condition,
-            props.configuration,
+            props.selection,
             props.parameters
         )
     ) {
@@ -342,14 +341,9 @@ function getFirstVisibleOption(
 }
 
 function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
-    const { parameter, value, onValueChange, configuration, parameters } =
-        props;
+    const { parameter, value, onValueChange, selection, parameters } = props;
 
-    const visibleOptions = getVisibleOptions(
-        parameter,
-        configuration,
-        parameters
-    );
+    const visibleOptions = getVisibleOptions(parameter, selection, parameters);
 
     useEffect(() => {
         const option = getFirstVisibleOption(
