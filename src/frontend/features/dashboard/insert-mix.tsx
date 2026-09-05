@@ -1,8 +1,8 @@
-import { Group, Progress, Stack, Table, Text } from "@mantine/core";
+import { Group, Progress, Stack, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import type { InsertSourceUsage } from "@backend/features/analytics/contract";
 import { InsertSource } from "@backend/features/analytics/events";
-import { formatCount, formatPercent } from "./series-utils";
+import { formatCount, formatPercent } from "./format";
 
 const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.SEARCH]: "Search results",
@@ -27,51 +27,19 @@ export function InsertSourceBreakdown({
     }
 
     return (
-        <Stack gap="md">
-            <Stack gap="xs">
-                {sources.map((source) => (
-                    <div key={source.source}>
-                        <Group justify="space-between" gap="xs" mb={4}>
-                            <Text size="sm">
-                                {SOURCE_LABELS[source.source]}
-                            </Text>
-                            <Text size="sm" c="dimmed">
-                                {formatCount(source.count)} (
-                                {formatPercent(source.count, total)})
-                            </Text>
-                        </Group>
-                        <Progress
-                            value={(source.count / total) * 100}
-                            size="sm"
-                        />
-                    </div>
-                ))}
-            </Stack>
-
-            <Table>
-                <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Started from</Table.Th>
-                        <Table.Th ta="right">Insert menu</Table.Th>
-                        <Table.Th ta="right">Quick insert</Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {sources.map((source) => (
-                        <Table.Tr key={source.source}>
-                            <Table.Td>{SOURCE_LABELS[source.source]}</Table.Td>
-                            <Table.Td ta="right">
-                                {formatCount(
-                                    source.count - source.quickInsertCount
-                                )}
-                            </Table.Td>
-                            <Table.Td ta="right">
-                                {formatCount(source.quickInsertCount)}
-                            </Table.Td>
-                        </Table.Tr>
-                    ))}
-                </Table.Tbody>
-            </Table>
+        <Stack gap="xs">
+            {sources.map((source) => (
+                <div key={source.source}>
+                    <Group justify="space-between" gap="xs" mb={4}>
+                        <Text size="sm">{SOURCE_LABELS[source.source]}</Text>
+                        <Text size="sm" c="dimmed">
+                            {formatCount(source.count)} (
+                            {formatPercent(source.count, total)})
+                        </Text>
+                    </Group>
+                    <Progress value={(source.count / total) * 100} size="sm" />
+                </div>
+            ))}
         </Stack>
     );
 }

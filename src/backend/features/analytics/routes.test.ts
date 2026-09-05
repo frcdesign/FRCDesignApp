@@ -29,7 +29,6 @@ import {
 import { getDb } from "../../db/client";
 import { createApp } from "../../app";
 import { EventType, InsertSource } from "./events";
-import { quantityParam } from "../../../__test_utils__/configuration-fixtures";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
@@ -37,7 +36,6 @@ import {
 } from "../configurations/models";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
-    SPARKLINE_DAYS,
     type AnalyticsOverviewOut,
     type UnusedOptionOut,
     type InsertableReportOut,
@@ -45,7 +43,7 @@ import {
     type LibrarySummary,
     type PartUsageOut
 } from "./contract";
-import { buildParameterUsage, summarizeHealth } from "./routes";
+import { SPARKLINE_DAYS } from "./measures";
 import { toDayKey } from "./tracking";
 import { BuildIssueType } from "../build-checker/issues";
 
@@ -187,12 +185,12 @@ describe("analytics routes", () => {
             await seedTestData(db);
 
             const paths = [
-                "/api/analytics/overview",
-                `/api/analytics/summary/library/${TEST_LIBRARY_ID}`,
-                `/api/analytics/parts/library/${TEST_LIBRARY_ID}`,
-                `/api/analytics/unused/library/${TEST_LIBRARY_ID}`,
+                `/api/analytics/overview?${ALL_TIME}`,
+                `/api/analytics/summary/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
+                `/api/analytics/parts/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
+                `/api/analytics/unused/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/health/library/${TEST_LIBRARY_ID}`,
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             ];
 
             for (const path of paths) {
@@ -234,7 +232,9 @@ describe("analytics routes", () => {
                 }
             ]);
 
-            const res = await anonymousGet("/api/analytics/overview");
+            const res = await anonymousGet(
+                `/api/analytics/overview?${ALL_TIME}`
+            );
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals).toMatchObject({
@@ -676,7 +676,7 @@ describe("analytics routes", () => {
             await seedTestData(db);
 
             const res = await anonymousGet(
-                `/api/analytics/summary/library/${LibraryId.MKCAD}`
+                `/api/analytics/summary/library/${LibraryId.MKCAD}?${ALL_TIME}`
             );
             const body: LibrarySummary = await res.json();
 
@@ -933,7 +933,7 @@ describe("analytics routes", () => {
             await seedFavorite(db, TEST_PART_STUDIO_ID, "user-b");
 
             const res = await anonymousGet(
-                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}`
+                `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             );
             const body: InsertableReportOut = await res.json();
 
@@ -967,183 +967,5 @@ describe("analytics routes", () => {
             expect(body.insertCount).toBe(12);
             expect(body.usesPerMonth).toBe(4);
         });
-    });
-});
-
-describe("buildParameterUsage", () => {
-    const enumParameter: ConfigurationParameter = {
-        type: ParameterType.ENUM,
-        id: "size",
-        name: "Size",
-        default: "medium",
-        isCosmetic: false,
-        options: [
-            { id: "small", name: "Small" },
-            { id: "medium", name: "Medium" },
-            { id: "large", name: "Large" }
-        ],
-        optionConditions: []
-    };
-
-    it("surfaces declared options that were never picked", () => {
-        const [usage] = buildParameterUsage(
-            [enumParameter],
-            [
-                { parameterId: "size", value: "large", count: 7 },
-                { parameterId: "size", value: "medium", count: 2 }
-            ]
-        );
-
-        expect(usage.total).toBe(9);
-        const small = usage.values.find((value) => value.value === "small");
-        expect(small).toMatchObject({ count: 0, label: "Small" });
-
-        // The default is flagged even though it isn't the popular choice —
-        // which is the whole point of the report.
-        const medium = usage.values.find((value) => value.value === "medium");
-        expect(medium?.isDefault).toBe(true);
-        expect(usage.values[0].value).toBe("large");
-    });
-
-    it("drops values recorded against a parameter the part no longer has", () => {
-        const usage = buildParameterUsage(
-            [enumParameter],
-            [{ parameterId: "removed", value: "1", count: 4 }]
-        );
-
-        expect(usage.map((entry) => entry.parameterId)).toEqual(["size"]);
-    });
-
-    it("labels a quantity in its own unit, not the one it is keyed in", () => {
-        const [usage] = buildParameterUsage(
-            [quantityParam("length")],
-            [
-                { parameterId: "length", value: "0.0254 m", count: 5 },
-                { parameterId: "length", value: "0.0508 m", count: 2 }
-            ]
-        );
-
-        expect(usage.values).toEqual([
-            { value: "0.0254 m", label: "1 in", count: 5, isDefault: true },
-            { value: "0.0508 m", label: "2 in", count: 2, isDefault: false }
-        ]);
-    });
-
-    it("always shows a free-form parameter's default, even unused", () => {
-        const [usage] = buildParameterUsage(
-            [
-                {
-                    type: ParameterType.STRING,
-                    id: "label",
-                    name: "Label",
-                    default: "none",
-                    isCosmetic: false
-                }
-            ],
-            [{ parameterId: "label", value: "custom", count: 2 }]
-        );
-
-        const defaultValue = usage.values.find((value) => value.isDefault);
-        expect(defaultValue).toMatchObject({ value: "none", count: 0 });
-    });
-});
-
-describe("summarizeHealth", () => {
-    const cleanGroup = {
-        id: "g1",
-        buildIssues: [],
-        lastLoadedAt: 1
-    };
-    const insertable = {
-        id: "i1",
-        groupId: "g1",
-        buildIssues: [],
-        lastLoadedAt: 1
-    };
-
-    it("counts every issue, including a lesser one on the same item", () => {
-        const counts = summarizeHealth(
-            [cleanGroup],
-            [
-                insertable,
-                {
-                    ...insertable,
-                    id: "i2",
-                    buildIssues: [
-                        { type: BuildIssueType.LOAD_FAILED },
-                        { type: BuildIssueType.NO_VENDORS }
-                    ]
-                },
-                {
-                    ...insertable,
-                    id: "i3",
-                    // Info-only, so it leaves the item unhealthy without
-                    // landing on either tile.
-                    buildIssues: [{ type: BuildIssueType.NO_THUMBNAIL_TAB }]
-                }
-            ],
-            new Map()
-        );
-
-        expect(counts).toEqual({
-            groupCount: 1,
-            insertableCount: 3,
-            errorCount: 1,
-            warningCount: 1,
-            healthyItems: 2
-        });
-    });
-
-    it("counts an insertable's configuration issues as its own", () => {
-        // The panel merges these, so the dashboard must not disagree.
-        const counts = summarizeHealth(
-            [cleanGroup],
-            [insertable],
-            new Map([
-                ["i1", [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }]]
-            ])
-        );
-
-        expect(counts.warningCount).toBe(1);
-        expect(counts.healthyItems).toBe(1); // the group
-    });
-
-    it("counts issues, not items, so two on one part read as two", () => {
-        const counts = summarizeHealth(
-            [cleanGroup],
-            [insertable],
-            new Map([
-                [
-                    "i1",
-                    [
-                        { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED },
-                        { type: BuildIssueType.MANUAL_INDEXING_REQUIRED }
-                    ]
-                ]
-            ])
-        );
-
-        expect(counts.warningCount).toBe(2);
-        expect(counts.healthyItems).toBe(1);
-    });
-
-    it("reports a group's stored issues without recomputing any", () => {
-        // Visibility checks now run in the workflow and on the visibility
-        // toggle, so this only reads what they wrote.
-        const counts = summarizeHealth(
-            [
-                {
-                    ...cleanGroup,
-                    buildIssues: [
-                        { type: BuildIssueType.NO_UNHIDDEN_INSERTABLES }
-                    ]
-                }
-            ],
-            [],
-            new Map()
-        );
-
-        expect(counts.errorCount).toBe(1);
-        expect(counts.healthyItems).toBe(0);
     });
 });

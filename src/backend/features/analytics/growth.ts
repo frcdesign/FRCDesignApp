@@ -10,11 +10,11 @@ import {
     seasonWindow
 } from "./seasons";
 import {
-    RECENT_DAYS,
     type GrowthMeasure,
     type GrowthOut,
     type PeriodComparison
 } from "./contract";
+import { RECENT_DAYS } from "./measures";
 
 interface Window {
     from: string;

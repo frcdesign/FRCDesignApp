@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { usesPerMonth } from "@backend/features/analytics/contract";
+import { usesPerMonth } from "@backend/features/analytics/measures";
 
 const DAY = 24 * 3600 * 1000;
 const NOW = Date.UTC(2026, 5, 1);

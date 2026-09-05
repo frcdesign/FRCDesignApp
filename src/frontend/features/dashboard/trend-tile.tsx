@@ -21,7 +21,7 @@ import {
     toTrend,
     type MetricDefinition
 } from "./metrics";
-import { formatCount, formatPercent } from "./series-utils";
+import { formatCount, formatPercent } from "./format";
 
 const MiniSparkline = lazy(() =>
     import("./sparkline").then((module) => ({

@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Minus } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
-import { formatCount } from "./series-utils";
+import { formatCount } from "./format";
 
 /**
  * How a measure changed, or why it cannot be said.

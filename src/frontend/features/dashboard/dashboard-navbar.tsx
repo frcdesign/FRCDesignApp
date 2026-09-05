@@ -31,7 +31,7 @@ import { DashboardSettingsMenu } from "./dashboard-settings";
 import { RangeControl } from "./range-control";
 import { getOverviewQuery } from "./dashboard-queries";
 import { toDayRange } from "./range";
-import { formatDay } from "./series-utils";
+import { formatDay } from "./format";
 import {
     DASHBOARDS,
     DEFAULT_LIBRARY,

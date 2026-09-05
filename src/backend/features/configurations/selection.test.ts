@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    applied,
+    appliedValues,
     ELEMENT_DEFAULT_KEY,
     formatValue,
     fromKey,
@@ -127,7 +127,7 @@ describe("fromKey", () => {
     });
 });
 
-describe("applied", () => {
+describe("appliedValues", () => {
     const hidden = boolParam("reinforced");
     const params = [
         size,
@@ -142,13 +142,13 @@ describe("applied", () => {
     ];
 
     it("leaves out a parameter the selection hides", () => {
-        expect(applied(select({ size: "s" }, params), params)).toEqual({
+        expect(appliedValues(select({ size: "s" }, params), params)).toEqual({
             size: "s"
         });
     });
 
     it("keeps one the selection shows", () => {
-        expect(applied(select({ size: "l" }, params), params)).toEqual({
+        expect(appliedValues(select({ size: "l" }, params), params)).toEqual({
             size: "l",
             reinforced: "false"
         });

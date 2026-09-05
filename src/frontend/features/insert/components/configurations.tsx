@@ -16,6 +16,7 @@ import {
     type SyntheticEvent,
     useCallback,
     useEffect,
+    useMemo,
     useRef,
     useState
 } from "react";
@@ -75,28 +76,6 @@ function handleBooleanChange(handler: Dispatch<boolean>) {
         handler((event.target as HTMLInputElement).checked);
 }
 
-/**
- * Makes what the menu opened with a whole selection.
- *
- * Runs for a prefill too, not only for an unset one: a search hit names the
- * values that hit overrides and nothing else, and the menu holds selections.
- */
-function useWholeSelection(
-    parameters: ConfigurationParameter[] | undefined,
-    selection: Selection | undefined,
-    setSelection: Dispatch<Selection>
-) {
-    const settled = useRef(false);
-    useEffect(() => {
-        // In an effect rather than a .then inside useQuery, which misbehaved.
-        if (!parameters || settled.current) {
-            return;
-        }
-        settled.current = true;
-        setSelection(toSelection(selection ?? {}, parameters));
-    }, [parameters, selection, setSelection]);
-}
-
 /** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
@@ -137,18 +116,25 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
-    useWholeSelection(parameters, selection, setSelection);
+    // Whole the moment the parameters are known, whatever the menu opened with
+    // — a search hit names only the values that hit overrides. Derived rather
+    // than stored, so there is no render where this holds a partial one.
+    const whole = useMemo(
+        () =>
+            parameters ? toSelection(selection ?? {}, parameters) : undefined,
+        [parameters, selection]
+    );
     useReportSelection(
         parameters,
         query.data?.records,
-        selection,
+        whole,
         onConfigurationKey,
         onRecord
     );
 
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.
-    if (query.isPending || unitInfoQuery.isLoading || !selection) {
+    if (query.isPending || unitInfoQuery.isLoading || !whole) {
         return (
             <Center my="md">
                 <Loader />
@@ -161,7 +147,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     return (
         <ConfigurationParameters
             configurationResult={query.data}
-            selection={selection}
+            selection={whole}
             setSelection={setSelection}
             unitInfo={unitInfo}
         />

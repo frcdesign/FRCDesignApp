@@ -2,14 +2,12 @@ import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
 import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-    SPARKLINE_DAYS,
-    type PartUsageOut
-} from "@backend/features/analytics/contract";
+import { type PartUsageOut } from "@backend/features/analytics/contract";
+import { SPARKLINE_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
 import { IconSize } from "../../lib/style-constants";
-import { formatCount } from "./series-utils";
+import { formatCount } from "./format";
 import {
     DEFAULT_SORT,
     filterAndSort,

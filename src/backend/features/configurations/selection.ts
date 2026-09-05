@@ -81,7 +81,7 @@ export function toSelection(
  * condition rules out, so one that is hidden changes neither the render nor
  * what the user chose, and is left off.
  */
-export function applied(
+export function appliedValues(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): Selection {
@@ -107,7 +107,7 @@ export function toKey(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): ConfigurationKey {
-    const values = applied(selection, parameters);
+    const values = appliedValues(selection, parameters);
     const overrides: Selection = {};
     for (const parameter of parameters) {
         const value = values[parameter.id];

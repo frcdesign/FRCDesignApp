@@ -1,15 +1,15 @@
 import { SimpleGrid } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
-    RECENT_DAYS,
     type DailyMetricPoint,
     type GrowthOut
 } from "@backend/features/analytics/contract";
+import { RECENT_DAYS } from "@backend/features/analytics/measures";
 import { formatRate } from "./change-indicator";
 import { ComparisonTile } from "./comparison-tile";
 import { perUnit } from "./derived";
 import { Section } from "./section";
-import { toSparkSeries } from "./spark-series";
+import { toSparkSeries } from "./series";
 
 /**
  * The trailing month against the month before it.

@@ -1,4 +1,3 @@
-import { Card, Title } from "@mantine/core";
 import { lazy, Suspense, type ReactNode } from "react";
 import type {
     DailyInsertPoint,
@@ -7,6 +6,7 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { LIBRARY_PROGRAM, Program } from "@backend/features/analytics/seasons";
 import { METRICS, toTrend } from "./metrics";
+import { SectionCard } from "./section";
 
 const LibraryInsertsChart = lazy(() =>
     import("./trend-chart").then((module) => ({
@@ -31,14 +31,11 @@ function ChartCard({
     children: ReactNode;
 }): ReactNode {
     return (
-        <Card withBorder padding="lg" radius="md">
-            <Title order={4} mb="md">
-                {title}
-            </Title>
+        <SectionCard title={title}>
             <Suspense fallback={<div style={{ height: PAGE_CHART_HEIGHT }} />}>
                 {children}
             </Suspense>
-        </Card>
+        </SectionCard>
     );
 }
 

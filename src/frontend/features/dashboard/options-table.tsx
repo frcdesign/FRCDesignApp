@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 import type { UnusedOptionOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { DashboardLink } from "./dashboard-link";
-import { formatCount, formatPercent } from "./series-utils";
+import { formatCount, formatPercent } from "./format";
 
 interface OptionsTableProps {
     libraryId: LibraryId;

@@ -66,7 +66,6 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
-        parameters: [],
         isFavorite: false,
         isQuickInsert: false,
         source: InsertSource.BROWSE,
@@ -99,7 +98,6 @@ function configuredEvent(
 ): InsertEvent {
     return insertEvent({
         selection: toSelection(values, SIZE_PARAMETERS),
-        parameters: SIZE_PARAMETERS,
         ...overrides
     });
 }

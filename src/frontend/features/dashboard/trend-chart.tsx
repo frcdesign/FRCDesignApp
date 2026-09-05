@@ -4,8 +4,8 @@ import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { getLibraryColor } from "../../theme";
-import { toChartData } from "./series-utils";
-import { type BucketPoint, type Granularity } from "./buckets";
+import { toChartData } from "./series";
+import { type BucketPoint, type Granularity } from "./series";
 import type { ChartReferenceLineProps } from "@mantine/charts";
 import {
     championshipOf,

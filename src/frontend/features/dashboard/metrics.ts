@@ -8,7 +8,7 @@ import {
     toBucketKey,
     type BucketPoint,
     type Granularity
-} from "./buckets";
+} from "./series";
 
 export type MetricKey =
     | "inserts"

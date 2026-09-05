@@ -14,7 +14,7 @@ import type {
     ConfigurationValueUsage
 } from "@backend/features/analytics/contract";
 import { FontWeight } from "../../lib/style-constants";
-import { formatCount } from "./series-utils";
+import { formatCount } from "./format";
 
 /**
  * Per-parameter value counts, which is how a wrong default shows itself: the

@@ -17,7 +17,7 @@ export function Section({
     );
 }
 
-/** The same heading in a card, for a section that is one chart or table. */
+/** A section whose content is one card: a chart, a table, a breakdown. */
 export function SectionCard({
     title,
     children
@@ -26,11 +26,10 @@ export function SectionCard({
     children: ReactNode;
 }): ReactNode {
     return (
-        <Card withBorder padding="lg" radius="md">
-            <Title order={4} mb="md">
-                {title}
-            </Title>
-            {children}
-        </Card>
+        <Section title={title}>
+            <Card withBorder padding="lg" radius="md">
+                {children}
+            </Card>
+        </Section>
     );
 }

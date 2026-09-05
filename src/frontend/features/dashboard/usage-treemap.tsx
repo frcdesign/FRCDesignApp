@@ -1,4 +1,4 @@
-import { Anchor, Breadcrumbs, Group, Text } from "@mantine/core";
+import { Anchor, Breadcrumbs, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -56,9 +56,7 @@ export function UsageTreemap({
 
     return (
         <SectionCard title="Usage breakdown">
-            <Group justify="space-between" mt={-8} mb="md">
-                <Crumbs root={root} path={path} onSelect={setPath} />
-            </Group>
+            <Crumbs root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
                 <Text c="dimmed" py="xl" ta="center">
                     Nothing was inserted in this range.
@@ -103,11 +101,7 @@ function Crumbs({
 
     // Rooted at a library with nothing drilled, there is nowhere to go back to.
     if (steps.length <= 1) {
-        return (
-            <Text size="sm" c="dimmed">
-                Click a tile to zoom in
-            </Text>
-        );
+        return null;
     }
 
     return (

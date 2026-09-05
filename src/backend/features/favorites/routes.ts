@@ -87,16 +87,11 @@ async function getFavorites(
 }
 
 /** One insertable's parameters, for making a selection whole. */
-async function getInsertableParameters(
+async function getParametersFor(
     db: Db,
     insertableId: string
 ): Promise<ConfigurationParameter[]> {
-    const row = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, insertableId))
-        .get();
-    return row?.parameters ?? [];
+    return (await getParameters(db, [insertableId])).get(insertableId) ?? [];
 }
 
 /** The parameters of each insertable named, for keying against. */
@@ -168,7 +163,7 @@ favoriteRoutes.post(
                 defaultSelection: selection
                     ? toSelection(
                           selection,
-                          await getInsertableParameters(db, insertableId)
+                          await getParametersFor(db, insertableId)
                       )
                     : undefined,
                 sortOrder: existingCount.length,
@@ -248,7 +243,7 @@ favoriteRoutes.post(
             .set({
                 defaultSelection: toSelection(
                     selection,
-                    await getInsertableParameters(db, row.insertableId)
+                    await getParametersFor(db, row.insertableId)
                 )
             })
             .where(

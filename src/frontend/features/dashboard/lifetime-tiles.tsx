@@ -7,7 +7,7 @@ import type {
 } from "@backend/features/analytics/contract";
 import { formatRate } from "./change-indicator";
 import { perUnit } from "./derived";
-import { toSparkSeries } from "./spark-series";
+import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
 
 /**

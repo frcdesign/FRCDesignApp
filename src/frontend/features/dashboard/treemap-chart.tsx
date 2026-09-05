@@ -1,6 +1,6 @@
 import { Treemap, type TreemapData } from "@mantine/charts";
 import { type ReactNode } from "react";
-import { formatCount } from "./series-utils";
+import { formatCount } from "./format";
 import { type TreemapNode } from "./treemap-data";
 
 // Kept in this lazily-loaded module so recharts and its styles stay out of the

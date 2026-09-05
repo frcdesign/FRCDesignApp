@@ -4,7 +4,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
 import { ChangeIndicator } from "./change-indicator";
-import { formatCount } from "./series-utils";
+import { formatCount } from "./format";
 
 const MiniSparkline = lazy(() =>
     import("./sparkline").then((module) => ({

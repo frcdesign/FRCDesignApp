@@ -1,8 +1,9 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import {
+    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -16,11 +17,8 @@ import {
 import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
-import {
-    type ConfigurationParameter,
-    type Selection
-} from "../configurations/models";
-import { applied } from "../configurations/selection";
+import { type Selection } from "../configurations/models";
+import { appliedValues } from "../configurations/selection";
 
 /** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
 export function toDayKey(timestamp: number): string {
@@ -37,8 +35,6 @@ export interface InsertEvent {
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
     selection: Selection | undefined;
-    /** Its parameters, so the hidden ones can be left out of the counts. */
-    parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
     isQuickInsert: boolean;
@@ -80,11 +76,7 @@ export async function trackInsert(
     const db = getDb(c.env.DB);
     const now = Date.now();
     const day = toDayKey(now);
-    // What Onshape actually applied: the selection minus the parameters it
-    // hides, which is what a count of chosen values means.
-    const selection = event.selection
-        ? applied(event.selection, event.parameters)
-        : null;
+    const selection = await appliedSelection(db, event);
 
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values({
@@ -326,6 +318,32 @@ function incrementSourceMetric(db: Db, day: string, event: InsertEvent) {
                 quickInsertCount: sql`${dailySourceMetrics.quickInsertCount} + ${quickInsert}`
             }
         });
+}
+
+/**
+ * What Onshape actually applied: the selection minus the parameters it hides,
+ * which is what a count of chosen values means.
+ *
+ * Read against the parameters as they stand now rather than against a copy the
+ * caller carried: this runs after the response, and the library is the only
+ * thing that knows what the insertable declares.
+ */
+async function appliedSelection(
+    db: Db,
+    event: InsertEvent
+): Promise<Selection | null> {
+    if (!event.selection) return null;
+
+    const row = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, event.insertableId))
+        .get();
+
+    const parameters = row?.parameters ?? [];
+    return parameters.length === 0
+        ? null
+        : appliedValues(event.selection, parameters);
 }
 
 /** One counter per parameter value the insert used. */

@@ -30,7 +30,7 @@ import { useRangePreset } from "../../../../features/dashboard/range-control";
 import {
     formatCount,
     formatPercent
-} from "../../../../features/dashboard/series-utils";
+} from "../../../../features/dashboard/format";
 
 interface PartSearch {
     /** The part being reported on; absent until one is picked. */

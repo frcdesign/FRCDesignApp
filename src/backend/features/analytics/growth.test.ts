@@ -6,7 +6,6 @@ import { LibraryId } from "../library/library-id";
 import { resetDb, seedLibrary, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { getGrowth, recentWindows, toComparison } from "./growth";
-import { RECENT_DAYS } from "./contract";
 
 const db = getDb(env.DB);
 
@@ -47,9 +46,9 @@ describe("recentWindows", () => {
     });
 
     it("puts two equal, adjacent windows back to back", () => {
-        expect(WINDOWS.current.from).toBe("2026-07-30");
-        expect(WINDOWS.previous.to).toBe("2026-07-29");
-        expect(WINDOWS.previous.from).toBe("2026-07-02");
+        expect(WINDOWS.current.from).toBe("2026-07-28");
+        expect(WINDOWS.previous.to).toBe("2026-07-27");
+        expect(WINDOWS.previous.from).toBe("2026-06-28");
     });
 });
 
@@ -106,7 +105,7 @@ describe("getGrowth", () => {
         expect(growth.recent.inserts.current).toBe(30);
         expect(growth.recent.inserts.previous).toBe(20);
         expect(growth.recent.inserts.changeRatio).toBeCloseTo(0.5);
-        expect(growth.recent.inserts.baselineShort).toBe("28 days");
+        expect(growth.recent.inserts.baselineShort).toBe("30 days");
     });
 
     it("counts a person once per window, not once overall", async () => {
@@ -221,9 +220,5 @@ describe("getGrowth", () => {
             LibraryId.FTC_DESIGN_LIB
         );
         expect(ftc.season.inserts.label).toBe("FTC 2025–26");
-    });
-
-    it("uses a window of whole weeks", () => {
-        expect(RECENT_DAYS % 7).toBe(0);
     });
 });

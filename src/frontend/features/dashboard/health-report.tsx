@@ -6,7 +6,7 @@ import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { IconSize } from "../../lib/style-constants";
-import { formatCount, formatPercent } from "./series-utils";
+import { formatCount, formatPercent } from "./format";
 
 /** Mirrors the panel's severity colors so the two views agree at a glance. */
 function SeverityIcon({

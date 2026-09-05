@@ -358,7 +358,6 @@ insertableRoutes.post(
                 insertableId,
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
-                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -415,7 +414,7 @@ insertableRoutes.post(
             ? [PartType.COMPOSITE_PARTS]
             : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        const { selection, parameters } = await readSelection(
+        const { selection } = await readSelection(
             db,
             insertableId,
             body.selection
@@ -446,7 +445,6 @@ insertableRoutes.post(
                 insertableId,
                 targetElementType: ElementType.ASSEMBLY,
                 selection,
-                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
