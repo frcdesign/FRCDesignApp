@@ -3,11 +3,8 @@ import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { StatTile } from "./stat-tiles";
 
 /**
- * A `StatTile` whose number and change come from one comparison.
- *
- * Thin on purpose: it exists so the two cannot be passed from different
- * windows by mistake, and so a comparison tile lays out identically to a plain
- * stat tile rather than drifting into its own arrangement.
+ * A `StatTile` whose number and change come from one comparison, so the two
+ * cannot be passed from different windows by mistake.
  */
 export function ComparisonTile({
     label,

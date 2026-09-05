@@ -12,9 +12,7 @@ import { Section } from "./section";
 import { toSparkSeries } from "./series";
 
 /**
- * The trailing month against the month before it.
- *
- * The section that says something useful from the first weeks of tracking,
+ * The trailing month against the one before it: what says something useful
  * before there is a second season to compare against.
  */
 export function RecentSection({

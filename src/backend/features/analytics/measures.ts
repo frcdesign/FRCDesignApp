@@ -8,10 +8,8 @@
 export const SPARKLINE_DAYS = 30;
 
 /**
- * The trailing window the recent comparisons cover.
- *
- * Lives here rather than beside the query so the dashboard can name its own
- * heading from it and never drift from the window it reports.
+ * The trailing window the recent comparisons cover. Shared with the dashboard,
+ * whose heading is named from it and so cannot drift.
  */
 export const RECENT_DAYS = 30;
 
@@ -19,14 +17,8 @@ export const RECENT_DAYS = 30;
 const MONTH_DAYS = 30;
 
 /**
- * Inserts per month, normalized for how long a part has been in use so one
- * added recently is not buried under one that has been around for years.
- *
- * Called with the reported window's bounds, so `firstInsertedAt` is the later
- * of the part's first use and the window opening. The observed span is floored
- * at a month, so a part used twice in its first week reads as 2 rather than
- * being extrapolated to 60. Rounded, because a rate with decimals in it is
- * harder to scan than it is precise.
+ * Inserts per month, so a new part is not buried under an old one. The span is
+ * floored at a month, or a first week of 2 extrapolates to 60.
  */
 export function usesPerMonth(
     insertCount: number,

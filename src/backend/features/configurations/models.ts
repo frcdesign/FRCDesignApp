@@ -134,20 +134,14 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 }
 
 /**
- * One selection of values for an insertable's parameters, keyed by parameter id.
- *
- * Always complete and always canonical: every parameter the insertable declares
- * is named, and each value is spelled the one way every equivalent selection
- * shares. `toSelection` is what makes one; nothing else may build a map that
- * claims to be this.
+ * One selection, keyed by parameter id: always complete, always canonical.
+ * `toSelection` is what makes one; nothing else may claim to.
  */
 export type Selection = Record<string, string>;
 
 /**
- * A selection's identity: the text spelling of what it overrides, which is what
- * addresses a render — thumbnails, R2 keys, stored records, Onshape itself.
- * `ELEMENT_DEFAULT_KEY` (the empty string) is a selection that overrides
- * nothing, and so names the element's own defaults.
+ * A selection's identity: what it overrides, which is what addresses a render.
+ * `ELEMENT_DEFAULT_KEY` — empty — overrides nothing, and so is the default.
  */
 export type ConfigurationKey = string;
 
@@ -156,9 +150,8 @@ export type ConfigurationKey = string;
  * UI can read it back without re-querying Onshape.
  */
 /**
- * The part an element resolves to, as one probe read it: from the element's own
- * defaults it describes the element, from one configuration a
- * {@link ConfigurationRecord}.
+ * The part one probe resolved to: the element itself from its own defaults, a
+ * {@link ConfigurationRecord} from any other selection.
  */
 export interface PartMetadata {
     partNumber?: string;

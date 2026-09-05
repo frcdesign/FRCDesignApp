@@ -21,11 +21,8 @@ const UsageTreemapChart = lazy(() =>
 const CHART_HEIGHT = 360;
 
 /**
- * Insertions as area, drilled by clicking.
- *
- * Rooted at every library on the app dashboard and at one library on a library
- * page, so the same component covers both — `root` is the level the breadcrumb
- * cannot climb above.
+ * Insertions as area, drilled by clicking. `root` is the level the breadcrumb
+ * cannot climb above: every library, or one of them.
  */
 export function UsageTreemap({
     parts,

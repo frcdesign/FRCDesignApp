@@ -7,10 +7,8 @@ export enum EventType {
 }
 
 /**
- * Which part of the app an insert started from.
- *
- * Distinct from an insert's `isFavorite` flag, which only says the part happens
- * to be favorited — a favorited part inserted from search is `SEARCH`.
+ * Where an insert started, not whether the part is favorited: a favorited part
+ * inserted from search is `SEARCH`.
  */
 export enum InsertSource {
     SEARCH = "search",

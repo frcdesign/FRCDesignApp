@@ -60,9 +60,8 @@ export async function getHealthCounts(
 }
 
 /**
- * An insertable's configuration issues, joined rather than fetched by id list
- * so the query stays one round trip regardless of library size. `parameters` is
- * deliberately not selected — it is large and unused here.
+ * Joined rather than fetched by id list, so this is one round trip whatever the
+ * library's size. `parameters` is left unselected: large, and unused here.
  */
 async function getConfigurationIssues(
     db: Db,
@@ -105,12 +104,8 @@ export interface HealthInsertableRow {
 }
 
 /**
- * Rolls groups and insertables up into the maintainer-facing health report.
- *
- * Every check is stored, so this only reads. The one inherited behaviour is
- * that an insertable's configuration issues count as its own, matching what
- * editors see in the panel. Hidden insertables are filtered out upstream —
- * they are exempt from the checks, so counting them would inflate "healthy".
+ * An insertable's configuration issues count as its own, matching the panel.
+ * Hidden ones are filtered upstream: exempt from the checks, so never healthy.
  */
 export function summarizeHealth(
     groups: HealthGroupRow[],

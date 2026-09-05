@@ -97,13 +97,8 @@ export function LibraryInsertsChart({
 }
 
 /**
- * Kickoff and championship markers for the seasons the chart covers.
- *
- * A reference line on a category axis matches by exact category value, so each
- * marker is pinned to the bucket containing its day — hence charting on
- * `bucket` rather than the formatted label. Markers landing in the same bucket
- * join their labels instead of drawing two lines on one tick, which is what
- * happens to both programs' championships at monthly granularity.
+ * Season markers, pinned to the bucket holding their day since a reference line
+ * matches a category exactly. Two in one bucket join labels rather than lines.
  */
 function seasonLines(
     programs: Program[] | undefined,

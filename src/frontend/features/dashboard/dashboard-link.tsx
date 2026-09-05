@@ -8,11 +8,8 @@ interface MantineAnchorProps extends Omit<AnchorProps, "href"> {
 }
 
 /**
- * A Mantine-styled router link.
- *
- * `<Anchor component={Link}>` type-checks its props against Mantine's polymorphic
- * signature, which drops the router's `to`/`params` generics; `createLink` keeps
- * them.
+ * A Mantine-styled router link: `<Anchor component={Link}>` drops the router's
+ * `to`/`params` generics, and `createLink` keeps them.
  */
 function MantineAnchor(props: MantineAnchorProps): ReactNode {
     return <Anchor {...props} />;

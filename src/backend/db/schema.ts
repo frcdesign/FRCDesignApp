@@ -181,20 +181,16 @@ export const favorites = sqliteTable(
             mode: "json"
         }).$type<Selection | null>(),
         sortOrder: integer("sort_order").notNull().default(0),
-        // Null on every row that predates this column. Deliberately not
-        // backfilled: stamping them all with the migration date would draw a
-        // cliff of favorites on a day nobody favorited anything.
+        // Null on rows predating the column: backfilling would draw a cliff
+        // of favorites on a day nobody favorited anything.
         createdAt: integer("created_at")
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );
 
 /**
- * Append-only usage log. Analytics is keyed on the Onshape `elementId` rather
- * than `insertables.id`, because a tab that is removed and re-added gets a fresh
- * app id (see `selectInsertablesToLoad`); the Onshape id keeps the history
- * attached across that. Deliberately has no foreign keys, so a library reload
- * dropping an insertable never cascades away its usage.
+ * Append-only usage log, keyed on the Onshape `elementId` and free of foreign
+ * keys: a re-added tab gets a fresh app id, and a reload must not drop history.
  */
 export const events = sqliteTable(
     "events",
@@ -231,14 +227,8 @@ export const events = sqliteTable(
 );
 
 /**
- * Per-day counts driving the range chart and the lifetime totals.
- *
- * The flag counters are subsets of `count` on insert rows (and always 0 on
- * app-open rows), which is what makes each one a percentage without needing its
- * own table or an extra write. `assemblyCount` is the denominator for
- * `fastenCount` rather than a flag in its own right: Onshape only offers
- * insert-and-fasten when the target tab is an assembly, so measuring it against
- * every insert would understate it by however many part-studio inserts happened.
+ * Per-day counts. Each flag counter is a subset of `count`, and so a percentage
+ * of it; `assemblyCount` is the denominator for `fastenCount`, not a flag.
  */
 export const dailyMetrics = sqliteTable(
     "daily_metrics",
@@ -285,14 +275,8 @@ export const insertableStats = sqliteTable(
 );
 
 /**
- * Per-day counts for one part: the rollup behind the parts table, its sparkline
- * and the part report.
- *
- * The two target counters are subsets of `count`, the same way the flag
- * counters on `dailyMetrics` are, which is what makes the derived share
- * readable without a second table. Keyed part-first so one part's history is a
- * range scan, with the day index for the other direction — a whole library's
- * window, which is what the parts table asks for.
+ * Per-day counts for one part, target counters included as subsets of `count`.
+ * Keyed part-first for one part's history, indexed by day for a whole library's.
  */
 export const dailyInsertableMetrics = sqliteTable(
     "daily_insertable_metrics",
@@ -311,9 +295,8 @@ export const dailyInsertableMetrics = sqliteTable(
 );
 
 /**
- * One row per user per part per day, so a part's unique users can be counted
- * over any window. A distinct-user count is the one measure a counter cannot
- * accumulate; this is {@link dailyUserActivity} narrowed to a single part.
+ * {@link dailyUserActivity} narrowed to one part: a distinct-user count is the
+ * one measure a counter cannot accumulate, so the identities are kept per day.
  */
 export const dailyInsertableUsers = sqliteTable(
     "daily_insertable_users",
@@ -353,13 +336,8 @@ export const dailyConfigurationMetrics = sqliteTable(
 );
 
 /**
- * One row per user per library per day.
- *
- * A distinct-user count is the one measure a counter cannot accumulate, so it
- * needs the identities kept per day. Storing them here rather than deriving
- * from `events` keeps reads off the event log: active users for a day is a
- * COUNT of an index range, and unique users over a range is a DISTINCT over a
- * table bounded by users x days rather than by every insert ever made.
+ * One row per user per library per day, so a distinct-user count is a DISTINCT
+ * over users x days rather than over every insert ever made.
  */
 export const dailyUserActivity = sqliteTable(
     "daily_user_activity",

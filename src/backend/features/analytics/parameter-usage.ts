@@ -16,11 +16,8 @@ import type {
 const MAX_FREE_FORM_VALUES = 20;
 
 /**
- * Merges recorded value counts with the insertable's current parameters, so
- * declared-but-unused enum options still surface.
- *
- * Values recorded against a parameter the insertable no longer declares are
- * dropped: they describe a configuration nobody can pick any more.
+ * Merged with the parameters declared today, so an unused option still surfaces
+ * and a retired one is dropped: nobody can pick it any more.
  */
 export function buildParameterUsage(
     parameters: ConfigurationParameter[],
@@ -61,10 +58,8 @@ export function buildParameterUsage(
 }
 
 /**
- * Quantity and string parameters have no declared option list and unbounded
- * distinct values, so only the most-used are returned — plus the default, which
- * must stay visible even at zero uses. Labelled in the parameter's own unit:
- * the values are keyed in base units, which nobody reads a tube length in.
+ * Unbounded distinct values, so only the most-used are returned, plus the
+ * default. Labelled in the parameter's unit; nobody reads a tube length in metres.
  */
 function toFreeFormValues(
     counts: Map<string, number>,

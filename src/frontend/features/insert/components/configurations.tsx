@@ -116,9 +116,8 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
-    // Whole the moment the parameters are known, whatever the menu opened with
-    // — a search hit names only the values that hit overrides. Derived rather
-    // than stored, so there is no render where this holds a partial one.
+    // Whole the moment the parameters are known, since a search hit names only
+    // its overrides. Derived, so no render holds a partial selection.
     const whole = useMemo(
         () =>
             parameters ? toSelection(selection ?? {}, parameters) : undefined,

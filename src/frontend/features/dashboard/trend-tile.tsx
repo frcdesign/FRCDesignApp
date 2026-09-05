@@ -46,10 +46,8 @@ interface TrendTileProps {
 }
 
 /**
- * One number, its trend, and the full chart on hover.
- *
- * The tile leads with the range so it agrees with the sparkline beneath it;
- * the lifetime figure stays available without switching the range.
+ * One number, its trend, and the full chart on hover. Leads with the range so
+ * it agrees with the sparkline beneath it.
  */
 export function TrendTile({
     metric,
@@ -75,10 +73,8 @@ export function TrendTile({
         <HoverCard
             withinPortal
             shadow="md"
-            // Beside the tile rather than below it: the panel is taller than the
-            // gap under a second-row tile, so opening downward would run off a
-            // laptop screen. Mantine flips it to the other side when the column
-            // has no room.
+            // Beside the tile, not below: the panel is taller than the gap
+            // under a second-row tile. Mantine flips it when there is no room.
             position="right-start"
             withArrow
             openDelay={150}

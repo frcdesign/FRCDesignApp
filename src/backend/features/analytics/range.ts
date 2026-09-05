@@ -16,11 +16,8 @@ export interface DayRange {
 }
 
 /**
- * The window a request asks for.
- *
- * Both bounds are required: every page states the window it reports, so a
- * missing one is a caller's bug rather than a reason to invent a default and
- * report something nobody asked for.
+ * The window a request asks for. Both bounds are required: every page states
+ * the window it reports, so a missing one is the caller's bug.
  */
 export function getRange(c: AppContext): DayRange {
     const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -38,11 +35,8 @@ export function getRange(c: AppContext): DayRange {
 }
 
 /**
- * Every day in the range, inclusive.
- *
- * Callers must clamp `from` to the first recorded day first: the "all time"
- * preset reaches back to 2000, and filling two decades of zeroes would dwarf
- * the data it surrounds.
+ * Every day in the range, inclusive. Clamp `from` to the first recorded day
+ * first, or "all time" fills two decades of zeroes.
  */
 export function eachDay(range: DayRange): string[] {
     const days: string[] = [];
@@ -58,9 +52,8 @@ export function eachDay(range: DayRange): string[] {
 }
 
 /**
- * The first day anything was recorded, so a range can be clamped to the
- * history that exists and a caller can tell "nothing happened" from "we were
- * not tracking yet".
+ * The first day anything was recorded, which is what tells "nothing happened"
+ * from "we were not tracking yet".
  */
 export async function getTrackingSince(db: Db): Promise<string | null> {
     const row = await db

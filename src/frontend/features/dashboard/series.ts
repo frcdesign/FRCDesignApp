@@ -1,9 +1,6 @@
 /**
- * Every series the dashboard plots, and the bucketing they share.
- *
- * Chart points keep the raw bucket key alongside the formatted label, because
- * recharts matches a reference line against exact category values — a season
- * marker can line up with "2026-01" but not with "Jan 2026".
+ * Every series the dashboard plots, and the bucketing they share. Points keep
+ * the raw key beside the label: a reference line matches "2026-01", not "Jan 2026".
  */
 
 import type {
@@ -26,9 +23,8 @@ export interface BucketPoint {
 }
 
 /**
- * Picks a granularity from the span the days cover, not from how many there
- * are: a sparse three-year series has few points but must still bucket, or the
- * chart silently compresses its gaps.
+ * From the span the days cover, not how many there are: a sparse three-year
+ * series has few points but must still bucket, or its gaps compress silently.
  */
 export function pickGranularity(days: string[]): Granularity {
     if (days.length === 0) return "day";
@@ -128,15 +124,8 @@ interface Bucket {
 }
 
 /**
- * Daily points folded into the buckets the range implies.
- *
- * Left raw, two years of days is a hairy smear rather than a shape — the same
- * reason the chart below these cards buckets, and it uses the same rule so the
- * two agree on what a point means.
- *
- * Distinct-user counts are averaged over a bucket rather than summed, since one
- * person active all week is one user and not seven. Uses per user divides the
- * two folded totals, which is that same per-day average expressed as a rate.
+ * Folded by the chart's own rule, since two years of raw days is a smear. Users
+ * are averaged over a bucket, not summed: one person all week is one user.
  */
 export function toSparkSeries(points: DailyMetricPoint[]): SparkSeries {
     const granularity = pickGranularity(points.map((point) => point.day));

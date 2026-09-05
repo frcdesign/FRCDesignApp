@@ -6,10 +6,8 @@ import { type ReactNode } from "react";
 import "@mantine/charts/styles.layer.css";
 
 /**
- * A shape, not a chart: no axes, no tooltip, nothing to read a value off.
- *
- * Flat rather than absent when everything is zero, so a row or tile never
- * changes height depending on whether anything happened.
+ * A shape, not a chart: no axes, nothing to read a value off. Flat rather than
+ * absent at zero, so a row never changes height.
  */
 export function MiniSparkline({
     data,

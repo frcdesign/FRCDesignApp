@@ -24,9 +24,8 @@ import { eachDay, type DayRange } from "./range";
 import { getHealthCounts } from "./health";
 
 /**
- * Lifetime totals, optionally scoped to one library. Unique users is a count
- * over `user_stats` — globally it must be distinct, since a person active in
- * two libraries has a row in each.
+ * Lifetime totals, optionally scoped to one library. Users must be counted
+ * distinctly: someone active in two libraries has a row in each.
  */
 export async function getTotals(
     db: Db,
@@ -115,10 +114,8 @@ function activityFilters(range: DayRange, libraryId?: LibraryId) {
 }
 
 /**
- * Every metric's daily values across the range, as one series.
- *
- * Both halves are index range scans over rollups — nothing here reads the
- * event log, which grows with every insert rather than with the range.
+ * Every metric's daily values as one series, read from rollups: the event log
+ * grows with every insert rather than with the range.
  */
 export async function getMetricSeries(
     db: Db,
@@ -193,9 +190,8 @@ export async function getMetricSeries(
         pointFor(row.day).activeUsers = row.activeUsers;
     }
 
-    // A quiet day is a zero, not a missing point. Without this, anything that
-    // divides by the number of points averages over *active* days instead of
-    // calendar days, and a chart joins straight across a gap.
+    // A quiet day is a zero, not a missing point: anything dividing by the
+    // number of points would average over active days instead of calendar ones.
     for (const day of eachDay(range)) pointFor(day);
 
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));

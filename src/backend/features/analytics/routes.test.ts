@@ -51,9 +51,8 @@ const db = getDb(env.DB);
 const elementId = TEST_PART_STUDIO_PATH.elementId;
 
 /**
- * Drives the real app with services that throw, exactly as they do for a
- * caller with no session. A read endpoint that touched `c.var.getUserId()` or
- * `getOnshapeApi()` would fail here — which is what keeps the dashboard public.
+ * The real app with services that throw, as they do without a session: an
+ * endpoint that touched one would fail here, which keeps the dashboard public.
  */
 function anonymousGet(path: string) {
     const app = createApp(() => ({
@@ -256,8 +255,6 @@ describe("analytics routes", () => {
                 assemblyCount: 5
             });
 
-            // Explicit range: the default window is the last 30 days, which
-            // this fixed seed date falls outside of.
             const res = await anonymousGet(
                 "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
             );
@@ -286,9 +283,8 @@ describe("analytics routes", () => {
         it("scopes rangeTotals to the range while totals stay lifetime", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-06-15", 3);
-            // Unique users over a range cannot come from user_stats, which
-            // holds one all-time row per user, so it reads the per-day
-            // activity rollup — never the event log.
+            // user_stats holds one all-time row per user, so a range reads
+            // the per-day activity rollup instead.
             await db.insert(dailyUserActivity).values([
                 {
                     day: "2026-01-01",
@@ -317,9 +313,8 @@ describe("analytics routes", () => {
         });
 
         it("fills quiet days in, so an average is per calendar day", async () => {
-            // Two active days inside a wider window. Left sparse, anything
-            // dividing by the number of points would report the two-day
-            // average and call it the month's.
+            // Two active days in a wider window: left sparse, a mean over the
+            // points would report the two-day average as the month's.
             await seedMetric("2026-06-15", 2);
             await seedMetric("2026-06-18", 4);
 

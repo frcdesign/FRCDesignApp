@@ -9,10 +9,8 @@ export interface UsagePart extends PartUsageOut {
 }
 
 /**
- * How far into the hierarchy the treemap is looking.
- *
- * An empty path is every library; naming a library shows its groups; naming a
- * group shows its parts. Parts are leaves — clicking one leaves the chart.
+ * How far in the treemap is looking: every library, one library's groups, or
+ * one group's parts. Parts are leaves — clicking one leaves the chart.
  */
 export interface TreemapPath {
     libraryId?: LibraryId;
@@ -20,11 +18,8 @@ export interface TreemapPath {
 }
 
 /**
- * One tile. Area is insertions, so a slice's share of its parent is its share
- * of the rectangle.
- *
- * The optional keys say what a click does: descend to a library, descend to a
- * group, or open a part's dashboard.
+ * One tile, its area a share of its parent's insertions. The optional keys say
+ * what a click does: descend a level, or open a part's dashboard.
  */
 export interface TreemapNode {
     name: string;
@@ -36,12 +31,8 @@ export interface TreemapNode {
 }
 
 /**
- * Shades by rank off one hue, darkest first.
- *
- * Monotone rather than cycling: a lighter tile always means a smaller one, so
- * color reinforces area instead of contradicting it. Ranks past the ramp all
- * take the lightest shade, which by then are slivers anyway, and the stroke
- * between tiles keeps them apart.
+ * Shades by rank off one hue, darkest first: monotone rather than cycling, so a
+ * lighter tile always means a smaller one.
  */
 const SHADES = [9, 8, 7, 6, 5, 4, 3];
 
@@ -81,11 +72,8 @@ function rollUp(
 }
 
 /**
- * The tiles at `path`.
- *
- * Libraries keep their own colors, the same ones the charts use for them;
- * inside a library everything shades off that library's hue, so the level you
- * are in is legible from the palette alone.
+ * The tiles at `path`. Libraries keep the colors the charts give them, and
+ * everything inside one shades off that library's hue.
  */
 export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
     const shown = within(parts, path);

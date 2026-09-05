@@ -254,9 +254,8 @@ const targetPathSchema = z.object({
 const configurationSchema = z.record(z.string(), z.string()).optional();
 
 /**
- * What an insert applies: whatever the request named, made whole against the
- * insertable's own parameters. Every configuration crosses the boundary here,
- * so nothing past it holds a partial or as-typed map.
+ * What an insert applies, made whole against the insertable's parameters. Every
+ * request crosses here, so nothing past it holds a partial or as-typed map.
  */
 async function readSelection(
     db: Db,

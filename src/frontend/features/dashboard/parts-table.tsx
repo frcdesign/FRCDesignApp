@@ -26,10 +26,8 @@ const MiniSparkline = lazy(() =>
 const ROW_SPARKLINE = { h: 24, w: 80 };
 
 /**
- * Widths for every column but the first, which takes what is left.
- *
- * Without them the browser hands the two text columns all the slack and strands
- * the numbers, the sparkline and the link far apart from each other.
+ * Widths for every column but the first, which takes what is left: unset, the
+ * text columns take all the slack and strand the numbers from the sparkline.
  */
 const COLUMN_WIDTH = {
     group: 180,

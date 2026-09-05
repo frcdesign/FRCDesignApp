@@ -164,11 +164,8 @@ function parameterValues(
 }
 
 export interface EnumerateResult {
-    /**
-     * What each combination varies: enum and boolean parameters only, so these
-     * are the one place a map is not yet whole. `toSelection` makes them so,
-     * which the only caller does before anything reads them.
-     */
+    /** What each combination varies — enums and booleans — so the one place a
+     * map is not yet whole; the only caller runs `toSelection` over them. */
     configurations: Selection[];
     /** True when enumeration was stopped for exceeding the cap. */
     capped: boolean;

@@ -26,9 +26,8 @@ export function makeUrl(path: DocumentPath): string {
         url += `/e/${path.elementId}`;
     }
     if (isConfigurablePath(path)) {
-        // Onshape's own query parameter, so it keeps Onshape's name. Encoded
-        // here rather than in the shared helper, whose raw output is what
-        // Onshape's api takes; a url needs its own escaping.
+        // Onshape's own parameter, so it keeps Onshape's name. Escaped here:
+        // the helper's raw output is what their api takes.
         url +=
             "?configuration=" +
             encodeURIComponent(encodeConfiguration(path.selection));

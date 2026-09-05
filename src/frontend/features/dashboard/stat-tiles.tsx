@@ -21,18 +21,12 @@ interface StatTileProps {
     /** Rates need a decimal; counts do not. Also formats the change tooltip. */
     format?: (value: number) => string;
     icon?: Icon;
-    /**
-     * How the measure changed, drawn to the right of the number where the icon
-     * would be. Never below it: every tile on these pages puts the two in the
-     * same place, so a row of them scans as one line of numbers.
-     */
+    /** How the measure changed, drawn to the right of the number — never below
+     * it, so a row of tiles scans as one line of numbers. */
     change?: PeriodComparison;
     trackingSince?: string | null;
-    /**
-     * The measure's shape over the selected window, under the value. Follows
-     * the picker even though the value above it is all time: a sparkline has
-     * no axis and claims no total, so the two do not have to agree.
-     */
+    /** The shape over the selected window, which follows the picker even when
+     * the value above is all time: a sparkline claims no total. */
     spark?: number[];
 }
 

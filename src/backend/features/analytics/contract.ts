@@ -29,10 +29,8 @@ export interface DailyInsertPoint {
 }
 
 /**
- * One day of every tracked metric, as raw counts so the client can ratio them.
- *
- * A single series backs every trend on the dashboard — the sparkline on a tile
- * and the chart behind it are the same numbers, so they cannot disagree.
+ * One day of every tracked metric, as raw counts. One series backs every trend,
+ * so a tile and the chart behind it cannot disagree.
  */
 export interface DailyMetricPoint {
     day: string;
@@ -56,10 +54,8 @@ export interface InsertSourceUsage {
 }
 
 /**
- * Build-health counts for a library. The severity counts are of issues, not
- * items: one part with three warnings is three, so fixing it moves the number
- * by what it actually cost. `healthyItems` counts items, and is what
- * `groupCount + insertableCount` partitions.
+ * Severity counts are of issues, not items — one part with three warnings is
+ * three — while `healthyItems` counts items, as the two counts above it do.
  */
 export interface LibraryHealthCounts {
     groupCount: number;
@@ -81,13 +77,8 @@ export interface PeriodComparison {
     previous: number;
     /** Null whenever stating a change would be dishonest; see `unavailable`. */
     changeRatio: number | null;
-    /**
-     * Why there is no change to state. `no-prior-data` means the baseline
-     * window predates tracking, so its zero is an absence of measurement;
-     * `no-activity` means both windows are genuinely empty; `zero-baseline`
-     * means only the baseline is, which reads as "new" rather than as an
-     * infinite increase.
-     */
+    /** Why there is no change to state: an unmeasured baseline, two empty
+     * windows, or an empty baseline, which reads as new rather than infinite. */
     unavailable?:
         | "no-prior-data"
         | "partial-prior-data"
@@ -116,11 +107,8 @@ export interface GrowthOut {
 }
 
 /**
- * What one library's page reads.
- *
- * Deliberately narrower than the app overview: the two used to share a type,
- * which meant every library page paid for a per-library series, a source
- * breakdown and a range total that nothing on it opened.
+ * What one library's page reads. Narrower than the app overview it used to
+ * share a type with, which had every library page paying for unopened fields.
  */
 export interface LibrarySummaryOut {
     /** Lifetime, for the headline cards. */
@@ -162,11 +150,8 @@ export interface PartUsageOut {
     insertCount: number;
     /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    /**
-     * Daily inserts over a fixed trailing {@link SPARKLINE_DAYS}, oldest first.
-     * Deliberately not the reported window: this is a shape, and two years of
-     * points in a sparkline is a smear.
-     */
+    /** Daily inserts over a trailing {@link SPARKLINE_DAYS}, oldest first: a
+     * shape rather than the reported window, which can be years of smear. */
     recent: number[];
 }
 
@@ -190,9 +175,8 @@ export interface ConfigurationParameterUsage {
 }
 
 /**
- * One declared enum option and how often it was actually chosen, across a
- * whole library. Only enums appear: a quantity or string parameter has no
- * declared option list, so "never used" is not a question that can be asked.
+ * One declared enum option and how often it was chosen. Only an enum declares
+ * its options, so only an enum can have one nobody picked.
  */
 export interface UnusedOptionOut {
     elementId: string;

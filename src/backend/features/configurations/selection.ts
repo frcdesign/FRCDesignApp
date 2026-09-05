@@ -1,14 +1,6 @@
 /**
  * The two forms a configuration takes, and the only place either is built.
- *
- * A selection — {@link Selection} — is what someone picked: every
- * parameter the insertable declares, each value canonically spelled. A
- * {@link ConfigurationKey} is that selection's identity: what it overrides,
- * encoded. The key is what addresses a render, so `toKey` is the one function
- * allowed to decide what "overrides" means.
- *
- * Canonicalizing is lossy: "2 + 3 in" evaluates away, so an expression survives
- * only inside the input the user typed it into.
+ * Canonicalizing is lossy: "2 + 3 in" survives only in the input it was typed into.
  */
 import {
     type ConfigurationKey,
@@ -37,10 +29,8 @@ export function canonicalizeValue(
     value: string
 ): string {
     if (parameter.type === ParameterType.QUANTITY) {
-        // "1in", "1 in", "(0.5 + 0.5) in" and "25.4 mm" are one configuration:
-        // the parser reads them all to the same base value, which spells it in
-        // the units and precision Onshape itself compares in. Unparseable
-        // values ride as-is.
+        // "1in", "1 in" and "25.4 mm" are one configuration: the parser reads
+        // them to one base value. Unparseable values ride as typed.
         const base = evaluateBaseValue(
             value,
             parameter.quantityType,
@@ -55,12 +45,8 @@ export function canonicalizeValue(
 }
 
 /**
- * The one map anything past the insert menu is allowed to hold: every declared
- * parameter, each value canonical.
- *
- * Filled from the parameters' own defaults, so a partial map — a search hit
- * naming only its overrides, a favorite made before a parameter existed — comes
- * out whole. In parameter order, so equivalent selections spell the same way.
+ * Every declared parameter, canonically spelled and in parameter order. Filled
+ * from the defaults, so a partial map — a search hit's overrides — comes whole.
  */
 export function toSelection(
     values: Partial<Selection>,
@@ -77,9 +63,8 @@ export function toSelection(
 }
 
 /**
- * What a selection actually applies. Onshape doesn't apply a parameter its
- * condition rules out, so one that is hidden changes neither the render nor
- * what the user chose, and is left off.
+ * What a selection actually applies: Onshape never applies a parameter its
+ * condition hides, so a hidden one is left off.
  */
 export function appliedValues(
     selection: Selection,
@@ -100,8 +85,7 @@ export function appliedValues(
 
 /**
  * A selection's identity: what it overrides, encoded. Two selections that
- * render the same thing produce the same key, which is what lets one cache
- * entry serve both.
+ * render the same thing key the same, and so share a cache entry.
  */
 export function toKey(
     selection: Selection,
@@ -126,11 +110,8 @@ export function fromKey(
     return toSelection(decodeConfiguration(key), parameters);
 }
 
-/**
- * A value spelled for a reader: a quantity in the unit its parameter declares,
- * rather than the base unit it is stored in. Everything else already reads as
- * it is stored.
- */
+/** A quantity in the unit its parameter declares, rather than the base unit it
+ * is stored in; everything else already reads as stored. */
 export function formatValue(
     parameter: ConfigurationParameter,
     value: string

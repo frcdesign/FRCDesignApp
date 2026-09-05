@@ -99,10 +99,8 @@ export function HealthTiles({
 }
 
 /**
- * Every library's health at a glance, for the app dashboard.
- *
- * Kept apart from the usage table below it: health is current state and usage
- * is a window, and interleaving them made one row answer two questions.
+ * Every library's health at a glance, kept apart from usage: one is current
+ * state and the other a window, and one row answering both read as neither.
  */
 export function LibraryHealthStrip({
     libraries

@@ -152,9 +152,8 @@ describe("favorites routes", () => {
         it("stamps createdAt, leaving rows that predate the column null", async () => {
             await seedPartStudio(db);
             await seedAssembly(db);
-            // Seeded without a timestamp, the way every row written before the
-            // column existed looks. Backfilling those would draw a cliff of
-            // favorites on the migration date.
+            // Seeded without a timestamp, as every row predating the column
+            // looks.
             const old = await seedFavorite(db, TEST_PART_STUDIO_ID);
 
             const app = createTestApp();

@@ -23,9 +23,8 @@ import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
 /**
- * The record a selection produces. Records name only enumerated parameters, so
- * several can match; the most specific (the most named) wins. Both sides are
- * keys built in parameter order, so this compares whole assignments.
+ * The record a selection produces. Several can match, since records name only
+ * enumerated parameters, so the most specific wins.
  */
 export function findRecordForConfiguration(
     configurationKey: string,

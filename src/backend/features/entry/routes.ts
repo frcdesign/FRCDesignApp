@@ -25,9 +25,8 @@ interface AppEntry {
 }
 
 /**
- * Builds the url the caller resumes at, seeded with the library and theme they
- * last used. Returns who they are alongside it so `/init` can record the open
- * without repeating the lookup.
+ * The url the caller resumes at, seeded with what they last used. Returns who
+ * they are too, so `/init` records the open without a second lookup.
  */
 async function getAppEntry(c: AppContext): Promise<AppEntry> {
     const db = getDb(c.env.DB);

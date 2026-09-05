@@ -48,10 +48,8 @@ export interface AppOpenEvent {
 }
 
 /**
- * Runs tracking work without blocking the response, swallowing any failure.
- *
  * Usage data is never worth failing a user's insert over, so errors are logged
- * and dropped. Falls back to awaiting when no execution context is available.
+ * and dropped. Awaits when no execution context is available.
  */
 export async function trackInBackground(
     c: AppContext,
@@ -321,12 +319,8 @@ function incrementSourceMetric(db: Db, day: string, event: InsertEvent) {
 }
 
 /**
- * What Onshape actually applied: the selection minus the parameters it hides,
- * which is what a count of chosen values means.
- *
- * Read against the parameters as they stand now rather than against a copy the
- * caller carried: this runs after the response, and the library is the only
- * thing that knows what the insertable declares.
+ * What Onshape applied: the selection minus what it hides, read against the
+ * parameters as they stand now rather than a copy the caller carried.
  */
 async function appliedSelection(
     db: Db,

@@ -40,13 +40,7 @@ export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
     });
 }
 
-/**
- * The library's parts, counted over `range`.
- *
- * The range is required rather than defaulted: a caller that forgets it would
- * silently inherit the API's own 30-day default and report a window nothing on
- * the page names.
- */
+/** The library's parts, counted over `range`. */
 export function getPartsQuery(libraryId: LibraryId, range: DayRange) {
     return queryOptions<PartUsageOut[]>({
         queryKey: ["analytics", "parts", libraryId, range.from, range.to],

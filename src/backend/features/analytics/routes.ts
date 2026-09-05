@@ -44,10 +44,8 @@ import { clampRange, getRange, getTrackingSince } from "./range";
 export const analyticsRoutes = getApp();
 
 /**
- * Every read handler here is deliberately public: the dashboard lives outside
- * the Onshape panel with no OAuth, and in this app an endpoint is public
- * exactly by never touching `c.var.getUserId()` / `c.var.getOnshapeApi()`.
- * Only aggregates are returned — never a user id.
+ * Every handler here is public, which in this app means never touching
+ * `getUserId()` or `getOnshapeApi()`. Only aggregates leave — never a user id.
  */
 
 const DEFAULT_UNUSED_THRESHOLD = 5;
@@ -121,10 +119,8 @@ analyticsRoutes.get("/analytics/parts" + libraryRoute(), async (c) => {
     const db = getDb(c.env.DB);
     const range = getRange(c);
 
-    // Driven off the library rather than the stats table, so a part nobody has
-    // used is still listed (at zero) and a part that has left the library is
-    // not listed at all — its usage is history about something you can no
-    // longer open, which only pads the table.
+    // Driven off the library, not the stats table: an unused part still lists
+    // at zero, and one that has left the library does not list at all.
     const [rows, series, windowed] = await Promise.all([
         db
             .select({

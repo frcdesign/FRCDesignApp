@@ -11,9 +11,7 @@ import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
 
 /**
- * The page's headline: how big this is, and whether it grew.
- *
- * The value is all time and the change beside it is season over season — the
+ * The page's headline: an all-time value with a season-over-season change, the
  * two windows a maintainer actually asks about.
  */
 export function LifetimeTiles({

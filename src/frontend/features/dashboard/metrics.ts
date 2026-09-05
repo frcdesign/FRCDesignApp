@@ -17,10 +17,8 @@ export type MetricKey =
     | "deriveShare";
 
 /**
- * How one number is derived, formatted and trended.
- *
- * Every tile and every detail chart is built from one of these, so a metric
- * reads the same way wherever it appears.
+ * How one number is derived, formatted and trended, so a metric reads the same
+ * way wherever it appears.
  */
 export interface MetricDefinition {
     key: MetricKey;
@@ -114,10 +112,8 @@ export function rangeTerms(
 }
 
 /**
- * The metric's value across the whole range.
- *
- * Derived from the same points the sparkline plots and folded by the metric's
- * own rule, so a tile can never disagree with the chart behind it.
+ * Folded from the same points the sparkline plots, so a tile can never disagree
+ * with the chart behind it.
  */
 export function rangeValue(
     points: DailyMetricPoint[],
@@ -141,10 +137,8 @@ export interface TrendPoint extends BucketPoint {
 }
 
 /**
- * The metric's value per bucket across the range.
- *
- * Shares are ratioed after bucketing, so a month reads as its true share rather
- * than an average of daily percentages, which would over-weight quiet days.
+ * The value per bucket. Shares are ratioed after bucketing, or an average of
+ * daily percentages would over-weight quiet days.
  */
 export function toTrend(
     points: DailyMetricPoint[],

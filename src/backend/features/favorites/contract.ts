@@ -7,12 +7,8 @@ export interface Favorite {
     libraryId: LibraryId;
     /** The selection it opens with; absent for the element's own defaults. */
     defaultSelection?: Selection;
-    /**
-     * That selection's key, which is what names its thumbnail. Derived per
-     * response rather than stored, both because a reload can move the defaults
-     * it is measured against and because a card has no parameters to derive it
-     * from.
-     */
+    /** That selection's key, which names its thumbnail. Derived per response:
+     * a reload moves the defaults, and a card has no parameters of its own. */
     configurationKey?: ConfigurationKey;
 }
 

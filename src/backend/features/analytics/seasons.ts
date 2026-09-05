@@ -1,14 +1,8 @@
 import { LibraryId } from "../library/library-id";
 
 /**
- * Competition seasons, which is what makes usage here comparable at all.
- *
- * A library built for a Jan–Apr competition has a year that looks nothing like
- * a calendar one, so growth is measured season over season and the charts are
- * banded to show why the shape is what it is.
- *
- * Pure date maths on `YYYY-MM-DD` keys, no Worker imports, so the dashboard can
- * import it through `@backend/*` without pulling the Worker into the bundle.
+ * Competition seasons, which is what makes usage comparable: a library built
+ * for a Jan–Apr competition has a year nothing like a calendar one.
  */
 export enum Program {
     FRC = "frc",
@@ -76,11 +70,8 @@ export function seasonOf(program: Program, year: number): Season {
 }
 
 /**
- * The day the season culminates, for a chart marker.
- *
- * Both programs finish at the same event, so a season year has one of these.
- * The real date moves every year within the second half of April; this is an
- * approximation, which is all a chart bucketed by week or month can show.
+ * The day the season culminates. Approximate — the real date moves within late
+ * April — which is all a chart bucketed by week or month can show.
  */
 export function championshipOf(season: Season): string {
     return `${season.year}-04-20`;
@@ -139,11 +130,8 @@ function addDays(day: string, count: number): string {
 }
 
 /**
- * The window to report on, and how much of a season it covers.
- *
- * In season that is the season so far; between seasons it is the last complete
- * one, entire — comparing an off-season week against a full season would show
- * a collapse every May that means nothing.
+ * In season, the season so far; between seasons, the last complete one — an
+ * off-season week against a full season would show a collapse every May.
  */
 export function seasonWindow(program: Program, day: string): SeasonWindow {
     const current = currentSeason(program, day);

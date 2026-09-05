@@ -6,16 +6,8 @@ import { IconSize } from "../../lib/style-constants";
 import { formatCount } from "./format";
 
 /**
- * How a measure changed, or why it cannot be said.
- *
- * Always two right-aligned lines, sat beside the number rather than under it,
- * so a row of tiles scans as one line of values and one column of changes.
- *
- * A percentage is never shown without what it is measured against: the tiles
- * that use this mix windows deliberately — an all-time value with a
- * season-over-season change — so a bare "+82%" would be unreadable. The chip
- * says it in the fewest words that still say it, and the tooltip carries the
- * exact window and count.
+ * How a measure changed, always beside the number and never without naming the
+ * baseline: these tiles mix windows, so a bare "+82%" would be unreadable.
  */
 export function ChangeIndicator({
     comparison,

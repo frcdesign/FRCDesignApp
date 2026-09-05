@@ -27,11 +27,8 @@ function addDays(day: string, count: number): string {
 }
 
 /**
- * The two trailing windows to compare, ending yesterday.
- *
- * Today is deliberately excluded: a part-finished day always reads lower than
- * a whole one, so including it manufactures a decline every morning that
- * recovers by evening.
+ * The two trailing windows to compare, ending yesterday: a part-finished today
+ * would manufacture a decline every morning that recovers by evening.
  */
 export function recentWindows(today: string): {
     current: Window;
@@ -49,11 +46,8 @@ export function recentWindows(today: string): {
 }
 
 /**
- * Builds the comparison, deciding whether a change can honestly be stated.
- *
- * A percentage is withheld rather than faked whenever the baseline window
- * reaches back past the day tracking started — that window is empty because
- * nothing was recorded, not because nothing happened.
+ * Withholds the percentage when the baseline reaches back past the day tracking
+ * started: that window is empty for want of recording, not of activity.
  */
 export function toComparison(
     current: number,
@@ -128,11 +122,8 @@ async function countEvents(
 }
 
 /**
- * Distinct people over two windows.
- *
- * Two queries rather than one: a COUNT(DISTINCT) cannot be split by a CASE the
- * way a SUM can, because the same person appearing in both windows must count
- * once in each and not once overall.
+ * Two queries rather than one: a COUNT(DISTINCT) cannot be split by a CASE, and
+ * someone active in both windows counts once in each.
  */
 async function countPeople(
     db: Db,
@@ -195,12 +186,8 @@ async function measure(
 }
 
 /**
- * Growth for a library, or for the app when no library is given.
- *
- * The app spans both competitions, so it is measured over Sept–Apr. That is
- * numerically FTC's span, and it is the right app-wide window precisely because
- * FRC's Jan–Apr falls inside it — one season covering both, named without a
- * program so it does not read as an FTC-only figure.
+ * Growth for a library, or for the app when no library is given. The app spans
+ * Sept–Apr, which covers FRC's Jan–Apr, so its season is named without a program.
  */
 export async function getGrowth(
     db: Db,

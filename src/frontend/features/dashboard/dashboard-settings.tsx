@@ -30,11 +30,8 @@ const SCHEMES: { value: MantineColorScheme; label: string; icon: ReactNode }[] =
     ];
 
 /**
- * The dashboard's settings.
- *
- * Deliberately not the panel's settings modal: this page is public, so the
- * app's theme and access settings are either unauthorized or write to a
- * session that does not exist here. Color scheme is the one that applies.
+ * Not the panel's settings modal: this page is public, so the app's own
+ * settings would write to a session that does not exist here.
  */
 export function DashboardSettingsMenu(): ReactNode {
     const { colorScheme, setColorScheme } = useMantineColorScheme();

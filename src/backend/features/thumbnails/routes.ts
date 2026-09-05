@@ -33,11 +33,7 @@ const storedThumbnailQuery = z.object({
 
 /**
  * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderThumbnail=
- * — an unrendered configuration falls back to the element default, and
- * `renderThumbnail` starts the real render.
- *
- * Each answer says how it may be cached rather than the route saying it once:
- * stored bytes are pinned by the url, a stand-in and a miss are not.
+ * Each answer caches itself: stored bytes are pinned by the url, a miss is not.
  */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",

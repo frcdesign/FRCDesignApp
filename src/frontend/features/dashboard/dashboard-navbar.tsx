@@ -210,10 +210,8 @@ function ThresholdControl(): ReactNode {
 const THRESHOLD_LABEL_WIDTH = 52;
 
 /**
- * How much history there is.
- *
- * Worth more than a window picker on a dataset this new: every empty
- * comparison on the page is explained by this one date.
+ * How much history there is, which is what explains every empty comparison on
+ * the page.
  */
 function TrackingSince(): ReactNode {
     const { data } = useQuery(getOverviewQuery(toDayRange("all")));

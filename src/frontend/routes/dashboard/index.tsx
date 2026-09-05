@@ -44,9 +44,8 @@ function taggedParts(
 }
 
 function DashboardOverview(): ReactNode {
-    // No range picker here: each section is opinionated about the window it
-    // reports on and says so, which is the only way one page can mix a trailing
-    // month, a season and all time without the reader having to guess.
+    // No range picker: each section names the window it reports, which is how
+    // one page mixes a trailing month, a season and all time.
     const range = toDayRange("all");
     const query = useQuery(getOverviewQuery(range));
     const allParts = useAllParts(range);

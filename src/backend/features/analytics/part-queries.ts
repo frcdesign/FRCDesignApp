@@ -35,9 +35,8 @@ export function toWindowedPart(
     const from = Date.parse(`${range.from}T00:00:00Z`);
     const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
     const insertCount = windowed.get(row.elementId) ?? 0;
-    // A part first used inside the window is rated over the days it has
-    // actually existed, not over the whole window, so arriving late is not
-    // read as being unpopular.
+    // Rated over the days the part has existed, so arriving late in the window
+    // does not read as unpopular.
     const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
 
     return {
@@ -59,10 +58,8 @@ export function toWindowedPart(
 }
 
 /**
- * Inserts per element inside the window, keyed by element id.
- *
- * Folded out of the per-part daily rollup, which `daily_insertable_metrics_day_idx`
- * makes a range scan over one library's window.
+ * Inserts per element inside the window, folded out of the daily rollup —
+ * a range scan, thanks to `daily_insertable_metrics_day_idx`.
  */
 export async function getWindowedInsertCounts(
     db: Db,
