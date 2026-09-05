@@ -1,4 +1,4 @@
-import { SimpleGrid, Stack } from "@mantine/core";
+import { Card, SimpleGrid, Stack } from "@mantine/core";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -16,7 +16,7 @@ import { toDayRange } from "../../features/dashboard/range";
 import { RecentSection } from "../../features/dashboard/growth-section";
 import { LifetimeTiles } from "../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
-import { Section, SectionCard } from "../../features/dashboard/section";
+import { Section } from "../../features/dashboard/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { type UsagePart } from "../../features/dashboard/treemap-data";
 import { TrendTile } from "../../features/dashboard/trend-tile";
@@ -70,9 +70,11 @@ function DashboardOverview(): ReactNode {
 
             <InsertsByLibraryCard series={series} />
 
-            <SectionCard title="How people use the app">
-                <InsertSourceBreakdown sources={sources} />
-                <SimpleGrid cols={{ base: 1, sm: 3 }} mt="lg">
+            <Section title="How people use the app">
+                <Card withBorder padding="lg" radius="md">
+                    <InsertSourceBreakdown sources={sources} />
+                </Card>
+                <SimpleGrid cols={{ base: 1, sm: 3 }}>
                     <TrendTile
                         metric={METRICS.quickShare}
                         totals={totals}
@@ -89,7 +91,7 @@ function DashboardOverview(): ReactNode {
                         series={metricSeries}
                     />
                 </SimpleGrid>
-            </SectionCard>
+            </Section>
 
             {allParts.every((query) => query.data) ? (
                 <UsageTreemap parts={allParts.flatMap(taggedParts)} />
