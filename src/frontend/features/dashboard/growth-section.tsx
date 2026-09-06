@@ -4,7 +4,7 @@ import {
     type DailyMetricPoint,
     type GrowthOut
 } from "@backend/features/analytics/contract";
-import { RECENT_DAYS } from "@backend/features/analytics/measures";
+import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { formatRate } from "./change-indicator";
 import { ComparisonTile } from "./comparison-tile";
 import { perUnit } from "./derived";
@@ -35,7 +35,7 @@ export function RecentSection({
     );
 
     return (
-        <Section title={`Last ${RECENT_DAYS} days`}>
+        <Section title={`Last ${MONTH_DAYS} days`}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <ComparisonTile
                     label="Total uses"

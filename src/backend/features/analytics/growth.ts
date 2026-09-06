@@ -14,7 +14,7 @@ import {
     type GrowthOut,
     type PeriodComparison
 } from "./contract";
-import { RECENT_DAYS } from "./measures";
+import { MONTH_DAYS } from "./measures";
 
 /** Both bounds inclusive, as every day key in this file is. */
 interface Window {
@@ -39,17 +39,17 @@ export function recentWindows(today: string): {
     current: Window;
     previous: Window;
 } {
-    // Yesterday back RECENT_DAYS, inclusive: the -1 is what makes the span the
-    // count rather than one more than it.
+    // Yesterday back a month, inclusive: the -1 is what makes the span the
+    // count of days rather than one more than it.
     const to = addDays(today, -1);
-    const from = addDays(to, -(RECENT_DAYS - 1));
+    const from = addDays(to, -(MONTH_DAYS - 1));
 
     // The equal window immediately before, ending the day before `from`, so the
     // two are the same length and share no day.
     return {
         current: { from, to },
         previous: {
-            from: addDays(from, -RECENT_DAYS),
+            from: addDays(from, -MONTH_DAYS),
             to: addDays(from, -1)
         }
     };
@@ -207,9 +207,9 @@ export async function getGrowth(
 ): Promise<GrowthOut> {
     const windows = recentWindows(today);
     const recentLabels = {
-        label: `Last ${RECENT_DAYS} days`,
-        baselineLabel: `the ${RECENT_DAYS} days before`,
-        baselineShort: `${RECENT_DAYS} days`
+        label: `Last ${MONTH_DAYS} days`,
+        baselineLabel: `the ${MONTH_DAYS} days before`,
+        baselineShort: `${MONTH_DAYS} days`
     };
 
     const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FTC;

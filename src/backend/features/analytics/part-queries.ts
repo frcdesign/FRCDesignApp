@@ -15,7 +15,7 @@ import {
 } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
-import { SPARKLINE_DAYS, usesPerMonth } from "./measures";
+import { MONTH_DAYS, usesPerMonth } from "./measures";
 import { toDayKey } from "./tracking";
 import { type DayRange } from "./range";
 import { toElementPath } from "../../lib/onshape/path";
@@ -134,7 +134,7 @@ export async function getConfigurationCounts(
 }
 
 function emptySparkline(): number[] {
-    return Array.from({ length: SPARKLINE_DAYS }, () => 0);
+    return Array.from({ length: MONTH_DAYS }, () => 0);
 }
 
 /**
@@ -146,8 +146,8 @@ export async function getPartSparklines(
     libraryId: LibraryId
 ): Promise<Map<string, number[]>> {
     const now = Date.now();
-    const days = Array.from({ length: SPARKLINE_DAYS }, (_, i) =>
-        toDayKey(now - (SPARKLINE_DAYS - 1 - i) * 24 * 3600 * 1000)
+    const days = Array.from({ length: MONTH_DAYS }, (_, i) =>
+        toDayKey(now - (MONTH_DAYS - 1 - i) * 24 * 3600 * 1000)
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 

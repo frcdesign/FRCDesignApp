@@ -43,7 +43,7 @@ import {
     type LibrarySummary,
     type PartUsageOut
 } from "./contract";
-import { SPARKLINE_DAYS } from "./measures";
+import { MONTH_DAYS } from "./measures";
 import { toDayKey } from "./tracking";
 import { BuildIssueType } from "../build-checker/issues";
 
@@ -623,10 +623,10 @@ describe("analytics routes", () => {
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body[0].recent).toHaveLength(SPARKLINE_DAYS);
+            expect(body[0].recent).toHaveLength(MONTH_DAYS);
             expect(body[0].recent.at(-1)).toBe(2);
             expect(body[0].recent.slice(0, -1)).toEqual(
-                Array.from({ length: SPARKLINE_DAYS - 1 }, () => 0)
+                Array.from({ length: MONTH_DAYS - 1 }, () => 0)
             );
         });
 
@@ -641,7 +641,7 @@ describe("analytics routes", () => {
             );
             const body: PartUsageOut[] = await res.json();
 
-            expect(body[0].recent).toHaveLength(SPARKLINE_DAYS);
+            expect(body[0].recent).toHaveLength(MONTH_DAYS);
         });
 
         it("gives a never-used part a flat sparkline", async () => {
@@ -651,7 +651,7 @@ describe("analytics routes", () => {
             const body: PartUsageOut[] = await res.json();
 
             expect(body[0].recent).toEqual(
-                Array.from({ length: SPARKLINE_DAYS }, () => 0)
+                Array.from({ length: MONTH_DAYS }, () => 0)
             );
         });
     });

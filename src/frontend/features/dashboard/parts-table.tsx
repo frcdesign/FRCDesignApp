@@ -3,7 +3,7 @@ import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { type PartUsageOut } from "@backend/features/analytics/contract";
-import { SPARKLINE_DAYS } from "@backend/features/analytics/measures";
+import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
 import { IconSize } from "../../lib/style-constants";
@@ -108,7 +108,7 @@ export function PartsTable({
                             width={COLUMN_WIDTH.uses}
                         />
                         <Table.Th w={COLUMN_WIDTH.sparkline}>
-                            Last {SPARKLINE_DAYS} days
+                            Last {MONTH_DAYS} days
                         </Table.Th>
                         <Table.Th w={COLUMN_WIDTH.onshape} ta="center">
                             Onshape

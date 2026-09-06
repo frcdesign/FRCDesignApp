@@ -149,7 +149,7 @@ export interface PartUsageOut {
     insertCount: number;
     /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    /** Daily inserts over a trailing {@link SPARKLINE_DAYS}, oldest first: a
+    /** Daily inserts over a trailing {@link MONTH_DAYS}, oldest first: a
      * shape rather than the reported window, which can be years of smear. */
     recent: number[];
 }
