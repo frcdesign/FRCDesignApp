@@ -44,6 +44,7 @@ export interface Season {
     label: string;
 }
 
+/** Two digits, so a month reads as `03`: day keys are compared as text. */
 function pad(value: number): string {
     return value.toString().padStart(2, "0");
 }

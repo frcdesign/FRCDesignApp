@@ -1,6 +1,6 @@
-import { sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
+import { earliest, increment, latest } from "../../db/updates";
 import { ElementType } from "../../lib/onshape/element-type";
 import { EventType, InsertSource } from "./events";
 import {
@@ -83,10 +83,13 @@ function countDay(db: Db, event: LoggedEvent) {
                 dailyMetrics.type
             ],
             set: {
-                count: sql`${dailyMetrics.count} + 1`,
-                favoriteCount: sql`${dailyMetrics.favoriteCount} + ${favorite}`,
-                fastenCount: sql`${dailyMetrics.fastenCount} + ${fasten}`,
-                quickInsertCount: sql`${dailyMetrics.quickInsertCount} + ${quickInsert}`
+                count: increment(dailyMetrics.count),
+                favoriteCount: increment(dailyMetrics.favoriteCount, favorite),
+                fastenCount: increment(dailyMetrics.fastenCount, fasten),
+                quickInsertCount: increment(
+                    dailyMetrics.quickInsertCount,
+                    quickInsert
+                )
             }
         });
 }
@@ -124,12 +127,10 @@ function countUser(db: Db, event: LoggedEvent) {
         .onConflictDoUpdate({
             target: [userStats.userId, userStats.libraryId],
             set: {
-                insertCount: sql`${userStats.insertCount} + ${insert}`,
-                openCount: sql`${userStats.openCount} + ${open}`,
-                // Bounds rather than assignment: a replay reaches a day in
-                // whatever order the log hands it over.
-                firstSeenAt: sql`min(${userStats.firstSeenAt}, ${event.createdAt})`,
-                lastSeenAt: sql`max(${userStats.lastSeenAt}, ${event.createdAt})`
+                insertCount: increment(userStats.insertCount, insert),
+                openCount: increment(userStats.openCount, open),
+                firstSeenAt: earliest(userStats.firstSeenAt, event.createdAt),
+                lastSeenAt: latest(userStats.lastSeenAt, event.createdAt)
             }
         });
 }
@@ -154,8 +155,11 @@ function countSource(db: Db, event: LoggedInsert) {
                 dailySourceMetrics.source
             ],
             set: {
-                count: sql`${dailySourceMetrics.count} + 1`,
-                quickInsertCount: sql`${dailySourceMetrics.quickInsertCount} + ${quickInsert}`
+                count: increment(dailySourceMetrics.count),
+                quickInsertCount: increment(
+                    dailySourceMetrics.quickInsertCount,
+                    quickInsert
+                )
             }
         });
 }
@@ -176,7 +180,7 @@ function countTarget(db: Db, event: LoggedInsert) {
                 dailyTargetMetrics.libraryId,
                 dailyTargetMetrics.targetElementType
             ],
-            set: { count: sql`${dailyTargetMetrics.count} + 1` }
+            set: { count: increment(dailyTargetMetrics.count) }
         });
 }
 
@@ -198,7 +202,7 @@ function countPartDay(db: Db, event: LoggedInsert) {
                 dailyInsertableMetrics.day,
                 dailyInsertableMetrics.targetElementType
             ],
-            set: { count: sql`${dailyInsertableMetrics.count} + 1` }
+            set: { count: increment(dailyInsertableMetrics.count) }
         });
 }
 
@@ -228,9 +232,15 @@ function countPartLifetime(db: Db, event: LoggedInsert) {
         .onConflictDoUpdate({
             target: [insertableStats.libraryId, insertableStats.elementId],
             set: {
-                insertCount: sql`${insertableStats.insertCount} + 1`,
-                firstInsertedAt: sql`min(${insertableStats.firstInsertedAt}, ${event.createdAt})`,
-                lastInsertedAt: sql`max(${insertableStats.lastInsertedAt}, ${event.createdAt})`
+                insertCount: increment(insertableStats.insertCount),
+                firstInsertedAt: earliest(
+                    insertableStats.firstInsertedAt,
+                    event.createdAt
+                ),
+                lastInsertedAt: latest(
+                    insertableStats.lastInsertedAt,
+                    event.createdAt
+                )
             }
         });
 }
@@ -258,7 +268,9 @@ function countValues(db: Db, event: LoggedInsert): BatchItem<"sqlite">[] {
                     dailyConfigurationMetrics.value,
                     dailyConfigurationMetrics.day
                 ],
-                set: { count: sql`${dailyConfigurationMetrics.count} + 1` }
+                set: {
+                    count: increment(dailyConfigurationMetrics.count)
+                }
             })
     );
 }

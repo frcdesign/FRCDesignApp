@@ -1,15 +1,18 @@
-import { eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import { configurations } from "../../db/schema";
-import { events, type LoggedEvent } from "./schema";
+import {
+    events,
+    type EventCore,
+    type InsertColumns,
+    type LoggedEvent
+} from "./schema";
 import { rollupWrites } from "./rollups";
 import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import { type Selection } from "../configurations/models";
-import { appliedValues } from "../configurations/selection";
+import { appliedSelection } from "../configurations/storage";
 
 /** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
 export function toDayKey(timestamp: number): string {
@@ -65,16 +68,15 @@ export async function trackInsert(
     const now = Date.now();
 
     await record(db, {
-        id: crypto.randomUUID(),
-        type: EventType.INSERT,
-        createdAt: now,
-        day: toDayKey(now),
-        libraryId: event.libraryId,
-        userId: event.userId,
+        ...core(EventType.INSERT, now, event),
         elementId: event.elementId,
         insertableId: event.insertableId,
         targetElementType: event.targetElementType,
-        selection: await appliedSelection(db, event),
+        selection: await appliedSelection(
+            db,
+            event.insertableId,
+            event.selection
+        ),
         isFavorite: event.isFavorite,
         isQuickInsert: event.isQuickInsert,
         source: event.source,
@@ -90,22 +92,42 @@ export async function trackAppOpen(
     const now = Date.now();
 
     await record(db, {
+        ...core(EventType.APP_OPEN, now, event),
+        ...NOT_AN_INSERT
+    });
+}
+
+/** What every logged event carries; its kind fills in the rest. */
+function core(
+    type: EventType,
+    now: number,
+    event: { libraryId: LibraryId; userId: string }
+): EventCore {
+    return {
         id: crypto.randomUUID(),
-        type: EventType.APP_OPEN,
+        type,
         createdAt: now,
         day: toDayKey(now),
         libraryId: event.libraryId,
-        userId: event.userId,
-        elementId: null,
-        insertableId: null,
-        targetElementType: null,
-        selection: null,
-        isFavorite: null,
-        isQuickInsert: null,
-        source: null,
-        fasten: null
-    });
+        userId: event.userId
+    };
 }
+
+/**
+ * The insert-only columns an app open leaves empty, spelled out rather than
+ * defaulted: a column added to the log stops compiling here until someone says
+ * what a non-insert should record for it.
+ */
+const NOT_AN_INSERT: InsertColumns = {
+    elementId: null,
+    insertableId: null,
+    targetElementType: null,
+    selection: null,
+    isFavorite: null,
+    isQuickInsert: null,
+    source: null,
+    fasten: null
+};
 
 /**
  * Appends the event to the log, then applies it to the rollups — the two halves
@@ -120,26 +142,4 @@ async function record(db: Db, event: LoggedEvent): Promise<void> {
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
-}
-
-/**
- * What Onshape applied: the selection minus what it hides, read against the
- * parameters as they stand now rather than a copy the caller carried.
- */
-async function appliedSelection(
-    db: Db,
-    event: InsertEvent
-): Promise<Selection | null> {
-    if (!event.selection) return null;
-
-    const row = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.id, event.insertableId))
-        .get();
-
-    const parameters = row?.parameters ?? [];
-    return parameters.length === 0
-        ? null
-        : appliedValues(event.selection, parameters);
 }
