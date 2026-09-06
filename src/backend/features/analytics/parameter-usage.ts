@@ -23,17 +23,16 @@ export function buildParameterUsage(
     parameters: ConfigurationParameter[],
     valueRows: { parameterId: string; value: string; count: number }[]
 ): ConfigurationParameterUsage[] {
-    const countsByParameter = new Map<string, Map<string, number>>();
-    for (const row of valueRows) {
-        const values =
-            countsByParameter.get(row.parameterId) ?? new Map<string, number>();
-        values.set(row.value, row.count);
-        countsByParameter.set(row.parameterId, values);
-    }
+    const rowsByParameter = Map.groupBy(valueRows, (row) => row.parameterId);
 
     return parameters.map((parameter) => {
-        const counts =
-            countsByParameter.get(parameter.id) ?? new Map<string, number>();
+        // `new Map(undefined)` is empty, which is what a parameter nobody has
+        // configured should read as.
+        const counts = new Map(
+            rowsByParameter
+                .get(parameter.id)
+                ?.map((row) => [row.value, row.count] as const)
+        );
 
         const values =
             parameter.type === ParameterType.ENUM

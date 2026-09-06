@@ -2,7 +2,6 @@ import { and, eq } from "drizzle-orm";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
-import { groupBy } from "../../lib/collections";
 import { getDb } from "../../db/client";
 import { configurations, group, insertables } from "../../db/schema";
 import { insertableStats } from "./schema";
@@ -259,7 +258,7 @@ analyticsRoutes.get(
             getConfigurationCounts(db, libraryId, range)
         ]);
 
-        const byElement = groupBy(valueRows, (row) => row.elementId);
+        const byElement = Map.groupBy(valueRows, (row) => row.elementId);
 
         const out: UnusedOptionOut[] = [];
         for (const part of parts) {
