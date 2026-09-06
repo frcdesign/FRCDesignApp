@@ -4,17 +4,17 @@
  * Imported by both sides, so it stays free of anything Worker-only.
  */
 
+/** What "a month" means to every window and rate here. */
+const MONTH_DAYS = 30;
+
 /** The trailing days each parts-table row's sparkline plots. */
-export const SPARKLINE_DAYS = 30;
+export const SPARKLINE_DAYS = MONTH_DAYS;
 
 /**
  * The trailing window the recent comparisons cover. Shared with the dashboard,
  * whose heading is named from it and so cannot drift.
  */
-export const RECENT_DAYS = 30;
-
-/** The days a "month" stands for in the per-month usage rate. */
-const MONTH_DAYS = 30;
+export const RECENT_DAYS = MONTH_DAYS;
 
 /**
  * Inserts per month, so a new part is not buried under an old one. The span is

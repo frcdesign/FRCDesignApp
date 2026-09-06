@@ -2,18 +2,24 @@
  * Reads of the per-part rollups: what a part was used for inside a window, and
  * how that lands day by day.
  */
-import { and, eq, gte, lte, sum } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import {
+    configurations,
     dailyConfigurationMetrics,
-    dailyInsertableMetrics
+    dailyInsertableMetrics,
+    dailyInsertableUsers,
+    favorites,
+    insertables,
+    insertableStats
 } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
 import { SPARKLINE_DAYS, usesPerMonth } from "./measures";
 import { toDayKey } from "./tracking";
 import { type DayRange } from "./range";
-import { type ElementPath } from "../../lib/onshape/path";
+import { toElementPath } from "../../lib/onshape/path";
+import { type ConfigurationParameter } from "../configurations/models";
 
 export interface PartRow {
     elementId: string;
@@ -23,20 +29,6 @@ export interface PartRow {
     versionId: string;
     isVisible: boolean;
     firstInsertedAt: number | null;
-}
-
-/** The version-pinned tab a row addresses, which is what a link opens. */
-export function toElementPath(row: {
-    documentId: string;
-    versionId: string;
-    elementId: string;
-}): ElementPath {
-    return {
-        documentId: row.documentId,
-        instanceId: row.versionId,
-        instanceType: "v",
-        elementId: row.elementId
-    };
 }
 
 /** One part counted over the window rather than over its whole history. */
@@ -183,4 +175,124 @@ export async function getPartSparklines(
         byElement.set(row.elementId, counts);
     }
     return byElement;
+}
+
+/** The part's lifetime row, which is where its first use is recorded. */
+export function getPartStats(db: Db, libraryId: LibraryId, elementId: string) {
+    return db
+        .select()
+        .from(insertableStats)
+        .where(
+            and(
+                eq(insertableStats.libraryId, libraryId),
+                eq(insertableStats.elementId, elementId)
+            )
+        )
+        .get();
+}
+
+/** The live insertable, absent once the part has left the library. */
+export function getPartInsertable(
+    db: Db,
+    libraryId: LibraryId,
+    elementId: string
+) {
+    return db
+        .select({
+            id: insertables.id,
+            name: insertables.name,
+            documentId: insertables.documentId,
+            versionId: insertables.versionId
+        })
+        .from(insertables)
+        .where(
+            and(
+                eq(insertables.libraryId, libraryId),
+                eq(insertables.elementId, elementId)
+            )
+        )
+        .get();
+}
+
+/** Distinct users of one part inside the window. */
+export function countPartUsers(
+    db: Db,
+    libraryId: LibraryId,
+    elementId: string,
+    range: DayRange
+) {
+    return db
+        .select({ value: countDistinct(dailyInsertableUsers.userId) })
+        .from(dailyInsertableUsers)
+        .where(
+            and(
+                eq(dailyInsertableUsers.libraryId, libraryId),
+                eq(dailyInsertableUsers.elementId, elementId),
+                gte(dailyInsertableUsers.day, range.from),
+                lte(dailyInsertableUsers.day, range.to)
+            )
+        )
+        .get();
+}
+
+/** One part's inserts inside the window, with the tabs they landed in. */
+export function sumPartMetrics(
+    db: Db,
+    libraryId: LibraryId,
+    elementId: string,
+    range: DayRange
+) {
+    return db
+        .select({
+            inserts: sum(dailyInsertableMetrics.count),
+            partStudio: sum(dailyInsertableMetrics.partStudioCount),
+            assembly: sum(dailyInsertableMetrics.assemblyCount)
+        })
+        .from(dailyInsertableMetrics)
+        .where(
+            and(
+                inWindow(libraryId, range),
+                eq(dailyInsertableMetrics.elementId, elementId)
+            )
+        )
+        .get();
+}
+
+/**
+ * Favorites are keyed by insertable id, so a part that has left the library has
+ * none to count.
+ */
+export function countPartFavorites(
+    db: Db,
+    libraryId: LibraryId,
+    elementId: string
+) {
+    return db
+        .select({ value: count() })
+        .from(favorites)
+        .innerJoin(insertables, eq(insertables.id, favorites.insertableId))
+        .where(
+            and(
+                eq(insertables.libraryId, libraryId),
+                eq(insertables.elementId, elementId)
+            )
+        )
+        .get();
+}
+
+/**
+ * The parameters the part declares today. The 1:1 configurations table is keyed
+ * by insertable id, so they are only reachable through a live row.
+ */
+export async function getPartParameters(
+    db: Db,
+    insertableId: string | undefined
+): Promise<ConfigurationParameter[]> {
+    if (insertableId === undefined) return [];
+    const row = await db
+        .select({ parameters: configurations.parameters })
+        .from(configurations)
+        .where(eq(configurations.id, insertableId))
+        .get();
+    return row?.parameters ?? [];
 }

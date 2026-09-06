@@ -24,6 +24,20 @@ export interface PartPath extends ElementPath {
     partId: string;
 }
 
+/** The version-pinned tab a stored insertable row addresses. */
+export function toElementPath(row: {
+    documentId: string;
+    versionId: string;
+    elementId: string;
+}): ElementPath {
+    return {
+        documentId: row.documentId,
+        instanceId: row.versionId,
+        instanceType: "v",
+        elementId: row.elementId
+    };
+}
+
 export interface ConfigurablePath extends ElementPath {
     selection: Selection;
 }

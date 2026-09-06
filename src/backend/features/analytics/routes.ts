@@ -1,13 +1,10 @@
-import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import z from "zod";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import {
     configurations,
-    dailyInsertableMetrics,
-    dailyInsertableUsers,
-    favorites,
     group,
     insertables,
     insertableStats
@@ -22,15 +19,20 @@ import type {
 import { ParameterType } from "../configurations/models";
 import { usesPerMonth } from "./measures";
 import { getGrowth } from "./growth";
+import { toElementPath } from "../../lib/onshape/path";
 import { toDayKey } from "./tracking";
 import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
 import {
+    countPartFavorites,
+    countPartUsers,
     getConfigurationCounts,
-    toElementPath,
+    getPartInsertable,
+    getPartParameters,
     getPartSparklines,
+    getPartStats,
     getWindowedInsertCounts,
-    inWindow,
+    sumPartMetrics,
     toWindowedPart
 } from "./part-queries";
 import {
@@ -308,74 +310,12 @@ analyticsRoutes.get(
             totals,
             favoriteCount
         ] = await Promise.all([
-            db
-                .select()
-                .from(insertableStats)
-                .where(
-                    and(
-                        eq(insertableStats.libraryId, libraryId),
-                        eq(insertableStats.elementId, elementId)
-                    )
-                )
-                .get(),
-            db
-                .select({
-                    id: insertables.id,
-                    name: insertables.name,
-                    documentId: insertables.documentId,
-                    versionId: insertables.versionId
-                })
-                .from(insertables)
-                .where(
-                    and(
-                        eq(insertables.libraryId, libraryId),
-                        eq(insertables.elementId, elementId)
-                    )
-                )
-                .get(),
+            getPartStats(db, libraryId, elementId),
+            getPartInsertable(db, libraryId, elementId),
             getConfigurationCounts(db, libraryId, range, elementId),
-            db
-                .select({ value: countDistinct(dailyInsertableUsers.userId) })
-                .from(dailyInsertableUsers)
-                .where(
-                    and(
-                        eq(dailyInsertableUsers.libraryId, libraryId),
-                        eq(dailyInsertableUsers.elementId, elementId),
-                        gte(dailyInsertableUsers.day, range.from),
-                        lte(dailyInsertableUsers.day, range.to)
-                    )
-                )
-                .get(),
-            db
-                .select({
-                    inserts: sum(dailyInsertableMetrics.count),
-                    partStudio: sum(dailyInsertableMetrics.partStudioCount),
-                    assembly: sum(dailyInsertableMetrics.assemblyCount)
-                })
-                .from(dailyInsertableMetrics)
-                .where(
-                    and(
-                        inWindow(libraryId, range),
-                        eq(dailyInsertableMetrics.elementId, elementId)
-                    )
-                )
-                .get(),
-            // Favorites are keyed by insertable id, so a part that left
-            // the library has none to count.
-            db
-                .select({ value: count() })
-                .from(favorites)
-                .innerJoin(
-                    insertables,
-                    eq(insertables.id, favorites.insertableId)
-                )
-                .where(
-                    and(
-                        eq(insertables.libraryId, libraryId),
-                        eq(insertables.elementId, elementId)
-                    )
-                )
-                .get()
+            countPartUsers(db, libraryId, elementId, range),
+            sumPartMetrics(db, libraryId, elementId, range),
+            countPartFavorites(db, libraryId, elementId)
         ]);
 
         const insertCount = Number(totals?.inserts ?? 0);
@@ -391,17 +331,7 @@ analyticsRoutes.get(
             windowStart
         );
 
-        // The 1:1 configurations table is keyed by insertable id, so the
-        // current parameter definitions are only reachable via a live row.
-        const parameters = insertable
-            ? ((
-                  await db
-                      .select({ parameters: configurations.parameters })
-                      .from(configurations)
-                      .where(eq(configurations.id, insertable.id))
-                      .get()
-              )?.parameters ?? [])
-            : [];
+        const parameters = await getPartParameters(db, insertable?.id);
 
         const out: InsertableReportOut = {
             elementId,

@@ -7,11 +7,7 @@ import { getLibraryColor } from "../../theme";
 import { toChartData } from "./series";
 import { type BucketPoint, type Granularity } from "./series";
 import type { ChartReferenceLineProps } from "@mantine/charts";
-import {
-    championshipOf,
-    Program,
-    seasonsBetween
-} from "@backend/features/analytics/seasons";
+import { Program, seasonsBetween } from "@backend/features/analytics/seasons";
 import { isShare, type MetricDefinition, type TrendPoint } from "./metrics";
 
 // Kept in this lazily-loaded module so recharts and its styles stay out of the
@@ -97,8 +93,8 @@ export function LibraryInsertsChart({
 }
 
 /**
- * Season markers, pinned to the bucket holding their day since a reference line
- * matches a category exactly. Two in one bucket join labels rather than lines.
+ * Season markers, placed by month: a season opens and closes on month bounds,
+ * and the championship closing it moves within its month every year.
  */
 function seasonLines(
     programs: Program[] | undefined,
@@ -110,12 +106,10 @@ function seasonLines(
     const last = buckets[buckets.length - 1];
 
     const labels = new Map<string, string[]>();
-    const mark = (day: string, label: string) => {
-        // The bucket keys are prefixes of a day key, so a plain comparison of
-        // equal-length slices finds the bucket the day falls in.
-        const bucket = buckets.find(
-            (candidate) => candidate === day.slice(0, candidate.length)
-        );
+    const mark = (month: string, label: string) => {
+        // A monthly bucket is the month; a finer one falls inside it, and the
+        // first such bucket is where the month begins on the axis.
+        const bucket = buckets.find((candidate) => candidate.startsWith(month));
         if (bucket === undefined) return;
         const existing = labels.get(bucket) ?? [];
         if (!existing.includes(label)) labels.set(bucket, [...existing, label]);
@@ -123,9 +117,9 @@ function seasonLines(
 
     for (const program of programs) {
         for (const season of seasonsBetween(program, first, last)) {
-            mark(season.from, `${program.toUpperCase()} kickoff`);
-            // Both programs finish at the same event, so this deduplicates.
-            mark(championshipOf(season), "Championship");
+            mark(season.startMonth, `${program.toUpperCase()} kickoff`);
+            // Both programs close at the same event, so this deduplicates.
+            mark(season.endMonth, "Championship");
         }
     }
 

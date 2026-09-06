@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
     baselineWindow,
-    championshipOf,
     currentSeason,
     lastCompleteSeason,
     LIBRARY_PROGRAM,
@@ -158,17 +157,17 @@ describe("years", () => {
     });
 });
 
-describe("championshipOf", () => {
-    it("puts both programs' seasons on the same closing event", () => {
+describe("season months", () => {
+    it("closes both programs' seasons in the same month", () => {
         // One event finishes both, so a chart must not draw two markers.
-        expect(championshipOf(seasonOf(Program.FRC, 2027))).toBe(
-            championshipOf(seasonOf(Program.FTC, 2027))
+        expect(seasonOf(Program.FRC, 2027).endMonth).toBe(
+            seasonOf(Program.FTC, 2027).endMonth
         );
     });
 
-    it("falls inside the season it closes", () => {
+    it("names the months its days open and close on", () => {
         const season = seasonOf(Program.FTC, 2027);
-        const day = championshipOf(season);
-        expect(day >= season.from && day <= season.to).toBe(true);
+        expect(season.startMonth).toBe(season.from.slice(0, 7));
+        expect(season.endMonth).toBe(season.to.slice(0, 7));
     });
 });

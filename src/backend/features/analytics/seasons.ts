@@ -27,9 +27,12 @@ const SPANS: Record<Program, { startMonth: number; endMonth: number }> = {
 
 export interface Season {
     program: Program;
-    /** Inclusive day keys. */
+    /** Inclusive day keys, always a whole first and last month. */
     from: string;
     to: string;
+    /** Those months as `YYYY-MM`, which is all a chart marker needs. */
+    startMonth: string;
+    endMonth: string;
     /**
      * The year the season ends in, which is how both programs name themselves:
      * FTC's Sept 2026 – Apr 2027 is the 2027 season, as is FRC's Jan–Apr 2027.
@@ -63,18 +66,12 @@ export function seasonOf(program: Program, year: number): Season {
         program,
         from: `${startYear}-${pad(startMonth)}-01`,
         to: endOfMonth(year, endMonth),
+        startMonth: `${startYear}-${pad(startMonth)}`,
+        endMonth: `${year}-${pad(endMonth)}`,
         year,
         years,
         label: `${program.toUpperCase()} ${years}`
     };
-}
-
-/**
- * The day the season culminates. Approximate — the real date moves within late
- * April — which is all a chart bucketed by week or month can show.
- */
-export function championshipOf(season: Season): string {
-    return `${season.year}-04-20`;
 }
 
 /** The season containing `day`, or null when the day is between seasons. */
