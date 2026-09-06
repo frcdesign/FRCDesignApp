@@ -23,6 +23,7 @@ import {
     dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
+    dailyTargetMetrics,
     dailyUserActivity,
     events,
     insertableStats,
@@ -38,6 +39,7 @@ const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
 const ROLLUPS = [
     dailyMetrics,
     dailySourceMetrics,
+    dailyTargetMetrics,
     dailyUserActivity,
     dailyInsertableMetrics,
     dailyInsertableUsers,

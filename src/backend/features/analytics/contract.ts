@@ -1,6 +1,19 @@
 import { LibraryId } from "../library/library-id";
+import { ElementType } from "../../lib/onshape/element-type";
 import type { ElementPath } from "../../lib/onshape/path";
 import { InsertSource } from "./events";
+
+/**
+ * Inserts by the kind of tab they landed in. Every type is listed, so a tab
+ * nobody inserts into reads as a zero rather than a missing key.
+ */
+export type InsertTargets = Record<ElementType, number>;
+
+export function emptyTargets(): InsertTargets {
+    return Object.fromEntries(
+        Object.values(ElementType).map((type) => [type, 0])
+    ) as InsertTargets;
+}
 
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
@@ -12,10 +25,10 @@ export interface AnalyticsTotals {
     quickInserts: number;
     /**
      * Insert-and-fasten, which Onshape only offers on an assembly target — so
-     * its denominator is `assemblyInserts`, not `inserts`.
+     * its denominator is the assembly entry of `targets`, not `inserts`.
      */
     fastenInserts: number;
-    assemblyInserts: number;
+    targets: InsertTargets;
     /**
      * Favorites standing right now, not over the range: a favorite is state a
      * user keeps, not an event, so it has no day to be windowed by.
@@ -42,8 +55,8 @@ export interface DailyMetricPoint {
     favoriteInserts: number;
     quickInserts: number;
     fastenInserts: number;
-    /** The denominator for `fastenInserts` on this day. */
-    assemblyInserts: number;
+    /** That day's inserts by target; the assembly entry is fasten's denominator. */
+    targets: InsertTargets;
 }
 
 /** Lifetime inserts started from one part of the app. */
@@ -193,12 +206,6 @@ export interface UnusedOptionOut {
     parameterTotal: number;
 }
 
-/** How an insert reached Onshape: derived into a part studio, or inserted. */
-export interface TargetSplit {
-    partStudio: number;
-    assembly: number;
-}
-
 export interface InsertableReportOut {
     elementId: string;
     name: string | null;
@@ -212,6 +219,6 @@ export interface InsertableReportOut {
     /** How many users currently have this part favorited. */
     favorites: number;
     /** Inserts by the kind of tab they landed in; derived vs. inserted. */
-    targets: TargetSplit;
+    targets: InsertTargets;
     parameters: ConfigurationParameterUsage[];
 }

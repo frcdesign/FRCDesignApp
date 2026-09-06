@@ -8,17 +8,21 @@ import { favorites } from "../../db/schema";
 import {
     dailyMetrics,
     dailySourceMetrics,
+    dailyTargetMetrics,
     dailyUserActivity,
     userStats
 } from "./schema";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
-import type {
-    AnalyticsTotals,
-    DailyInsertPoint,
-    DailyMetricPoint,
-    InsertSourceUsage,
-    LibrarySummary
+import { ElementType } from "../../lib/onshape/element-type";
+import {
+    emptyTargets,
+    type InsertTargets,
+    type AnalyticsTotals,
+    type DailyInsertPoint,
+    type DailyMetricPoint,
+    type InsertSourceUsage,
+    type LibrarySummary
 } from "./contract";
 import { eachDay, type DayRange } from "./range";
 import { getHealthCounts } from "./health";
@@ -29,8 +33,9 @@ export async function getTotals(
     libraryId?: LibraryId,
     range?: DayRange
 ): Promise<AnalyticsTotals> {
-    const [metrics, uniqueUsers, favoriteCount] = await Promise.all([
+    const [metrics, targets, uniqueUsers, favoriteCount] = await Promise.all([
         countMetrics(db, libraryId, range),
+        countTargets(db, libraryId, range),
         countUsers(db, libraryId, range),
         countFavorites(db, libraryId)
     ]);
@@ -45,7 +50,7 @@ export async function getTotals(
         favoriteInserts: Number(inserts?.favorites ?? 0),
         quickInserts: Number(inserts?.quickInserts ?? 0),
         fastenInserts: Number(inserts?.fastens ?? 0),
-        assemblyInserts: Number(inserts?.assemblies ?? 0),
+        targets: toTargets(targets),
         favorites: favoriteCount?.value ?? 0
     };
 }
@@ -65,13 +70,43 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
             total: sum(dailyMetrics.count),
             favorites: sum(dailyMetrics.favoriteCount),
             fastens: sum(dailyMetrics.fastenCount),
-            quickInserts: sum(dailyMetrics.quickInsertCount),
-            assemblies: sum(dailyMetrics.assemblyCount)
+            quickInserts: sum(dailyMetrics.quickInsertCount)
         })
         .from(dailyMetrics)
         .where(filters.length ? and(...filters) : undefined)
         .groupBy(dailyMetrics.type)
         .all();
+}
+
+/** Inserts by target, over whatever the caller scoped to. */
+function countTargets(db: Db, libraryId?: LibraryId, range?: DayRange) {
+    const filters = [];
+    if (libraryId) filters.push(eq(dailyTargetMetrics.libraryId, libraryId));
+    if (range) {
+        filters.push(gte(dailyTargetMetrics.day, range.from));
+        filters.push(lte(dailyTargetMetrics.day, range.to));
+    }
+
+    return db
+        .select({
+            targetElementType: dailyTargetMetrics.targetElementType,
+            total: sum(dailyTargetMetrics.count)
+        })
+        .from(dailyTargetMetrics)
+        .where(filters.length ? and(...filters) : undefined)
+        .groupBy(dailyTargetMetrics.targetElementType)
+        .all();
+}
+
+/** Rows of one target apiece, as the whole-of-enum shape the contract states. */
+export function toTargets(
+    rows: { targetElementType: ElementType; total: string | number | null }[]
+): InsertTargets {
+    const targets = emptyTargets();
+    for (const row of rows) {
+        targets[row.targetElementType] = Number(row.total ?? 0);
+    }
+    return targets;
 }
 
 /**
@@ -144,12 +179,31 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
             total: sum(dailyMetrics.count),
             favoriteInserts: sum(dailyMetrics.favoriteCount),
             fastenInserts: sum(dailyMetrics.fastenCount),
-            quickInserts: sum(dailyMetrics.quickInsertCount),
-            assemblyInserts: sum(dailyMetrics.assemblyCount)
+            quickInserts: sum(dailyMetrics.quickInsertCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
         .groupBy(dailyMetrics.day, dailyMetrics.type)
+        .all();
+}
+
+/** Each day's inserts by target, summed across libraries when unscoped. */
+function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
+    const filters = [
+        gte(dailyTargetMetrics.day, range.from),
+        lte(dailyTargetMetrics.day, range.to)
+    ];
+    if (libraryId) filters.push(eq(dailyTargetMetrics.libraryId, libraryId));
+
+    return db
+        .select({
+            day: dailyTargetMetrics.day,
+            targetElementType: dailyTargetMetrics.targetElementType,
+            total: sum(dailyTargetMetrics.count)
+        })
+        .from(dailyTargetMetrics)
+        .where(and(...filters))
+        .groupBy(dailyTargetMetrics.day, dailyTargetMetrics.targetElementType)
         .all();
 }
 
@@ -172,8 +226,9 @@ export async function getMetricSeries(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<DailyMetricPoint[]> {
-    const [rows, userRows] = await Promise.all([
+    const [rows, targetRows, userRows] = await Promise.all([
         countMetricsByDay(db, range, libraryId),
+        countTargetsByDay(db, range, libraryId),
         countUsersByDay(db, range, libraryId)
     ]);
 
@@ -189,7 +244,7 @@ export async function getMetricSeries(
             favoriteInserts: 0,
             quickInserts: 0,
             fastenInserts: 0,
-            assemblyInserts: 0
+            targets: emptyTargets()
         };
         byDay.set(day, created);
         return created;
@@ -205,7 +260,11 @@ export async function getMetricSeries(
         point.favoriteInserts = Number(row.favoriteInserts ?? 0);
         point.fastenInserts = Number(row.fastenInserts ?? 0);
         point.quickInserts = Number(row.quickInserts ?? 0);
-        point.assemblyInserts = Number(row.assemblyInserts ?? 0);
+    }
+    for (const row of targetRows) {
+        pointFor(row.day).targets[row.targetElementType] = Number(
+            row.total ?? 0
+        );
     }
     for (const row of userRows) {
         pointFor(row.day).activeUsers = row.activeUsers;

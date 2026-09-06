@@ -2,6 +2,7 @@ import type {
     AnalyticsTotals,
     DailyMetricPoint
 } from "@backend/features/analytics/contract";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     formatBucket,
     pickGranularity,
@@ -58,8 +59,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
         // Onshape only offers fasten on an assembly target.
-        denominator: (point) => point.assemblyInserts,
-        lifetimeDenominator: (totals) => totals.assemblyInserts,
+        denominator: (point) => point.targets[ElementType.ASSEMBLY],
+        lifetimeDenominator: (totals) => totals.targets[ElementType.ASSEMBLY],
         lifetimeValue: (totals) => totals.fastenInserts,
         detailLabel: "% of assembly inserts"
     },
@@ -83,9 +84,9 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
             "How often a part is derived into a part studio rather than inserted into an assembly. A library people derive from is being used as a starting point to modify; one people insert into assemblies is being used as finished hardware.",
         numeratorLabel: "Inserts into a part studio",
         denominatorLabel: "All inserts",
-        numerator: (point) => point.inserts - point.assemblyInserts,
+        numerator: (point) => point.targets[ElementType.PART_STUDIO],
         denominator: (point) => point.inserts,
-        lifetimeValue: (totals) => totals.inserts - totals.assemblyInserts,
+        lifetimeValue: (totals) => totals.targets[ElementType.PART_STUDIO],
         lifetimeDenominator: (totals) => totals.inserts,
         detailLabel: "% of inserts"
     }

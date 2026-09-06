@@ -149,11 +149,13 @@ export async function getPartSparklines(
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 
+    // Summed over targets: a part inserted into both kinds of tab on one day
+    // has a row apiece, and the sparkline plots the day.
     const rows = await db
         .select({
             elementId: dailyInsertableMetrics.elementId,
             day: dailyInsertableMetrics.day,
-            count: dailyInsertableMetrics.count
+            count: sum(dailyInsertableMetrics.count)
         })
         .from(dailyInsertableMetrics)
         .where(
@@ -162,6 +164,7 @@ export async function getPartSparklines(
                 gte(dailyInsertableMetrics.day, days[0])
             )
         )
+        .groupBy(dailyInsertableMetrics.elementId, dailyInsertableMetrics.day)
         .all();
 
     const byElement = new Map<string, number[]>();
@@ -169,7 +172,7 @@ export async function getPartSparklines(
         const index = dayIndex.get(row.day);
         if (index === undefined) continue;
         const counts = byElement.get(row.elementId) ?? emptySparkline();
-        counts[index] = row.count;
+        counts[index] = Number(row.count ?? 0);
         byElement.set(row.elementId, counts);
     }
     return byElement;
@@ -233,8 +236,8 @@ export function countPartUsers(
         .get();
 }
 
-/** One part's inserts inside the window, with the tabs they landed in. */
-export function sumPartMetrics(
+/** One part's inserts inside the window, by the kind of tab they landed in. */
+export function sumPartTargets(
     db: Db,
     libraryId: LibraryId,
     elementId: string,
@@ -242,9 +245,8 @@ export function sumPartMetrics(
 ) {
     return db
         .select({
-            inserts: sum(dailyInsertableMetrics.count),
-            partStudio: sum(dailyInsertableMetrics.partStudioCount),
-            assembly: sum(dailyInsertableMetrics.assemblyCount)
+            targetElementType: dailyInsertableMetrics.targetElementType,
+            total: sum(dailyInsertableMetrics.count)
         })
         .from(dailyInsertableMetrics)
         .where(
@@ -253,7 +255,8 @@ export function sumPartMetrics(
                 eq(dailyInsertableMetrics.elementId, elementId)
             )
         )
-        .get();
+        .groupBy(dailyInsertableMetrics.targetElementType)
+        .all();
 }
 
 /**

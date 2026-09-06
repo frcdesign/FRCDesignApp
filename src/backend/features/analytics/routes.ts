@@ -28,7 +28,7 @@ import {
     getPartSparklines,
     getPartStats,
     getWindowedInsertCounts,
-    sumPartMetrics,
+    sumPartTargets,
     toWindowedPart
 } from "./part-queries";
 import {
@@ -36,7 +36,8 @@ import {
     getMetricSeries,
     getSeries,
     getSources,
-    getTotals
+    getTotals,
+    toTargets
 } from "./metric-queries";
 import { clampRange, getRange, getTrackingSince } from "./range";
 
@@ -303,18 +304,22 @@ analyticsRoutes.get(
             insertable,
             valueRows,
             uniqueUsers,
-            totals,
+            targetRows,
             favoriteCount
         ] = await Promise.all([
             getPartStats(db, libraryId, elementId),
             getPartInsertable(db, libraryId, elementId),
             getConfigurationCounts(db, libraryId, range, elementId),
             countPartUsers(db, libraryId, elementId, range),
-            sumPartMetrics(db, libraryId, elementId, range),
+            sumPartTargets(db, libraryId, elementId, range),
             countPartFavorites(db, libraryId, elementId)
         ]);
 
-        const insertCount = Number(totals?.inserts ?? 0);
+        const targets = toTargets(targetRows);
+        const insertCount = Object.values(targets).reduce(
+            (total, count) => total + count,
+            0
+        );
         // Rated over the days the part has existed inside the window, as the
         // parts table rates it.
         const windowStart = Date.parse(`${range.from}T00:00:00Z`);
@@ -344,10 +349,7 @@ analyticsRoutes.get(
             firstInsertedAt: stats?.firstInsertedAt ?? null,
             uniqueUsers: uniqueUsers?.value ?? 0,
             favorites: favoriteCount?.value ?? 0,
-            targets: {
-                partStudio: Number(totals?.partStudio ?? 0),
-                assembly: Number(totals?.assembly ?? 0)
-            },
+            targets,
             parameters: buildParameterUsage(parameters, valueRows)
         };
         return c.json(out);

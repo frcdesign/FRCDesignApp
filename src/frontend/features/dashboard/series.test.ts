@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type {
-    DailyInsertPoint,
-    DailyMetricPoint
+import {
+    emptyTargets,
+    type DailyInsertPoint,
+    type DailyMetricPoint
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
@@ -31,7 +32,7 @@ function day(index: number, values: Partial<DailyMetricPoint> = {}) {
         favoriteInserts: 0,
         quickInserts: 0,
         fastenInserts: 0,
-        assemblyInserts: 0,
+        targets: emptyTargets(),
         ...values
     };
 }

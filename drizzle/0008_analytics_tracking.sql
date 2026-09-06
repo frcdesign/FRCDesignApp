@@ -13,10 +13,9 @@ CREATE TABLE `daily_insertable_metrics` (
 	`day` text NOT NULL,
 	`library_id` text NOT NULL,
 	`element_id` text NOT NULL,
+	`target_element_type` text NOT NULL,
 	`count` integer DEFAULT 0 NOT NULL,
-	`part_studio_count` integer DEFAULT 0 NOT NULL,
-	`assembly_count` integer DEFAULT 0 NOT NULL,
-	PRIMARY KEY(`library_id`, `element_id`, `day`)
+	PRIMARY KEY(`library_id`, `element_id`, `day`, `target_element_type`)
 );
 --> statement-breakpoint
 CREATE INDEX `daily_insertable_metrics_day_idx` ON `daily_insertable_metrics` (`library_id`,`day`);--> statement-breakpoint
@@ -36,7 +35,6 @@ CREATE TABLE `daily_metrics` (
 	`favorite_count` integer DEFAULT 0 NOT NULL,
 	`fasten_count` integer DEFAULT 0 NOT NULL,
 	`quick_insert_count` integer DEFAULT 0 NOT NULL,
-	`assembly_count` integer DEFAULT 0 NOT NULL,
 	PRIMARY KEY(`day`, `library_id`, `type`)
 );
 --> statement-breakpoint
@@ -47,6 +45,14 @@ CREATE TABLE `daily_source_metrics` (
 	`count` integer DEFAULT 0 NOT NULL,
 	`quick_insert_count` integer DEFAULT 0 NOT NULL,
 	PRIMARY KEY(`day`, `library_id`, `source`)
+);
+--> statement-breakpoint
+CREATE TABLE `daily_target_metrics` (
+	`day` text NOT NULL,
+	`library_id` text NOT NULL,
+	`target_element_type` text NOT NULL,
+	`count` integer DEFAULT 0 NOT NULL,
+	PRIMARY KEY(`day`, `library_id`, `target_element_type`)
 );
 --> statement-breakpoint
 CREATE TABLE `daily_user_activity` (

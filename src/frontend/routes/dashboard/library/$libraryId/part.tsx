@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
 import { makeUrl } from "../../../../lib/url";
@@ -136,8 +137,8 @@ function ReportBody({
                 <SummaryCard
                     label="Derived"
                     value={formatPercent(
-                        report.targets.partStudio,
-                        report.targets.partStudio + report.targets.assembly
+                        report.targets[ElementType.PART_STUDIO],
+                        report.insertCount
                     )}
                 />
             </SimpleGrid>

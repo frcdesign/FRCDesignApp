@@ -149,24 +149,15 @@
                     "notNull": true,
                     "autoincrement": false
                 },
+                "target_element_type": {
+                    "name": "target_element_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
                 "count": {
                     "name": "count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "part_studio_count": {
-                    "name": "part_studio_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "assembly_count": {
-                    "name": "assembly_count",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,
@@ -183,9 +174,14 @@
             },
             "foreignKeys": {},
             "compositePrimaryKeys": {
-                "daily_insertable_metrics_library_id_element_id_day_pk": {
-                    "columns": ["library_id", "element_id", "day"],
-                    "name": "daily_insertable_metrics_library_id_element_id_day_pk"
+                "daily_insertable_metrics_library_id_element_id_day_target_element_type_pk": {
+                    "columns": [
+                        "library_id",
+                        "element_id",
+                        "day",
+                        "target_element_type"
+                    ],
+                    "name": "daily_insertable_metrics_library_id_element_id_day_target_element_type_pk"
                 }
             },
             "uniqueConstraints": {},
@@ -289,14 +285,6 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": 0
-                },
-                "assembly_count": {
-                    "name": "assembly_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
                 }
             },
             "indexes": {},
@@ -357,6 +345,50 @@
                 "daily_source_metrics_day_library_id_source_pk": {
                     "columns": ["day", "library_id", "source"],
                     "name": "daily_source_metrics_day_library_id_source_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_target_metrics": {
+            "name": "daily_target_metrics",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "target_element_type": {
+                    "name": "target_element_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "count": {
+                    "name": "count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_target_metrics_day_library_id_target_element_type_pk": {
+                    "columns": ["day", "library_id", "target_element_type"],
+                    "name": "daily_target_metrics_day_library_id_target_element_type_pk"
                 }
             },
             "uniqueConstraints": {},

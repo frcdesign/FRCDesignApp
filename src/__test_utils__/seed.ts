@@ -12,6 +12,7 @@ import {
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
+    dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
     events,
@@ -72,6 +73,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(events);
     await db.delete(dailyMetrics);
     await db.delete(dailySourceMetrics);
+    await db.delete(dailyTargetMetrics);
     await db.delete(dailyUserActivity);
     await db.delete(insertableStats);
     await db.delete(dailyInsertableMetrics);

@@ -59,7 +59,8 @@ export type LoggedEvent = typeof events.$inferSelect;
 
 /**
  * Per-day counts. Each flag counter is a subset of `count`, and so a percentage
- * of it; `assemblyCount` is the denominator for `fastenCount`, not a flag.
+ * of it. Fasten's denominator is not here: it is the assembly row of
+ * {@link dailyTargetMetrics}, since Onshape only offers it on an assembly.
  */
 export const dailyMetrics = sqliteTable(
     "daily_metrics",
@@ -70,10 +71,26 @@ export const dailyMetrics = sqliteTable(
         count: integer("count").notNull().default(0),
         favoriteCount: integer("favorite_count").notNull().default(0),
         fastenCount: integer("fasten_count").notNull().default(0),
-        quickInsertCount: integer("quick_insert_count").notNull().default(0),
-        assemblyCount: integer("assembly_count").notNull().default(0)
+        quickInsertCount: integer("quick_insert_count").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.type] })]
+);
+
+/**
+ * Per-day inserts split by the kind of tab they landed in. A dimension rather
+ * than a counter per type, so a new kind of target needs no column.
+ */
+export const dailyTargetMetrics = sqliteTable(
+    "daily_target_metrics",
+    {
+        day: text("day").notNull(),
+        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        targetElementType: text("target_element_type")
+            .notNull()
+            .$type<ElementType>(),
+        count: integer("count").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.libraryId, t.targetElementType] })]
 );
 
 /** Per-day inserts split by where they started, for the source breakdown. */
@@ -106,7 +123,7 @@ export const insertableStats = sqliteTable(
 );
 
 /**
- * Per-day counts for one part, target counters included as subsets of `count`.
+ * Per-day counts for one part, split by target as {@link dailyTargetMetrics} is.
  * Keyed part-first for one part's history, indexed by day for a whole library's.
  */
 export const dailyInsertableMetrics = sqliteTable(
@@ -115,12 +132,15 @@ export const dailyInsertableMetrics = sqliteTable(
         day: text("day").notNull(),
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         elementId: text("element_id").notNull(),
-        count: integer("count").notNull().default(0),
-        partStudioCount: integer("part_studio_count").notNull().default(0),
-        assemblyCount: integer("assembly_count").notNull().default(0)
+        targetElementType: text("target_element_type")
+            .notNull()
+            .$type<ElementType>(),
+        count: integer("count").notNull().default(0)
     },
     (t) => [
-        primaryKey({ columns: [t.libraryId, t.elementId, t.day] }),
+        primaryKey({
+            columns: [t.libraryId, t.elementId, t.day, t.targetElementType]
+        }),
         index("daily_insertable_metrics_day_idx").on(t.libraryId, t.day)
     ]
 );

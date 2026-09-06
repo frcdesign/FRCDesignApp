@@ -7,6 +7,7 @@ import {
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
+    dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
     insertableStats,
@@ -101,30 +102,23 @@ async function seedInserts(
         configuration = {},
         target
     } = options;
-    const partStudio = target === ElementType.PART_STUDIO ? count : 0;
-    const assembly = target === ElementType.ASSEMBLY ? count : 0;
-
     await db
         .insert(dailyInsertableMetrics)
         .values({
             day,
             libraryId: TEST_LIBRARY_ID,
             elementId: element,
-            count,
-            partStudioCount: partStudio,
-            assemblyCount: assembly
+            targetElementType: target ?? ElementType.PART_STUDIO,
+            count
         })
         .onConflictDoUpdate({
             target: [
                 dailyInsertableMetrics.libraryId,
                 dailyInsertableMetrics.elementId,
-                dailyInsertableMetrics.day
+                dailyInsertableMetrics.day,
+                dailyInsertableMetrics.targetElementType
             ],
-            set: {
-                count: sql`${dailyInsertableMetrics.count} + ${count}`,
-                partStudioCount: sql`${dailyInsertableMetrics.partStudioCount} + ${partStudio}`,
-                assemblyCount: sql`${dailyInsertableMetrics.assemblyCount} + ${assembly}`
-            }
+            set: { count: sql`${dailyInsertableMetrics.count} + ${count}` }
         });
 
     await db
@@ -250,9 +244,22 @@ describe("analytics routes", () => {
                 count: 10,
                 favoriteCount: 4,
                 fastenCount: 3,
-                quickInsertCount: 6,
-                assemblyCount: 5
+                quickInsertCount: 6
             });
+            await db.insert(dailyTargetMetrics).values([
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    targetElementType: ElementType.ASSEMBLY,
+                    count: 5
+                },
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    targetElementType: ElementType.PART_STUDIO,
+                    count: 5
+                }
+            ]);
 
             const res = await anonymousGet(
                 "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
@@ -265,7 +272,10 @@ describe("analytics routes", () => {
                 fastenInserts: 3,
                 quickInserts: 6,
                 // The fasten denominator, so the UI reads 3/5 rather than 3/10.
-                assemblyInserts: 5
+                targets: {
+                    [ElementType.ASSEMBLY]: 5,
+                    [ElementType.PART_STUDIO]: 5
+                }
             });
             expect(body.metricSeries[0]).toEqual({
                 day: "2026-03-01",
@@ -275,7 +285,10 @@ describe("analytics routes", () => {
                 favoriteInserts: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
-                assemblyInserts: 5
+                targets: {
+                    [ElementType.ASSEMBLY]: 5,
+                    [ElementType.PART_STUDIO]: 5
+                }
             });
         });
 
@@ -629,6 +642,25 @@ describe("analytics routes", () => {
             );
         });
 
+        it("adds up a day's targets in the sparkline and the count", async () => {
+            // One row per target, so a part used both ways in a day would
+            // otherwise plot whichever row came back last.
+            await seedPartStudio(db);
+            await seedInserts(2, { target: ElementType.PART_STUDIO });
+            await seedInserts(3, { target: ElementType.ASSEMBLY });
+            await seedInserts(1, {
+                day: toDayKey(Date.now() - 24 * 3600 * 1000),
+                target: ElementType.ASSEMBLY
+            });
+
+            const res = await anonymousGet(partsUrl());
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].insertCount).toBe(6);
+            expect(body[0].recent.at(-1)).toBe(5);
+            expect(body[0].recent.at(-2)).toBe(1);
+        });
+
         it("keeps the sparkline at 30 days whatever the range", async () => {
             // It is a shape, not a window: two years of points in a sparkline
             // is a smear.
@@ -954,7 +986,10 @@ describe("analytics routes", () => {
             );
             const body: InsertableReportOut = await res.json();
 
-            expect(body.targets).toEqual({ partStudio: 3, assembly: 1 });
+            expect(body.targets).toEqual({
+                [ElementType.PART_STUDIO]: 3,
+                [ElementType.ASSEMBLY]: 1
+            });
         });
 
         it("rates uses over the span the part has been in use", async () => {

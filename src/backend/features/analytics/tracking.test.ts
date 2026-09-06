@@ -8,6 +8,7 @@ import {
     dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
+    dailyTargetMetrics,
     dailyUserActivity,
     events,
     insertableStats,
@@ -183,12 +184,14 @@ describe("tracking", () => {
             );
 
             const daily = await db.select().from(dailyInsertableMetrics).all();
-            expect(daily).toHaveLength(1);
-            expect(daily[0]).toMatchObject({
-                elementId,
-                count: 2,
-                partStudioCount: 1,
-                assemblyCount: 1
+            expect(daily).toHaveLength(2);
+            expect(
+                Object.fromEntries(
+                    daily.map((row) => [row.targetElementType, row.count])
+                )
+            ).toEqual({
+                [ElementType.PART_STUDIO]: 1,
+                [ElementType.ASSEMBLY]: 1
             });
         });
 
@@ -345,7 +348,7 @@ describe("tracking", () => {
             });
         });
 
-        it("counts assembly targets separately, as the fasten denominator", async () => {
+        it("counts targets by type, giving fasten its denominator", async () => {
             await trackInsert(
                 fakeContext(),
                 insertEvent({
@@ -369,10 +372,16 @@ describe("tracking", () => {
             );
 
             const daily = await db.select().from(dailyMetrics).get();
-            expect(daily).toMatchObject({
-                count: 3,
-                assemblyCount: 2,
-                fastenCount: 1
+            expect(daily).toMatchObject({ count: 3, fastenCount: 1 });
+
+            const targets = await db.select().from(dailyTargetMetrics).all();
+            expect(
+                Object.fromEntries(
+                    targets.map((row) => [row.targetElementType, row.count])
+                )
+            ).toEqual({
+                [ElementType.ASSEMBLY]: 2,
+                [ElementType.PART_STUDIO]: 1
             });
         });
 

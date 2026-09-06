@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { DailyMetricPoint } from "@backend/features/analytics/contract";
+import {
+    emptyTargets,
+    type DailyMetricPoint,
+    type InsertTargets
+} from "@backend/features/analytics/contract";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import { METRICS, isShare, rangeTerms, rangeValue, toTrend } from "./metrics";
+
+/** A day's inserts split between the two kinds of tab they landed in. */
+function targets(partStudio: number, assembly: number): InsertTargets {
+    return {
+        [ElementType.PART_STUDIO]: partStudio,
+        [ElementType.ASSEMBLY]: assembly
+    };
+}
 
 function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
     const date = new Date(Date.UTC(2026, 0, 1 + index));
@@ -12,7 +25,7 @@ function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
         favoriteInserts: 0,
         quickInserts: 0,
         fastenInserts: 0,
-        assemblyInserts: 0,
+        targets: emptyTargets(),
         ...overrides
     };
 }
@@ -32,7 +45,13 @@ describe("metric definitions", () => {
     it("measures fasten against assembly inserts", () => {
         // The one metric with a denominator other than total inserts.
         const [point] = toTrend(
-            [day(0, { inserts: 40, fastenInserts: 4, assemblyInserts: 16 })],
+            [
+                day(0, {
+                    inserts: 40,
+                    fastenInserts: 4,
+                    targets: targets(24, 16)
+                })
+            ],
             METRICS.fastenShare
         );
         expect(point.value).toBe(25);
@@ -113,7 +132,7 @@ describe("rangeValue", () => {
                 favoriteInserts: 5,
                 quickInserts: 2,
                 fastenInserts: 1,
-                assemblyInserts: 4
+                targets: targets(6, 4)
             }),
             day(1, {
                 inserts: 30,
@@ -122,7 +141,7 @@ describe("rangeValue", () => {
                 favoriteInserts: 5,
                 quickInserts: 8,
                 fastenInserts: 3,
-                assemblyInserts: 6
+                targets: targets(24, 6)
             })
         ];
 

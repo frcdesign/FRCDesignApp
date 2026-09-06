@@ -9,6 +9,7 @@ import {
     dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
+    dailyTargetMetrics,
     dailyUserActivity,
     insertableStats,
     userStats,
@@ -50,6 +51,7 @@ export function rollupWrites(
     return [
         ...writes,
         countSource(db, event),
+        countTarget(db, event),
         countPartDay(db, event),
         markPartUser(db, event),
         countPartLifetime(db, event),
@@ -62,7 +64,6 @@ function countDay(db: Db, event: LoggedEvent) {
     const favorite = event.isFavorite ? 1 : 0;
     const fasten = event.fasten ? 1 : 0;
     const quickInsert = event.isQuickInsert ? 1 : 0;
-    const assembly = event.targetElementType === ElementType.ASSEMBLY ? 1 : 0;
 
     return db
         .insert(dailyMetrics)
@@ -73,8 +74,7 @@ function countDay(db: Db, event: LoggedEvent) {
             count: 1,
             favoriteCount: favorite,
             fastenCount: fasten,
-            quickInsertCount: quickInsert,
-            assemblyCount: assembly
+            quickInsertCount: quickInsert
         })
         .onConflictDoUpdate({
             target: [
@@ -86,8 +86,7 @@ function countDay(db: Db, event: LoggedEvent) {
                 count: sql`${dailyMetrics.count} + 1`,
                 favoriteCount: sql`${dailyMetrics.favoriteCount} + ${favorite}`,
                 fastenCount: sql`${dailyMetrics.fastenCount} + ${fasten}`,
-                quickInsertCount: sql`${dailyMetrics.quickInsertCount} + ${quickInsert}`,
-                assemblyCount: sql`${dailyMetrics.assemblyCount} + ${assembly}`
+                quickInsertCount: sql`${dailyMetrics.quickInsertCount} + ${quickInsert}`
             }
         });
 }
@@ -161,33 +160,45 @@ function countSource(db: Db, event: LoggedInsert) {
         });
 }
 
-/** The part's own day, split by the kind of tab it landed in. */
-function countPartDay(db: Db, event: LoggedInsert) {
-    const partStudio =
-        event.targetElementType === ElementType.PART_STUDIO ? 1 : 0;
-    const assembly = event.targetElementType === ElementType.ASSEMBLY ? 1 : 0;
+/** The library's day for the kind of tab this insert landed in. */
+function countTarget(db: Db, event: LoggedInsert) {
+    return db
+        .insert(dailyTargetMetrics)
+        .values({
+            day: event.day,
+            libraryId: event.libraryId,
+            targetElementType: event.targetElementType,
+            count: 1
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyTargetMetrics.day,
+                dailyTargetMetrics.libraryId,
+                dailyTargetMetrics.targetElementType
+            ],
+            set: { count: sql`${dailyTargetMetrics.count} + 1` }
+        });
+}
 
+/** As {@link countTarget}, but for one part rather than the library. */
+function countPartDay(db: Db, event: LoggedInsert) {
     return db
         .insert(dailyInsertableMetrics)
         .values({
             day: event.day,
             libraryId: event.libraryId,
             elementId: event.elementId,
-            count: 1,
-            partStudioCount: partStudio,
-            assemblyCount: assembly
+            targetElementType: event.targetElementType,
+            count: 1
         })
         .onConflictDoUpdate({
             target: [
                 dailyInsertableMetrics.libraryId,
                 dailyInsertableMetrics.elementId,
-                dailyInsertableMetrics.day
+                dailyInsertableMetrics.day,
+                dailyInsertableMetrics.targetElementType
             ],
-            set: {
-                count: sql`${dailyInsertableMetrics.count} + 1`,
-                partStudioCount: sql`${dailyInsertableMetrics.partStudioCount} + ${partStudio}`,
-                assemblyCount: sql`${dailyInsertableMetrics.assemblyCount} + ${assembly}`
-            }
+            set: { count: sql`${dailyInsertableMetrics.count} + 1` }
         });
 }
 
