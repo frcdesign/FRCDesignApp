@@ -1,11 +1,8 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-    configurations,
-    dailyConfigurationMetrics,
-    insertables
-} from "../../../db/schema";
+import { configurations, insertables } from "../../../db/schema";
+import { dailyConfigurationMetrics } from "../../analytics/schema";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import { BuildIssueType } from "../../build-checker/issues";

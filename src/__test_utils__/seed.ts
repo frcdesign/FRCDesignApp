@@ -1,6 +1,13 @@
 import { type Db } from "@backend/db/client";
 import {
     configurations,
+    favorites,
+    group,
+    insertables,
+    libraries,
+    users
+} from "@backend/db/schema";
+import {
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -8,14 +15,9 @@ import {
     dailySourceMetrics,
     dailyUserActivity,
     events,
-    favorites,
-    group,
     insertableStats,
-    insertables,
-    libraries,
-    userStats,
-    users
-} from "@backend/db/schema";
+    userStats
+} from "../backend/features/analytics/schema";
 import {
     ParameterType,
     type ConfigurationParameter

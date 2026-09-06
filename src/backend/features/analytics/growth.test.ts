@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { dailyMetrics, dailyUserActivity } from "../../db/schema";
+import { dailyMetrics, dailyUserActivity } from "./schema";
 import { ChangeUnavailable } from "./contract";
 import { EventType } from "./events";
 import { LibraryId } from "../library/library-id";

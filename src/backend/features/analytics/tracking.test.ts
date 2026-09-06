@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { configurations } from "../../db/schema";
 import {
-    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -12,7 +12,7 @@ import {
     events,
     insertableStats,
     userStats
-} from "../../db/schema";
+} from "./schema";
 import {
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,

@@ -3,12 +3,8 @@ import z from "zod";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
-import {
-    configurations,
-    group,
-    insertables,
-    insertableStats
-} from "../../db/schema";
+import { configurations, group, insertables } from "../../db/schema";
+import { insertableStats } from "./schema";
 import type {
     AnalyticsOverviewOut,
     InsertableReportOut,

@@ -5,7 +5,7 @@ import { min } from "drizzle-orm";
 import z from "zod";
 import { type AppContext } from "../../lib/context";
 import { type Db } from "../../db/client";
-import { dailyMetrics } from "../../db/schema";
+import { dailyMetrics } from "./schema";
 import { toDayKey } from "./tracking";
 import { internalError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";

@@ -1,19 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import {
-    configurations,
-    dailyConfigurationMetrics,
-    dailyInsertableMetrics,
-    dailyInsertableUsers,
-    dailyMetrics,
-    dailySourceMetrics,
-    dailyUserActivity,
-    events,
-    insertableStats,
-    userStats
-} from "../../db/schema";
+import { configurations } from "../../db/schema";
+import { events, type LoggedEvent } from "./schema";
+import { rollupWrites } from "./rollups";
 import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -66,256 +57,69 @@ export async function trackInBackground(
     }
 }
 
-/** Records an insert as a raw event plus its rollups, in a single D1 batch. */
 export async function trackInsert(
     c: AppContext,
     event: InsertEvent
 ): Promise<void> {
     const db = getDb(c.env.DB);
     const now = Date.now();
-    const day = toDayKey(now);
-    const selection = await appliedSelection(db, event);
 
-    const writes: BatchItem<"sqlite">[] = [
-        db.insert(events).values({
-            type: EventType.INSERT,
-            createdAt: now,
-            day,
-            libraryId: event.libraryId,
-            userId: event.userId,
-            elementId: event.elementId,
-            insertableId: event.insertableId,
-            targetElementType: event.targetElementType,
-            selection,
-            isFavorite: event.isFavorite,
-            isQuickInsert: event.isQuickInsert,
-            source: event.source,
-            fasten: event.fasten
-        }),
-        incrementDailyMetric(db, day, event.libraryId, EventType.INSERT, {
-            favorite: event.isFavorite,
-            fasten: event.fasten,
-            quickInsert: event.isQuickInsert,
-            assembly: event.targetElementType === ElementType.ASSEMBLY
-        }),
-        incrementSourceMetric(db, day, event),
-        incrementInsertableMetric(db, day, event),
-        markUserActive(db, day, event.libraryId, event.userId),
-        markInsertableUserActive(db, day, event),
-        db
-            .insert(insertableStats)
-            .values({
-                libraryId: event.libraryId,
-                elementId: event.elementId,
-                insertCount: 1,
-                firstInsertedAt: now,
-                lastInsertedAt: now
-            })
-            .onConflictDoUpdate({
-                target: [insertableStats.libraryId, insertableStats.elementId],
-                set: {
-                    insertCount: sql`${insertableStats.insertCount} + 1`,
-                    lastInsertedAt: now
-                }
-            }),
-        db
-            .insert(userStats)
-            .values({
-                userId: event.userId,
-                libraryId: event.libraryId,
-                insertCount: 1,
-                firstSeenAt: now,
-                lastSeenAt: now
-            })
-            .onConflictDoUpdate({
-                target: [userStats.userId, userStats.libraryId],
-                set: {
-                    insertCount: sql`${userStats.insertCount} + 1`,
-                    lastSeenAt: now
-                }
-            }),
-        ...configurationWrites(db, day, event, selection)
-    ];
-
-    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+    await record(db, {
+        id: crypto.randomUUID(),
+        type: EventType.INSERT,
+        createdAt: now,
+        day: toDayKey(now),
+        libraryId: event.libraryId,
+        userId: event.userId,
+        elementId: event.elementId,
+        insertableId: event.insertableId,
+        targetElementType: event.targetElementType,
+        selection: await appliedSelection(db, event),
+        isFavorite: event.isFavorite,
+        isQuickInsert: event.isQuickInsert,
+        source: event.source,
+        fasten: event.fasten
+    });
 }
 
-/** Records an app open as a raw event plus its rollups. */
 export async function trackAppOpen(
     c: AppContext,
     event: AppOpenEvent
 ): Promise<void> {
     const db = getDb(c.env.DB);
     const now = Date.now();
-    const day = toDayKey(now);
 
-    await db.batch([
-        db.insert(events).values({
-            type: EventType.APP_OPEN,
-            createdAt: now,
-            day,
-            libraryId: event.libraryId,
-            userId: event.userId
-        }),
-        incrementDailyMetric(db, day, event.libraryId, EventType.APP_OPEN),
-        markUserActive(db, day, event.libraryId, event.userId),
-        db
-            .insert(userStats)
-            .values({
-                userId: event.userId,
-                libraryId: event.libraryId,
-                openCount: 1,
-                firstSeenAt: now,
-                lastSeenAt: now
-            })
-            .onConflictDoUpdate({
-                target: [userStats.userId, userStats.libraryId],
-                set: {
-                    openCount: sql`${userStats.openCount} + 1`,
-                    lastSeenAt: now
-                }
-            })
-    ]);
+    await record(db, {
+        id: crypto.randomUUID(),
+        type: EventType.APP_OPEN,
+        createdAt: now,
+        day: toDayKey(now),
+        libraryId: event.libraryId,
+        userId: event.userId,
+        elementId: null,
+        insertableId: null,
+        targetElementType: null,
+        selection: null,
+        isFavorite: null,
+        isQuickInsert: null,
+        source: null,
+        fasten: null
+    });
 }
 
 /**
- * Records that this user was active today. Idempotent, so the row is written
- * once per user per library per day no matter how much they do.
+ * Appends the event to the log, then applies it to the rollups — the two halves
+ * of a write, in one batch so neither can land without the other. They are kept
+ * apart so the second can move to a batch job over the log without touching the
+ * first: what is recorded and what is counted are separate decisions.
  */
-function markUserActive(
-    db: Db,
-    day: string,
-    libraryId: LibraryId,
-    userId: string
-) {
-    return db
-        .insert(dailyUserActivity)
-        .values({ day, libraryId, userId })
-        .onConflictDoNothing();
-}
+async function record(db: Db, event: LoggedEvent): Promise<void> {
+    const writes: BatchItem<"sqlite">[] = [
+        db.insert(events).values(event),
+        ...rollupWrites(db, event)
+    ];
 
-/** The day's counters for the part itself, including its target split. */
-function incrementInsertableMetric(db: Db, day: string, event: InsertEvent) {
-    const partStudio =
-        event.targetElementType === ElementType.PART_STUDIO ? 1 : 0;
-    const assembly = event.targetElementType === ElementType.ASSEMBLY ? 1 : 0;
-
-    return db
-        .insert(dailyInsertableMetrics)
-        .values({
-            day,
-            libraryId: event.libraryId,
-            elementId: event.elementId,
-            count: 1,
-            partStudioCount: partStudio,
-            assemblyCount: assembly
-        })
-        .onConflictDoUpdate({
-            target: [
-                dailyInsertableMetrics.libraryId,
-                dailyInsertableMetrics.elementId,
-                dailyInsertableMetrics.day
-            ],
-            set: {
-                count: sql`${dailyInsertableMetrics.count} + 1`,
-                partStudioCount: sql`${dailyInsertableMetrics.partStudioCount} + ${partStudio}`,
-                assemblyCount: sql`${dailyInsertableMetrics.assemblyCount} + ${assembly}`
-            }
-        });
-}
-
-/** As {@link markUserActive}, but for one part rather than the library. */
-function markInsertableUserActive(db: Db, day: string, event: InsertEvent) {
-    return db
-        .insert(dailyInsertableUsers)
-        .values({
-            day,
-            libraryId: event.libraryId,
-            elementId: event.elementId,
-            userId: event.userId
-        })
-        .onConflictDoNothing();
-}
-
-/** Counters incremented alongside a day's inserts, each a subset of its total. */
-interface InsertFlags {
-    favorite: boolean;
-    fasten: boolean;
-    quickInsert: boolean;
-    /** Targeted an assembly, so insert-and-fasten was on offer. */
-    assembly: boolean;
-}
-
-const NO_FLAGS: InsertFlags = {
-    favorite: false,
-    fasten: false,
-    quickInsert: false,
-    assembly: false
-};
-
-function incrementDailyMetric(
-    db: Db,
-    day: string,
-    libraryId: LibraryId,
-    type: EventType,
-    flags: InsertFlags = NO_FLAGS
-) {
-    const favorite = flags.favorite ? 1 : 0;
-    const fasten = flags.fasten ? 1 : 0;
-    const quickInsert = flags.quickInsert ? 1 : 0;
-    const assembly = flags.assembly ? 1 : 0;
-
-    return db
-        .insert(dailyMetrics)
-        .values({
-            day,
-            libraryId,
-            type,
-            count: 1,
-            favoriteCount: favorite,
-            fastenCount: fasten,
-            quickInsertCount: quickInsert,
-            assemblyCount: assembly
-        })
-        .onConflictDoUpdate({
-            target: [
-                dailyMetrics.day,
-                dailyMetrics.libraryId,
-                dailyMetrics.type
-            ],
-            set: {
-                count: sql`${dailyMetrics.count} + 1`,
-                favoriteCount: sql`${dailyMetrics.favoriteCount} + ${favorite}`,
-                fastenCount: sql`${dailyMetrics.fastenCount} + ${fasten}`,
-                quickInsertCount: sql`${dailyMetrics.quickInsertCount} + ${quickInsert}`,
-                assemblyCount: sql`${dailyMetrics.assemblyCount} + ${assembly}`
-            }
-        });
-}
-
-function incrementSourceMetric(db: Db, day: string, event: InsertEvent) {
-    const quickInsert = event.isQuickInsert ? 1 : 0;
-
-    return db
-        .insert(dailySourceMetrics)
-        .values({
-            day,
-            libraryId: event.libraryId,
-            source: event.source,
-            count: 1,
-            quickInsertCount: quickInsert
-        })
-        .onConflictDoUpdate({
-            target: [
-                dailySourceMetrics.day,
-                dailySourceMetrics.libraryId,
-                dailySourceMetrics.source
-            ],
-            set: {
-                count: sql`${dailySourceMetrics.count} + 1`,
-                quickInsertCount: sql`${dailySourceMetrics.quickInsertCount} + ${quickInsert}`
-            }
-        });
+    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 /**
@@ -338,37 +142,4 @@ async function appliedSelection(
     return parameters.length === 0
         ? null
         : appliedValues(event.selection, parameters);
-}
-
-/** One counter per parameter value the insert used. */
-function configurationWrites(
-    db: Db,
-    day: string,
-    event: InsertEvent,
-    selection: Selection | null
-): BatchItem<"sqlite">[] {
-    if (!selection) return [];
-
-    return Object.entries(selection).map(([parameterId, value]) =>
-        db
-            .insert(dailyConfigurationMetrics)
-            .values({
-                day,
-                libraryId: event.libraryId,
-                elementId: event.elementId,
-                parameterId,
-                value,
-                count: 1
-            })
-            .onConflictDoUpdate({
-                target: [
-                    dailyConfigurationMetrics.libraryId,
-                    dailyConfigurationMetrics.elementId,
-                    dailyConfigurationMetrics.parameterId,
-                    dailyConfigurationMetrics.value,
-                    dailyConfigurationMetrics.day
-                ],
-                set: { count: sql`${dailyConfigurationMetrics.count} + 1` }
-            })
-    );
 }

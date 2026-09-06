@@ -4,15 +4,13 @@
  */
 import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
+import { configurations, favorites, insertables } from "../../db/schema";
 import {
-    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
-    favorites,
-    insertables,
     insertableStats
-} from "../../db/schema";
+} from "./schema";
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
 import { MONTH_DAYS, usesPerMonth } from "./measures";

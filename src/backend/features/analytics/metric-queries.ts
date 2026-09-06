@@ -4,13 +4,13 @@
  */
 import { and, asc, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
+import { favorites } from "../../db/schema";
 import {
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
-    favorites,
     userStats
-} from "../../db/schema";
+} from "./schema";
 import { EventType, InsertSource } from "./events";
 import { LibraryId } from "../library/library-id";
 import type {

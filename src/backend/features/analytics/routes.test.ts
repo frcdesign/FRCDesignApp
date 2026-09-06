@@ -1,18 +1,17 @@
 import { sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
+import { configurations, insertables } from "../../db/schema";
 import {
-    configurations,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
     dailySourceMetrics,
     dailyUserActivity,
-    insertables,
     insertableStats,
     userStats
-} from "../../db/schema";
+} from "./schema";
 import {
     TEST_LIBRARY_ID,
     TEST_ASSEMBLY_PATH,

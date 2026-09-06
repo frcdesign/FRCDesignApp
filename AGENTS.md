@@ -33,6 +33,11 @@ Anything the frontend imports from a backend feature must be a leaf module —
 pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
+D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
+`features/analytics/schema.ts`, since nothing outside analytics reads them and
+they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
+file, so a new one has to be added there or its tables generate no migration.
+
 ## Configurations
 
 A configuration takes exactly two forms, and `features/configurations/selection.ts`
