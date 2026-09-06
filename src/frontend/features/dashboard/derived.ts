@@ -23,12 +23,12 @@ export function perUnit(
 
     const unavailable = numerator.unavailable ?? denominator.unavailable;
     if (unavailable) {
-        return { ...base, changeRatio: null, unavailable };
+        return { ...base, changeRatio: undefined, unavailable };
     }
     if (previous === 0) {
         return {
             ...base,
-            changeRatio: null,
+            changeRatio: undefined,
             unavailable:
                 current === 0
                     ? ChangeUnavailable.NO_ACTIVITY

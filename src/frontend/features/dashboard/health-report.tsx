@@ -1,50 +1,11 @@
 import { Card, Group, SimpleGrid, Table, Text, Title } from "@mantine/core";
-import { WarningOctagon, Warning, Check, Info } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import type { LibraryHealthCounts } from "@backend/features/analytics/contract";
 import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
+import { IssueIcon } from "../build-status/components/issues";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
-import { IconSize } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
-
-interface SeverityIconProps {
-    severity: BuildIssueSeverity | null;
-}
-
-/** Mirrors the panel's severity colors so the two views agree at a glance. */
-function SeverityIcon({ severity }: SeverityIconProps): ReactNode {
-    switch (severity) {
-        case BuildIssueSeverity.ERROR:
-            return (
-                <WarningOctagon
-                    size={IconSize.SMALL}
-                    color={"var(--mantine-color-red-6)"}
-                />
-            );
-        case BuildIssueSeverity.WARNING:
-            return (
-                <Warning
-                    size={IconSize.SMALL}
-                    color={"var(--mantine-color-yellow-6)"}
-                />
-            );
-        case BuildIssueSeverity.INFO:
-            return (
-                <Info
-                    size={IconSize.SMALL}
-                    color={"var(--mantine-color-blue-6)"}
-                />
-            );
-        case null:
-            return (
-                <Check
-                    size={IconSize.SMALL}
-                    color={"var(--mantine-color-green-6)"}
-                />
-            );
-    }
-}
 
 interface HealthTilesProps {
     counts: LibraryHealthCounts;
@@ -85,7 +46,7 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
                 <Card key={tile.label} withBorder padding="lg" radius="md">
                     <Group gap="xs">
                         {tile.severity !== undefined && (
-                            <SeverityIcon severity={tile.severity} />
+                            <IssueIcon severity={tile.severity} />
                         )}
                         <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                             {tile.label}

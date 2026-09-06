@@ -8,7 +8,7 @@ import {
     Title
 } from "@mantine/core";
 import { Info } from "@phosphor-icons/react";
-import { lazy, Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import type {
     AnalyticsTotals,
     DailyMetricPoint
@@ -22,17 +22,7 @@ import {
     type MetricDefinition
 } from "./metrics";
 import { formatCount, formatPercent } from "./format";
-
-const MiniSparkline = lazy(() =>
-    import("./sparkline").then((module) => ({
-        default: module.MiniSparkline
-    }))
-);
-const MetricDetailChart = lazy(() =>
-    import("./trend-chart").then((module) => ({
-        default: module.MetricDetailChart
-    }))
-);
+import { MetricDetailChart, MiniSparkline } from "./charts";
 
 const SPARKLINE_HEIGHT = 40;
 // Narrow enough that a middle-column tile can open the panel on either side.
@@ -93,14 +83,10 @@ export function TrendTile({
                         />
                     </Group>
                     <Title order={2}>{value}</Title>
-                    <Suspense
-                        fallback={<div style={{ height: SPARKLINE_HEIGHT }} />}
-                    >
-                        <MiniSparkline
-                            data={trend.map((point) => point.value)}
-                            h={SPARKLINE_HEIGHT}
-                        />
-                    </Suspense>
+                    <MiniSparkline
+                        data={trend.map((point) => point.value)}
+                        h={SPARKLINE_HEIGHT}
+                    />
                     <Text size="xs" c="dimmed">
                         {lifetime} all time
                     </Text>
@@ -115,9 +101,7 @@ export function TrendTile({
                         </Text>
                     </div>
                     <MetricTerms metric={metric} series={series} />
-                    <Suspense fallback={<div style={{ height: 160 }} />}>
-                        <MetricDetailChart metric={metric} trend={trend} />
-                    </Suspense>
+                    <MetricDetailChart metric={metric} trend={trend} />
                 </Stack>
             </HoverCard.Dropdown>
         </HoverCard>

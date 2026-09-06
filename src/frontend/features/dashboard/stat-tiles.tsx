@@ -1,16 +1,11 @@
 import { Card, Group, Text, Title } from "@mantine/core";
 import { type Icon } from "@phosphor-icons/react";
-import { lazy, Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
 import { ChangeIndicator } from "./change-indicator";
+import { MiniSparkline } from "./charts";
 import { formatCount } from "./format";
-
-const MiniSparkline = lazy(() =>
-    import("./sparkline").then((module) => ({
-        default: module.MiniSparkline
-    }))
-);
 
 const SPARKLINE_HEIGHT = 40;
 
@@ -24,7 +19,6 @@ interface StatTileProps {
     /** How the measure changed, drawn to the right of the number — never below
      * it, so a row of tiles scans as one line of numbers. */
     change?: PeriodComparison;
-    trackingSince?: string | null;
     /** The shape over the selected window, which follows the picker even when
      * the value above is all time: a sparkline claims no total. */
     spark?: number[];
@@ -36,7 +30,6 @@ export function StatTile({
     format = formatCount,
     icon: TileIcon,
     change,
-    trackingSince = null,
     spark
 }: StatTileProps): ReactNode {
     return (
@@ -51,24 +44,14 @@ export function StatTile({
                     </Title>
                 </div>
                 {change ? (
-                    <ChangeIndicator
-                        comparison={change}
-                        trackingSince={trackingSince}
-                        format={format}
-                    />
+                    <ChangeIndicator comparison={change} format={format} />
                 ) : (
                     TileIcon && (
                         <TileIcon size={IconSize.CONTROL} opacity={0.25} />
                     )
                 )}
             </Group>
-            {spark && (
-                <Suspense
-                    fallback={<div style={{ height: SPARKLINE_HEIGHT }} />}
-                >
-                    <MiniSparkline data={spark} h={SPARKLINE_HEIGHT} />
-                </Suspense>
-            )}
+            {spark && <MiniSparkline data={spark} h={SPARKLINE_HEIGHT} />}
         </Card>
     );
 }

@@ -17,10 +17,10 @@ export const MONTH_DAYS = 30;
  */
 export function usesPerMonth(
     insertCount: number,
-    firstInsertedAt: number | null,
+    firstInsertedAt: number | undefined,
     now: number
 ): number {
-    if (insertCount === 0 || firstInsertedAt === null) return 0;
+    if (insertCount === 0 || firstInsertedAt === undefined) return 0;
     const days = (now - firstInsertedAt) / (24 * 3600 * 1000);
     return Math.round((insertCount * MONTH_DAYS) / Math.max(days, MONTH_DAYS));
 }

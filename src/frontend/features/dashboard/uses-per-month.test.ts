@@ -7,7 +7,7 @@ const ago = (days: number) => NOW - days * DAY;
 
 describe("usesPerMonth", () => {
     it("is zero for a part nobody has inserted", () => {
-        expect(usesPerMonth(0, null, NOW)).toBe(0);
+        expect(usesPerMonth(0, undefined, NOW)).toBe(0);
     });
 
     it("scales a long history down to one month", () => {

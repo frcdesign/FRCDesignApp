@@ -100,8 +100,8 @@ export enum ChangeUnavailable {
 export interface PeriodComparison {
     current: number;
     previous: number;
-    /** Null whenever stating a change would be dishonest; see `unavailable`. */
-    changeRatio: number | null;
+    /** Absent whenever stating a change would be dishonest; see `unavailable`. */
+    changeRatio?: number;
     /** Why there is no change to state; absent whenever `changeRatio` is set. */
     unavailable?: ChangeUnavailable;
     currentFrom: string;
@@ -123,7 +123,6 @@ export interface GrowthOut {
     recent: Record<GrowthMeasure, PeriodComparison>;
     /** Season to date against the same stretch of the season before. */
     season: Record<GrowthMeasure, PeriodComparison>;
-    trackingSince: string | null;
 }
 
 /**
@@ -136,7 +135,6 @@ export interface LibrarySummaryOut {
     /** Scoped to the requested range, for the chart and the sparklines. */
     metricSeries: DailyMetricPoint[];
     growth: GrowthOut;
-    trackingSince: string | null;
     from: string;
     to: string;
 }
@@ -151,8 +149,6 @@ export interface AnalyticsOverviewOut {
     sources: InsertSourceUsage[];
     from: string;
     to: string;
-    /** The first day anything was recorded; null before any event. */
-    trackingSince: string | null;
     growth: GrowthOut;
 }
 
@@ -186,7 +182,7 @@ export interface ConfigurationParameterUsage {
     parameterId: string;
     name: string;
     type: string;
-    defaultValue: string | null;
+    defaultValue?: string;
     /** Total recorded values for this parameter, the base for percentages. */
     total: number;
     values: ConfigurationValueUsage[];
@@ -208,13 +204,13 @@ export interface UnusedOptionOut {
 
 export interface InsertableReportOut {
     elementId: string;
-    name: string | null;
-    /** Null once the part has left the library: there is nothing left to open. */
-    path: ElementPath | null;
+    /** Absent once the part has left the library, as is the path to open it. */
+    name?: string;
+    path?: ElementPath;
     insertCount: number;
     /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    firstInsertedAt: number | null;
+    firstInsertedAt?: number;
     uniqueUsers: number;
     /** How many users currently have this part favorited. */
     favorites: number;

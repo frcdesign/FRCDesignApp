@@ -13,7 +13,7 @@ function comparison(
     return {
         current,
         previous,
-        changeRatio: unavailable ? null : 0,
+        changeRatio: unavailable ? undefined : 0,
         unavailable,
         currentFrom: "2026-08-01",
         currentTo: "2026-08-28",
@@ -44,7 +44,7 @@ describe("perUnit", () => {
             comparison(120, 0, ChangeUnavailable.NO_PRIOR_DATA),
             comparison(20, 0)
         );
-        expect(rate.changeRatio).toBeNull();
+        expect(rate.changeRatio).toBeUndefined();
         expect(rate.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 

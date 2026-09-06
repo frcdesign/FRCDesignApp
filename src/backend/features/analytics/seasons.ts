@@ -75,8 +75,11 @@ export function seasonOf(program: Program, year: number): Season {
     };
 }
 
-/** The season containing `day`, or null when the day is between seasons. */
-export function currentSeason(program: Program, day: string): Season | null {
+/** The season containing `day`, or undefined between seasons. */
+export function currentSeason(
+    program: Program,
+    day: string
+): Season | undefined {
     const year = Number(day.slice(0, 4));
     // A day in January belongs to a season that opened the previous year, so
     // both candidates have to be tried.
@@ -86,7 +89,7 @@ export function currentSeason(program: Program, day: string): Season | null {
     ]) {
         if (day >= candidate.from && day <= candidate.to) return candidate;
     }
-    return null;
+    return undefined;
 }
 
 export function previousSeason(season: Season): Season {
@@ -133,7 +136,7 @@ function addDays(day: string, count: number): string {
  */
 export function seasonWindow(program: Program, day: string): SeasonWindow {
     const current = currentSeason(program, day);
-    if (current === null) {
+    if (current === undefined) {
         const season = lastCompleteSeason(program, day);
         return {
             from: season.from,

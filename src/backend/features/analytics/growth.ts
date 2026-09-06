@@ -65,7 +65,7 @@ export function toComparison(
     previous: number,
     windows: { current: Window; previous: Window },
     labels: Pick<PeriodComparison, "label" | "baselineLabel" | "baselineShort">,
-    trackingSince: string | null
+    trackingSince: string | undefined
 ): PeriodComparison {
     const base = {
         current,
@@ -77,26 +77,20 @@ export function toComparison(
         ...labels
     };
 
-    if (trackingSince === null || windows.previous.to < trackingSince) {
+    if (trackingSince === undefined || windows.previous.to < trackingSince) {
         return {
             ...base,
-            changeRatio: null,
             unavailable: ChangeUnavailable.NO_PRIOR_DATA
         };
     }
     if (windows.previous.from < trackingSince) {
-        return {
-            ...base,
-            changeRatio: null,
-            unavailable: ChangeUnavailable.PARTIAL_PRIOR_DATA
-        };
+        return { ...base, unavailable: ChangeUnavailable.PARTIAL_PRIOR_DATA };
     }
     if (previous === 0) {
         // Both empty is a quiet stretch, not a gap in what was recorded — the
         // difference decides whether the UI blames tracking or the period.
         return {
             ...base,
-            changeRatio: null,
             unavailable:
                 current === 0
                     ? ChangeUnavailable.NO_ACTIVITY
@@ -178,7 +172,7 @@ async function measure(
     db: Db,
     windows: { current: Window; previous: Window },
     labels: Pick<PeriodComparison, "label" | "baselineLabel" | "baselineShort">,
-    trackingSince: string | null,
+    trackingSince: string | undefined,
     libraryId?: LibraryId
 ): Promise<Record<GrowthMeasure, PeriodComparison>> {
     const [inserts, people, opens] = await Promise.all([
@@ -210,7 +204,7 @@ async function measure(
 export async function getGrowth(
     db: Db,
     today: string,
-    trackingSince: string | null,
+    trackingSince: string | undefined,
     libraryId?: LibraryId
 ): Promise<GrowthOut> {
     const windows = recentWindows(today);
@@ -244,5 +238,5 @@ export async function getGrowth(
         measure(db, seasonWindows, seasonLabels, trackingSince, libraryId)
     ]);
 
-    return { recent, season: seasonal, trackingSince };
+    return { recent, season: seasonal };
 }

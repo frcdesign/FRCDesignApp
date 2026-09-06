@@ -64,25 +64,25 @@ describe("toComparison", () => {
         // The whole prior window is before anything was recorded, so its zero
         // means "not measured", not "nothing happened".
         const out = toComparison(120, 0, WINDOWS, LABELS, "2026-08-01");
-        expect(out.changeRatio).toBeNull();
+        expect(out.changeRatio).toBeUndefined();
         expect(out.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 
     it("flags a baseline that tracking only partly covers", () => {
         const out = toComparison(120, 40, WINDOWS, LABELS, "2026-07-10");
-        expect(out.changeRatio).toBeNull();
+        expect(out.changeRatio).toBeUndefined();
         expect(out.unavailable).toBe(ChangeUnavailable.PARTIAL_PRIOR_DATA);
     });
 
     it("reads a genuinely empty baseline as new, not as an infinite rise", () => {
         const out = toComparison(9, 0, WINDOWS, LABELS, "2026-01-01");
-        expect(out.changeRatio).toBeNull();
+        expect(out.changeRatio).toBeUndefined();
         expect(out.unavailable).toBe(ChangeUnavailable.ZERO_BASELINE);
     });
 
     it("blames the quiet period, not tracking, when both are empty", () => {
         const out = toComparison(0, 0, WINDOWS, LABELS, "2026-01-01");
-        expect(out.changeRatio).toBeNull();
+        expect(out.changeRatio).toBeUndefined();
         expect(out.unavailable).toBe(ChangeUnavailable.NO_ACTIVITY);
     });
 
@@ -187,22 +187,21 @@ describe("getGrowth", () => {
         const growth = await getGrowth(db, TODAY, "2025-09-01");
 
         expect(growth.season.inserts.current).toBe(100);
-        expect(growth.season.inserts.changeRatio).toBeNull();
+        expect(growth.season.inserts.changeRatio).toBeUndefined();
         expect(growth.season.inserts.unavailable).toBe(
             ChangeUnavailable.NO_PRIOR_DATA
         );
     });
 
     it("reports nothing rather than failing with no data at all", async () => {
-        const growth = await getGrowth(db, TODAY, null);
+        const growth = await getGrowth(db, TODAY, undefined);
 
         expect(growth.recent.inserts.current).toBe(0);
-        expect(growth.recent.inserts.changeRatio).toBeNull();
+        expect(growth.recent.inserts.changeRatio).toBeUndefined();
         expect(growth.recent.inserts.unavailable).toBe(
             ChangeUnavailable.NO_PRIOR_DATA
         );
-        expect(growth.season.inserts.changeRatio).toBeNull();
-        expect(growth.trackingSince).toBeNull();
+        expect(growth.season.inserts.changeRatio).toBeUndefined();
     });
 
     it("scopes to one library and uses that library's own season", async () => {

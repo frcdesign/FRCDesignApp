@@ -51,7 +51,7 @@ export function toWindowedPart(
         insertCount,
         usesPerMonth: usesPerMonth(
             insertCount,
-            insertCount === 0 ? null : firstUsed,
+            insertCount === 0 ? undefined : firstUsed,
             to
         ),
         recent: series.get(row.elementId) ?? emptySparkline()

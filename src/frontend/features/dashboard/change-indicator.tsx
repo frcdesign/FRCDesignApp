@@ -10,7 +10,6 @@ import { formatCount } from "./format";
 
 interface ChangeIndicatorProps {
     comparison: PeriodComparison;
-    trackingSince: string | null;
     /** Rates need a decimal; counts do not. */
     format?: (value: number) => string;
 }
@@ -21,17 +20,11 @@ interface ChangeIndicatorProps {
  */
 export function ChangeIndicator({
     comparison,
-    trackingSince,
     format = formatCount
 }: ChangeIndicatorProps): ReactNode {
-    if (comparison.changeRatio === null) {
+    if (comparison.changeRatio === undefined) {
         return (
-            <Tooltip
-                withArrow
-                multiline
-                w={260}
-                label={explain(comparison, trackingSince)}
-            >
+            <Tooltip withArrow multiline w={260} label={explain(comparison)}>
                 <Text size="sm" c="dimmed" w="fit-content" ta="right">
                     {shortReason(comparison)}
                 </Text>
@@ -88,22 +81,16 @@ function shortReason(comparison: PeriodComparison): string {
     }
 }
 
-function explain(
-    comparison: PeriodComparison,
-    trackingSince: string | null
-): string {
-    const since = trackingSince
-        ? `Tracking started ${trackingSince}.`
-        : "Nothing has been recorded yet.";
+function explain(comparison: PeriodComparison): string {
     switch (comparison.unavailable) {
         case ChangeUnavailable.ZERO_BASELINE:
             return `Nothing in ${comparison.baselineLabel}, so there is no baseline to grow from.`;
         case ChangeUnavailable.NO_ACTIVITY:
             return `Neither ${comparison.label} nor ${comparison.baselineLabel} recorded any use.`;
         case ChangeUnavailable.PARTIAL_PRIOR_DATA:
-            return `${since} It covers only part of ${comparison.baselineLabel}, so a change would overstate the growth.`;
+            return `Tracking covers only part of ${comparison.baselineLabel}, so a change would overstate the growth.`;
         default:
-            return `${since} ${comparison.baselineLabel} came before that, so its zero means unmeasured rather than unused.`;
+            return `${comparison.baselineLabel} came before tracking started, so its zero means unmeasured rather than unused.`;
     }
 }
 

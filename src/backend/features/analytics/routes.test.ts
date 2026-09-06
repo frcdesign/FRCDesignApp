@@ -337,7 +337,6 @@ describe("analytics routes", () => {
 
             // Clamped to the first recorded day, not back to the requested
             // one: "all time" reaches to 2000 and would fill two decades.
-            expect(body.trackingSince).toBe("2026-06-15");
             expect(body.metricSeries.map((point) => point.day)).toEqual([
                 "2026-06-15",
                 "2026-06-16",

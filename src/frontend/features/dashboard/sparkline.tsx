@@ -5,7 +5,7 @@ import { type ReactNode } from "react";
 // Onshape panel bundle entirely.
 import "@mantine/charts/styles.layer.css";
 
-interface MiniSparklineProps {
+export interface MiniSparklineProps {
     data: number[];
     h: number;
     /** Fills its container when omitted, which is what a card wants. */

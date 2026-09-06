@@ -25,7 +25,7 @@ export function RecentSection({
     growth,
     series
 }: RecentSectionProps): ReactNode {
-    const { recent, trackingSince } = growth;
+    const { recent } = growth;
     const perUser = perUnit(recent.inserts, recent.activeUsers);
     // The sparkline covers exactly the days the number above it counts.
     const spark = toSparkSeries(
@@ -43,14 +43,12 @@ export function RecentSection({
                     label="Total uses"
                     value={recent.inserts.current}
                     change={recent.inserts}
-                    trackingSince={trackingSince}
                     spark={spark.inserts}
                 />
                 <StatTile
                     label="Total users"
                     value={recent.activeUsers.current}
                     change={recent.activeUsers}
-                    trackingSince={trackingSince}
                     spark={spark.activeUsers}
                 />
                 <StatTile
@@ -59,7 +57,6 @@ export function RecentSection({
                     change={perUser}
                     format={formatRate}
                     spark={spark.usesPerUser}
-                    trackingSince={trackingSince}
                 />
                 {/* Matches the card above it in the Overall row, so the two
                     rows line up column by column. */}
@@ -67,7 +64,6 @@ export function RecentSection({
                     label="App sessions"
                     value={recent.appOpens.current}
                     change={recent.appOpens}
-                    trackingSince={trackingSince}
                     spark={spark.appOpens}
                 />
             </SimpleGrid>

@@ -31,24 +31,24 @@ describe("seasonOf", () => {
 
 describe("currentSeason", () => {
     it.each([
-        ["2026-12-31", null],
+        ["2026-12-31", undefined],
         ["2027-01-01", "FRC 2027"],
         ["2027-04-30", "FRC 2027"],
-        ["2027-05-01", null]
+        ["2027-05-01", undefined]
     ])("places %s in the FRC season %s", (day, label) => {
-        expect(currentSeason(Program.FRC, day)?.label ?? null).toBe(label);
+        expect(currentSeason(Program.FRC, day)?.label).toBe(label);
     });
 
     it.each([
-        ["2026-08-31", null],
+        ["2026-08-31", undefined],
         ["2026-09-01", "FTC 2026–27"],
         // The one that a naive year lookup gets wrong: January belongs to a
         // season that opened the previous September.
         ["2027-01-15", "FTC 2026–27"],
         ["2027-04-30", "FTC 2026–27"],
-        ["2027-05-01", null]
+        ["2027-05-01", undefined]
     ])("places %s in the FTC season %s", (day, label) => {
-        expect(currentSeason(Program.FTC, day)?.label ?? null).toBe(label);
+        expect(currentSeason(Program.FTC, day)?.label).toBe(label);
     });
 });
 

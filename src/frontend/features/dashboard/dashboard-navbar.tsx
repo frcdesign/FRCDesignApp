@@ -11,7 +11,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
-import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
     useNavigate,
     useParams,
@@ -29,9 +29,6 @@ import {
 } from "../../lib/style-constants";
 import { DashboardSettingsMenu } from "./dashboard-settings";
 import { RangeControl } from "./range-control";
-import { getOverviewQuery } from "./dashboard-queries";
-import { toDayRange } from "./range";
-import { formatDay } from "./format";
 import {
     DASHBOARDS,
     DEFAULT_LIBRARY,
@@ -70,30 +67,25 @@ export function DashboardNavbar(): ReactNode {
                     <DashboardSettingsMenu />
                 </Group>
             </Group>
-            <Group
-                gap="sm"
-                px="sm"
-                py="xs"
-                wrap="nowrap"
-                align="center"
-                style={{ borderBottom: BORDER }}
-            >
-                {/* The app dashboard spans every library, so it has none to
-                    pick; the range still applies to it. */}
-                {current === "app" ? (
-                    <TrackingSince />
-                ) : (
+            {/* Only the library-scoped dashboards have anything to put here:
+                the app dashboard spans every library, and its cards each state
+                their own window. */}
+            {current !== "app" && (
+                <Group
+                    gap="sm"
+                    px="sm"
+                    py="xs"
+                    wrap="nowrap"
+                    align="center"
+                    style={{ borderBottom: BORDER }}
+                >
                     <LibraryMenu dashboard={current} />
-                )}
-                {/* Every library-scoped dashboard counts over the range; the
-                    app dashboard's cards each state their own window. */}
-                {current !== "app" && (
                     <Group gap="sm" ml="auto">
                         {current === "unused" && <ThresholdControl />}
                         <RangeControl />
                     </Group>
-                )}
-            </Group>
+                </Group>
+            )}
         </Stack>
     );
 }
@@ -212,20 +204,6 @@ function ThresholdControl(): ReactNode {
 
 /** Wide enough for the "Uses ≤" prefix to sit clear of the number. */
 const THRESHOLD_LABEL_WIDTH = 52;
-
-/**
- * How much history there is, which is what explains every empty comparison on
- * the page.
- */
-function TrackingSince(): ReactNode {
-    const { data } = useQuery(getOverviewQuery(toDayRange("all")));
-    if (!data?.trackingSince) return null;
-    return (
-        <Text size="xs" c="dimmed" my="auto">
-            Tracking since {formatDay(data.trackingSince)}
-        </Text>
-    );
-}
 
 /** Refetches whatever the current dashboard is showing. */
 function RefreshButton(): ReactNode {

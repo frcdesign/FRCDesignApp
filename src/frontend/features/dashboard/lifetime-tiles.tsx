@@ -29,7 +29,7 @@ export function LifetimeTiles({
     series,
     withOpens = false
 }: LifetimeTilesProps): ReactNode {
-    const { season, trackingSince } = growth;
+    const { season } = growth;
     const perUser =
         totals.uniqueUsers === 0 ? 0 : totals.inserts / totals.uniqueUsers;
     const spark = toSparkSeries(series);
@@ -40,14 +40,12 @@ export function LifetimeTiles({
                 label="Total uses"
                 value={totals.inserts}
                 change={season.inserts}
-                trackingSince={trackingSince}
                 spark={spark.inserts}
             />
             <StatTile
                 label="Total users"
                 value={totals.uniqueUsers}
                 change={season.activeUsers}
-                trackingSince={trackingSince}
                 spark={spark.activeUsers}
             />
             {/* Lifetime uses over everyone who ever used it, against a season's
@@ -58,7 +56,6 @@ export function LifetimeTiles({
                 value={perUser}
                 format={formatRate}
                 change={perUnit(season.inserts, season.activeUsers)}
-                trackingSince={trackingSince}
                 spark={spark.usesPerUser}
             />
             {withOpens && (
@@ -66,7 +63,6 @@ export function LifetimeTiles({
                     label="App sessions"
                     value={totals.appOpens}
                     change={season.appOpens}
-                    trackingSince={trackingSince}
                     spark={spark.appOpens}
                 />
             )}

@@ -17,7 +17,7 @@ import "@mantine/charts/styles.layer.css";
 // Keeps the hover panel short enough to fit beside a tile on a laptop.
 const DETAIL_HEIGHT = 160;
 
-interface MetricDetailChartProps {
+export interface MetricDetailChartProps {
     metric: MetricDefinition;
     trend: TrendPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
@@ -58,7 +58,7 @@ export function MetricDetailChart({
     );
 }
 
-interface LibraryInsertsChartProps {
+export interface LibraryInsertsChartProps {
     series: DailyInsertPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;

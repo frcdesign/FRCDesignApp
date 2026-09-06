@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { LibraryInsertsChart, MetricDetailChart } from "./charts";
 import type {
     DailyInsertPoint,
     DailyMetricPoint
@@ -7,18 +8,6 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { LIBRARY_PROGRAM, Program } from "@backend/features/analytics/seasons";
 import { METRICS, toTrend } from "./metrics";
 import { SectionCard } from "./section";
-
-const LibraryInsertsChart = lazy(() =>
-    import("./trend-chart").then((module) => ({
-        default: module.LibraryInsertsChart
-    }))
-);
-
-const MetricDetailChart = lazy(() =>
-    import("./trend-chart").then((module) => ({
-        default: module.MetricDetailChart
-    }))
-);
 
 interface InsertsByLibraryCardProps {
     series: DailyInsertPoint[];
@@ -34,13 +23,7 @@ function ChartCard({
     title: string;
     children: ReactNode;
 }): ReactNode {
-    return (
-        <SectionCard title={title}>
-            <Suspense fallback={<div style={{ height: PAGE_CHART_HEIGHT }} />}>
-                {children}
-            </Suspense>
-        </SectionCard>
-    );
+    return <SectionCard title={title}>{children}</SectionCard>;
 }
 
 /** Every library on one axis, for the app dashboard. */

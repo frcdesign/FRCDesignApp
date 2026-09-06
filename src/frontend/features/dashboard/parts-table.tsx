@@ -1,7 +1,8 @@
 import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
 import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
-import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { MiniSparkline } from "./charts";
 import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -15,12 +16,6 @@ import {
     type SortColumn,
     type SortState
 } from "./parts-sort";
-
-const MiniSparkline = lazy(() =>
-    import("./sparkline").then((module) => ({
-        default: module.MiniSparkline
-    }))
-);
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
@@ -209,9 +204,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 {formatCount(part.insertCount)}
             </Table.Td>
             <Table.Td>
-                <Suspense fallback={<div style={{ height: 24 }} />}>
-                    <MiniSparkline data={part.recent} {...ROW_SPARKLINE} />
-                </Suspense>
+                <MiniSparkline data={part.recent} {...ROW_SPARKLINE} />
             </Table.Td>
             {/* Stops the row's own navigation: this link leaves the app. */}
             <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>

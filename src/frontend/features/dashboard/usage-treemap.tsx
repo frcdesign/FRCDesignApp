@@ -1,8 +1,9 @@
 import { Anchor, Breadcrumbs, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
-import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
+import { UsageTreemapChart } from "./charts";
 import { SectionCard } from "./section";
 import {
     toNodes,
@@ -10,12 +11,6 @@ import {
     type TreemapPath,
     type UsagePart
 } from "./treemap-data";
-
-const UsageTreemapChart = lazy(() =>
-    import("./treemap-chart").then((module) => ({
-        default: module.UsageTreemapChart
-    }))
-);
 
 interface UsageTreemapProps {
     parts: UsagePart[];
@@ -61,13 +56,11 @@ export function UsageTreemap({
                     Nothing was inserted in this range.
                 </Text>
             ) : (
-                <Suspense fallback={<div style={{ height: CHART_HEIGHT }} />}>
-                    <UsageTreemapChart
-                        nodes={nodes}
-                        h={CHART_HEIGHT}
-                        onSelect={select}
-                    />
-                </Suspense>
+                <UsageTreemapChart
+                    nodes={nodes}
+                    h={CHART_HEIGHT}
+                    onSelect={select}
+                />
             )}
         </SectionCard>
     );
