@@ -20,6 +20,10 @@ const MetricDetailChart = lazy(() =>
     }))
 );
 
+interface InsertsByLibraryCardProps {
+    series: DailyInsertPoint[];
+}
+
 /** Tall enough to read a year of daily points without squinting. */
 const PAGE_CHART_HEIGHT = 280;
 
@@ -42,9 +46,7 @@ function ChartCard({
 /** Every library on one axis, for the app dashboard. */
 export function InsertsByLibraryCard({
     series
-}: {
-    series: DailyInsertPoint[];
-}): ReactNode {
+}: InsertsByLibraryCardProps): ReactNode {
     return (
         <ChartCard title="Uses over time">
             {/* Always monthly: this one plots everything recorded, and a finer
@@ -60,14 +62,16 @@ export function InsertsByLibraryCard({
     );
 }
 
+interface InsertsOverTimeCardProps {
+    series: DailyMetricPoint[];
+    libraryId: LibraryId;
+}
+
 /** The one library's own line, for the library dashboard. */
 export function InsertsOverTimeCard({
     series,
     libraryId
-}: {
-    series: DailyMetricPoint[];
-    libraryId: LibraryId;
-}): ReactNode {
+}: InsertsOverTimeCardProps): ReactNode {
     return (
         <ChartCard title="Uses over time">
             <MetricDetailChart

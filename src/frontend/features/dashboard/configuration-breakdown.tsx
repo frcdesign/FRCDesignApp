@@ -16,15 +16,17 @@ import type {
 import { FontWeight } from "../../lib/style-constants";
 import { formatCount } from "./format";
 
+interface ConfigurationBreakdownProps {
+    parameters: ConfigurationParameterUsage[];
+}
+
 /**
  * Per-parameter value counts, which is how a wrong default shows itself: the
  * default sitting below another value, or options nobody ever picks.
  */
 export function ConfigurationBreakdown({
     parameters
-}: {
-    parameters: ConfigurationParameterUsage[];
-}): ReactNode {
+}: ConfigurationBreakdownProps): ReactNode {
     if (parameters.length === 0) {
         return (
             <Text c="dimmed" py="xl" ta="center">
@@ -45,11 +47,11 @@ export function ConfigurationBreakdown({
     );
 }
 
-function ParameterCard({
-    parameter
-}: {
+interface ParameterCardProps {
     parameter: ConfigurationParameterUsage;
-}): ReactNode {
+}
+
+function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     return (
         <Card withBorder padding="md" radius="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
@@ -88,13 +90,12 @@ function ParameterCard({
 /** Six rows or so, past which the card scrolls rather than the page. */
 const VALUES_HEIGHT = 260;
 
-function ValueRow({
-    value,
-    total
-}: {
+interface ValueRowProps {
     value: ConfigurationValueUsage;
     total: number;
-}): ReactNode {
+}
+
+function ValueRow({ value, total }: ValueRowProps): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
 
     return (

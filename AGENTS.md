@@ -9,6 +9,12 @@ doc comment when the signature already says it (e.g. write "returns the access
 level, respecting the cache" — not a paragraph re-deriving the caching).
 Aggressively delete comments that narrate obvious implementation details.
 
+## Components
+
+A component's props are a named `interface <Component>Props` declared just above
+it, never an inline object type — the name is what error messages and editors
+show at the call site.
+
 ## Layout
 
 `src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There

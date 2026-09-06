@@ -6,10 +6,16 @@ import {
 } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { formatRate } from "./change-indicator";
-import { ComparisonTile } from "./comparison-tile";
 import { perUnit } from "./derived";
 import { Section } from "./section";
+import { StatTile } from "./stat-tiles";
 import { toSparkSeries } from "./series";
+
+interface RecentSectionProps {
+    growth: GrowthOut;
+    /** Every recorded day; sliced to the window the tiles report on. */
+    series: DailyMetricPoint[];
+}
 
 /**
  * The trailing month against the one before it: what says something useful
@@ -18,11 +24,7 @@ import { toSparkSeries } from "./series";
 export function RecentSection({
     growth,
     series
-}: {
-    growth: GrowthOut;
-    /** Every recorded day; sliced to the window the tiles report on. */
-    series: DailyMetricPoint[];
-}): ReactNode {
+}: RecentSectionProps): ReactNode {
     const { recent, trackingSince } = growth;
     const perUser = perUnit(recent.inserts, recent.activeUsers);
     // The sparkline covers exactly the days the number above it counts.
@@ -37,30 +39,34 @@ export function RecentSection({
     return (
         <Section title={`Last ${MONTH_DAYS} days`}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-                <ComparisonTile
+                <StatTile
                     label="Total uses"
-                    comparison={recent.inserts}
+                    value={recent.inserts.current}
+                    change={recent.inserts}
                     trackingSince={trackingSince}
                     spark={spark.inserts}
                 />
-                <ComparisonTile
+                <StatTile
                     label="Total users"
-                    comparison={recent.activeUsers}
+                    value={recent.activeUsers.current}
+                    change={recent.activeUsers}
                     trackingSince={trackingSince}
                     spark={spark.activeUsers}
                 />
-                <ComparisonTile
+                <StatTile
                     label="Uses per user"
-                    comparison={perUser}
-                    trackingSince={trackingSince}
+                    value={perUser.current}
+                    change={perUser}
                     format={formatRate}
                     spark={spark.usesPerUser}
+                    trackingSince={trackingSince}
                 />
                 {/* Matches the card above it in the Overall row, so the two
                     rows line up column by column. */}
-                <ComparisonTile
+                <StatTile
                     label="App sessions"
-                    comparison={recent.appOpens}
+                    value={recent.appOpens.current}
+                    change={recent.appOpens}
                     trackingSince={trackingSince}
                     spark={spark.appOpens}
                 />

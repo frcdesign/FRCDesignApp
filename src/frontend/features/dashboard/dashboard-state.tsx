@@ -4,15 +4,15 @@ import { type UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { IconSize } from "../../lib/style-constants";
 
+interface DashboardStateProps {
+    query: UseQueryResult<unknown>;
+}
+
 /**
  * Renders the loading/error state of a dashboard query. Views call this when
  * `data` is absent, so each one doesn't repeat the same two branches.
  */
-export function DashboardState({
-    query
-}: {
-    query: UseQueryResult<unknown>;
-}): ReactNode {
+export function DashboardState({ query }: DashboardStateProps): ReactNode {
     if (query.isError) {
         return (
             <Alert

@@ -10,6 +10,15 @@ import { perUnit } from "./derived";
 import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
 
+interface LifetimeTilesProps {
+    totals: AnalyticsTotals;
+    growth: GrowthOut;
+    /** Daily points over the selected window, for the sparklines. */
+    series: DailyMetricPoint[];
+    /** Opens follow whichever library was selected, so app level only. */
+    withOpens?: boolean;
+}
+
 /**
  * The page's headline: an all-time value with a season-over-season change, the
  * two windows a maintainer actually asks about.
@@ -19,14 +28,7 @@ export function LifetimeTiles({
     growth,
     series,
     withOpens = false
-}: {
-    totals: AnalyticsTotals;
-    growth: GrowthOut;
-    /** Daily points over the selected window, for the sparklines. */
-    series: DailyMetricPoint[];
-    /** Opens follow whichever library was selected, so app level only. */
-    withOpens?: boolean;
-}): ReactNode {
+}: LifetimeTilesProps): ReactNode {
     const { season, trackingSince } = growth;
     const perUser =
         totals.uniqueUsers === 0 ? 0 : totals.inserts / totals.uniqueUsers;

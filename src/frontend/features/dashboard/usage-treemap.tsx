@@ -17,6 +17,12 @@ const UsageTreemapChart = lazy(() =>
     }))
 );
 
+interface UsageTreemapProps {
+    parts: UsagePart[];
+    /** The level this instance starts at and will not go above. */
+    root?: TreemapPath;
+}
+
 /** Tall enough that the smaller slices still get a readable tile. */
 const CHART_HEIGHT = 360;
 
@@ -27,11 +33,7 @@ const CHART_HEIGHT = 360;
 export function UsageTreemap({
     parts,
     root = {}
-}: {
-    parts: UsagePart[];
-    /** The level this instance starts at and will not go above. */
-    root?: TreemapPath;
-}): ReactNode {
+}: UsageTreemapProps): ReactNode {
     const navigate = useNavigate();
     const [path, setPath] = useState<TreemapPath>(root);
 
@@ -42,7 +44,7 @@ export function UsageTreemap({
             void navigate({
                 to: "/dashboard/library/$libraryId/part",
                 params: { libraryId: node.libraryId },
-                search: (prev) => ({ ...prev, element: node.elementId })
+                search: { element: node.elementId }
             });
         } else if (node.groupName !== undefined) {
             setPath({ ...path, groupName: node.groupName });
@@ -71,16 +73,14 @@ export function UsageTreemap({
     );
 }
 
-/** Every level above the current one, each clickable to climb back to it. */
-function Crumbs({
-    root,
-    path,
-    onSelect
-}: {
+interface CrumbsProps {
     root: TreemapPath;
     path: TreemapPath;
     onSelect: (path: TreemapPath) => void;
-}): ReactNode {
+}
+
+/** Every level above the current one, each clickable to climb back to it. */
+function Crumbs({ root, path, onSelect }: CrumbsProps): ReactNode {
     const steps: { label: string; to: TreemapPath }[] = [];
 
     if (root.libraryId === undefined) {

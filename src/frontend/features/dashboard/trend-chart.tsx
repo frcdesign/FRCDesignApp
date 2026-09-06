@@ -17,20 +17,22 @@ import "@mantine/charts/styles.layer.css";
 // Keeps the hover panel short enough to fit beside a tile on a laptop.
 const DETAIL_HEIGHT = 160;
 
-/** The same numbers as the sparkline, with axes and a tooltip. */
-export function MetricDetailChart({
-    metric,
-    trend,
-    h = DETAIL_HEIGHT,
-    programs
-}: {
+interface MetricDetailChartProps {
     metric: MetricDefinition;
     trend: TrendPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;
     /** Marks kickoffs and championships; omitted in the tile hover panels. */
     programs?: Program[];
-}): ReactNode {
+}
+
+/** The same numbers as the sparkline, with axes and a tooltip. */
+export function MetricDetailChart({
+    metric,
+    trend,
+    h = DETAIL_HEIGHT,
+    programs
+}: MetricDetailChartProps): ReactNode {
     const share = isShare(metric);
     return (
         <LineChart
@@ -56,13 +58,7 @@ export function MetricDetailChart({
     );
 }
 
-/** Inserts split by library — the one trend that is genuinely multi-series. */
-export function LibraryInsertsChart({
-    series,
-    h = DETAIL_HEIGHT,
-    programs,
-    granularity
-}: {
+interface LibraryInsertsChartProps {
     series: DailyInsertPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;
@@ -70,7 +66,15 @@ export function LibraryInsertsChart({
     programs?: Program[];
     /** Overrides the granularity picked from the span. */
     granularity?: Granularity;
-}): ReactNode {
+}
+
+/** Inserts split by library — the one trend that is genuinely multi-series. */
+export function LibraryInsertsChart({
+    series,
+    h = DETAIL_HEIGHT,
+    programs,
+    granularity
+}: LibraryInsertsChartProps): ReactNode {
     const libraryIds = Object.values(LibraryId);
     const data = toChartData(series, libraryIds, granularity);
     return (

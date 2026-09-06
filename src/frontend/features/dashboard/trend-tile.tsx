@@ -124,17 +124,16 @@ export function TrendTile({
     );
 }
 
+interface MetricTermsProps {
+    metric: MetricDefinition;
+    series: DailyMetricPoint[];
+}
+
 /**
  * Names what went into the number, so a share reads as an explicit division
  * rather than a percentage the reader has to take on trust.
  */
-function MetricTerms({
-    metric,
-    series
-}: {
-    metric: MetricDefinition;
-    series: DailyMetricPoint[];
-}): ReactNode {
+function MetricTerms({ metric, series }: MetricTermsProps): ReactNode {
     const terms = rangeTerms(series, metric);
 
     return (
@@ -154,15 +153,13 @@ function MetricTerms({
     );
 }
 
-function Row({
-    label,
-    value,
-    dividedBy
-}: {
+interface RowProps {
     label: string;
     value: number;
     dividedBy?: boolean;
-}): ReactNode {
+}
+
+function Row({ label, value, dividedBy }: RowProps): ReactNode {
     return (
         <Group justify="space-between" gap="xs" wrap="nowrap">
             <Text size="sm" c="dimmed">

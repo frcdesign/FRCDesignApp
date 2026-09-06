@@ -20,7 +20,7 @@ export function RangeControl(): ReactNode {
             onChange={(value) => {
                 void navigate({
                     to: ".",
-                    search: (prev) => ({ ...prev, range: value })
+                    search: { range: value }
                 });
             }}
             data={Object.entries(RANGE_PRESETS).map(([value, { label }]) => ({

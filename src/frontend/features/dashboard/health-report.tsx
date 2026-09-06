@@ -8,12 +8,12 @@ import { getLibraryName } from "../library/library-path";
 import { IconSize } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
 
-/** Mirrors the panel's severity colors so the two views agree at a glance. */
-function SeverityIcon({
-    severity
-}: {
+interface SeverityIconProps {
     severity: BuildIssueSeverity | null;
-}): ReactNode {
+}
+
+/** Mirrors the panel's severity colors so the two views agree at a glance. */
+function SeverityIcon({ severity }: SeverityIconProps): ReactNode {
     switch (severity) {
         case BuildIssueSeverity.ERROR:
             return (
@@ -46,12 +46,12 @@ function SeverityIcon({
     }
 }
 
-/** Headline health of the library: how much of it is clean, and what isn't. */
-export function HealthTiles({
-    counts
-}: {
+interface HealthTilesProps {
     counts: LibraryHealthCounts;
-}): ReactNode {
+}
+
+/** Headline health of the library: how much of it is clean, and what isn't. */
+export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
     // Info issues are counted in the breakdown below rather than given a tile:
@@ -98,15 +98,17 @@ export function HealthTiles({
     );
 }
 
+interface LibraryHealthStripProps {
+    libraries: { libraryId: LibraryId; health: LibraryHealthCounts }[];
+}
+
 /**
  * Every library's health at a glance, kept apart from usage: one is current
  * state and the other a window, and one row answering both read as neither.
  */
 export function LibraryHealthStrip({
     libraries
-}: {
-    libraries: { libraryId: LibraryId; health: LibraryHealthCounts }[];
-}): ReactNode {
+}: LibraryHealthStripProps): ReactNode {
     return (
         <Table>
             <Table.Thead>

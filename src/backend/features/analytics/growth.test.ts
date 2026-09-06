@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { dailyMetrics, dailyUserActivity } from "../../db/schema";
+import { ChangeUnavailable } from "./contract";
 import { EventType } from "./events";
 import { LibraryId } from "../library/library-id";
 import { resetDb, seedLibrary, TEST_LIBRARY_ID } from "../../../__test_utils__";
@@ -64,25 +65,25 @@ describe("toComparison", () => {
         // means "not measured", not "nothing happened".
         const out = toComparison(120, 0, WINDOWS, LABELS, "2026-08-01");
         expect(out.changeRatio).toBeNull();
-        expect(out.unavailable).toBe("no-prior-data");
+        expect(out.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 
     it("flags a baseline that tracking only partly covers", () => {
         const out = toComparison(120, 40, WINDOWS, LABELS, "2026-07-10");
         expect(out.changeRatio).toBeNull();
-        expect(out.unavailable).toBe("partial-prior-data");
+        expect(out.unavailable).toBe(ChangeUnavailable.PARTIAL_PRIOR_DATA);
     });
 
     it("reads a genuinely empty baseline as new, not as an infinite rise", () => {
         const out = toComparison(9, 0, WINDOWS, LABELS, "2026-01-01");
         expect(out.changeRatio).toBeNull();
-        expect(out.unavailable).toBe("zero-baseline");
+        expect(out.unavailable).toBe(ChangeUnavailable.ZERO_BASELINE);
     });
 
     it("blames the quiet period, not tracking, when both are empty", () => {
         const out = toComparison(0, 0, WINDOWS, LABELS, "2026-01-01");
         expect(out.changeRatio).toBeNull();
-        expect(out.unavailable).toBe("no-activity");
+        expect(out.unavailable).toBe(ChangeUnavailable.NO_ACTIVITY);
     });
 
     it("states a decline as readily as a rise", () => {
@@ -187,7 +188,9 @@ describe("getGrowth", () => {
 
         expect(growth.season.inserts.current).toBe(100);
         expect(growth.season.inserts.changeRatio).toBeNull();
-        expect(growth.season.inserts.unavailable).toBe("no-prior-data");
+        expect(growth.season.inserts.unavailable).toBe(
+            ChangeUnavailable.NO_PRIOR_DATA
+        );
     });
 
     it("reports nothing rather than failing with no data at all", async () => {
@@ -195,7 +198,9 @@ describe("getGrowth", () => {
 
         expect(growth.recent.inserts.current).toBe(0);
         expect(growth.recent.inserts.changeRatio).toBeNull();
-        expect(growth.recent.inserts.unavailable).toBe("no-prior-data");
+        expect(growth.recent.inserts.unavailable).toBe(
+            ChangeUnavailable.NO_PRIOR_DATA
+        );
         expect(growth.season.inserts.changeRatio).toBeNull();
         expect(growth.trackingSince).toBeNull();
     });

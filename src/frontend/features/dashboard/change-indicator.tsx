@@ -1,9 +1,19 @@
 import { Group, Stack, Text, Tooltip } from "@mantine/core";
 import { ArrowDown, ArrowUp, Minus } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import type { PeriodComparison } from "@backend/features/analytics/contract";
+import {
+    ChangeUnavailable,
+    type PeriodComparison
+} from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
 import { formatCount } from "./format";
+
+interface ChangeIndicatorProps {
+    comparison: PeriodComparison;
+    trackingSince: string | null;
+    /** Rates need a decimal; counts do not. */
+    format?: (value: number) => string;
+}
 
 /**
  * How a measure changed, always beside the number and never without naming the
@@ -13,12 +23,7 @@ export function ChangeIndicator({
     comparison,
     trackingSince,
     format = formatCount
-}: {
-    comparison: PeriodComparison;
-    trackingSince: string | null;
-    /** Rates need a decimal; counts do not. */
-    format?: (value: number) => string;
-}): ReactNode {
+}: ChangeIndicatorProps): ReactNode {
     if (comparison.changeRatio === null) {
         return (
             <Tooltip
@@ -72,11 +77,11 @@ export function formatRate(value: number): string {
 /** Sits where the chip does, so it is kept as short; `explain` has the rest. */
 function shortReason(comparison: PeriodComparison): string {
     switch (comparison.unavailable) {
-        case "zero-baseline":
+        case ChangeUnavailable.ZERO_BASELINE:
             return "New";
-        case "no-activity":
+        case ChangeUnavailable.NO_ACTIVITY:
             return "No activity";
-        case "partial-prior-data":
+        case ChangeUnavailable.PARTIAL_PRIOR_DATA:
             return "Partial baseline";
         default:
             return "No baseline";
@@ -91,11 +96,11 @@ function explain(
         ? `Tracking started ${trackingSince}.`
         : "Nothing has been recorded yet.";
     switch (comparison.unavailable) {
-        case "zero-baseline":
+        case ChangeUnavailable.ZERO_BASELINE:
             return `Nothing in ${comparison.baselineLabel}, so there is no baseline to grow from.`;
-        case "no-activity":
+        case ChangeUnavailable.NO_ACTIVITY:
             return `Neither ${comparison.label} nor ${comparison.baselineLabel} recorded any use.`;
-        case "partial-prior-data":
+        case ChangeUnavailable.PARTIAL_PRIOR_DATA:
             return `${since} It covers only part of ${comparison.baselineLabel}, so a change would overstate the growth.`;
         default:
             return `${since} ${comparison.baselineLabel} came before that, so its zero means unmeasured rather than unused.`;

@@ -7,15 +7,17 @@ import { type TreemapNode } from "./treemap-data";
 // Onshape panel bundle entirely.
 import "@mantine/charts/styles.layer.css";
 
+interface UsageTreemapChartProps {
+    nodes: TreemapNode[];
+    h: number;
+    onSelect: (node: TreemapNode) => void;
+}
+
 export function UsageTreemapChart({
     nodes,
     h,
     onSelect
-}: {
-    nodes: TreemapNode[];
-    h: number;
-    onSelect: (node: TreemapNode) => void;
-}): ReactNode {
+}: UsageTreemapChartProps): ReactNode {
     return (
         <Treemap
             // `TreemapData` is an open record and an interface never satisfies

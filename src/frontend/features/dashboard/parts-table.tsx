@@ -129,14 +129,7 @@ export function PartsTable({
     );
 }
 
-function SortableTh({
-    label,
-    column,
-    sort,
-    onToggle,
-    align,
-    width
-}: {
+interface SortableThProps {
     label: string;
     column: SortColumn;
     sort: SortState;
@@ -144,7 +137,16 @@ function SortableTh({
     align?: "right";
     /** Left off the first column, which absorbs the leftover width. */
     width?: number;
-}): ReactNode {
+}
+
+function SortableTh({
+    label,
+    column,
+    sort,
+    onToggle,
+    align,
+    width
+}: SortableThProps): ReactNode {
     const active = sort.column === column;
     const Caret = sort.descending ? CaretDown : CaretUp;
 
@@ -172,13 +174,12 @@ function SortableTh({
     );
 }
 
-function PartRow({
-    libraryId,
-    part
-}: {
+interface PartRowProps {
     libraryId: LibraryId;
     part: PartUsageOut;
-}): ReactNode {
+}
+
+function PartRow({ libraryId, part }: PartRowProps): ReactNode {
     const navigate = useNavigate();
 
     return (
@@ -188,10 +189,7 @@ function PartRow({
                 void navigate({
                     to: "/dashboard/library/$libraryId/part",
                     params: { libraryId },
-                    search: (prev) => ({
-                        ...prev,
-                        element: part.path.elementId
-                    })
+                    search: { element: part.path.elementId }
                 })
             }
         >

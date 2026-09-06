@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { ArrowSquareOut, MagnifyingGlass } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import type { InsertableReportOut } from "@backend/features/analytics/contract";
@@ -39,9 +39,10 @@ interface PartSearch {
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/part")({
     component: PartReport,
-    validateSearch: (search: Record<string, unknown>): PartSearch => ({
-        element: typeof search.element === "string" ? search.element : undefined
-    })
+    validateSearch: (search: Record<string, unknown>): PartSearch =>
+        typeof search.element === "string" ? { element: search.element } : {},
+    // Survives a range change on this page; switching library clears it.
+    search: { middlewares: [retainSearchParams(["element"])] }
 });
 
 function PartReport(): ReactNode {
@@ -86,15 +87,17 @@ function PartReport(): ReactNode {
     );
 }
 
+interface ReportBodyProps {
+    libraryId: LibraryId;
+    elementId: string;
+    range: DayRange;
+}
+
 function ReportBody({
     libraryId,
     elementId,
     range
-}: {
-    libraryId: LibraryId;
-    elementId: string;
-    range: DayRange;
-}): ReactNode {
+}: ReportBodyProps): ReactNode {
     const query = useQuery(
         getInsertableReportQuery(libraryId, elementId, range)
     );
@@ -149,14 +152,13 @@ function ReportBody({
     );
 }
 
-/** The part's name, linked into Onshape like a part number is to its vendor. */
-function PartTitle({
-    report,
-    elementId
-}: {
+interface PartTitleProps {
     report: InsertableReportOut;
     elementId: string;
-}): ReactNode {
+}
+
+/** The part's name, linked into Onshape like a part number is to its vendor. */
+function PartTitle({ report, elementId }: PartTitleProps): ReactNode {
     const name = report.name ?? elementId;
     if (!report.path) {
         return <Title order={2}>{name}</Title>;
@@ -179,13 +181,12 @@ function PartTitle({
     );
 }
 
-function SummaryCard({
-    label,
-    value
-}: {
+interface SummaryCardProps {
     label: string;
     value: string;
-}): ReactNode {
+}
+
+function SummaryCard({ label, value }: SummaryCardProps): ReactNode {
     return (
         <Card withBorder padding="md" radius="md">
             <Text size="sm" c="dimmed" tt="uppercase" fw={700}>

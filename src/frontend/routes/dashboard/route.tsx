@@ -20,13 +20,18 @@ export interface DashboardSearch {
 
 export const Route = createFileRoute("/dashboard")({
     component: DashboardLayout,
-    validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
-        range: isRangePreset(search.range) ? search.range : undefined,
-        threshold:
-            typeof search.threshold === "number" && search.threshold >= 0
-                ? search.threshold
-                : undefined
-    }),
+    validateSearch: (search: Record<string, unknown>): DashboardSearch => {
+        // Absent rather than undefined: `retainSearchParams` carries over only
+        // the keys a navigation leaves out entirely.
+        const out: DashboardSearch = {};
+        if (isRangePreset(search.range)) {
+            out.range = search.range;
+        }
+        if (typeof search.threshold === "number" && search.threshold >= 0) {
+            out.threshold = search.threshold;
+        }
+        return out;
+    },
     search: {
         middlewares: [retainSearchParams(["range", "threshold"])]
     }

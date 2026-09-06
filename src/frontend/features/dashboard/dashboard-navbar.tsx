@@ -42,6 +42,10 @@ import {
 
 import frcDesignBook from "/frc-design-book.svg";
 
+interface DashboardTabsProps {
+    current: DashboardKey;
+}
+
 /**
  * Two tiers, like the panel's navbar: the dashboard over the library it reads.
  */
@@ -95,7 +99,7 @@ export function DashboardNavbar(): ReactNode {
 }
 
 /** Switches between the four dashboards, keeping library and range. */
-function DashboardTabs({ current }: { current: DashboardKey }): ReactNode {
+function DashboardTabs({ current }: DashboardTabsProps): ReactNode {
     const navigate = useNavigate();
     const params = useParams({ strict: false });
     const libraryId = params.libraryId ?? DEFAULT_LIBRARY;
@@ -109,8 +113,7 @@ function DashboardTabs({ current }: { current: DashboardKey }): ReactNode {
                 void navigate({
                     to: target.to,
                     // Harmless on the app dashboard, which ignores it.
-                    params: { libraryId },
-                    search: (prev) => prev
+                    params: { libraryId }
                 });
             }}
             styles={TAB_STYLES}
@@ -126,8 +129,12 @@ function DashboardTabs({ current }: { current: DashboardKey }): ReactNode {
     );
 }
 
+interface LibraryMenuProps {
+    dashboard: DashboardKey;
+}
+
 /** Repoints the current library-scoped dashboard at another library. */
-function LibraryMenu({ dashboard }: { dashboard: DashboardKey }): ReactNode {
+function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
     const navigate = useNavigate();
     const params = useParams({ strict: false });
     const current = params.libraryId ?? DEFAULT_LIBRARY;
@@ -156,11 +163,9 @@ function LibraryMenu({ dashboard }: { dashboard: DashboardKey }): ReactNode {
                                     target?.to ??
                                     "/dashboard/library/$libraryId",
                                 params: { libraryId },
-                                // The part belongs to the old library.
-                                search: (prev) => ({
-                                    ...prev,
-                                    element: undefined
-                                })
+                                // Dropped, not retained: the part being
+                                // reported on belongs to the old library.
+                                search: { element: undefined }
                             })
                         }
                     >
@@ -193,13 +198,12 @@ function ThresholdControl(): ReactNode {
             onChange={(value) =>
                 void navigate({
                     to: ".",
-                    search: (prev) => ({
-                        ...prev,
+                    search: {
                         threshold:
                             typeof value === "number"
                                 ? value
                                 : DEFAULT_THRESHOLD
-                    })
+                    }
                 })
             }
         />

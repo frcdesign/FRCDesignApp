@@ -1,14 +1,13 @@
 import { Card, Stack, Title } from "@mantine/core";
 import { type ReactNode } from "react";
 
-/** A titled run of the page. */
-export function Section({
-    title,
-    children
-}: {
+interface SectionProps {
     title: string;
     children: ReactNode;
-}): ReactNode {
+}
+
+/** A titled run of the page. */
+export function Section({ title, children }: SectionProps): ReactNode {
     return (
         <Stack gap="sm">
             <Title order={3}>{title}</Title>
@@ -17,14 +16,13 @@ export function Section({
     );
 }
 
-/** A section whose content is one card: a chart, a table, a breakdown. */
-export function SectionCard({
-    title,
-    children
-}: {
+interface SectionCardProps {
     title: string;
     children: ReactNode;
-}): ReactNode {
+}
+
+/** A section whose content is one card: a chart, a table, a breakdown. */
+export function SectionCard({ title, children }: SectionCardProps): ReactNode {
     return (
         <Section title={title}>
             <Card withBorder padding="lg" radius="md">

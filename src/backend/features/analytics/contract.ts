@@ -72,19 +72,25 @@ export interface LibrarySummary {
     health: LibraryHealthCounts;
 }
 
+/**
+ * Why a change cannot be stated: an unmeasured baseline, two empty windows, or
+ * an empty baseline, which reads as new rather than infinite.
+ */
+export enum ChangeUnavailable {
+    NO_PRIOR_DATA = "no-prior-data",
+    PARTIAL_PRIOR_DATA = "partial-prior-data",
+    NO_ACTIVITY = "no-activity",
+    ZERO_BASELINE = "zero-baseline"
+}
+
 /** One measure over a window and the matching earlier window. */
 export interface PeriodComparison {
     current: number;
     previous: number;
     /** Null whenever stating a change would be dishonest; see `unavailable`. */
     changeRatio: number | null;
-    /** Why there is no change to state: an unmeasured baseline, two empty
-     * windows, or an empty baseline, which reads as new rather than infinite. */
-    unavailable?:
-        | "no-prior-data"
-        | "partial-prior-data"
-        | "no-activity"
-        | "zero-baseline";
+    /** Why there is no change to state; absent whenever `changeRatio` is set. */
+    unavailable?: ChangeUnavailable;
     currentFrom: string;
     currentTo: string;
     previousFrom: string;

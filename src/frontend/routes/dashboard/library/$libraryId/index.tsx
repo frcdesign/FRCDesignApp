@@ -61,17 +61,19 @@ function LibraryOverview(): ReactNode {
     );
 }
 
+interface LibraryBodyProps {
+    libraryId: LibraryId;
+    summary: LibrarySummaryOut;
+    parts: UseQueryResult<PartUsageOut[]>;
+    health: UseQueryResult<LibraryHealthCounts>;
+}
+
 function LibraryBody({
     libraryId,
     summary,
     parts,
     health
-}: {
-    libraryId: LibraryId;
-    summary: LibrarySummaryOut;
-    parts: UseQueryResult<PartUsageOut[]>;
-    health: UseQueryResult<LibraryHealthCounts>;
-}): ReactNode {
+}: LibraryBodyProps): ReactNode {
     const { totals, metricSeries, growth } = summary;
 
     return (

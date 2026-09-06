@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { PeriodComparison } from "@backend/features/analytics/contract";
+import {
+    ChangeUnavailable,
+    type PeriodComparison
+} from "@backend/features/analytics/contract";
 import { perUnit } from "./derived";
 
 function comparison(
     current: number,
     previous: number,
-    unavailable?: PeriodComparison["unavailable"]
+    unavailable?: ChangeUnavailable
 ): PeriodComparison {
     return {
         current,
@@ -38,17 +41,17 @@ describe("perUnit", () => {
 
     it("carries a term's reason rather than inventing a number", () => {
         const rate = perUnit(
-            comparison(120, 0, "no-prior-data"),
+            comparison(120, 0, ChangeUnavailable.NO_PRIOR_DATA),
             comparison(20, 0)
         );
         expect(rate.changeRatio).toBeNull();
-        expect(rate.unavailable).toBe("no-prior-data");
+        expect(rate.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 
     it("reads an empty denominator as no rate, not as a division by zero", () => {
         const rate = perUnit(comparison(10, 0), comparison(0, 0));
         expect(Number.isFinite(rate.current)).toBe(true);
         expect(rate.current).toBe(0);
-        expect(rate.unavailable).toBe("no-activity");
+        expect(rate.unavailable).toBe(ChangeUnavailable.NO_ACTIVITY);
     });
 });

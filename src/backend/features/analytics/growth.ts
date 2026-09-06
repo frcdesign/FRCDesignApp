@@ -10,6 +10,7 @@ import {
     seasonWindow
 } from "./seasons";
 import {
+    ChangeUnavailable,
     type GrowthMeasure,
     type GrowthOut,
     type PeriodComparison
@@ -77,13 +78,17 @@ export function toComparison(
     };
 
     if (trackingSince === null || windows.previous.to < trackingSince) {
-        return { ...base, changeRatio: null, unavailable: "no-prior-data" };
+        return {
+            ...base,
+            changeRatio: null,
+            unavailable: ChangeUnavailable.NO_PRIOR_DATA
+        };
     }
     if (windows.previous.from < trackingSince) {
         return {
             ...base,
             changeRatio: null,
-            unavailable: "partial-prior-data"
+            unavailable: ChangeUnavailable.PARTIAL_PRIOR_DATA
         };
     }
     if (previous === 0) {
@@ -92,7 +97,10 @@ export function toComparison(
         return {
             ...base,
             changeRatio: null,
-            unavailable: current === 0 ? "no-activity" : "zero-baseline"
+            unavailable:
+                current === 0
+                    ? ChangeUnavailable.NO_ACTIVITY
+                    : ChangeUnavailable.ZERO_BASELINE
         };
     }
     return { ...base, changeRatio: (current - previous) / previous };

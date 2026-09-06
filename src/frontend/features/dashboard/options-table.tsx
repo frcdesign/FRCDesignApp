@@ -1,8 +1,8 @@
 import { Badge, Group, Table, Text } from "@mantine/core";
+import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import type { UnusedOptionOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { DashboardLink } from "./dashboard-link";
 import { formatCount, formatPercent } from "./format";
 
 interface OptionsTableProps {
@@ -16,6 +16,8 @@ export function OptionsTable({
     options,
     emptyMessage
 }: OptionsTableProps): ReactNode {
+    const navigate = useNavigate();
+
     if (options.length === 0) {
         return (
             <Text c="dimmed" py="xl" ta="center">
@@ -40,19 +42,16 @@ export function OptionsTable({
                     {options.map((option) => (
                         <Table.Tr
                             key={`${option.elementId}-${option.parameterId}-${option.option.value}`}
+                            style={{ cursor: "pointer" }}
+                            onClick={() =>
+                                void navigate({
+                                    to: "/dashboard/library/$libraryId/part",
+                                    params: { libraryId },
+                                    search: { element: option.elementId }
+                                })
+                            }
                         >
-                            <Table.Td>
-                                <DashboardLink
-                                    to="/dashboard/library/$libraryId/part"
-                                    params={{ libraryId }}
-                                    search={(prev) => ({
-                                        ...prev,
-                                        element: option.elementId
-                                    })}
-                                >
-                                    {option.partName}
-                                </DashboardLink>
-                            </Table.Td>
+                            <Table.Td>{option.partName}</Table.Td>
                             <Table.Td>{option.parameterName}</Table.Td>
                             <Table.Td>
                                 <Group gap="xs">

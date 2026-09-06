@@ -1,4 +1,7 @@
-import type { PeriodComparison } from "@backend/features/analytics/contract";
+import {
+    ChangeUnavailable,
+    type PeriodComparison
+} from "@backend/features/analytics/contract";
 
 function ratio(numerator: number, denominator: number): number {
     return denominator === 0 ? 0 : numerator / denominator;
@@ -26,7 +29,10 @@ export function perUnit(
         return {
             ...base,
             changeRatio: null,
-            unavailable: current === 0 ? "no-activity" : "zero-baseline"
+            unavailable:
+                current === 0
+                    ? ChangeUnavailable.NO_ACTIVITY
+                    : ChangeUnavailable.ZERO_BASELINE
         };
     }
     return { ...base, changeRatio: (current - previous) / previous };

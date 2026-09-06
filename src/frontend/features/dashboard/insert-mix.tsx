@@ -10,12 +10,14 @@ const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.FAVORITES]: "Favorites list"
 };
 
+interface InsertSourceBreakdownProps {
+    sources: InsertSourceUsage[];
+}
+
 /** Headline shares of inserts: favorites, insert-and-fasten, quick insert. */
 export function InsertSourceBreakdown({
     sources
-}: {
-    sources: InsertSourceUsage[];
-}): ReactNode {
+}: InsertSourceBreakdownProps): ReactNode {
     const total = sources.reduce((sum, source) => sum + source.count, 0);
 
     if (total === 0) {
