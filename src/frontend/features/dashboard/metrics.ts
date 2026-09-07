@@ -128,8 +128,8 @@ export function rangeValue(
     return numerator;
 }
 
-/** True when the metric is a share rather than a count. */
-export function isShare(metric: MetricDefinition): boolean {
+/** True when the metric reads as a percentage rather than a count. */
+export function isPercentage(metric: MetricDefinition): boolean {
     return metric.denominator !== undefined;
 }
 

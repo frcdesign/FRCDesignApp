@@ -5,7 +5,13 @@ import {
     type InsertTargets
 } from "@backend/features/analytics/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { METRICS, isShare, rangeTerms, rangeValue, toTrend } from "./metrics";
+import {
+    METRICS,
+    isPercentage,
+    rangeTerms,
+    rangeValue,
+    toTrend
+} from "./metrics";
 
 /** A day's inserts split between the two kinds of tab they landed in. */
 function targets(partStudio: number, assembly: number): InsertTargets {
@@ -33,7 +39,7 @@ function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
 describe("metric definitions", () => {
     it("marks exactly the ratio metrics as shares", () => {
         const shares = Object.values(METRICS)
-            .filter(isShare)
+            .filter(isPercentage)
             .map((metric) => metric.key);
         expect(shares.sort()).toEqual([
             "deriveShare",
@@ -152,9 +158,9 @@ describe("rangeValue", () => {
 
             // A fold of the plotted values must land within them.
             expect(value, metric.key).toBeGreaterThanOrEqual(
-                isShare(metric) ? low : high
+                isPercentage(metric) ? low : high
             );
-            if (isShare(metric)) {
+            if (isPercentage(metric)) {
                 expect(value, metric.key).toBeLessThanOrEqual(high);
             }
         }
@@ -188,7 +194,9 @@ describe("rangeValue", () => {
 describe("metric descriptions", () => {
     it("names a denominator for exactly the shares", () => {
         for (const metric of Object.values(METRICS)) {
-            expect(!!metric.denominatorLabel, metric.key).toBe(isShare(metric));
+            expect(!!metric.denominatorLabel, metric.key).toBe(
+                isPercentage(metric)
+            );
         }
     });
 

@@ -15,13 +15,13 @@ import type {
 } from "@backend/features/analytics/contract";
 import { FontWeight, IconSize } from "../../lib/style-constants";
 import {
-    isShare,
+    isPercentage,
     rangeTerms,
     rangeValue,
     toTrend,
     type MetricDefinition
 } from "./metrics";
-import { formatCount, formatPercent } from "./format";
+import { formatCount, formatPercent, formatShare } from "./format";
 import { MetricDetailChart, MiniSparkline } from "./charts";
 
 const SPARKLINE_HEIGHT = 40;
@@ -45,17 +45,16 @@ export function TrendTile({
     series
 }: TrendTileProps): ReactNode {
     const trend = toTrend(series, metric);
-    const share = isShare(metric);
+    const percentage = isPercentage(metric);
 
     // From the same points the sparkline plots, so the two always agree.
-    const value = share
-        ? `${rangeValue(series, metric).toFixed(1)}%`
-        : formatCount(rangeValue(series, metric));
+    const range = rangeValue(series, metric);
+    const value = percentage ? formatPercent(range) : formatCount(range);
 
-    const lifetime = share
-        ? formatPercent(
+    const lifetime = percentage
+        ? formatShare(
               metric.lifetimeValue(totals),
-              metric.lifetimeDenominator?.(totals) ?? 0
+              metric.lifetimeDenominator?.(totals)
           )
         : formatCount(metric.lifetimeValue(totals));
 

@@ -5,7 +5,7 @@ import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import { IssueIcon } from "../build-status/components/issues";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
-import { formatCount, formatPercent } from "./format";
+import { formatCount, formatShare } from "./format";
 
 interface HealthTilesProps {
     counts: LibraryHealthCounts;
@@ -25,7 +25,7 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
         },
         {
             label: "Healthy",
-            value: formatPercent(counts.healthyItems, total),
+            value: formatShare(counts.healthyItems, total),
             severity: null
         },
         {
@@ -89,7 +89,7 @@ export function LibraryHealthStrip({
                             {formatCount(health.insertableCount)}
                         </Table.Td>
                         <Table.Td ta="right">
-                            {formatPercent(
+                            {formatShare(
                                 health.healthyItems,
                                 health.groupCount + health.insertableCount
                             )}

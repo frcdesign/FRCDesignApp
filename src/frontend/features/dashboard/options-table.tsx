@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import type { UnusedOptionOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { formatCount, formatPercent } from "./format";
+import { formatCount, formatShare } from "./format";
 
 interface OptionsTableProps {
     libraryId: LibraryId;
@@ -74,12 +74,10 @@ export function OptionsTable({
                                 {formatCount(option.option.count)}
                             </Table.Td>
                             <Table.Td ta="right" c="dimmed">
-                                {option.parameterTotal === 0
-                                    ? "—"
-                                    : formatPercent(
-                                          option.option.count,
-                                          option.parameterTotal
-                                      )}
+                                {formatShare(
+                                    option.option.count,
+                                    option.parameterTotal
+                                )}
                             </Table.Td>
                         </Table.Tr>
                     ))}

@@ -3,12 +3,17 @@ import { type ReactNode } from "react";
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
-import { getLibraryColor } from "../../theme";
+import { getLibraryShade } from "../../theme";
+import { MUTED_MARK } from "../../lib/style-constants";
 import { toChartData } from "./series";
 import { type BucketPoint, type Granularity } from "./series";
 import type { ChartReferenceLineProps } from "@mantine/charts";
 import { Program, seasonsBetween } from "@backend/features/analytics/seasons";
-import { isShare, type MetricDefinition, type TrendPoint } from "./metrics";
+import {
+    isPercentage,
+    type MetricDefinition,
+    type TrendPoint
+} from "./metrics";
 
 // Kept in this lazily-loaded module so recharts and its styles stay out of the
 // Onshape panel bundle entirely.
@@ -33,7 +38,7 @@ export function MetricDetailChart({
     h = DETAIL_HEIGHT,
     programs
 }: MetricDetailChartProps): ReactNode {
-    const share = isShare(metric);
+    const share = isPercentage(metric);
     return (
         <LineChart
             h={h}
@@ -90,7 +95,7 @@ export function LibraryInsertsChart({
             referenceLines={seasonLines(programs, data)}
             series={libraryIds.map((libraryId) => ({
                 name: getLibraryName(libraryId),
-                color: `${getLibraryColor(libraryId)}.6`
+                color: getLibraryShade(libraryId)
             }))}
         />
     );
@@ -121,19 +126,21 @@ function seasonLines(
 
     for (const program of programs) {
         for (const season of seasonsBetween(program, first, last)) {
-            mark(season.startMonth, `${program.toUpperCase()} kickoff`);
+            mark(season.startMonth, `${program} kickoff`);
             // Both programs close at the same event, so this deduplicates.
             mark(season.endMonth, "Championship");
         }
     }
 
-    return [...labels.entries()].map(([bucket, names]) => ({
-        x: bucket,
-        color: "gray.5",
-        strokeDasharray: "4 4",
-        label: names.join(" · "),
-        labelPosition: "top" as const
-    }));
+    return [...labels.entries()].map(
+        ([bucket, names]): ChartReferenceLineProps => ({
+            x: bucket,
+            color: MUTED_MARK,
+            strokeDasharray: "4 4",
+            label: names.join(" · "),
+            labelPosition: "top"
+        })
+    );
 }
 
 /** Ticks show the label; bands match the raw key the axis is actually keyed on. */

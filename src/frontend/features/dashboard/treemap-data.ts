@@ -2,6 +2,7 @@ import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { getLibraryColor } from "../../theme";
+import { colorVar, FILLED_SHADE } from "../../lib/style-constants";
 
 /** A part tagged with the library it came from, so one list spans them all. */
 export interface UsagePart extends PartUsageOut {
@@ -51,8 +52,7 @@ export type TreemapNode =
 const SHADES = [9, 8, 7, 6, 5, 4, 3];
 
 function shade(color: string, rank: number): string {
-    const step = SHADES[Math.min(rank, SHADES.length - 1)];
-    return `var(--mantine-color-${color}-${step})`;
+    return colorVar(color, SHADES[Math.min(rank, SHADES.length - 1)]);
 }
 
 /**
@@ -97,7 +97,7 @@ export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
                 kind: TreemapKind.LIBRARY,
                 name: getLibraryName(key),
                 value,
-                color: `var(--mantine-color-${getLibraryColor(key)}-6)`,
+                color: colorVar(getLibraryColor(key), FILLED_SHADE),
                 libraryId: key
             })
         );

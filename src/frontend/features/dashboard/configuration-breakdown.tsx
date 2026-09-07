@@ -13,8 +13,8 @@ import type {
     ConfigurationParameterUsage,
     ConfigurationValueUsage
 } from "@backend/features/analytics/contract";
-import { FontWeight } from "../../lib/style-constants";
-import { formatCount } from "./format";
+import { FontWeight, MUTED_MARK } from "../../lib/style-constants";
+import { formatCount, formatPercent } from "./format";
 
 interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
@@ -116,13 +116,12 @@ function ValueRow({ value, total }: ValueRowProps): ReactNode {
                     )}
                 </Group>
                 <Text size="sm" c="dimmed">
-                    {formatCount(value.count)} ({percent.toFixed(0)}%)
+                    {formatCount(value.count)} ({formatPercent(percent)})
                 </Text>
             </Group>
-            {/* An explicit shade: bare "gray" is nearly invisible on a dark card. */}
             <Progress
                 value={percent}
-                color={value.isDefault ? undefined : "gray.5"}
+                color={value.isDefault ? undefined : MUTED_MARK}
                 size="sm"
             />
         </div>

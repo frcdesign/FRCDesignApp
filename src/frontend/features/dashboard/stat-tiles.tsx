@@ -11,8 +11,7 @@ const SPARKLINE_HEIGHT = 40;
 
 interface StatTileProps {
     label: string;
-    /** A count is formatted with separators; a string is shown as given. */
-    value: number | string;
+    value: number;
     /** Rates need a decimal; counts do not. Also formats the change tooltip. */
     format?: (value: number) => string;
     icon?: Icon;
@@ -39,9 +38,7 @@ export function StatTile({
                     <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                         {label}
                     </Text>
-                    <Title order={2}>
-                        {typeof value === "number" ? format(value) : value}
-                    </Title>
+                    <Title order={2}>{format(value)}</Title>
                 </div>
                 {change ? (
                     <ChangeIndicator comparison={change} format={format} />

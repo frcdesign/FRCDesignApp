@@ -5,8 +5,8 @@ import { LibraryId } from "../library/library-id";
  * for a Jan–Apr competition has a year nothing like a calendar one.
  */
 export enum Program {
-    FRC = "frc",
-    FTC = "ftc"
+    FRC = "FRC",
+    FTC = "FTC"
 }
 
 /** Which competition each library serves. */
@@ -71,7 +71,7 @@ export function seasonOf(program: Program, year: number): Season {
         endMonth: `${year}-${pad(endMonth)}`,
         year,
         years,
-        label: `${program.toUpperCase()} ${years}`
+        label: `${program} ${years}`
     };
 }
 
