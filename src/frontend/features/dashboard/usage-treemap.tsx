@@ -1,12 +1,12 @@
 import { Anchor, Breadcrumbs, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
-import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { UsageTreemapChart } from "./charts";
 import { SectionCard } from "./section";
 import {
     toNodes,
+    TreemapKind,
     type TreemapNode,
     type TreemapPath,
     type UsagePart
@@ -35,16 +35,18 @@ export function UsageTreemap({
     const nodes = useMemo(() => toNodes(parts, path), [parts, path]);
 
     function select(node: TreemapNode): void {
-        if (node.elementId !== undefined && node.libraryId !== undefined) {
-            void navigate({
-                to: "/dashboard/library/$libraryId/part",
-                params: { libraryId: node.libraryId },
-                search: { element: node.elementId }
-            });
-        } else if (node.groupName !== undefined) {
-            setPath({ ...path, groupName: node.groupName });
-        } else if (node.libraryId !== undefined) {
-            setPath({ libraryId: node.libraryId });
+        switch (node.kind) {
+            case TreemapKind.LIBRARY:
+                return setPath({ libraryId: node.libraryId });
+            case TreemapKind.GROUP:
+                return setPath({ ...path, groupName: node.groupName });
+            case TreemapKind.PART:
+                // The only click that leaves the chart.
+                return void navigate({
+                    to: "/dashboard/library/$libraryId/part",
+                    params: { libraryId: node.libraryId },
+                    search: { element: node.elementId }
+                });
         }
     }
 
@@ -113,9 +115,4 @@ function Crumbs({ root, path, onSelect }: CrumbsProps): ReactNode {
             )}
         </Breadcrumbs>
     );
-}
-
-/** Narrows a library id for a page that is already scoped to one. */
-export function libraryRoot(libraryId: LibraryId): TreemapPath {
-    return { libraryId };
 }

@@ -20,9 +20,9 @@ export function UsageTreemapChart({
 }: UsageTreemapChartProps): ReactNode {
     return (
         <Treemap
-            // `TreemapData` is an open record and an interface never satisfies
-            // one implicitly; the extra keys are exactly what we want carried.
-            data={nodes as TreemapData[]}
+            // `TreemapData` is an open record, which no union satisfies
+            // implicitly; the extra keys are exactly what we want carried.
+            data={nodes as unknown as TreemapData[]}
             height={h}
             valueFormatter={formatCount}
             style={{ cursor: "pointer" }}

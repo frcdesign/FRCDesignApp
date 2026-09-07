@@ -20,10 +20,7 @@ import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
 import { getLibraryName } from "../../../../features/library/library-path";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
-import {
-    libraryRoot,
-    UsageTreemap
-} from "../../../../features/dashboard/usage-treemap";
+import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { SectionCard } from "../../../../features/dashboard/section";
 
@@ -111,7 +108,7 @@ function LibraryBody({
                    the next library does not have. */
                 <UsageTreemap
                     key={libraryId}
-                    root={libraryRoot(libraryId)}
+                    root={{ libraryId }}
                     parts={parts.data.map((part) => ({ ...part, libraryId }))}
                 />
             ) : (

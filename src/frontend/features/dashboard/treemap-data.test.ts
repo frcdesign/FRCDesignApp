@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LibraryId } from "@backend/features/library/library-id";
-import { toNodes, type UsagePart } from "./treemap-data";
+import { toNodes, TreemapKind, type UsagePart } from "./treemap-data";
 
 function part({
     elementId = "e-1",
@@ -54,10 +54,11 @@ describe("toNodes at the library level", () => {
         expect(nodes.map((node) => node.value)).toEqual([40, 35]);
     });
 
-    it("carries a library and no group, so a click descends one level", () => {
-        expect(nodes[0].libraryId).toBe(LibraryId.MKCAD);
-        expect(nodes[0].groupName).toBeUndefined();
-        expect(nodes[0].elementId).toBeUndefined();
+    it("is a library tile, so a click descends one level", () => {
+        expect(nodes[0]).toMatchObject({
+            kind: TreemapKind.LIBRARY,
+            libraryId: LibraryId.MKCAD
+        });
     });
 
     it("gives each library its own color rather than a rank shade", () => {
@@ -114,9 +115,11 @@ describe("toNodes at the part level", () => {
             "Versa",
             "MAXPlanetary"
         ]);
-        expect(nodes[0].elementId).toBe("e-1");
-        expect(nodes[0].libraryId).toBe(LibraryId.FRC_DESIGN_LIB);
-        expect(nodes[0].groupName).toBeUndefined();
+        expect(nodes[0]).toMatchObject({
+            kind: TreemapKind.PART,
+            elementId: "e-1",
+            libraryId: LibraryId.FRC_DESIGN_LIB
+        });
     });
 
     it("returns nothing when the group is not in the range", () => {
@@ -139,7 +142,9 @@ describe("toNodes at the part level", () => {
             groupName: "Wheels"
         });
 
-        expect(nodes.map((node) => node.elementId)).toEqual(["b"]);
+        expect(nodes).toMatchObject([
+            { kind: TreemapKind.PART, elementId: "b" }
+        ]);
     });
 });
 

@@ -1,7 +1,6 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { UnknownLibrary } from "../../../../features/dashboard/unknown-library";
 
 function isLibraryId(libraryId: string): libraryId is LibraryId {
     return (Object.values(LibraryId) as string[]).includes(libraryId);
@@ -19,12 +18,9 @@ export const Route = createFileRoute("/dashboard/library/$libraryId")({
         // Widened back out: parse() asserts the type, this is what checks it.
         const libraryId: string = params.libraryId;
         if (!isLibraryId(libraryId)) {
-            throw new Error(`Unknown library: ${libraryId}`);
+            throw notFound();
         }
-    },
-    // The app's shared error pages send users to `/app`, which is wrong for an
-    // anonymous dashboard visitor.
-    errorComponent: UnknownLibrary
+    }
 });
 
 function LibraryLayout(): ReactNode {

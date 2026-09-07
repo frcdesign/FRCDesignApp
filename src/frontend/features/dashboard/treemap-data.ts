@@ -17,18 +17,32 @@ export interface TreemapPath {
     groupName?: string;
 }
 
-/**
- * One tile, its area a share of its parent's insertions. The optional keys say
- * what a click does: descend a level, or open a part's dashboard.
- */
-export interface TreemapNode {
+/** What a tile stands for, and so what clicking it does. */
+export enum TreemapKind {
+    LIBRARY = "library",
+    GROUP = "group",
+    PART = "part"
+}
+
+/** What every tile carries; its area is a share of its parent's insertions. */
+interface TileBase {
     name: string;
     value: number;
     color: string;
-    libraryId?: LibraryId;
-    groupName?: string;
-    elementId?: string;
 }
+
+/**
+ * One tile. Discriminated rather than a bag of optional ids, so a click reads
+ * the level it is on instead of guessing from which keys are set.
+ */
+export type TreemapNode =
+    | (TileBase & { kind: TreemapKind.LIBRARY; libraryId: LibraryId })
+    | (TileBase & { kind: TreemapKind.GROUP; groupName: string })
+    | (TileBase & {
+          kind: TreemapKind.PART;
+          libraryId: LibraryId;
+          elementId: string;
+      });
 
 /**
  * Shades by rank off one hue, darkest first: monotone rather than cycling, so a
@@ -55,20 +69,19 @@ function within(parts: UsagePart[], path: TreemapPath): UsagePart[] {
     );
 }
 
-/** Sums `parts` by a key, largest first, then colors by rank. */
-function rollUp(
+/** Insertions summed by a key, largest first — so an index is a shade rank. */
+function totalsBy<K extends string>(
     parts: UsagePart[],
-    keyOf: (part: UsagePart) => string,
-    toNode: (key: string, value: number, rank: number) => TreemapNode
-): TreemapNode[] {
-    const totals = new Map<string, number>();
+    keyOf: (part: UsagePart) => K
+): { key: K; value: number }[] {
+    const totals = new Map<K, number>();
     for (const part of parts) {
         const key = keyOf(part);
         totals.set(key, (totals.get(key) ?? 0) + part.insertCount);
     }
-    return [...totals.entries()]
+    return [...totals]
         .sort(([, a], [, b]) => b - a)
-        .map(([key, value], rank) => toNode(key, value, rank));
+        .map(([key, value]) => ({ key, value }));
 }
 
 /**
@@ -79,14 +92,13 @@ export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
     const shown = within(parts, path);
 
     if (path.libraryId === undefined) {
-        return rollUp(
-            shown,
-            (part) => part.libraryId,
-            (key, value) => ({
+        return totalsBy(shown, (part) => part.libraryId).map(
+            ({ key, value }) => ({
+                kind: TreemapKind.LIBRARY,
                 name: getLibraryName(key),
                 value,
                 color: `var(--mantine-color-${getLibraryColor(key)}-6)`,
-                libraryId: key as LibraryId
+                libraryId: key
             })
         );
     }
@@ -94,10 +106,9 @@ export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
     const hue = getLibraryColor(path.libraryId);
 
     if (path.groupName === undefined) {
-        return rollUp(
-            shown,
-            (part) => part.groupName,
-            (key, value, rank) => ({
+        return totalsBy(shown, (part) => part.groupName).map(
+            ({ key, value }, rank) => ({
+                kind: TreemapKind.GROUP,
                 name: key,
                 value,
                 color: shade(hue, rank),
@@ -109,10 +120,11 @@ export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
     return shown
         .sort((a, b) => b.insertCount - a.insertCount)
         .map((part, rank) => ({
+            kind: TreemapKind.PART,
             name: part.name,
             value: part.insertCount,
             color: shade(hue, rank),
-            elementId: part.path.elementId,
-            libraryId: part.libraryId
+            libraryId: part.libraryId,
+            elementId: part.path.elementId
         }));
 }
