@@ -210,7 +210,6 @@ export interface InsertableReportOut {
     insertCount: number;
     /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    firstInsertedAt?: number;
     uniqueUsers: number;
     /** How many users currently have this part favorited. */
     favorites: number;

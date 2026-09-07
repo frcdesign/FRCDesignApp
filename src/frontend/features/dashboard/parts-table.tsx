@@ -2,7 +2,7 @@ import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
 import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { MiniSparkline } from "./charts";
+import { AppSparkline } from "./charts";
 import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -55,9 +55,9 @@ export function PartsTable({
         [parts, search, sort]
     );
 
-    function toggle(column: SortColumn): void {
+    const toggle = (column: SortColumn): void => {
         setSort((prev) => nextSort(prev, column));
-    }
+    };
 
     if (shown.length === 0) {
         return (
@@ -204,7 +204,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 {formatCount(part.insertCount)}
             </Table.Td>
             <Table.Td>
-                <MiniSparkline data={part.recent} {...ROW_SPARKLINE} />
+                <AppSparkline data={part.recent} {...ROW_SPARKLINE} />
             </Table.Td>
             {/* Stops the row's own navigation: this link leaves the app. */}
             <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>

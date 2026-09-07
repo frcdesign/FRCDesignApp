@@ -1,10 +1,10 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import type { MiniSparklineProps } from "./sparkline";
+import type { AppSparklineProps } from "./sparkline";
 import type {
     LibraryInsertsChartProps,
     MetricDetailChartProps
 } from "./trend-chart";
-import type { UsageTreemapChartProps } from "./treemap-chart";
+import type { AppTreemapProps } from "./treemap-chart";
 
 /**
  * Every chart the dashboard draws, each behind its own code split: recharts and
@@ -20,10 +20,10 @@ function Placeholder({ h }: { h: number }): ReactNode {
 }
 
 const Sparkline = lazy(() =>
-    import("./sparkline").then((module) => ({ default: module.MiniSparkline }))
+    import("./sparkline").then((module) => ({ default: module.AppSparkline }))
 );
 
-export function MiniSparkline(props: MiniSparklineProps): ReactNode {
+export function AppSparkline(props: AppSparklineProps): ReactNode {
     return (
         <Suspense fallback={<Placeholder h={props.h} />}>
             <Sparkline {...props} />
@@ -63,11 +63,11 @@ export function LibraryInsertsChart(
 
 const Treemap = lazy(() =>
     import("./treemap-chart").then((module) => ({
-        default: module.UsageTreemapChart
+        default: module.AppTreemap
     }))
 );
 
-export function UsageTreemapChart(props: UsageTreemapChartProps): ReactNode {
+export function AppTreemap(props: AppTreemapProps): ReactNode {
     return (
         <Suspense fallback={<Placeholder h={props.h} />}>
             <Treemap {...props} />

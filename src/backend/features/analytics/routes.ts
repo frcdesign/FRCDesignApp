@@ -351,7 +351,6 @@ analyticsRoutes.get(
                 insertCount === 0 ? undefined : firstUsed,
                 windowEnd
             ),
-            firstInsertedAt: stats?.firstInsertedAt,
             uniqueUsers: uniqueUsers?.value ?? 0,
             favorites: favoriteCount?.value ?? 0,
             targets,

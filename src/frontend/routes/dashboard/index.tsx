@@ -76,17 +76,17 @@ function DashboardOverview(): ReactNode {
                 </Card>
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>
                     <TrendTile
-                        metric={METRICS.quickShare}
+                        metric={METRICS.quickFraction}
                         totals={totals}
                         series={metricSeries}
                     />
                     <TrendTile
-                        metric={METRICS.fastenShare}
+                        metric={METRICS.fastenFraction}
                         totals={totals}
                         series={metricSeries}
                     />
                     <TrendTile
-                        metric={METRICS.deriveShare}
+                        metric={METRICS.deriveFraction}
                         totals={totals}
                         series={metricSeries}
                     />

@@ -30,7 +30,7 @@ import { toDayRange } from "../../../../features/dashboard/range";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import {
     formatCount,
-    formatShare
+    formatFraction
 } from "../../../../features/dashboard/format";
 
 interface PartSearch {
@@ -136,7 +136,7 @@ function ReportBody({
                 />
                 <SummaryCard
                     label="Derived"
-                    value={formatShare(
+                    value={formatFraction(
                         report.targets[ElementType.PART_STUDIO],
                         report.insertCount
                     )}

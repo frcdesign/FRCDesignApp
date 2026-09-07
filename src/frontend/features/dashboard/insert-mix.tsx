@@ -2,7 +2,7 @@ import { Group, Progress, Stack, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import type { InsertSourceUsage } from "@backend/features/analytics/contract";
 import { InsertSource } from "@backend/features/analytics/events";
-import { formatCount, formatShare } from "./format";
+import { formatCount, formatFraction } from "./format";
 
 const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.SEARCH]: "Search results",
@@ -36,7 +36,7 @@ export function InsertSourceBreakdown({
                         <Text size="sm">{SOURCE_LABELS[source.source]}</Text>
                         <Text size="sm" c="dimmed">
                             {formatCount(source.count)} (
-                            {formatShare(source.count, total)})
+                            {formatFraction(source.count, total)})
                         </Text>
                     </Group>
                     <Progress value={(source.count / total) * 100} size="sm" />

@@ -1,7 +1,7 @@
-/** How the dashboard spells a number, a share and a day. */
+/** How the dashboard spells a number and a fraction of one. */
 
 /** Stands in for a number there is no way to state. */
-export const NO_VALUE = "—";
+const NO_VALUE = "—";
 
 /** Formats a count for the stat tiles, e.g. 12400 -> "12,400". */
 export function formatCount(value: number | undefined): string {
@@ -15,20 +15,13 @@ export function formatPercent(value: number): string {
 }
 
 /**
- * One number as a share of another. A total that is absent and one that is zero
- * read the same: there is nothing to take a share of either way.
+ * One number as a fraction of another. A total that is absent and one that is
+ * zero read the same: there is nothing to take a fraction of either way.
  */
-export function formatShare(part: number, total: number | undefined): string {
+export function formatFraction(
+    part: number,
+    total: number | undefined
+): string {
     if (!total) return NO_VALUE;
     return formatPercent((part / total) * 100);
-}
-
-/** Formats a "YYYY-MM-DD" day key as a short date. */
-export function formatDay(day: string): string {
-    return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC"
-    });
 }

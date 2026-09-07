@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
 import { IconSize } from "../../lib/style-constants";
 import { ChangeIndicator } from "./change-indicator";
-import { MiniSparkline } from "./charts";
+import { AppSparkline } from "./charts";
 import { formatCount } from "./format";
 
 const SPARKLINE_HEIGHT = 40;
@@ -48,7 +48,7 @@ export function StatTile({
                     )
                 )}
             </Group>
-            {spark && <MiniSparkline data={spark} h={SPARKLINE_HEIGHT} />}
+            {spark && <AppSparkline data={spark} h={SPARKLINE_HEIGHT} />}
         </Card>
     );
 }

@@ -2,7 +2,7 @@ import { Anchor, Breadcrumbs, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../library/library-path";
-import { UsageTreemapChart } from "./charts";
+import { AppTreemap } from "./charts";
 import { SectionCard } from "./section";
 import {
     toNodes,
@@ -34,7 +34,7 @@ export function UsageTreemap({
 
     const nodes = useMemo(() => toNodes(parts, path), [parts, path]);
 
-    function select(node: TreemapNode): void {
+    const select = (node: TreemapNode): void => {
         switch (node.kind) {
             case TreemapKind.LIBRARY:
                 return setPath({ libraryId: node.libraryId });
@@ -48,34 +48,34 @@ export function UsageTreemap({
                     search: { element: node.elementId }
                 });
         }
-    }
+    };
 
     return (
         <SectionCard title="Usage breakdown">
-            <Crumbs root={root} path={path} onSelect={setPath} />
+            <AppBreadcrumbs root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
                 <Text c="dimmed" py="xl" ta="center">
                     Nothing was inserted in this range.
                 </Text>
             ) : (
-                <UsageTreemapChart
-                    nodes={nodes}
-                    h={CHART_HEIGHT}
-                    onSelect={select}
-                />
+                <AppTreemap nodes={nodes} h={CHART_HEIGHT} onSelect={select} />
             )}
         </SectionCard>
     );
 }
 
-interface CrumbsProps {
+interface AppBreadcrumbsProps {
     root: TreemapPath;
     path: TreemapPath;
     onSelect: (path: TreemapPath) => void;
 }
 
 /** Every level above the current one, each clickable to climb back to it. */
-function Crumbs({ root, path, onSelect }: CrumbsProps): ReactNode {
+function AppBreadcrumbs({
+    root,
+    path,
+    onSelect
+}: AppBreadcrumbsProps): ReactNode {
     const steps: { label: string; to: TreemapPath }[] = [];
 
     if (root.libraryId === undefined) {

@@ -42,9 +42,9 @@ describe("metric definitions", () => {
             .filter(isPercentage)
             .map((metric) => metric.key);
         expect(shares.sort()).toEqual([
-            "deriveShare",
-            "fastenShare",
-            "quickShare"
+            "deriveFraction",
+            "fastenFraction",
+            "quickFraction"
         ]);
     });
 
@@ -58,7 +58,7 @@ describe("metric definitions", () => {
                     targets: targets(24, 16)
                 })
             ],
-            METRICS.fastenShare
+            METRICS.fastenFraction
         );
         expect(point.value).toBe(25);
     });
@@ -79,7 +79,7 @@ describe("toTrend", () => {
                 day(0, { inserts: 10, quickInserts: 3 }),
                 day(1, { inserts: 4, quickInserts: 1 })
             ],
-            METRICS.quickShare
+            METRICS.quickFraction
         );
         expect(trend.map((point) => point.value)).toEqual([30, 25]);
     });
@@ -92,7 +92,7 @@ describe("toTrend", () => {
                 day(index + 1, { inserts: 99, quickInserts: 0 })
             )
         ];
-        const [first] = toTrend(points, METRICS.quickShare);
+        const [first] = toTrend(points, METRICS.quickFraction);
         expect(first.value).toBeLessThan(1);
     });
 
@@ -118,7 +118,7 @@ describe("toTrend", () => {
     });
 
     it("reports zero rather than dividing by zero", () => {
-        const [point] = toTrend([day(0)], METRICS.quickShare);
+        const [point] = toTrend([day(0)], METRICS.quickFraction);
         expect(point.value).toBe(0);
     });
 
@@ -180,14 +180,14 @@ describe("rangeValue", () => {
                 day(0, { inserts: 1, quickInserts: 1 }),
                 day(1, { inserts: 99, quickInserts: 0 })
             ],
-            METRICS.quickShare
+            METRICS.quickFraction
         );
         expect(value).toBeCloseTo(1, 1);
     });
 
     it("reports zero for an empty range", () => {
         expect(rangeValue([], METRICS.inserts)).toBe(0);
-        expect(rangeValue([], METRICS.quickShare)).toBe(0);
+        expect(rangeValue([], METRICS.quickFraction)).toBe(0);
     });
 });
 
@@ -215,12 +215,12 @@ describe("rangeTerms", () => {
             day(1, { inserts: 30, quickInserts: 7 })
         ];
 
-        expect(rangeTerms(points, METRICS.quickShare)).toEqual({
+        expect(rangeTerms(points, METRICS.quickFraction)).toEqual({
             numerator: 10,
             denominator: 40
         });
         // Those terms are exactly what the displayed value divides.
-        expect(rangeValue(points, METRICS.quickShare)).toBeCloseTo(25, 5);
+        expect(rangeValue(points, METRICS.quickFraction)).toBeCloseTo(25, 5);
     });
 
     it("leaves the denominator at zero for a count", () => {

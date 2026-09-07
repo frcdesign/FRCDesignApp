@@ -4,7 +4,7 @@ import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { getLibraryShade } from "../../theme";
-import { MUTED_MARK } from "../../lib/style-constants";
+import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
 import { toChartData } from "./series";
 import { type BucketPoint, type Granularity } from "./series";
 import type { ChartReferenceLineProps } from "@mantine/charts";
@@ -56,7 +56,7 @@ export function MetricDetailChart({
                 {
                     name: "value",
                     label: metric.detailLabel,
-                    color: "var(--mantine-primary-color-filled)"
+                    color: PrimaryColor.FILLED
                 }
             ]}
         />

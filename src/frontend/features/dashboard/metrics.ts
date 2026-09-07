@@ -13,9 +13,9 @@ import {
 
 export type MetricKey =
     | "inserts"
-    | "fastenShare"
-    | "quickShare"
-    | "deriveShare";
+    | "fastenFraction"
+    | "quickFraction"
+    | "deriveFraction";
 
 /**
  * How one number is derived, formatted and trended, so a metric reads the same
@@ -50,8 +50,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.inserts,
         detailLabel: "Total uses"
     },
-    fastenShare: {
-        key: "fastenShare",
+    fastenFraction: {
+        key: "fastenFraction",
         label: "Insert and fasten",
         description:
             "How often people use insert and fasten instead of inserting and mating by hand. Onshape only offers it when the open tab is an assembly, so part-studio inserts are left out of the denominator entirely \u2014 otherwise this would mostly track how much assembly work was happening.",
@@ -64,8 +64,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.fastenInserts,
         detailLabel: "% of assembly inserts"
     },
-    quickShare: {
-        key: "quickShare",
+    quickFraction: {
+        key: "quickFraction",
         label: "Quick insert",
         description:
             "How often people insert straight from a card\u2019s context menu rather than opening the insert menu. A low share on a configurable part is expected, since choosing values needs the menu.",
@@ -77,8 +77,8 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.quickInserts,
         detailLabel: "% of inserts"
     },
-    deriveShare: {
-        key: "deriveShare",
+    deriveFraction: {
+        key: "deriveFraction",
         label: "Derived into a part studio",
         description:
             "How often a part is derived into a part studio rather than inserted into an assembly. A library people derive from is being used as a starting point to modify; one people insert into assemblies is being used as finished hardware.",

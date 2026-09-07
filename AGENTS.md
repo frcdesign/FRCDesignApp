@@ -15,6 +15,10 @@ A component's props are a named `interface <Component>Props` declared just above
 it, never an inline object type — the name is what error messages and editors
 show at the call site.
 
+A function declared inside a component is a `const` arrow, never a `function`
+declaration: the surrounding component is the hoisting boundary, and an arrow
+reads as the value it is.
+
 ## Layout
 
 `src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There

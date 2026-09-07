@@ -1,11 +1,12 @@
 import { Sparkline } from "@mantine/charts";
 import { type ReactNode } from "react";
+import { PrimaryColor } from "../../lib/style-constants";
 
 // Kept in this lazily-loaded module so recharts and its styles stay out of the
 // Onshape panel bundle entirely.
 import "@mantine/charts/styles.layer.css";
 
-export interface MiniSparklineProps {
+export interface AppSparklineProps {
     data: number[];
     h: number;
     /** Fills its container when omitted, which is what a card wants. */
@@ -16,17 +17,19 @@ export interface MiniSparklineProps {
  * A shape, not a chart: no axes, nothing to read a value off. Flat rather than
  * absent at zero, so a row never changes height.
  */
-export function MiniSparkline({ data, h, w }: MiniSparklineProps): ReactNode {
+export function AppSparkline({ data, h, w }: AppSparklineProps): ReactNode {
     return (
         <Sparkline
             h={h}
             w={w}
             data={data}
+            // Mantine's own default is blue, whatever the theme says.
+            color={PrimaryColor.FILLED}
+            // The rest are departures from its defaults: a smooth curve, and a
+            // fainter, thinner line, since this sits behind a number.
             curveType="monotone"
-            color="var(--mantine-primary-color-filled)"
             fillOpacity={0.15}
             strokeWidth={1.5}
-            withGradient
         />
     );
 }

@@ -21,8 +21,8 @@ import {
     toTrend,
     type MetricDefinition
 } from "./metrics";
-import { formatCount, formatPercent, formatShare } from "./format";
-import { MetricDetailChart, MiniSparkline } from "./charts";
+import { formatCount, formatPercent, formatFraction } from "./format";
+import { MetricDetailChart, AppSparkline } from "./charts";
 
 const SPARKLINE_HEIGHT = 40;
 // Narrow enough that a middle-column tile can open the panel on either side.
@@ -52,7 +52,7 @@ export function TrendTile({
     const value = percentage ? formatPercent(range) : formatCount(range);
 
     const lifetime = percentage
-        ? formatShare(
+        ? formatFraction(
               metric.lifetimeValue(totals),
               metric.lifetimeDenominator?.(totals)
           )
@@ -82,7 +82,7 @@ export function TrendTile({
                         />
                     </Group>
                     <Title order={2}>{value}</Title>
-                    <MiniSparkline
+                    <AppSparkline
                         data={trend.map((point) => point.value)}
                         h={SPARKLINE_HEIGHT}
                     />
