@@ -112,8 +112,8 @@ interface MetricTermsProps {
 }
 
 /**
- * Names what went into the number, so a share reads as an explicit division
- * rather than a percentage the reader has to take on trust.
+ * Names what went into the number, so a percentage reads as the division it is
+ * rather than one the reader has to take on trust.
  */
 function MetricTerms({ metric, series }: MetricTermsProps): ReactNode {
     const terms = rangeTerms(series, metric);
@@ -122,12 +122,16 @@ function MetricTerms({ metric, series }: MetricTermsProps): ReactNode {
         <>
             <Divider />
             <Stack gap={2}>
-                <Row label={metric.numeratorLabel} value={terms.numerator} />
+                <Row
+                    role={metric.denominatorLabel ? "Numerator" : undefined}
+                    label={metric.numeratorLabel}
+                    value={terms.numerator}
+                />
                 {metric.denominatorLabel && (
                     <Row
+                        role="Denominator"
                         label={metric.denominatorLabel}
                         value={terms.denominator}
-                        dividedBy
                     />
                 )}
             </Stack>
@@ -136,16 +140,21 @@ function MetricTerms({ metric, series }: MetricTermsProps): ReactNode {
 }
 
 interface RowProps {
+    /** "Numerator" or "Denominator"; absent on a metric that divides by
+     * nothing, where naming a numerator would be odd. */
+    role?: string;
     label: string;
     value: number;
-    dividedBy?: boolean;
 }
 
-function Row({ label, value, dividedBy }: RowProps): ReactNode {
+function Row({ role, label, value }: RowProps): ReactNode {
     return (
         <Group justify="space-between" gap="xs" wrap="nowrap">
-            <Text size="sm" c="dimmed">
-                {dividedBy ? `÷ ${label}` : label}
+            <Text size="sm">
+                {role && `${role}: `}
+                <Text span size="sm" c="dimmed">
+                    {label}
+                </Text>
             </Text>
             <Text size="sm" fw={FontWeight.SEMI_BOLD}>
                 {formatCount(value)}
