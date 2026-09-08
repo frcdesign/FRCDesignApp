@@ -10,6 +10,7 @@ import {
 import { rollupWrites } from "./rollups";
 import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
+import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import { type Selection } from "../configurations/models";
 import { appliedSelection } from "../configurations/storage";
@@ -22,8 +23,9 @@ export function toDayKey(timestamp: number): string {
 export interface InsertEvent {
     libraryId: LibraryId;
     userId: string;
-    /** Onshape element id — the key analytics is stored against. */
-    elementId: string;
+    /** The version-pinned tab inserted from, logged whole: the rollups key on
+     * its element id, and the rest says which version was used. */
+    path: ElementPath;
     insertableId: string;
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
@@ -69,7 +71,7 @@ export async function trackInsert(
 
     await record(db, {
         ...core(EventType.INSERT, now, event),
-        elementId: event.elementId,
+        ...event.path,
         insertableId: event.insertableId,
         targetElementType: event.targetElementType,
         selection: await appliedSelection(
@@ -120,6 +122,9 @@ function core(
  */
 const NOT_AN_INSERT: InsertColumns = {
     elementId: null,
+    documentId: null,
+    instanceId: null,
+    instanceType: null,
     insertableId: null,
     targetElementType: null,
     selection: null,

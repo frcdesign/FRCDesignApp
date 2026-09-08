@@ -1,4 +1,6 @@
 import { and, eq } from "drizzle-orm";
+import { HttpStatus } from "http-status-ts";
+import { internalError } from "../../lib/api-error";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
@@ -240,6 +242,8 @@ analyticsRoutes.get(
             db
                 .select({
                     elementId: insertables.elementId,
+                    documentId: insertables.documentId,
+                    versionId: insertables.versionId,
                     name: insertables.name,
                     parameters: configurations.parameters
                 })
@@ -273,11 +277,11 @@ analyticsRoutes.get(
                 for (const value of parameter.values) {
                     if (value.count > threshold) continue;
                     out.push({
-                        elementId: part.elementId,
+                        path: toElementPath(part),
                         partName: part.name,
                         parameterId: parameter.parameterId,
                         parameterName: parameter.name,
-                        option: value,
+                        value,
                         parameterTotal: parameter.total
                     });
                 }
@@ -288,7 +292,7 @@ analyticsRoutes.get(
         // an option skipped on a heavily configured part is the stronger signal.
         out.sort(
             (a, b) =>
-                a.option.count - b.option.count ||
+                a.value.count - b.value.count ||
                 b.parameterTotal - a.parameterTotal ||
                 a.partName.localeCompare(b.partName)
         );
@@ -339,12 +343,17 @@ analyticsRoutes.get(
             windowStart
         );
 
-        const parameters = await getPartParameters(db, insertable?.id);
+        // Only a part still in the library has a report: its name, its path
+        // and its parameters all come from the row that is no longer there.
+        if (!insertable) {
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+        }
+
+        const parameters = await getPartParameters(db, insertable.id);
 
         const out: InsertableReportOut = {
-            elementId,
-            name: insertable?.name,
-            path: insertable && toElementPath({ ...insertable, elementId }),
+            name: insertable.name,
+            path: toElementPath({ ...insertable, elementId }),
             insertCount,
             usesPerMonth: usesPerMonth(
                 insertCount,

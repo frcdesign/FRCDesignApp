@@ -58,7 +58,7 @@ export function OptionsTable({
                 <Table.Tbody>
                     {options.map((option) => (
                         <OptionRow
-                            key={`${option.elementId}-${option.parameterId}-${option.option.value}`}
+                            key={`${option.path.elementId}-${option.parameterId}-${option.value.value}`}
                             libraryId={libraryId}
                             option={option}
                         />
@@ -85,18 +85,18 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
                 void navigate({
                     to: "/dashboard/library/$libraryId/part",
                     params: { libraryId },
-                    search: { element: option.elementId }
+                    search: { element: option.path.elementId }
                 })
             }
         >
             <Table.Td>{option.partName}</Table.Td>
             <Table.Td>{option.parameterName}</Table.Td>
             <Table.Td>
-                <OptionLabel value={option.option} />
+                <OptionLabel value={option.value} />
             </Table.Td>
-            <Table.Td ta="right">{formatCount(option.option.count)}</Table.Td>
+            <Table.Td ta="right">{formatCount(option.value.count)}</Table.Td>
             <Table.Td ta="right" c="dimmed">
-                {formatFraction(option.option.count, option.parameterTotal)}
+                {formatFraction(option.value.count, option.parameterTotal)}
             </Table.Td>
         </Table.Tr>
     );

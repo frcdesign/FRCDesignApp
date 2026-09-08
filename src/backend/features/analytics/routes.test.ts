@@ -746,14 +746,15 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            expect(body.map((row) => row.option.value)).toEqual([
+            expect(body.map((row) => row.value.value)).toEqual([
                 "one",
                 "three"
             ]);
             expect(body[0]).toMatchObject({
+                path: TEST_PART_STUDIO_PATH,
                 partName: "Test PARTSTUDIO",
                 parameterName: "Stages",
-                option: { count: 0 },
+                value: { count: 0 },
                 parameterTotal: 4
             });
         });
@@ -767,9 +768,9 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            const defaults = body.filter((row) => row.option.isDefault);
+            const defaults = body.filter((row) => row.value.isDefault);
             expect(defaults).toHaveLength(1);
-            expect(defaults[0].option.value).toBe("one");
+            expect(defaults[0].value.value).toBe("one");
         });
 
         it("leaves out an option used more than the threshold", async () => {
@@ -781,7 +782,7 @@ describe("analytics routes", () => {
             );
             const body: UnusedOptionOut[] = await res.json();
 
-            expect(body.map((row) => row.option.value)).toEqual([
+            expect(body.map((row) => row.value.value)).toEqual([
                 "two",
                 "three"
             ]);

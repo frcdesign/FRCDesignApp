@@ -25,7 +25,7 @@ export enum TreemapKind {
     PART = "part"
 }
 
-/** What every tile carries; its area is a share of its parent's insertions. */
+/** What every tile carries; its area is its fraction of the parent's uses. */
 interface TileBase {
     name: string;
     value: number;

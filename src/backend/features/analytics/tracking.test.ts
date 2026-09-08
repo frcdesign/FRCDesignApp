@@ -63,7 +63,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
         userId: TEST_USER_ID,
-        elementId,
+        path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
@@ -127,7 +127,9 @@ describe("tracking", () => {
                 type: "insert",
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID,
-                elementId,
+                // The whole path, so the version used is still known after a
+                // reload moves the library on.
+                ...TEST_PART_STUDIO_PATH,
                 selection: { size: "large" }
             });
             expect(event?.day).toBe(toDayKey(Date.now()));

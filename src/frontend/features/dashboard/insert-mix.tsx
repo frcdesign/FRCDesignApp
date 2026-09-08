@@ -14,7 +14,7 @@ interface InsertSourceBreakdownProps {
     sources: InsertSourceUsage[];
 }
 
-/** Headline shares of inserts: favorites, insert-and-fasten, quick insert. */
+/** Where inserts started from, each as a fraction of every insert. */
 export function InsertSourceBreakdown({
     sources
 }: InsertSourceBreakdownProps): ReactNode {

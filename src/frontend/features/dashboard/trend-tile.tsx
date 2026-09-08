@@ -23,7 +23,6 @@ import {
 } from "./metrics";
 import { formatCount, formatPercent, formatFraction } from "./format";
 import { AppSparkline } from "./sparkline";
-import { MetricDetailChart } from "./trend-chart";
 
 const SPARKLINE_HEIGHT = 40;
 // Narrow enough that a middle-column tile can open the panel on either side.
@@ -37,8 +36,8 @@ interface TrendTileProps {
 }
 
 /**
- * One number, its trend, and the full chart on hover. Leads with the range so
- * it agrees with the sparkline beneath it.
+ * One number and its trend, with what went into it on hover. Leads with the
+ * range so it agrees with the sparkline beneath it.
  */
 export function TrendTile({
     metric,
@@ -101,7 +100,6 @@ export function TrendTile({
                         </Text>
                     </div>
                     <MetricTerms metric={metric} series={series} />
-                    <MetricDetailChart metric={metric} trend={trend} />
                 </Stack>
             </HoverCard.Dropdown>
         </HoverCard>

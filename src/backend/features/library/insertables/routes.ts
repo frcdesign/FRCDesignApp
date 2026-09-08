@@ -10,7 +10,11 @@ import { requireEditorMiddleware } from "../../auth/guards";
 import { requireSignInMiddleware } from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
-import { type ElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
+import {
+    toElementPath,
+    type ElementPath,
+    INSTANCE_TYPES
+} from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
     type Selection
@@ -353,7 +357,7 @@ insertableRoutes.post(
             trackInsert(c, {
                 libraryId: insertable.libraryId,
                 userId: await c.var.getUserId(),
-                elementId: insertable.elementId,
+                path: sourcePath,
                 insertableId,
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
@@ -402,12 +406,7 @@ insertableRoutes.post(
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
-        const sourcePath: ElementPath = {
-            documentId: row.documentId,
-            instanceId: row.versionId,
-            instanceType: "v",
-            elementId: row.elementId
-        };
+        const sourcePath = toElementPath(row);
 
         const partTypes = row.isOpenComposite
             ? [PartType.COMPOSITE_PARTS]
@@ -440,7 +439,7 @@ insertableRoutes.post(
             trackInsert(c, {
                 libraryId: row.libraryId,
                 userId: await c.var.getUserId(),
-                elementId: row.elementId,
+                path: sourcePath,
                 insertableId,
                 targetElementType: ElementType.ASSEMBLY,
                 selection,

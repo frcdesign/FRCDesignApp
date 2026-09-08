@@ -193,20 +193,20 @@ export interface ConfigurationParameterUsage {
  * its options, so only an enum can have one nobody picked.
  */
 export interface UnusedOptionOut {
-    elementId: string;
+    path: ElementPath;
     partName: string;
     parameterId: string;
     parameterName: string;
-    option: ConfigurationValueUsage;
-    /** Recorded values for this parameter, so a count reads as a share. */
+    value: ConfigurationValueUsage;
+    /** Every recorded value for this parameter, which the count is a
+     * fraction of. */
     parameterTotal: number;
 }
 
 export interface InsertableReportOut {
-    elementId: string;
-    /** Absent once the part has left the library, as is the path to open it. */
-    name?: string;
-    path?: ElementPath;
+    /** Only a part still in the library is reported on, so both are known. */
+    name: string;
+    path: ElementPath;
     insertCount: number;
     /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;

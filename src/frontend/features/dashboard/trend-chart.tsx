@@ -38,7 +38,7 @@ export function MetricDetailChart({
     h = DETAIL_HEIGHT,
     programs
 }: MetricDetailChartProps): ReactNode {
-    const share = isPercentage(metric);
+    const percentage = isPercentage(metric);
     return (
         <LineChart
             h={h}
@@ -48,9 +48,11 @@ export function MetricDetailChart({
             curveType="monotone"
             withDots={trend.length <= 45}
             yAxisLabel={metric.detailLabel}
-            // A share is only comparable against a fixed axis.
-            yAxisProps={share ? { domain: [0, 100] } : undefined}
-            valueFormatter={(value) => (share ? `${value}%` : String(value))}
+            // A percentage is only comparable against a fixed axis.
+            yAxisProps={percentage ? { domain: [0, 100] } : undefined}
+            valueFormatter={(value) =>
+                percentage ? `${value}%` : String(value)
+            }
             referenceLines={seasonLines(programs, trend)}
             series={[
                 {

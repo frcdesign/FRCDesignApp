@@ -44,7 +44,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "inserts",
         label: "Total uses",
         description:
-            "The total number of times a part was inserted by the app. Inserting the same part twice counts twice.",
+            "The total number of times a part was inserted by the app.",
         numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
@@ -54,7 +54,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "fastenFraction",
         label: "Insert and fasten",
         description:
-            "The percentage of inserts into assemblies which are done using insert and fasten. Onshape only offers it on an assembly, so inserts into a part studio are left out of the denominator entirely.",
+            "The percentage of inserts into assemblies which are done using insert and fasten.",
         numeratorLabel: "Inserts that also fastened",
         denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
@@ -68,7 +68,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "quickFraction",
         label: "Quick insert",
         description:
-            "The percentage of inserts which are done via the right click context menu, rather than by opening the insert menu. A configurable part is expected to score low, since choosing values needs the menu.",
+            "The percentage of inserts which are done via the right click context menu.",
         numeratorLabel: "Quick inserts",
         denominatorLabel: "All inserts",
         numerator: (point) => point.quickInserts,
@@ -81,7 +81,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "assemblyFraction",
         label: "Into an assembly",
         description:
-            "The percentage of inserts into an assembly (as opposed to a part studio). A library people mostly derive into part studios is a starting point to modify; one people insert into assemblies is finished hardware.",
+            "The percentage of inserts into an assembly (as opposed to a part studio).",
         numeratorLabel: "Inserts into an assembly",
         denominatorLabel: "All inserts",
         numerator: (point) => point.targets[ElementType.ASSEMBLY],

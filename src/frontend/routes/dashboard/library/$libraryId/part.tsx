@@ -1,8 +1,6 @@
 import {
     Anchor,
-    Badge,
     Card,
-    Group,
     SimpleGrid,
     Stack,
     Text,
@@ -111,12 +109,7 @@ function ReportBody({
 
     return (
         <Stack gap="xl">
-            <Group gap="sm">
-                <PartTitle report={report} elementId={elementId} />
-                {report.name === null && (
-                    <Badge color="gray">No longer in library</Badge>
-                )}
-            </Group>
+            <PartTitle report={report} />
 
             <SimpleGrid cols={{ base: 1, sm: 3, lg: 5 }}>
                 <SummaryCard
@@ -156,16 +149,10 @@ function ReportBody({
 
 interface PartTitleProps {
     report: InsertableReportOut;
-    elementId: string;
 }
 
 /** The part's name, linked into Onshape like a part number is to its vendor. */
-function PartTitle({ report, elementId }: PartTitleProps): ReactNode {
-    const name = report.name ?? elementId;
-    if (!report.path) {
-        return <Title order={2}>{name}</Title>;
-    }
-
+function PartTitle({ report }: PartTitleProps): ReactNode {
     return (
         <Title order={2}>
             <Anchor
@@ -176,7 +163,7 @@ function PartTitle({ report, elementId }: PartTitleProps): ReactNode {
                 // Centres the icon on the text rather than on its baseline.
                 style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-                {name}
+                {report.name}
                 <ArrowSquareOut size={IconSize.MEDIUM} />
             </Anchor>
         </Title>

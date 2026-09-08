@@ -12,6 +12,7 @@ import {
     primaryKey
 } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../../lib/onshape/element-type";
+import { type InstanceType } from "../../lib/onshape/path";
 import { LibraryId } from "../library/library-id";
 import { Selection } from "../configurations/models";
 import { EventType, InsertSource } from "./events";
@@ -32,7 +33,12 @@ export const events = sqliteTable(
         day: text("day").notNull(),
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         userId: text("user_id").notNull(),
+        // The whole path inserted from, version included: what the part was
+        // when it was used, which the library row no longer says after a reload.
         elementId: text("element_id"),
+        documentId: text("document_id"),
+        instanceId: text("instance_id"),
+        instanceType: text("instance_type").$type<InstanceType>(),
         // The app id at event time; kept for debugging, never joined on
         insertableId: text("insertable_id"),
         // The type of tab the user inserted into, not the insertable's own type

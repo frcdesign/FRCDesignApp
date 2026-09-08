@@ -32,7 +32,6 @@ import {
 import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
 
 const db = getDb(env.DB);
-const elementId = TEST_PART_STUDIO_PATH.elementId;
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
 
 /** Every table the rollups write, read whole so a replay can be compared. */
@@ -56,7 +55,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
         userId: TEST_USER_ID,
-        elementId,
+        path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
