@@ -55,7 +55,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         label: "Insert and fasten",
         description:
             "The percentage of inserts into assemblies which are done using insert and fasten.",
-        numeratorLabel: "Inserts that also fastened",
+        numeratorLabel: "Insert and fasten inserts",
         denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
         // Onshape only offers fasten on an assembly target.
