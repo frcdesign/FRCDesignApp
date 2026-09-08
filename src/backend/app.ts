@@ -2,6 +2,7 @@
  * Composition root: binds the request's auth onto every request and mounts each
  * feature's routes. Everything it wires lives in a feature or in lib.
  */
+import { analyticsRoutes } from "./features/analytics/routes";
 import { accessRoutes, authRoutes } from "./features/auth/routes";
 import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
@@ -26,7 +27,8 @@ const apiRoutes = [
     configurationRoutes,
     thumbnailRoutes,
     favoriteRoutes,
-    buildStatusRoutes
+    buildStatusRoutes,
+    analyticsRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

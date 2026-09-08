@@ -1,5 +1,6 @@
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
 import { LibraryId } from "@backend/features/library/library-id";
+import { FILLED_SHADE } from "./lib/style-constants";
 
 /**
  * FRCDesign brand green ramp (index 6 = #4cae4f, the brand color).
@@ -22,7 +23,7 @@ const frcGreen: MantineColorsTuple = [
  * Falls back rather than throwing: the root themes the app even when the url
  * names a library that does not exist, which the route 404s separately.
  */
-function getLibraryColor(libraryId: string): string {
+export function getLibraryColor(libraryId: string): string {
     switch (libraryId) {
         case LibraryId.FTC_DESIGN_LIB:
             return "orange";
@@ -31,6 +32,11 @@ function getLibraryColor(libraryId: string): string {
         default:
             return "frcGreen";
     }
+}
+
+/** A library's color as Mantine's `color.shade`, for a chart series or tile. */
+export function getLibraryShade(libraryId: string): string {
+    return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
 }
 
 /** The frame stays neutral; a library's color is an accent on its controls. */

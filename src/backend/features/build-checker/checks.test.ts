@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls } from "../thumbnails/types";
 import { Vendor } from "../library/vendors";
 import { BuildIssueType } from "./issues";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
 import { thumbnailUrl } from "../thumbnails/keys";
 import { checkGroup, checkInsertable } from "./checks";
 
@@ -17,7 +17,7 @@ function defaultThumbnailUrl(size: ThumbnailSize): string {
         elementId: "element",
         microversionId: "microversion",
         size,
-        canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+        configurationKey: ELEMENT_DEFAULT_KEY
     });
 }
 

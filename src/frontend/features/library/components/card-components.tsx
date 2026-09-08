@@ -29,10 +29,11 @@ import {
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 
-import { ParameterValues } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
@@ -62,17 +63,19 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps) {
 
 interface QuickInsertItemProps {
     insertable: InsertableOut;
-    configuration?: ParameterValues;
+    selection?: Selection;
     isFavorite: boolean;
+    source: InsertSource;
 }
 
 export function QuickInsertItems(props: QuickInsertItemProps) {
-    const { insertable, configuration, isFavorite } = props;
+    const { insertable, selection, isFavorite, source } = props;
     const search = useSearch({ from: "/app" });
 
-    const insertMutation = useInsertMutation(insertable, configuration, {
+    const insertMutation = useInsertMutation(insertable, selection, {
         isFavorite,
-        isQuickInsert: true
+        isQuickInsert: true,
+        source
     });
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
@@ -190,11 +193,11 @@ interface PartNameAndNumberProps {
     searchHit?: SearchHit;
 }
 
-/** The matched configuration's name and part number, beneath the title. */
+/** The matched selection's name and part number, beneath the title. */
 function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
     const { title, searchHit } = props;
 
-    // The hit's best-matching configuration, minus a value repeating the title.
+    // The hit's best-matching selection, minus a value repeating the title.
     const partName =
         searchHit?.partName?.toLowerCase() !== title.toLowerCase()
             ? searchHit?.partName

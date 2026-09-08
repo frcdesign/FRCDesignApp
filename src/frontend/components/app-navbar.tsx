@@ -1,8 +1,6 @@
 import {
     ActionIcon,
-    Box,
     Button,
-    Center,
     Group,
     Input,
     Loader,
@@ -16,15 +14,13 @@ import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
-    maskedImage,
-    PrimaryColor,
-    RADIUS,
+    NAVBAR_ROW_HEIGHT,
     StatusColor
 } from "../lib/style-constants";
 import { ReactNode, RefObject, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import frcDesignBook from "/frc-design-book.svg";
+import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useGetUiState, useSetUiState } from "../lib/ui-state";
@@ -57,12 +53,13 @@ export function AppNavbar(): ReactNode {
             <Group
                 gap="sm"
                 px="sm"
+                h={NAVBAR_ROW_HEIGHT}
                 wrap="nowrap"
                 align="stretch"
                 bg={FRAME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
-                <FrcDesignBookIcon />
+                <AppBrand />
                 <LibraryTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <JobIndicator />
@@ -71,7 +68,7 @@ export function AppNavbar(): ReactNode {
                 </Group>
             </Group>
             {showSearch && (
-                <Group gap="xs" p="sm" wrap="nowrap">
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
                     <SearchBar />
                     <VendorMenu />
                 </Group>
@@ -120,31 +117,6 @@ function RunningJobLoader(): ReactNode {
     );
 }
 
-function FrcDesignBookIcon(): ReactNode {
-    return (
-        <Center
-            component="a"
-            href="https://frcdesign.org"
-            target="_blank"
-            aria-label="FRCDesign.org"
-            w={IconSize.CONTROL}
-            h={IconSize.CONTROL}
-            my="auto"
-            bg={PrimaryColor.FILLED}
-            c={PrimaryColor.CONTRAST}
-            style={{ borderRadius: RADIUS }}
-        >
-            {/* Masked, not drawn, so the book takes the tile's contrast color
-                rather than the gray in the file. */}
-            <Box
-                w={IconSize.SMALL}
-                h={IconSize.SMALL}
-                style={maskedImage(frcDesignBook)}
-            />
-        </Center>
-    );
-}
-
 /** Switches libraries; the url is what actually selects one. */
 function LibraryTabs(): ReactNode {
     const currentLibraryId = useLibraryId();
@@ -178,10 +150,13 @@ function LibraryTabs(): ReactNode {
             styles={{
                 // Hides the line under the tab list alone; the row owns one
                 // that spans it. The active indicator is colored separately.
-                root: { "--tab-border-color": "transparent" },
+                root: { "--tab-border-color": "transparent", minWidth: 0 },
                 // Three full names outgrow a narrow panel; scrolling beats
                 // reflowing the navbar into two rows.
                 list: {
+                    // Full height, so the underline lands on the row's border
+                    // rather than partway up a taller bar.
+                    height: "100%",
                     flexWrap: "nowrap",
                     overflowX: "auto",
                     scrollbarWidth: "none"

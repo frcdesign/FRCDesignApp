@@ -1,4 +1,4 @@
-import { ParameterValues } from "../../features/configurations/models";
+import { Selection } from "../../features/configurations/models";
 
 /** The instance kinds an Onshape path can address, as one definition: the type
  * and the runtime list validators check against both derive from it. */
@@ -24,8 +24,22 @@ export interface PartPath extends ElementPath {
     partId: string;
 }
 
+/** The version-pinned tab a stored insertable row addresses. */
+export function toElementPath(row: {
+    documentId: string;
+    versionId: string;
+    elementId: string;
+}): ElementPath {
+    return {
+        documentId: row.documentId,
+        instanceId: row.versionId,
+        instanceType: "v",
+        elementId: row.elementId
+    };
+}
+
 export interface ConfigurablePath extends ElementPath {
-    configuration: ParameterValues;
+    selection: Selection;
 }
 
 export function isDocumentPath(path: any): path is DocumentPath {
@@ -62,7 +76,7 @@ export function isConfigurablePath(
 ): path is ConfigurablePath {
     return (
         isElementPath(path) &&
-        (path as ConfigurablePath).configuration !== undefined
+        (path as ConfigurablePath).selection !== undefined
     );
 }
 

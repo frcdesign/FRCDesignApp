@@ -8,8 +8,8 @@ import {
 import { PartMetadata, SearchRecord } from "./models";
 import { Vendor } from "../library/vendors";
 
-function rec(canonicalConfiguration: string, partNumber = "PN"): SearchRecord {
-    return { partNumber, canonicalConfiguration };
+function rec(configurationKey: string, partNumber = "PN"): SearchRecord {
+    return { partNumber, configurationKey };
 }
 
 describe("findRecordForConfiguration", () => {

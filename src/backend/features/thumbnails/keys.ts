@@ -1,5 +1,5 @@
 /** Thumbnail addressing, shared so the client builds the urls the worker serves. */
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
 import { ThumbnailSize } from "./types";
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
@@ -14,12 +14,12 @@ export function thumbnailKey(
     elementId: string,
     microversionId: string,
     size: ThumbnailSize,
-    canonicalConfiguration: string = DEFAULT_CANONICAL_CONFIGURATION
+    configurationKey: string = ELEMENT_DEFAULT_KEY
 ): string {
-    if (canonicalConfiguration === DEFAULT_CANONICAL_CONFIGURATION) {
+    if (configurationKey === ELEMENT_DEFAULT_KEY) {
         return `thumbnails/default/${elementId}/${microversionId}/${size}`;
     }
-    const segment = encodeURIComponent(canonicalConfiguration);
+    const segment = encodeURIComponent(configurationKey);
     return `thumbnails/config/${elementId}/${microversionId}/${segment}/${size}`;
 }
 
@@ -28,7 +28,7 @@ export interface ThumbnailUrlOptions {
     microversionId: string;
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
-    canonicalConfiguration: string;
+    configurationKey: string;
     /** Whether a miss should start rendering this configuration. */
     renderThumbnail?: boolean;
     /** Only needed to render: what the render resolves the element from. */
@@ -45,7 +45,7 @@ export function thumbnailUrl({
     elementId,
     microversionId,
     size,
-    canonicalConfiguration,
+    configurationKey,
     renderThumbnail,
     insertableId,
     attempt
@@ -53,8 +53,8 @@ export function thumbnailUrl({
     // `v` is the one abbreviation: it is the cache version every immutable url
     // carries, and a render is pinned to the microversion it was taken from.
     const query = new URLSearchParams({ v: microversionId });
-    if (canonicalConfiguration !== DEFAULT_CANONICAL_CONFIGURATION) {
-        query.set("canonicalConfiguration", canonicalConfiguration);
+    if (configurationKey !== ELEMENT_DEFAULT_KEY) {
+        query.set("configurationKey", configurationKey);
         if (renderThumbnail && insertableId) {
             query.set("renderThumbnail", "true");
             query.set("insertableId", insertableId);

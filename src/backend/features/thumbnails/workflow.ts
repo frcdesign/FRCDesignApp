@@ -15,7 +15,7 @@ import { uploadConfigurationThumbnails } from "./store";
 export interface ThumbnailWorkflowParams {
     insertableId: string;
     /** Never the default, which loads eagerly with the element. */
-    canonicalConfiguration: string;
+    configurationKey: string;
     sessionId: string;
 }
 
@@ -31,8 +31,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<ThumbnailWorkflowParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { insertableId, canonicalConfiguration, sessionId } =
-            event.payload;
+        const { insertableId, configurationKey, sessionId } = event.payload;
 
         // Read rather than passed in: the stored row is what the key has to
         // agree with, and a request can carry a microversion it has moved past.
@@ -72,7 +71,7 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                         elementId: element.elementId
                     },
                     element.microversionId,
-                    canonicalConfiguration
+                    configurationKey
                 )
         );
     }

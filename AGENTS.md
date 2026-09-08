@@ -9,6 +9,16 @@ doc comment when the signature already says it (e.g. write "returns the access
 level, respecting the cache" — not a paragraph re-deriving the caching).
 Aggressively delete comments that narrate obvious implementation details.
 
+## Components
+
+A component's props are a named `interface <Component>Props` declared just above
+it, never an inline object type — the name is what error messages and editors
+show at the call site.
+
+A function declared inside a component is a `const` arrow, never a `function`
+declaration: the surrounding component is the hoisting boundary, and an arrow
+reads as the value it is.
+
 ## Layout
 
 `src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There
@@ -26,6 +36,32 @@ Both sides are organized the same way:
 Anything the frontend imports from a backend feature must be a leaf module —
 pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
+
+D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
+`features/analytics/schema.ts`, since nothing outside analytics reads them and
+they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
+file, so a new one has to be added there or its tables generate no migration.
+
+## Configurations
+
+A configuration takes exactly two forms, and `features/configurations/selection.ts`
+is the only place either is built:
+
+- A **selection** (`Selection`) is what someone picked: every parameter
+  the insertable declares, each value canonically spelled (base units, trimmed,
+  lowercase booleans). `toSelection` makes one out of whatever arrived — a partial map
+  from a search hit, a stored favorite, a request body — and every boundary
+  calls it. Parameter defaults are canonical too, from `parse-configuration`, so
+  nothing has to canonicalize one to compare against it.
+- A **`ConfigurationKey`** is that selection's identity: what it overrides,
+  encoded as `id=value;id=value`, with hidden parameters left out. It addresses
+  a render — R2 keys, thumbnail urls, stored records, Onshape itself — and
+  `ELEMENT_DEFAULT_KEY` (the empty string) is a selection that overrides
+  nothing.
+
+Raw text lives only inside the input a user is typing into. Don't add a third
+form: if something needs a different view of a selection, it wants a function in
+`selection.ts`, not a new shape.
 
 # Running the app
 

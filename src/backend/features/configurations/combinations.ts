@@ -3,7 +3,7 @@
  * parameters vary; quantity and string ones ride their Onshape defaults.
  */
 import {
-    ParameterValues,
+    Selection,
     BooleanParameter,
     ConfigurationParameter,
     EnumParameter,
@@ -59,7 +59,7 @@ export interface ConfigurationCount {
     count: number | null;
     band: IndexingBand;
     /** The combinations counted, so the load path need not enumerate again. */
-    configurations: ParameterValues[];
+    configurations: Selection[];
 }
 
 /** Shared, so the load path and the admin UI agree on which limit applies. */
@@ -116,7 +116,7 @@ export function countCombinations(
     let count = 0;
     let capped = false;
 
-    const walk = (depth: number, configuration: ParameterValues) => {
+    const walk = (depth: number, configuration: Selection) => {
         if (depth === indexed.length) {
             // The lone empty default is not a configuration of its own.
             if (Object.keys(configuration).length > 0) {
@@ -152,7 +152,7 @@ export function countCombinations(
 
 function parameterValues(
     parameter: EnumParameter | BooleanParameter,
-    configuration: ParameterValues,
+    configuration: Selection,
     parameters: ConfigurationParameter[]
 ): string[] {
     if (parameter.type === ParameterType.BOOLEAN) {
@@ -164,8 +164,9 @@ function parameterValues(
 }
 
 export interface EnumerateResult {
-    /** The enumerated configurations, or empty when `capped`. */
-    configurations: ParameterValues[];
+    /** What each combination varies — enums and booleans — so the one place a
+     * map is not yet whole; the only caller runs `toSelection` over them. */
+    configurations: Selection[];
     /** True when enumeration was stopped for exceeding the cap. */
     capped: boolean;
 }
@@ -178,17 +179,17 @@ export function enumerateConfigurations(
     parameters: ConfigurationParameter[],
     cap: number = MAX_PART_NUMBER_CONFIGURATIONS
 ): EnumerateResult {
-    let configurations: ParameterValues[] = [{}];
+    let configurations: Selection[] = [{}];
 
     for (const parameter of parameters) {
         if (!isIndexedParameter(parameter)) {
             continue;
         }
 
-        const next: ParameterValues[] = [];
+        const next: Selection[] = [];
         for (const configuration of configurations) {
-            // A parameter hidden in this partial configuration is left unset;
-            // Onshape applies its default.
+            // A parameter hidden in this partial combination is left unset;
+            // `toSelection` fills it from the default Onshape would apply.
             if (
                 !evaluateCondition(
                     parameter.condition,

@@ -21,70 +21,69 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
-    ParameterValues,
+    Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    defaultConfiguration?: ParameterValues;
+    initialSelection?: Selection;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
+    source: InsertSource;
 }
 
 /**
- * The selection the menu holds, in both the form insert sends and the canonical
- * one that names a thumbnail, plus whether it still stands where it opened.
+ * The selection the menu holds and its key, plus whether it still stands where
+ * it opened.
  */
-function useInsertSelection(defaultConfiguration?: ParameterValues) {
-    const [configuration, setConfiguration] = useState(defaultConfiguration);
-    // Reported by ConfigurationWrapper, which has the parameters and units the
-    // canonical form needs. Empty means the element's default configuration.
-    const [canonicalConfiguration, setCanonicalConfiguration] = useState(
-        DEFAULT_CANONICAL_CONFIGURATION
-    );
+function useInsertSelection(initialSelection?: Selection) {
+    const [selection, setSelection] = useState(initialSelection);
+    // Reported by ConfigurationWrapper, which has the parameters the key is
+    // measured against. Empty means the element's own defaults.
+    const [configurationKey, setConfigurationKey] =
+        useState(ELEMENT_DEFAULT_KEY);
     // The first report is what the menu opened with, and so what a right-click
     // on the card would have inserted. Absent until the parameters load.
     const [openedWith, setOpenedWith] = useState<string>();
 
-    const onCanonicalConfiguration = useCallback((canonical: string) => {
-        setCanonicalConfiguration(canonical);
-        setOpenedWith((opened) => opened ?? canonical);
+    const onConfigurationKey = useCallback((key: string) => {
+        setConfigurationKey(key);
+        setOpenedWith((opened) => opened ?? key);
     }, []);
 
     return {
-        configuration,
-        setConfiguration,
-        canonicalConfiguration,
-        onCanonicalConfiguration,
-        isUnchanged:
-            canonicalConfiguration ===
-            (openedWith ?? DEFAULT_CANONICAL_CONFIGURATION)
+        selection,
+        setSelection,
+        configurationKey,
+        onConfigurationKey,
+        isUnchanged: configurationKey === (openedWith ?? ELEMENT_DEFAULT_KEY)
     };
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, openedAt, onInsert } = props;
+    const { insertable, modalId, openedAt, onInsert, source } = props;
     const favorites = useFavoritesQuery().data?.favorites;
     const isSignedIn = useIsSignedIn();
 
     const {
-        configuration,
-        setConfiguration,
-        canonicalConfiguration,
-        onCanonicalConfiguration,
+        selection,
+        setSelection,
+        configurationKey,
+        onConfigurationKey,
         isUnchanged
-    } = useInsertSelection(props.defaultConfiguration);
+    } = useInsertSelection(props.initialSelection);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
@@ -119,9 +118,9 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <ConfigurationWrapper
                 insertableId={insertable.id}
                 microversionId={insertable.microversionId}
-                configuration={configuration}
-                setConfiguration={setConfiguration}
-                onCanonicalConfiguration={onCanonicalConfiguration}
+                selection={selection}
+                setSelection={setSelection}
+                onConfigurationKey={onConfigurationKey}
                 onRecord={setRecord}
             />
         );
@@ -135,17 +134,18 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    canonicalConfiguration={canonicalConfiguration}
+                    configurationKey={configurationKey}
                 />
                 {parameters}
             </AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
-                configuration={configuration}
-                canonicalConfiguration={canonicalConfiguration}
+                selection={selection}
+                configurationKey={configurationKey}
                 isUnchanged={isUnchanged}
                 openedAt={openedAt}
+                source={source}
                 onInsert={onInsert}
             />
         </>
@@ -155,11 +155,13 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
-    configuration?: ParameterValues;
-    canonicalConfiguration: string;
+    selection?: Selection;
+    configurationKey: string;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
     openedAt: number;
+    /** Where the insert began, which the menu and the buttons both record. */
+    source: InsertSource;
     onInsert: () => void;
 }
 
@@ -168,10 +170,11 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
     const {
         insertable,
         favorite,
-        configuration,
-        canonicalConfiguration,
+        selection,
+        configurationKey,
         isUnchanged,
         openedAt,
+        source,
         onInsert
     } = props;
     return (
@@ -181,8 +184,8 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={configuration}
-                        canonicalConfiguration={canonicalConfiguration}
+                        selection={selection}
+                        configurationKey={configurationKey}
                         large
                     />
                 </RequireSignIn>
@@ -191,17 +194,19 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         favorite={favorite}
                         insertable={insertable}
                         inInsertMenu
-                        configuration={configuration}
-                        canonicalConfiguration={canonicalConfiguration}
+                        selection={selection}
+                        configurationKey={configurationKey}
+                        source={source}
                     />
                 </MenuButton>
             </Group>
             <InsertButtons
                 insertable={insertable}
-                configuration={configuration}
+                selection={selection}
                 isUnchanged={isUnchanged}
                 isFavorite={favorite !== undefined}
                 openedAt={openedAt}
+                source={source}
                 onInsert={onInsert}
             />
         </AppModalFooter>
@@ -210,16 +215,17 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
 
 interface InsertButtonsProps {
     /**
-     * Whether the configuration is still the one the menu opened with, which a
+     * Whether the selection is still the one the menu opened with, which a
      * right-click on the card would have inserted without opening anything.
      */
     isUnchanged: boolean;
     insertable: InsertableOut;
-    configuration?: ParameterValues;
+    selection?: Selection;
     isFavorite: boolean;
     /** When the menu opened, for the quick insert tip. */
     openedAt: number;
     onInsert: () => void;
+    source: InsertSource;
 }
 
 /**
@@ -228,10 +234,11 @@ interface InsertButtonsProps {
 function InsertButtons(props: InsertButtonsProps): ReactNode {
     const {
         insertable,
-        configuration,
+        selection,
         isUnchanged,
         isFavorite,
         openedAt,
+        source,
         onInsert
     } = props;
 
@@ -239,8 +246,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     // Inserting targets the current Onshape document; there's nothing to insert
     // into when the app is open standalone.
     const isConnected = useIsConnectedToOnshape();
-    const insertMutation = useInsertMutation(insertable, configuration, {
-        isFavorite
+    const insertMutation = useInsertMutation(insertable, selection, {
+        isFavorite,
+        source
     });
     const uiState = useGetUiState();
     const setUiState = useSetUiState();
@@ -303,7 +311,7 @@ function showSignInPreviewToast() {
         color: "blue",
         icon: <InfoIcon size={IconSize.MEDIUM} />,
         message: renderNotification(
-            "Sign in to Onshape to see the configuration preview.",
+            "Sign in to Onshape to see the selection preview.",
             { text: "Sign in", onClick: startSignIn }
         )
     });

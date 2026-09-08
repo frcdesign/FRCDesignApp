@@ -8,6 +8,7 @@ import {
     VisibilityType
 } from "../configurations/models";
 import { getUnitDisplayStr } from "../configurations/enums";
+import { canonicalizeValue } from "../configurations/selection";
 import {
     type OnshapeConfigurationResponse,
     type OnshapeEnumOptionVisibilityConditionList,
@@ -167,5 +168,10 @@ export function parseOnshapeConfiguration(
         }
     }
 
-    return parameters;
+    // Canonical from here on, so a default is spelled the way a chosen value
+    // is and nothing downstream has to canonicalize one to compare them.
+    return parameters.map((parameter) => ({
+        ...parameter,
+        default: canonicalizeValue(parameter, parameter.default)
+    }));
 }

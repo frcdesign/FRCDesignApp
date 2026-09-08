@@ -24,6 +24,7 @@
     },
     "dependencies": {
         "@hono/zod-validator": "^0.9.0",
+        "@mantine/charts": "9.5.1",
         "@mantine/core": "^9.5.1",
         "@mantine/hooks": "^9.5.1",
         "@mantine/modals": "^9.5.1",
@@ -41,6 +42,7 @@
         "minisearch": "^7.2.0",
         "react": "^19.2.7",
         "react-dom": "^19.2.7",
+        "recharts": "^3.10.1",
         "typescript-parsec": "^0.3.4",
         "zod": "^4.4.3"
     },

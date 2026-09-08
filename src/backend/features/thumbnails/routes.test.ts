@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
-import { DEFAULT_CANONICAL_CONFIGURATION } from "../configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 
@@ -65,7 +65,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+                configurationKey: ELEMENT_DEFAULT_KEY
             })
         );
         expect(res.status).toBe(200);
@@ -97,7 +97,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION
+                configurationKey: CANONICAL_CONFIGURATION
             })
         );
         expect(res.status).toBe(200);
@@ -121,7 +121,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION
+                configurationKey: CANONICAL_CONFIGURATION
             })
         );
         expect(res.status).toBe(200);
@@ -134,7 +134,7 @@ describe("thumbnail serving", () => {
                 elementId: "does-not-exist",
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: DEFAULT_CANONICAL_CONFIGURATION
+                configurationKey: ELEMENT_DEFAULT_KEY
             })
         );
         expect(res.status).toBe(404);
@@ -156,7 +156,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION
+                configurationKey: CANONICAL_CONFIGURATION
             })
         );
         expect(res.status).toBe(200);
@@ -185,7 +185,7 @@ describe("thumbnail serving", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION
+                configurationKey: CANONICAL_CONFIGURATION
             })
         );
         expect(res.status).toBe(200);
@@ -210,7 +210,7 @@ describe("rendering a configuration's thumbnail", () => {
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
-            canonicalConfiguration: CANONICAL_CONFIGURATION,
+            configurationKey: CANONICAL_CONFIGURATION,
             renderThumbnail: true,
             insertableId: INSERTABLE_ID
         });
@@ -226,7 +226,7 @@ describe("rendering a configuration's thumbnail", () => {
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
-            canonicalConfiguration: CANONICAL_CONFIGURATION,
+            configurationKey: CANONICAL_CONFIGURATION,
             renderThumbnail: true
         });
         expect(
@@ -246,7 +246,7 @@ describe("rendering a configuration's thumbnail", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION,
+                configurationKey: CANONICAL_CONFIGURATION,
                 renderThumbnail: true,
                 insertableId: INSERTABLE_ID
             }),
@@ -258,7 +258,7 @@ describe("rendering a configuration's thumbnail", () => {
             expect.objectContaining({
                 params: {
                     insertableId: INSERTABLE_ID,
-                    canonicalConfiguration: CANONICAL_CONFIGURATION,
+                    configurationKey: CANONICAL_CONFIGURATION,
                     // The render runs later, so it needs a session to authenticate.
                     sessionId: SESSION_ID
                 }
@@ -277,7 +277,7 @@ describe("rendering a configuration's thumbnail", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION,
+                configurationKey: CANONICAL_CONFIGURATION,
                 renderThumbnail: true,
                 insertableId: INSERTABLE_ID
             })
@@ -300,7 +300,7 @@ describe("rendering a configuration's thumbnail", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION
+                configurationKey: CANONICAL_CONFIGURATION
             })
         );
 
@@ -319,7 +319,7 @@ describe("rendering a configuration's thumbnail", () => {
                 elementId,
                 microversionId: MICROVERSION,
                 size: SIZE,
-                canonicalConfiguration: CANONICAL_CONFIGURATION,
+                configurationKey: CANONICAL_CONFIGURATION,
                 attempt: 7
             })
         );
@@ -338,7 +338,7 @@ describe("rendering a configuration's thumbnail", () => {
                     elementId: "any",
                     microversionId: MICROVERSION,
                     size: SIZE,
-                    canonicalConfiguration: CANONICAL_CONFIGURATION,
+                    configurationKey: CANONICAL_CONFIGURATION,
                     attempt
                 }),
                 "http://x"

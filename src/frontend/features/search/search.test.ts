@@ -12,9 +12,9 @@ import { configurationRecord } from "../../../__test_utils__/configuration-fixtu
 
 const record = (
     partNumber: string | undefined,
-    canonicalConfiguration: string,
+    configurationKey: string,
     name?: string
-) => configurationRecord({ partNumber, canonicalConfiguration, name });
+) => configurationRecord({ partNumber, configurationKey, name });
 
 /** Hidden insertables shown: these tests are about matching, not visibility. */
 const search = (searchDb: MiniSearch<SearchDocument>, query: string) =>
@@ -71,7 +71,7 @@ describe("doSearch part-number matching", () => {
         const { hits } = search(searchDb, "217-2601");
         expect(hits).toHaveLength(1);
         expect(hits[0].id).toBe("i1");
-        expect(hits[0].canonicalConfiguration).toBe("length=long");
+        expect(hits[0].configurationKey).toBe("length=long");
     });
 
     // "Bracket 217" matches the part-number field on "217", but no single record
@@ -88,7 +88,7 @@ describe("doSearch part-number matching", () => {
         const { hits } = search(searchDb, "Bracket");
         expect(hits).toHaveLength(1);
         // The insertable's own name matched, so the row shows its default config.
-        expect(hits[0].canonicalConfiguration).toBe("length=short");
+        expect(hits[0].configurationKey).toBe("length=short");
         expect(hits[0].partNumber).toBe("217-2600");
     });
 
@@ -103,7 +103,7 @@ describe("doSearch part-number matching", () => {
         });
         const { hits } = search(searchDb, "217-2600");
         expect(hits).toHaveLength(1);
-        expect(hits[0].canonicalConfiguration).toBe("version=latest");
+        expect(hits[0].configurationKey).toBe("version=latest");
     });
 });
 
@@ -120,23 +120,23 @@ describe("doSearch configuration matching", () => {
 
     it("picks the configuration a term of the query names", () => {
         const { hits } = search(searchDb, "maxspline 24t");
-        expect(hits[0].canonicalConfiguration).toBe("teeth=24");
+        expect(hits[0].configurationKey).toBe("teeth=24");
         expect(hits[0].partNumber).toBe("WCP-1235");
     });
 
     it("picks it from the distinguishing term alone", () => {
         const { hits } = search(searchDb, "36t");
-        expect(hits[0].canonicalConfiguration).toBe("teeth=36");
+        expect(hits[0].configurationKey).toBe("teeth=36");
     });
 
     it("keeps the default when no term distinguishes a configuration", () => {
         const { hits } = search(searchDb, "maxspline gear");
-        expect(hits[0].canonicalConfiguration).toBe("");
+        expect(hits[0].configurationKey).toBe("");
     });
 
     it("lets a part number typed in full outrank a looser name match", () => {
         const { hits } = search(searchDb, "WCP-1236");
-        expect(hits[0].canonicalConfiguration).toBe("teeth=36");
+        expect(hits[0].configurationKey).toBe("teeth=36");
     });
 });
 
@@ -203,7 +203,7 @@ describe("doSearch size matching", () => {
         (query) => {
             const { hits } = search(searchDb, query);
             expect(hits[0].partName).toBe('1" Hex Standoff');
-            expect(hits[0].canonicalConfiguration).toBe("length=1 in");
+            expect(hits[0].configurationKey).toBe("length=1 in");
         }
     );
 
@@ -402,7 +402,7 @@ describe("doSearch name matching", () => {
         expect(hits).toHaveLength(1);
         expect(hits[0].partName).toBe("3/4 Bearing");
         expect(hits[0].partNumber).toBe("217-2601");
-        expect(hits[0].canonicalConfiguration).toBe("length=long");
+        expect(hits[0].configurationKey).toBe("length=long");
     });
 
     it("finds a fractional name by its decimal forms (.5, 0.5, 1/2)", () => {

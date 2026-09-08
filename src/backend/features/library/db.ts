@@ -1,5 +1,6 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
+import { increment } from "../../db/updates";
 import {
     libraries,
     group,
@@ -161,7 +162,7 @@ export async function bumpLibraryVersion(
         .values({ id: libraryId, cacheVersion: 1 })
         .onConflictDoUpdate({
             target: libraries.id,
-            set: { cacheVersion: sql`cache_version + 1` }
+            set: { cacheVersion: increment(libraries.cacheVersion) }
         });
 }
 

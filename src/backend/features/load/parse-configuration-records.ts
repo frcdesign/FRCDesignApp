@@ -7,7 +7,7 @@ import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
-    ParameterValues,
+    Selection,
     ConfigurationParameter,
     PartMetadata,
     ConfigurationRecord,
@@ -24,9 +24,10 @@ import {
     isIndexingEnabled
 } from "../configurations/combinations";
 import {
-    DEFAULT_CANONICAL_CONFIGURATION,
-    canonicalizeConfiguration
-} from "../configurations/canonical";
+    ELEMENT_DEFAULT_KEY,
+    toKey,
+    toSelection
+} from "../configurations/selection";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
@@ -74,7 +75,7 @@ export interface IndexingDecision {
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
     /** The combinations to probe, already enumerated by the count. */
-    configurations: ParameterValues[];
+    configurations: Selection[];
 }
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
@@ -89,7 +90,13 @@ export function decideIndexing(
         return { shouldIndex: true, buildIssues: [], configurations: [] };
     }
 
-    const { band, configurations } = countConfigurations(parameters);
+    const counted = countConfigurations(parameters);
+    const band = counted.band;
+    // Enumeration names only what varies; every probe past here is a whole
+    // selection, so nothing downstream has to wonder which it holds.
+    const configurations = counted.configurations.map((configuration) =>
+        toSelection(configuration, parameters)
+    );
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
     if (band === IndexingBand.EXCEEDED) {
@@ -152,7 +159,7 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
-    configuration: ParameterValues,
+    configuration: Selection,
     isOpenComposite: boolean
 ): ProbedRecord {
     const evaluation = evaluateParts(parts);
@@ -201,7 +208,7 @@ function readMetadataValue(value: unknown): string | undefined {
 /** Builds a record from an assembly's element metadata for one configuration. */
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
-    configuration: ParameterValues
+    configuration: Selection
 ): ProbedRecord {
     // An assembly is never a composite, so it reads nothing about one.
     const record: ProbedRecord = {
@@ -228,7 +235,7 @@ export async function parseConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
-    configurations: ParameterValues[],
+    configurations: Selection[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await probeConfiguration(
@@ -265,7 +272,7 @@ export async function loadConfigurationRecords(
     elementPath: ElementPath,
     elementType: ElementType,
     parameters: ConfigurationParameter[],
-    configurations: ParameterValues[],
+    configurations: Selection[],
     isOpenComposite: boolean
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await ctx.step.do(
@@ -307,18 +314,17 @@ export async function loadConfigurationRecords(
  * default probe already covers.
  */
 function planBatches(
-    configurations: ParameterValues[],
+    configurations: Selection[],
     parameters: ConfigurationParameter[]
-): ParameterValues[][] {
+): Selection[][] {
     // Canonicalizing to the default means landing on the default probe's record,
     // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
         (configuration) =>
-            canonicalizeConfiguration(configuration, parameters) !==
-            DEFAULT_CANONICAL_CONFIGURATION
+            toKey(configuration, parameters) !== ELEMENT_DEFAULT_KEY
     );
 
-    const batches: ParameterValues[][] = [];
+    const batches: Selection[][] = [];
     for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
         batches.push(toFetch.slice(i, i + BATCH_SIZE));
     }
@@ -330,7 +336,7 @@ async function probeConfiguration(
     client: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    configuration: ParameterValues,
+    configuration: Selection,
     isOpenComposite: boolean
 ): Promise<ProbedRecord> {
     if (elementType === ElementType.ASSEMBLY) {
@@ -351,7 +357,7 @@ async function fetchBatch(
     client: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    batch: ParameterValues[],
+    batch: Selection[],
     isOpenComposite: boolean
 ): Promise<ProbedRecord[]> {
     const records: ProbedRecord[] = [];
@@ -402,13 +408,10 @@ function toResult(
     // for the same selection.
     const records: ConfigurationRecord[] = batches.flat().map((record) => ({
         ...record,
-        // Read before canonicalizing, which drops a selection that is the
-        // default — including a default vendor option.
+        // Read before keying, which names only overrides — and so drops a
+        // default vendor option.
         vendor: resolveVendor(record, parameters),
-        canonicalConfiguration: canonicalizeConfiguration(
-            record.configuration,
-            parameters
-        )
+        configurationKey: toKey(record.configuration, parameters)
     }));
 
     // A capped insertable never reaches here: decideIndexing turns indexing off

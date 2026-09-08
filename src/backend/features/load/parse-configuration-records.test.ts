@@ -8,10 +8,7 @@ import type {
     OnshapePart
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
-import {
-    ParameterValues,
-    ConfigurationParameter
-} from "../configurations/models";
+import { Selection, ConfigurationParameter } from "../configurations/models";
 import {
     enumParam,
     paramsWithConfigs
@@ -182,9 +179,7 @@ describe("parseAssemblyRecord", () => {
 });
 
 /** Mocks the parts endpoint, deriving a studio's parts from the configuration. */
-function mockParts(
-    partsFor: (configuration: ParameterValues) => OnshapePart[]
-) {
+function mockParts(partsFor: (configuration: Selection) => OnshapePart[]) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
         .mockImplementation((_client, _path, configuration) =>

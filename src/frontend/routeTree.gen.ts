@@ -9,16 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
+import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
+import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
 import { Route as AppLibraryLibraryIdIndexRouteImport } from './routes/app/library/$libraryId/index'
+import { Route as DashboardLibraryLibraryIdUnusedRouteImport } from './routes/dashboard/library/$libraryId/unused'
+import { Route as DashboardLibraryLibraryIdPartRouteImport } from './routes/dashboard/library/$libraryId/part'
 import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
 
+const DashboardRouteRoute = DashboardRouteRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
@@ -28,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -49,17 +65,41 @@ const PagesCookieErrorRoute = PagesCookieErrorRouteImport.update({
   path: '/cookie-error',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardLibraryLibraryIdRouteRoute =
+  DashboardLibraryLibraryIdRouteRouteImport.update({
+    id: '/library/$libraryId',
+    path: '/library/$libraryId',
+    getParentRoute: () => DashboardRouteRoute,
+  } as any)
 const AppLibraryLibraryIdRouteRoute =
   AppLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
     path: '/library/$libraryId',
     getParentRoute: () => AppRouteRoute,
   } as any)
+const DashboardLibraryLibraryIdIndexRoute =
+  DashboardLibraryLibraryIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => DashboardLibraryLibraryIdRouteRoute,
+  } as any)
 const AppLibraryLibraryIdIndexRoute =
   AppLibraryLibraryIdIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AppLibraryLibraryIdRouteRoute,
+  } as any)
+const DashboardLibraryLibraryIdUnusedRoute =
+  DashboardLibraryLibraryIdUnusedRouteImport.update({
+    id: '/unused',
+    path: '/unused',
+    getParentRoute: () => DashboardLibraryLibraryIdRouteRoute,
+  } as any)
+const DashboardLibraryLibraryIdPartRoute =
+  DashboardLibraryLibraryIdPartRouteImport.update({
+    id: '/part',
+    path: '/part',
+    getParentRoute: () => DashboardLibraryLibraryIdRouteRoute,
   } as any)
 const AppLibraryLibraryIdGroupsGroupIdRoute =
   AppLibraryLibraryIdGroupsGroupIdRouteImport.update({
@@ -71,12 +111,18 @@ const AppLibraryLibraryIdGroupsGroupIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/cookie-error': typeof PagesCookieErrorRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
+  '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
+  '/dashboard/library/$libraryId/': typeof DashboardLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRoutesByTo {
@@ -86,19 +132,29 @@ export interface FileRoutesByTo {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
+  '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdIndexRoute
+  '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
+  '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
+  '/dashboard/library/$libraryId/': typeof DashboardLibraryLibraryIdIndexRoute
   '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRouteTypes {
@@ -106,12 +162,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/dashboard'
     | '/cookie-error'
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/dashboard/'
     | '/app/library/$libraryId'
+    | '/dashboard/library/$libraryId'
+    | '/dashboard/library/$libraryId/part'
+    | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
+    | '/dashboard/library/$libraryId/'
     | '/app/library/$libraryId/groups/$groupId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,24 +183,35 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/dashboard'
+    | '/dashboard/library/$libraryId/part'
+    | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId'
+    | '/dashboard/library/$libraryId'
     | '/app/library/$libraryId/groups/$groupId'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/dashboard'
     | '/_pages/cookie-error'
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
+    | '/dashboard/'
     | '/app/library/$libraryId'
+    | '/dashboard/library/$libraryId'
+    | '/dashboard/library/$libraryId/part'
+    | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
+    | '/dashboard/library/$libraryId/'
     | '/app/library/$libraryId/groups/$groupId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
   PagesLicenseRoute: typeof PagesLicenseRoute
@@ -147,6 +220,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -160,6 +240,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -189,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PagesCookieErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/library/$libraryId': {
+      id: '/dashboard/library/$libraryId'
+      path: '/library/$libraryId'
+      fullPath: '/dashboard/library/$libraryId'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdRouteRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/app/library/$libraryId': {
       id: '/app/library/$libraryId'
       path: '/library/$libraryId'
@@ -196,12 +290,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLibraryLibraryIdRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/dashboard/library/$libraryId/': {
+      id: '/dashboard/library/$libraryId/'
+      path: '/'
+      fullPath: '/dashboard/library/$libraryId/'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdIndexRouteImport
+      parentRoute: typeof DashboardLibraryLibraryIdRouteRoute
+    }
     '/app/library/$libraryId/': {
       id: '/app/library/$libraryId/'
       path: '/'
       fullPath: '/app/library/$libraryId/'
       preLoaderRoute: typeof AppLibraryLibraryIdIndexRouteImport
       parentRoute: typeof AppLibraryLibraryIdRouteRoute
+    }
+    '/dashboard/library/$libraryId/unused': {
+      id: '/dashboard/library/$libraryId/unused'
+      path: '/unused'
+      fullPath: '/dashboard/library/$libraryId/unused'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdUnusedRouteImport
+      parentRoute: typeof DashboardLibraryLibraryIdRouteRoute
+    }
+    '/dashboard/library/$libraryId/part': {
+      id: '/dashboard/library/$libraryId/part'
+      path: '/part'
+      fullPath: '/dashboard/library/$libraryId/part'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdPartRouteImport
+      parentRoute: typeof DashboardLibraryLibraryIdRouteRoute
     }
     '/app/library/$libraryId/groups/$groupId': {
       id: '/app/library/$libraryId/groups/$groupId'
@@ -242,9 +357,43 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
+interface DashboardLibraryLibraryIdRouteRouteChildren {
+  DashboardLibraryLibraryIdPartRoute: typeof DashboardLibraryLibraryIdPartRoute
+  DashboardLibraryLibraryIdUnusedRoute: typeof DashboardLibraryLibraryIdUnusedRoute
+  DashboardLibraryLibraryIdIndexRoute: typeof DashboardLibraryLibraryIdIndexRoute
+}
+
+const DashboardLibraryLibraryIdRouteRouteChildren: DashboardLibraryLibraryIdRouteRouteChildren =
+  {
+    DashboardLibraryLibraryIdPartRoute: DashboardLibraryLibraryIdPartRoute,
+    DashboardLibraryLibraryIdUnusedRoute: DashboardLibraryLibraryIdUnusedRoute,
+    DashboardLibraryLibraryIdIndexRoute: DashboardLibraryLibraryIdIndexRoute,
+  }
+
+const DashboardLibraryLibraryIdRouteRouteWithChildren =
+  DashboardLibraryLibraryIdRouteRoute._addFileChildren(
+    DashboardLibraryLibraryIdRouteRouteChildren,
+  )
+
+interface DashboardRouteRouteChildren {
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardLibraryLibraryIdRouteRoute: typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardIndexRoute: DashboardIndexRoute,
+  DashboardLibraryLibraryIdRouteRoute:
+    DashboardLibraryLibraryIdRouteRouteWithChildren,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
   PagesCookieErrorRoute: PagesCookieErrorRoute,
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,
   PagesLicenseRoute: PagesLicenseRoute,

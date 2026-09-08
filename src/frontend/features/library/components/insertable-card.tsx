@@ -1,4 +1,4 @@
-import { DEFAULT_CANONICAL_CONFIGURATION } from "@backend/features/configurations/canonical";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
@@ -7,7 +7,7 @@ import {
     getFavoriteForInsertable
 } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { ParameterValues } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,
@@ -28,18 +28,21 @@ import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavoritesQuery } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { InsertSource } from "@backend/features/analytics/events";
 
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
     searchHit?: SearchHit;
     onClick?: () => void;
+    /** Where this card is listed — browsing a group unless told otherwise. */
+    source?: InsertSource;
 }
 
 /**
  * A card representing a part studio or assembly.
  */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
-    const { insertable, searchHit } = props;
+    const { insertable, searchHit, source = InsertSource.BROWSE } = props;
 
     const favorites = useFavoritesQuery().data?.favorites;
 
@@ -54,10 +57,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     }
 
     const favorite = getFavoriteForInsertable(favorites, insertable.id);
-    // What the hit names, for inserting and for prefilling the menu; the
-    // canonical form itself is what names its thumbnail.
-    const hitConfiguration = searchHit?.canonicalConfiguration
-        ? decodeConfiguration(searchHit.canonicalConfiguration)
+    // What the hit names, for inserting and for prefilling the menu; its key
+    // is what names the thumbnail.
+    const hitSelection = searchHit?.configurationKey
+        ? decodeConfiguration(searchHit.configurationKey)
         : undefined;
 
     const openMenu = () => {
@@ -66,7 +69,11 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             openCannotDeriveAssemblyAlert();
             return;
         }
-        openInsertMenu({ insertable, defaultConfiguration: hitConfiguration });
+        openInsertMenu({
+            insertable,
+            initialSelection: hitSelection,
+            source
+        });
     };
 
     const thumbnail = (
@@ -76,9 +83,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             target={{
                 elementId: insertable.elementId,
                 microversionId: insertable.microversionId,
-                canonicalConfiguration:
-                    searchHit?.canonicalConfiguration ??
-                    DEFAULT_CANONICAL_CONFIGURATION,
+                configurationKey:
+                    searchHit?.configurationKey ?? ELEMENT_DEFAULT_KEY,
                 // A cold search would otherwise start a render per row.
                 renderThumbnail: false
             }}
@@ -108,10 +114,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     <FavoriteButton
                         favorite={favorite}
                         insertable={insertable}
-                        defaultConfiguration={hitConfiguration}
-                        canonicalConfiguration={
-                            searchHit?.canonicalConfiguration
-                        }
+                        selection={hitSelection}
+                        configurationKey={searchHit?.configurationKey}
                     />
                 </RequireSignIn>
             }
@@ -119,7 +123,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 <InsertableMenuItems
                     favorite={favorite}
                     insertable={insertable}
-                    configuration={hitConfiguration}
+                    selection={hitSelection}
+                    source={source}
                 />
             }
         />
@@ -131,10 +136,11 @@ interface InsertableMenuItemsProps {
     insertable: InsertableOut;
     inInsertMenu?: boolean;
     /** What quick insert inserts and "Open document" opens: a search hit's
-     * configuration on a card, the selected one inside the insert menu. */
-    configuration?: ParameterValues;
-    /** The same selection canonicalized, so favoriting can key its thumbnail. */
-    canonicalConfiguration?: string;
+     * selection on a card, the selected one inside the insert menu. */
+    selection?: Selection;
+    /** That selection's key, so favoriting can name its thumbnail. */
+    configurationKey?: string;
+    source: InsertSource;
 }
 
 export function InsertableMenuItems(
@@ -144,8 +150,9 @@ export function InsertableMenuItems(
         favorite,
         insertable,
         inInsertMenu,
-        configuration,
-        canonicalConfiguration
+        selection,
+        configurationKey,
+        source
     } = props;
     const isConnected = useIsConnectedToOnshape();
 
@@ -155,8 +162,9 @@ export function InsertableMenuItems(
                 <>
                     <QuickInsertItems
                         insertable={insertable}
-                        configuration={configuration}
+                        selection={selection}
                         isFavorite={favorite !== undefined}
+                        source={source}
                     />
                     <Menu.Divider />
                 </>
@@ -165,12 +173,12 @@ export function InsertableMenuItems(
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
-                    defaultConfiguration={configuration}
-                    canonicalConfiguration={canonicalConfiguration}
+                    selection={selection}
+                    configurationKey={configurationKey}
                 />
                 <Menu.Divider />
             </RequireSignIn>
-            <OpenDocumentItems path={{ ...insertable.path, configuration }} />
+            <OpenDocumentItems path={{ ...insertable.path, selection }} />
         </>
     );
 }

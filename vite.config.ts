@@ -31,7 +31,10 @@ export default defineConfig({
     plugins: [
         tanstackRouter({
             routesDirectory: "src/frontend/routes",
-            generatedRouteTree: "src/frontend/routeTree.gen.ts"
+            generatedRouteTree: "src/frontend/routeTree.gen.ts",
+            // Splits each route's component into its own chunk, which is what
+            // keeps the dashboard's charts out of the Onshape panel's bundle.
+            autoCodeSplitting: true
         }),
         react(),
         cloudflare()

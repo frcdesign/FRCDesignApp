@@ -43,6 +43,24 @@ export enum StatusColor {
     DIMMED = "dimmed"
 }
 
+/**
+ * Mantine's default step for a color: what a bare color name renders as, and
+ * so the step anything picking its own color should match.
+ */
+export const FILLED_SHADE = 6;
+
+/** A Mantine color at one shade, for props that take a CSS value rather than
+ * Mantine's own `color.shade` shorthand. */
+export function colorVar(color: string, shade: number): string {
+    return `var(--mantine-color-${color}-${shade})`;
+}
+
+/**
+ * A mark that must read as secondary but stay legible on both themes, which
+ * bare "gray" does not: a reference line, a bar for an unremarkable value.
+ */
+export const MUTED_MARK = `${StatusColor.NEUTRAL}.5`;
+
 /** The same color as a tint to sit content on, e.g. a callout's background. */
 export function statusBackground(color: StatusColor): string {
     return `var(--mantine-color-${color}-light)`;
@@ -75,6 +93,22 @@ export function maskedImage(url: string) {
         maskPosition: "center"
     };
 }
+
+/** The height of a default-sized Mantine input, for aligning beside one. */
+export const INPUT_HEIGHT = "36px";
+
+/**
+ * One height for every navbar row, so the app's two tiers and the dashboard's
+ * read as the same bar rather than three sizes of one.
+ */
+export const NAVBAR_ROW_HEIGHT = 48;
+
+/**
+ * A rule that has to read against {@link FRAME_BACKGROUND} rather than a white
+ * page, so it takes the same step off the frame in either theme.
+ */
+export const NAVBAR_DIVIDER_COLOR =
+    "light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3))";
 
 /**
  * One height for a section header, set rather than left to the content: an

@@ -7,7 +7,7 @@ import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
-    ParameterValues,
+    Selection,
     PartMetadata
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
@@ -167,13 +167,15 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, as the user made it: a
-        // canonical one would drop a default-valued or hidden parameter,
-        // including a string they typed. Null for the element's own default.
-        defaultConfiguration: text("default_configuration", {
+        // The selection the favorite opens with, whole and canonical like
+        // every stored one. Null for an insertable with nothing to configure.
+        defaultSelection: text("default_selection", {
             mode: "json"
-        }).$type<ParameterValues | null>(),
-        sortOrder: integer("sort_order").notNull().default(0)
+        }).$type<Selection | null>(),
+        sortOrder: integer("sort_order").notNull().default(0),
+        // Null on rows predating the column: backfilling would draw a cliff
+        // of favorites on a day nobody favorited anything.
+        createdAt: integer("created_at")
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );

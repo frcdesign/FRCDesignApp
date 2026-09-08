@@ -1,12 +1,8 @@
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
-import { Button, Divider, Group, Select, Text, Title } from "@mantine/core";
+import { Box, Button, Select, Stack } from "@mantine/core";
 import { SignOutIcon } from "@phosphor-icons/react";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
-import { PropsWithChildren, ReactNode } from "react";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { ReactNode, useId } from "react";
 import {
     AccessLevel,
     hasEditorAccess,
@@ -14,7 +10,9 @@ import {
 } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useSaveSettings } from "../settings";
+import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
+import { Section } from "../../../components/section";
 import {
     RequireAccessLevel,
     RequireSignIn,
@@ -29,21 +27,8 @@ import { ReloadGroupsButton } from "../../library/components/reload-groups-butto
 /** The FRCDesign feedback form, which the setting below opens. */
 const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
 
-interface SettingRowProps extends PropsWithChildren {
-    label: string;
-}
-
-function SettingRow(props: SettingRowProps): ReactNode {
-    const { label, children } = props;
-    return (
-        <Group justify="space-between" wrap="nowrap" my="sm">
-            <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                {label}
-            </Text>
-            {children}
-        </Group>
-    );
-}
+/** The usage dashboard, served standalone and needing no sign-in. */
+const DASHBOARD_URL = "/dashboard";
 
 /** Capitalizes the first letter of a string and lower cases everything else. */
 function capitalize(value: string) {
@@ -61,25 +46,33 @@ interface SettingSelectProps<T extends string> {
 /** A setting chosen from a short list of named values. */
 function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
     const { label, value, options, onSelect } = props;
+    const id = useId();
+
     return (
-        <Select
-            label={label}
-            data={options.map((option) => ({
-                value: option,
-                label: capitalize(option)
-            }))}
-            value={value}
-            allowDeselect={false}
-            checkIconPosition="right"
-            comboboxProps={{ withinPortal: true }}
-            onChange={(selected) => {
-                if (selected !== null) {
-                    onSelect(selected);
-                }
-            }}
-        />
+        <InputRow label={label} htmlFor={id} spread>
+            <Select
+                id={id}
+                w={SETTING_CONTROL_WIDTH}
+                data={options.map((option) => ({
+                    value: option,
+                    label: capitalize(option)
+                }))}
+                value={value}
+                allowDeselect={false}
+                checkIconPosition="right"
+                comboboxProps={{ withinPortal: true }}
+                onChange={(selected) => {
+                    if (selected !== null) {
+                        onSelect(selected);
+                    }
+                }}
+            />
+        </InputRow>
     );
 }
+
+/** Wide enough for "Open dashboard", so every control ends on one line. */
+const SETTING_CONTROL_WIDTH = 170;
 
 export function SettingsMenuContent(): ReactNode {
     const { maxAccessLevel } = useAccessData();
@@ -90,13 +83,11 @@ export function SettingsMenuContent(): ReactNode {
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
-                <>
-                    <Title order={6} mt="md">
-                        Admin Settings
-                    </Title>
-                    <Divider mb="sm" />
-                    <AdminSettings />
-                </>
+                <Box mt="md">
+                    <Section title="Admin settings" order={6}>
+                        <AdminSettings />
+                    </Section>
+                </Box>
             )}
         </>
     );
@@ -107,26 +98,29 @@ function UserSettings(): ReactNode {
     const isConnected = useIsConnectedToOnshape();
 
     return (
-        <>
+        <Stack gap="sm">
             <ThemeSelect />
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
-                <SettingRow label="Open outside Onshape">
+                <InputRow spread label="Open outside Onshape">
                     <OpenUrlButton
                         text="Open app"
                         url={standaloneUrl(libraryId)}
                     />
-                </SettingRow>
+                </InputRow>
             )}
-            <SettingRow label="Submit feedback">
+            <InputRow spread label="Usage dashboard">
+                <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
+            </InputRow>
+            <InputRow spread label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
-            </SettingRow>
+            </InputRow>
             {/* Onshape owns the session the panel runs in, so signing out is
                 only the standalone app's to offer. */}
             {!isConnected && (
                 <RequireSignIn>
-                    <SettingRow label="Onshape account">
+                    <InputRow spread label="Onshape account">
                         <Button
                             leftSection={<SignOutIcon size={IconSize.SMALL} />}
                             variant="light"
@@ -135,10 +129,10 @@ function UserSettings(): ReactNode {
                         >
                             Sign out
                         </Button>
-                    </SettingRow>
+                    </InputRow>
                 </RequireSignIn>
             )}
-        </>
+        </Stack>
     );
 }
 
@@ -166,18 +160,18 @@ function ThemeSelect(): ReactNode {
 
 function AdminSettings(): ReactNode {
     return (
-        <>
+        <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <SettingRow label="Reload outdated documents">
+                <InputRow spread label="Reload outdated documents">
                     <ReloadGroupsButton />
-                </SettingRow>
-                <SettingRow label="Reload all documents">
+                </InputRow>
+                <InputRow spread label="Reload all documents">
                     <ReloadGroupsButton reloadAll />
-                </SettingRow>
+                </InputRow>
             </RequireAccessLevel>
-        </>
+        </Stack>
     );
 }
 
