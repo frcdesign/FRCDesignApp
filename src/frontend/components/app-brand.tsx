@@ -1,4 +1,4 @@
-import { Box, Center, Group, Text } from "@mantine/core";
+import { Box, Center, Divider, Group, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
     FontWeight,
@@ -13,11 +13,12 @@ import frcDesignBook from "/frc-design-book.svg";
 /**
  * The book and the app's name, in the navbar of both the panel and the
  * dashboard. The book links out to FRCDesign.org; the name does not, since
- * clicking the app's own name should not leave it.
+ * clicking the app's own name should not leave it. Closed by a rule, so the
+ * name reads as the app rather than as the first tab.
  */
 export function AppBrand(): ReactNode {
     return (
-        <Group gap="xs" wrap="nowrap" my="auto">
+        <Group gap="xs" wrap="nowrap" h="100%" pr="xs">
             <Center
                 component="a"
                 href="https://frcdesign.org"
@@ -37,9 +38,10 @@ export function AppBrand(): ReactNode {
                     style={maskedImage(frcDesignBook)}
                 />
             </Center>
-            <Text fw={FontWeight.SEMI_BOLD} size="sm">
+            <Text fw={FontWeight.BOLD} size="sm" mr="xs">
                 FRCDesignApp
             </Text>
+            <Divider orientation="vertical" my="sm" />
         </Group>
     );
 }

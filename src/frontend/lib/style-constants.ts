@@ -101,7 +101,7 @@ export const INPUT_HEIGHT = "36px";
  * One height for every navbar row, so the app's two tiers and the dashboard's
  * read as the same bar rather than three sizes of one.
  */
-export const NAVBAR_ROW_HEIGHT = 60;
+export const NAVBAR_ROW_HEIGHT = 48;
 
 /**
  * One height for a section header, set rather than left to the content: an

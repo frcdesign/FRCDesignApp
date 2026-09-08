@@ -231,7 +231,7 @@ function RefreshButton(): ReactNode {
 
 const TAB_STYLES = {
     // Hides the line under the tab list alone; the row owns one that spans it.
-    root: { "--tab-border-color": "transparent" },
+    root: { "--tab-border-color": "transparent", minWidth: 0 },
     // Full height, so the underline lands on the row's border rather than
     // partway up a taller bar.
     list: {

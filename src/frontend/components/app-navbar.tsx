@@ -150,7 +150,7 @@ function LibraryTabs(): ReactNode {
             styles={{
                 // Hides the line under the tab list alone; the row owns one
                 // that spans it. The active indicator is colored separately.
-                root: { "--tab-border-color": "transparent" },
+                root: { "--tab-border-color": "transparent", minWidth: 0 },
                 // Three full names outgrow a narrow panel; scrolling beats
                 // reflowing the navbar into two rows.
                 list: {
