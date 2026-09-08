@@ -55,6 +55,8 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - **Dashboard settings** — the dashboard's own menu is gone in favour of the
   standard settings modal, which fixes a theme toggle that did nothing, and
   the modal now offers the app when the dashboard is what's showing.
+- **App brand** — the divider sits closer to the name, and the name links out
+  to FRCDesign.org alongside the book.
 
 ## Noticed, not yet addressed
 
