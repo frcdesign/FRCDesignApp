@@ -19,6 +19,7 @@ import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
 import { makeUrl } from "../../../../lib/url";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
+import { METRICS } from "../../../../features/dashboard/metrics";
 import {
     getInsertableReportQuery,
     getPartsQuery,
@@ -135,9 +136,9 @@ function ReportBody({
                     value={formatCount(report.favorites)}
                 />
                 <SummaryCard
-                    label="Derived"
+                    label={METRICS.assemblyFraction.label}
                     value={formatFraction(
-                        report.targets[ElementType.PART_STUDIO],
+                        report.targets[ElementType.ASSEMBLY],
                         report.insertCount
                     )}
                 />

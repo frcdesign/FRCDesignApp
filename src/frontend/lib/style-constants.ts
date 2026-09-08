@@ -104,6 +104,13 @@ export const INPUT_HEIGHT = "36px";
 export const NAVBAR_ROW_HEIGHT = 48;
 
 /**
+ * A rule that has to read against {@link FRAME_BACKGROUND} rather than a white
+ * page, so it takes the same step off the frame in either theme.
+ */
+export const NAVBAR_DIVIDER_COLOR =
+    "light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3))";
+
+/**
  * One height for a section header, set rather than left to the content: an
  * accordion is sized by its label, a group header by its menu button.
  */

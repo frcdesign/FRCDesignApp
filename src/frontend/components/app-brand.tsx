@@ -4,6 +4,7 @@ import {
     FontWeight,
     IconSize,
     maskedImage,
+    NAVBAR_DIVIDER_COLOR,
     PrimaryColor,
     RADIUS
 } from "../lib/style-constants";
@@ -41,7 +42,13 @@ export function AppBrand(): ReactNode {
             <Text fw={FontWeight.BOLD} size="sm" mr="xs">
                 FRCDesignApp
             </Text>
-            <Divider orientation="vertical" my="sm" />
+            {/* Mantine's default divider is tuned for a white page and all
+                but disappears on the navbar's own gray. */}
+            <Divider
+                orientation="vertical"
+                my="sm"
+                color={NAVBAR_DIVIDER_COLOR}
+            />
         </Group>
     );
 }

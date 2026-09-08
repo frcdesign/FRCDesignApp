@@ -86,7 +86,7 @@ function DashboardOverview(): ReactNode {
                         series={metricSeries}
                     />
                     <TrendTile
-                        metric={METRICS.deriveFraction}
+                        metric={METRICS.assemblyFraction}
                         totals={totals}
                         series={metricSeries}
                     />

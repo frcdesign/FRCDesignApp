@@ -15,7 +15,7 @@ export type MetricKey =
     | "inserts"
     | "fastenFraction"
     | "quickFraction"
-    | "deriveFraction";
+    | "assemblyFraction";
 
 /**
  * How one number is derived, formatted and trended, so a metric reads the same
@@ -44,7 +44,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "inserts",
         label: "Total uses",
         description:
-            "Every part inserted into a document from the library, counted once per insert. Quick inserts and inserts from the insert menu both count, and inserting the same part twice counts twice.",
+            "The total number of times a part was inserted by the app. Inserting the same part twice counts twice.",
         numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
@@ -54,7 +54,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "fastenFraction",
         label: "Insert and fasten",
         description:
-            "How often people use insert and fasten instead of inserting and mating by hand. Onshape only offers it when the open tab is an assembly, so part-studio inserts are left out of the denominator entirely \u2014 otherwise this would mostly track how much assembly work was happening.",
+            "The percentage of inserts into assemblies which are done using insert and fasten. Onshape only offers it on an assembly, so inserts into a part studio are left out of the denominator entirely.",
         numeratorLabel: "Inserts that also fastened",
         denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
@@ -68,7 +68,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "quickFraction",
         label: "Quick insert",
         description:
-            "How often people insert straight from a card\u2019s context menu rather than opening the insert menu. A low share on a configurable part is expected, since choosing values needs the menu.",
+            "The percentage of inserts which are done via the right click context menu, rather than by opening the insert menu. A configurable part is expected to score low, since choosing values needs the menu.",
         numeratorLabel: "Quick inserts",
         denominatorLabel: "All inserts",
         numerator: (point) => point.quickInserts,
@@ -77,16 +77,16 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         lifetimeValue: (totals) => totals.quickInserts,
         detailLabel: "% of inserts"
     },
-    deriveFraction: {
-        key: "deriveFraction",
-        label: "Derived into a part studio",
+    assemblyFraction: {
+        key: "assemblyFraction",
+        label: "Into an assembly",
         description:
-            "How often a part is derived into a part studio rather than inserted into an assembly. A library people derive from is being used as a starting point to modify; one people insert into assemblies is being used as finished hardware.",
-        numeratorLabel: "Inserts into a part studio",
+            "The percentage of inserts into an assembly (as opposed to a part studio). A library people mostly derive into part studios is a starting point to modify; one people insert into assemblies is finished hardware.",
+        numeratorLabel: "Inserts into an assembly",
         denominatorLabel: "All inserts",
-        numerator: (point) => point.targets[ElementType.PART_STUDIO],
+        numerator: (point) => point.targets[ElementType.ASSEMBLY],
         denominator: (point) => point.inserts,
-        lifetimeValue: (totals) => totals.targets[ElementType.PART_STUDIO],
+        lifetimeValue: (totals) => totals.targets[ElementType.ASSEMBLY],
         lifetimeDenominator: (totals) => totals.inserts,
         detailLabel: "% of inserts"
     }

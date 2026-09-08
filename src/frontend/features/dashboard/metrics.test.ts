@@ -37,12 +37,12 @@ function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
 }
 
 describe("metric definitions", () => {
-    it("marks exactly the ratio metrics as shares", () => {
-        const shares = Object.values(METRICS)
+    it("marks exactly the ratio metrics as percentages", () => {
+        const percentages = Object.values(METRICS)
             .filter(isPercentage)
             .map((metric) => metric.key);
-        expect(shares.sort()).toEqual([
-            "deriveFraction",
+        expect(percentages.sort()).toEqual([
+            "assemblyFraction",
             "fastenFraction",
             "quickFraction"
         ]);
