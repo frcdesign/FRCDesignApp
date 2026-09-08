@@ -94,6 +94,15 @@ export function maskedImage(url: string) {
     };
 }
 
+/** The height of a default-sized Mantine input, for aligning beside one. */
+export const INPUT_HEIGHT = "36px";
+
+/**
+ * One height for every navbar row, so the app's two tiers and the dashboard's
+ * read as the same bar rather than three sizes of one.
+ */
+export const NAVBAR_ROW_HEIGHT = 60;
+
 /**
  * One height for a section header, set rather than left to the content: an
  * accordion is sized by its label, a group header by its menu button.

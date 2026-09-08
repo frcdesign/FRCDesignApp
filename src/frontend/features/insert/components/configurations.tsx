@@ -1,17 +1,14 @@
 import {
     Center,
     Checkbox,
-    Group,
     Loader,
     Select,
     Stack,
-    Text,
     TextInput
 } from "@mantine/core";
 import { useSearch } from "@tanstack/react-router";
 import {
     type Dispatch,
-    JSX,
     ReactNode,
     type SyntheticEvent,
     useCallback,
@@ -54,6 +51,7 @@ import {
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../../../lib/notifications";
 import { SectionError } from "../../../components/app-zero-state";
+import { InputRow } from "../../../components/input-row";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
 interface ConfigurationWrapperProps {
@@ -245,65 +243,6 @@ function ParameterInput(
     }
 }
 
-/**
- * The height of a default sized Mantine input.
- */
-const INPUT_HEIGHT = "36px";
-
-interface InputLabelProps {
-    label: string;
-    /**
-     * The id of the input the label describes.
-     */
-    htmlFor: string;
-    /** True to lead with the input instead of the label. */
-    inputFirst?: boolean;
-    children: ReactNode;
-}
-
-/**
- * Given an input's height so it stays aligned rather than drifting when the
- * input grows to show an error message.
- */
-function InputLabel(props: InputLabelProps) {
-    const { label, htmlFor, inputFirst = false, children } = props;
-    const text = (
-        <Text
-            size="sm"
-            display="flex"
-            h={INPUT_HEIGHT}
-            style={{ alignItems: "center", cursor: "pointer" }}
-            component="label"
-            htmlFor={htmlFor}
-        >
-            {label}
-        </Text>
-    );
-
-    let result: JSX.Element;
-    if (inputFirst) {
-        result = (
-            <>
-                {children}
-                {text}
-            </>
-        );
-    } else {
-        result = (
-            <>
-                {text}
-                {children}
-            </>
-        );
-    }
-
-    return (
-        <Group gap="sm" align="flex-start">
-            {result}
-        </Group>
-    );
-}
-
 function getFirstVisibleOption(
     visibleOptions: EnumOption[],
     currentOptionId: string | undefined,
@@ -353,7 +292,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     }
 
     return (
-        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+        <InputRow label={parameter.name} htmlFor={parameter.id}>
             <Select
                 id={parameter.id}
                 data={visibleOptions.map((option) => ({
@@ -372,14 +311,14 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     }
                 }}
             />
-        </InputLabel>
+        </InputRow>
     );
 }
 
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputLabel label={parameter.name} htmlFor={parameter.id} inputFirst>
+        <InputRow label={parameter.name} htmlFor={parameter.id} controlFirst>
             <Checkbox
                 id={parameter.id}
                 checked={(value ?? parameter.default) === "true"}
@@ -392,21 +331,21 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
                     onValueChange(checked ? "true" : "false")
                 )}
             />
-        </InputLabel>
+        </InputRow>
     );
 }
 
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+        <InputRow label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
                 value={value ?? parameter.default}
                 flex={1}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
-        </InputLabel>
+        </InputRow>
     );
 }
 
@@ -464,7 +403,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     }, [evaluateOptions, expression, onValueChange, parameter]);
 
     return (
-        <InputLabel label={parameter.name} htmlFor={parameter.id}>
+        <InputRow label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
                 ref={ref}
@@ -486,6 +425,6 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                     setExpression(event.currentTarget.value);
                 }}
             />
-        </InputLabel>
+        </InputRow>
     );
 }

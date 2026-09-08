@@ -1,6 +1,5 @@
 import {
     ActionIcon,
-    Box,
     Button,
     Group,
     Menu,
@@ -25,8 +24,9 @@ import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
-    PrimaryColor
+    NAVBAR_ROW_HEIGHT
 } from "../../lib/style-constants";
+import { AppBrand } from "../../components/app-brand";
 import { DashboardSettingsMenu } from "./dashboard-settings";
 import { RangeControl } from "./range-control";
 import {
@@ -36,8 +36,6 @@ import {
     toDashboardKey,
     type DashboardKey
 } from "./dashboard-nav";
-
-import frcDesignBook from "/frc-design-book.svg";
 
 interface DashboardTabsProps {
     current: DashboardKey;
@@ -55,12 +53,13 @@ export function DashboardNavbar(): ReactNode {
             <Group
                 gap="sm"
                 px="sm"
+                h={NAVBAR_ROW_HEIGHT}
                 wrap="nowrap"
                 align="stretch"
                 bg={FRAME_BACKGROUND}
                 style={{ borderBottom: BORDER }}
             >
-                <FrcDesignBookIcon />
+                <AppBrand />
                 <DashboardTabs current={current} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <RefreshButton />
@@ -74,7 +73,7 @@ export function DashboardNavbar(): ReactNode {
                 <Group
                     gap="sm"
                     px="sm"
-                    py="xs"
+                    h={NAVBAR_ROW_HEIGHT}
                     wrap="nowrap"
                     align="center"
                     style={{ borderBottom: BORDER }}
@@ -233,40 +232,14 @@ function RefreshButton(): ReactNode {
 const TAB_STYLES = {
     // Hides the line under the tab list alone; the row owns one that spans it.
     root: { "--tab-border-color": "transparent" },
-    list: { flexWrap: "nowrap", overflowX: "auto", scrollbarWidth: "none" },
+    // Full height, so the underline lands on the row's border rather than
+    // partway up a taller bar.
+    list: {
+        height: "100%",
+        flexWrap: "nowrap",
+        overflowX: "auto",
+        scrollbarWidth: "none"
+    },
     // Pulled onto that divider, so the active tab's indicator replaces it.
     tab: { marginBottom: -1, paddingInline: "var(--mantine-spacing-sm)" }
 } as const;
-
-function FrcDesignBookIcon(): ReactNode {
-    return (
-        <Box
-            component="a"
-            href="https://frcdesign.org"
-            target="_blank"
-            aria-label="FRCDesign.org"
-            w={IconSize.CONTROL}
-            h={IconSize.CONTROL}
-            my="auto"
-            bg={PrimaryColor.FILLED}
-            c={PrimaryColor.CONTRAST}
-            style={{
-                borderRadius: "var(--mantine-radius-sm)",
-                display: "grid",
-                placeItems: "center"
-            }}
-        >
-            <Box
-                w={IconSize.SMALL}
-                h={IconSize.SMALL}
-                style={{
-                    backgroundColor: "currentColor",
-                    maskImage: `url("${frcDesignBook}")`,
-                    maskSize: "contain",
-                    maskRepeat: "no-repeat",
-                    maskPosition: "center"
-                }}
-            />
-        </Box>
-    );
-}
