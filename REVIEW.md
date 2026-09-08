@@ -25,20 +25,20 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 
 ## Frontend
 
-| Area                    | Files | Status | Notes                                            |
-| ----------------------- | ----: | :----: | ------------------------------------------------ |
-| `lib/`                  |    13 |   ☐    |                                                  |
-| `components/`           |    15 |   ☐    | `app-zero-state` touched: added `SectionMessage` |
-| `routes/`               |    16 |   ☐    | library `index`/`route` touched                  |
-| `features/auth`         |       |   ☐    |                                                  |
-| `features/library`      |       |   ☐    | `insertable-card` touched                        |
-| `features/search`       |       |   ☐    |                                                  |
-| `features/insert`       |       |   ☐    | `insert-menu` touched                            |
-| `features/favorites`    |       |   ◐    | standalone zero state done; rest unreviewed      |
-| `features/thumbnails`   |       |   ☐    |                                                  |
-| `features/build-status` |       |   ☐    |                                                  |
-| `features/settings`     |       |   ☐    |                                                  |
-| `features/dashboard`    |       |   ☐    |                                                  |
+| Area                    | Files | Status | Notes                                                    |
+| ----------------------- | ----: | :----: | -------------------------------------------------------- |
+| `lib/`                  |    13 |   ☐    |                                                          |
+| `components/`           |    15 |   ☐    | `app-zero-state` touched: added `SectionMessage`         |
+| `routes/`               |    16 |   ☐    | library `index`/`route` touched                          |
+| `features/auth`         |       |   ☐    |                                                          |
+| `features/library`      |       |   ☐    | `insertable-card`, `library-path`, `coming-soon` touched |
+| `features/search`       |       |   ☐    |                                                          |
+| `features/insert`       |       |   ☐    | `insert-menu` touched                                    |
+| `features/favorites`    |       |   ◐    | standalone zero state done; rest unreviewed              |
+| `features/thumbnails`   |       |   ☐    |                                                          |
+| `features/build-status` |       |   ☐    |                                                          |
+| `features/settings`     |       |   ◐    | `settings-menu` gained the app switch                    |
+| `features/dashboard`    |       |   ◐    | own settings menu dropped; rest unreviewed               |
 
 ## Excluded
 
@@ -50,3 +50,13 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - **Favorites, signed out** — the section now renders for everyone with a
   "sign in to view favorites" zero state, and the sign-in check moved out of
   the favorites query into its callers.
+- **Coming soon** — retitled "Under construction", with the library named in
+  the description.
+- **Dashboard settings** — the dashboard's own menu is gone in favour of the
+  standard settings modal, which fixes a theme toggle that did nothing, and
+  the modal now offers the app when the dashboard is what's showing.
+
+## Noticed, not yet addressed
+
+- `routes/dashboard/library/$libraryId/route.tsx` declares its own
+  `isLibraryId`, duplicating the one in `features/library/library-path.ts`.

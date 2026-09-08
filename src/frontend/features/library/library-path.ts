@@ -10,7 +10,17 @@ export function useLibraryId(): LibraryId {
         from: "/app/library/$libraryId",
         shouldThrow: false
     });
-    return params?.libraryId ?? DEFAULT_SETTINGS.libraryId;
+    // The dashboard scopes to a library of its own, which its settings menu
+    // offers the app for.
+    const dashboardParams = useParams({
+        from: "/dashboard/library/$libraryId",
+        shouldThrow: false
+    });
+    return (
+        params?.libraryId ??
+        dashboardParams?.libraryId ??
+        DEFAULT_SETTINGS.libraryId
+    );
 }
 
 export function isLibraryId(libraryId: string): libraryId is LibraryId {

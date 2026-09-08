@@ -27,7 +27,7 @@ import {
     NAVBAR_ROW_HEIGHT
 } from "../../lib/style-constants";
 import { AppBrand } from "../../components/app-brand";
-import { DashboardSettingsMenu } from "./dashboard-settings";
+import { SettingsButton } from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -63,7 +63,7 @@ export function DashboardNavbar(): ReactNode {
                 <DashboardTabs current={current} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <RefreshButton />
-                    <DashboardSettingsMenu />
+                    <SettingsButton />
                 </Group>
             </Group>
             {/* Only the library-scoped dashboards have anything to put here:

@@ -17,8 +17,8 @@ export function ComingSoon(): ReactNode {
                     color={PrimaryColor.FILLED}
                 />
             }
-            title={`${getLibraryName(libraryId)} is coming soon`}
-            description="It is still being put together. Check back soon!"
+            title="Under construction"
+            description={`${getLibraryName(libraryId)} is coming soon!`}
         />
     );
 }
