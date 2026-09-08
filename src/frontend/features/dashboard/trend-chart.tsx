@@ -15,8 +15,8 @@ import {
     type TrendPoint
 } from "./metrics";
 
-// Kept in this lazily-loaded module so recharts and its styles stay out of the
-// Onshape panel bundle entirely.
+// The charts' styles, imported where the charts are so they land in the same
+// route chunk rather than the panel's bundle.
 import "@mantine/charts/styles.layer.css";
 
 // Keeps the hover panel short enough to fit beside a tile on a laptop.

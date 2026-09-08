@@ -1,10 +1,8 @@
 import { Card, Group, Text, Title } from "@mantine/core";
-import { type Icon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import type { PeriodComparison } from "@backend/features/analytics/contract";
-import { IconSize } from "../../lib/style-constants";
 import { ChangeIndicator } from "./change-indicator";
-import { AppSparkline } from "./charts";
+import { AppSparkline } from "./sparkline";
 import { formatCount } from "./format";
 
 const SPARKLINE_HEIGHT = 40;
@@ -14,7 +12,6 @@ interface StatTileProps {
     value: number;
     /** Rates need a decimal; counts do not. Also formats the change tooltip. */
     format?: (value: number) => string;
-    icon?: Icon;
     /** How the measure changed, drawn to the right of the number — never below
      * it, so a row of tiles scans as one line of numbers. */
     change?: PeriodComparison;
@@ -27,7 +24,6 @@ export function StatTile({
     label,
     value,
     format = formatCount,
-    icon: TileIcon,
     change,
     spark
 }: StatTileProps): ReactNode {
@@ -40,12 +36,8 @@ export function StatTile({
                     </Text>
                     <Title order={2}>{format(value)}</Title>
                 </div>
-                {change ? (
+                {change && (
                     <ChangeIndicator comparison={change} format={format} />
-                ) : (
-                    TileIcon && (
-                        <TileIcon size={IconSize.CONTROL} opacity={0.25} />
-                    )
                 )}
             </Group>
             {spark && <AppSparkline data={spark} h={SPARKLINE_HEIGHT} />}

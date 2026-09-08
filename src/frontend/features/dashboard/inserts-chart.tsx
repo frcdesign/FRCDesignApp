@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { LibraryInsertsChart, MetricDetailChart } from "./charts";
+import { LibraryInsertsChart, MetricDetailChart } from "./trend-chart";
 import type {
     DailyInsertPoint,
     DailyMetricPoint

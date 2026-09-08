@@ -3,8 +3,8 @@ import { type ReactNode } from "react";
 import { formatCount } from "./format";
 import { type TreemapNode } from "./treemap-data";
 
-// Kept in this lazily-loaded module so recharts and its styles stay out of the
-// Onshape panel bundle entirely.
+// The charts' styles, imported where the charts are so they land in the same
+// route chunk rather than the panel's bundle.
 import "@mantine/charts/styles.layer.css";
 
 export interface AppTreemapProps {

@@ -2,7 +2,7 @@ import { Anchor, Breadcrumbs, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../library/library-path";
-import { AppTreemap } from "./charts";
+import { AppTreemap } from "./treemap-chart";
 import { SectionCard } from "./section";
 import {
     toNodes,

@@ -22,7 +22,8 @@ import {
     type MetricDefinition
 } from "./metrics";
 import { formatCount, formatPercent, formatFraction } from "./format";
-import { MetricDetailChart, AppSparkline } from "./charts";
+import { AppSparkline } from "./sparkline";
+import { MetricDetailChart } from "./trend-chart";
 
 const SPARKLINE_HEIGHT = 40;
 // Narrow enough that a middle-column tile can open the panel on either side.

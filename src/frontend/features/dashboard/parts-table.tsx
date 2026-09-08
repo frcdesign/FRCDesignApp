@@ -2,7 +2,7 @@ import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
 import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AppSparkline } from "./charts";
+import { AppSparkline } from "./sparkline";
 import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
