@@ -2,10 +2,7 @@ import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection"
 import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
-import {
-    Favorite,
-    getFavoriteForInsertable
-} from "@backend/features/favorites/contract";
+import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { Selection } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
@@ -25,7 +22,7 @@ import {
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
-import { useFavoritesQuery } from "../../favorites/queries";
+import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/events";
@@ -44,7 +41,7 @@ interface InsertableCardProps extends PropsWithChildren {
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, searchHit, source = InsertSource.BROWSE } = props;
 
-    const favorites = useFavoritesQuery().data?.favorites;
+    const favorite = useFavorite(insertable.id);
 
     const isHidden = useIsInsertableHidden(insertable);
 
@@ -52,11 +49,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         insertable.elementType
     );
 
-    if (isHidden || !favorites) {
+    if (isHidden) {
         return null;
     }
 
-    const favorite = getFavoriteForInsertable(favorites, insertable.id);
     // What the hit names, for inserting and for prefilling the menu; its key
     // is what names the thumbnail.
     const hitSelection = searchHit?.configurationKey

@@ -1,4 +1,5 @@
-import { useAccessData } from "../../auth/access-level";
+import { useAccessData, useIsSignedIn } from "../../auth/access-level";
+import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
@@ -13,7 +14,8 @@ import type { Insertables } from "@backend/features/library/contract";
 import { useGetUiState } from "../../../lib/ui-state";
 import {
     SectionError,
-    SectionLoading
+    SectionLoading,
+    SectionMessage
 } from "../../../components/app-zero-state";
 import {
     NoSearchResultError,
@@ -26,6 +28,8 @@ import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
+import { FavoriteIcon } from "./favorite-button";
+import { startSignIn } from "../../auth/sign-in";
 
 /**
  * A list of current favorite cards.
@@ -34,10 +38,19 @@ import { AppIcon } from "../../../components/app-icon";
 export function FavoritesList(): ReactNode {
     const { searchQuery, vendorFilters } = useGetUiState();
 
+    const isSignedIn = useIsSignedIn();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    if (libraryQuery.isPending || favoritesQuery.isPending) {
+    // Ahead of the pending branch, which favorites never leaves while signed
+    // out: the query stays disabled rather than 401.
+    if (isSignedIn === false) {
+        return <SignInToViewFavorites />;
+    } else if (
+        isSignedIn === undefined ||
+        libraryQuery.isPending ||
+        favoritesQuery.isPending
+    ) {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
@@ -80,6 +93,17 @@ export function FavoritesList(): ReactNode {
                 isVisible: true
             })}
             favoritesData={favoritesData}
+        />
+    );
+}
+
+function SignInToViewFavorites(): ReactNode {
+    return (
+        <SectionMessage
+            icon={<FavoriteIcon size={IconSize.SECTION} />}
+            title="Sign in to view favorites"
+            description="Favorites are saved to your Onshape account."
+            action={<Button onClick={startSignIn}>Sign in</Button>}
         />
     );
 }

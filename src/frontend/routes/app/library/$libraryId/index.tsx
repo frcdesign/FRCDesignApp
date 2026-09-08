@@ -29,7 +29,6 @@ import {
 } from "../../../../features/library/library-path";
 import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
-import { useIsSignedIn } from "../../../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -56,9 +55,8 @@ function useHomeSections(): Section[] {
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
-    const isSignedIn = useIsSignedIn();
 
-    // Favorites are per-user and hidden until signed in.
+    // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
@@ -98,10 +96,7 @@ function useHomeSections(): Section[] {
 
     // One slot below favorites, showing search results while a query is active
     // and the library otherwise. The differing `value` remounts it on the swap.
-    return [
-        ...(isSignedIn ? [favorites] : []),
-        uiState.searchQuery ? search : library
-    ];
+    return [favorites, uiState.searchQuery ? search : library];
 }
 
 interface SectionAccordionProps {

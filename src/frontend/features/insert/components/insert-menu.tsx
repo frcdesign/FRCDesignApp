@@ -1,9 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import {
-    type Favorite,
-    getFavoriteForInsertable
-} from "@backend/features/favorites/contract";
+import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
@@ -25,7 +22,7 @@ import {
     SearchRecord
 } from "@backend/features/configurations/models";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
-import { useFavoritesQuery } from "../../favorites/queries";
+import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
@@ -74,7 +71,7 @@ function useInsertSelection(initialSelection?: Selection) {
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, modalId, openedAt, onInsert, source } = props;
-    const favorites = useFavoritesQuery().data?.favorites;
+    const favorite = useFavorite(insertable.id);
     const isSignedIn = useIsSignedIn();
 
     const {
@@ -105,12 +102,6 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             showSignInPreviewToast();
         }
     }, [isSignedIn]);
-
-    if (!favorites) {
-        return null;
-    }
-
-    const favorite = getFavoriteForInsertable(favorites, insertable.id);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {

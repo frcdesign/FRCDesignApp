@@ -75,6 +75,11 @@ export function SectionError(props: ErrorProps): ReactNode {
     );
 }
 
+/** A section zero state that is not an error, so it carries no fallback. */
+export function SectionMessage(props: ZeroStateProps): ReactNode {
+    return <ZeroState {...props} />;
+}
+
 interface PageMessageProps extends ZeroStateProps {
     /** Keeps the message nearer the top of the page. @default false */
     justifyUp?: boolean;
