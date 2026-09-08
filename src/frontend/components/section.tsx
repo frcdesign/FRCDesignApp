@@ -1,16 +1,22 @@
-import { Card, Stack, Title } from "@mantine/core";
+import { Card, Stack, Title, type TitleOrder } from "@mantine/core";
 import { type ReactNode } from "react";
 
 interface SectionProps {
     title: string;
+    /** Smaller inside a popover than on a page. @default 3 */
+    order?: TitleOrder;
     children: ReactNode;
 }
 
-/** A titled run of the page. */
-export function Section({ title, children }: SectionProps): ReactNode {
+/** A titled run of a page or a menu. */
+export function Section({
+    title,
+    order = 3,
+    children
+}: SectionProps): ReactNode {
     return (
         <Stack gap="sm">
-            <Title order={3}>{title}</Title>
+            <Title order={order}>{title}</Title>
             {children}
         </Stack>
     );

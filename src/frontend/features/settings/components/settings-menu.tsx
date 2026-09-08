@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
-import { Button, Divider, Group, Select, Text, Title } from "@mantine/core";
+import { Box, Button, Group, Select, Text } from "@mantine/core";
 import { SignOutIcon } from "@phosphor-icons/react";
 import {
     FontWeight,
@@ -15,6 +15,7 @@ import {
 import { LibraryId } from "@backend/features/library/library-id";
 import { useSaveSettings } from "../settings";
 import { OpenUrlButton } from "../../../components/open-url-button";
+import { Section } from "../../../components/section";
 import {
     RequireAccessLevel,
     RequireSignIn,
@@ -93,13 +94,11 @@ export function SettingsMenuContent(): ReactNode {
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
-                <>
-                    <Title order={6} mt="md">
-                        Admin Settings
-                    </Title>
-                    <Divider mb="sm" />
-                    <AdminSettings />
-                </>
+                <Box mt="md">
+                    <Section title="Admin settings" order={6}>
+                        <AdminSettings />
+                    </Section>
+                </Box>
             )}
         </>
     );

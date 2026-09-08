@@ -22,7 +22,7 @@ import { getLibraryName } from "../../../../features/library/library-path";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
-import { SectionCard } from "../../../../features/dashboard/section";
+import { SectionCard } from "../../../../components/section";
 
 /** Enough to see the head of the distribution without a wall of rows. */
 const MOST_USED_LIMIT = 10;

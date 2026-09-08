@@ -12,11 +12,11 @@ import {
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
-import { toDayRange } from "../../features/dashboard/range";
+import { RangePreset, toDayRange } from "../../features/dashboard/range";
 import { RecentSection } from "../../features/dashboard/growth-section";
 import { LifetimeTiles } from "../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
-import { Section } from "../../features/dashboard/section";
+import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { type UsagePart } from "../../features/dashboard/treemap-data";
 import { TrendTile } from "../../features/dashboard/trend-tile";
@@ -46,7 +46,7 @@ function taggedParts(
 function DashboardOverview(): ReactNode {
     // No range picker: each section names the window it reports, which is how
     // one page mixes a trailing month, a season and all time.
-    const range = toDayRange("all");
+    const range = toDayRange(RangePreset.ALL);
     const query = useQuery(getOverviewQuery(range));
     const allParts = useAllParts(range);
 

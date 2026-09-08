@@ -62,14 +62,10 @@ export function filterAndSort(
     search: string,
     sort: SortState
 ): PartUsageOut[] {
-    return (
-        parts
-            .filter((part) => matchesSearch(part, search))
-            // Ties break on name so the order never depends on how rows arrived.
-            .sort(
-                (a, b) =>
-                    (sort.descending ? -1 : 1) * compare(a, b, sort.column) ||
-                    a.name.localeCompare(b.name)
-            )
-    );
+    const direction = sort.descending ? -1 : 1;
+    // Ties break on name, so the order never depends on how rows arrived.
+    const bySort = (a: PartUsageOut, b: PartUsageOut): number =>
+        direction * compare(a, b, sort.column) || a.name.localeCompare(b.name);
+
+    return parts.filter((part) => matchesSearch(part, search)).toSorted(bySort);
 }

@@ -7,7 +7,7 @@ import {
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { formatRate } from "./change-indicator";
 import { perUnit } from "./derived";
-import { Section } from "./section";
+import { Section } from "../../components/section";
 import { StatTile } from "./stat-tiles";
 import { toSparkSeries } from "./series";
 

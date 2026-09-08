@@ -1,7 +1,12 @@
 import { SegmentedControl } from "@mantine/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import { DEFAULT_RANGE_PRESET, RANGE_PRESETS, type RangePreset } from "./range";
+import {
+    DEFAULT_RANGE_PRESET,
+    isRangePreset,
+    RANGE_PRESETS,
+    type RangePreset
+} from "./range";
 
 /** Reads the active range preset from the URL. */
 export function useRangePreset(): RangePreset {
@@ -18,10 +23,10 @@ export function RangeControl(): ReactNode {
             size="xs"
             value={preset}
             onChange={(value) => {
-                void navigate({
-                    to: ".",
-                    search: { range: value }
-                });
+                // Mantine hands back a bare string; the presets are the only
+                // values it can be, but the router wants the narrower type.
+                if (!isRangePreset(value)) return;
+                void navigate({ to: ".", search: { range: value } });
             }}
             data={Object.entries(RANGE_PRESETS).map(([value, { label }]) => ({
                 value,

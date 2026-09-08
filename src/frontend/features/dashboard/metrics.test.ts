@@ -103,14 +103,21 @@ describe("toTrend", () => {
         expect(toTrend(points, METRICS.inserts)).toHaveLength(30);
     });
 
-    it("buckets a long range by month", () => {
-        const points = Array.from({ length: 365 }, (_, index) =>
-            day(index, { inserts: 1 })
-        );
-        const trend = toTrend(points, METRICS.inserts);
+    it("buckets a year by week and a longer span by month", () => {
+        const daily = (length: number) =>
+            Array.from({ length }, (_, index) => day(index, { inserts: 1 }));
 
-        expect(trend).toHaveLength(12);
-        expect(trend[0]).toEqual({
+        const year = toTrend(daily(365), METRICS.inserts);
+        expect(year).toHaveLength(53);
+        // 2026-01-01 is a Thursday, so the first week is a stub of 4 days.
+        expect(year[0]).toEqual({
+            bucket: "2025-12-29",
+            label: "Dec 29",
+            value: 4
+        });
+
+        const longer = toTrend(daily(800), METRICS.inserts);
+        expect(longer[0]).toEqual({
             bucket: "2026-01",
             label: "Jan 2026",
             value: 31

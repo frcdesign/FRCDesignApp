@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { LibraryInsertsChart, MetricDetailChart } from "./trend-chart";
+import { Granularity } from "./series";
 import type {
     DailyInsertPoint,
     DailyMetricPoint
@@ -7,7 +8,7 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { LIBRARY_PROGRAM, Program } from "@backend/features/analytics/seasons";
 import { METRICS, toTrend } from "./metrics";
-import { SectionCard } from "./section";
+import { SectionCard } from "../../components/section";
 
 interface InsertsByLibraryCardProps {
     series: DailyInsertPoint[];
@@ -39,7 +40,7 @@ export function InsertsByLibraryCard({
                 series={series}
                 h={PAGE_CHART_HEIGHT}
                 programs={[Program.FTC, Program.FRC]}
-                granularity="month"
+                granularity={Granularity.MONTH}
             />
         </ChartCard>
     );

@@ -10,10 +10,17 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 
-/** Above this many days, points are bucketed by month to stay readable. */
-const MONTHLY_BUCKET_DAYS = 120;
+/** The longest span still worth a point per day: a quarter of daily points. */
+const DAILY_DAYS = 120;
 
-export type Granularity = "day" | "week" | "month";
+/** Past this, even a point per week runs to hundreds of them. */
+const WEEKLY_DAYS = 550;
+
+export enum Granularity {
+    DAY = "day",
+    WEEK = "week",
+    MONTH = "month"
+}
 
 export interface BucketPoint {
     /** The raw key, "YYYY-MM-DD" or "YYYY-MM". What bands match against. */
@@ -27,14 +34,17 @@ export interface BucketPoint {
  * series has few points but must still bucket, or its gaps compress silently.
  */
 export function pickGranularity(days: string[]): Granularity {
-    if (days.length === 0) return "day";
+    if (days.length === 0) return Granularity.DAY;
     let first = days[0];
     let last = days[0];
     for (const day of days) {
         if (day < first) first = day;
         if (day > last) last = day;
     }
-    return spanInDays(first, last) > MONTHLY_BUCKET_DAYS ? "month" : "day";
+
+    const span = spanInDays(first, last);
+    if (span <= DAILY_DAYS) return Granularity.DAY;
+    return span <= WEEKLY_DAYS ? Granularity.WEEK : Granularity.MONTH;
 }
 
 /** Inclusive day count between two "YYYY-MM-DD" keys. */
@@ -52,17 +62,17 @@ function weekStart(day: string): string {
 
 export function toBucketKey(day: string, granularity: Granularity): string {
     switch (granularity) {
-        case "month":
+        case Granularity.MONTH:
             return day.slice(0, 7);
-        case "week":
+        case Granularity.WEEK:
             return weekStart(day);
-        case "day":
+        case Granularity.DAY:
             return day;
     }
 }
 
 export function formatBucket(bucket: string, granularity: Granularity): string {
-    const monthly = granularity === "month";
+    const monthly = granularity === Granularity.MONTH;
     const parsed = new Date(monthly ? `${bucket}-01` : bucket);
     return parsed.toLocaleDateString("en-US", {
         month: "short",

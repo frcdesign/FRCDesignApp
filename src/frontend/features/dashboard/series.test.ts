@@ -6,7 +6,7 @@ import {
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
-import { toChartData, toSparkSeries } from "./series";
+import { Granularity, toChartData, toSparkSeries } from "./series";
 
 const FRC = getLibraryName(LibraryId.FRC_DESIGN_LIB);
 const MKCAD = getLibraryName(LibraryId.MKCAD);
@@ -62,12 +62,18 @@ describe("toChartData", () => {
         expect(data).toHaveLength(30);
     });
 
-    it("buckets a long range by month", () => {
-        // 365 daily points would be unreadable, so they collapse to months.
+    it("buckets a year by week, which 365 daily points cannot show", () => {
         const data = toChartData(makeDays(365), [LibraryId.FRC_DESIGN_LIB]);
 
-        // 365 days from Jan 1 of a non-leap year is exactly 12 months.
-        expect(data).toHaveLength(12);
+        // 2026-01-01 is a Thursday, so the first week is a stub of 4 days.
+        expect(data).toHaveLength(53);
+        expect(data[0].bucket).toBe("2025-12-29");
+        expect(data[1][FRC]).toBe(7);
+    });
+
+    it("buckets several years by month, where weeks would run to hundreds", () => {
+        const data = toChartData(makeDays(800), [LibraryId.FRC_DESIGN_LIB]);
+
         expect(data[0][FRC]).toBe(31); // all of January
         expect(data[0].bucket).toBe("2026-01");
         expect(data[0].label).toBe("Jan 2026");
@@ -82,7 +88,7 @@ describe("toChartData", () => {
         const data = toChartData(
             makeDays(30),
             [LibraryId.FRC_DESIGN_LIB],
-            "week"
+            Granularity.WEEK
         );
 
         expect(data[0].bucket).toBe("2025-12-29");
@@ -105,8 +111,9 @@ describe("toSparkSeries", () => {
         );
         const { inserts } = toSparkSeries(points);
 
-        expect(inserts).toHaveLength(12);
-        expect(inserts[0]).toBe(62); // all of January, at 2 a day
+        // A week a point, and the first is Jan 1-4 at 2 a day.
+        expect(inserts).toHaveLength(53);
+        expect(inserts[0]).toBe(8);
     });
 
     it("averages users over a bucket rather than summing them", () => {

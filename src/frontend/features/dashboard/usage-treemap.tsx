@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../library/library-path";
 import { AppTreemap } from "./treemap-chart";
-import { SectionCard } from "./section";
+import { SectionCard } from "../../components/section";
 import {
     toNodes,
     TreemapKind,
