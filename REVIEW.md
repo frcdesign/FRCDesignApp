@@ -25,20 +25,20 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 
 ## Frontend
 
-| Area                    | Files | Status | Notes                                                    |
-| ----------------------- | ----: | :----: | -------------------------------------------------------- |
-| `lib/`                  |    13 |   ☐    |                                                          |
-| `components/`           |    15 |   ☐    | `app-zero-state` touched: added `SectionMessage`         |
-| `routes/`               |    16 |   ☐    | library `index`/`route` touched                          |
-| `features/auth`         |       |   ☐    |                                                          |
-| `features/library`      |       |   ☐    | `insertable-card`, `library-path`, `coming-soon` touched |
-| `features/search`       |       |   ☐    |                                                          |
-| `features/insert`       |       |   ☐    | `insert-menu` touched                                    |
-| `features/favorites`    |       |   ◐    | standalone zero state done; rest unreviewed              |
-| `features/thumbnails`   |       |   ☐    |                                                          |
-| `features/build-status` |       |   ☐    |                                                          |
-| `features/settings`     |       |   ◐    | `settings-menu` gained the app switch                    |
-| `features/dashboard`    |       |   ◐    | own settings menu dropped; rest unreviewed               |
+| Area                    | Files | Status | Notes                                                       |
+| ----------------------- | ----: | :----: | ----------------------------------------------------------- |
+| `lib/`                  |    13 |   ☐    |                                                             |
+| `components/`           |    15 |   ☐    | `app-zero-state` reworked into `SectionNotice`/`PageNotice` |
+| `routes/`               |    16 |   ☐    | library `index`/`route` touched                             |
+| `features/auth`         |       |   ☐    |                                                             |
+| `features/library`      |       |   ☐    | `insertable-card`, `library-path`, `coming-soon` touched    |
+| `features/search`       |       |   ☐    |                                                             |
+| `features/insert`       |       |   ☐    | `insert-menu` touched                                       |
+| `features/favorites`    |       |   ◐    | standalone zero state done; rest unreviewed                 |
+| `features/thumbnails`   |       |   ☐    |                                                             |
+| `features/build-status` |       |   ☐    |                                                             |
+| `features/settings`     |       |   ◐    | `settings-menu` gained the app switch                       |
+| `features/dashboard`    |       |   ◐    | own settings menu dropped; rest unreviewed                  |
 
 ## Excluded
 
@@ -92,8 +92,6 @@ Left for you to decide, since each wants a migration or a judgement call:
 
 ## Noticed, not yet addressed
 
-- `routes/dashboard/library/$libraryId/route.tsx` declares its own
-  `isLibraryId`, duplicating the one in `features/library/library-path.ts`.
 - `NoSearchResultError` in `features/search/components/search-errors.tsx` has
   the naming problem `SectionNotice` just shed: it reports "No parts", not a
   failure. Left for the search pass, along with the file's own name.
