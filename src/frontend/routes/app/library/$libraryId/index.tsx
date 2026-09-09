@@ -15,7 +15,7 @@ import { ItemTable } from "../../../../features/library/components/card-componen
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
 import {
-    SectionError,
+    SectionNotice,
     SectionLoading
 } from "../../../../components/app-zero-state";
 import { RequireAccessLevel } from "../../../../features/auth/access-level";
@@ -186,7 +186,7 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load groups." />;
+        return <SectionNotice title="Failed to load groups." />;
     }
 
     const groups = libraryQuery.data.groups;
@@ -195,7 +195,7 @@ function LibraryList() {
     if (groupOrder.length <= 0) {
         // Add an escape hatch for when no groups are in the database
         return (
-            <SectionError
+            <SectionNotice
                 title="No groups found"
                 description={null}
                 action={

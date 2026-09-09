@@ -24,7 +24,7 @@ import { favoritesQueryKey } from "../../../lib/query-keys";
 import { getQueryUpdater } from "../../../lib/query-cache";
 import { toFavoritePath, useLibraryId } from "../../library/library-path";
 import { useRefreshFavorites } from "../../../lib/refresh";
-import { PageError } from "../../../components/app-zero-state";
+import { PageNotice } from "../../../components/app-zero-state";
 
 interface FavoriteMenuContentProps {
     favoriteId: string;
@@ -120,7 +120,7 @@ export function FavoriteMenuContent(
     }
     if (!insertable.isConfigurable) {
         return (
-            <PageError
+            <PageNotice
                 title="Cannot edit unconfigurable favorite"
                 description={null}
             />

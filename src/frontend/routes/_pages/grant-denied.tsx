@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { PageError } from "../../components/app-zero-state";
+import { PageNotice } from "../../components/app-zero-state";
 
 export const Route = createFileRoute("/_pages/grant-denied")({
     component: GrantDenied
@@ -15,7 +15,7 @@ function GrantDenied(): JSX.Element {
     );
 
     return (
-        <PageError
+        <PageNotice
             title="Grant Denied"
             description="You denied the FRCDesignApp access to your documents."
             action={applicationAccessButton}

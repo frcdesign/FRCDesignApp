@@ -1,7 +1,7 @@
 import { HammerIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { IconSize, PrimaryColor } from "../../../lib/style-constants";
-import { PageMessage } from "../../../components/app-zero-state";
+import { PageNotice } from "../../../components/app-zero-state";
 import { getLibraryName, useLibraryId } from "../library-path";
 import { AppIcon } from "../../../components/app-icon";
 
@@ -9,7 +9,7 @@ import { AppIcon } from "../../../components/app-icon";
 export function ComingSoon(): ReactNode {
     const libraryId = useLibraryId();
     return (
-        <PageMessage
+        <PageNotice
             icon={
                 <AppIcon
                     icon={HammerIcon}

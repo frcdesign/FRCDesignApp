@@ -18,7 +18,7 @@ import {
 } from "react";
 import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
-import { SectionError } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
 import { useIsSignedIn } from "../../auth/access-level";
@@ -301,7 +301,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
             <PreviewBox heightAndWidth={heightAndWidth}>
-                <SectionError
+                <SectionNotice
                     title="The thumbnail could not be loaded."
                     // Standalone has no insert button to fall back on, and
                     // null suppresses the generic "contact the developers".

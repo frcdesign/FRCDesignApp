@@ -13,9 +13,8 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
 import { useGetUiState } from "../../../lib/ui-state";
 import {
-    SectionError,
     SectionLoading,
-    SectionMessage
+    SectionNotice
 } from "../../../components/app-zero-state";
 import {
     NoSearchResultError,
@@ -54,7 +53,7 @@ export function FavoritesList(): ReactNode {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
-            <SectionError
+            <SectionNotice
                 title="Failed to load favorites."
                 icon={
                     <AppIcon
@@ -99,7 +98,7 @@ export function FavoritesList(): ReactNode {
 
 function SignInToViewFavorites(): ReactNode {
     return (
-        <SectionMessage
+        <SectionNotice
             icon={<FavoriteIcon size={IconSize.SECTION} />}
             title="Sign in to view favorites"
             description="Favorites are saved to your Onshape account."
@@ -125,9 +124,9 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     if (searchDbQuery.isLoading) {
         return <SectionLoading title="Searching..." />;
     } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
+        return <SectionNotice title="Failed to load search database." />;
     } else if (!searchDbQuery.data) {
-        return <SectionError title="The search database is empty." />;
+        return <SectionNotice title="The search database is empty." />;
     }
 
     const result = searchInsertables({

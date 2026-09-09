@@ -50,7 +50,7 @@ import {
 } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { showErrorToast } from "../../../lib/notifications";
-import { SectionError } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-zero-state";
 import { InputRow } from "../../../components/input-row";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
@@ -138,7 +138,7 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
             </Center>
         );
     } else if (query.isError) {
-        return <SectionError title="Failed to load selection." />;
+        return <SectionNotice title="Failed to load selection." />;
     }
 
     return (

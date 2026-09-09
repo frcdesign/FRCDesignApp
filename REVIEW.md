@@ -57,8 +57,15 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   the modal now offers the app when the dashboard is what's showing.
 - **App brand** — the divider sits closer to the name, and the name links out
   to FRCDesign.org alongside the book.
+- **Zero states** — `SectionError`/`PageError` are now `SectionNotice`/
+  `PageNotice`, since half their callers were empty states rather than
+  failures. `SectionMessage` and `PageMessage` are gone: an explicit icon and
+  description already opt out of the failure defaults.
 
 ## Noticed, not yet addressed
 
 - `routes/dashboard/library/$libraryId/route.tsx` declares its own
   `isLibraryId`, duplicating the one in `features/library/library-path.ts`.
+- `NoSearchResultError` in `features/search/components/search-errors.tsx` has
+  the naming problem `SectionNotice` just shed: it reports "No parts", not a
+  failure. Left for the search pass, along with the file's own name.

@@ -5,7 +5,7 @@ import { searchInsertables } from "../filter";
 import { InsertableCard } from "../../library/components/insertable-card";
 import { ItemTable } from "../../library/components/card-components";
 import {
-    SectionError,
+    SectionNotice,
     SectionLoading
 } from "../../../components/app-zero-state";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
@@ -32,11 +32,11 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading library..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load library." />;
+        return <SectionNotice title="Failed to load library." />;
     } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
+        return <SectionNotice title="Failed to load search database." />;
     } else if (!searchDbQuery.data) {
-        return <SectionError title="The search database is empty." />;
+        return <SectionNotice title="The search database is empty." />;
     }
     const result = searchInsertables({
         searchDb: searchDbQuery.data,
