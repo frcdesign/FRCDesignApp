@@ -5,33 +5,26 @@ import {
     retainSearchParams
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
+import * as z from "zod";
 import { DashboardNavbar } from "../../features/dashboard/dashboard-navbar";
-import {
-    isRangePreset,
-    type RangePreset
-} from "../../features/dashboard/range";
+import { RangePreset } from "../../features/dashboard/range";
+import { parseSearch } from "../../lib/search-params";
 
-export interface DashboardSearch {
+// Every field is caught rather than required: a hand-edited url should drop the
+// bad param, not fail the whole route.
+const DashboardSearchType = z.object({
     /** Preset window for the range chart; kept in the URL so views are shareable. */
-    range?: RangePreset;
+    range: z.enum(RangePreset).optional().catch(undefined),
     /** The uses a part must be at or below to count as low usage. */
-    threshold?: number;
-}
+    threshold: z.coerce.number().int().nonnegative().optional().catch(undefined)
+});
+
+export type DashboardSearch = z.infer<typeof DashboardSearchType>;
 
 export const Route = createFileRoute("/dashboard")({
     component: DashboardLayout,
-    validateSearch: (search: Record<string, unknown>): DashboardSearch => {
-        // Absent rather than undefined: `retainSearchParams` carries over only
-        // the keys a navigation leaves out entirely.
-        const out: DashboardSearch = {};
-        if (isRangePreset(search.range)) {
-            out.range = search.range;
-        }
-        if (typeof search.threshold === "number" && search.threshold >= 0) {
-            out.threshold = search.threshold;
-        }
-        return out;
-    },
+    validateSearch: (search: Record<string, unknown>): DashboardSearch =>
+        parseSearch(DashboardSearchType, search),
     search: {
         middlewares: [retainSearchParams(["range", "threshold"])]
     }

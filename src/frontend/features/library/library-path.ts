@@ -1,4 +1,5 @@
-import { useMatch, useParams } from "@tanstack/react-router";
+import { notFound, useMatch, useParams } from "@tanstack/react-router";
+import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 
@@ -23,8 +24,19 @@ export function useLibraryId(): LibraryId {
     );
 }
 
-export function isLibraryId(libraryId: string): libraryId is LibraryId {
-    return (Object.values(LibraryId) as string[]).includes(libraryId);
+const LibraryIdType = z.enum(LibraryId);
+
+/**
+ * Reads the library id out of a url. Quietly falling back to another library
+ * would hide the bad url and leave the caller wondering why they are somewhere
+ * else, so an unknown one 404s here rather than reaching the API.
+ */
+export function parseLibraryId(libraryId: string): LibraryId {
+    const parsed = LibraryIdType.safeParse(libraryId);
+    if (!parsed.success) {
+        throw notFound();
+    }
+    return parsed.data;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {

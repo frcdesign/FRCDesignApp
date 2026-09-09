@@ -1,5 +1,9 @@
 import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
-import { ArrowSquareOut, CaretDown, CaretUp } from "@phosphor-icons/react";
+import {
+    ArrowSquareOutIcon,
+    CaretDownIcon,
+    CaretUpIcon
+} from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppSparkline } from "./sparkline";
@@ -143,7 +147,7 @@ function SortableTh({
     width
 }: SortableThProps): ReactNode {
     const active = sort.column === column;
-    const Caret = sort.descending ? CaretDown : CaretUp;
+    const Caret = sort.descending ? CaretDownIcon : CaretUpIcon;
 
     return (
         <Table.Th
@@ -214,7 +218,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                     rel="noreferrer"
                     aria-label={`Open ${part.name} in Onshape`}
                 >
-                    <ArrowSquareOut size={IconSize.SMALL} />
+                    <ArrowSquareOutIcon size={IconSize.SMALL} />
                 </Anchor>
             </Table.Td>
         </Table.Tr>

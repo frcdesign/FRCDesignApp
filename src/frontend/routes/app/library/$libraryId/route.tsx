@@ -1,4 +1,4 @@
-import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { queryClient } from "../../../../lib/query-client";
 import { prefetchFavorites } from "../../../../features/favorites/queries";
@@ -7,10 +7,9 @@ import {
     getLibraryVersionQuery
 } from "../../../../features/library/queries";
 import { getSearchDbQuery } from "../../../../features/search/queries";
-import { LibraryId } from "@backend/features/library/library-id";
 import {
     isComingSoon,
-    isLibraryId,
+    parseLibraryId,
     useLibraryId
 } from "../../../../features/library/library-path";
 import { ComingSoon } from "../../../../features/library/components/coming-soon";
@@ -18,16 +17,8 @@ import { ComingSoon } from "../../../../features/library/components/coming-soon"
 export const Route = createFileRoute("/app/library/$libraryId")({
     component: LibraryRoute,
     params: {
-        // Narrowed by beforeLoad, which 404s an unknown library.
-        parse: ({ libraryId }) => ({ libraryId: libraryId as LibraryId }),
+        parse: ({ libraryId }) => ({ libraryId: parseLibraryId(libraryId) }),
         stringify: ({ libraryId }) => ({ libraryId })
-    },
-    beforeLoad: ({ params }) => {
-        // Quietly showing a different library would hide the bad url and leave
-        // the caller wondering why they are somewhere else.
-        if (!isLibraryId(params.libraryId)) {
-            throw notFound();
-        }
     },
     loader: async ({ params }) => {
         const { libraryId } = params;

@@ -7,14 +7,16 @@ import {
     TextInput,
     Title
 } from "@mantine/core";
-import { ArrowSquareOut, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
+import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
+import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
 import { METRICS } from "../../../../features/dashboard/metrics";
@@ -32,15 +34,15 @@ import {
     formatFraction
 } from "../../../../features/dashboard/format";
 
-interface PartSearch {
+const PartSearchType = z.object({
     /** The part being reported on; absent until one is picked. */
-    element?: string;
-}
+    element: z.string().optional().catch(undefined)
+});
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/part")({
     component: PartReport,
-    validateSearch: (search: Record<string, unknown>): PartSearch =>
-        typeof search.element === "string" ? { element: search.element } : {},
+    validateSearch: (search: Record<string, unknown>) =>
+        parseSearch(PartSearchType, search),
     // Survives a range change on this page; switching library clears it.
     search: { middlewares: [retainSearchParams(["element"])] }
 });
@@ -68,7 +70,7 @@ function PartReport(): ReactNode {
                     w={360}
                     mb="md"
                     placeholder="Search parts…"
-                    leftSection={<MagnifyingGlass size={IconSize.SMALL} />}
+                    leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
                     value={search}
                     onChange={(event) => setSearch(event.currentTarget.value)}
                 />
@@ -164,7 +166,7 @@ function PartTitle({ report }: PartTitleProps): ReactNode {
                 style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
             >
                 {report.name}
-                <ArrowSquareOut size={IconSize.MEDIUM} />
+                <ArrowSquareOutIcon size={IconSize.MEDIUM} />
             </Anchor>
         </Title>
     );

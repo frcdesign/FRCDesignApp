@@ -9,7 +9,7 @@ import {
     Tabs,
     Tooltip
 } from "@mantine/core";
-import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, CaretDownIcon } from "@phosphor-icons/react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
     useNavigate,
@@ -138,7 +138,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                 <Button
                     variant="default"
                     size="compact-sm"
-                    rightSection={<CaretDown size={IconSize.SMALL} />}
+                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
                 >
                     {getLibraryName(current)}
                 </Button>
@@ -223,7 +223,7 @@ function RefreshButton(): ReactNode {
                     })
                 }
             >
-                <ArrowClockwise size={IconSize.MEDIUM} />
+                <ArrowClockwiseIcon size={IconSize.MEDIUM} />
             </ActionIcon>
         </Tooltip>
     );

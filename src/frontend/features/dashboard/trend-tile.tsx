@@ -7,7 +7,7 @@ import {
     Text,
     Title
 } from "@mantine/core";
-import { Info } from "@phosphor-icons/react";
+import { InfoIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import type {
     AnalyticsTotals,
@@ -75,7 +75,7 @@ export function TrendTile({
                             {metric.label}
                         </Text>
                         {/* Affordance for the hover; the card is the target. */}
-                        <Info
+                        <InfoIcon
                             size={IconSize.SMALL}
                             opacity={0.6}
                             aria-label={`About ${metric.label}`}
