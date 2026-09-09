@@ -9,7 +9,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     Selection,
     ConfigurationParameter,
-    ELEMENT_DEFAULT_KEY,
+    DEFAULT_CONFIGURATION_KEY,
     PartMetadata,
     ConfigurationRecord,
     ProbedRecord
@@ -91,8 +91,8 @@ export function decideIndexing(
     const band = counted.band;
     // Enumeration names only what varies; every probe past here is a whole
     // selection, so nothing downstream has to wonder which it holds.
-    const configurations = counted.configurations.map((configuration) =>
-        toSelection(configuration, parameters)
+    const configurations = counted.configurations.map((partial) =>
+        toSelection(partial, parameters)
     );
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
@@ -317,8 +317,8 @@ function planBatches(
     // Canonicalizing to the default means landing on the default probe's record,
     // so drop every all-defaults combination, not just the empty one.
     const toFetch = configurations.filter(
-        (configuration) =>
-            toKey(configuration, parameters) !== ELEMENT_DEFAULT_KEY
+        (selection) =>
+            toKey(selection, parameters) !== DEFAULT_CONFIGURATION_KEY
     );
 
     const batches: Selection[][] = [];
@@ -333,18 +333,18 @@ async function probeConfiguration(
     client: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    configuration: Selection,
+    selection: Selection,
     isOpenComposite: boolean
 ): Promise<ProbedRecord> {
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
-            await getElementMetadata(client, elementPath, configuration),
-            configuration
+            await getElementMetadata(client, elementPath, selection),
+            selection
         );
     }
     return parsePartStudioRecord(
-        await getParts(client, elementPath, configuration),
-        configuration,
+        await getParts(client, elementPath, selection),
+        selection,
         isOpenComposite
     );
 }
@@ -358,13 +358,13 @@ async function fetchBatch(
     isOpenComposite: boolean
 ): Promise<ProbedRecord[]> {
     const records: ProbedRecord[] = [];
-    for (const configuration of batch) {
+    for (const selection of batch) {
         records.push(
             await probeConfiguration(
                 client,
                 elementPath,
                 elementType,
-                configuration,
+                selection,
                 isOpenComposite
             )
         );

@@ -66,6 +66,30 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   selection its key already names; `PartialSelection` now separates a
   combination being built from a whole one; assorted naming and dedupe.
 
+- **Configuration vocabulary, codebase-wide** — a `Selection`-typed value is
+  called `selection` everywhere now, `configurationKey` is typed
+  `ConfigurationKey`, and `ELEMENT_DEFAULT_KEY` is `DEFAULT_CONFIGURATION_KEY`.
+  Onshape's own wire names (the `configuration` query param, the `/ac/` path
+  segment) stay as Onshape spells them.
+
+## Database
+
+Fixed here: the `groups` table export was the only singular one among
+`libraries`/`insertables`/`configurations`/`users`/`favorites`, and it collided
+with row variables also called `group`. Identifier only — the SQL name was
+already `groups`, so no migration.
+
+Left for you to decide, since each wants a migration or a judgement call:
+
+| Item                                                                   | Why                                                                                                                              |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `users.libraryId` has no `.references(() => libraries.id)`             | `groups`, `insertables` and `favorites` all declare it; users is the gap                                                         |
+| `configurations.id` is really an insertable id                         | It is both PK and FK to `insertables.id`, so every query reads `eq(configurations.id, insertableId)`                             |
+| `buildIssues` is declared identically on three tables                  | As are `smallThumbnailUrl`/`largeThumbnailUrl` on two — candidates for a shared column builder                                   |
+| Epoch-ms columns are plain `integer`                                   | `lastLoadedAt`, `createdAt`, `firstInsertedAt`, … — no `{ mode: "timestamp_ms" }`, and only some carry a comment saying the unit |
+| Builder order varies                                                   | `.notNull().$type<LibraryId>()` in `db/schema.ts` vs `.$type<LibraryId>().notNull()` in `analytics/schema.ts`                    |
+| Stored `configurations.records` still hold the old duplicate selection | Written before the fix two commits back; inert, and cleared on the next reload                                                   |
+
 ## Noticed, not yet addressed
 
 - `routes/dashboard/library/$libraryId/route.tsx` declares its own
@@ -77,8 +101,3 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   row's `onValueChange` changes identity each render and the effects in
   `ParameterInput` and `EnumInput` re-run regardless of their deps. Stabilising
   it means giving each row its own component — worth doing, bigger than a pass.
-- The word "configuration" still names `Selection`-typed values outside
-  `features/configurations` (`load/`, `lib/onshape/`), where the feature now
-  says "selection". Same vocabulary drift, next feature over.
-- `configurationKey` is typed as a bare `string` in ~15 places outside this
-  feature (thumbnails, search, favorites) rather than `ConfigurationKey`.

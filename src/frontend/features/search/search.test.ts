@@ -7,12 +7,15 @@ import {
 import { doSearch, type Position } from "./search";
 import { LibraryOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { ConfigurationRecord } from "@backend/features/configurations/models";
+import {
+    type ConfigurationKey,
+    ConfigurationRecord
+} from "@backend/features/configurations/models";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
 const record = (
     partNumber: string | undefined,
-    configurationKey: string,
+    configurationKey: ConfigurationKey,
     name?: string
 ) => configurationRecord({ partNumber, configurationKey, name });
 

@@ -2,7 +2,7 @@ import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
-    group,
+    groups,
     insertables,
     libraries,
     users
@@ -66,7 +66,7 @@ export async function resetDb(db: Db): Promise<void> {
     await db.delete(favorites);
     await db.delete(configurations);
     await db.delete(insertables);
-    await db.delete(group);
+    await db.delete(groups);
     await db.delete(users);
     await db.delete(libraries);
     // Analytics has no foreign keys, so nothing cascades these away.
@@ -103,11 +103,11 @@ export async function seedGroup(
     db: Db,
     id: string = TEST_GROUP_ID,
     libraryId: LibraryId = TEST_LIBRARY_ID,
-    overrides: Partial<typeof group.$inferInsert> = {}
+    overrides: Partial<typeof groups.$inferInsert> = {}
 ): Promise<string> {
     await seedLibrary(db, libraryId);
     await db
-        .insert(group)
+        .insert(groups)
         .values({
             id,
             libraryId,
@@ -146,7 +146,7 @@ export async function seedInsertable(
     return values.id;
 }
 
-/** Seeds the standard part-studio insertable (ensures library + group). */
+/** Seeds the standard part-studio insertable (ensures library + groups). */
 export async function seedPartStudio(
     db: Db,
     overrides: Partial<typeof insertables.$inferInsert> = {}
@@ -155,7 +155,7 @@ export async function seedPartStudio(
     return seedInsertable(db, overrides);
 }
 
-/** Seeds the standard assembly insertable (ensures library + group). */
+/** Seeds the standard assembly insertable (ensures library + groups). */
 export async function seedAssembly(db: Db): Promise<string> {
     await seedGroup(db);
     return seedInsertable(db, {
@@ -204,7 +204,7 @@ export async function seedConfiguration(
 }
 
 /**
- * Seeds the canonical dataset: a library, a user, a group, a part studio, an
+ * Seeds the canonical dataset: a library, a user, a groups, a part studio, an
  * assembly, and two favorites (the user's, on the part studio and the assembly).
  */
 export async function seedTestData(db: Db): Promise<void> {

@@ -16,7 +16,10 @@ import {
     ReactNode,
     useState
 } from "react";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
+import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY
+} from "@backend/features/configurations/models";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
@@ -52,7 +55,7 @@ export interface ThumbnailTarget {
     elementId: string;
     microversionId: string;
     /** Empty means the element default. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /**
      * Whether a miss should start rendering: surfaces where the user picked the
      * configuration do, where a search would otherwise render a row at a time.
@@ -74,7 +77,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        target && target.configurationKey !== ELEMENT_DEFAULT_KEY
+        target && target.configurationKey !== DEFAULT_CONFIGURATION_KEY
             ? thumbnailUrl({ ...target, size })
             : stored;
 
@@ -169,7 +172,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 interface PreviewImageProps {
     path: ElementPath;
     /** The selection to preview; Onshape applies defaults for what it omits. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;
     /** What the render resolves the element from. */

@@ -9,9 +9,9 @@ import type { OnshapeMetadataObject } from "../types";
 export function getElementMetadata(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration: Selection
+    selection: Selection
 ): Promise<OnshapeMetadataObject> {
-    const encoded = encodeConfiguration(configuration);
+    const encoded = encodeConfiguration(selection);
     // Computed properties are expensive and unused, and indexing probes this
     // once per configuration.
     const query: Record<string, string> = {

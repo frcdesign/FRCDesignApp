@@ -15,7 +15,7 @@ import {
 import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersionId } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
-import { group, libraries, PLACEHOLDER_VERSION_ID } from "../../db/schema";
+import { groups, libraries, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 
 import {
@@ -68,12 +68,12 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         const storedGroups = await step.do("list-groups", () =>
             getDb(ctx.env.DB)
                 .select({
-                    groupId: group.id,
-                    documentId: group.documentId,
-                    versionId: group.versionId
+                    groupId: groups.id,
+                    documentId: groups.documentId,
+                    versionId: groups.versionId
                 })
-                .from(group)
-                .where(eq(group.libraryId, libraryId))
+                .from(groups)
+                .where(eq(groups.libraryId, libraryId))
         );
 
         const results = await Promise.all(
@@ -201,7 +201,7 @@ async function resolveGroupTarget(
 
 /**
  * Writes the group row the load then fills in, creating the library if this is
- * its first group.
+ * its first groups.
  */
 async function createShellGroup(
     env: AppBindings,
@@ -219,7 +219,7 @@ async function createShellGroup(
         params.selectedGroupId
     );
     await db
-        .insert(group)
+        .insert(groups)
         .values({
             id: params.groupId,
             documentId: params.documentId,
@@ -242,21 +242,21 @@ async function flagFailedGroup(
 ): Promise<void> {
     const db = getDb(env.DB);
     const row = await db
-        .select({ buildIssues: group.buildIssues })
-        .from(group)
-        .where(eq(group.id, groupId))
+        .select({ buildIssues: groups.buildIssues })
+        .from(groups)
+        .where(eq(groups.id, groupId))
         .get();
     if (!row) {
         return;
     }
     await db
-        .update(group)
+        .update(groups)
         .set({
             buildIssues: addBuildIssue(row.buildIssues, {
                 type: BuildIssueType.LOAD_FAILED
             })
         })
-        .where(eq(group.id, groupId));
+        .where(eq(groups.id, groupId));
 }
 
 /** Rebuild the library's search index and bump its cache version. */

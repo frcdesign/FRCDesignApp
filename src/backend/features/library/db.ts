@@ -3,7 +3,7 @@ import { type Db } from "../../db/client";
 import { increment } from "../../db/updates";
 import {
     libraries,
-    group,
+    groups,
     insertables,
     configurations,
     PLACEHOLDER_VERSION_ID
@@ -24,9 +24,9 @@ export async function getLibraryOut(
 ): Promise<LibraryOut> {
     const allGroups = await db
         .select()
-        .from(group)
-        .where(eq(group.libraryId, libraryId))
-        .orderBy(asc(group.sortOrder))
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
     if (allGroups.length === 0) {
@@ -127,10 +127,10 @@ export async function placeNewGroup(
     selectedGroupId: string | undefined
 ): Promise<number> {
     const siblings = await db
-        .select({ id: group.id })
-        .from(group)
-        .where(eq(group.libraryId, libraryId))
-        .orderBy(asc(group.sortOrder))
+        .select({ id: groups.id })
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
     const selectedIndex = selectedGroupId
@@ -144,9 +144,9 @@ export async function placeNewGroup(
     await Promise.all(
         siblings.map((sibling, index) =>
             db
-                .update(group)
+                .update(groups)
                 .set({ sortOrder: index < newIndex ? index : index + 1 })
-                .where(eq(group.id, sibling.id))
+                .where(eq(groups.id, sibling.id))
         )
     );
 

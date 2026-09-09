@@ -25,7 +25,7 @@ export const libraries = sqliteTable("libraries", {
  */
 export const PLACEHOLDER_VERSION_ID = "placeholder";
 
-export const group = sqliteTable(
+export const groups = sqliteTable(
     "groups",
     {
         id: text("id")
@@ -65,7 +65,7 @@ export const insertables = sqliteTable("insertables", {
     // The group this insertable belongs to (its primary parent).
     groupId: text("group_id")
         .notNull()
-        .references(() => group.id, { onDelete: "cascade" }),
+        .references(() => groups.id, { onDelete: "cascade" }),
     // The Onshape document the element lives in (kept for Onshape API calls).
     documentId: text("document_id").notNull(),
     libraryId: text("library_id")

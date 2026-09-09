@@ -1,3 +1,4 @@
+import { type ConfigurationKey } from "../configurations/models";
 import {
     WorkflowEntrypoint,
     type WorkflowEvent,
@@ -15,7 +16,7 @@ import { uploadConfigurationThumbnails } from "./store";
 export interface ThumbnailWorkflowParams {
     insertableId: string;
     /** Never the default, which loads eagerly with the element. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     sessionId: string;
 }
 

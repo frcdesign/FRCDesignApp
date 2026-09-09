@@ -4,7 +4,8 @@ import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import {
-    ELEMENT_DEFAULT_KEY,
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY,
     Selection
 } from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
@@ -82,7 +83,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 elementId: insertable.elementId,
                 microversionId: insertable.microversionId,
                 configurationKey:
-                    searchHit?.configurationKey ?? ELEMENT_DEFAULT_KEY,
+                    searchHit?.configurationKey ?? DEFAULT_CONFIGURATION_KEY,
                 // A cold search would otherwise start a render per row.
                 renderThumbnail: false
             }}
@@ -137,7 +138,7 @@ interface InsertableMenuItemsProps {
      * selection on a card, the selected one inside the insert menu. */
     selection?: Selection;
     /** That selection's key, so favoriting can name its thumbnail. */
-    configurationKey?: string;
+    configurationKey?: ConfigurationKey;
     source: InsertSource;
 }
 

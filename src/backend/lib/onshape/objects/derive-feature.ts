@@ -28,7 +28,7 @@ export class DerivedFeature {
         sourcePath: ElementPath,
         microversionId: string,
         useMateConnector: boolean,
-        configuration: Selection | undefined,
+        selection: Selection | undefined,
         parameters: ConfigurationParameter[] | undefined
     ) {
         this.escapedName = escapeFeatureName(name);
@@ -36,23 +36,23 @@ export class DerivedFeature {
         this.useMateConnector = useMateConnector;
 
         if (
-            configuration !== undefined &&
+            selection !== undefined &&
             parameters !== undefined &&
             parameters.length > 0
         ) {
             this.partConfiguration = this.buildPartConfiguration(
-                configuration,
+                selection,
                 parameters
             );
         }
     }
 
     private buildPartConfiguration(
-        configuration: Selection,
+        selection: Selection,
         parameters: ConfigurationParameter[]
     ): object[] {
         return parameters.map((parameter) => {
-            const value = configuration[parameter.id] ?? parameter.default;
+            const value = selection[parameter.id] ?? parameter.default;
             switch (parameter.type) {
                 case ParameterType.ENUM:
                     return {

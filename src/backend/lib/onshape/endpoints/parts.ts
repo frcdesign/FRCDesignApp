@@ -9,8 +9,8 @@ import type { OnshapeAssemblyDefinition, OnshapePart } from "../types";
  * Builds the `configuration` query for an element request. The value is the
  * raw `id=value;…` form; `createSearchParams` URL-encodes it.
  */
-function configurationQuery(configuration: Selection): Record<string, string> {
-    const encoded = encodeConfiguration(configuration);
+function configurationQuery(selection: Selection): Record<string, string> {
+    const encoded = encodeConfiguration(selection);
     return encoded ? { configuration: encoded } : {};
 }
 
@@ -18,10 +18,10 @@ function configurationQuery(configuration: Selection): Record<string, string> {
 export function getParts(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration: Selection
+    selection: Selection
 ): Promise<OnshapePart[]> {
     return client.get(apiPath("parts", elementPath, toElementApiPath), {
-        query: configurationQuery(configuration)
+        query: configurationQuery(selection)
     });
 }
 
@@ -29,9 +29,9 @@ export function getParts(
 export function getAssemblyDefinition(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration: Selection
+    selection: Selection
 ): Promise<OnshapeAssemblyDefinition> {
     return client.get(apiPath("assemblies", elementPath, toElementApiPath), {
-        query: configurationQuery(configuration)
+        query: configurationQuery(selection)
     });
 }

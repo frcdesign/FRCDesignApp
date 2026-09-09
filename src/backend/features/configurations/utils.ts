@@ -4,7 +4,7 @@ import {
     type PartMetadata,
     type PartialSelection,
     Selection,
-    ELEMENT_DEFAULT_KEY,
+    DEFAULT_CONFIGURATION_KEY,
     EnumOption,
     EnumParameter,
     OptionVisibilityType,
@@ -257,7 +257,7 @@ export function toRecords(
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
     return [
-        { ...partMetadata, configurationKey: ELEMENT_DEFAULT_KEY },
+        { ...partMetadata, configurationKey: DEFAULT_CONFIGURATION_KEY },
         ...records
     ];
 }

@@ -8,7 +8,7 @@ import {
     type BuildIssue,
     BuildIssueType
 } from "../build-checker/issues";
-import { group, insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import { uploadDocumentThumbnails } from "../thumbnails/store";
 import { getContents } from "../../lib/onshape/endpoints/documents";
 import type { OnshapeElement } from "../../lib/onshape/types";
@@ -167,7 +167,7 @@ async function saveGroup(
     }
 
     const writes: BatchItem<"sqlite">[] = [
-        db.update(group).set(parsed).where(eq(group.id, target.groupId))
+        db.update(groups).set(parsed).where(eq(groups.id, target.groupId))
     ];
     if (!hasFailedInsertables) {
         // A skipped tab never reaches saveInsertable, so move the whole group

@@ -1,3 +1,4 @@
+import { type ConfigurationKey } from "../configurations/models";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -26,7 +27,7 @@ interface FavoritesBody {
         {
             insertableId: string;
             defaultSelection?: Record<string, string>;
-            configurationKey?: string;
+            configurationKey?: ConfigurationKey;
         }
     >;
     favoriteOrder: string[];

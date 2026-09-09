@@ -8,7 +8,7 @@ import {
     toInstanceApiPath
 } from "../path";
 import { apiPath } from "../api-path";
-import { encodeConfiguration } from "./configurations";
+import { encodeConfigurationForBody } from "./configurations";
 import { OnshapeElementType, PartType } from "./documents";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
 import {
@@ -102,7 +102,7 @@ export function addElementToAssembly(
         instance.configuration =
             typeof configuration === "string"
                 ? configuration
-                : encodeConfiguration(configuration);
+                : encodeConfigurationForBody(configuration);
     }
 
     if (elementType === OnshapeElementType.ASSEMBLY) {

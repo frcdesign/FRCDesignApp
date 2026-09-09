@@ -2,10 +2,10 @@ import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import {
-    OnshapeConfigurationInfo,
     OnshapeConfigurationParameter,
     OnshapeConfigurationResponse
 } from "../types";
+import { type Selection } from "../../../features/configurations/models";
 
 export function getConfiguration(
     client: OnshapeApi,
@@ -38,28 +38,14 @@ export function setConfiguration(
     );
 }
 
-/** Converts a configuration string back into a record mapping parameter IDs to values. */
-export async function decodeConfiguration(
-    client: OnshapeApi,
-    elementPath: ElementPath,
-    configurationString: string
-): Promise<Record<string, string>> {
-    const result: OnshapeConfigurationInfo = await client.get(
-        apiPath("elements", elementPath, toElementApiPath, {
-            endRoute: "configurationencodings",
-            endId: configurationString
-        })
-    );
-    return Object.fromEntries(
-        result.parameters.map((p) => [p.parameterId, p.parameterValue])
-    );
-}
-
-/** Encodes a configuration into a string suitable for passing to the Onshape API as a body parameter. */
-export function encodeConfiguration(
-    configuration: Record<string, string>
-): string {
-    return Object.entries(configuration)
+/**
+ * A selection encoded for an Onshape request *body*, where nothing else will
+ * escape it. Not `encodeConfiguration` from `features/configurations/utils`,
+ * which leaves values raw for a query string to encode on the way out — the
+ * two differ only in that, so they are named for which side they serve.
+ */
+export function encodeConfigurationForBody(selection: Selection): string {
+    return Object.entries(selection)
         .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
 }

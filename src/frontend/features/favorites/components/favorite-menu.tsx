@@ -14,10 +14,11 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import { FavoriteIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {
+    type ConfigurationKey,
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/models";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";
@@ -41,7 +42,7 @@ interface FavoriteMenuContentProps {
 function useSetDefaultConfigurationMutation(
     favoriteId: string,
     selection: Selection | undefined,
-    configurationKey: string | undefined
+    configurationKey: ConfigurationKey | undefined
 ) {
     const libraryId = useLibraryId();
     const refreshFavorites = useRefreshFavorites();
@@ -135,7 +136,9 @@ export function FavoriteMenuContent(
                     insertableId={insertable.id}
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    configurationKey={configurationKey ?? ELEMENT_DEFAULT_KEY}
+                    configurationKey={
+                        configurationKey ?? DEFAULT_CONFIGURATION_KEY
+                    }
                 />
                 <ConfigurationWrapper
                     onConfigurationKey={setConfigurationKey}

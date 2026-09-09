@@ -18,10 +18,11 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY,
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
@@ -49,8 +50,9 @@ function useInsertSelection(initialSelection?: Selection) {
     const [selection, setSelection] = useState(initialSelection);
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
-    const [configurationKey, setConfigurationKey] =
-        useState(ELEMENT_DEFAULT_KEY);
+    const [configurationKey, setConfigurationKey] = useState(
+        DEFAULT_CONFIGURATION_KEY
+    );
     // The first report is what the menu opened with, and so what a right-click
     // on the card would have inserted. Absent until the parameters load.
     const [openedWith, setOpenedWith] = useState<string>();
@@ -65,7 +67,8 @@ function useInsertSelection(initialSelection?: Selection) {
         setSelection,
         configurationKey,
         onConfigurationKey,
-        isUnchanged: configurationKey === (openedWith ?? ELEMENT_DEFAULT_KEY)
+        isUnchanged:
+            configurationKey === (openedWith ?? DEFAULT_CONFIGURATION_KEY)
     };
 }
 
@@ -147,7 +150,7 @@ interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
     selection?: Selection;
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
     openedAt: number;

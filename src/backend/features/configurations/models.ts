@@ -147,7 +147,7 @@ export type PartialSelection = Partial<Selection>;
 
 /**
  * A selection's identity: what it overrides, which is what addresses a render.
- * {@link ELEMENT_DEFAULT_KEY} — empty — overrides nothing, and so is the default.
+ * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing, and so is the default.
  */
 export type ConfigurationKey = string;
 
@@ -156,7 +156,7 @@ export type ConfigurationKey = string;
  * Beside the type rather than in `selection.ts`, which `utils.ts` would have to
  * import back from to name it.
  */
-export const ELEMENT_DEFAULT_KEY: ConfigurationKey = "";
+export const DEFAULT_CONFIGURATION_KEY: ConfigurationKey = "";
 
 /**
  * The part one probe resolved to: the element itself from its own defaults, a

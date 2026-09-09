@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { group, insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
@@ -26,9 +26,9 @@ describe("GET /build-status", () => {
     it("returns each group's and insertable's last-loaded time", async () => {
         await seedPartStudio(db);
         await db
-            .update(group)
+            .update(groups)
             .set({ lastLoadedAt: GROUP_LOADED_AT })
-            .where(eq(group.id, TEST_GROUP_ID));
+            .where(eq(groups.id, TEST_GROUP_ID));
         await db
             .update(insertables)
             .set({ lastLoadedAt: INSERTABLE_LOADED_AT })

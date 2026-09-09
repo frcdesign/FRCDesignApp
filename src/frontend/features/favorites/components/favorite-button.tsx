@@ -1,3 +1,4 @@
+import { type ConfigurationKey } from "@backend/features/configurations/models";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -36,7 +37,7 @@ interface UpdateFavoritesArgs {
     selection?: Selection;
     /** That selection's key, so the new row's thumbnail is right before the
      * refetch answers. */
-    configurationKey?: string;
+    configurationKey?: ConfigurationKey;
 }
 
 function updateFavorites(
@@ -124,7 +125,7 @@ interface FavoriteButtonProps {
      */
     selection?: Selection;
     /** That selection's key, when the caller knows it. */
-    configurationKey?: string;
+    configurationKey?: ConfigurationKey;
     /**
      * Sizes the button to sit beside a full-height button rather than in a card row.
      * @default false
@@ -184,7 +185,7 @@ interface FavoriteInsertableItemProps {
     /** The selection the new favorite opens with. */
     selection?: Selection;
     /** That selection's key, when the caller knows it. */
-    configurationKey?: string;
+    configurationKey?: ConfigurationKey;
 }
 
 export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {

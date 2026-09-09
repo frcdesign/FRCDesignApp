@@ -1,4 +1,4 @@
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/models";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -85,7 +85,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 microversionId: insertable.microversionId,
                                 configurationKey:
                                     favorite.configurationKey ??
-                                    ELEMENT_DEFAULT_KEY,
+                                    DEFAULT_CONFIGURATION_KEY,
                                 renderThumbnail: true,
                                 insertableId: insertable.id
                             }}
