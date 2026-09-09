@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/models";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 

@@ -17,7 +17,7 @@ import {
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";

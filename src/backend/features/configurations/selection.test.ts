@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { ELEMENT_DEFAULT_KEY } from "./models";
 import {
     appliedValues,
-    ELEMENT_DEFAULT_KEY,
     formatValue,
     fromKey,
     toKey,

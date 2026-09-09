@@ -1,10 +1,12 @@
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
 import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Selection } from "@backend/features/configurations/models";
+import {
+    ELEMENT_DEFAULT_KEY,
+    Selection
+} from "@backend/features/configurations/models";
 import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,

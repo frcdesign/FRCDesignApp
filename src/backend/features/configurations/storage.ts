@@ -1,13 +1,12 @@
+/**
+ * Reads of a stored configuration. Apart from `selection.ts` so that stays a
+ * leaf module the frontend can import.
+ */
 import { eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { configurations } from "../../db/schema";
 import { type Selection } from "./models";
 import { appliedValues } from "./selection";
-
-/**
- * Reads of a stored configuration. Apart from `selection.ts` so that stays a
- * leaf module the frontend can import.
- */
 
 /**
  * What Onshape applied for a selection: the values it did not hide, against the

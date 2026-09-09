@@ -6,7 +6,7 @@ import { getApp } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/models";
 
 import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";

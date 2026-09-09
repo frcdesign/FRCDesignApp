@@ -16,7 +16,7 @@ import {
     ReactNode,
     useState
 } from "react";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";

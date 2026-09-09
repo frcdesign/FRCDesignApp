@@ -62,6 +62,10 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   failures. `SectionMessage` and `PageMessage` are gone: an explicit icon and
   description already opt out of the failure defaults.
 
+- **Configurations** — a stored record no longer carries a second copy of the
+  selection its key already names; `PartialSelection` now separates a
+  combination being built from a whole one; assorted naming and dedupe.
+
 ## Noticed, not yet addressed
 
 - `routes/dashboard/library/$libraryId/route.tsx` declares its own
@@ -69,3 +73,12 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - `NoSearchResultError` in `features/search/components/search-errors.tsx` has
   the naming problem `SectionNotice` just shed: it reports "No parts", not a
   failure. Left for the search pass, along with the file's own name.
+- `ConfigurationParameters` builds `handleValueChange` inside a `.map`, so every
+  row's `onValueChange` changes identity each render and the effects in
+  `ParameterInput` and `EnumInput` re-run regardless of their deps. Stabilising
+  it means giving each row its own component — worth doing, bigger than a pass.
+- The word "configuration" still names `Selection`-typed values outside
+  `features/configurations` (`load/`, `lib/onshape/`), where the feature now
+  says "selection". Same vocabulary drift, next feature over.
+- `configurationKey` is typed as a bare `string` in ~15 places outside this
+  feature (thumbnails, search, favorites) rather than `ConfigurationKey`.

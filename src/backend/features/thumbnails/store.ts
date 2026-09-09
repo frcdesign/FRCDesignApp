@@ -18,7 +18,7 @@ import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./types";
 import { thumbnailKey, thumbnailUrl } from "./keys";
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/models";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**

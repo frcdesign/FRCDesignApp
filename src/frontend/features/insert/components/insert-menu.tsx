@@ -21,7 +21,7 @@ import {
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";

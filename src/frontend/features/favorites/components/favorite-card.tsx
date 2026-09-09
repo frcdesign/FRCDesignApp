@@ -1,4 +1,4 @@
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/models";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";

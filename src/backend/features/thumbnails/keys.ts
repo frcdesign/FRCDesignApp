@@ -1,5 +1,5 @@
 /** Thumbnail addressing, shared so the client builds the urls the worker serves. */
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import { ELEMENT_DEFAULT_KEY } from "../configurations/models";
 import { ThumbnailSize } from "./types";
 
 /** Marks a response as the element default standing in for an unrendered configuration. */

@@ -9,6 +9,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     Selection,
     ConfigurationParameter,
+    ELEMENT_DEFAULT_KEY,
     PartMetadata,
     ConfigurationRecord,
     ProbedRecord
@@ -23,11 +24,7 @@ import {
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
-import {
-    ELEMENT_DEFAULT_KEY,
-    toKey,
-    toSelection
-} from "../configurations/selection";
+import { toKey, toSelection } from "../configurations/selection";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
@@ -159,7 +156,7 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
-    configuration: Selection,
+    selection: Selection,
     isOpenComposite: boolean
 ): ProbedRecord {
     const evaluation = evaluateParts(parts);
@@ -167,14 +164,14 @@ export function parsePartStudioRecord(
     // in a configuration that loses it; toResult raises the build issue.
     if (isOpenComposite && !evaluation.isOpenComposite) {
         return {
-            configuration,
+            selection,
             hasMultipleParts: false,
             isOpenComposite: false
         };
     }
     const part = evaluation.partToUse;
     return {
-        configuration,
+        selection,
         partNumber: clean(part?.partNumber),
         name: clean(part?.name),
         description: clean(part?.description),
@@ -208,11 +205,11 @@ function readMetadataValue(value: unknown): string | undefined {
 /** Builds a record from an assembly's element metadata for one configuration. */
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
-    configuration: Selection
+    selection: Selection
 ): ProbedRecord {
     // An assembly is never a composite, so it reads nothing about one.
     const record: ProbedRecord = {
-        configuration,
+        selection,
         hasMultipleParts: false,
         isOpenComposite: false
     };
@@ -382,7 +379,7 @@ function resolveVendor(
 ): string | undefined {
     return (
         record.vendor ??
-        parseRecordVendor(record.name, record.configuration, parameters)
+        parseRecordVendor(record.name, record.selection, parameters)
     );
 }
 
@@ -406,13 +403,19 @@ function toResult(
 
     // Canonical, so a record addresses the same thumbnail the insert menu does
     // for the same selection.
-    const records: ConfigurationRecord[] = batches.flat().map((record) => ({
-        ...record,
-        // Read before keying, which names only overrides — and so drops a
-        // default vendor option.
-        vendor: resolveVendor(record, parameters),
-        configurationKey: toKey(record.configuration, parameters)
-    }));
+    // The selection is destructured off rather than spread through: the key is
+    // what a stored record is addressed by, and carrying the whole selection
+    // alongside it would bloat every row with what the key already says.
+    const records: ConfigurationRecord[] = batches.flat().map((probe) => {
+        const { selection, ...record } = probe;
+        return {
+            ...record,
+            // Read before keying, which names only overrides — and so drops a
+            // default vendor option.
+            vendor: resolveVendor(probe, parameters),
+            configurationKey: toKey(selection, parameters)
+        };
+    });
 
     // A capped insertable never reaches here: decideIndexing turns indexing off
     // past the cap, and raises CONFIGURATION_LIMIT_EXCEEDED itself.

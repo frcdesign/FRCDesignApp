@@ -19,6 +19,7 @@ import {
 } from "react";
 import {
     Selection,
+    type ConfigurationKey,
     ConfigurationResult,
     ConfigurationParameter,
     ParameterType,
@@ -63,7 +64,7 @@ interface ConfigurationWrapperProps {
      * Reported here because only this component has the parameters the key is
      * measured against.
      */
-    onConfigurationKey?: (configurationKey: string) => void;
+    onConfigurationKey?: (configurationKey: ConfigurationKey) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
 }
@@ -79,7 +80,7 @@ function useReportSelection(
     parameters: ConfigurationParameter[] | undefined,
     records: SearchRecord[] | undefined,
     selection: Selection | undefined,
-    onConfigurationKey?: (configurationKey: string) => void,
+    onConfigurationKey?: (configurationKey: ConfigurationKey) => void,
     onRecord?: (record: SearchRecord | undefined) => void
 ) {
     useEffect(() => {
@@ -94,7 +95,9 @@ function useReportSelection(
     }, [parameters, records, selection, onConfigurationKey, onRecord]);
 }
 
-export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
+export function ConfigurationWrapper(
+    props: ConfigurationWrapperProps
+): ReactNode {
     const {
         insertableId,
         microversionId,
@@ -151,14 +154,16 @@ export function ConfigurationWrapper(props: ConfigurationWrapperProps) {
     );
 }
 
-interface ConfigurationParameterProps {
+interface ConfigurationParametersProps {
     configurationResult: ConfigurationResult;
     selection: Selection;
     setSelection: Dispatch<Selection>;
     unitInfo: UnitInfo;
 }
 
-function ConfigurationParameters(props: ConfigurationParameterProps) {
+function ConfigurationParameters(
+    props: ConfigurationParametersProps
+): ReactNode {
     const { configurationResult, selection, setSelection, unitInfo } = props;
 
     const parameters = configurationResult.parameters.map((parameter) => {
@@ -207,27 +212,23 @@ interface ParameterProps<T extends ConfigurationParameter> {
 function ParameterInput(
     props: ParameterProps<ConfigurationParameter>
 ): ReactNode {
-    const { parameter } = props;
+    const { parameter, selection, parameters, onValueChange } = props;
 
+    const isShown = evaluateCondition(
+        parameter.condition,
+        selection,
+        parameters
+    );
+
+    // Depends on what it reads, rather than on `props` wholesale, which named
+    // nothing and changed identity every render.
     useEffect(() => {
-        if (
-            !evaluateCondition(
-                parameter.condition,
-                props.selection,
-                props.parameters
-            )
-        ) {
-            props.onValueChange(undefined);
+        if (!isShown) {
+            onValueChange(undefined);
         }
-    }, [parameter.condition, props]);
+    }, [isShown, onValueChange]);
 
-    if (
-        !evaluateCondition(
-            parameter.condition,
-            props.selection,
-            props.parameters
-        )
-    ) {
+    if (!isShown) {
         return null;
     }
 
@@ -243,7 +244,11 @@ function ParameterInput(
     }
 }
 
-function getFirstVisibleOption(
+/**
+ * The option an enum lands on: the one selected when visibility still allows it,
+ * then the parameter's default, then whatever is left to pick.
+ */
+function resolveSelectedOption(
     visibleOptions: EnumOption[],
     currentOptionId: string | undefined,
     defaultOptionId: string
@@ -268,25 +273,21 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     const { parameter, value, onValueChange, selection, parameters } = props;
 
     const visibleOptions = getVisibleOptions(parameter, selection, parameters);
-
-    useEffect(() => {
-        const option = getFirstVisibleOption(
-            visibleOptions,
-            value,
-            parameter.default
-        );
-        if (!option) {
-            onValueChange(undefined);
-        } else if (option.id !== value) {
-            onValueChange(option.id);
-        }
-    }, [onValueChange, parameter.default, value, visibleOptions]);
-
-    const currentOption = getFirstVisibleOption(
+    const currentOption = resolveSelectedOption(
         visibleOptions,
         value,
         parameter.default
     );
+
+    // Writes the resolved option back, so the selection holds what is shown.
+    useEffect(() => {
+        if (!currentOption) {
+            onValueChange(undefined);
+        } else if (currentOption.id !== value) {
+            onValueChange(currentOption.id);
+        }
+    }, [currentOption, onValueChange, value]);
+
     if (!currentOption) {
         return null;
     }
@@ -350,12 +351,13 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
 }
 
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
-    // This parameter doesn't actually use value since it manages it's state internally
+    // Alone among the inputs in holding its own state: `value` seeds the
+    // expression and its display, and the input owns both from then on.
     const { parameter, value, onValueChange, unitInfo } = props;
 
     const evaluateOptions = getEvaluateOptions(parameter, unitInfo);
 
-    const ref = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
 
     // The user's raw expression.
@@ -406,7 +408,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
         <InputRow label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
-                ref={ref}
+                ref={inputRef}
                 value={focused ? expression : display}
                 error={errorMessage}
                 flex={1}
@@ -417,7 +419,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                 onBlur={handleSubmit}
                 onKeyDown={(event) => {
                     if (event.key === "Enter") {
-                        ref.current?.blur();
+                        inputRef.current?.blur();
                         handleSubmit();
                     }
                 }}
