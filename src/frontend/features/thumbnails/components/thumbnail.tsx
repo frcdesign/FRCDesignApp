@@ -21,7 +21,7 @@ import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
-import { useIsSignedIn } from "../../auth/access-level";
+import { useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
 /** Letterbox rather than stretch, in case the render is not the size we asked for. */
@@ -259,7 +259,7 @@ function PreviewBox(props: PreviewBoxProps): ReactNode {
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
     const { insertableId, microversionId, largeThumbnailUrl } = props;
-    const isSignedIn = useIsSignedIn();
+    const { signedIn, isPending } = useAccessData();
     const isConnected = useIsConnectedToOnshape();
     const isFetchingConfiguration = useIsFetchingConfiguration(
         insertableId,
@@ -268,7 +268,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const targetElementType = useTargetElementType();
     const { query, lastRenderedUrl } = usePreviewThumbnail(
         props,
-        !isFetchingConfiguration && isSignedIn === true
+        !isFetchingConfiguration && signedIn
     );
 
     const heightAndWidth = getHeightAndWidth(PREVIEW_SIZE, 0.7);
@@ -280,13 +280,13 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     // Not known yet: the stored thumbnail would be swapped for the live preview
     // a moment later.
-    if (isSignedIn === undefined) {
+    if (isPending) {
         return spinner;
     }
 
     // Not signed in: no live Onshape preview, so show the stored thumbnail
     // (Thumbnail falls back to a placeholder when there's none).
-    if (!isSignedIn) {
+    if (!signedIn) {
         return (
             <Thumbnail
                 url={largeThumbnailUrl}

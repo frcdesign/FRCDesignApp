@@ -1,4 +1,4 @@
-import { useAccessData, useIsSignedIn } from "../../auth/access-level";
+import { useAccessData } from "../../auth/access-level";
 import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -37,16 +37,16 @@ import { startSignIn } from "../../auth/sign-in";
 export function FavoritesList(): ReactNode {
     const { searchQuery, vendorFilters } = useGetUiState();
 
-    const isSignedIn = useIsSignedIn();
+    const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    // Ahead of the pending branch, which favorites never leaves while signed
-    // out: the query stays disabled rather than 401.
-    if (isSignedIn === false) {
+    // Only once known, and ahead of the pending branch, which favorites never
+    // leaves while signed out: the query stays disabled rather than 401.
+    if (!isPending && !signedIn) {
         return <SignInToViewFavorites />;
     } else if (
-        isSignedIn === undefined ||
+        isPending ||
         libraryQuery.isPending ||
         favoritesQuery.isPending
     ) {

@@ -37,7 +37,7 @@ export function useFavoritesQuery() {
     const isSignedIn = useIsSignedIn();
     return useQuery({
         ...getFavoritesQuery(libraryId),
-        enabled: isSignedIn === true
+        enabled: isSignedIn
     });
 }
 

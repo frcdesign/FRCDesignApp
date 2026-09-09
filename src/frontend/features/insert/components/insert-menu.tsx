@@ -25,7 +25,7 @@ import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection"
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
-import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
+import { RequireSignIn, useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
 import { InsertSource } from "@backend/features/analytics/events";
@@ -72,7 +72,7 @@ function useInsertSelection(initialSelection?: Selection) {
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, modalId, openedAt, onInsert, source } = props;
     const favorite = useFavorite(insertable.id);
-    const isSignedIn = useIsSignedIn();
+    const { signedIn, isPending } = useAccessData();
 
     const {
         selection,
@@ -98,10 +98,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     useEffect(() => {
         // Only once known: pending reads as signed out, which would prompt a
         // signed-in caller to sign in.
-        if (isSignedIn === false) {
+        if (!isPending && !signedIn) {
             showSignInPreviewToast();
         }
-    }, [isSignedIn]);
+    }, [signedIn, isPending]);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {
