@@ -17,7 +17,7 @@ import {
     NAVBAR_ROW_HEIGHT,
     StatusColor
 } from "../lib/style-constants";
-import { ReactNode, RefObject, useRef } from "react";
+import { ReactNode, RefObject, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { AppBrand } from "./app-brand";
@@ -202,6 +202,13 @@ export function SearchBar() {
     const uiState = useGetUiState();
     const setUiState = useSetUiState();
     const libraryId = useLibraryId();
+
+    // `autoFocus` focuses before the ref is attached, so onFocus below has
+    // nothing to select through on the first open: the query carried over from
+    // last time keeps the caret after it, waiting to be cleared by hand.
+    useEffect(() => {
+        selectAllInputText(ref);
+    }, []);
 
     const clearButton = uiState.searchQuery ? (
         <Input.ClearButton
