@@ -2,6 +2,8 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
+import { events } from "../analytics/schema";
+import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/events";
 import { LibraryId } from "../library/library-id";
 import { Theme } from "../settings/settings";
 import {
@@ -124,6 +126,42 @@ describe("GET /init", () => {
         await seedResume(LibraryId.MKCAD, TEST_GROUP_ID);
 
         expect(await entryPath()).toBe(`/app/library/${LibraryId.MKCAD}`);
+    });
+
+    /** The app session cookie an `/init` response starts. */
+    function sessionCookie(res: Response): string {
+        const header = res.headers.get("Set-Cookie") ?? "";
+        return /frc-design-app-session=([^;]+)/.exec(header)?.[1] ?? "";
+    }
+
+    it("starts an app session and records the open against it", async () => {
+        const res = await createTestApp().request(
+            "/init",
+            jsonRequest("GET"),
+            env
+        );
+
+        const header = res.headers.get("Set-Cookie") ?? "";
+        // The panel runs in an Onshape iframe, which a Lax cookie never reaches.
+        expect(header).toContain("SameSite=None");
+        expect(header).toContain("HttpOnly");
+
+        const event = await db.select().from(events).get();
+        expect(event).toMatchObject({
+            type: EventType.APP_OPEN,
+            sessionId: sessionCookie(res),
+            schemaVersion: EVENT_SCHEMA_VERSION
+        });
+        expect(sessionCookie(res)).not.toBe("");
+    });
+
+    // One open is one session, or "inserts per session" counts something else.
+    it("starts a fresh session on every open", async () => {
+        const app = createTestApp();
+        const first = await app.request("/init", jsonRequest("GET"), env);
+        const second = await app.request("/init", jsonRequest("GET"), env);
+
+        expect(sessionCookie(first)).not.toBe(sessionCookie(second));
     });
 
     it("never caches the gate's verdict", async () => {

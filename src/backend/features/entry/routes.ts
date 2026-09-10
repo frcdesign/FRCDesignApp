@@ -11,6 +11,7 @@ import { getSessionCompanyId } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
 import { LibraryId } from "../library/library-id";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
+import { startAppSession } from "../analytics/session";
 
 /** Cloudflare strips the port in local dev, so redirect back relatively. */
 function getRelativeUrl(requestUrl: string) {
@@ -75,9 +76,16 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     }
     const entry = await getAppEntry(c);
     // Reaching here is exactly "the panel was opened", and it is the only entry
-    // Onshape uses. Best-effort, so the redirect never waits on it.
+    // Onshape uses. So this is where a session starts, and what every insert
+    // until the next open correlates back to.
+    const sessionId = startAppSession(c);
+    // Best-effort, so the redirect never waits on it.
     await trackInBackground(c, () =>
-        trackAppOpen(c, { libraryId: entry.libraryId, userId: entry.userId })
+        trackAppOpen(c, {
+            libraryId: entry.libraryId,
+            userId: entry.userId,
+            sessionId
+        })
     );
     return c.redirect(entry.url);
 });

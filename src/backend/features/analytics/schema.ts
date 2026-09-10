@@ -33,6 +33,18 @@ export const events = sqliteTable(
         day: text("day").notNull(),
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         userId: text("user_id").notNull(),
+        /**
+         * The panel open this event belongs to, so an insert can be tied to the
+         * open that preceded it. Null when the client sent no session cookie.
+         * Not indexed: nothing reads the log to report a metric, and a funnel
+         * over it is a batch job that can afford the scan.
+         */
+        sessionId: text("session_id"),
+        /**
+         * What the columns meant when the row was written. 1 is the backfill
+         * for rows predating the column, which is what they were.
+         */
+        schemaVersion: integer("schema_version").notNull().default(1),
         // The whole path inserted from, version included: what the part was
         // when it was used, which the library row no longer says after a reload.
         elementId: text("element_id"),
@@ -66,7 +78,14 @@ export type LoggedEvent = typeof events.$inferSelect;
 /** What every event carries, whatever kind of event it is. */
 export type EventCore = Pick<
     LoggedEvent,
-    "id" | "type" | "createdAt" | "day" | "libraryId" | "userId"
+    | "id"
+    | "type"
+    | "createdAt"
+    | "day"
+    | "libraryId"
+    | "userId"
+    | "sessionId"
+    | "schemaVersion"
 >;
 
 /** The rest, which only an insert fills in. */

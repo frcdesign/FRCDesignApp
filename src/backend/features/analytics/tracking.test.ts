@@ -32,7 +32,7 @@ import {
     type InsertEvent
 } from "./tracking";
 import { toDayKey } from "./day";
-import { InsertSource } from "./events";
+import { EVENT_SCHEMA_VERSION, InsertSource } from "./events";
 import {
     boolParam,
     enumParam,
@@ -46,6 +46,7 @@ import { toSelection } from "../configurations/selection";
 import { ElementType } from "../../lib/onshape/element-type";
 
 const db = getDb(env.DB);
+const TEST_SESSION_ID = "session-1";
 
 /** Silences an expected console.error without an empty arrow. */
 function noop(): void {
@@ -63,6 +64,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
         userId: TEST_USER_ID,
+        sessionId: TEST_SESSION_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
@@ -129,6 +131,8 @@ describe("tracking", () => {
                 type: "insert",
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID,
+                sessionId: TEST_SESSION_ID,
+                schemaVersion: EVENT_SCHEMA_VERSION,
                 // The whole path, so the version used is still known after a
                 // reload moves the library on.
                 ...TEST_PART_STUDIO_PATH,
@@ -144,6 +148,15 @@ describe("tracking", () => {
 
             const user = await db.select().from(userStats).get();
             expect(user).toMatchObject({ insertCount: 1, openCount: 0 });
+        });
+
+        it("records a null session when the client sent no cookie", async () => {
+            await trackInsert(fakeContext(), insertEvent({ sessionId: null }));
+
+            const event = await db.select().from(events).get();
+            expect(event?.sessionId).toBeNull();
+            // Still versioned: only the correlation is missing.
+            expect(event?.schemaVersion).toBe(EVENT_SCHEMA_VERSION);
         });
 
         it("increments the rollups rather than duplicating rows", async () => {
@@ -458,7 +471,8 @@ describe("tracking", () => {
             await trackInsert(fakeContext(), insertEvent());
             await trackAppOpen(fakeContext(), {
                 libraryId: TEST_LIBRARY_ID,
-                userId: TEST_USER_ID
+                userId: TEST_USER_ID,
+                sessionId: TEST_SESSION_ID
             });
 
             const rows = await db.select().from(dailyUserActivity).all();
@@ -489,7 +503,8 @@ describe("tracking", () => {
         it("counts opens separately from inserts", async () => {
             await trackAppOpen(fakeContext(), {
                 libraryId: TEST_LIBRARY_ID,
-                userId: TEST_USER_ID
+                userId: TEST_USER_ID,
+                sessionId: TEST_SESSION_ID
             });
 
             const daily = await db.select().from(dailyMetrics).get();

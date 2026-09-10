@@ -32,6 +32,7 @@ import {
 import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
 
 const db = getDb(env.DB);
+const TEST_SESSION_ID = "session-1";
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
 
 /** Every table the rollups write, read whole so a replay can be compared. */
@@ -55,6 +56,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
         userId: TEST_USER_ID,
+        sessionId: TEST_SESSION_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
@@ -96,7 +98,8 @@ describe("rollupWrites", () => {
         clock.mockReturnValue(start);
         await trackAppOpen(fakeContext(), {
             libraryId: TEST_LIBRARY_ID,
-            userId: TEST_USER_ID
+            userId: TEST_USER_ID,
+            sessionId: TEST_SESSION_ID
         });
         await trackInsert(
             fakeContext(),

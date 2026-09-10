@@ -32,6 +32,7 @@ import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/events";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
+import { getAppSessionId } from "../../analytics/session";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -364,6 +365,7 @@ insertableRoutes.post(
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
                 parameters,
+                sessionId: getAppSessionId(c),
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -447,6 +449,7 @@ insertableRoutes.post(
                 targetElementType: ElementType.ASSEMBLY,
                 selection,
                 parameters,
+                sessionId: getAppSessionId(c),
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,

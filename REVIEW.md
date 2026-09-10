@@ -92,6 +92,15 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - **Duplicate imports** — a dozen modules were imported twice in the same file.
   Merged, and `no-duplicate-imports` now keeps them merged.
 
+- **Analytics session and schema version** — every event now carries the panel
+  open it belongs to and the version of what its columns mean. `/init` mints a
+  session id and sets it as a cookie, so the open and every insert until the
+  next open share one; a client that sends no cookie logs a null rather than
+  dropping the event. Neither could have been backfilled once real usage
+  started, which is why they went in before launch and the rest of that finding
+  did not. The log is still unindexed on both: nothing reads it to report a
+  metric, and a funnel over it is a batch job that can afford the scan.
+
 ## Database
 
 Fixed here: the `groups` table export was the only singular one among

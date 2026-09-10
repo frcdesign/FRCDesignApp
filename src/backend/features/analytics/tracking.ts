@@ -8,7 +8,7 @@ import {
     type LoggedEvent
 } from "./schema";
 import { rollupWrites } from "./rollups";
-import { EventType, InsertSource } from "./events";
+import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -22,6 +22,8 @@ import { toDayKey } from "./day";
 export interface InsertEvent {
     libraryId: LibraryId;
     userId: string;
+    /** The panel open this insert belongs to; null when none was readable. */
+    sessionId: string | null;
     /** The version-pinned tab inserted from, logged whole: the rollups key on
      * its element id, and the rest says which version was used. */
     path: ElementPath;
@@ -45,6 +47,8 @@ export interface InsertEvent {
 export interface AppOpenEvent {
     libraryId: LibraryId;
     userId: string;
+    /** The panel open being recorded, which `/init` has just started. */
+    sessionId: string;
 }
 
 /**
@@ -115,7 +119,7 @@ function appliedSelection(
 function core(
     type: EventType,
     now: number,
-    event: { libraryId: LibraryId; userId: string }
+    event: { libraryId: LibraryId; userId: string; sessionId: string | null }
 ): EventCore {
     return {
         id: crypto.randomUUID(),
@@ -123,7 +127,9 @@ function core(
         createdAt: new Date(now),
         day: toDayKey(now),
         libraryId: event.libraryId,
-        userId: event.userId
+        userId: event.userId,
+        sessionId: event.sessionId,
+        schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
