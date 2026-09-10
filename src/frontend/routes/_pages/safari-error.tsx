@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { PageError } from "../../components/app-zero-state";
+import { PageNotice } from "../../components/app-zero-state";
 
 export const Route = createFileRoute("/_pages/safari-error")({
     component: SafariError
@@ -16,7 +16,7 @@ function SafariError(): JSX.Element {
     );
 
     return (
-        <PageError
+        <PageNotice
             title="Failed to Authenticate in Safari."
             description="The FRCDesignApp does not work on Safari unless you manually disable 'Prevent cross-site tracking' in your browser settings."
             action={applicationAccessButton}

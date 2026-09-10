@@ -45,14 +45,14 @@ export function parseVendors(
  */
 export function parseRecordVendor(
     partName: string | undefined,
-    configuration: Selection,
+    selection: Selection,
     parameters: ConfigurationParameter[]
 ): Vendor | undefined {
     for (const param of parameters) {
         if (param.type !== ParameterType.ENUM) continue;
         // An absent value is the parameter's default, which is what the
         // element's own probe — configured with nothing — resolves to.
-        const selected = configuration[param.id] ?? param.default;
+        const selected = selection[param.id] ?? param.default;
         const option = param.options.find((o) => o.id === selected);
         const vendor = option && parseOptionVendor(option.name);
         if (vendor) return vendor;

@@ -26,7 +26,7 @@ export interface PartRow {
     documentId: string;
     versionId: string;
     isVisible: boolean;
-    firstInsertedAt: number | null;
+    firstInsertedAt: Date | null;
 }
 
 /** One part counted over the window rather than over its whole history. */
@@ -41,7 +41,7 @@ export function toWindowedPart(
     const insertCount = windowed.get(row.elementId) ?? 0;
     // Rated over the days the part has existed, so arriving late in the window
     // does not read as unpopular.
-    const firstUsed = Math.max(row.firstInsertedAt ?? from, from);
+    const firstUsed = Math.max(row.firstInsertedAt?.getTime() ?? from, from);
 
     return {
         path: toElementPath(row),

@@ -28,7 +28,7 @@ export const events = sqliteTable(
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
         type: text("type").notNull().$type<EventType>(),
-        createdAt: integer("created_at").notNull(),
+        createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
         // UTC YYYY-MM-DD, denormalized so rollups can be rebuilt with a GROUP BY
         day: text("day").notNull(),
         libraryId: text("library_id").notNull().$type<LibraryId>(),
@@ -128,8 +128,12 @@ export const insertableStats = sqliteTable(
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         elementId: text("element_id").notNull(),
         insertCount: integer("insert_count").notNull().default(0),
-        firstInsertedAt: integer("first_inserted_at").notNull(),
-        lastInsertedAt: integer("last_inserted_at").notNull()
+        firstInsertedAt: integer("first_inserted_at", {
+            mode: "timestamp_ms"
+        }).notNull(),
+        lastInsertedAt: integer("last_inserted_at", {
+            mode: "timestamp_ms"
+        }).notNull()
     },
     (t) => [
         primaryKey({ columns: [t.libraryId, t.elementId] }),
@@ -226,8 +230,12 @@ export const userStats = sqliteTable(
         libraryId: text("library_id").notNull().$type<LibraryId>(),
         insertCount: integer("insert_count").notNull().default(0),
         openCount: integer("open_count").notNull().default(0),
-        firstSeenAt: integer("first_seen_at").notNull(),
-        lastSeenAt: integer("last_seen_at").notNull()
+        firstSeenAt: integer("first_seen_at", {
+            mode: "timestamp_ms"
+        }).notNull(),
+        lastSeenAt: integer("last_seen_at", {
+            mode: "timestamp_ms"
+        }).notNull()
     },
     (t) => [primaryKey({ columns: [t.userId, t.libraryId] })]
 );

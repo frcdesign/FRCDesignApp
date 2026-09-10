@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
-import { SignOutIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
+import { useMatch } from "@tanstack/react-router";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode, useId } from "react";
 import {
@@ -96,6 +97,7 @@ export function SettingsMenuContent(): ReactNode {
 function UserSettings(): ReactNode {
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
+    const isDashboard = useIsDashboard();
 
     return (
         <Stack gap="sm">
@@ -110,9 +112,16 @@ function UserSettings(): ReactNode {
                     />
                 </InputRow>
             )}
-            <InputRow spread label="Usage dashboard">
-                <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
-            </InputRow>
+            {/* The dashboard is where the app is the thing worth offering. */}
+            {isDashboard ? (
+                <InputRow spread label="Main app">
+                    <OpenAppButton libraryId={libraryId} />
+                </InputRow>
+            ) : (
+                <InputRow spread label="Usage dashboard">
+                    <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
+                </InputRow>
+            )}
             <InputRow spread label="Submit feedback">
                 <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
             </InputRow>
@@ -142,6 +151,30 @@ function UserSettings(): ReactNode {
  */
 function standaloneUrl(libraryId: LibraryId): string {
     return new URL(`/app/library/${libraryId}`, window.location.origin).href;
+}
+
+/** Whether the dashboard is showing, rather than the app itself. */
+function useIsDashboard(): boolean {
+    return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
+}
+
+interface OpenAppButtonProps {
+    libraryId: LibraryId;
+}
+
+/** Leaves the dashboard for the app, in place rather than in a second tab. */
+function OpenAppButton(props: OpenAppButtonProps): ReactNode {
+    return (
+        <Button
+            leftSection={<ArrowLeftIcon size={IconSize.SMALL} />}
+            variant="light"
+            onClick={() => {
+                window.location.href = standaloneUrl(props.libraryId);
+            }}
+        >
+            Open app
+        </Button>
+    );
 }
 
 function ThemeSelect(): ReactNode {

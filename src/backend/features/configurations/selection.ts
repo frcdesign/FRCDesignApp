@@ -6,6 +6,7 @@ import {
     type ConfigurationKey,
     type ConfigurationParameter,
     ParameterType,
+    type PartialSelection,
     type Selection
 } from "./models";
 import {
@@ -19,9 +20,6 @@ import {
     formatBaseValue,
     formatValueWithUnits
 } from "./input-parser";
-
-/** The key of a selection that overrides nothing: the element's own defaults. */
-export const ELEMENT_DEFAULT_KEY: ConfigurationKey = "";
 
 /** Normalizes one parameter's raw value to its canonical spelling. */
 export function canonicalizeValue(
@@ -49,7 +47,7 @@ export function canonicalizeValue(
  * from the defaults, so a partial map — a search hit's overrides — comes whole.
  */
 export function toSelection(
-    values: Partial<Selection>,
+    values: PartialSelection,
     parameters: ConfigurationParameter[]
 ): Selection {
     const selection: Selection = {};

@@ -108,7 +108,7 @@ function core(
     return {
         id: crypto.randomUUID(),
         type,
-        createdAt: now,
+        createdAt: new Date(now),
         day: toDayKey(now),
         libraryId: event.libraryId,
         userId: event.userId

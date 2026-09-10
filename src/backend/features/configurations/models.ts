@@ -23,10 +23,10 @@ export enum OptionVisibilityType {
 }
 
 export type OptionVisibilityCondition =
-    | EqualOptionVisibilityCondition
+    | ListOptionVisibilityCondition
     | RangeOptionVisibilityCondition;
 
-export interface EqualOptionVisibilityCondition {
+export interface ListOptionVisibilityCondition {
     type: OptionVisibilityType.LIST;
     controlledOptions: string[];
     condition: VisibilityCondition;
@@ -88,7 +88,7 @@ export interface SearchRecord {
      * The key of the selection producing it, so it names the same render the
      * insert menu asks for; empty for the element's own defaults.
      */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
 }
 
 export type ConfigurationParameter =
@@ -140,15 +140,24 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 export type Selection = Record<string, string>;
 
 /**
+ * A selection still being built: enumeration names only what it varies, and a
+ * search hit only what it overrides. `toSelection` is what makes one whole.
+ */
+export type PartialSelection = Partial<Selection>;
+
+/**
  * A selection's identity: what it overrides, which is what addresses a render.
- * `ELEMENT_DEFAULT_KEY` — empty — overrides nothing, and so is the default.
+ * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing, and so is the default.
  */
 export type ConfigurationKey = string;
 
 /**
- * What one probed configuration resolves to. Stored per probe, so search and the
- * UI can read it back without re-querying Onshape.
+ * The key of a selection that overrides nothing: the element's own defaults.
+ * Beside the type rather than in `selection.ts`, which `utils.ts` would have to
+ * import back from to name it.
  */
+export const DEFAULT_CONFIGURATION_KEY: ConfigurationKey = "";
+
 /**
  * The part one probe resolved to: the element itself from its own defaults, a
  * {@link ConfigurationRecord} from any other selection.
@@ -173,13 +182,13 @@ export interface PartMetadata {
  */
 export interface ProbedRecord extends PartMetadata {
     /** The selection probed, before it is keyed for storage. */
-    configuration: Selection;
+    selection: Selection;
 }
 
 /** A probe as it is stored. Kept only for an indexed insertable. */
 export interface ConfigurationRecord extends PartMetadata {
     /** The key of the selection that produces it. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
 }
 
 /**

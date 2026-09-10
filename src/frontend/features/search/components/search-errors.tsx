@@ -9,7 +9,7 @@ import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "../search";
 import { useNavigate } from "@tanstack/react-router";
-import { SectionError } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-zero-state";
 import { useLibraryId } from "../../library/library-path";
 import { AppIcon } from "../../../components/app-icon";
 
@@ -113,7 +113,7 @@ export function NoSearchResultError(
 
     if (filtered.byGroup > 0) {
         return (
-            <SectionError
+            <SectionNotice
                 icon={icon}
                 title={`No ${plural(objectLabel)}.`}
                 description={getGroupString(filtered, objectLabel)}
@@ -122,7 +122,7 @@ export function NoSearchResultError(
         );
     } else if (filtered.byVendor > 0) {
         return (
-            <SectionError
+            <SectionNotice
                 icon={icon}
                 title={`No ${plural(objectLabel)}.`}
                 description={getVendorString(filtered, objectLabel)}
@@ -131,7 +131,7 @@ export function NoSearchResultError(
         );
     }
     return (
-        <SectionError
+        <SectionNotice
             icon={icon}
             title={`No ${plural(objectLabel)}`}
             description={null}

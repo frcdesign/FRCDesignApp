@@ -1,3 +1,4 @@
+import { type ConfigurationKey } from "../../../features/configurations/models";
 import { OnshapeApi } from "../client";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
@@ -38,11 +39,11 @@ export function getThumbnailFromWorkspace(
     client: OnshapeApi,
     elementPath: ElementPath,
     size = ThumbnailSize.LARGE,
-    configuration?: string
+    configurationKey?: ConfigurationKey
 ): Promise<ArrayBuffer> {
     assertWorkspace(elementPath);
     let path = apiPath("thumbnails", elementPath, toElementApiPath);
-    if (configuration) path += "/ac/" + configuration;
+    if (configurationKey) path += "/ac/" + configurationKey;
     path += "/s/" + size;
     return client.getImage(path, {
         query: { rejectEmpty: "true", requireConfigMatch: "true" }
@@ -55,7 +56,7 @@ export class NoSuchConfigurationError extends Error {}
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configuration?: string
+    configurationKey?: ConfigurationKey
 ): Promise<string> {
     const query = new URLSearchParams({
         includeParts: "true",
@@ -63,7 +64,7 @@ export async function getThumbnailId(
         includeCompositeParts: "true",
         elementId: elementPath.elementId
     });
-    if (configuration) query.set("configuration", configuration);
+    if (configurationKey) query.set("configuration", configurationKey);
 
     const insertables = await client.get(
         apiPath("documents", elementPath, toInstanceApiPath, {

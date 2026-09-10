@@ -157,7 +157,7 @@ async function seedInserts(
     }
 }
 
-async function seedInsertableStats(count: number, insertedAt = Date.now()) {
+async function seedInsertableStats(count: number, insertedAt = new Date()) {
     await db.insert(insertableStats).values({
         libraryId: TEST_LIBRARY_ID,
         elementId,
@@ -206,21 +206,21 @@ describe("analytics routes", () => {
                 {
                     userId: "user-a",
                     libraryId: TEST_LIBRARY_ID,
-                    firstSeenAt: 1,
-                    lastSeenAt: 1
+                    firstSeenAt: new Date(1),
+                    lastSeenAt: new Date(1)
                 },
                 {
                     userId: "user-b",
                     libraryId: TEST_LIBRARY_ID,
-                    firstSeenAt: 1,
-                    lastSeenAt: 1
+                    firstSeenAt: new Date(1),
+                    lastSeenAt: new Date(1)
                 },
                 // Same person in a second library must not double-count.
                 {
                     userId: "user-a",
                     libraryId: LibraryId.MKCAD,
-                    firstSeenAt: 1,
-                    lastSeenAt: 1
+                    firstSeenAt: new Date(1),
+                    lastSeenAt: new Date(1)
                 }
             ]);
 
@@ -566,15 +566,15 @@ describe("analytics routes", () => {
                     libraryId: TEST_LIBRARY_ID,
                     elementId,
                     insertCount: 60,
-                    firstInsertedAt: Date.now() - 730 * day,
-                    lastInsertedAt: Date.now()
+                    firstInsertedAt: new Date(Date.now() - 730 * day),
+                    lastInsertedAt: new Date()
                 },
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId: TEST_ASSEMBLY_PATH.elementId,
                     insertCount: 20,
-                    firstInsertedAt: Date.now() - 60 * day,
-                    lastInsertedAt: Date.now()
+                    firstInsertedAt: new Date(Date.now() - 60 * day),
+                    lastInsertedAt: new Date()
                 }
             ]);
             await seedInserts(60, { day: ago(700) });
@@ -604,15 +604,15 @@ describe("analytics routes", () => {
                     libraryId: TEST_LIBRARY_ID,
                     elementId,
                     insertCount: 10,
-                    firstInsertedAt: Date.now() - 300 * day,
-                    lastInsertedAt: Date.now()
+                    firstInsertedAt: new Date(Date.now() - 300 * day),
+                    lastInsertedAt: new Date()
                 },
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId: TEST_ASSEMBLY_PATH.elementId,
                     insertCount: 10,
-                    firstInsertedAt: Date.now() - 30 * day,
-                    lastInsertedAt: Date.now()
+                    firstInsertedAt: new Date(Date.now() - 30 * day),
+                    lastInsertedAt: new Date()
                 }
             ]);
             await seedInserts(10, { day: ago(200) });
@@ -994,7 +994,10 @@ describe("analytics routes", () => {
 
         it("rates uses over the span the part has been in use", async () => {
             await seedPartStudio(db);
-            await seedInsertableStats(0, Date.now() - 90 * 24 * 3600 * 1000);
+            await seedInsertableStats(
+                0,
+                new Date(Date.now() - 90 * 24 * 3600 * 1000)
+            );
             await seedInserts(12);
 
             const res = await anonymousGet(

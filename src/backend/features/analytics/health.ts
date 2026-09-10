@@ -4,7 +4,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { configurations, group, insertables } from "../../db/schema";
+import { configurations, groups, insertables } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import type { LibraryHealthCounts } from "./contract";
 import {
@@ -30,11 +30,11 @@ export async function getHealthCounts(
     db: Db,
     libraryId: LibraryId
 ): Promise<LibraryHealthCounts> {
-    const [groups, allInsertables] = await Promise.all([
+    const [allGroups, allInsertables] = await Promise.all([
         db
-            .select({ buildIssues: group.buildIssues })
-            .from(group)
-            .where(eq(group.libraryId, libraryId))
+            .select({ buildIssues: groups.buildIssues })
+            .from(groups)
+            .where(eq(groups.libraryId, libraryId))
             .all(),
         db
             .select({
@@ -47,7 +47,7 @@ export async function getHealthCounts(
     ]);
 
     return summarizeHealth(
-        groups,
+        allGroups,
         allInsertables,
         await getConfigurationIssues(db, libraryId)
     );

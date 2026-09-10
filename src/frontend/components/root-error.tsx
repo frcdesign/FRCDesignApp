@@ -1,5 +1,5 @@
 import { RequireAccessLevel } from "../features/auth/access-level";
-import { PageError } from "./app-zero-state";
+import { PageNotice } from "./app-zero-state";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
@@ -13,7 +13,7 @@ import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
  */
 export function RootAppError(): ReactNode {
     return (
-        <PageError
+        <PageNotice
             title="The app has crashed due to an unexpected error."
             action={
                 <RequireAccessLevel useMaxAccessLevel>
@@ -63,7 +63,7 @@ export function NotFoundError(): ReactNode {
     );
 
     return (
-        <PageError
+        <PageNotice
             title="Failed to find page."
             description="Click this button to fix the issue. If it doesn't, contact the FRCDesignApp developers."
             action={homeButton}

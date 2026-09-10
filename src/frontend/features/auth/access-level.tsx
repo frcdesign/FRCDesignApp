@@ -50,24 +50,21 @@ export function useAccessData(): ResolvedAccessData {
     const chosenLevel = useGetUiState().accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
-        // A stored choice can outlive the access that allowed it; clamp to max.
-        const currentAccessLevel = isWithinAccessLevel(
-            desired,
-            serverData.maxAccessLevel
-        )
-            ? desired
-            : serverData.maxAccessLevel;
+        let currentAccessLevel = desired;
+        if (!isWithinAccessLevel(desired, serverData.maxAccessLevel)) {
+            // A stored choice can outlive the access that allowed it; clamp to max.
+            currentAccessLevel = serverData.maxAccessLevel;
+        }
         return { ...serverData, currentAccessLevel, isPending };
     }, [serverData, chosenLevel, isPending]);
 }
 
 /**
- * Whether the caller is signed in to Onshape, or undefined until access-data
- * lands: the placeholder says signed out, which is not yet an answer.
+ * Whether the caller is signed in to Onshape. Reads signed out while access-data
+ * is pending, so a signed-out render wants useAccessData().isPending as well.
  */
-export function useIsSignedIn(): boolean | undefined {
-    const { signedIn, isPending } = useAccessData();
-    return isPending ? undefined : signedIn;
+export function useIsSignedIn(): boolean {
+    return useAccessData().signedIn;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {

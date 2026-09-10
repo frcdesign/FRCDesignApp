@@ -11,7 +11,7 @@ import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import { getDb } from "../../db/client";
-import { group, insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import { BuildIssueType } from "../build-checker/issues";
 import {
     type StoredInsertable,
@@ -180,7 +180,7 @@ const NO_CONFIGURATION: OnshapeConfigurationResponse = {
 };
 
 function readGroup() {
-    return db.select().from(group).where(eq(group.id, TEST_GROUP_ID)).get();
+    return db.select().from(groups).where(eq(groups.id, TEST_GROUP_ID)).get();
 }
 
 describe("loadGroup", () => {
@@ -211,7 +211,7 @@ describe("loadGroup", () => {
         const groupRow = await readGroup();
         expect(groupRow?.versionId).toBe("v-2");
         expect(groupRow?.name).toBe("Reloaded Group");
-        expect(groupRow?.lastLoadedAt).toEqual(expect.any(Number));
+        expect(groupRow?.lastLoadedAt).toEqual(expect.any(Date));
         expect(groupRow?.buildIssues).not.toContainEqual({
             type: BuildIssueType.INSERTABLES_FAILED
         });

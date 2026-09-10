@@ -9,7 +9,7 @@ import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import { configurations, insertables } from "../../db/schema";
 import { type ConfigurationResult, type UnitInfo } from "./models";
 import { toSearchRecords } from "../search/search-index";
-import { toRecords } from "./utils";
+import { DEFAULT_QUANTITY_PRECISION, toRecords } from "./utils";
 import { QuantityType, type Unit } from "./enums";
 import { INSTANCE_TYPES } from "../../lib/onshape/path";
 import { internalError } from "../../lib/api-error";
@@ -62,6 +62,31 @@ configurationRoutes.get(
     }
 );
 
+/** One entry of Onshape's `defaultUnits`: which unit a quantity type is in. */
+interface OnshapeUnit {
+    key: QuantityType;
+    value: Unit;
+}
+
+/**
+ * The document's unit for a quantity type. Onshape names one for every type, so
+ * a missing entry is a response we don't understand rather than a document
+ * without a preference.
+ */
+function getDefaultUnit(
+    units: OnshapeUnit[],
+    quantityType: QuantityType
+): Unit {
+    const unit = units.find((entry) => entry.key === quantityType);
+    if (!unit) {
+        throw internalError(
+            `Onshape named no default unit for ${quantityType}`,
+            HttpStatus.BAD_GATEWAY
+        );
+    }
+    return unit.value;
+}
+
 /** GET /api/unit-info?documentId=X&instanceId=Y&instanceType=v */
 configurationRoutes.get(
     "/unit-info",
@@ -82,20 +107,9 @@ configurationRoutes.get(
             lengthUnit,
             anglePrecision: rawUnitInfo.unitsDisplayPrecision[angleUnit],
             lengthPrecision: rawUnitInfo.unitsDisplayPrecision[lengthUnit],
-            realPrecision: 3
+            // Onshape carries no display precision for a unitless real.
+            realPrecision: DEFAULT_QUANTITY_PRECISION
         };
         return c.json(result);
     }
 );
-
-interface OnshapeUnit {
-    key: QuantityType;
-    value: Unit;
-}
-
-function getDefaultUnit(
-    units: OnshapeUnit[],
-    quantityType: QuantityType
-): Unit {
-    return units.find((u) => u.key === quantityType)!.value;
-}

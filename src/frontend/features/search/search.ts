@@ -6,7 +6,10 @@ import {
     tokenizeName,
     tokenizePartNumber
 } from "@backend/features/search/search-index";
-import { SearchRecord } from "@backend/features/configurations/models";
+import {
+    type ConfigurationKey,
+    SearchRecord
+} from "@backend/features/configurations/models";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.
@@ -36,7 +39,7 @@ export interface SearchHit {
      * The best-matching record for this hit, used to pre-fill the insert menu —
      * its part number, name, and the key of the selection producing it.
      */
-    configurationKey?: string;
+    configurationKey?: ConfigurationKey;
     partNumber?: string;
     partName?: string;
     /** The vendor's page for the part number, when one can be derived. */

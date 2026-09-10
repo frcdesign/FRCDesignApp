@@ -53,7 +53,7 @@ describe("saveInsertable", () => {
             indexConfigurations: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
-            lastLoadedAt: expect.any(Number)
+            lastLoadedAt: expect.any(Date)
         });
     });
 

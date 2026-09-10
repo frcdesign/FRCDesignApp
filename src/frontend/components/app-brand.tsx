@@ -11,18 +11,20 @@ import {
 
 import frcDesignBook from "/frc-design-book.svg";
 
+/** The site the app belongs to, which both halves of the brand link out to. */
+const FRC_DESIGN_URL = "https://frcdesign.org";
+
 /**
  * The book and the app's name, in the navbar of both the panel and the
- * dashboard. The book links out to FRCDesign.org; the name does not, since
- * clicking the app's own name should not leave it. Closed by a rule, so the
- * name reads as the app rather than as the first tab.
+ * dashboard, both linking out to FRCDesign.org. Closed by a rule, so the name
+ * reads as the app rather than as the first tab.
  */
 export function AppBrand(): ReactNode {
     return (
-        <Group gap="xs" wrap="nowrap" h="100%" pr="xs">
+        <Group gap="xs" wrap="nowrap" h="100%">
             <Center
                 component="a"
-                href="https://frcdesign.org"
+                href={FRC_DESIGN_URL}
                 target="_blank"
                 aria-label="FRCDesign.org"
                 w={IconSize.CONTROL}
@@ -39,7 +41,16 @@ export function AppBrand(): ReactNode {
                     style={maskedImage(frcDesignBook)}
                 />
             </Center>
-            <Text fw={FontWeight.BOLD} size="sm" mr="xs">
+            <Text
+                component="a"
+                href={FRC_DESIGN_URL}
+                target="_blank"
+                fw={FontWeight.BOLD}
+                size="sm"
+                // The navbar's own text color, rather than a link's blue.
+                c="inherit"
+                td="none"
+            >
                 FRCDesignApp
             </Text>
             {/* Mantine's default divider is tuned for a white page and all

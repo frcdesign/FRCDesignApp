@@ -26,6 +26,10 @@ export default defineConfig([
             reactDom.configs.recommended
         ],
         rules: {
+            // tsc has no deprecation check — @deprecated is an editor-only hint,
+            // so lint is the only thing that fails a build on one.
+            "@typescript-eslint/no-deprecated": "error",
+
             // any-cascade rules — Onshape API responses are untyped; fixing requires
             // full API type definitions which don't exist
             "@typescript-eslint/no-explicit-any": "off",

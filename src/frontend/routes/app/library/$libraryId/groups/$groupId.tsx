@@ -29,8 +29,8 @@ import { ItemTable } from "../../../../../features/library/components/card-compo
 import { AppContextMenu, MenuButton } from "../../../../../components/app-menu";
 import { SearchCallout } from "../../../../../features/search/components/search-errors";
 import {
-    PageError,
-    SectionError,
+    PageNotice,
+    SectionNotice,
     SectionLoading
 } from "../../../../../components/app-zero-state";
 import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
@@ -61,7 +61,7 @@ function GroupList(): ReactNode {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load group." />;
+        return <SectionNotice title="Failed to load group." />;
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
@@ -70,7 +70,7 @@ function GroupList(): ReactNode {
 
     if (!group) {
         return (
-            <PageError
+            <PageNotice
                 title="Group not found"
                 description={null}
                 justifyUp
@@ -172,12 +172,12 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     if (groupInsertables.length === 0) {
         return group.isLoaded ? (
-            <SectionError
+            <SectionNotice
                 title="This group has no visible elements"
                 description={null}
             />
         ) : (
-            <SectionError
+            <SectionNotice
                 title="This group failed to load."
                 description="Reload documents to try again, or delete the group."
             />
@@ -191,7 +191,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     if (result.insertables.length === 0) {
         return (
-            <SectionError
+            <SectionNotice
                 icon={
                     <AppIcon
                         icon={WarningIcon}

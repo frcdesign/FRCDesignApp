@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { countConfigurations } from "../configurations/combinations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as MetadataEndpoints from "../../lib/onshape/endpoints/metadata";
 import { OnshapeApi } from "../../lib/onshape/client";
@@ -90,7 +89,7 @@ describe("parsePartStudioRecord", () => {
                 false
             )
         ).toEqual({
-            configuration: { size: "L" },
+            selection: { size: "L" },
             partNumber: "217-2600",
             name: "Bracket",
             description: "A bracket",
@@ -136,7 +135,7 @@ describe("parsePartStudioRecord", () => {
                 true
             )
         ).toEqual({
-            configuration: { size: "S" },
+            selection: { size: "S" },
             hasMultipleParts: false,
             // The composite it was expected to resolve to is gone.
             isOpenComposite: false
@@ -145,7 +144,7 @@ describe("parsePartStudioRecord", () => {
 
     it("returns an all-null record for an empty response", () => {
         expect(parsePartStudioRecord([], { A: "a1" }, false)).toEqual({
-            configuration: { A: "a1" },
+            selection: { A: "a1" },
             hasMultipleParts: false,
             isOpenComposite: false
         });
@@ -166,7 +165,7 @@ describe("parseAssemblyRecord", () => {
             ]
         };
         expect(parseAssemblyRecord(metadata, { q: "1" })).toEqual({
-            configuration: { q: "1" },
+            selection: { q: "1" },
             partNumber: "AM-1234",
             name: "Gearbox",
             description: "A gearbox",
@@ -178,13 +177,24 @@ describe("parseAssemblyRecord", () => {
     });
 });
 
-/** Mocks the parts endpoint, deriving a studio's parts from the configuration. */
-function mockParts(partsFor: (configuration: Selection) => OnshapePart[]) {
+/** Mocks the parts endpoint, deriving a studio's parts from the selection. */
+function mockParts(partsFor: (selection: Selection) => OnshapePart[]) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
-        .mockImplementation((_client, _path, configuration) =>
-            Promise.resolve(partsFor(configuration))
+        .mockImplementation((_client, _path, selection) =>
+            Promise.resolve(partsFor(selection))
         );
+}
+
+/**
+ * The combinations the load would probe: whole selections, which is what
+ * `decideIndexing` makes of what enumeration names.
+ */
+function probeSelections(
+    parameters: ConfigurationParameter[],
+    elementType: ElementType = ElementType.PART_STUDIO
+): Selection[] {
+    return decideIndexing(elementType, parameters, true).configurations;
 }
 
 /** Probes an element the way the load does: its own combinations, in full. */
@@ -192,12 +202,13 @@ function probeRecords(
     parameters: ConfigurationParameter[],
     options: { elementType?: ElementType; isOpenComposite?: boolean } = {}
 ) {
+    const elementType = options.elementType ?? ElementType.PART_STUDIO;
     return parseConfigurationRecords(
         CLIENT,
         PATH,
-        options.elementType ?? ElementType.PART_STUDIO,
+        elementType,
         parameters,
-        countConfigurations(parameters).configurations,
+        probeSelections(parameters, elementType),
         options.isOpenComposite ?? false
     );
 }
@@ -215,6 +226,20 @@ describe("parseConfigurationRecords", () => {
         // under another name and is not probed again.
         expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
+    });
+
+    // A stored record is addressed by its key; carrying the selection it was
+    // probed with would put a second copy of that in every row.
+    it("stores the key alone, not the selection behind it", async () => {
+        mockParts(() => [{ partId: "p", partNumber: "PN" }]);
+
+        const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
+
+        expect(result.records).not.toHaveLength(0);
+        for (const record of result.records) {
+            expect(record).not.toHaveProperty("selection");
+            expect(record.configurationKey).toBe("A=a2");
+        }
     });
 
     it("fills the vendor Onshape leaves unset, per configuration", async () => {
@@ -268,7 +293,7 @@ describe("parseConfigurationRecords", () => {
             PATH,
             ElementType.PART_STUDIO,
             [enumParam("A", ["a1", "a2"])],
-            countConfigurations([enumParam("A", ["a1", "a2"])]).configurations,
+            probeSelections([enumParam("A", ["a1", "a2"])]),
             false
         );
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CONFIGURATION_KEY } from "./models";
 import {
     appliedValues,
-    ELEMENT_DEFAULT_KEY,
     formatValue,
     fromKey,
     toKey,
@@ -57,7 +57,7 @@ describe("toKey", () => {
 
     it("is empty for a selection that overrides nothing", () => {
         expect(toKey(select({ size: "s", length: "1 in" }), parameters)).toBe(
-            ELEMENT_DEFAULT_KEY
+            DEFAULT_CONFIGURATION_KEY
         );
     });
 
@@ -82,7 +82,7 @@ describe("toKey", () => {
 
     it("keys a value equal to the default in another unit as no override", () => {
         expect(toKey(select({ length: "25.4 mm" }), parameters)).toBe(
-            ELEMENT_DEFAULT_KEY
+            DEFAULT_CONFIGURATION_KEY
         );
     });
 

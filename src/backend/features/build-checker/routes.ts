@@ -4,7 +4,7 @@ import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { requireEditorMiddleware } from "../auth/guards";
-import { group, insertables, configurations } from "../../db/schema";
+import { groups, insertables, configurations } from "../../db/schema";
 import type {
     LibraryBuildStatus,
     GroupBuildStatus,
@@ -27,15 +27,15 @@ buildStatusRoutes.get(
         const [allGroups, allInsertables] = await Promise.all([
             db
                 .select({
-                    id: group.id,
-                    buildIssues: group.buildIssues,
-                    sortAlphabetically: group.sortAlphabetically,
-                    sortOrder: group.sortOrder,
-                    lastLoadedAt: group.lastLoadedAt
+                    id: groups.id,
+                    buildIssues: groups.buildIssues,
+                    sortAlphabetically: groups.sortAlphabetically,
+                    sortOrder: groups.sortOrder,
+                    lastLoadedAt: groups.lastLoadedAt
                 })
-                .from(group)
-                .where(eq(group.libraryId, libraryId))
-                .orderBy(asc(group.sortOrder))
+                .from(groups)
+                .where(eq(groups.libraryId, libraryId))
+                .orderBy(asc(groups.sortOrder))
                 .all(),
             db
                 .select({
@@ -78,7 +78,7 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                lastLoadedAt: group.lastLoadedAt
+                lastLoadedAt: group.lastLoadedAt?.getTime() ?? null
             };
         }
 
@@ -92,7 +92,7 @@ buildStatusRoutes.get(
                 indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
-                lastLoadedAt: ins.lastLoadedAt
+                lastLoadedAt: ins.lastLoadedAt?.getTime() ?? null
             };
         }
 

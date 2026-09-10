@@ -1,5 +1,8 @@
 /** Thumbnail addressing, shared so the client builds the urls the worker serves. */
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY
+} from "../configurations/models";
 import { ThumbnailSize } from "./types";
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
@@ -14,9 +17,9 @@ export function thumbnailKey(
     elementId: string,
     microversionId: string,
     size: ThumbnailSize,
-    configurationKey: string = ELEMENT_DEFAULT_KEY
+    configurationKey: ConfigurationKey = DEFAULT_CONFIGURATION_KEY
 ): string {
-    if (configurationKey === ELEMENT_DEFAULT_KEY) {
+    if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
         return `thumbnails/default/${elementId}/${microversionId}/${size}`;
     }
     const segment = encodeURIComponent(configurationKey);
@@ -28,7 +31,7 @@ export interface ThumbnailUrlOptions {
     microversionId: string;
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /** Whether a miss should start rendering this configuration. */
     renderThumbnail?: boolean;
     /** Only needed to render: what the render resolves the element from. */
@@ -53,7 +56,7 @@ export function thumbnailUrl({
     // `v` is the one abbreviation: it is the cache version every immutable url
     // carries, and a render is pinned to the microversion it was taken from.
     const query = new URLSearchParams({ v: microversionId });
-    if (configurationKey !== ELEMENT_DEFAULT_KEY) {
+    if (configurationKey !== DEFAULT_CONFIGURATION_KEY) {
         query.set("configurationKey", configurationKey);
         if (renderThumbnail && insertableId) {
             query.set("renderThumbnail", "true");

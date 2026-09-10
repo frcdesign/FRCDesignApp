@@ -1,4 +1,5 @@
 import { useAccessData } from "../../auth/access-level";
+import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
@@ -12,8 +13,8 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
 import { useGetUiState } from "../../../lib/ui-state";
 import {
-    SectionError,
-    SectionLoading
+    SectionLoading,
+    SectionNotice
 } from "../../../components/app-zero-state";
 import {
     NoSearchResultError,
@@ -26,6 +27,8 @@ import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
+import { FavoriteIcon } from "./favorite-button";
+import { startSignIn } from "../../auth/sign-in";
 
 /**
  * A list of current favorite cards.
@@ -34,14 +37,23 @@ import { AppIcon } from "../../../components/app-icon";
 export function FavoritesList(): ReactNode {
     const { searchQuery, vendorFilters } = useGetUiState();
 
+    const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    if (libraryQuery.isPending || favoritesQuery.isPending) {
+    // Only once known, and ahead of the pending branch, which favorites never
+    // leaves while signed out: the query stays disabled rather than 401.
+    if (!isPending && !signedIn) {
+        return <SignInToViewFavorites />;
+    } else if (
+        isPending ||
+        libraryQuery.isPending ||
+        favoritesQuery.isPending
+    ) {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
-            <SectionError
+            <SectionNotice
                 title="Failed to load favorites."
                 icon={
                     <AppIcon
@@ -84,6 +96,17 @@ export function FavoritesList(): ReactNode {
     );
 }
 
+function SignInToViewFavorites(): ReactNode {
+    return (
+        <SectionNotice
+            icon={<FavoriteIcon size={IconSize.SECTION} />}
+            title="Sign in to view favorites"
+            description="Favorites are saved to your Onshape account."
+            action={<Button onClick={startSignIn}>Sign in</Button>}
+        />
+    );
+}
+
 interface FavoriteSearchResultsProps {
     query: string;
     insertables: Insertables;
@@ -101,9 +124,9 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     if (searchDbQuery.isLoading) {
         return <SectionLoading title="Searching..." />;
     } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
+        return <SectionNotice title="Failed to load search database." />;
     } else if (!searchDbQuery.data) {
-        return <SectionError title="The search database is empty." />;
+        return <SectionNotice title="The search database is empty." />;
     }
 
     const result = searchInsertables({

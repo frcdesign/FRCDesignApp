@@ -1,4 +1,5 @@
-import { useMatch, useParams } from "@tanstack/react-router";
+import { notFound, useMatch, useParams } from "@tanstack/react-router";
+import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 
@@ -10,11 +11,32 @@ export function useLibraryId(): LibraryId {
         from: "/app/library/$libraryId",
         shouldThrow: false
     });
-    return params?.libraryId ?? DEFAULT_SETTINGS.libraryId;
+    // The dashboard scopes to a library of its own, which its settings menu
+    // offers the app for.
+    const dashboardParams = useParams({
+        from: "/dashboard/library/$libraryId",
+        shouldThrow: false
+    });
+    return (
+        params?.libraryId ??
+        dashboardParams?.libraryId ??
+        DEFAULT_SETTINGS.libraryId
+    );
 }
 
-export function isLibraryId(libraryId: string): libraryId is LibraryId {
-    return (Object.values(LibraryId) as string[]).includes(libraryId);
+const LibraryIdType = z.enum(LibraryId);
+
+/**
+ * Reads the library id out of a url. Quietly falling back to another library
+ * would hide the bad url and leave the caller wondering why they are somewhere
+ * else, so an unknown one 404s here rather than reaching the API.
+ */
+export function parseLibraryId(libraryId: string): LibraryId {
+    const parsed = LibraryIdType.safeParse(libraryId);
+    if (!parsed.success) {
+        throw notFound();
+    }
+    return parsed.data;
 }
 
 export function toLibraryPath(libraryId: LibraryId): string {
@@ -45,16 +67,9 @@ export function getLibraryName(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
-/** Announced, but with nothing to show yet. */
-export function isComingSoon(libraryId: string): boolean {
-    return libraryId === LibraryId.FTC_DESIGN_LIB;
-}
-
 /** Where a library is in its life; undefined once it is simply supported. */
 export function getLibraryStatus(libraryId: string): string | undefined {
     switch (libraryId) {
-        case LibraryId.FTC_DESIGN_LIB:
-            return "Coming soon";
         case LibraryId.MKCAD:
             return "Deprecated";
     }

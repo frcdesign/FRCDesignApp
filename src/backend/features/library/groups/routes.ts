@@ -7,8 +7,8 @@ import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
-import { group, insertables, libraries, favorites } from "../../../db/schema";
-import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import { groups, insertables, favorites } from "../../../db/schema";
+import { bumpLibraryVersion, ensureLibrary, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
 import {
@@ -61,10 +61,7 @@ groupRoutes.post(
         }
 
         const db = getDb(c.env.DB);
-        await db
-            .insert(libraries)
-            .values({ id: libraryId })
-            .onConflictDoNothing();
+        await ensureLibrary(db, libraryId);
 
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
@@ -138,10 +135,13 @@ groupRoutes.post(
 
         const db = getDb(c.env.DB);
         await db
-            .update(group)
+            .update(groups)
             .set({ sortAlphabetically: body.sortAlphabetically })
             .where(
-                and(eq(group.id, body.groupId), eq(group.libraryId, libraryId))
+                and(
+                    eq(groups.id, body.groupId),
+                    eq(groups.libraryId, libraryId)
+                )
             );
 
         await bumpLibraryVersion(db, libraryId);
@@ -162,10 +162,10 @@ groupRoutes.post(
         await Promise.all(
             body.groupOrder.map((id, i) =>
                 db
-                    .update(group)
+                    .update(groups)
                     .set({ sortOrder: i })
                     .where(
-                        and(eq(group.id, id), eq(group.libraryId, libraryId))
+                        and(eq(groups.id, id), eq(groups.libraryId, libraryId))
                     )
             )
         );
@@ -201,12 +201,12 @@ groupRoutes.post(
         const db = getDb(c.env.DB);
 
         const existingGroup = await db
-            .select({ id: group.id })
-            .from(group)
+            .select({ id: groups.id })
+            .from(groups)
             .where(
                 and(
-                    eq(group.documentId, body.newDocumentId),
-                    eq(group.libraryId, libraryId)
+                    eq(groups.documentId, body.newDocumentId),
+                    eq(groups.libraryId, libraryId)
                 )
             )
             .get();
@@ -249,8 +249,10 @@ groupRoutes.delete(
 
         // Cascade deletes insertables → favorites, and configurations automatically
         await db
-            .delete(group)
-            .where(and(eq(group.id, groupId), eq(group.libraryId, libraryId)));
+            .delete(groups)
+            .where(
+                and(eq(groups.id, groupId), eq(groups.libraryId, libraryId))
+            );
 
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);

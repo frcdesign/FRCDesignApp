@@ -9,7 +9,7 @@ import {
     Tabs,
     Tooltip
 } from "@mantine/core";
-import { ArrowClockwise, CaretDown } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, CaretDownIcon } from "@phosphor-icons/react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
     useNavigate,
@@ -27,7 +27,7 @@ import {
     NAVBAR_ROW_HEIGHT
 } from "../../lib/style-constants";
 import { AppBrand } from "../../components/app-brand";
-import { DashboardSettingsMenu } from "./dashboard-settings";
+import { SettingsButton } from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -63,7 +63,7 @@ export function DashboardNavbar(): ReactNode {
                 <DashboardTabs current={current} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <RefreshButton />
-                    <DashboardSettingsMenu />
+                    <SettingsButton />
                 </Group>
             </Group>
             {/* Only the library-scoped dashboards have anything to put here:
@@ -138,7 +138,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                 <Button
                     variant="default"
                     size="compact-sm"
-                    rightSection={<CaretDown size={IconSize.SMALL} />}
+                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
                 >
                     {getLibraryName(current)}
                 </Button>
@@ -223,7 +223,7 @@ function RefreshButton(): ReactNode {
                     })
                 }
             >
-                <ArrowClockwise size={IconSize.MEDIUM} />
+                <ArrowClockwiseIcon size={IconSize.MEDIUM} />
             </ActionIcon>
         </Tooltip>
     );

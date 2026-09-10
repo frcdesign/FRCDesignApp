@@ -16,12 +16,15 @@ import {
     ReactNode,
     useState
 } from "react";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
+import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY
+} from "@backend/features/configurations/models";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
-import { SectionError } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
-import { useIsSignedIn } from "../../auth/access-level";
+import { useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
 /** Letterbox rather than stretch, in case the render is not the size we asked for. */
@@ -52,7 +55,7 @@ export interface ThumbnailTarget {
     elementId: string;
     microversionId: string;
     /** Empty means the element default. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /**
      * Whether a miss should start rendering: surfaces where the user picked the
      * configuration do, where a search would otherwise render a row at a time.
@@ -74,7 +77,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        target && target.configurationKey !== ELEMENT_DEFAULT_KEY
+        target && target.configurationKey !== DEFAULT_CONFIGURATION_KEY
             ? thumbnailUrl({ ...target, size })
             : stored;
 
@@ -169,7 +172,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 interface PreviewImageProps {
     path: ElementPath;
     /** The selection to preview; Onshape applies defaults for what it omits. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;
     /** What the render resolves the element from. */
@@ -259,7 +262,7 @@ function PreviewBox(props: PreviewBoxProps): ReactNode {
 
 export function PreviewImage(props: PreviewImageProps): ReactNode {
     const { insertableId, microversionId, largeThumbnailUrl } = props;
-    const isSignedIn = useIsSignedIn();
+    const { signedIn, isPending } = useAccessData();
     const isConnected = useIsConnectedToOnshape();
     const isFetchingConfiguration = useIsFetchingConfiguration(
         insertableId,
@@ -268,7 +271,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
     const targetElementType = useTargetElementType();
     const { query, lastRenderedUrl } = usePreviewThumbnail(
         props,
-        !isFetchingConfiguration && isSignedIn === true
+        !isFetchingConfiguration && signedIn
     );
 
     const heightAndWidth = getHeightAndWidth(PREVIEW_SIZE, 0.7);
@@ -280,13 +283,13 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
 
     // Not known yet: the stored thumbnail would be swapped for the live preview
     // a moment later.
-    if (isSignedIn === undefined) {
+    if (isPending) {
         return spinner;
     }
 
     // Not signed in: no live Onshape preview, so show the stored thumbnail
     // (Thumbnail falls back to a placeholder when there's none).
-    if (!isSignedIn) {
+    if (!signedIn) {
         return (
             <Thumbnail
                 url={largeThumbnailUrl}
@@ -301,7 +304,7 @@ export function PreviewImage(props: PreviewImageProps): ReactNode {
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (
             <PreviewBox heightAndWidth={heightAndWidth}>
-                <SectionError
+                <SectionNotice
                     title="The thumbnail could not be loaded."
                     // Standalone has no insert button to fall back on, and
                     // null suppresses the generic "contact the developers".

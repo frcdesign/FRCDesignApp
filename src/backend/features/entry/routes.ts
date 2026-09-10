@@ -4,7 +4,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { group, users } from "../../db/schema";
+import { groups, users } from "../../db/schema";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getSessionCompanyId } from "../auth/session";
@@ -37,14 +37,14 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
         .select({
             libraryId: users.libraryId,
             theme: users.theme,
-            groupId: group.id
+            groupId: groups.id
         })
         .from(users)
         .leftJoin(
-            group,
+            groups,
             and(
-                eq(group.id, users.groupId),
-                eq(group.libraryId, users.libraryId)
+                eq(groups.id, users.groupId),
+                eq(groups.libraryId, users.libraryId)
             )
         )
         .where(eq(users.id, userId))

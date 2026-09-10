@@ -3,7 +3,7 @@ import { type Db } from "../../db/client";
 import { increment } from "../../db/updates";
 import {
     libraries,
-    group,
+    groups,
     insertables,
     configurations,
     PLACEHOLDER_VERSION_ID
@@ -24,9 +24,9 @@ export async function getLibraryOut(
 ): Promise<LibraryOut> {
     const allGroups = await db
         .select()
-        .from(group)
-        .where(eq(group.libraryId, libraryId))
-        .orderBy(asc(group.sortOrder))
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
     if (allGroups.length === 0) {
@@ -127,10 +127,10 @@ export async function placeNewGroup(
     selectedGroupId: string | undefined
 ): Promise<number> {
     const siblings = await db
-        .select({ id: group.id })
-        .from(group)
-        .where(eq(group.libraryId, libraryId))
-        .orderBy(asc(group.sortOrder))
+        .select({ id: groups.id })
+        .from(groups)
+        .where(eq(groups.libraryId, libraryId))
+        .orderBy(asc(groups.sortOrder))
         .all();
 
     const selectedIndex = selectedGroupId
@@ -144,13 +144,26 @@ export async function placeNewGroup(
     await Promise.all(
         siblings.map((sibling, index) =>
             db
-                .update(group)
+                .update(groups)
                 .set({ sortOrder: index < newIndex ? index : index + 1 })
-                .where(eq(group.id, sibling.id))
+                .where(eq(groups.id, sibling.id))
         )
     );
 
     return newIndex;
+}
+
+/**
+ * The library's row, which everything pointing at a library needs to exist
+ * first. Called wherever a library id is written rather than assumed: a library
+ * gets its row on the first group added to it, and a caller can land on one
+ * that has none yet.
+ */
+export async function ensureLibrary(
+    db: Db,
+    libraryId: LibraryId
+): Promise<void> {
+    await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
 }
 
 export async function bumpLibraryVersion(

@@ -1,5 +1,5 @@
 import { Group, Stack, Text, Tooltip } from "@mantine/core";
-import { ArrowDown, ArrowUp, Minus } from "@phosphor-icons/react";
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     ChangeUnavailable,
@@ -35,7 +35,7 @@ export function ChangeIndicator({
     const rising = comparison.changeRatio >= 0;
     // A flat reading gets neither color: calling 0% green would overstate it.
     const flat = Math.abs(comparison.changeRatio) < 0.005;
-    const Arrow = flat ? Minus : rising ? ArrowUp : ArrowDown;
+    const Arrow = flat ? MinusIcon : rising ? ArrowUpIcon : ArrowDownIcon;
     const color = flat ? "dimmed" : rising ? "green" : "red";
 
     const change = (

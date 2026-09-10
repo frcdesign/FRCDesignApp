@@ -6,7 +6,7 @@ import { getApp } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
 
 import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";
@@ -20,7 +20,7 @@ const storedThumbnailParams = z.object({
 });
 
 /** Absent means the element default, which is what `""` encodes. */
-const configurationKeyQuery = z.string().default(ELEMENT_DEFAULT_KEY);
+const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
@@ -59,7 +59,7 @@ thumbnailRoutes.get(
             );
         }
 
-        if (configurationKey === ELEMENT_DEFAULT_KEY) {
+        if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
             return notRenderedYet();
         }
 

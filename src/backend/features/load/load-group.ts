@@ -8,7 +8,7 @@ import {
     type BuildIssue,
     BuildIssueType
 } from "../build-checker/issues";
-import { group, insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import { uploadDocumentThumbnails } from "../thumbnails/store";
 import { getContents } from "../../lib/onshape/endpoints/documents";
 import type { OnshapeElement } from "../../lib/onshape/types";
@@ -37,7 +37,7 @@ interface ParsedGroup {
     largeThumbnailUrl: string | null;
     buildIssues: BuildIssue[];
     /** When this (successful) load completed, epoch ms. */
-    lastLoadedAt: number;
+    lastLoadedAt: Date;
     /** Undefined if an insertable failed. */
     versionId?: string;
 }
@@ -160,14 +160,14 @@ async function saveGroup(
         buildIssues,
         // Stamp the successful load; failures never reach here, so a failed
         // reload leaves the group's last-good time untouched.
-        lastLoadedAt: Date.now()
+        lastLoadedAt: new Date()
     };
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;
     }
 
     const writes: BatchItem<"sqlite">[] = [
-        db.update(group).set(parsed).where(eq(group.id, target.groupId))
+        db.update(groups).set(parsed).where(eq(groups.id, target.groupId))
     ];
     if (!hasFailedInsertables) {
         // A skipped tab never reaches saveInsertable, so move the whole group

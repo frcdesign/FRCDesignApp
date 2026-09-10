@@ -1,5 +1,5 @@
 import { Alert, Center, Loader } from "@mantine/core";
-import { Warning } from "@phosphor-icons/react";
+import { WarningIcon } from "@phosphor-icons/react";
 import { type UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { IconSize } from "../../lib/style-constants";
@@ -17,7 +17,7 @@ export function DashboardState({ query }: DashboardStateProps): ReactNode {
         return (
             <Alert
                 color="red"
-                icon={<Warning size={IconSize.MEDIUM} />}
+                icon={<WarningIcon size={IconSize.MEDIUM} />}
                 title="Failed to load analytics"
             >
                 {query.error instanceof Error

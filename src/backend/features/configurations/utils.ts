@@ -1,7 +1,10 @@
 import {
+    type ConfigurationKey,
     type ConfigurationRecord,
     type PartMetadata,
+    type PartialSelection,
     Selection,
+    DEFAULT_CONFIGURATION_KEY,
     EnumOption,
     EnumParameter,
     OptionVisibilityType,
@@ -27,7 +30,7 @@ import { type EvaluateOptions, valueWithUnits } from "./input-parser";
  * enumerated parameters, so the most specific wins.
  */
 export function findRecordForConfiguration(
-    configurationKey: string,
+    configurationKey: ConfigurationKey,
     records: SearchRecord[]
 ): SearchRecord | undefined {
     const selected = new Set(splitConfiguration(configurationKey));
@@ -44,32 +47,35 @@ export function findRecordForConfiguration(
     return best;
 }
 
+/**
+ * Whether a parameter is shown. Takes a partial selection: visibility is what
+ * enumeration consults while a combination is still being built up.
+ */
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
-    configuration: Record<string, string>,
+    selection: PartialSelection,
     parameters: ConfigurationParameter[]
 ): boolean {
     if (!condition) {
         return true;
     }
 
-    if (condition.type == VisibilityType.LOGICAL) {
-        if (condition.operation == LogicalOp.AND) {
+    if (condition.type === VisibilityType.LOGICAL) {
+        if (condition.operation === LogicalOp.AND) {
             return condition.children.every((child) =>
-                evaluateCondition(child, configuration, parameters)
-            );
-        } else {
-            return condition.children.some((child) =>
-                evaluateCondition(child, configuration, parameters)
+                evaluateCondition(child, selection, parameters)
             );
         }
-    } else if (condition.type == VisibilityType.EQUAL) {
-        return condition.value == configuration[condition.id];
-    } else if (condition.type == VisibilityType.RANGE) {
+        return condition.children.some((child) =>
+            evaluateCondition(child, selection, parameters)
+        );
+    } else if (condition.type === VisibilityType.EQUAL) {
+        return condition.value === selection[condition.id];
+    } else if (condition.type === VisibilityType.RANGE) {
         const parameter = parameters.find(
             (parameter) => parameter.id === condition.id
         );
-        if (parameter?.type != ParameterType.ENUM) {
+        if (parameter?.type !== ParameterType.ENUM) {
             throw new Error(
                 "Visibility condition does not target a valid enum parameter."
             );
@@ -78,21 +84,23 @@ export function evaluateCondition(
         const optionIds = parameter.options.map((option) => option.id);
         const startIndex = optionIds.indexOf(condition.start);
         const endIndex = optionIds.indexOf(condition.end);
-        return optionIds
-            .slice(startIndex, endIndex + 1)
-            .includes(configuration[condition.id]);
-    } else if (condition.type === VisibilityType.ALWAYS_SHOWN) {
-        return true;
+        const value = selection[condition.id];
+        return (
+            value !== undefined &&
+            optionIds.slice(startIndex, endIndex + 1).includes(value)
+        );
     }
+    // ALWAYS_SHOWN, and anything Onshape adds that we have not taught it yet.
     return true;
 }
+
+/** A description holding a link is the link, rather than a description. */
+const ABSOLUTE_URL = new RegExp("^https?://", "i");
+
 /**
  * The page for a part, in descending precision: a description that is already a
  * url, then the vendor the part number names, then the taggings standing in.
  */
-/** A description holding a link is the link, rather than a description. */
-const ABSOLUTE_URL = new RegExp("^https?://", "i");
-
 export function getPartUrl(
     record: PartMetadata,
     vendors: Vendor[] = []
@@ -149,16 +157,16 @@ export function getOption(
     options: EnumOption[],
     optionId: string
 ): EnumOption | undefined {
-    return options.find((option) => option.id == optionId);
+    return options.find((option) => option.id === optionId);
 }
 
 /**
- * Returns the enum options visible given the current (possibly partial)
- * configuration, applying the parameter's option visibility conditions.
+ * The enum options the selection leaves visible, by the parameter's own option
+ * conditions. Partial for the same reason {@link evaluateCondition} is.
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
-    configuration: Selection,
+    selection: PartialSelection,
     parameters: ConfigurationParameter[]
 ): EnumOption[] {
     // No conditions means everything is shown
@@ -170,16 +178,12 @@ export function getVisibleOptions(
 
     const validOptionIds = enumParameter.optionConditions
         .filter((optionCondition) =>
-            evaluateCondition(
-                optionCondition.condition,
-                configuration,
-                parameters
-            )
+            evaluateCondition(optionCondition.condition, selection, parameters)
         )
         .flatMap((optionCondition) => {
-            if (optionCondition.type == OptionVisibilityType.LIST) {
+            if (optionCondition.type === OptionVisibilityType.LIST) {
                 return optionCondition.controlledOptions;
-            } else if (optionCondition.type == OptionVisibilityType.RANGE) {
+            } else if (optionCondition.type === OptionVisibilityType.RANGE) {
                 return optionIds.slice(
                     optionIds.indexOf(optionCondition.start),
                     optionIds.indexOf(optionCondition.end) + 1
@@ -252,5 +256,8 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [{ ...partMetadata, configurationKey: "" }, ...records];
+    return [
+        { ...partMetadata, configurationKey: DEFAULT_CONFIGURATION_KEY },
+        ...records
+    ];
 }

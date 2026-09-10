@@ -3,7 +3,7 @@
  * parameters vary; quantity and string ones ride their Onshape defaults.
  */
 import {
-    Selection,
+    type PartialSelection,
     BooleanParameter,
     ConfigurationParameter,
     EnumParameter,
@@ -59,7 +59,7 @@ export interface ConfigurationCount {
     count: number | null;
     band: IndexingBand;
     /** The combinations counted, so the load path need not enumerate again. */
-    configurations: Selection[];
+    configurations: PartialSelection[];
 }
 
 /** Shared, so the load path and the admin UI agree on which limit applies. */
@@ -73,7 +73,7 @@ export function countConfigurations(
     // The lone default that nothing-to-vary enumerates to is not a configuration
     // of its own: a non-configurable insertable has none.
     const count = configurations.some(
-        (configuration) => Object.keys(configuration).length > 0
+        (selection) => Object.keys(selection).length > 0
     )
         ? configurations.length
         : 0;
@@ -103,6 +103,27 @@ export function isIndexedParameter(
     return !parameter.isCosmetic;
 }
 
+/**
+ * The values enumeration varies this parameter over, given what the combination
+ * has fixed so far. None when its condition hides it here, or when visibility
+ * leaves it no option: either way it is left unset for Onshape to default.
+ */
+function parameterValues(
+    parameter: EnumParameter | BooleanParameter,
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): string[] {
+    if (!evaluateCondition(parameter.condition, selection, parameters)) {
+        return [];
+    }
+    if (parameter.type === ParameterType.BOOLEAN) {
+        return ["true", "false"];
+    }
+    return getVisibleOptions(parameter, selection, parameters).map(
+        (option) => option.id
+    );
+}
+
 /** The most combinations counted for display, far past the index cap on work. */
 export const MAX_COUNTED_CONFIGURATIONS = 100_000;
 
@@ -116,30 +137,23 @@ export function countCombinations(
     let count = 0;
     let capped = false;
 
-    const walk = (depth: number, configuration: Selection) => {
+    const walk = (depth: number, selection: PartialSelection) => {
         if (depth === indexed.length) {
             // The lone empty default is not a configuration of its own.
-            if (Object.keys(configuration).length > 0) {
+            if (Object.keys(selection).length > 0) {
                 count++;
                 capped = count > cap;
             }
             return;
         }
         const parameter = indexed[depth];
-        const values = evaluateCondition(
-            parameter.condition,
-            configuration,
-            parameters
-        )
-            ? parameterValues(parameter, configuration, parameters)
-            : [];
-        // Hidden here, or with nothing to pick: left unset for Onshape to default.
+        const values = parameterValues(parameter, selection, parameters);
         if (values.length === 0) {
-            walk(depth + 1, configuration);
+            walk(depth + 1, selection);
             return;
         }
         for (const value of values) {
-            walk(depth + 1, { ...configuration, [parameter.id]: value });
+            walk(depth + 1, { ...selection, [parameter.id]: value });
             if (capped) {
                 return;
             }
@@ -150,23 +164,10 @@ export function countCombinations(
     return capped ? null : count;
 }
 
-function parameterValues(
-    parameter: EnumParameter | BooleanParameter,
-    configuration: Selection,
-    parameters: ConfigurationParameter[]
-): string[] {
-    if (parameter.type === ParameterType.BOOLEAN) {
-        return ["true", "false"];
-    }
-    return getVisibleOptions(parameter, configuration, parameters).map(
-        (option) => option.id
-    );
-}
-
 export interface EnumerateResult {
-    /** What each combination varies — enums and booleans — so the one place a
-     * map is not yet whole; the only caller runs `toSelection` over them. */
-    configurations: Selection[];
+    /** What each combination varies — enums and booleans — which is why these
+     * are partial; the only caller runs `toSelection` over them. */
+    configurations: PartialSelection[];
     /** True when enumeration was stopped for exceeding the cap. */
     capped: boolean;
 }
@@ -179,44 +180,25 @@ export function enumerateConfigurations(
     parameters: ConfigurationParameter[],
     cap: number = MAX_PART_NUMBER_CONFIGURATIONS
 ): EnumerateResult {
-    let configurations: Selection[] = [{}];
+    let configurations: PartialSelection[] = [{}];
 
     for (const parameter of parameters) {
         if (!isIndexedParameter(parameter)) {
             continue;
         }
 
-        const next: Selection[] = [];
-        for (const configuration of configurations) {
-            // A parameter hidden in this partial combination is left unset;
+        const next: PartialSelection[] = [];
+        for (const selection of configurations) {
+            const values = parameterValues(parameter, selection, parameters);
+            // Nothing to vary here, so the parameter is left unset;
             // `toSelection` fills it from the default Onshape would apply.
-            if (
-                !evaluateCondition(
-                    parameter.condition,
-                    configuration,
-                    parameters
-                )
-            ) {
-                next.push(configuration);
-                continue;
-            }
-
-            const values =
-                parameter.type === ParameterType.BOOLEAN
-                    ? ["true", "false"]
-                    : getVisibleOptions(
-                          parameter,
-                          configuration,
-                          parameters
-                      ).map((option) => option.id);
-
             if (values.length === 0) {
-                next.push(configuration);
+                next.push(selection);
                 continue;
             }
 
             for (const value of values) {
-                next.push({ ...configuration, [parameter.id]: value });
+                next.push({ ...selection, [parameter.id]: value });
             }
         }
 

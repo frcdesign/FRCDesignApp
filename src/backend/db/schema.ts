@@ -25,7 +25,7 @@ export const libraries = sqliteTable("libraries", {
  */
 export const PLACEHOLDER_VERSION_ID = "placeholder";
 
-export const group = sqliteTable(
+export const groups = sqliteTable(
     "groups",
     {
         id: text("id")
@@ -50,9 +50,9 @@ export const group = sqliteTable(
             .$type<BuildIssue[]>()
             .notNull()
             .default([]),
-        // Epoch ms of the last successful load; null before the first. Failures
-        // are conveyed by buildIssues, not here.
-        lastLoadedAt: integer("last_loaded_at")
+        // Null before the first successful load. Failures are conveyed by
+        // buildIssues, not here.
+        lastLoadedAt: integer("last_loaded_at", { mode: "timestamp_ms" })
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
@@ -65,7 +65,7 @@ export const insertables = sqliteTable("insertables", {
     // The group this insertable belongs to (its primary parent).
     groupId: text("group_id")
         .notNull()
-        .references(() => group.id, { onDelete: "cascade" }),
+        .references(() => groups.id, { onDelete: "cascade" }),
     // The Onshape document the element lives in (kept for Onshape API calls).
     documentId: text("document_id").notNull(),
     libraryId: text("library_id")
@@ -110,9 +110,9 @@ export const insertables = sqliteTable("insertables", {
         .$type<BuildIssue[]>()
         .notNull()
         .default([]),
-    // Epoch ms of the last successful load; null before the first. Failures are
-    // conveyed by buildIssues, not here.
-    lastLoadedAt: integer("last_loaded_at")
+    // Null before the first successful load. Failures are conveyed by
+    // buildIssues, not here.
+    lastLoadedAt: integer("last_loaded_at", { mode: "timestamp_ms" })
 });
 
 export const configurations = sqliteTable("configurations", {
@@ -142,10 +142,14 @@ export const users = sqliteTable("users", {
         .$type<Theme>()
         .notNull()
         .default(DEFAULT_SETTINGS.theme),
+    // Ordered like every other `library_id`, and pointing at the same place.
+    // The row it needs is upserted wherever one is written, since the default
+    // below is applied by an insert that names no library at all.
     libraryId: text("library_id")
-        .$type<LibraryId>()
         .notNull()
-        .default(DEFAULT_SETTINGS.libraryId),
+        .$type<LibraryId>()
+        .default(DEFAULT_SETTINGS.libraryId)
+        .references(() => libraries.id),
     // The group last opened in that library, which entry resumes in. Null for
     // the library itself; a stale one resolves to that, so it is never cleaned.
     groupId: text("group_id")
@@ -175,7 +179,7 @@ export const favorites = sqliteTable(
         sortOrder: integer("sort_order").notNull().default(0),
         // Null on rows predating the column: backfilling would draw a cliff
         // of favorites on a day nobody favorited anything.
-        createdAt: integer("created_at")
+        createdAt: integer("created_at", { mode: "timestamp_ms" })
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );

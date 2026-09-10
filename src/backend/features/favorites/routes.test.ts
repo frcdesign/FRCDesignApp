@@ -1,3 +1,4 @@
+import { type ConfigurationKey } from "../configurations/models";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -26,7 +27,7 @@ interface FavoritesBody {
         {
             insertableId: string;
             defaultSelection?: Record<string, string>;
-            configurationKey?: string;
+            configurationKey?: ConfigurationKey;
         }
     >;
     favoriteOrder: string[];
@@ -166,7 +167,9 @@ describe("favorites routes", () => {
 
             const rows = await db.select().from(favorites).all();
             const stamped = rows.find((row) => row.id === "fav-stamped");
-            expect(stamped?.createdAt).toBeGreaterThanOrEqual(before);
+            expect(stamped?.createdAt?.getTime()).toBeGreaterThanOrEqual(
+                before
+            );
             expect(rows.find((row) => row.id === old)?.createdAt).toBeNull();
         });
 

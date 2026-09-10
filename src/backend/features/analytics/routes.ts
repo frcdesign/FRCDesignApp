@@ -5,7 +5,7 @@ import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { getDb } from "../../db/client";
-import { configurations, group, insertables } from "../../db/schema";
+import { configurations, groups, insertables } from "../../db/schema";
 import { insertableStats } from "./schema";
 import type {
     AnalyticsOverviewOut,
@@ -144,7 +144,7 @@ analyticsRoutes.get(
                     documentId: insertables.documentId,
                     versionId: insertables.versionId,
                     isVisible: insertables.isVisible,
-                    groupName: group.name
+                    groupName: groups.name
                 })
                 .from(insertables)
                 .leftJoin(
@@ -155,7 +155,7 @@ analyticsRoutes.get(
                     )
                 )
                 // `groupId` is a non-null FK that cascades, so a row always matches.
-                .innerJoin(group, eq(group.id, insertables.groupId))
+                .innerJoin(groups, eq(groups.id, insertables.groupId))
                 .where(eq(insertables.libraryId, libraryId))
                 .all(),
             getPartSparklines(db, libraryId),
@@ -192,7 +192,7 @@ analyticsRoutes.get(
                     name: insertables.name,
                     documentId: insertables.documentId,
                     versionId: insertables.versionId,
-                    groupName: group.name,
+                    groupName: groups.name,
                     isVisible: insertables.isVisible,
                     firstInsertedAt: insertableStats.firstInsertedAt
                 })
@@ -204,7 +204,7 @@ analyticsRoutes.get(
                         eq(insertableStats.elementId, insertables.elementId)
                     )
                 )
-                .innerJoin(group, eq(group.id, insertables.groupId))
+                .innerJoin(groups, eq(groups.id, insertables.groupId))
                 .where(
                     and(
                         eq(insertables.libraryId, libraryId),
@@ -339,7 +339,7 @@ analyticsRoutes.get(
             Date.parse(`${range.to}T23:59:59Z`)
         );
         const firstUsed = Math.max(
-            stats?.firstInsertedAt ?? windowStart,
+            stats?.firstInsertedAt?.getTime() ?? windowStart,
             windowStart
         );
 

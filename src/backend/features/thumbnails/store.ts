@@ -18,7 +18,10 @@ import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./types";
 import { thumbnailKey, thumbnailUrl } from "./keys";
-import { ELEMENT_DEFAULT_KEY } from "../configurations/selection";
+import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY
+} from "../configurations/models";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**
@@ -28,7 +31,7 @@ import { OnshapeApi } from "../../lib/onshape/client";
 export interface ThumbnailMetadata extends Record<string, string> {
     microversionId: string;
     /** Empty for an element's own thumbnail, as everywhere else. */
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
 }
 
 /** Stores one rendered thumbnail, tagging it with what produced it. */
@@ -70,7 +73,7 @@ export async function uploadThumbnails(
             small,
             {
                 microversionId,
-                configurationKey: ELEMENT_DEFAULT_KEY
+                configurationKey: DEFAULT_CONFIGURATION_KEY
             }
         ),
         putThumbnail(
@@ -79,7 +82,7 @@ export async function uploadThumbnails(
             large,
             {
                 microversionId,
-                configurationKey: ELEMENT_DEFAULT_KEY
+                configurationKey: DEFAULT_CONFIGURATION_KEY
             }
         )
     ]);
@@ -89,13 +92,13 @@ export async function uploadThumbnails(
             elementId,
             microversionId,
             size: ThumbnailSize.SMALL,
-            configurationKey: ELEMENT_DEFAULT_KEY
+            configurationKey: DEFAULT_CONFIGURATION_KEY
         }),
         large: thumbnailUrl({
             elementId,
             microversionId,
             size: ThumbnailSize.LARGE,
-            configurationKey: ELEMENT_DEFAULT_KEY
+            configurationKey: DEFAULT_CONFIGURATION_KEY
         })
     };
 }
@@ -115,7 +118,7 @@ export async function uploadConfigurationThumbnails(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     microversionId: string,
-    configurationKey: string
+    configurationKey: ConfigurationKey
 ): Promise<void> {
     const { elementId } = elementPath;
     const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({

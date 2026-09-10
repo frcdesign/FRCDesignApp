@@ -1,9 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
-import {
-    type Favorite,
-    getFavoriteForInsertable
-} from "@backend/features/favorites/contract";
+import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
@@ -21,14 +18,15 @@ import { ConfigurationWrapper } from "./configurations";
 import { useInsertMutation } from "../insert-hooks";
 import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
 import {
+    type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY,
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { ELEMENT_DEFAULT_KEY } from "@backend/features/configurations/selection";
-import { useFavoritesQuery } from "../../favorites/queries";
+import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
-import { RequireSignIn, useIsSignedIn } from "../../auth/access-level";
+import { RequireSignIn, useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
 import { InsertSource } from "@backend/features/analytics/events";
@@ -52,8 +50,9 @@ function useInsertSelection(initialSelection?: Selection) {
     const [selection, setSelection] = useState(initialSelection);
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
-    const [configurationKey, setConfigurationKey] =
-        useState(ELEMENT_DEFAULT_KEY);
+    const [configurationKey, setConfigurationKey] = useState(
+        DEFAULT_CONFIGURATION_KEY
+    );
     // The first report is what the menu opened with, and so what a right-click
     // on the card would have inserted. Absent until the parameters load.
     const [openedWith, setOpenedWith] = useState<string>();
@@ -68,14 +67,15 @@ function useInsertSelection(initialSelection?: Selection) {
         setSelection,
         configurationKey,
         onConfigurationKey,
-        isUnchanged: configurationKey === (openedWith ?? ELEMENT_DEFAULT_KEY)
+        isUnchanged:
+            configurationKey === (openedWith ?? DEFAULT_CONFIGURATION_KEY)
     };
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, modalId, openedAt, onInsert, source } = props;
-    const favorites = useFavoritesQuery().data?.favorites;
-    const isSignedIn = useIsSignedIn();
+    const favorite = useFavorite(insertable.id);
+    const { signedIn, isPending } = useAccessData();
 
     const {
         selection,
@@ -101,16 +101,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     useEffect(() => {
         // Only once known: pending reads as signed out, which would prompt a
         // signed-in caller to sign in.
-        if (isSignedIn === false) {
+        if (!isPending && !signedIn) {
             showSignInPreviewToast();
         }
-    }, [isSignedIn]);
-
-    if (!favorites) {
-        return null;
-    }
-
-    const favorite = getFavoriteForInsertable(favorites, insertable.id);
+    }, [signedIn, isPending]);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {
@@ -156,7 +150,7 @@ interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
     selection?: Selection;
-    configurationKey: string;
+    configurationKey: ConfigurationKey;
     /** Whether the selection still stands where the menu opened. */
     isUnchanged: boolean;
     openedAt: number;

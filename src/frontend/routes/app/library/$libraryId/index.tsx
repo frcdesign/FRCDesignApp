@@ -15,7 +15,7 @@ import { ItemTable } from "../../../../features/library/components/card-componen
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
 import {
-    SectionError,
+    SectionNotice,
     SectionLoading
 } from "../../../../components/app-zero-state";
 import { RequireAccessLevel } from "../../../../features/auth/access-level";
@@ -29,7 +29,6 @@ import {
 } from "../../../../features/library/library-path";
 import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
-import { useIsSignedIn } from "../../../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -56,9 +55,8 @@ function useHomeSections(): Section[] {
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
-    const isSignedIn = useIsSignedIn();
 
-    // Favorites are per-user and hidden until signed in.
+    // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
@@ -98,10 +96,7 @@ function useHomeSections(): Section[] {
 
     // One slot below favorites, showing search results while a query is active
     // and the library otherwise. The differing `value` remounts it on the swap.
-    return [
-        ...(isSignedIn ? [favorites] : []),
-        uiState.searchQuery ? search : library
-    ];
+    return [favorites, uiState.searchQuery ? search : library];
 }
 
 interface SectionAccordionProps {
@@ -191,7 +186,7 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load groups." />;
+        return <SectionNotice title="Failed to load groups." />;
     }
 
     const groups = libraryQuery.data.groups;
@@ -200,7 +195,7 @@ function LibraryList() {
     if (groupOrder.length <= 0) {
         // Add an escape hatch for when no groups are in the database
         return (
-            <SectionError
+            <SectionNotice
                 title="No groups found"
                 description={null}
                 action={

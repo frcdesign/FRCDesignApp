@@ -40,7 +40,7 @@ import {
     PartType,
     type OnshapeElementType
 } from "../../../lib/onshape/endpoints/documents";
-import { encodeConfiguration } from "../../../lib/onshape/endpoints/configurations";
+import { encodeConfigurationForBody } from "../../../lib/onshape/endpoints/configurations";
 import { toSelection } from "../../configurations/selection";
 import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
@@ -419,7 +419,7 @@ insertableRoutes.post(
         );
 
         const encodedConfiguration = selection
-            ? encodeConfiguration(selection)
+            ? encodeConfigurationForBody(selection)
             : undefined;
 
         const result = await addElementToAssembly(
