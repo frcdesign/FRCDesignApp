@@ -85,7 +85,9 @@ export function SettingsMenuContent(): ReactNode {
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
                 <Box mt="md">
-                    <Section title="Admin settings" order={6}>
+                    {/* The modal title's size, so the admin half of the menu
+                        announces itself rather than reading as another row. */}
+                    <Section title="Admin settings" order={5}>
                         <AdminSettings />
                     </Section>
                 </Box>

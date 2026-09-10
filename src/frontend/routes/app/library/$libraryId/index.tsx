@@ -127,7 +127,11 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 // the next one; content closes off an open one.
                 control: {
                     borderBottom: BORDER,
-                    minHeight: SECTION_HEADER_HEIGHT
+                    minHeight: SECTION_HEADER_HEIGHT,
+                    // Mantine brightens a control to pure white or black; a
+                    // section header is a title like the group page's, so it
+                    // reads in the same text color.
+                    color: "var(--mantine-color-text)"
                 },
                 // Its own padding would outgrow that height.
                 label: { paddingBlock: 0 },

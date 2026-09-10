@@ -1,7 +1,9 @@
-import { Button } from "@mantine/core";
+import { Button, Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
+import { ArrowsClockwiseIcon, WarningIcon } from "@phosphor-icons/react";
+import { AppIcon } from "../../../components/app-icon";
+import { AppTitle } from "../../../components/app-title";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { showInfoToast } from "../../../lib/notifications";
 import { useMutation } from "@tanstack/react-query";
@@ -20,6 +22,9 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     const { reloadAll = false } = props;
 
     const libraryId = useLibraryId();
+    // Reloading everything spends the account's Onshape allocation, so it is
+    // spoken in the same red as anything else that cannot be taken back.
+    const color = reloadAll ? StatusColor.ERROR : StatusColor.INFO;
 
     const mutation = useMutation({
         mutationKey: ["reload-groups"],
@@ -47,17 +52,32 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
 
     const handleClick = () => {
         modals.openConfirmModal({
-            title: reloadAll
-                ? "Reload all documents"
-                : "Reload outdated documents",
-            children:
-                "Are you sure you want to reload" +
-                (reloadAll ? " all documents?" : " outdated documents?"),
+            title: (
+                <AppTitle
+                    icon={
+                        <AppIcon
+                            icon={reloadAll ? WarningIcon : ArrowsClockwiseIcon}
+                            size={IconSize.MEDIUM}
+                            color={color}
+                        />
+                    }
+                    title={
+                        reloadAll
+                            ? "Reload all documents"
+                            : "Reload outdated documents"
+                    }
+                />
+            ),
+            children: (
+                <Text size="sm">
+                    {reloadAll
+                        ? "Are you sure you want to reload all documents? This is an expensive operation and should only be done after checking with Alex."
+                        : "Are you sure you want to reload outdated documents?"}
+                </Text>
+            ),
             labels: { confirm: "Reload documents", cancel: "Cancel" },
-            confirmProps: {
-                variant: "light",
-                color: reloadAll ? "red" : "blue"
-            },
+            centered: true,
+            confirmProps: { variant: "light", color },
             onConfirm: () => mutation.mutate()
         });
     };
@@ -65,7 +85,7 @@ export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     return (
         <Button
             variant="light"
-            color={reloadAll ? "red" : "blue"}
+            color={color}
             leftSection={<ArrowsClockwiseIcon size={IconSize.SMALL} />}
             onClick={handleClick}
             loading={mutation.isPending}

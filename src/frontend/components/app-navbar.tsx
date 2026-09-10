@@ -79,7 +79,7 @@ function SignInButton(): ReactNode {
     if (isPending || signedIn) return null;
 
     return (
-        <Button variant="outline" size="compact-sm" onClick={startSignIn}>
+        <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
             Sign in
         </Button>
     );
@@ -103,7 +103,7 @@ function RunningJobLoader(): ReactNode {
             withArrow
             label="The library is being loaded from Onshape in the background"
         >
-            <Loader size="sm" />
+            <Loader size={IconSize.CONTROL} />
         </Tooltip>
     );
 }
@@ -178,10 +178,12 @@ export function SettingsButton() {
             color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
-            size="lg"
+            // The filter button's size and icon, so the navbar's two rows read
+            // as one set of controls.
+            size="input-sm"
             onClick={() => openSettingsMenu()}
         >
-            <GearIcon size={IconSize.MEDIUM} />
+            <GearIcon size={IconSize.CONTROL} />
         </ActionIcon>
     );
 }
