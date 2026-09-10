@@ -239,7 +239,7 @@ export async function saveInsertable(
         isOpenComposite: parsed.isOpenComposite,
         partMetadata: parsed.partMetadata,
         buildIssues: parsed.buildIssues,
-        lastLoadedAt: Date.now()
+        lastLoadedAt: new Date()
     };
 
     const insertableWrite = db

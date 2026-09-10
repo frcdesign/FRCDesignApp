@@ -167,7 +167,9 @@ describe("favorites routes", () => {
 
             const rows = await db.select().from(favorites).all();
             const stamped = rows.find((row) => row.id === "fav-stamped");
-            expect(stamped?.createdAt).toBeGreaterThanOrEqual(before);
+            expect(stamped?.createdAt?.getTime()).toBeGreaterThanOrEqual(
+                before
+            );
             expect(rows.find((row) => row.id === old)?.createdAt).toBeNull();
         });
 

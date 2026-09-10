@@ -153,6 +153,19 @@ export async function placeNewGroup(
     return newIndex;
 }
 
+/**
+ * The library's row, which everything pointing at a library needs to exist
+ * first. Called wherever a library id is written rather than assumed: a library
+ * gets its row on the first group added to it, and a caller can land on one
+ * that has none yet.
+ */
+export async function ensureLibrary(
+    db: Db,
+    libraryId: LibraryId
+): Promise<void> {
+    await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
+}
+
 export async function bumpLibraryVersion(
     db: Db,
     libraryId: LibraryId

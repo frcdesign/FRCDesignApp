@@ -339,7 +339,7 @@ analyticsRoutes.get(
             Date.parse(`${range.to}T23:59:59Z`)
         );
         const firstUsed = Math.max(
-            stats?.firstInsertedAt ?? windowStart,
+            stats?.firstInsertedAt?.getTime() ?? windowStart,
             windowStart
         );
 

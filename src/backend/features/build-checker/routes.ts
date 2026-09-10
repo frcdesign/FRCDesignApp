@@ -78,7 +78,7 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                lastLoadedAt: group.lastLoadedAt
+                lastLoadedAt: group.lastLoadedAt?.getTime() ?? null
             };
         }
 
@@ -92,7 +92,7 @@ buildStatusRoutes.get(
                 indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
-                lastLoadedAt: ins.lastLoadedAt
+                lastLoadedAt: ins.lastLoadedAt?.getTime() ?? null
             };
         }
 

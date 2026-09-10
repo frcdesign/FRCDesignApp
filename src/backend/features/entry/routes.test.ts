@@ -24,11 +24,7 @@ describe("GET /init", () => {
     });
 
     it("sends a user to the library they last used", async () => {
-        await seedUser(db);
-        await db
-            .update(users)
-            .set({ libraryId: LibraryId.MKCAD })
-            .where(eq(users.id, TEST_USER_ID));
+        await seedUser(db, TEST_USER_ID, LibraryId.MKCAD);
 
         const res = await createTestApp().request(
             "/init?documentId=doc&workspaceId=ws",
@@ -89,10 +85,10 @@ describe("GET /init", () => {
 
     /** The library and group a user left off in, as their row records them. */
     async function seedResume(libraryId: LibraryId, groupId: string | null) {
-        await seedUser(db);
+        await seedUser(db, TEST_USER_ID, libraryId);
         await db
             .update(users)
-            .set({ libraryId, groupId })
+            .set({ groupId })
             .where(eq(users.id, TEST_USER_ID));
     }
 

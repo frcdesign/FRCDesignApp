@@ -167,7 +167,7 @@ favoriteRoutes.post(
                       )
                     : undefined,
                 sortOrder: existingCount.length,
-                createdAt: Date.now()
+                createdAt: new Date()
             })
             .onConflictDoNothing();
 

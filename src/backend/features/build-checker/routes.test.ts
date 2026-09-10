@@ -16,8 +16,8 @@ import type { LibraryBuildStatus } from "./contract";
 
 const db = getDb(env.DB);
 
-const GROUP_LOADED_AT = 1000;
-const INSERTABLE_LOADED_AT = 2000;
+const GROUP_LOADED_AT = new Date(1000);
+const INSERTABLE_LOADED_AT = new Date(2000);
 
 describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
@@ -42,9 +42,11 @@ describe("GET /build-status", () => {
         expect(res.status).toBe(200);
 
         const body: LibraryBuildStatus = await res.json();
-        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBe(GROUP_LOADED_AT);
+        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBe(
+            GROUP_LOADED_AT.getTime()
+        );
         expect(body.insertables[TEST_PART_STUDIO_ID].lastLoadedAt).toBe(
-            INSERTABLE_LOADED_AT
+            INSERTABLE_LOADED_AT.getTime()
         );
     });
 

@@ -13,12 +13,14 @@ export function increment(column: SQLiteColumn, by: number | SQL = 1): SQL {
 
 /**
  * Bounds rather than assignment, so writes reaching a row out of order — a
- * replay of the event log, say — still leave the true first and last.
+ * replay of the event log, say — still leave the true first and last. The
+ * milliseconds are spelled out here because a raw `sql` fragment carries no
+ * column codec to convert the Date for it.
  */
-export function earliest(column: SQLiteColumn, value: number): SQL {
-    return sql`min(${column}, ${value})`;
+export function earliest(column: SQLiteColumn, value: Date): SQL {
+    return sql`min(${column}, ${value.getTime()})`;
 }
 
-export function latest(column: SQLiteColumn, value: number): SQL {
-    return sql`max(${column}, ${value})`;
+export function latest(column: SQLiteColumn, value: Date): SQL {
+    return sql`max(${column}, ${value.getTime()})`;
 }

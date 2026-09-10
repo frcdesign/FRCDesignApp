@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
@@ -90,11 +91,18 @@ export async function seedLibrary(
     return id;
 }
 
+/**
+ * Seeds the library the user row points at as well, since its `library_id`
+ * takes a default and references `libraries` — which is what `ensureLibrary`
+ * does ahead of the same insert in the app.
+ */
 export async function seedUser(
     db: Db,
-    id: string = TEST_USER_ID
+    id: string = TEST_USER_ID,
+    libraryId: LibraryId = DEFAULT_SETTINGS.libraryId
 ): Promise<string> {
-    await db.insert(users).values({ id }).onConflictDoNothing();
+    await seedLibrary(db, libraryId);
+    await db.insert(users).values({ id, libraryId }).onConflictDoNothing();
     return id;
 }
 
@@ -114,7 +122,7 @@ export async function seedGroup(
             name: "Test Group",
             documentId: `doc-${id}`,
             versionId: "inst-1",
-            lastLoadedAt: Date.now(),
+            lastLoadedAt: new Date(),
             ...overrides
         })
         .onConflictDoNothing();

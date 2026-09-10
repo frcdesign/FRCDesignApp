@@ -9,13 +9,14 @@ import { getDb } from "../../db/client";
 import type { LibraryId } from "../library/library-id";
 import {
     bumpLibraryVersion,
+    ensureLibrary,
     placeNewGroup,
     rebuildSearchDb
 } from "../library/db";
 import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersionId } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
-import { groups, libraries, PLACEHOLDER_VERSION_ID } from "../../db/schema";
+import { groups, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 
 import {
@@ -208,10 +209,7 @@ async function createShellGroup(
     params: AddGroupParams
 ): Promise<void> {
     const db = getDb(env.DB);
-    await db
-        .insert(libraries)
-        .values({ id: params.libraryId })
-        .onConflictDoNothing();
+    await ensureLibrary(db, params.libraryId);
     // placeNewGroup renumbers siblings eagerly. Failed inserts result in a gap that's fixed on the next edit.
     const sortOrder = await placeNewGroup(
         db,

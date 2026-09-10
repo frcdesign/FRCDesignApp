@@ -6,7 +6,8 @@ import { z } from "zod";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { LibraryId } from "../library/library-id";
-import { Theme } from "./settings";
+import { ensureLibrary } from "../library/db";
+import { DEFAULT_SETTINGS, Theme } from "./settings";
 
 export const settingsRoutes = getApp();
 
@@ -28,6 +29,9 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
+        // Before the user row, which points at a library by default and by
+        // whatever this body names.
+        await ensureLibrary(db, body.libraryId ?? DEFAULT_SETTINGS.libraryId);
         await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
         if (Object.keys(body).length > 0) {

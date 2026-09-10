@@ -31,7 +31,7 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 | `components/`           |    15 |   ☐    | `app-zero-state` reworked into `SectionNotice`/`PageNotice` |
 | `routes/`               |    16 |   ☐    | library `index`/`route` touched                             |
 | `features/auth`         |       |   ☐    |                                                             |
-| `features/library`      |       |   ☐    | `insertable-card`, `library-path`, `coming-soon` touched    |
+| `features/library`      |       |   ☐    | `insertable-card`, `library-path` touched; coming-soon gone |
 | `features/search`       |       |   ☐    |                                                             |
 | `features/insert`       |       |   ☐    | `insert-menu` touched                                       |
 | `features/favorites`    |       |   ◐    | standalone zero state done; rest unreviewed                 |
@@ -50,8 +50,8 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - **Favorites, signed out** — the section now renders for everyone with a
   "sign in to view favorites" zero state, and the sign-in check moved out of
   the favorites query into its callers.
-- **Coming soon** — retitled "Under construction", with the library named in
-  the description.
+- **FTCDesignLib** — launched, and the coming-soon shell removed with it: it
+  was the only library the gate named.
 - **Dashboard settings** — the dashboard's own menu is gone in favour of the
   standard settings modal, which fixes a theme toggle that did nothing, and
   the modal now offers the app when the dashboard is what's showing.
@@ -79,16 +79,20 @@ Fixed here: the `groups` table export was the only singular one among
 with row variables also called `group`. Identifier only — the SQL name was
 already `groups`, so no migration.
 
+Also fixed: `users.libraryId` now declares the foreign key its siblings all
+had, and every epoch-ms column is `{ mode: "timestamp_ms" }` so the type says
+what the unit is. The key needed the library rows to exist first — see
+`0009_users_library_fk.sql`; the timestamps needed no migration at all, since
+the storage was already milliseconds.
+
 Left for you to decide, since each wants a migration or a judgement call:
 
-| Item                                                                   | Why                                                                                                                              |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `users.libraryId` has no `.references(() => libraries.id)`             | `groups`, `insertables` and `favorites` all declare it; users is the gap                                                         |
-| `configurations.id` is really an insertable id                         | It is both PK and FK to `insertables.id`, so every query reads `eq(configurations.id, insertableId)`                             |
-| `buildIssues` is declared identically on three tables                  | As are `smallThumbnailUrl`/`largeThumbnailUrl` on two — candidates for a shared column builder                                   |
-| Epoch-ms columns are plain `integer`                                   | `lastLoadedAt`, `createdAt`, `firstInsertedAt`, … — no `{ mode: "timestamp_ms" }`, and only some carry a comment saying the unit |
-| Builder order varies                                                   | `.notNull().$type<LibraryId>()` in `db/schema.ts` vs `.$type<LibraryId>().notNull()` in `analytics/schema.ts`                    |
-| Stored `configurations.records` still hold the old duplicate selection | Written before the fix two commits back; inert, and cleared on the next reload                                                   |
+| Item                                                                   | Why                                                                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `configurations.id` is really an insertable id                         | It is both PK and FK to `insertables.id`, so every query reads `eq(configurations.id, insertableId)`          |
+| `buildIssues` is declared identically on three tables                  | As are `smallThumbnailUrl`/`largeThumbnailUrl` on two — candidates for a shared column builder                |
+| Builder order varies                                                   | `.notNull().$type<LibraryId>()` in `db/schema.ts` vs `.$type<LibraryId>().notNull()` in `analytics/schema.ts` |
+| Stored `configurations.records` still hold the old duplicate selection | Written before the fix two commits back; inert, and cleared on the next reload                                |
 
 ## Noticed, not yet addressed
 

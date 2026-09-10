@@ -7,8 +7,8 @@ import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
-import { groups, insertables, libraries, favorites } from "../../../db/schema";
-import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import { groups, insertables, favorites } from "../../../db/schema";
+import { bumpLibraryVersion, ensureLibrary, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
 import {
@@ -61,10 +61,7 @@ groupRoutes.post(
         }
 
         const db = getDb(c.env.DB);
-        await db
-            .insert(libraries)
-            .values({ id: libraryId })
-            .onConflictDoNothing();
+        await ensureLibrary(db, libraryId);
 
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
