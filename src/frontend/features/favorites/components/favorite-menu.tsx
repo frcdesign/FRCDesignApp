@@ -151,6 +151,7 @@ export function FavoriteMenuContent(
             </AppModalBody>
             <AppModalFooter>
                 <Button
+                    variant="light"
                     ml="auto"
                     leftSection={<FloppyDiskIcon size={IconSize.SMALL} />}
                     // Saving before the wrapper reports would store nothing,

@@ -50,6 +50,7 @@ export function NotFoundError(): ReactNode {
     const navigate = useNavigate();
     const homeButton = (
         <Button
+            variant="light"
             leftSection={<HouseIcon size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({

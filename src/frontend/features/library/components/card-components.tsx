@@ -33,6 +33,7 @@ import { Selection } from "@backend/features/configurations/models";
 import { useSearch } from "@tanstack/react-router";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
+import { TruncatedText } from "../../../components/truncated-text";
 import { InsertSource } from "@backend/features/analytics/events";
 
 interface OpenDocumentItemsProps {
@@ -159,9 +160,13 @@ export function CardTitle(props: CardTitleProps) {
     // Shrinks to truncate, but never grows: the build status badge and hidden tag belong beside the name, not at the row's edge.
     const cardTitleComponent = (
         <Stack gap={0} miw={0}>
-            <Text size="sm" truncate c={disabled ? "dimmed" : undefined}>
+            <TruncatedText
+                hoverText={title}
+                size="sm"
+                c={disabled ? "dimmed" : undefined}
+            >
                 {cardTitle}
-            </Text>
+            </TruncatedText>
             {/* The line under the title, so it sits beside it in the stack
                 rather than inside the paragraph the title renders as. */}
             <PartNameAndNumber title={title} searchHit={searchHit} />
@@ -218,12 +223,12 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
             c={StatusColor.DIMMED}
         >
             {partName && (
-                <Text inherit truncate miw={0}>
+                <TruncatedText hoverText={partName} inherit miw={0}>
                     <HighlightedText
                         text={partName}
                         positions={searchHit?.partNamePositions}
                     />
-                </Text>
+                </TruncatedText>
             )}
             {partName && partNumber && <Text inherit>·</Text>}
             {partNumber && (

@@ -80,6 +80,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
+                        variant="light"
                         leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({

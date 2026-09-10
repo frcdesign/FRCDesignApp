@@ -35,6 +35,13 @@ function setVendorFilters(libraryId: LibraryId, vendors: Vendor[]): void {
     updateUiState({ vendorFilters });
 }
 
+/** A vendor's name, and the code a part number writes it as when that differs
+ * — Custom names itself, so it does not repeat. */
+function vendorLabel(vendor: Vendor): string {
+    const name = getVendorName(vendor);
+    return name === vendor ? name : `${name} (${vendor})`;
+}
+
 interface ClearFiltersButtonProps {
     /** @default "Clear filters" */
     text?: string;
@@ -83,7 +90,7 @@ export function VendorMenu(): ReactNode {
             >
                 {libraryVendors.map((vendor) => (
                     <Menu.CheckboxItem key={vendor} value={vendor}>
-                        {`${getVendorName(vendor)} (${vendor})`}
+                        {vendorLabel(vendor)}
                     </Menu.CheckboxItem>
                 ))}
             </Menu.CheckboxGroup>

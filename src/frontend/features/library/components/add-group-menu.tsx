@@ -72,6 +72,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             </AppModalBody>
             <AppModalFooter>
                 <Button
+                    variant="light"
                     ml="auto"
                     leftSection={<PlusIcon size={IconSize.SMALL} />}
                     onClick={() => mutation.mutate()}
@@ -87,6 +88,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
 export function AddGroupButton(): ReactNode {
     return (
         <Button
+            variant="light"
             leftSection={<PlusIcon size={IconSize.SMALL} />}
             onClick={() => openAddGroupMenu()}
         >

@@ -104,7 +104,11 @@ function SignInToViewFavorites(): ReactNode {
             icon={<FavoriteIcon size={IconSize.SECTION} />}
             title="Sign in to view favorites"
             description="Favorites are saved to your Onshape account."
-            action={<Button onClick={startSignIn}>Sign in</Button>}
+            action={
+                <Button variant="light" onClick={startSignIn}>
+                    Sign in
+                </Button>
+            }
         />
     );
 }
