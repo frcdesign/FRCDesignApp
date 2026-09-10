@@ -59,6 +59,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
+        parameters: [],
         isFavorite: false,
         isQuickInsert: false,
         source: InsertSource.BROWSE,
@@ -99,7 +100,10 @@ describe("rollupWrites", () => {
         });
         await trackInsert(
             fakeContext(),
-            insertEvent({ selection: toSelection({}, SIZE_PARAMETERS) })
+            insertEvent({
+                selection: toSelection({}, SIZE_PARAMETERS),
+                parameters: SIZE_PARAMETERS
+            })
         );
 
         clock.mockReturnValue(start + day);
@@ -107,6 +111,7 @@ describe("rollupWrites", () => {
             fakeContext(),
             insertEvent({
                 selection: toSelection({ size: "large" }, SIZE_PARAMETERS),
+                parameters: SIZE_PARAMETERS,
                 targetElementType: ElementType.ASSEMBLY,
                 isFavorite: true,
                 isQuickInsert: true,

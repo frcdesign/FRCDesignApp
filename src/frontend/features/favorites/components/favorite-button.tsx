@@ -1,10 +1,12 @@
-import { type ConfigurationKey } from "@backend/features/configurations/models";
+import {
+    type ConfigurationKey,
+    type Selection
+} from "@backend/features/configurations/models";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useMutation } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import type { Selection } from "@backend/features/configurations/models";
 import { apiDelete, apiPost } from "../../../lib/api-client";
 import type {
     Favorite,

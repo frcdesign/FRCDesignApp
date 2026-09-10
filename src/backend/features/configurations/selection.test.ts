@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIGURATION_KEY } from "./models";
+import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./models";
 import {
     appliedValues,
     formatValue,
@@ -7,7 +7,6 @@ import {
     toKey,
     toSelection
 } from "./selection";
-import { VisibilityType } from "./models";
 import { QuantityType, Unit } from "./enums";
 import {
     boolParam,

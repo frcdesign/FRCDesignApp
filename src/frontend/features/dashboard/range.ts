@@ -1,4 +1,4 @@
-import { toDayKey, type DayRange } from "./dashboard-queries";
+import { toDayKey, type DayRange } from "@backend/features/analytics/day";
 
 export enum RangePreset {
     ALL = "all",

@@ -20,10 +20,10 @@ import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
 import { METRICS } from "../../../../features/dashboard/metrics";
+import { type DayRange } from "@backend/features/analytics/day";
 import {
     getInsertableReportQuery,
-    getPartsQuery,
-    type DayRange
+    getPartsQuery
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { PartsTable } from "../../../../features/dashboard/parts-table";

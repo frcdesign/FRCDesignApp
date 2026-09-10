@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import {
@@ -148,8 +148,9 @@ favoriteRoutes.post(
             .values({ id: userId, libraryId })
             .onConflictDoNothing();
 
-        const existingCount = await db
-            .select({ sortOrder: favorites.sortOrder })
+        // Ordered onto the end of what they already have.
+        const existing = await db
+            .select({ value: count() })
             .from(favorites)
             .where(
                 and(
@@ -157,7 +158,7 @@ favoriteRoutes.post(
                     eq(favorites.libraryId, libraryId)
                 )
             )
-            .all();
+            .get();
 
         await db
             .insert(favorites)
@@ -172,7 +173,7 @@ favoriteRoutes.post(
                           await getParametersFor(db, insertableId)
                       )
                     : undefined,
-                sortOrder: existingCount.length,
+                sortOrder: existing?.value ?? 0,
                 createdAt: new Date()
             })
             .onConflictDoNothing();

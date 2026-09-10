@@ -12,13 +12,12 @@ import { EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
-import { type Selection } from "../configurations/models";
-import { appliedSelection } from "../configurations/storage";
-
-/** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
-export function toDayKey(timestamp: number): string {
-    return new Date(timestamp).toISOString().slice(0, 10);
-}
+import {
+    type ConfigurationParameter,
+    type Selection
+} from "../configurations/models";
+import { appliedValues } from "../configurations/selection";
+import { toDayKey } from "./day";
 
 export interface InsertEvent {
     libraryId: LibraryId;
@@ -31,6 +30,11 @@ export interface InsertEvent {
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
     selection: Selection | undefined;
+    /**
+     * The parameters that selection was made whole against, carried rather than
+     * read back: applying the insert already had to load them.
+     */
+    parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
     isQuickInsert: boolean;
@@ -74,11 +78,7 @@ export async function trackInsert(
         ...event.path,
         insertableId: event.insertableId,
         targetElementType: event.targetElementType,
-        selection: await appliedSelection(
-            db,
-            event.insertableId,
-            event.selection
-        ),
+        selection: appliedSelection(event.selection, event.parameters),
         isFavorite: event.isFavorite,
         isQuickInsert: event.isQuickInsert,
         source: event.source,
@@ -97,6 +97,18 @@ export async function trackAppOpen(
         ...core(EventType.APP_OPEN, now, event),
         ...NOT_AN_INSERT
     });
+}
+
+/**
+ * What Onshape applied for a selection: the values no condition hid. Null when
+ * the insertable has nothing to configure, which is what the log records.
+ */
+function appliedSelection(
+    selection: Selection | undefined,
+    parameters: ConfigurationParameter[]
+): Selection | null {
+    if (!selection || parameters.length === 0) return null;
+    return appliedValues(selection, parameters);
 }
 
 /** What every logged event carries; its kind fills in the rest. */

@@ -72,6 +72,26 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   Onshape's own wire names (the `configuration` query param, the `/ac/` path
   segment) stay as Onshape spells them.
 
+- **Analytics range** — a dashboard read can no longer ask for a window ending
+  in the year 9999. `clampRange` holds `to` to today, and `eachDay` caps what it
+  densifies, so an unauthenticated `/analytics/overview` cannot allocate a point
+  per day until then. `range.test.ts` covers both bounds.
+
+- **`DayRange` and `toDayKey`** — were declared once on each side of the app.
+  They now live in `features/analytics/day.ts`, a leaf both sides import, as
+  `measures.ts` already did for the same reason.
+
+- **Insert tracking** — the applied selection is keyed against the parameters
+  the insert had already loaded, rather than reading the `configurations` row a
+  second time inside `trackInsert`. `configurations/storage.ts` existed only for
+  that read and is gone.
+
+- **Favorites** — the next `sortOrder` is a `count()` rather than selecting
+  every row to take its length.
+
+- **Duplicate imports** — a dozen modules were imported twice in the same file.
+  Merged, and `no-duplicate-imports` now keeps them merged.
+
 ## Database
 
 Fixed here: the `groups` table export was the only singular one among

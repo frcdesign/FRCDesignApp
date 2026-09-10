@@ -8,8 +8,10 @@ import {
     filterInsertables,
     searchInsertables
 } from "../../search/filter";
-import { getFavoriteForInsertable } from "@backend/features/favorites/contract";
-import type { FavoritesData } from "@backend/features/favorites/contract";
+import {
+    getFavoriteForInsertable,
+    type FavoritesData
+} from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
 import { useGetUiState } from "../../../lib/ui-state";
 import {

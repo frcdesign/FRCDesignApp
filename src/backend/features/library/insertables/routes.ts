@@ -6,8 +6,10 @@ import z from "zod";
 import { getApp } from "../../../lib/context";
 import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
 import { getDb, type Db } from "../../../db/client";
-import { requireEditorMiddleware } from "../../auth/guards";
-import { requireSignInMiddleware } from "../../auth/guards";
+import {
+    requireEditorMiddleware,
+    requireSignInMiddleware
+} from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import {
@@ -361,6 +363,7 @@ insertableRoutes.post(
                 insertableId,
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
+                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -412,7 +415,7 @@ insertableRoutes.post(
             ? [PartType.COMPOSITE_PARTS]
             : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        const { selection } = await readSelection(
+        const { selection, parameters } = await readSelection(
             db,
             insertableId,
             body.selection
@@ -443,6 +446,7 @@ insertableRoutes.post(
                 insertableId,
                 targetElementType: ElementType.ASSEMBLY,
                 selection,
+                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,

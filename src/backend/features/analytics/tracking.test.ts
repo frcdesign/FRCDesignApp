@@ -26,12 +26,12 @@ import {
 import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
 import {
-    toDayKey,
     trackAppOpen,
     trackInBackground,
     trackInsert,
     type InsertEvent
 } from "./tracking";
+import { toDayKey } from "./day";
 import { InsertSource } from "./events";
 import {
     boolParam,
@@ -67,6 +67,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
+        parameters: [],
         isFavorite: false,
         isQuickInsert: false,
         source: InsertSource.BROWSE,
@@ -99,6 +100,7 @@ function configuredEvent(
 ): InsertEvent {
     return insertEvent({
         selection: toSelection(values, SIZE_PARAMETERS),
+        parameters: SIZE_PARAMETERS,
         ...overrides
     });
 }

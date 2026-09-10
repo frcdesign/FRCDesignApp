@@ -24,7 +24,8 @@ import {
     type InsertSourceUsage,
     type LibrarySummary
 } from "./contract";
-import { eachDay, type DayRange } from "./range";
+import { type DayRange } from "./day";
+import { eachDay } from "./range";
 import { getHealthCounts } from "./health";
 
 /** Lifetime totals, optionally scoped to one library and to a window. */

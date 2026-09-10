@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client";
+import { OAuthApi, OnshapeApi } from "../client";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     DocumentPath,
@@ -11,7 +11,6 @@ import {
     toInstanceTypeKey
 } from "../path";
 import { apiPath } from "../api-path";
-import { OAuthApi } from "../client";
 import { getLatestVersion } from "./versions";
 import {
     OnshapeDocumentContents,

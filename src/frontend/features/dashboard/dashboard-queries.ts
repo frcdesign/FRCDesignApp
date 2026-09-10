@@ -9,16 +9,8 @@ import type {
     UnusedOptionOut
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
+import { type DayRange } from "@backend/features/analytics/day";
 import { toLibraryPath } from "../library/library-path";
-
-export interface DayRange {
-    from: string;
-    to: string;
-}
-
-export function toDayKey(timestamp: number): string {
-    return new Date(timestamp).toISOString().slice(0, 10);
-}
 
 export function getOverviewQuery(range: DayRange) {
     return queryOptions<AnalyticsOverviewOut>({

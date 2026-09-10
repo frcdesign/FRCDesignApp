@@ -25,9 +25,11 @@ import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useGetUiState, useSetUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../features/library/library-path";
-import { RequireAccessLevel } from "../features/auth/access-level";
+import {
+    RequireAccessLevel,
+    useAccessData
+} from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
-import { useAccessData } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";

@@ -14,11 +14,11 @@ import type { FavoritesData } from "@backend/features/favorites/contract";
 import { FavoriteIcon } from "./favorite-button";
 import { queryClient } from "../../../lib/query-client";
 import {
+    DEFAULT_CONFIGURATION_KEY,
     type ConfigurationKey,
     Selection,
     SearchRecord
 } from "@backend/features/configurations/models";
-import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/models";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";

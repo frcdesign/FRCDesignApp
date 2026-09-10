@@ -1,5 +1,4 @@
-import { OnshapeApi } from "../client";
-import { OAuthApi } from "../client";
+import { OAuthApi, OnshapeApi } from "../client";
 import { apiPath } from "../api-path";
 import { AccessLevel } from "../../../features/auth/access-level";
 

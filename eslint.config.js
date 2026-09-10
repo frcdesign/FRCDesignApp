@@ -26,6 +26,11 @@ export default defineConfig([
             reactDom.configs.recommended
         ],
         rules: {
+            // Two import statements for one module drift apart; a dozen pairs
+            // had accumulated. A namespace import is not reported, so the
+            // `import * as` a test spies through still stands beside its named one.
+            "no-duplicate-imports": "error",
+
             // tsc has no deprecation check — @deprecated is an editor-only hint,
             // so lint is the only thing that fails a build on one.
             "@typescript-eslint/no-deprecated": "error",
