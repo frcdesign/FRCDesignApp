@@ -118,9 +118,15 @@ export function getInsertableReportQuery(
     });
 }
 
-export function getHealthQuery(libraryId: LibraryId) {
+/** Immutable for a version of the library, as the build status is. */
+export function getHealthQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryHealthCounts>({
-        queryKey: ["analytics", "health", libraryId],
-        queryFn: () => apiGet("/analytics/health" + toLibraryPath(libraryId))
+        queryKey: ["analytics", "health", libraryId, cacheVersion],
+        queryFn: () =>
+            apiGet("/analytics/health" + toLibraryPath(libraryId), {
+                cacheId: cacheVersion
+            }),
+        staleTime: Infinity,
+        gcTime: Infinity
     });
 }

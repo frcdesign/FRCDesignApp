@@ -132,7 +132,10 @@
             ],
             "vars": {
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
-                "NODE_ENV": "development"
+                // Production, not because cert is production, but because
+                // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
+                // this alone: anything but "production" leaves them armed.
+                "NODE_ENV": "production"
             },
             "limits": {
                 "subrequests": 1000

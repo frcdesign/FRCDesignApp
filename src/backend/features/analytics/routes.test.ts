@@ -181,7 +181,7 @@ describe("analytics routes", () => {
                 `/api/analytics/summary/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/parts/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`,
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`,
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             ];
 
@@ -854,6 +854,30 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/health/library/:libraryId", () => {
+        it("caches publicly and immutably, as the library's other reads do", async () => {
+            await seedPartStudio(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=3`
+            );
+
+            expect(res.status).toBe(200);
+            expect(res.headers.get("Cache-Control")).toBe(
+                "public, max-age=31536000, immutable"
+            );
+        });
+
+        // Or the next version of the counts is unreachable behind the cache.
+        it("rejects a request that pins no version", async () => {
+            await seedPartStudio(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+            );
+
+            expect(res.status).toBe(400);
+        });
+
         it("counts an issue against the item that carries it", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({
@@ -862,7 +886,7 @@ describe("analytics routes", () => {
             });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 
@@ -885,7 +909,7 @@ describe("analytics routes", () => {
             });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 
@@ -897,7 +921,7 @@ describe("analytics routes", () => {
             await db.update(insertables).set({ isVisible: true });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 

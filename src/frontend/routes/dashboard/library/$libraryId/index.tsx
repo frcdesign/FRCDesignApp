@@ -19,6 +19,7 @@ import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-char
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
 import { getLibraryName } from "../../../../features/library/library-path";
+import { useCacheVersion } from "../../../../features/library/queries";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
@@ -34,12 +35,13 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/")({
 function LibraryOverview(): ReactNode {
     const { libraryId } = Route.useParams();
     const preset = useRangePreset();
+    const cacheVersion = useCacheVersion();
 
     const range = toDayRange(preset);
 
     const summary = useQuery(getLibrarySummaryQuery(libraryId, range));
     const parts = useQuery(getPartsQuery(libraryId, range));
-    const health = useQuery(getHealthQuery(libraryId));
+    const health = useQuery(getHealthQuery(libraryId, cacheVersion));
 
     return (
         <Stack gap="xl">

@@ -120,6 +120,17 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   covers. CI runs it. `scripts/drizzle-generate.py` answers drizzle-kit's rename
   prompts, which it otherwise refuses to run without a terminal.
 
+- **Health counts** — `/analytics/health` is keyed on the library's cache
+  version now, like `/build-status` and `/library-data`, so the three full scans
+  behind four integers run once per version rather than once per dashboard load.
+  Public rather than private: unlike the build status, the answer is the same for
+  whoever asks. The dashboard's library route awaits the version first, as the
+  app's does, so nothing fetches once at zero and again at the real one.
+
+- **Cert `NODE_ENV`** — production. Not because cert is production, but because
+  `FORCE_SIGNED_IN` and `VITE_ACCESS_LEVEL_OVERRIDE` are gated on that string
+  alone, and anything else leaves them armed.
+
 - **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
   are gone; the workflow was already the only correct path. `drizzle-kit` and
   the router devtools moved to `devDependencies`.

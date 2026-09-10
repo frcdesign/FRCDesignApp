@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
+import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
@@ -117,12 +118,22 @@ analyticsRoutes.get(
     }
 );
 
-/** GET /api/analytics/health/library/:libraryId */
-analyticsRoutes.get("/analytics/health" + libraryRoute(), async (c) => {
-    const libraryId = getLibraryParam(c);
-    const db = getDb(c.env.DB);
-    return c.json(await getHealthCounts(db, libraryId));
-});
+/**
+ * GET /api/analytics/health/library/:libraryId?v=:cacheVersion
+ *
+ * Counted off the same build issues `/build-status` reads, and so keyed the same
+ * way: every write behind them bumps the library's version. Public rather than
+ * private, since this answer is the same for whoever asks.
+ */
+analyticsRoutes.get(
+    "/analytics/health" + libraryRoute(),
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => {
+        const libraryId = getLibraryParam(c);
+        const db = getDb(c.env.DB);
+        return c.json(await getHealthCounts(db, libraryId));
+    }
+);
 
 /** GET /api/analytics/parts/library/:libraryId */
 analyticsRoutes.get(
