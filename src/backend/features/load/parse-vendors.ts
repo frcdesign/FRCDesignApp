@@ -5,12 +5,11 @@ import {
     type Selection
 } from "../configurations/models";
 
+/** A vendor named by one of a text's words, as its code or as its whole name. */
 export function parseNameVendor(name: string): Vendor | undefined {
-    const words = name.toUpperCase().match(/\b(\w+)\b/g) ?? [];
+    const words = name.match(/\b(\w+)\b/g) ?? [];
     for (const word of words) {
-        const vendor = Object.values(Vendor).find(
-            (v) => (v as string).toUpperCase() === word
-        );
+        const vendor = parseVendor(word);
         if (vendor !== undefined) return vendor;
     }
     return undefined;

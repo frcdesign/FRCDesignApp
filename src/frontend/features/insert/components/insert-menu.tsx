@@ -285,6 +285,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
+                variant="light"
                 leftSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}

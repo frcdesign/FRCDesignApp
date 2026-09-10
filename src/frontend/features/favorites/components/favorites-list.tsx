@@ -29,13 +29,15 @@ import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
 import { FavoriteIcon } from "./favorite-button";
 import { startSignIn } from "../../auth/sign-in";
+import { useVendorFilters } from "../../settings/components/vendor-filters";
 
 /**
  * A list of current favorite cards.
  * Unlike the normal DocumentList, this list can be searched directly.
  */
 export function FavoritesList(): ReactNode {
-    const { searchQuery, vendorFilters } = useGetUiState();
+    const { searchQuery } = useGetUiState();
+    const vendorFilters = useVendorFilters();
 
     const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
@@ -102,7 +104,11 @@ function SignInToViewFavorites(): ReactNode {
             icon={<FavoriteIcon size={IconSize.SECTION} />}
             title="Sign in to view favorites"
             description="Favorites are saved to your Onshape account."
-            action={<Button onClick={startSignIn}>Sign in</Button>}
+            action={
+                <Button variant="light" onClick={startSignIn}>
+                    Sign in
+                </Button>
+            }
         />
     );
 }
@@ -117,7 +123,7 @@ interface FavoriteSearchResultsProps {
 function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     const { query, insertables, favoritesData } = props;
 
-    const vendorFilters = useGetUiState().vendorFilters;
+    const vendorFilters = useVendorFilters();
     const accessData = useAccessData();
     const searchDbQuery = useSearchDbQuery();
 

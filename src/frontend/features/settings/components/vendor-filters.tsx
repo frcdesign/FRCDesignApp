@@ -2,10 +2,45 @@ import { ActionIcon, Button, Menu } from "@mantine/core";
 import { FunnelIcon, FunnelXIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import { getVendorName } from "@backend/features/library/vendors";
-import { Vendor } from "@backend/features/library/vendors";
-import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
+import {
+    getLibraryVendors,
+    getVendorName,
+    Vendor
+} from "@backend/features/library/vendors";
+import {
+    getUiState,
+    updateUiState,
+    useGetUiState
+} from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
+import { useLibraryId } from "../../library/library-path";
+import type { LibraryId } from "@backend/features/library/library-id";
+
+/** The current library's active filters; `undefined` means every vendor. */
+export function useVendorFilters(): Vendor[] | undefined {
+    return useGetUiState().vendorFilters[useLibraryId()];
+}
+
+/** Replaces one library's filters, leaving what the others have picked. An
+ * empty list is no filter at all, so it is stored as absent. */
+function setVendorFilters(libraryId: LibraryId, vendors: Vendor[]): void {
+    // Read at call time rather than from a render, so two changes in a tick
+    // cannot drop one another's library.
+    const vendorFilters = { ...getUiState().vendorFilters };
+    if (vendors.length > 0) {
+        vendorFilters[libraryId] = vendors;
+    } else {
+        delete vendorFilters[libraryId];
+    }
+    updateUiState({ vendorFilters });
+}
+
+/** A vendor's name, and the code a part number writes it as when that differs
+ * — Custom names itself, so it does not repeat. */
+function vendorLabel(vendor: Vendor): string {
+    const name = getVendorName(vendor);
+    return name === vendor ? name : `${name} (${vendor})`;
+}
 
 interface ClearFiltersButtonProps {
     /** @default "Clear filters" */
@@ -16,11 +51,8 @@ interface ClearFiltersButtonProps {
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
     const { text = "Clear filters", small = false } = props;
-    const uiState = useGetUiState();
-    const setUiState = useSetUiState();
-
-    const vendorFilters = uiState.vendorFilters;
-    const areAllTagsActive = vendorFilters === undefined;
+    const libraryId = useLibraryId();
+    const areAllTagsActive = useVendorFilters() === undefined;
 
     return (
         <Button
@@ -29,7 +61,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
             size={small ? "xs" : undefined}
             leftSection={<FunnelXIcon size={IconSize.SMALL} />}
             onClick={() => {
-                setUiState({ vendorFilters: undefined });
+                setVendorFilters(libraryId, []);
             }}
         >
             {text}
@@ -42,25 +74,23 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
  * vendor checkbox items. `undefined` filters mean "all vendors active".
  */
 export function VendorMenu(): ReactNode {
-    const uiState = useGetUiState();
-    const setUiState = useSetUiState();
-    const hasFilters = uiState.vendorFilters !== undefined;
+    const libraryId = useLibraryId();
+    const vendorFilters = useVendorFilters();
+    const libraryVendors = getLibraryVendors(libraryId);
+    const hasFilters = vendorFilters !== undefined;
 
     const menuItems = (
         <>
             <Menu.Label>Vendors</Menu.Label>
             <Menu.CheckboxGroup
-                value={uiState.vendorFilters ?? []}
+                value={vendorFilters ?? []}
                 onChange={(value) => {
-                    setUiState({
-                        vendorFilters:
-                            value.length > 0 ? (value as Vendor[]) : undefined
-                    });
+                    setVendorFilters(libraryId, value as Vendor[]);
                 }}
             >
-                {Object.values(Vendor).map((vendor) => (
+                {libraryVendors.map((vendor) => (
                     <Menu.CheckboxItem key={vendor} value={vendor}>
-                        {`${getVendorName(vendor)} (${vendor})`}
+                        {vendorLabel(vendor)}
                     </Menu.CheckboxItem>
                 ))}
             </Menu.CheckboxGroup>
@@ -68,7 +98,7 @@ export function VendorMenu(): ReactNode {
             <Menu.Item
                 leftSection={<FunnelXIcon size={IconSize.SMALL} />}
                 disabled={!hasFilters}
-                onClick={() => setUiState({ vendorFilters: undefined })}
+                onClick={() => setVendorFilters(libraryId, [])}
             >
                 Clear filters
             </Menu.Item>

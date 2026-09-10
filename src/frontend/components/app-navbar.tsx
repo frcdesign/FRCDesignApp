@@ -17,7 +17,7 @@ import {
     NAVBAR_ROW_HEIGHT,
     StatusColor
 } from "../lib/style-constants";
-import { ReactNode, RefObject, useRef } from "react";
+import { ReactNode, RefObject, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { AppBrand } from "./app-brand";
@@ -79,7 +79,7 @@ function SignInButton(): ReactNode {
     if (isPending || signedIn) return null;
 
     return (
-        <Button variant="outline" size="compact-sm" onClick={startSignIn}>
+        <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
             Sign in
         </Button>
     );
@@ -103,7 +103,7 @@ function RunningJobLoader(): ReactNode {
             withArrow
             label="The library is being loaded from Onshape in the background"
         >
-            <Loader size="sm" />
+            <Loader size={IconSize.CONTROL} />
         </Tooltip>
     );
 }
@@ -178,10 +178,12 @@ export function SettingsButton() {
             color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
-            size="lg"
+            // The filter button's size and icon, so the navbar's two rows read
+            // as one set of controls.
+            size="input-sm"
             onClick={() => openSettingsMenu()}
         >
-            <GearIcon size={IconSize.MEDIUM} />
+            <GearIcon size={IconSize.CONTROL} />
         </ActionIcon>
     );
 }
@@ -200,6 +202,13 @@ export function SearchBar() {
     const uiState = useGetUiState();
     const setUiState = useSetUiState();
     const libraryId = useLibraryId();
+
+    // `autoFocus` focuses before the ref is attached, so onFocus below has
+    // nothing to select through on the first open: the query carried over from
+    // last time keeps the caret after it, waiting to be cleared by hand.
+    useEffect(() => {
+        selectAllInputText(ref);
+    }, []);
 
     const clearButton = uiState.searchQuery ? (
         <Input.ClearButton

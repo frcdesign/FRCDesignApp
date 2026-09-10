@@ -25,6 +25,13 @@ describe("parseNameVendor", () => {
     it("detects Redux despite mixed case enum value", () => {
         expect(parseNameVendor("REDUX module")).toBe(Vendor.REDUX);
     });
+
+    // FTC vendors spell themselves out in element names rather than using the
+    // code a part number carries.
+    it("detects a vendor written as its whole name", () => {
+        expect(parseNameVendor("goBILDA 5203 Motor")).toBe(Vendor.GB);
+        expect(parseNameVendor("Misumi Extrusion")).toBe(Vendor.MIS);
+    });
 });
 
 describe("parseVendors", () => {

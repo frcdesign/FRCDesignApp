@@ -6,7 +6,7 @@ import { Vendor } from "@backend/features/library/vendors";
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 
 /** Bumped when a change to the schema makes stored state unusable. */
-const LATEST_VERSION = 3;
+const LATEST_VERSION = 4;
 
 const STORAGE_KEY = "uiState";
 
@@ -21,7 +21,11 @@ const UiStateSchema = z.object({
     version: z.number().default(1),
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
-    vendorFilters: z.array(VendorType).optional(),
+    /** Vendor filters per library, so switching libraries keeps each one's;
+     * a library with no entry has every vendor active. */
+    vendorFilters: z
+        .partialRecord(LibraryIdType, z.array(VendorType))
+        .default({}),
     searchQuery: z.string().default(""),
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */

@@ -33,7 +33,10 @@ import {
     SectionNotice,
     SectionLoading
 } from "../../../../../components/app-zero-state";
-import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
+import {
+    ClearFiltersButton,
+    useVendorFilters
+} from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../features/library/library-path";
 import { useGetUiState } from "../../../../../lib/ui-state";
@@ -57,6 +60,7 @@ function GroupList(): ReactNode {
     });
 
     const uiState = useGetUiState();
+    const vendorFilters = useVendorFilters();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
@@ -76,6 +80,7 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
+                        variant="light"
                         leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
@@ -97,7 +102,7 @@ function GroupList(): ReactNode {
             <SearchResults
                 query={uiState.searchQuery}
                 filters={{
-                    vendors: uiState.vendorFilters,
+                    vendors: vendorFilters,
                     groupId: group.id
                 }}
             />
@@ -164,7 +169,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
     const accessData = useAccessData();
-    const uiState = useGetUiState();
+    const vendorFilters = useVendorFilters();
 
     const groupInsertables = group.insertableOrder
         .map((insertableId) => insertables[insertableId])
@@ -185,7 +190,7 @@ export function GroupListContent(props: GroupListCardsProps): ReactNode {
     }
 
     const result = filterInsertables(groupInsertables, {
-        vendors: uiState.vendorFilters,
+        vendors: vendorFilters,
         isVisible: !hasEditorAccess(accessData.currentAccessLevel)
     });
 

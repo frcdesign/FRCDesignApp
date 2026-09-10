@@ -25,8 +25,8 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { useLibraryId } from "../../library/library-path";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
-/** The FRCDesign feedback form, which the setting below opens. */
-const FEEDBACK_FORM_URL = "https://forms.gle/WVXUwnrrpLGKdiBx9";
+/** The FRCDesign Discord, where feedback and support now live. */
+const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -85,7 +85,9 @@ export function SettingsMenuContent(): ReactNode {
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
                 <Box mt="md">
-                    <Section title="Admin settings" order={6}>
+                    {/* The modal title's size, so the admin half of the menu
+                        announces itself rather than reading as another row. */}
+                    <Section title="Admin settings" order={5}>
                         <AdminSettings />
                     </Section>
                 </Box>
@@ -122,8 +124,8 @@ function UserSettings(): ReactNode {
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
-            <InputRow spread label="Submit feedback">
-                <OpenUrlButton text="Open form" url={FEEDBACK_FORM_URL} />
+            <InputRow spread label="Discord">
+                <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>
             {/* Onshape owns the session the panel runs in, so signing out is
                 only the standalone app's to offer. */}
