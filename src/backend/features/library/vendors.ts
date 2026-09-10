@@ -59,8 +59,8 @@ const FTC_VENDORS: Vendor[] = [
 ];
 
 /**
- * The vendors a library stocks, which is both what its filters offer and what
- * its insertables can be tagged with. MKCad is FRC, so it shares that list.
+ * The vendors a library stocks, which is what its filters offer. Tagging stays
+ * library-generic. MKCad is FRC, so it shares that list.
  */
 export function getLibraryVendors(libraryId: LibraryId): Vendor[] {
     return libraryId === LibraryId.FTC_DESIGN_LIB ? FTC_VENDORS : FRC_VENDORS;
@@ -68,18 +68,14 @@ export function getLibraryVendors(libraryId: LibraryId): Vendor[] {
 
 /**
  * Resolves the free text Onshape carries as a vendor to one we know, written
- * either as its code or as its full name. Narrow `vendors` to a library's own
- * to keep a code it does not stock from matching.
+ * either as its code or as its full name.
  */
-export function parseVendor(
-    vendor: string | undefined,
-    vendors: Vendor[] = Object.values(Vendor)
-): Vendor | undefined {
+export function parseVendor(vendor: string | undefined): Vendor | undefined {
     const text = clean(vendor)?.toUpperCase();
     if (!text) {
         return undefined;
     }
-    return vendors.find(
+    return Object.values(Vendor).find(
         (known) =>
             known.toUpperCase() === text ||
             getVendorName(known).toUpperCase() === text

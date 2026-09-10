@@ -69,7 +69,7 @@ export async function loadInsertable(
 
     const parameters = await parseConfigurationStep(ctx, target);
 
-    const vendors = parseVendors(target.name, parameters, target.libraryId);
+    const vendors = parseVendors(target.name, parameters);
 
     const fastenInfo = flags.supportsFasten
         ? await parseFastenInfoStep(ctx, target)
@@ -95,8 +95,7 @@ export async function loadInsertable(
               target.elementType,
               parameters,
               indexing.configurations,
-              isOpenComposite,
-              target.libraryId
+              isOpenComposite
           )
         : NO_RECORDS;
 

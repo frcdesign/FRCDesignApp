@@ -28,7 +28,6 @@ import {
 } from "../../load/parse-configuration-records";
 import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
-import type { LibraryId } from "../library-id";
 import { InsertSource } from "../../analytics/events";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -157,7 +156,6 @@ insertableRoutes.post(
         // The error reaches the client via the app's onError handler.
         const indexed = indexing.shouldIndex
             ? await indexRecords(await c.var.getOnshapeApi(), {
-                  libraryId: row.libraryId,
                   documentId: row.documentId,
                   versionId: row.versionId,
                   elementId: row.elementId,
@@ -221,7 +219,6 @@ insertableRoutes.post(
 function indexRecords(
     client: OnshapeApi,
     insertable: {
-        libraryId: LibraryId;
         documentId: string;
         versionId: string;
         elementId: string;
@@ -243,8 +240,7 @@ function indexRecords(
         insertable.elementType,
         insertable.parameters,
         insertable.configurations,
-        insertable.isOpenComposite,
-        insertable.libraryId
+        insertable.isOpenComposite
     );
 }
 
