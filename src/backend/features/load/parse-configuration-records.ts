@@ -4,6 +4,7 @@
  */
 import { OnshapeApi } from "../../lib/onshape/client";
 import { parseRecordVendor } from "./parse-vendors";
+import type { LibraryId } from "../library/library-id";
 import { ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
@@ -233,7 +234,8 @@ export async function parseConfigurationRecords(
     elementType: ElementType,
     parameters: ConfigurationParameter[],
     configurations: Selection[],
-    isOpenComposite: boolean
+    isOpenComposite: boolean,
+    libraryId: LibraryId
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await probeConfiguration(
         client,
@@ -256,7 +258,7 @@ export async function parseConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, parameters);
+    return toResult(defaultRecord, batchRecords, parameters, libraryId);
 }
 
 /**
@@ -270,7 +272,8 @@ export async function loadConfigurationRecords(
     elementType: ElementType,
     parameters: ConfigurationParameter[],
     configurations: Selection[],
-    isOpenComposite: boolean
+    isOpenComposite: boolean,
+    libraryId: LibraryId
 ): Promise<ConfigurationRecordsResult> {
     const defaultRecord = await ctx.step.do(
         `records-${insertableId}-default`,
@@ -303,7 +306,7 @@ export async function loadConfigurationRecords(
             )
         );
     }
-    return toResult(defaultRecord, batchRecords, parameters);
+    return toResult(defaultRecord, batchRecords, parameters, libraryId);
 }
 
 /**
@@ -375,11 +378,12 @@ async function fetchBatch(
 /** Onshape's vendor when a part carries one, otherwise the parsed one. */
 function resolveVendor(
     record: ProbedRecord,
-    parameters: ConfigurationParameter[]
+    parameters: ConfigurationParameter[],
+    libraryId: LibraryId
 ): string | undefined {
     return (
         record.vendor ??
-        parseRecordVendor(record.name, record.selection, parameters)
+        parseRecordVendor(record.name, record.selection, parameters, libraryId)
     );
 }
 
@@ -387,7 +391,8 @@ function resolveVendor(
 function toResult(
     defaultRecord: ProbedRecord,
     batches: ProbedRecord[][],
-    parameters: ConfigurationParameter[]
+    parameters: ConfigurationParameter[],
+    libraryId: LibraryId
 ): ConfigurationRecordsResult {
     // The element's own probe describes the element, not a configuration of it,
     // so it sheds the (empty) configuration that produced it.
@@ -396,7 +401,7 @@ function toResult(
         name: defaultRecord.name,
         description: defaultRecord.description,
         material: defaultRecord.material,
-        vendor: resolveVendor(defaultRecord, parameters),
+        vendor: resolveVendor(defaultRecord, parameters, libraryId),
         hasMultipleParts: defaultRecord.hasMultipleParts,
         isOpenComposite: defaultRecord.isOpenComposite
     };
@@ -412,7 +417,7 @@ function toResult(
             ...record,
             // Read before keying, which names only overrides — and so drops a
             // default vendor option.
-            vendor: resolveVendor(probe, parameters),
+            vendor: resolveVendor(probe, parameters, libraryId),
             configurationKey: toKey(selection, parameters)
         };
     });

@@ -21,7 +21,6 @@ import { useIsInsertableHidden } from "../../library/card-hooks";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
-import { useGetUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
@@ -36,6 +35,7 @@ import { produce } from "immer";
 import { SearchHit } from "../../search/search";
 import { toLibraryPath, useLibraryId } from "../../library/library-path";
 import { InsertSource } from "@backend/features/analytics/events";
+import { useVendorFilters } from "../../settings/components/vendor-filters";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;
@@ -115,7 +115,7 @@ interface FavoriteMenuItemsProps {
 function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
-    const uiState = useGetUiState();
+    const vendorFilters = useVendorFilters();
     const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
@@ -155,7 +155,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 id={favorite.id}
                 order={favoriteOrder}
                 onOrderChange={(newOrder) => {
-                    if (uiState.vendorFilters !== undefined) {
+                    if (vendorFilters !== undefined) {
                         openCannotReorderAlert();
                         return;
                     }

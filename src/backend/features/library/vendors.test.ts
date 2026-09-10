@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { Vendor, getVendorPartUrl, parseVendor } from "./vendors";
+import {
+    Vendor,
+    getLibraryVendors,
+    getVendorPartUrl,
+    parseVendor
+} from "./vendors";
+import { LibraryId } from "./library-id";
 
 describe("getVendorPartUrl", () => {
     // Each vendor writes its own casing, and only some have a per-part page.
@@ -21,6 +27,11 @@ describe("getVendorPartUrl", () => {
             "TTB-0008",
             "https://www.thethriftybot.com/search?type=product&q=TTB-0008"
         ],
+        [
+            Vendor.GB,
+            "2305-0025-0040",
+            "https://www.gobilda.com/search-results-page?q=2305-0025-0040"
+        ],
         // Escaped, since a part number can carry url syntax.
         [
             Vendor.TTB,
@@ -31,7 +42,7 @@ describe("getVendorPartUrl", () => {
         expect(getVendorPartUrl(vendor, partNumber)).toBe(url);
     });
 
-    it.each([Vendor.SDS, Vendor.VEX, Vendor.CUSTOM])(
+    it.each([Vendor.SDS, Vendor.VEX, Vendor.MIS, Vendor.CUSTOM])(
         "has no derivable page for %s",
         (vendor) => {
             expect(getVendorPartUrl(vendor, "12345")).toBeUndefined();
@@ -49,6 +60,7 @@ describe("toVendor", () => {
         ["custom", Vendor.CUSTOM],
         ["West Coast Products", Vendor.WCP],
         ["  mcmaster-carr ", Vendor.MCM],
+        ["goBILDA", Vendor.GB],
         ["Acme", undefined],
         ["", undefined],
         [undefined, undefined]
@@ -61,5 +73,33 @@ describe("Vendor", () => {
     it("lists Custom last, since it is the absence of a vendor", () => {
         const vendors = Object.values(Vendor);
         expect(vendors[vendors.length - 1]).toBe(Vendor.CUSTOM);
+    });
+});
+
+describe("getLibraryVendors", () => {
+    it("stocks each library with its own list", () => {
+        const ftc = getLibraryVendors(LibraryId.FTC_DESIGN_LIB);
+        const frc = getLibraryVendors(LibraryId.FRC_DESIGN_LIB);
+
+        expect(ftc).toContain(Vendor.GB);
+        expect(frc).not.toContain(Vendor.GB);
+        expect(frc).toContain(Vendor.TTB);
+        expect(ftc).not.toContain(Vendor.TTB);
+        // Shared by both, being where every team buys hardware.
+        expect(ftc).toContain(Vendor.MCM);
+        expect(frc).toContain(Vendor.MCM);
+    });
+
+    it("gives MKCad the FRC list, being an FRC library", () => {
+        expect(getLibraryVendors(LibraryId.MKCAD)).toEqual(
+            getLibraryVendors(LibraryId.FRC_DESIGN_LIB)
+        );
+    });
+
+    it("ends every list with Custom", () => {
+        for (const libraryId of Object.values(LibraryId)) {
+            const vendors = getLibraryVendors(libraryId);
+            expect(vendors[vendors.length - 1]).toBe(Vendor.CUSTOM);
+        }
     });
 });

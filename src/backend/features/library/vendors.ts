@@ -1,4 +1,5 @@
 import { clean } from "../../lib/text";
+import { LibraryId } from "./library-id";
 
 /** A part number's leading letters, which name the vendor that sells it. */
 const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
@@ -6,8 +7,13 @@ const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
 /** The vendors an insertable can come from, and how they are displayed. */
 export enum Vendor {
     AM = "AM",
+    AXN = "AXN",
+    BWT = "BWT",
+    GB = "GB",
     LAI = "LAI",
+    MB = "MB",
     MCM = "MCM",
+    MIS = "MIS",
     REDUX = "Redux",
     REV = "REV",
     SDS = "SDS",
@@ -20,16 +26,60 @@ export enum Vendor {
     CUSTOM = "Custom"
 }
 
+/** Who FRC teams buy from. */
+const FRC_VENDORS: Vendor[] = [
+    Vendor.AM,
+    Vendor.LAI,
+    Vendor.MCM,
+    Vendor.REDUX,
+    Vendor.REV,
+    Vendor.SDS,
+    Vendor.SWYFT,
+    Vendor.TTB,
+    Vendor.VEX,
+    Vendor.WCP,
+    Vendor.CUSTOM
+];
+
+/** Who FTC teams buy from — overlapping with FRC, but its own list. */
+const FTC_VENDORS: Vendor[] = [
+    Vendor.AM,
+    Vendor.AXN,
+    Vendor.BWT,
+    Vendor.GB,
+    Vendor.MB,
+    Vendor.MCM,
+    Vendor.MIS,
+    Vendor.REDUX,
+    Vendor.REV,
+    Vendor.SWYFT,
+    Vendor.VEX,
+    Vendor.WCP,
+    Vendor.CUSTOM
+];
+
+/**
+ * The vendors a library stocks, which is both what its filters offer and what
+ * its insertables can be tagged with. MKCad is FRC, so it shares that list.
+ */
+export function getLibraryVendors(libraryId: LibraryId): Vendor[] {
+    return libraryId === LibraryId.FTC_DESIGN_LIB ? FTC_VENDORS : FRC_VENDORS;
+}
+
 /**
  * Resolves the free text Onshape carries as a vendor to one we know, written
- * either as its code or as its full name.
+ * either as its code or as its full name. Narrow `vendors` to a library's own
+ * to keep a code it does not stock from matching.
  */
-export function parseVendor(vendor: string | undefined): Vendor | undefined {
+export function parseVendor(
+    vendor: string | undefined,
+    vendors: Vendor[] = Object.values(Vendor)
+): Vendor | undefined {
     const text = clean(vendor)?.toUpperCase();
     if (!text) {
         return undefined;
     }
-    return Object.values(Vendor).find(
+    return vendors.find(
         (known) =>
             known.toUpperCase() === text ||
             getVendorName(known).toUpperCase() === text
@@ -69,6 +119,8 @@ export function getVendorPartUrl(
             return `https://www.revrobotics.com/search.php?search_query=${query}&section=product`;
         case Vendor.TTB:
             return `https://www.thethriftybot.com/search?type=product&q=${query}`;
+        case Vendor.GB:
+            return `https://www.gobilda.com/search-results-page?q=${query}`;
         default:
             return undefined;
     }
@@ -83,12 +135,22 @@ export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AM:
             return "AndyMark";
+        case Vendor.AXN:
+            return "Axon Robotics";
+        case Vendor.BWT:
+            return "BWTLink";
         case Vendor.CUSTOM:
             return "Custom";
+        case Vendor.GB:
+            return "goBILDA";
         case Vendor.LAI:
             return "Last Anvil Innovations";
+        case Vendor.MB:
+            return "Melonbotics";
         case Vendor.MCM:
             return "McMaster-Carr";
+        case Vendor.MIS:
+            return "Misumi";
         case Vendor.REDUX:
             return "Redux Robotics";
         case Vendor.REV:
@@ -96,7 +158,7 @@ export function getVendorName(vendor: Vendor) {
         case Vendor.SDS:
             return "Swerve Drive Specialties";
         case Vendor.SWYFT:
-            return "SWYFT";
+            return "SWYFT Robotics";
         case Vendor.TTB:
             return "The Thrifty Bot";
         case Vendor.VEX:

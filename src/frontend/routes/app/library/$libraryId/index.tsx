@@ -29,6 +29,7 @@ import {
 } from "../../../../features/library/library-path";
 import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
+import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -55,6 +56,7 @@ function useHomeSections(): Section[] {
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
+    const vendorFilters = useVendorFilters();
 
     // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
@@ -78,7 +80,7 @@ function useHomeSections(): Section[] {
         panel: (
             <SearchResults
                 query={uiState.searchQuery ?? ""}
-                filters={{ vendors: uiState.vendorFilters }}
+                filters={{ vendors: vendorFilters }}
             />
         ),
         opened: isSearchOpen,

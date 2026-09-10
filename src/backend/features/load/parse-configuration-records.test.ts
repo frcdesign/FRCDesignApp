@@ -15,6 +15,7 @@ import {
 import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
 import { Vendor } from "../library/vendors";
+import { LibraryId } from "../library/library-id";
 import {
     decideIndexing,
     parseAssemblyRecord,
@@ -209,7 +210,8 @@ function probeRecords(
         elementType,
         parameters,
         probeSelections(parameters, elementType),
-        options.isOpenComposite ?? false
+        options.isOpenComposite ?? false,
+        LibraryId.FRC_DESIGN_LIB
     );
 }
 
@@ -294,7 +296,8 @@ describe("parseConfigurationRecords", () => {
             ElementType.PART_STUDIO,
             [enumParam("A", ["a1", "a2"])],
             probeSelections([enumParam("A", ["a1", "a2"])]),
-            false
+            false,
+            LibraryId.FRC_DESIGN_LIB
         );
 
         expect(result.buildIssues).toEqual([
