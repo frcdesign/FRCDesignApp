@@ -81,9 +81,9 @@ already `groups`, so no migration.
 
 Also fixed: `users.libraryId` now declares the foreign key its siblings all
 had, and every epoch-ms column is `{ mode: "timestamp_ms" }` so the type says
-what the unit is. The key needed the library rows to exist first — see
-`0009_users_library_fk.sql`; the timestamps needed no migration at all, since
-the storage was already milliseconds.
+what the unit is. The key is part of `0000_init.sql`, which the migrations were
+collapsed into; the timestamps needed no migration at all, since the storage was
+already milliseconds.
 
 Left for you to decide, since each wants a migration or a judgement call:
 

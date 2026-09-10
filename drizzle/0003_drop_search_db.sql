@@ -1,1 +1,0 @@
-ALTER TABLE `libraries` DROP COLUMN `search_db`;

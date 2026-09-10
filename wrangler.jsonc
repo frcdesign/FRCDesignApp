@@ -97,7 +97,7 @@
                 {
                     "binding": "DB",
                     "database_name": "frc-design-app-cert-db",
-                    "database_id": "d62bc087-f02a-4453-aab4-fbf338387676",
+                    "database_id": "c6325e51-5aef-47de-bdf4-c7bcd6a69e6b",
                     "migrations_dir": "drizzle"
                 }
             ],
@@ -145,36 +145,36 @@
             "d1_databases": [
                 {
                     "binding": "DB",
-                    "database_name": "db-production",
-                    "database_id": "00000000-0000-0000-0000-000000000000",
+                    "database_name": "frc-design-app-prod-db",
+                    "database_id": "a50ef115-925e-44d1-817a-2b58c0e68934",
                     "migrations_dir": "drizzle"
                 }
             ],
             "kv_namespaces": [
                 {
                     "binding": "KV",
-                    "id": "00000000000000000000000000000000"
+                    "id": "659e919411f847529a0b0b8cb72ee61b"
                 }
             ],
             "r2_buckets": [
                 {
                     "binding": "BLOB",
-                    "bucket_name": "frc-blob-production"
+                    "bucket_name": "frc-design-app-prod-blob"
                 }
             ],
             "workflows": [
                 {
-                    "name": "load-library-workflow-production",
+                    "name": "load-library-workflow-prod",
                     "binding": "LOAD_LIBRARY_WORKFLOW",
                     "class_name": "LoadLibraryWorkflow"
                 },
                 {
-                    "name": "add-group-workflow-production",
+                    "name": "add-group-workflow-prod",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
                 },
                 {
-                    "name": "thumbnail-workflow-production",
+                    "name": "thumbnail-workflow-prod",
                     "binding": "THUMBNAIL_WORKFLOW",
                     "class_name": "ThumbnailWorkflow"
                 }

@@ -29,10 +29,15 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // Before the user row, which points at a library by default and by
-        // whatever this body names.
-        await ensureLibrary(db, body.libraryId ?? DEFAULT_SETTINGS.libraryId);
-        await db.insert(users).values({ id: userId }).onConflictDoNothing();
+        const libraryId = body.libraryId ?? DEFAULT_SETTINGS.libraryId;
+
+        // The row names its library rather than leaning on the column default,
+        // so the library ensured here is the one the foreign key points at.
+        await ensureLibrary(db, libraryId);
+        await db
+            .insert(users)
+            .values({ id: userId, libraryId })
+            .onConflictDoNothing();
 
         if (Object.keys(body).length > 0) {
             await db.update(users).set(body).where(eq(users.id, userId));

@@ -140,7 +140,13 @@ favoriteRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        await db.insert(users).values({ id: userId }).onConflictDoNothing();
+        // Named rather than left to the column default, which points at a
+        // library this caller may have no row for. The favorite's own key
+        // already requires the one they are favoriting in.
+        await db
+            .insert(users)
+            .values({ id: userId, libraryId })
+            .onConflictDoNothing();
 
         const existingCount = await db
             .select({ sortOrder: favorites.sortOrder })
