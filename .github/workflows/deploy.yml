@@ -32,6 +32,10 @@ jobs:
             - name: Test
               run: npm test
 
+            # A migration that only passes on an empty database will break cert.
+            - name: Check migrations against a populated database
+              run: npm run check:migrations
+
     deploy-cert:
         needs: ci
         if: github.ref == 'refs/heads/cert'

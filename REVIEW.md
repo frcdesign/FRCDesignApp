@@ -92,14 +92,37 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
 - **Duplicate imports** — a dozen modules were imported twice in the same file.
   Merged, and `no-duplicate-imports` now keeps them merged.
 
-- **Analytics session and schema version** — every event now carries the panel
-  open it belongs to and the version of what its columns mean. `/init` mints a
-  session id and sets it as a cookie, so the open and every insert until the
-  next open share one; a client that sends no cookie logs a null rather than
-  dropping the event. Neither could have been backfilled once real usage
-  started, which is why they went in before launch and the rest of that finding
-  did not. The log is still unindexed on both: nothing reads it to report a
-  metric, and a funnel over it is a batch job that can afford the scan.
+- **Event schema version** — every event carries the version of what its columns
+  mean, so a later change to their reading stays tellable from the rows written
+  under this one. A session id was tried alongside it and taken back out: it
+  wanted a second cookie, and the funnel it would have bought is not worth one.
+
+- **Insert-and-fasten** — `fasten` recorded what the request asked for, since
+  tracking ran before the mate was built. It now runs after, on every path that
+  leaves a part in the assembly, so a fasten that failed or was never possible
+  records the unfastened insert it turned out to be rather than a fasten that
+  never happened.
+
+- **Day keys** — rollups were keyed on the UTC date, which cut a US evening's
+  work in half: 8pm Eastern is already tomorrow. They are keyed in
+  `America/New_York` now. Stepping between day keys is calendar arithmetic
+  rather than adding 24 hours to an instant, which is what kept the two from
+  disagreeing across a DST change; `growth.ts` and `seasons.ts` had a copy of
+  that arithmetic each, and now share one.
+
+- **`configurations.id`** — renamed to `insertable_id`, which is what it holds.
+  The table stays split from `insertables` rather than folded in: `parameters`
+  and `records` are large, and inlining them takes the b-tree a library scan
+  walks from 126 pages to 1,212.
+
+- **Migrations** — `scripts/check-migrations.py` applies the chain to a database
+  that already holds rows, which is the case an empty local database never
+  covers. CI runs it. `scripts/drizzle-generate.py` answers drizzle-kit's rename
+  prompts, which it otherwise refuses to run without a terminal.
+
+- **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
+  are gone; the workflow was already the only correct path. `drizzle-kit` and
+  the router devtools moved to `devDependencies`.
 
 ## Database
 

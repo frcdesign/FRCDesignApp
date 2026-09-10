@@ -5,7 +5,7 @@ import { min } from "drizzle-orm";
 import z from "zod";
 import { type Db } from "../../db/client";
 import { dailyMetrics } from "./schema";
-import { toDayKey, type DayRange } from "./day";
+import { addDays, toDayKey, type DayRange } from "./day";
 
 /** The uses a part must be at or below for the low-usage reports to list it. */
 const DEFAULT_UNUSED_THRESHOLD = 5;
@@ -40,11 +40,10 @@ export const thresholdQuery = rangeQuery.extend({
  */
 export function eachDay(range: DayRange): string[] {
     const days: string[] = [];
-    const last = Date.parse(`${range.to}T00:00:00Z`);
-    let at = Date.parse(`${range.from}T00:00:00Z`);
-    while (at <= last && days.length < MAX_SERIES_DAYS) {
-        days.push(toDayKey(at));
-        at += 24 * 3600 * 1000;
+    let day = range.from;
+    while (day <= range.to && days.length < MAX_SERIES_DAYS) {
+        days.push(day);
+        day = addDays(day, 1);
     }
     return days;
 }

@@ -1,0 +1,13 @@
+-- Written by hand, replacing what `drizzle-kit generate` emitted for this
+-- rename. Its version rebuilt the table and copied with
+-- `SELECT "insertable_id" ... FROM configurations`, naming a column the old
+-- table does not have: SQLite resolves an unknown double-quoted identifier to a
+-- string literal, so every row's key became the text 'insertable_id' — silently
+-- on one row, and as a UNIQUE failure part-way through on more, leaving
+-- `__new_configurations` behind. Empty tables copy nothing, so it looks fine
+-- locally and only breaks where there is data.
+--
+-- SQLite has renamed columns in place since 3.25, which keeps the rows, the
+-- foreign key and its cascade, and cannot half-apply. Verified by
+-- scripts/check-migrations.py against a populated database.
+ALTER TABLE `configurations` RENAME COLUMN `id` TO `insertable_id`;

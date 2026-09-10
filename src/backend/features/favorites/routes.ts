@@ -104,13 +104,13 @@ async function getParameters(
     }
     const rows = await db
         .select({
-            id: configurations.id,
+            insertableId: configurations.insertableId,
             parameters: configurations.parameters
         })
         .from(configurations)
-        .where(inArray(configurations.id, insertableIds))
+        .where(inArray(configurations.insertableId, insertableIds))
         .all();
-    return new Map(rows.map((row) => [row.id, row.parameters]));
+    return new Map(rows.map((row) => [row.insertableId, row.parameters]));
 }
 
 /** GET /api/favorites/library/:libraryId */

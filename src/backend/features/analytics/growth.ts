@@ -16,20 +16,12 @@ import {
     type PeriodComparison
 } from "./contract";
 import { MONTH_DAYS } from "./measures";
+import { addDays } from "./day";
 
 /** Both bounds inclusive, as every day key in this file is. */
 interface Window {
     from: string;
     to: string;
-}
-
-/**
- * Shifts a `YYYY-MM-DD` key by whole days. UTC throughout, which is what the
- * rollups are keyed on, so no local midnight can move a day.
- */
-function addDays(day: string, count: number): string {
-    const at = Date.parse(`${day}T00:00:00Z`) + count * 24 * 3600 * 1000;
-    return new Date(at).toISOString().slice(0, 10);
 }
 
 /**

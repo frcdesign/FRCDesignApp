@@ -32,7 +32,6 @@ import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/events";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
-import { getAppSessionId } from "../../analytics/session";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -146,7 +145,7 @@ insertableRoutes.post(
                 await db
                     .select({ parameters: configurations.parameters })
                     .from(configurations)
-                    .where(eq(configurations.id, insertableId))
+                    .where(eq(configurations.insertableId, insertableId))
                     .get()
             )?.parameters ?? [];
         const indexing = decideIndexing(
@@ -183,17 +182,17 @@ insertableRoutes.post(
                 ? db
                       .insert(configurations)
                       .values({
-                          id: insertableId,
+                          insertableId,
                           parameters,
                           records: indexed.records
                       })
                       .onConflictDoUpdate({
-                          target: configurations.id,
+                          target: configurations.insertableId,
                           set: { records: indexed.records }
                       })
                 : db
                       .delete(configurations)
-                      .where(eq(configurations.id, insertableId));
+                      .where(eq(configurations.insertableId, insertableId));
 
         await db.batch([
             db
@@ -275,7 +274,7 @@ async function readSelection(
     const row = await db
         .select({ parameters: configurations.parameters })
         .from(configurations)
-        .where(eq(configurations.id, insertableId))
+        .where(eq(configurations.insertableId, insertableId))
         .get();
 
     const parameters = row?.parameters ?? [];
@@ -365,7 +364,6 @@ insertableRoutes.post(
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
                 parameters,
-                sessionId: getAppSessionId(c),
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -438,31 +436,34 @@ insertableRoutes.post(
             }
         );
 
-        // Recorded here so a later fasten failure doesn't lose an insert that
-        // did land.
-        await trackInBackground(c, async () =>
-            trackInsert(c, {
-                libraryId: row.libraryId,
-                userId: await c.var.getUserId(),
-                path: sourcePath,
-                insertableId,
-                targetElementType: ElementType.ASSEMBLY,
-                selection,
-                parameters,
-                sessionId: getAppSessionId(c),
-                isFavorite: body.isFavorite,
-                isQuickInsert: body.isQuickInsert,
-                source: body.source,
-                fasten: body.fasten
-            })
-        );
+        // The insert has landed. Every path below records it exactly once, so
+        // a fasten that never happened cannot leave one unrecorded — and
+        // `fasten` says what happened rather than what was asked for.
+        const track = (fasten: boolean) =>
+            trackInBackground(c, async () =>
+                trackInsert(c, {
+                    libraryId: row.libraryId,
+                    userId: await c.var.getUserId(),
+                    path: sourcePath,
+                    insertableId,
+                    targetElementType: ElementType.ASSEMBLY,
+                    selection,
+                    parameters,
+                    isFavorite: body.isFavorite,
+                    isQuickInsert: body.isQuickInsert,
+                    source: body.source,
+                    fasten
+                })
+            );
 
         if (!body.fasten) {
+            await track(false);
             return c.json({ featureId: null });
         }
 
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
+            await track(false);
             throw internalError(
                 `${row.name} does not support insert and fasten.`,
                 HttpStatus.BAD_REQUEST
@@ -477,12 +478,19 @@ insertableRoutes.post(
             getFastenQuery(row.elementType, instancePath, fastenInfo)
         );
 
-        const fastenResult = await addAssemblyFeature(
-            onshapeApi,
-            targetPath,
-            builder.build()
-        );
-        return c.json({ featureId: fastenResult.feature.featureId });
+        try {
+            const fastenResult = await addAssemblyFeature(
+                onshapeApi,
+                targetPath,
+                builder.build()
+            );
+            await track(true);
+            return c.json({ featureId: fastenResult.feature.featureId });
+        } catch (error) {
+            // Only the mate failed; the insert is still in the assembly.
+            await track(false);
+            throw error;
+        }
     }
 );
 /** Always version-pinned; throws 404 when the insertable does not exist. */

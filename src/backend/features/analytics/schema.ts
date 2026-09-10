@@ -31,15 +31,8 @@ export const events = sqliteTable(
         createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
         // UTC YYYY-MM-DD, denormalized so rollups can be rebuilt with a GROUP BY
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         userId: text("user_id").notNull(),
-        /**
-         * The panel open this event belongs to, so an insert can be tied to the
-         * open that preceded it. Null when the client sent no session cookie.
-         * Not indexed: nothing reads the log to report a metric, and a funnel
-         * over it is a batch job that can afford the scan.
-         */
-        sessionId: text("session_id"),
         /**
          * What the columns meant when the row was written. 1 is the backfill
          * for rows predating the column, which is what they were.
@@ -84,7 +77,6 @@ export type EventCore = Pick<
     | "day"
     | "libraryId"
     | "userId"
-    | "sessionId"
     | "schemaVersion"
 >;
 
@@ -100,7 +92,7 @@ export const dailyMetrics = sqliteTable(
     "daily_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         type: text("type").notNull().$type<EventType>(),
         count: integer("count").notNull().default(0),
         favoriteCount: integer("favorite_count").notNull().default(0),
@@ -118,7 +110,7 @@ export const dailyTargetMetrics = sqliteTable(
     "daily_target_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         targetElementType: text("target_element_type")
             .notNull()
             .$type<ElementType>(),
@@ -132,7 +124,7 @@ export const dailySourceMetrics = sqliteTable(
     "daily_source_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         source: text("source").notNull().$type<InsertSource>(),
         count: integer("count").notNull().default(0),
         quickInsertCount: integer("quick_insert_count").notNull().default(0)
@@ -144,7 +136,7 @@ export const dailySourceMetrics = sqliteTable(
 export const insertableStats = sqliteTable(
     "insertable_stats",
     {
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         insertCount: integer("insert_count").notNull().default(0),
         firstInsertedAt: integer("first_inserted_at", {
@@ -168,7 +160,7 @@ export const dailyInsertableMetrics = sqliteTable(
     "daily_insertable_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         targetElementType: text("target_element_type")
             .notNull()
@@ -191,7 +183,7 @@ export const dailyInsertableUsers = sqliteTable(
     "daily_insertable_users",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         userId: text("user_id").notNull()
     },
@@ -210,7 +202,7 @@ export const dailyConfigurationMetrics = sqliteTable(
     "daily_configuration_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         parameterId: text("parameter_id").notNull(),
         value: text("value").notNull(),
@@ -232,7 +224,7 @@ export const dailyUserActivity = sqliteTable(
     "daily_user_activity",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         userId: text("user_id").notNull()
     },
     (t) => [
@@ -246,7 +238,7 @@ export const userStats = sqliteTable(
     "user_stats",
     {
         userId: text("user_id").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         insertCount: integer("insert_count").notNull().default(0),
         openCount: integer("open_count").notNull().default(0),
         firstSeenAt: integer("first_seen_at", {

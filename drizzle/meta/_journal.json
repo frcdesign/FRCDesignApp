@@ -12,8 +12,15 @@
         {
             "idx": 1,
             "version": "6",
-            "when": 1789063257352,
-            "tag": "0001_add_event_session_and_schema_version",
+            "when": 1789071763677,
+            "tag": "0001_add_event_schema_version",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "6",
+            "when": 1789072486681,
+            "tag": "0002_rename_configurations_key",
             "breakpoints": true
         }
     ]

@@ -1,4 +1,5 @@
 import { LibraryId } from "../library/library-id";
+import { addDays } from "./day";
 
 /**
  * Competition seasons, which is what makes usage comparable: a library built
@@ -123,11 +124,6 @@ export interface SeasonWindow {
 function daysBetween(from: string, to: string): number {
     const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
     return Math.round(ms / (24 * 3600 * 1000)) + 1;
-}
-
-function addDays(day: string, count: number): string {
-    const at = Date.parse(`${day}T00:00:00Z`) + count * 24 * 3600 * 1000;
-    return new Date(at).toISOString().slice(0, 10);
 }
 
 /**

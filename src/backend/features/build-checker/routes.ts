@@ -59,15 +59,20 @@ buildStatusRoutes.get(
         const insertableIds = allInsertables.map((ins) => ins.id);
         const allConfigurations = await db
             .select({
-                id: configurations.id,
+                insertableId: configurations.insertableId,
                 buildIssues: configurations.buildIssues,
                 parameters: configurations.parameters
             })
             .from(configurations)
-            .where(inArray(configurations.id, insertableIds))
+            .where(inArray(configurations.insertableId, insertableIds))
             .all();
 
-        const configMap = new Map(allConfigurations.map((c) => [c.id, c]));
+        const configMap = new Map(
+            allConfigurations.map(({ insertableId, ...status }) => [
+                insertableId,
+                status
+            ])
+        );
 
         const groupsOut: Record<string, GroupBuildStatus> = {};
         for (const group of allGroups) {

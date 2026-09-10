@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
-import { dailyConfigurationMetrics } from "../../analytics/schema";
+import { dailyConfigurationMetrics, events } from "../../analytics/schema";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
+import { MateLocation } from "./fasten";
 import { BuildIssueType } from "../../build-checker/issues";
 import {
     MOCK_ONSHAPE_API,
@@ -43,7 +44,7 @@ function readConfig(insertableId: string) {
     return db
         .select()
         .from(configurations)
-        .where(eq(configurations.id, insertableId))
+        .where(eq(configurations.insertableId, insertableId))
         .get();
 }
 
@@ -198,6 +199,83 @@ describe("insertable routes", () => {
         );
     });
 
+    /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */
+    async function seedFastenable() {
+        await seedAssembly(db);
+        await db
+            .update(insertables)
+            .set({
+                supportsFasten: true,
+                fastenInfo: {
+                    mateConnectorId: "mc1",
+                    mateLocation: MateLocation.Part,
+                    path: ["p1"]
+                }
+            })
+            .where(eq(insertables.id, TEST_ASSEMBLY_ID));
+        vi.spyOn(AssemblyEndpoints, "addElementToAssembly").mockResolvedValue({
+            insertInstanceResponses: [{ occurrences: [{ path: ["o1"] }] }]
+        });
+    }
+
+    function insertIntoAssembly(fasten: boolean) {
+        return createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                configuration: undefined,
+                fasten,
+                isFavorite: false,
+                isQuickInsert: false
+            }),
+            env
+        );
+    }
+
+    /** What the usage log recorded for the one insert these tests make. */
+    function loggedInsert() {
+        return db.select().from(events).get();
+    }
+
+    it("records an insert nobody asked to fasten as unfastened", async () => {
+        await seedFastenable();
+
+        expect((await insertIntoAssembly(false)).status).toBe(200);
+        expect(await loggedInsert()).toMatchObject({ fasten: false });
+    });
+
+    it("records the fasten only once it has been built", async () => {
+        await seedFastenable();
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+
+        expect((await insertIntoAssembly(true)).status).toBe(200);
+        expect(await loggedInsert()).toMatchObject({ fasten: true });
+    });
+
+    // The part is in the assembly either way, so the insert is still recorded —
+    // as the unfastened insert it turned out to be.
+    it("keeps the insert but drops the fasten when the mate fails", async () => {
+        await seedFastenable();
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockRejectedValue(
+            new Error("mate failed")
+        );
+
+        expect((await insertIntoAssembly(true)).status).toBe(500);
+        expect(await loggedInsert()).toMatchObject({ fasten: false });
+    });
+
+    it("keeps the insert when the part cannot fasten at all", async () => {
+        await seedAssembly(db);
+        vi.spyOn(AssemblyEndpoints, "addElementToAssembly").mockResolvedValue({
+            insertInstanceResponses: [{ occurrences: [{ path: ["o1"] }] }]
+        });
+
+        expect((await insertIntoAssembly(true)).status).toBe(400);
+        expect(await loggedInsert()).toMatchObject({ fasten: false });
+    });
+
     it("POST /index-configurations indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
@@ -253,7 +331,7 @@ describe("insertable routes", () => {
         await seedGroup(db);
         await seedInsertable(db);
         await db.insert(configurations).values({
-            id: TEST_PART_STUDIO_ID,
+            insertableId: TEST_PART_STUDIO_ID,
             parameters: [
                 enumParam(
                     "A",

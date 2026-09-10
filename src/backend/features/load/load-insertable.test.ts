@@ -111,7 +111,7 @@ describe("saveInsertable", () => {
         const config = await db
             .select()
             .from(configurations)
-            .where(eq(configurations.id, TEST_PART_STUDIO_ID))
+            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID))
             .get();
         expect(config?.records).toEqual(records);
     });

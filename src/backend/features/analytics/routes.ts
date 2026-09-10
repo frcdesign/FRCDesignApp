@@ -250,7 +250,7 @@ analyticsRoutes.get(
                 .from(insertables)
                 .innerJoin(
                     configurations,
-                    eq(configurations.id, insertables.id)
+                    eq(configurations.insertableId, insertables.id)
                 )
                 .where(
                     and(

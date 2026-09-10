@@ -205,7 +205,7 @@ export async function seedConfiguration(
     await db
         .insert(configurations)
         .values({
-            id: insertableId,
+            insertableId,
             parameters: TEST_PARAMETERS
         })
         .onConflictDoNothing();

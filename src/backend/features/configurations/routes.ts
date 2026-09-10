@@ -40,7 +40,10 @@ configurationRoutes.get(
                 records: configurations.records
             })
             .from(insertables)
-            .leftJoin(configurations, eq(configurations.id, insertables.id))
+            .leftJoin(
+                configurations,
+                eq(configurations.insertableId, insertables.id)
+            )
             .where(eq(insertables.id, insertableId))
             .get();
 

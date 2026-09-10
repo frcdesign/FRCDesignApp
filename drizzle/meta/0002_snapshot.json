@@ -1,14 +1,14 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "0a2cf9ad-e579-4237-9e66-bd5081848c77",
-    "prevId": "0d0a9543-a1b4-49fb-bbab-f3ad84070d50",
+    "id": "26dec54d-c9b7-469f-a381-caa6c1279843",
+    "prevId": "0a2cf9ad-e579-4237-9e66-bd5081848c77",
     "tables": {
         "configurations": {
             "name": "configurations",
             "columns": {
-                "id": {
-                    "name": "id",
+                "insertable_id": {
+                    "name": "insertable_id",
                     "type": "text",
                     "primaryKey": true,
                     "notNull": true,
@@ -41,11 +41,11 @@
             },
             "indexes": {},
             "foreignKeys": {
-                "configurations_id_insertables_id_fk": {
-                    "name": "configurations_id_insertables_id_fk",
+                "configurations_insertable_id_insertables_id_fk": {
+                    "name": "configurations_insertable_id_insertables_id_fk",
                     "tableFrom": "configurations",
                     "tableTo": "insertables",
-                    "columnsFrom": ["id"],
+                    "columnsFrom": ["insertable_id"],
                     "columnsTo": ["id"],
                     "onDelete": "cascade",
                     "onUpdate": "no action"
@@ -1159,7 +1159,9 @@
     "_meta": {
         "schemas": {},
         "tables": {},
-        "columns": {}
+        "columns": {
+            "\"configurations\".\"id\"": "\"configurations\".\"insertable_id\""
+        }
     },
     "internal": {
         "indexes": {}
