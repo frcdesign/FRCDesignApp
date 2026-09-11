@@ -5,7 +5,7 @@ import {
     Selection,
     VisibilityCondition,
     VisibilityType
-} from "../configurations/models";
+} from "../configurations/contract";
 import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { LogicalOp, QuantityType, Unit } from "../configurations/enums";
 import { evaluateCondition } from "../configurations/utils";

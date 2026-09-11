@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ThumbnailSize, ThumbnailUrls } from "../thumbnails/types";
+import { ThumbnailSize, ThumbnailUrls } from "../thumbnails/contract";
 import { Vendor } from "../library/vendors";
 import { BuildIssueType } from "./issues";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { thumbnailUrl } from "../thumbnails/keys";
 import { checkGroup, checkInsertable } from "./checks";
 

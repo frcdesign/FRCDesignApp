@@ -3,7 +3,7 @@ import {
     type EnumOption,
     ParameterType,
     type Selection
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import {
     evaluateCondition,
     getOption,

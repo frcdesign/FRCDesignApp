@@ -11,7 +11,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import {
     type ConfigurationParameter,
     type Selection
-} from "../configurations/models";
+} from "../configurations/contract";
 import { appliedValues } from "../configurations/selection";
 import { toDayKey } from "./day";
 

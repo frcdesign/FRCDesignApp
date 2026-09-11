@@ -3,7 +3,7 @@ import {
     ParameterType,
     type ConfigurationParameter,
     type Selection
-} from "../configurations/models";
+} from "../configurations/contract";
 
 /** A vendor named by one of a text's words, as its code or as its whole name. */
 export function parseNameVendor(name: string): Vendor | undefined {

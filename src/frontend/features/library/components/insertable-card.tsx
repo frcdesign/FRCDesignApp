@@ -7,7 +7,7 @@ import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
     Selection
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import {
     FavoriteButton,
     FavoriteInsertableItem

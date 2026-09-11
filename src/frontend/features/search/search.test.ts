@@ -3,14 +3,14 @@ import MiniSearch from "minisearch";
 import {
     buildSearchDb,
     type SearchDocument
-} from "@backend/features/search/search-index";
+} from "@backend/lib/search-index";
 import { doSearch, type Position } from "./search";
 import { LibraryOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     type ConfigurationKey,
     ConfigurationRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
 const record = (

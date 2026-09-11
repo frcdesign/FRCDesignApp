@@ -22,7 +22,7 @@ import {
     DEFAULT_CONFIGURATION_KEY,
     Selection,
     SearchRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";

@@ -21,7 +21,7 @@ import { type PartUsageOut } from "./contract";
 import { MONTH_DAYS, usesPerMonth } from "./measures";
 import { addDays, toDayKey, type DayRange } from "./day";
 import { toElementPath } from "../../lib/onshape/path";
-import { type ConfigurationParameter } from "../configurations/models";
+import { type ConfigurationParameter } from "../configurations/contract";
 
 export interface PartRow {
     elementId: string;

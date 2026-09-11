@@ -33,7 +33,7 @@ import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type AnalyticsOverviewOut,

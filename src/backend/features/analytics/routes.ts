@@ -14,7 +14,7 @@ import type {
     PartUsageOut,
     UnusedOptionOut
 } from "./contract";
-import { ParameterType } from "../configurations/models";
+import { ParameterType } from "../configurations/contract";
 import { usesPerMonth } from "./measures";
 import { getGrowth } from "./growth";
 import { toElementPath } from "../../lib/onshape/path";

@@ -2,7 +2,7 @@ import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { encodeConfiguration } from "../../../features/configurations/utils";
-import { Selection } from "../../../features/configurations/models";
+import { Selection } from "../../../features/configurations/contract";
 import type { OnshapePart } from "../types";
 
 /**

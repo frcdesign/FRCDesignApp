@@ -18,7 +18,7 @@ import {
     type ConfigurationKey,
     Selection,
     SearchRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";

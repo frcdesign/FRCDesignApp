@@ -1,6 +1,6 @@
 import MiniSearch from "minisearch";
 import { InsertableOut, Insertables } from "@backend/features/library/contract";
-import { SearchDocument } from "@backend/features/search/search-index";
+import { SearchDocument } from "@backend/lib/search-index";
 import { Vendor } from "@backend/features/library/vendors";
 import { doSearch, FilterResult, SearchFilters, SearchHit } from "./search";
 

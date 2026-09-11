@@ -11,7 +11,7 @@ import {
 import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect } from "react";
 import { modals } from "@mantine/modals";
-import type { SearchRecord } from "@backend/features/configurations/models";
+import type { SearchRecord } from "@backend/features/configurations/contract";
 import {
     FontWeight,
     IconSize,

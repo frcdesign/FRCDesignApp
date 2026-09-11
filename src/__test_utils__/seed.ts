@@ -23,7 +23,7 @@ import {
 import {
     ParameterType,
     type ConfigurationParameter
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { type ElementPath, type InstancePath } from "@backend/lib/onshape/path";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { LibraryId } from "@backend/features/library/library-id";

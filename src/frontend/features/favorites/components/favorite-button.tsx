@@ -1,7 +1,7 @@
 import {
     type ConfigurationKey,
     type Selection
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";

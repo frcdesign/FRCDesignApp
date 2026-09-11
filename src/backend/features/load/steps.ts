@@ -1,5 +1,5 @@
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
-import type { ThumbnailUrls } from "../thumbnails/types";
+import type { ThumbnailUrls } from "../thumbnails/contract";
 import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import type { LoadContext } from "./context";
 

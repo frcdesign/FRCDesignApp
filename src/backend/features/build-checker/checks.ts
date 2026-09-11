@@ -1,4 +1,4 @@
-import { ThumbnailUrls } from "../thumbnails/types";
+import { ThumbnailUrls } from "../thumbnails/contract";
 import { Vendor } from "../library/vendors";
 import { addBuildIssue, BuildIssue, BuildIssueType } from "./issues";
 

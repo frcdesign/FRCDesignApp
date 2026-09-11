@@ -13,7 +13,7 @@ import {
     PartMetadata,
     ConfigurationRecord,
     ProbedRecord
-} from "../configurations/models";
+} from "../configurations/contract";
 import {
     addBuildIssue,
     type BuildIssue,

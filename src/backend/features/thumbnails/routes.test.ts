@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
-import { ThumbnailSize } from "./types";
+import { ThumbnailSize } from "./contract";
 import {
     THUMBNAIL_FALLBACK_HEADER,
     parseThumbnailKey,
@@ -9,7 +9,7 @@ import {
     thumbnailKey,
     thumbnailUrl
 } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./models";
+import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./contract";
 import {
     appliedValues,
     formatValue,

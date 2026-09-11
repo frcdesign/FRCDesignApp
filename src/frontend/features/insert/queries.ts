@@ -3,7 +3,7 @@ import { apiGet } from "../../lib/api-client";
 import {
     type ConfigurationResult,
     type UnitInfo
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { InstancePath } from "@backend/lib/onshape/path";
 import { configurationQueryKey, unitInfoQueryKey } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";

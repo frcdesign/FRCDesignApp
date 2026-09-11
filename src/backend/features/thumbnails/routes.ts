@@ -4,9 +4,9 @@ import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 
-import { ThumbnailSize } from "./types";
+import { ThumbnailSize } from "./contract";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
 import type { ThumbnailWorkflowParams } from "./workflow";
 import { getSessionId } from "../auth/session";

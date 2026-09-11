@@ -1,4 +1,4 @@
-import { type ConfigurationKey } from "../configurations/models";
+import { type ConfigurationKey } from "../configurations/contract";
 import {
     WorkflowEntrypoint,
     type WorkflowEvent,

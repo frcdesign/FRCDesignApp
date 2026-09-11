@@ -13,7 +13,7 @@ import { type Db, getDb } from "../../db/client";
 import { users, favorites, configurations } from "../../db/schema";
 import { toKey, toSelection } from "../configurations/selection";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
-import type { ConfigurationParameter } from "../configurations/models";
+import type { ConfigurationParameter } from "../configurations/contract";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { validate } from "../../lib/validate";

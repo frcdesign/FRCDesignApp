@@ -3,15 +3,15 @@
  * deserializes it with the same options.
  */
 import MiniSearch, { Options } from "minisearch";
-import { LibraryOut } from "../library/contract";
-import { Vendor } from "../library/vendors";
-import { ConfigurationRecord, SearchRecord } from "../configurations/models";
-import { getPartUrl } from "../configurations/utils";
+import { LibraryOut } from "../features/library/contract";
+import { Vendor } from "../features/library/vendors";
+import { ConfigurationRecord, SearchRecord } from "../features/configurations/contract";
+import { getPartUrl } from "../features/configurations/utils";
 import {
     isPlaceholderPartNumber,
     meaningfulPartNumber
-} from "../configurations/part-number";
-import { clean } from "../../lib/text";
+} from "../features/configurations/part-number";
+import { clean } from "./text";
 
 /** Where a name breaks: punctuation and space, plus a quote used as a quote. */
 const NAME_SEPARATORS = new RegExp("(?<!\\d)\"|[-()',#&\\s/]+");

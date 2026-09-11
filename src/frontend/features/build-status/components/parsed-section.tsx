@@ -14,7 +14,7 @@ import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import {
     ConfigurationParameter,
     ParameterType
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import {
     type ConfigurationCount,
     countCombinations,

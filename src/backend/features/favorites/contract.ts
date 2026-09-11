@@ -1,4 +1,4 @@
-import { ConfigurationKey, Selection } from "../configurations/models";
+import { ConfigurationKey, Selection } from "../configurations/contract";
 import { LibraryId } from "../library/library-id";
 
 /**

@@ -5,7 +5,7 @@ import {
     VisibilityType,
     type ConfigurationParameter,
     type PartialSelection
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { toSelection } from "@backend/features/configurations/selection";
 import { evaluateCondition } from "@backend/features/configurations/utils";
 import { normalizeSelection, withParameterValue } from "./parameter-value";

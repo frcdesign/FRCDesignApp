@@ -1,4 +1,4 @@
-import { type ConfigurationKey } from "../../../features/configurations/models";
+import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import {
@@ -7,7 +7,7 @@ import {
     toInstanceApiPath
 } from "../path";
 import { apiPath } from "../api-path";
-import { ThumbnailSize } from "../../../features/thumbnails/types";
+import { ThumbnailSize } from "../../../features/thumbnails/contract";
 
 /** Returns the thumbnail for a given element in a workspace or version. */
 export function getElementThumbnail(

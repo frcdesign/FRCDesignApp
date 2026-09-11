@@ -8,7 +8,7 @@ import {
     ConfigurationParameter,
     EnumParameter,
     ParameterType
-} from "./models";
+} from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
 
 /**

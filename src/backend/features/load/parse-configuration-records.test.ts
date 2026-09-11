@@ -7,7 +7,7 @@ import type {
     OnshapePart
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
-import { Selection, ConfigurationParameter } from "../configurations/models";
+import { Selection, ConfigurationParameter } from "../configurations/contract";
 import {
     enumParam,
     paramsWithConfigs

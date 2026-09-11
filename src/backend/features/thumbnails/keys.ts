@@ -2,8 +2,8 @@
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
-} from "../configurations/models";
-import { ThumbnailSize } from "./types";
+} from "../configurations/contract";
+import { ThumbnailSize } from "./contract";
 
 /** Marks a response as the element default standing in for an unrendered configuration. */
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";

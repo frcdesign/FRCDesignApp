@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";

@@ -6,11 +6,11 @@ import {
     normalizeForMatch,
     tokenizeName,
     tokenizePartNumber
-} from "@backend/features/search/search-index";
+} from "@backend/lib/search-index";
 import {
     type ConfigurationKey,
     SearchRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 
 /**
  * A user facing name to use for elements currently being filtered/searched on.

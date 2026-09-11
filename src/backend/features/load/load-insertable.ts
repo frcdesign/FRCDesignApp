@@ -4,7 +4,7 @@ import type {
     Configuration,
     PartMetadata,
     ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import {
     addBuildIssue,
     type BuildIssue,
@@ -13,7 +13,7 @@ import {
 } from "../build-checker/issues";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { FastenInfo } from "../library/insertables/fasten";
-import type { ThumbnailUrls } from "../thumbnails/types";
+import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { Vendor } from "../library/vendors";
 import { configurations, insertables } from "../../db/schema";
 import { uploadThumbnails } from "../thumbnails/store";

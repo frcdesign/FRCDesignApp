@@ -3,7 +3,7 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { ReactNode, useCallback } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Selection } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { InsertSource } from "@backend/features/analytics/events";
 import { IconSize } from "../../../lib/style-constants";

@@ -1,4 +1,4 @@
-import { type ConfigurationKey } from "../configurations/models";
+import { type ConfigurationKey } from "../configurations/contract";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";

@@ -11,7 +11,7 @@ import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useMemo } from "react";
-import { Selection } from "@backend/features/configurations/models";
+import { Selection } from "@backend/features/configurations/contract";
 import { toInsertablePath } from "../../lib/api-paths";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { InsertSource } from "@backend/features/analytics/events";

@@ -5,7 +5,7 @@ import {
     findRecordForConfiguration,
     getPartUrl
 } from "./utils";
-import { PartMetadata, SearchRecord } from "./models";
+import { PartMetadata, SearchRecord } from "./contract";
 import { Vendor } from "../library/vendors";
 
 function rec(configurationKey: string, partNumber = "PN"): SearchRecord {

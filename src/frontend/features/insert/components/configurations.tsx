@@ -29,7 +29,7 @@ import {
     UnitInfo,
     EMPTY_UNIT_INFO,
     SearchRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import {
     evaluateCondition,
     findRecordForConfiguration,

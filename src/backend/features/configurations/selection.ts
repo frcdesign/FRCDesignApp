@@ -8,7 +8,7 @@ import {
     ParameterType,
     type PartialSelection,
     type Selection
-} from "./models";
+} from "./contract";
 import {
     DEFAULT_QUANTITY_PRECISION,
     decodeConfiguration,

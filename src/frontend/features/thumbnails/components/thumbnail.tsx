@@ -5,7 +5,7 @@ import {
     type LoadedImage
 } from "../../../lib/api-client";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { ThumbnailSize } from "@backend/features/thumbnails/types";
+import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { QuestionIcon } from "@phosphor-icons/react";
@@ -19,7 +19,7 @@ import {
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { useTargetElementType } from "../../insert/insert-hooks";

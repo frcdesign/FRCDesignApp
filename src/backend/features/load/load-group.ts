@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { ElementType } from "../../lib/onshape/element-type";
-import type { ThumbnailUrls } from "../thumbnails/types";
+import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
     type BuildIssue,

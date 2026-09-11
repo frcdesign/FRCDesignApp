@@ -16,12 +16,12 @@ import {
 } from "../../lib/onshape/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
-import { ThumbnailSize, ThumbnailUrls } from "./types";
+import { ThumbnailSize, ThumbnailUrls } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
-} from "../configurations/models";
+} from "../configurations/contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**

@@ -7,9 +7,9 @@ import {
     seedInsertable,
     seedPartStudio
 } from "../../../__test_utils__/seed";
-import { ThumbnailSize } from "./types";
+import { ThumbnailSize } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { reconcileThumbnails } from "./reconcile";
 import { LibraryId } from "../library/library-id";
 

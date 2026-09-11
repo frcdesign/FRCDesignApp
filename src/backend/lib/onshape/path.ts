@@ -1,4 +1,4 @@
-import { Selection } from "../../features/configurations/models";
+import { Selection } from "../../features/configurations/contract";
 
 /** The instance kinds an Onshape path can address, as one definition: the type
  * and the runtime list validators check against both derive from it. */

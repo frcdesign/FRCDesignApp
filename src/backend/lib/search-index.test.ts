@@ -9,10 +9,10 @@ import {
     tokenizeQuery,
     toSearchRecords
 } from "./search-index";
-import { LibraryOut } from "../library/contract";
-import { ElementType } from "../../lib/onshape/element-type";
-import { Vendor } from "../library/vendors";
-import { configurationRecord as record } from "../../../__test_utils__/configuration-fixtures";
+import { LibraryOut } from "../features/library/contract";
+import { ElementType } from "./onshape/element-type";
+import { Vendor } from "../features/library/vendors";
+import { configurationRecord as record } from "../../__test_utils__/configuration-fixtures";
 
 // A part number identifies the part; splitting or folding it makes it name a
 // different one, so it is indexed as typed alongside its segments.

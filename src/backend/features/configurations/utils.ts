@@ -15,7 +15,7 @@ import {
     UnitInfo,
     VisibilityCondition,
     VisibilityType
-} from "./models";
+} from "./contract";
 import {
     Vendor,
     getVendorPartUrl,

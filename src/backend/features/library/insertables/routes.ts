@@ -17,7 +17,7 @@ import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
     type Selection
-} from "../../configurations/models";
+} from "../../configurations/contract";
 import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
