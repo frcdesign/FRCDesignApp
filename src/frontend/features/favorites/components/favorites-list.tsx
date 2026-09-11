@@ -23,7 +23,7 @@ import {
     SearchCallout
 } from "../../search/components/search-errors";
 import { FavoriteCard } from "./favorite-card";
-import { ItemTable } from "../../library/components/card-components";
+import { ItemTable } from "../../../components/item-row";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";

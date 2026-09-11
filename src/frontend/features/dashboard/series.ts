@@ -8,7 +8,7 @@ import type {
     DailyMetricPoint
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 
 /** The longest span still worth a point per day: a quarter of daily points. */
 const DAILY_DAYS = 120;

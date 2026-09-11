@@ -1,3 +1,4 @@
+/** Which library is being shown, and how each one is spelled to the user. */
 import { notFound, useMatch, useParams } from "@tanstack/react-router";
 import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -36,18 +37,6 @@ export function parseLibraryId(libraryId: string): LibraryId {
         throw notFound();
     }
     return parsed.data;
-}
-
-export function toLibraryPath(libraryId: LibraryId): string {
-    return `/library/${libraryId}`;
-}
-
-export function toInsertablePath(insertableId: string): string {
-    return `/insertable/${insertableId}`;
-}
-
-export function toFavoritePath(favoriteId: string): string {
-    return `/favorite/${favoriteId}`;
 }
 
 export function getLibraryName(libraryId: string): string {

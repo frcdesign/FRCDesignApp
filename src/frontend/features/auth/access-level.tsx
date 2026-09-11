@@ -3,7 +3,8 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import {
     AccessLevel,
     type AccessData,
-    isWithinAccessLevel
+    isWithinAccessLevel,
+    hasEditorAccess
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
@@ -93,4 +94,13 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
 
 export function RequireSignIn(props: PropsWithChildren) {
     return useIsSignedIn() ? props.children : null;
+}
+
+/**
+ * Whether the caller is shown what is hidden. The rule was spelled out at each
+ * of its call sites, half of them negated, so changing who counts as privileged
+ * meant finding four of them and getting the negation right at each.
+ */
+export function useShowHidden(): boolean {
+    return hasEditorAccess(useAccessData().currentAccessLevel);
 }

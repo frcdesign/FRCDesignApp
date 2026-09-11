@@ -6,7 +6,7 @@ import {
 } from "@backend/features/configurations/models";
 import { InstancePath } from "@backend/lib/onshape/path";
 import { configurationQueryKey, unitInfoQueryKey } from "../../lib/query-keys";
-import { toInsertablePath } from "../library/library-path";
+import { toInsertablePath } from "../../lib/api-paths";
 
 /**
  * The current document's units. Disabled when not connected to a document, and

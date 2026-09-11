@@ -11,7 +11,8 @@ import { parseOnshapeUrl } from "../../../lib/url";
 import { appError, getAppErrorHandler } from "../../../lib/errors";
 import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
-import { toLibraryPath, useLibraryId } from "../library-path";
+import { toLibraryPath } from "../../../lib/api-paths";
+import { useLibraryId } from "../../../lib/library";
 import { jobStatusQueryKey } from "../../../lib/query-keys";
 import type { JobStatus } from "@backend/features/load/contract";
 

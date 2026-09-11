@@ -1,5 +1,6 @@
 import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
+import { type Position } from "../../lib/highlight";
 import {
     SearchDocument,
     normalizeForMatch,
@@ -29,11 +30,7 @@ export interface SearchFilters {
     isFavorite?: boolean;
 }
 
-/** Named for the highlight it marks; `Range` is a DOM type. */
-export interface Position {
-    start: number;
-    length: number;
-}
+export type { Position };
 
 export interface SearchHit {
     id: string;

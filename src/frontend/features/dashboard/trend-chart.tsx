@@ -2,7 +2,7 @@ import { LineChart, type ChartReferenceLineProps } from "@mantine/charts";
 import { type ReactNode } from "react";
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import { getLibraryShade } from "../../theme";
 import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
 import { toChartData, type BucketPoint, type Granularity } from "./series";

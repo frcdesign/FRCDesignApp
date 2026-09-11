@@ -10,7 +10,7 @@ import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult, ObjectLabel, plural } from "../search";
 import { useNavigate } from "@tanstack/react-router";
 import { SectionNotice } from "../../../components/app-zero-state";
-import { useLibraryId } from "../../library/library-path";
+import { useLibraryId } from "../../../lib/library";
 import { AppIcon } from "../../../components/app-icon";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {

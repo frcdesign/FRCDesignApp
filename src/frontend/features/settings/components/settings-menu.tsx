@@ -22,7 +22,7 @@ import {
 import { startSignOut } from "../../auth/sign-out";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { useLibraryId } from "../../library/library-path";
+import { useLibraryId } from "../../../lib/library";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
 /** The FRCDesign Discord, where feedback and support now live. */

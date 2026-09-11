@@ -6,7 +6,8 @@ import { type JobStatus } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";
-import { toLibraryPath, useLibraryId } from "./library-path";
+import { toLibraryPath } from "../../lib/api-paths";
+import { useLibraryId } from "../../lib/library";
 import {
     jobStatusQueryKey,
     libraryDataQueryKey,

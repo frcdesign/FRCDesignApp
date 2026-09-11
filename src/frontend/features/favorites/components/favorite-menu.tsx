@@ -23,7 +23,8 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { getQueryUpdater } from "../../../lib/query-cache";
-import { toFavoritePath, useLibraryId } from "../../library/library-path";
+import { toFavoritePath } from "../../../lib/api-paths";
+import { useLibraryId } from "../../../lib/library";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { PageNotice } from "../../../components/app-zero-state";
 

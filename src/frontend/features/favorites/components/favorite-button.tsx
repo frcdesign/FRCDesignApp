@@ -17,11 +17,8 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { appError, handleAppError } from "../../../lib/errors";
 import { getQueryUpdater } from "../../../lib/query-cache";
-import {
-    toFavoritePath,
-    toLibraryPath,
-    useLibraryId
-} from "../../library/library-path";
+import { toFavoritePath, toLibraryPath } from "../../../lib/api-paths";
+import { useLibraryId } from "../../../lib/library";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { AppIcon } from "../../../components/app-icon";

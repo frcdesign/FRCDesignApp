@@ -11,13 +11,10 @@ import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
-import {
-    CardTitle,
-    ItemRow,
-    OpenDocumentItems,
-    QuickInsertItems
-} from "../../library/components/card-components";
-import { useIsInsertableHidden } from "../../library/card-hooks";
+import { CardTitle, ItemRow } from "../../../components/item-row";
+import { OpenDocumentItems } from "../../../components/open-document-items";
+import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
@@ -33,7 +30,8 @@ import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { produce } from "immer";
 import { SearchHit } from "../../search/search";
-import { toLibraryPath, useLibraryId } from "../../library/library-path";
+import { toLibraryPath } from "../../../lib/api-paths";
+import { useLibraryId } from "../../../lib/library";
 import { InsertSource } from "@backend/features/analytics/events";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
 
@@ -91,7 +89,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             }}
                         />
                     }
-                    searchHit={searchHit}
+                    match={searchHit}
                 />
             }
             rightSection={

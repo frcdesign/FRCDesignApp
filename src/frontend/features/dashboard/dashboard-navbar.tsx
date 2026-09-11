@@ -19,7 +19,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import {
     BORDER,
     FRAME_BACKGROUND,

@@ -7,7 +7,7 @@ import {
 } from "@backend/features/favorites/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getAccessDataQuery, useIsSignedIn } from "../auth/access-level";
-import { useLibraryId } from "../library/library-path";
+import { useLibraryId } from "../../lib/library";
 import { queryClient } from "../../lib/query-client";
 import { favoritesQueryKey } from "../../lib/query-keys";
 

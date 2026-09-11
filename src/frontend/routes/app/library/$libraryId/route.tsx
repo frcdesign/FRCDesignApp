@@ -6,7 +6,7 @@ import {
     getLibraryVersionQuery
 } from "../../../../features/library/queries";
 import { getSearchDbQuery } from "../../../../features/search/queries";
-import { parseLibraryId } from "../../../../features/library/library-path";
+import { parseLibraryId } from "../../../../lib/library";
 
 export const Route = createFileRoute("/app/library/$libraryId")({
     params: {

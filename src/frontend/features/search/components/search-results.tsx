@@ -1,9 +1,9 @@
 import { useAccessData } from "../../auth/access-level";
 import { ReactNode } from "react";
-import { Position, SearchFilters, SearchHit } from "../search";
+import { SearchFilters } from "../search";
 import { searchInsertables } from "../filter";
 import { InsertableCard } from "../../library/components/insertable-card";
-import { ItemTable } from "../../library/components/card-components";
+import { ItemTable } from "../../../components/item-row";
 import {
     SectionNotice,
     SectionLoading
@@ -64,7 +64,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         <InsertableCard
             key={insertable.id}
             insertable={insertable}
-            searchHit={result.hits[insertable.id]}
+            match={result.hits[insertable.id]}
             source={source}
         />
     ));
@@ -78,81 +78,4 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
             <ItemTable>{resultCards}</ItemTable>
         </>
     );
-}
-
-interface SearchHitTitleProps {
-    title: string;
-    searchHit: SearchHit;
-}
-
-/**
- * Returns text highlighted with a searchHit.
- */
-export function SearchHitTitle(props: SearchHitTitleProps): ReactNode {
-    const { title, searchHit } = props;
-    return <HighlightedText text={title} positions={searchHit.positions} />;
-}
-
-/** Underlines wherever the query matched inside `text`. */
-interface HighlightedTextProps {
-    text: string;
-    /** Where the query matched; nothing highlights when absent. */
-    positions?: Position[];
-}
-
-export function HighlightedText(props: HighlightedTextProps): ReactNode {
-    const { text, positions = [] } = props;
-    return <>{applyRanges(text, positions)}</>;
-}
-
-function applyRanges(str: string, ranges: Position[]) {
-    ranges = deduplicateRanges(ranges);
-    // Sort ranges by start to ensure processing order
-    ranges = [...ranges].sort((a, b) => a.start - b.start);
-
-    const result: ReactNode[] = [];
-    let currentIndex = 0;
-
-    for (const range of ranges) {
-        const { start, length } = range;
-        const end = start + length;
-
-        if (currentIndex < start) {
-            result.push(str.slice(currentIndex, start));
-        }
-
-        result.push(<u key={currentIndex}>{str.slice(start, end)}</u>);
-
-        currentIndex = end;
-    }
-
-    if (currentIndex < str.length) {
-        result.push(str.slice(currentIndex));
-    }
-
-    return result;
-}
-
-function deduplicateRanges(ranges: Position[]): Position[] {
-    // Mapping where indexMap[i] = true means i is in a range.
-    const indexMap: boolean[] = [];
-    ranges.forEach((range) => {
-        for (let i = 0; i < range.length; i++) {
-            indexMap[range.start + i] = true;
-        }
-    });
-
-    const merged: Position[] = [];
-    // indexMap.length will always include the highest index set
-    for (let i = 0; i < indexMap.length; i++) {
-        if (!indexMap[i]) {
-            continue;
-        }
-        const start = i;
-        while (i < indexMap.length && indexMap[i]) {
-            i++;
-        }
-        merged.push({ start, length: i - start });
-    }
-    return merged;
 }

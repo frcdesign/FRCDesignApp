@@ -14,21 +14,21 @@ import { apiPost, apiDelete } from "../../../lib/api-client";
 import { showErrorToast } from "../../../lib/notifications";
 import { queryClient } from "../../../lib/query-client";
 import { ChangeOrderItems } from "../../../components/change-order";
-import { useSetVisibilityMutation } from "../card-hooks";
-import {
-    AdminOptionsSubmenu,
-    CardTitle,
-    ItemRow,
-    OpenDocumentItems
-} from "./card-components";
+import { AdminOptionsSubmenu } from "../../../components/app-menu";
+import { CardTitle, ItemRow } from "../../../components/item-row";
+import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AddGroupItem } from "./add-group-menu";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
+import {
+    useBuildStatusQuery,
+    useSetVisibilityMutation
+} from "../../build-status/queries";
 import { useRefreshLibrary } from "../../../lib/refresh";
-import { useBuildStatusQuery } from "../../build-status/queries";
 import { useCacheVersion, useLibraryQuery } from "../queries";
 import { libraryDataQueryKey } from "../../../lib/query-keys";
-import { toLibraryPath, useIsHome, useLibraryId } from "../library-path";
+import { toLibraryPath } from "../../../lib/api-paths";
+import { useIsHome, useLibraryId } from "../../../lib/library";
 import { getQueryUpdater } from "../../../lib/query-cache";
 
 interface GroupCardProps extends PropsWithChildren {

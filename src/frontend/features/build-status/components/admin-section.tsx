@@ -18,7 +18,7 @@ import {
     useToggleInsertAndFastenMutation,
     useIndexConfigurationsMutation,
     useToggleSortOrderMutation
-} from "../../library/card-hooks";
+} from "../queries";
 import { ControlRow, SectionHeader } from "./sections";
 import { IssueIcon } from "./issues";
 

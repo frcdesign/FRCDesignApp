@@ -1,20 +1,14 @@
 import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
-import { DotsThreeIcon } from "@phosphor-icons/react";
+import { DotsThreeIcon, GearIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../lib/style-constants";
+import { RequireAccessLevel } from "../features/auth/access-level";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
     children: ReactNode;
-    /**
-     * Set to true if this ContextMenu is controlled by a button.
-     * @default false
-     */
+    /** Set when a button owns the menu, rather than a right-click on a row. */
     controlledByButton?: boolean;
-    /**
-     * Set to true to make the ContextMenu wider than normal.
-     * @default false
-     */
     wideMenu?: boolean;
 }
 
@@ -64,10 +58,7 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
  * the right-click context menu so the menu is reachable without a right-click.
  */
 interface MenuButtonProps extends PropsWithChildren {
-    /**
-     * Sizes the button to sit beside a full-height button rather than in a card row.
-     * @default false
-     */
+    /** Sizes the button to sit beside a full-height button, not in a card row. */
     large?: boolean;
 }
 
@@ -87,5 +78,25 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
                 />
             </ActionIcon>
         </AppContextMenu>
+    );
+}
+
+/** Wraps one or more admin-only menu items into an Admin submenu. */
+export function AdminOptionsSubmenu(props: PropsWithChildren): ReactNode {
+    return (
+        <RequireAccessLevel>
+            <Menu.Divider />
+            <Menu.Sub>
+                <Menu.Sub.Target>
+                    <Menu.Sub.Item
+                        color={StatusColor.WARNING}
+                        leftSection={<GearIcon size={IconSize.SMALL} />}
+                    >
+                        Admin options
+                    </Menu.Sub.Item>
+                </Menu.Sub.Target>
+                <Menu.Sub.Dropdown>{props.children}</Menu.Sub.Dropdown>
+            </Menu.Sub>
+        </RequireAccessLevel>
     );
 }

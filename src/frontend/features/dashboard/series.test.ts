@@ -5,7 +5,7 @@ import {
     type DailyMetricPoint
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import { Granularity, toChartData, toSparkSeries } from "./series";
 
 const FRC = getLibraryName(LibraryId.FRC_DESIGN_LIB);

@@ -10,7 +10,7 @@ import type {
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
-import { toLibraryPath } from "../library/library-path";
+import { toLibraryPath } from "../../lib/api-paths";
 
 export function getOverviewQuery(range: DayRange) {
     return queryOptions<AnalyticsOverviewOut>({

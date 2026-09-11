@@ -6,7 +6,8 @@ import {
     SEARCH_OPTIONS,
     type SearchDocument
 } from "@backend/features/search/search-index";
-import { toLibraryPath, useLibraryId } from "../library/library-path";
+import { toLibraryPath } from "../../lib/api-paths";
+import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
 import { searchDbQueryKey } from "../../lib/query-keys";
 

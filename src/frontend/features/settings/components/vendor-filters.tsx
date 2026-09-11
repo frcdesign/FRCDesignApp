@@ -13,7 +13,7 @@ import {
     useGetUiState
 } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
-import { useLibraryId } from "../../library/library-path";
+import { useLibraryId } from "../../../lib/library";
 import type { LibraryId } from "@backend/features/library/library-id";
 
 /** The current library's active filters; `undefined` means every vendor. */

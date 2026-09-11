@@ -24,7 +24,7 @@ import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useGetUiState, updateUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../features/library/library-path";
+import { getLibraryName, useLibraryId } from "../lib/library";
 import {
     RequireAccessLevel,
     useAccessData

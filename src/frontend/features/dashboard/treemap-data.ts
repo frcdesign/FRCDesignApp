@@ -1,6 +1,6 @@
 import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import { getLibraryColor } from "../../theme";
 import { colorVar, FILLED_SHADE } from "../../lib/style-constants";
 

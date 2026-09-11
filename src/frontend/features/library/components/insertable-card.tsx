@@ -8,20 +8,20 @@ import {
     DEFAULT_CONFIGURATION_KEY,
     Selection
 } from "@backend/features/configurations/models";
-import { SearchHit } from "../../search/search";
 import {
     FavoriteButton,
     FavoriteInsertableItem
 } from "../../favorites/components/favorite-button";
-import { useIsInsertableHidden } from "../card-hooks";
+import { useIsInsertableHidden } from "../visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { InsertableStatusBadge } from "../../build-status/components/build-status";
 import {
     CardTitle,
     ItemRow,
-    OpenDocumentItems,
-    QuickInsertItems
-} from "./card-components";
+    type RowMatch
+} from "../../../components/item-row";
+import { OpenDocumentItems } from "../../../components/open-document-items";
+import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
@@ -30,9 +30,19 @@ import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/events";
 
+/**
+ * What a search found in this row. Structural rather than the search feature's
+ * own `SearchHit`, which a card has no other reason to know about.
+ */
+interface InsertableMatch extends RowMatch {
+    /** The key of the selection it names, for the thumbnail and the menu. */
+    configurationKey?: ConfigurationKey;
+}
+
 interface InsertableCardProps extends PropsWithChildren {
     insertable: InsertableOut;
-    searchHit?: SearchHit;
+    /** Set when a search found this row, to underline what matched. */
+    match?: InsertableMatch;
     onClick?: () => void;
     /** Where this card is listed — browsing a group unless told otherwise. */
     source?: InsertSource;
@@ -42,7 +52,7 @@ interface InsertableCardProps extends PropsWithChildren {
  * A card representing a part studio or assembly.
  */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
-    const { insertable, searchHit, source = InsertSource.BROWSE } = props;
+    const { insertable, match, source = InsertSource.BROWSE } = props;
 
     const favorite = useFavorite(insertable.id);
 
@@ -58,8 +68,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
 
     // What the hit names, for inserting and for prefilling the menu; its key
     // is what names the thumbnail.
-    const hitSelection = searchHit?.configurationKey
-        ? decodeConfiguration(searchHit.configurationKey)
+    const hitSelection = match?.configurationKey
+        ? decodeConfiguration(match.configurationKey)
         : undefined;
 
     const openMenu = () => {
@@ -83,7 +93,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 elementId: insertable.elementId,
                 microversionId: insertable.microversionId,
                 configurationKey:
-                    searchHit?.configurationKey ?? DEFAULT_CONFIGURATION_KEY,
+                    match?.configurationKey ?? DEFAULT_CONFIGURATION_KEY,
                 // A cold search would otherwise start a render per row.
                 renderThumbnail: false
             }}
@@ -96,7 +106,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             left={
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
-                    searchHit={searchHit}
+                    match={match}
                     title={insertable.name}
                     thumbnail={thumbnail}
                     showHiddenTag={!insertable.isVisible}
@@ -114,7 +124,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                         favorite={favorite}
                         insertable={insertable}
                         selection={hitSelection}
-                        configurationKey={searchHit?.configurationKey}
+                        configurationKey={match?.configurationKey}
                     />
                 </RequireSignIn>
             }
