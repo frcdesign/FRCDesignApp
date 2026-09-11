@@ -12,6 +12,7 @@ import {
     type MetricDefinition,
     type TrendPoint
 } from "./metrics";
+import { formatCount, formatPercent } from "./format";
 
 // The charts' styles, imported where the charts are so they land in the same
 // route chunk rather than the panel's bundle.
@@ -49,7 +50,7 @@ export function MetricDetailChart({
             // A percentage is only comparable against a fixed axis.
             yAxisProps={percentage ? { domain: [0, 100] } : undefined}
             valueFormatter={(value) =>
-                percentage ? `${value}%` : String(value)
+                percentage ? formatPercent(value) : formatCount(value)
             }
             referenceLines={seasonLines(programs, trend)}
             series={[

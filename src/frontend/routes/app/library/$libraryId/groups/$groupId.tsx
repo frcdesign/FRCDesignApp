@@ -193,7 +193,7 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     const result = filterInsertables(groupInsertables, {
         vendors: vendorFilters,
-        isVisible: !hasEditorAccess(accessData.currentAccessLevel)
+        visibleOnly: !hasEditorAccess(accessData.currentAccessLevel)
     });
 
     if (result.insertables.length === 0) {

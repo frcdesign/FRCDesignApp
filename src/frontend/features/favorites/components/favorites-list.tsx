@@ -93,7 +93,7 @@ export function FavoritesList(): ReactNode {
         <FavoriteCards
             result={filterInsertables(favoriteInsertables, {
                 vendors: vendorFilters,
-                isVisible: true
+                visibleOnly: true
             })}
             favoritesData={favoritesData}
         />

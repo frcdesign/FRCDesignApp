@@ -24,7 +24,7 @@ import {
     SearchRecord
 } from "@backend/features/configurations/models";
 import { useFavorite } from "../../favorites/queries";
-import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
+import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
@@ -245,7 +245,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const uiState = useGetUiState();
-    const setUiState = useSetUiState();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -281,7 +280,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 <Checkbox
                     label="Fasten"
                     checked={uiState.fasten}
-                    onChange={() => setUiState({ fasten: !uiState.fasten })}
+                    onChange={() => updateUiState({ fasten: !uiState.fasten })}
                 />
             )}
             <Button

@@ -2,7 +2,18 @@
  * Reads of the library-wide rollups: totals, the day series behind the charts,
  * and where inserts started from.
  */
-import { and, asc, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
+import {
+    and,
+    asc,
+    count,
+    countDistinct,
+    eq,
+    gte,
+    lte,
+    sum,
+    type SQL
+} from "drizzle-orm";
+import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
 import { favorites } from "../../db/schema";
 import {
@@ -56,14 +67,27 @@ export async function getTotals(
     };
 }
 
+/**
+ * The scope every rollup read takes: one library or all of them, one window or
+ * all of time. The tables differ only in which columns carry the two.
+ */
+function scopeFilters(
+    columns: { day: SQLiteColumn; libraryId: SQLiteColumn },
+    libraryId?: LibraryId,
+    range?: DayRange
+): SQL[] {
+    const filters: SQL[] = [];
+    if (libraryId) filters.push(eq(columns.libraryId, libraryId));
+    if (range) {
+        filters.push(gte(columns.day, range.from));
+        filters.push(lte(columns.day, range.to));
+    }
+    return filters;
+}
+
 /** Each event type's counters, summed over whatever the caller scoped to. */
 function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
-    const filters = [];
-    if (libraryId) filters.push(eq(dailyMetrics.libraryId, libraryId));
-    if (range) {
-        filters.push(gte(dailyMetrics.day, range.from));
-        filters.push(lte(dailyMetrics.day, range.to));
-    }
+    const filters = scopeFilters(dailyMetrics, libraryId, range);
 
     return db
         .select({
@@ -81,12 +105,7 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
 
 /** Inserts by target, over whatever the caller scoped to. */
 function countTargets(db: Db, libraryId?: LibraryId, range?: DayRange) {
-    const filters = [];
-    if (libraryId) filters.push(eq(dailyTargetMetrics.libraryId, libraryId));
-    if (range) {
-        filters.push(gte(dailyTargetMetrics.day, range.from));
-        filters.push(lte(dailyTargetMetrics.day, range.to));
-    }
+    const filters = scopeFilters(dailyTargetMetrics, libraryId, range);
 
     return db
         .select({
@@ -157,21 +176,12 @@ export async function getLibrarySummaries(db: Db): Promise<LibrarySummary[]> {
 
 /** Daily insert mix (favorites / fasten / quick insert) across the range. */
 function activityFilters(range: DayRange, libraryId?: LibraryId) {
-    const filters = [
-        gte(dailyUserActivity.day, range.from),
-        lte(dailyUserActivity.day, range.to)
-    ];
-    if (libraryId) filters.push(eq(dailyUserActivity.libraryId, libraryId));
-    return filters;
+    return scopeFilters(dailyUserActivity, libraryId, range);
 }
 
 /** Each event type's counters per day, summed across libraries when unscoped. */
 function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
-    const filters = [
-        gte(dailyMetrics.day, range.from),
-        lte(dailyMetrics.day, range.to)
-    ];
-    if (libraryId) filters.push(eq(dailyMetrics.libraryId, libraryId));
+    const filters = scopeFilters(dailyMetrics, libraryId, range);
 
     return db
         .select({
@@ -190,11 +200,7 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
 
 /** Each day's inserts by target, summed across libraries when unscoped. */
 function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
-    const filters = [
-        gte(dailyTargetMetrics.day, range.from),
-        lte(dailyTargetMetrics.day, range.to)
-    ];
-    if (libraryId) filters.push(eq(dailyTargetMetrics.libraryId, libraryId));
+    const filters = scopeFilters(dailyTargetMetrics, libraryId, range);
 
     return db
         .select({

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import {
     loadImage,
     loadImageResult,
@@ -121,14 +121,12 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
-        queryFn: ({ signal }) => {
-            if (url === undefined) {
-                throw new Error("Tried to get thumbnail with no URL");
-            }
-            return loadImage(url, signal);
-        },
-        retry: 1,
-        enabled: url !== undefined
+        // Narrowed here rather than guarded inside: `enabled` is what keeps it
+        // from running, and the query function should not restate that.
+        queryFn: url
+            ? ({ signal }) => loadImage(url, signal)
+            : skipToken,
+        retry: 1
     });
 
     let content;

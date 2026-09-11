@@ -28,7 +28,7 @@ import {
     getLibraryStatus,
     useLibraryId
 } from "../../../../features/library/library-path";
-import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
+import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
@@ -53,7 +53,6 @@ interface Section {
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
     const uiState = useGetUiState();
-    const setUiState = useSetUiState();
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -66,7 +65,7 @@ function useHomeSections(): Section[] {
         title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: uiState.isFavoritesOpen,
-        setOpened: (opened) => setUiState({ isFavoritesOpen: opened })
+        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
     const search: Section = {
@@ -95,7 +94,7 @@ function useHomeSections(): Section[] {
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
         opened: uiState.isLibraryOpen,
-        setOpened: (opened) => setUiState({ isLibraryOpen: opened })
+        setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
     // One slot below favorites, showing search results while a query is active

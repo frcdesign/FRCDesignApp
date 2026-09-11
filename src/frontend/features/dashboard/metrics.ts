@@ -4,9 +4,9 @@ import type {
 } from "@backend/features/analytics/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
+    bucketBy,
     formatBucket,
     pickGranularity,
-    toBucketKey,
     type BucketPoint,
     type Granularity
 } from "./series";
@@ -116,16 +116,21 @@ export function rangeTerms(
  * Folded from the same points the sparkline plots, so a tile can never disagree
  * with the chart behind it.
  */
+function metricValue(
+    { numerator, denominator }: MetricTerms,
+    metric: MetricDefinition
+): number {
+    if (!metric.denominator) {
+        return numerator;
+    }
+    return denominator === 0 ? 0 : (numerator / denominator) * 100;
+}
+
 export function rangeValue(
     points: DailyMetricPoint[],
     metric: MetricDefinition
 ): number {
-    const { numerator, denominator } = rangeTerms(points, metric);
-
-    if (metric.denominator) {
-        return denominator === 0 ? 0 : (numerator / denominator) * 100;
-    }
-    return numerator;
+    return metricValue(rangeTerms(points, metric), metric);
 }
 
 /** True when the metric reads as a percentage rather than a count. */
@@ -146,39 +151,17 @@ export function toTrend(
     metric: MetricDefinition,
     granularity: Granularity = pickGranularity(points.map((p) => p.day))
 ): TrendPoint[] {
-    const buckets = new Map<
-        string,
-        { numerator: number; denominator: number; days: number }
-    >();
-    for (const point of points) {
-        const key = toBucketKey(point.day, granularity);
-        const bucket = buckets.get(key) ?? {
-            numerator: 0,
-            denominator: 0,
-            days: 0
-        };
-        bucket.numerator += metric.numerator(point);
-        bucket.denominator += metric.denominator?.(point) ?? 0;
-        bucket.days += 1;
-        buckets.set(key, bucket);
-    }
-
-    return [...buckets.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([bucket, totals]) => ({
-            bucket,
-            label: formatBucket(bucket, granularity),
-            value: bucketValue(totals, metric)
-        }));
-}
-
-function bucketValue(
-    bucket: { numerator: number; denominator: number; days: number },
-    metric: MetricDefinition
-): number {
-    if (metric.denominator) {
-        if (bucket.denominator === 0) return 0;
-        return Math.round((bucket.numerator / bucket.denominator) * 1000) / 10;
-    }
-    return bucket.numerator;
+    return bucketBy(
+        points,
+        granularity,
+        (): MetricTerms => ({ numerator: 0, denominator: 0 }),
+        (terms, point) => {
+            terms.numerator += metric.numerator(point);
+            terms.denominator += metric.denominator?.(point) ?? 0;
+        }
+    ).map(({ bucket, totals }) => ({
+        bucket,
+        label: formatBucket(bucket, granularity),
+        value: metricValue(totals, metric)
+    }));
 }

@@ -20,13 +20,16 @@ export function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
 }
 
+/** As many results as a list is worth scrolling. */
+const MAX_HITS = 50;
+
 export interface SearchFilters {
     groupId?: string;
     vendors?: Vendor[];
     isFavorite?: boolean;
 }
 
-// Range is already defined by TypeScript
+/** Named for the highlight it marks; `Range` is a DOM type. */
 export interface Position {
     start: number;
     length: number;
@@ -129,13 +132,16 @@ export function doSearch(
     });
 
     const hits: SearchHit[] = miniSearchResults
+        // Sliced before mapping: the rest are never shown, and each one costs a
+        // record match and a highlight pass per field.
+        .slice(0, MAX_HITS)
         .map((miniSearchResult) => {
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
             const record = matchedRecord(miniSearchResult, document, query);
-            const partNumber = record?.partNumber ?? undefined;
-            const partName = record?.name ?? undefined;
+            const partNumber = record?.partNumber;
+            const partName = record?.name;
             return {
                 id: document.id,
                 positions: generateHighlightPositions(
@@ -162,8 +168,7 @@ export function doSearch(
                       )
                     : undefined
             };
-        })
-        .slice(0, 50); // Limit to 50 results
+        });
 
     return { hits, filtered };
 }

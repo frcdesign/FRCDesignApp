@@ -60,6 +60,31 @@ function weekStart(day: string): string {
     return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Points folded into their buckets, in key order. The three series the dashboard
+ * plots differ only in what they accumulate, so that is all a caller supplies.
+ */
+export function bucketBy<Point extends { day: string }, Totals>(
+    points: Point[],
+    granularity: Granularity,
+    empty: () => Totals,
+    add: (totals: Totals, point: Point) => void
+): { bucket: string; totals: Totals }[] {
+    const buckets = new Map<string, Totals>();
+    for (const point of points) {
+        const key = toBucketKey(point.day, granularity);
+        let totals = buckets.get(key);
+        if (!totals) {
+            totals = empty();
+            buckets.set(key, totals);
+        }
+        add(totals, point);
+    }
+    return [...buckets.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([bucket, totals]) => ({ bucket, totals }));
+}
+
 export function toBucketKey(day: string, granularity: Granularity): string {
     switch (granularity) {
         case Granularity.MONTH:
@@ -92,30 +117,27 @@ export function toChartData(
     libraryIds: LibraryId[],
     granularity: Granularity = pickGranularity(series.map((p) => p.day))
 ): ChartPoint[] {
-    const totals = new Map<string, Map<LibraryId, number>>();
-    for (const point of series) {
-        const key = toBucketKey(point.day, granularity);
-        const counts = totals.get(key) ?? new Map<LibraryId, number>();
-        for (const [libraryId, count] of Object.entries(point.counts)) {
-            const id = libraryId as LibraryId;
-            counts.set(id, (counts.get(id) ?? 0) + (count ?? 0));
-        }
-        totals.set(key, counts);
-    }
-
-    return [...totals.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([bucket, counts]) => {
-            const point: ChartPoint = {
-                bucket,
-                label: formatBucket(bucket, granularity)
-            };
-            // Every series needs a value on every point, or lines break up.
-            for (const libraryId of libraryIds) {
-                point[getLibraryName(libraryId)] = counts.get(libraryId) ?? 0;
+    return bucketBy(
+        series,
+        granularity,
+        () => new Map<LibraryId, number>(),
+        (counts, point) => {
+            for (const [libraryId, count] of Object.entries(point.counts)) {
+                const id = libraryId as LibraryId;
+                counts.set(id, (counts.get(id) ?? 0) + (count ?? 0));
             }
-            return point;
-        });
+        }
+    ).map(({ bucket, totals }) => {
+        const point: ChartPoint = {
+            bucket,
+            label: formatBucket(bucket, granularity)
+        };
+        // Every series needs a value on every point, or lines break up.
+        for (const libraryId of libraryIds) {
+            point[getLibraryName(libraryId)] = totals.get(libraryId) ?? 0;
+        }
+        return point;
+    });
 }
 
 /** One array per top card, bucketed to the same resolution as the chart. */
@@ -138,27 +160,22 @@ interface Bucket {
  * are averaged over a bucket, not summed: one person all week is one user.
  */
 export function toSparkSeries(points: DailyMetricPoint[]): SparkSeries {
-    const granularity = pickGranularity(points.map((point) => point.day));
-    const buckets = new Map<string, Bucket>();
-
-    for (const point of points) {
-        const key = toBucketKey(point.day, granularity);
-        const bucket = buckets.get(key) ?? {
+    const ordered = bucketBy(
+        points,
+        pickGranularity(points.map((point) => point.day)),
+        (): Bucket => ({
             inserts: 0,
             activeUsers: 0,
             appOpens: 0,
             days: 0
-        };
-        bucket.inserts += point.inserts;
-        bucket.activeUsers += point.activeUsers;
-        bucket.appOpens += point.appOpens;
-        bucket.days += 1;
-        buckets.set(key, bucket);
-    }
-
-    const ordered = [...buckets.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, bucket]) => bucket);
+        }),
+        (bucket, point) => {
+            bucket.inserts += point.inserts;
+            bucket.activeUsers += point.activeUsers;
+            bucket.appOpens += point.appOpens;
+            bucket.days += 1;
+        }
+    ).map(({ totals }) => totals);
 
     return {
         inserts: ordered.map((bucket) => bucket.inserts),

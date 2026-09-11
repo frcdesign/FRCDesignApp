@@ -5,14 +5,10 @@ import { Vendor } from "@backend/features/library/vendors";
 import { doSearch, FilterResult, SearchFilters, SearchHit } from "./search";
 
 interface FilterArgs {
-    /**
-     * A list of one or more vendors to keep.
-     */
+    /** One or more vendors to keep; every vendor when absent. */
     vendors?: Vendor[];
-    /**
-     * @default false
-     */
-    isVisible?: boolean;
+    /** Drops what is hidden, which only an editor is shown. */
+    visibleOnly?: boolean;
 }
 
 /**
@@ -32,18 +28,16 @@ export function filterInsertables(
     insertables: InsertableOut[],
     args: FilterArgs
 ): FilteredInsertables {
-    let filtered = [...insertables];
-
-    if (args.isVisible) {
-        filtered = filtered.filter((ins) => ins.isVisible);
-    }
+    let filtered = args.visibleOnly
+        ? insertables.filter((insertable) => insertable.isVisible)
+        : insertables;
 
     let filteredByVendor = 0;
     if (args.vendors && args.vendors.length > 0) {
         const vendorSet = new Set(args.vendors);
         const beforeCount = filtered.length;
-        filtered = filtered.filter((ins) =>
-            ins?.vendors.some((vendor) => vendorSet.has(vendor))
+        filtered = filtered.filter((insertable) =>
+            insertable.vendors.some((vendor) => vendorSet.has(vendor))
         );
         filteredByVendor = beforeCount - filtered.length;
     }
