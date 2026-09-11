@@ -4,7 +4,12 @@
  */
 import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { configurations, favorites, insertables } from "../../db/schema";
+import {
+    configurations,
+    favorites,
+    groups,
+    insertables
+} from "../../db/schema";
 import {
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
@@ -26,6 +31,44 @@ export interface PartRow {
     versionId: string;
     isVisible: boolean;
     firstInsertedAt: Date | null;
+}
+
+/**
+ * Every part the library still lists, with the date it was first inserted.
+ * Driven off `insertables` rather than the stats table, so a part nobody has
+ * used lists at zero and one that has left the library does not list at all.
+ */
+export function getPartRows(
+    db: Db,
+    libraryId: LibraryId,
+    options: { visibleOnly?: boolean } = {}
+): Promise<PartRow[]> {
+    const filters = [eq(insertables.libraryId, libraryId)];
+    if (options.visibleOnly) {
+        filters.push(eq(insertables.isVisible, true));
+    }
+    return db
+        .select({
+            elementId: insertables.elementId,
+            name: insertables.name,
+            groupName: groups.name,
+            documentId: insertables.documentId,
+            versionId: insertables.versionId,
+            isVisible: insertables.isVisible,
+            firstInsertedAt: insertableStats.firstInsertedAt
+        })
+        .from(insertables)
+        .leftJoin(
+            insertableStats,
+            and(
+                eq(insertableStats.libraryId, insertables.libraryId),
+                eq(insertableStats.elementId, insertables.elementId)
+            )
+        )
+        // `groupId` is a non-null FK that cascades, so a row always matches.
+        .innerJoin(groups, eq(groups.id, insertables.groupId))
+        .where(and(...filters))
+        .all();
 }
 
 /** One part counted over the window rather than over its whole history. */

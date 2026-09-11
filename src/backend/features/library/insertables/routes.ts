@@ -13,11 +13,7 @@ import {
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type InsertOut } from "../contract";
-import {
-    toElementPath,
-    type ElementPath,
-    INSTANCE_TYPES
-} from "../../../lib/onshape/path";
+import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
     type Selection
@@ -26,10 +22,8 @@ import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
-    parseConfigurationRecords,
-    type ConfigurationRecordsResult
+    parseConfigurationRecords
 } from "../../load/parse-configuration-records";
-import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/events";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
@@ -141,15 +135,16 @@ insertableRoutes.post(
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
         const indexed = indexing.shouldIndex
-            ? await indexRecords(await c.var.getOnshapeApi(), {
-                  documentId: row.documentId,
-                  versionId: row.versionId,
-                  elementId: row.elementId,
-                  elementType: row.elementType,
-                  isOpenComposite: row.isOpenComposite,
+            ? await parseConfigurationRecords(
+                  await c.var.getOnshapeApi(),
+                  {
+                      elementPath: toElementPath(row),
+                      elementType: row.elementType,
+                      isOpenComposite: row.isOpenComposite
+                  },
                   parameters,
-                  configurations: indexing.configurations
-              })
+                  indexing.configurations
+              )
             : NO_RECORDS;
 
         // Clear first, so an issue the reindex resolved (or that disabling makes
@@ -197,38 +192,6 @@ insertableRoutes.post(
         return c.json({ success: true });
     }
 );
-
-/**
- * Runs in a request, so it uses the unbatched {@link parseConfigurationRecords}
- * rather than the workflow's stepped loader.
- */
-function indexRecords(
-    client: OnshapeApi,
-    insertable: {
-        documentId: string;
-        versionId: string;
-        elementId: string;
-        elementType: ElementType;
-        isOpenComposite: boolean;
-        parameters: ConfigurationParameter[];
-        configurations: Selection[];
-    }
-): Promise<ConfigurationRecordsResult> {
-    const sourcePath: ElementPath = {
-        documentId: insertable.documentId,
-        instanceId: insertable.versionId,
-        instanceType: "v",
-        elementId: insertable.elementId
-    };
-    return parseConfigurationRecords(
-        client,
-        sourcePath,
-        insertable.elementType,
-        insertable.parameters,
-        insertable.configurations,
-        insertable.isOpenComposite
-    );
-}
 
 /**
  * The tab being inserted into, in the body so the whole path arrives as one

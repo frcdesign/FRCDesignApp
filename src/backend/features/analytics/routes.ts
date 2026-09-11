@@ -6,8 +6,7 @@ import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { getDb } from "../../db/client";
-import { configurations, groups, insertables } from "../../db/schema";
-import { insertableStats } from "./schema";
+import { configurations, insertables } from "../../db/schema";
 import type {
     AnalyticsOverviewOut,
     InsertableReportOut,
@@ -28,6 +27,7 @@ import {
     getConfigurationCounts,
     getPartInsertable,
     getPartParameters,
+    getPartRows,
     getPartSparklines,
     getPartStats,
     getWindowedInsertCounts,
@@ -140,31 +140,8 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const range = c.req.valid("query");
 
-        // Driven off the library, not the stats table: an unused part still lists
-        // at zero, and one that has left the library does not list at all.
         const [rows, series, windowed] = await Promise.all([
-            db
-                .select({
-                    elementId: insertables.elementId,
-                    firstInsertedAt: insertableStats.firstInsertedAt,
-                    name: insertables.name,
-                    documentId: insertables.documentId,
-                    versionId: insertables.versionId,
-                    isVisible: insertables.isVisible,
-                    groupName: groups.name
-                })
-                .from(insertables)
-                .leftJoin(
-                    insertableStats,
-                    and(
-                        eq(insertableStats.libraryId, insertables.libraryId),
-                        eq(insertableStats.elementId, insertables.elementId)
-                    )
-                )
-                // `groupId` is a non-null FK that cascades, so a row always matches.
-                .innerJoin(groups, eq(groups.id, insertables.groupId))
-                .where(eq(insertables.libraryId, libraryId))
-                .all(),
+            getPartRows(db, libraryId),
             getPartSparklines(db, libraryId),
             getWindowedInsertCounts(db, libraryId, range)
         ]);
@@ -190,35 +167,8 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const { threshold, ...range } = c.req.valid("query");
 
-        // Drives off insertables (not the stats table) so parts with no events at
-        // all — the ones that matter most here — are included.
         const [rows, series, windowed] = await Promise.all([
-            db
-                .select({
-                    elementId: insertables.elementId,
-                    name: insertables.name,
-                    documentId: insertables.documentId,
-                    versionId: insertables.versionId,
-                    groupName: groups.name,
-                    isVisible: insertables.isVisible,
-                    firstInsertedAt: insertableStats.firstInsertedAt
-                })
-                .from(insertables)
-                .leftJoin(
-                    insertableStats,
-                    and(
-                        eq(insertableStats.libraryId, insertables.libraryId),
-                        eq(insertableStats.elementId, insertables.elementId)
-                    )
-                )
-                .innerJoin(groups, eq(groups.id, insertables.groupId))
-                .where(
-                    and(
-                        eq(insertables.libraryId, libraryId),
-                        eq(insertables.isVisible, true)
-                    )
-                )
-                .all(),
+            getPartRows(db, libraryId, { visibleOnly: true }),
             getPartSparklines(db, libraryId),
             getWindowedInsertCounts(db, libraryId, range)
         ]);

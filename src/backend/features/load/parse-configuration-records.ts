@@ -223,87 +223,88 @@ export function parseAssemblyRecord(
     return record;
 }
 
-/**
- * Indexes an insertable's configuration records in one pass. For request
- * handlers, which have no workflow step to hang the fetches off.
- */
-export async function parseConfigurationRecords(
-    client: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType,
-    parameters: ConfigurationParameter[],
-    configurations: Selection[],
-    isOpenComposite: boolean
-): Promise<ConfigurationRecordsResult> {
-    const defaultRecord = await probeConfiguration(
-        client,
-        elementPath,
-        elementType,
-        {},
-        isOpenComposite
-    );
-    const batches = planBatches(configurations, parameters);
-
-    const batchRecords: ProbedRecord[][] = [];
-    for (const batch of batches) {
-        batchRecords.push(
-            await fetchBatch(
-                client,
-                elementPath,
-                elementType,
-                batch,
-                isOpenComposite
-            )
-        );
-    }
-    return toResult(defaultRecord, batchRecords, parameters);
+/** The element a probe reads, carried together rather than threaded apart. */
+export interface ProbeTarget {
+    elementPath: ElementPath;
+    elementType: ElementType;
+    isOpenComposite: boolean;
 }
 
 /**
- * One durable step per batch, so a rate-limited retry re-fetches only that
- * batch. An exhausted batch throws rather than saving a half-built list.
+ * How one Onshape read is run. A request awaits it directly; the workflow wraps
+ * each in a durable step, so a rate-limited retry re-fetches only that batch.
+ * The client is fetched per read rather than held, since a step that retries
+ * hours later needs a token that has not expired.
  */
-export async function loadConfigurationRecords(
-    ctx: LoadContext,
-    insertableId: string,
-    elementPath: ElementPath,
-    elementType: ElementType,
+type ProbeRunner = (
+    name: string,
+    read: () => Promise<ProbedRecord[]>
+) => Promise<ProbedRecord[]>;
+
+async function indexRecords(
+    getClient: () => Promise<OnshapeApi>,
+    run: ProbeRunner,
+    target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    configurations: Selection[],
-    isOpenComposite: boolean
+    configurations: Selection[]
 ): Promise<ConfigurationRecordsResult> {
-    const defaultRecord = await ctx.step.do(
-        `records-${insertableId}-default`,
-        { retries: ONSHAPE_STEP_RETRIES },
-        async () =>
-            probeConfiguration(
-                await getOnshapeApiFromContext(ctx),
-                elementPath,
-                elementType,
-                {},
-                isOpenComposite
-            )
+    // The element's own defaults, probed as a batch of one so every read the
+    // runner sees has the same shape.
+    const [defaultRecord] = await run("default", async () =>
+        fetchBatch(await getClient(), target, [{}])
     );
     const batches = planBatches(configurations, parameters);
 
     const batchRecords: ProbedRecord[][] = [];
     for (const [index, batch] of batches.entries()) {
         batchRecords.push(
-            await ctx.step.do(
-                `records-${insertableId}-batch-${index}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                async () =>
-                    fetchBatch(
-                        await getOnshapeApiFromContext(ctx),
-                        elementPath,
-                        elementType,
-                        batch,
-                        isOpenComposite
-                    )
+            await run(`batch-${index}`, async () =>
+                fetchBatch(await getClient(), target, batch)
             )
         );
     }
     return toResult(defaultRecord, batchRecords, parameters);
+}
+
+/** For request handlers, which have no workflow step to hang the fetches off. */
+export function parseConfigurationRecords(
+    client: OnshapeApi,
+    target: ProbeTarget,
+    parameters: ConfigurationParameter[],
+    configurations: Selection[]
+): Promise<ConfigurationRecordsResult> {
+    return indexRecords(
+        () => Promise.resolve(client),
+        (_name, read) => read(),
+        target,
+        parameters,
+        configurations
+    );
+}
+
+/**
+ * One durable step per batch. An exhausted batch throws rather than saving a
+ * half-built list.
+ */
+export function loadConfigurationRecords(
+    ctx: LoadContext,
+    insertableId: string,
+    target: ProbeTarget,
+    parameters: ConfigurationParameter[],
+    configurations: Selection[]
+): Promise<ConfigurationRecordsResult> {
+    return indexRecords(
+        () => getOnshapeApiFromContext(ctx),
+        (name, read) =>
+            ctx.step.do(
+                `records-${insertableId}-${name}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                read
+            ),
+        target,
+        parameters,
+        configurations
+    );
 }
 
 /**
@@ -331,11 +332,10 @@ function planBatches(
 /** Reads the record Onshape reports for an element in a given configuration. */
 async function probeConfiguration(
     client: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType,
-    selection: Selection,
-    isOpenComposite: boolean
+    target: ProbeTarget,
+    selection: Selection
 ): Promise<ProbedRecord> {
+    const { elementPath, elementType, isOpenComposite } = target;
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
             await getElementMetadata(client, elementPath, selection),
@@ -352,22 +352,12 @@ async function probeConfiguration(
 /** Probes each configuration in a batch. */
 async function fetchBatch(
     client: OnshapeApi,
-    elementPath: ElementPath,
-    elementType: ElementType,
-    batch: Selection[],
-    isOpenComposite: boolean
+    target: ProbeTarget,
+    batch: Selection[]
 ): Promise<ProbedRecord[]> {
     const records: ProbedRecord[] = [];
     for (const selection of batch) {
-        records.push(
-            await probeConfiguration(
-                client,
-                elementPath,
-                elementType,
-                selection,
-                isOpenComposite
-            )
-        );
+        records.push(await probeConfiguration(client, target, selection));
     }
     return records;
 }

@@ -91,11 +91,9 @@ export async function loadInsertable(
         ? await loadConfigurationRecords(
               ctx,
               insertableId,
-              elementPath,
-              target.elementType,
+              { elementPath, elementType: target.elementType, isOpenComposite },
               parameters,
-              indexing.configurations,
-              isOpenComposite
+              indexing.configurations
           )
         : NO_RECORDS;
 
