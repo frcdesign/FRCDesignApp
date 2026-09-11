@@ -2,12 +2,38 @@
 
 ## Comments
 
-Keep comments short. Prefer one line, with two lines as an absolute maximum.
-Explain _why_ something is done, not _what_ the code does — the what
-should be inferable from the code. Don't restate a function's behavior in its
-doc comment when the signature already says it (e.g. write "returns the access
-level, respecting the cache" — not a paragraph re-deriving the caching).
-Aggressively delete comments that narrate obvious implementation details.
+Explain _why_, not _what_: the what is in the code. Don't restate a signature
+(write "returns the access level, respecting the cache", not a paragraph
+re-deriving the caching), and delete comments that narrate obvious steps.
+
+One or two lines is the usual size. Go longer only for something genuinely
+hard — a protocol Onshape does not document, a fix whose reason is not visible
+from the code — and then say the hard thing plainly rather than compressing it
+into dense prose. **No comment is better than a long one, and a long one is
+better than a short one that is wrong.** Brevity is not worth an inaccuracy.
+
+A comment is a claim, and a reader will believe it without checking. So:
+
+- **Don't assert an invariant nothing enforces.** "Values never carry a `;`"
+  was true of the values anyone had tried and false of the ones a user could
+  type; it stood above the code it was wrong about for months. If a comment
+  states an invariant, either the code next to it enforces that invariant, or
+  the comment names what does (a validator, a schema, a filter upstream). If
+  neither is true, the comment is a bug report — fix the code instead.
+- **Write what you checked, not what you assume.** "These enums share these
+  values" was written about two enums that overlap on two of five members.
+  Prefer "the loader filters to these two types, so a cast is safe here" —
+  which a reader can go and verify — over a flat assertion they cannot.
+- **Hedge where you are actually unsure.** "as far as I can tell" and "Onshape
+  does not document this" are useful; they tell the next person where to look.
+  Confident phrasing on a guess is worse than no comment.
+- **Don't write a comment that forecloses checking.** "which is what lets this
+  round-trip" and "so nothing else has to" read as settled and stop the reader
+  from looking. State the reason; don't certify the conclusion.
+
+Update the comment in the same change as the code it describes, and delete it
+when it stops being true. A stale comment outranks the code in a reader's head,
+which is what makes it worse than none.
 
 ## Components
 

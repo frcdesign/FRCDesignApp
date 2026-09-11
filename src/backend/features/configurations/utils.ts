@@ -131,11 +131,11 @@ function escapeValue(value: string): string {
 
 /**
  * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
- * A string parameter can hold anything, so its value is escaped — otherwise a
- * typed `;` reads as the end of the assignment and sets the next parameter.
+ * A string parameter can hold anything, so `escapeValue` is what keeps a typed
+ * `;` from reading as the end of the assignment and setting the next parameter.
  *
- * Only the structural characters are escaped, leaving the rest as Onshape's
- * query parameter already carried them.
+ * Only the structural characters are escaped, so a value that holds none of
+ * them encodes exactly as it did before — which the stored keys rely on.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
