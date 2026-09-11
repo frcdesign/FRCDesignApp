@@ -1,4 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { handledError } from "../../lib/api-error";
+import { HttpStatus } from "http-status-ts";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import {
@@ -10,7 +12,7 @@ import {
 import { type Db, getDb } from "../../db/client";
 import { users, favorites, configurations } from "../../db/schema";
 import { toKey, toSelection } from "../configurations/selection";
-import type { Favorite, FavoritesData } from "./contract";
+import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import type { ConfigurationParameter } from "../configurations/models";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
@@ -29,7 +31,9 @@ const addFavoriteBody = z.object({
     selection: z.record(z.string(), z.string()).optional()
 });
 
-const favoriteOrderBody = z.object({ favoriteOrder: z.array(z.string()) });
+const favoriteOrderBody = z.object({
+    favoriteOrder: z.array(z.string()).max(MAX_FAVORITES)
+});
 
 const defaultSelectionBody = z.object({
     selection: z.record(z.string(), z.string())
@@ -148,7 +152,8 @@ favoriteRoutes.post(
             .values({ id: userId, libraryId })
             .onConflictDoNothing();
 
-        // Ordered onto the end of what they already have.
+        // Ordered onto the end of what they already have, and counted to see
+        // whether there is room for one more.
         const existing = await db
             .select({ value: count() })
             .from(favorites)
@@ -159,6 +164,16 @@ favoriteRoutes.post(
                 )
             )
             .get();
+
+        const sortOrder = existing?.value ?? 0;
+        if (sortOrder >= MAX_FAVORITES) {
+            // Handled rather than internal: the caller can act on this, and
+            // removing one is the whole of what it takes.
+            throw handledError(
+                `You can keep up to ${MAX_FAVORITES} favorites in a library. Remove one to add another.`,
+                HttpStatus.CONFLICT
+            );
+        }
 
         await db
             .insert(favorites)
@@ -173,7 +188,7 @@ favoriteRoutes.post(
                           await getParametersFor(db, insertableId)
                       )
                     : undefined,
-                sortOrder: existing?.value ?? 0,
+                sortOrder,
                 createdAt: new Date()
             })
             .onConflictDoNothing();
@@ -208,16 +223,16 @@ favoriteRoutes.post(
         const db = getDb(c.env.DB);
         // Scoped to the owner rather than checked first: a favorite that is not
         // theirs matches nothing, which costs no extra read.
-        await Promise.all(
-            favoriteOrder.map((id, i) =>
-                db
-                    .update(favorites)
-                    .set({ sortOrder: i })
-                    .where(
-                        and(eq(favorites.id, id), eq(favorites.userId, userId))
-                    )
-            )
+        const writes = favoriteOrder.map((id, i) =>
+            db
+                .update(favorites)
+                .set({ sortOrder: i })
+                .where(and(eq(favorites.id, id), eq(favorites.userId, userId)))
         );
+        // One round trip for the whole reorder; `batch` will not take an empty one.
+        if (writes.length > 0) {
+            await db.batch([writes[0], ...writes.slice(1)]);
+        }
 
         return c.json({ success: true });
     }

@@ -151,6 +151,13 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   the insert's `featureId` is nullable and was being passed to Onshape's
   open-feature message unchecked.
 
+- **Favorites cap** — 250 per user per library. The count the next `sortOrder`
+  already needed answers it, so the check costs no extra read. Refused as a
+  handled error rather than an internal one: the caller can act on it, and
+  removing one is the whole of what it takes, so they should be told which.
+  The reorder is bounded by the same number and goes in one batch instead of a
+  statement per favorite.
+
 - **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
   are gone; the workflow was already the only correct path. `drizzle-kit` and
   the router devtools moved to `devDependencies`.
