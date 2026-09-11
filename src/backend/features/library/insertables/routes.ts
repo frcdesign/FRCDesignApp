@@ -234,7 +234,7 @@ async function readSelection(
     };
 }
 
-const insertBodySchema = z.object({
+const insertBody = z.object({
     targetPath: targetPathSchema,
     selection: selectionSchema,
     isFavorite: z.boolean().default(false),
@@ -244,11 +244,11 @@ const insertBodySchema = z.object({
     source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
-const addToPartStudioBody = insertBodySchema.extend({
+const addToPartStudioBody = insertBody.extend({
     useMateConnector: z.boolean().default(false)
 });
 
-const addToAssemblyBody = insertBodySchema.extend({
+const addToAssemblyBody = insertBody.extend({
     fasten: z.boolean().default(false)
 });
 

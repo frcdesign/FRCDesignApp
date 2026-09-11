@@ -1,4 +1,4 @@
-import { useAccessData } from "../../auth/access-level";
+import { useShowHidden } from "../../auth/access-level";
 import { ReactNode } from "react";
 import { SearchFilters } from "../search";
 import { searchInsertables } from "../filter";
@@ -11,7 +11,6 @@ import {
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
-import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { InsertSource } from "@backend/features/analytics/events";
 
 interface SearchResultsProps {
@@ -32,7 +31,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
 
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
-    const accessData = useAccessData();
+    const showHidden = useShowHidden();
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading library..." />;
@@ -48,7 +47,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         insertables: libraryQuery.data.insertables,
         query,
         filters,
-        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+        showHidden
     });
 
     if (result.insertables.length === 0) {

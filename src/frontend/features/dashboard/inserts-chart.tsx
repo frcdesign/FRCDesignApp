@@ -17,22 +17,12 @@ interface InsertsByLibraryCardProps {
 /** Tall enough to read a year of daily points without squinting. */
 const PAGE_CHART_HEIGHT = 280;
 
-function ChartCard({
-    title,
-    children
-}: {
-    title: string;
-    children: ReactNode;
-}): ReactNode {
-    return <SectionCard title={title}>{children}</SectionCard>;
-}
-
 /** Every library on one axis, for the app dashboard. */
 export function InsertsByLibraryCard({
     series
 }: InsertsByLibraryCardProps): ReactNode {
     return (
-        <ChartCard title="Uses over time">
+        <SectionCard title="Uses over time">
             {/* Always monthly: this one plots everything recorded, and a finer
                 cut of two years is noise rather than detail. The app spans
                 both competitions, so both are marked. */}
@@ -42,7 +32,7 @@ export function InsertsByLibraryCard({
                 programs={[Program.FTC, Program.FRC]}
                 granularity={Granularity.MONTH}
             />
-        </ChartCard>
+        </SectionCard>
     );
 }
 
@@ -57,13 +47,13 @@ export function InsertsOverTimeCard({
     libraryId
 }: InsertsOverTimeCardProps): ReactNode {
     return (
-        <ChartCard title="Uses over time">
+        <SectionCard title="Uses over time">
             <MetricDetailChart
                 metric={METRICS.inserts}
                 trend={toTrend(series, METRICS.inserts)}
                 h={PAGE_CHART_HEIGHT}
                 programs={[LIBRARY_PROGRAM[libraryId]]}
             />
-        </ChartCard>
+        </SectionCard>
     );
 }

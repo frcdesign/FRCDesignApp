@@ -1,4 +1,4 @@
-import { useAccessData } from "../../../../../features/auth/access-level";
+import { useShowHidden } from "../../../../../features/auth/access-level";
 import { AppTitle } from "../../../../../components/app-title";
 import {
     createFileRoute,
@@ -22,7 +22,6 @@ import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { InsertSource } from "@backend/features/analytics/events";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
-import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { filterInsertables } from "../../../../../features/search/filter";
 import { GroupMenuItems } from "../../../../../features/library/components/group-card";
 import { InsertableCard } from "../../../../../features/library/components/insertable-card";
@@ -170,7 +169,7 @@ interface GroupListCardsProps {
 function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
-    const accessData = useAccessData();
+    const showHidden = useShowHidden();
     const vendorFilters = useVendorFilters();
 
     const groupInsertables = group.insertableOrder
@@ -193,7 +192,7 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     const result = filterInsertables(groupInsertables, {
         vendors: vendorFilters,
-        visibleOnly: !hasEditorAccess(accessData.currentAccessLevel)
+        visibleOnly: !showHidden
     });
 
     if (result.insertables.length === 0) {

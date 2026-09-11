@@ -38,12 +38,16 @@ import {
 } from "./parsed-section";
 import { GroupAdminSection, InsertableAdminSection } from "./admin-section";
 
-interface BuildStatusCardProps {
+/** What the card and the badge both say about a group or an insertable. */
+interface BuildStatusSubject {
     /** The group/insertable name shown in the header. */
     name: string;
     issues: BuildIssue[];
-    /** When the entity was last successfully loaded (epoch ms); null if never. */
+    /** When it was last successfully loaded (epoch ms); null if never. */
     lastLoadedAt: number | null;
+}
+
+interface BuildStatusCardProps extends BuildStatusSubject {
     /** The group/insertable admin menu wrapped by the card. */
     children: ReactNode;
 }
@@ -73,12 +77,7 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
     );
 }
 
-interface BuildStatusBadgeProps {
-    /** The group/insertable name shown in the header. */
-    name: string;
-    issues: BuildIssue[];
-    /** When the entity was last successfully loaded (epoch ms); null if never. */
-    lastLoadedAt: number | null;
+interface BuildStatusBadgeProps extends BuildStatusSubject {
     /** The group/insertable admin menu shown in the hover card. */
     hoverMenu: ReactNode;
 }
@@ -96,10 +95,10 @@ export function useCloseBuildCard(): () => void {
 
 /**
  * A severity icon whose hover card shows the build-status card wrapping the
- * given admin menu. Only rendered for editors and admins.
+ * given admin menu. Gated first, so the card and its admin controls only exist
+ * for an editor.
  */
 function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
-    // Gate first so the card and its admin controls only exist for editors.
     return (
         <RequireAccessLevel>
             <BuildStatusHoverCard {...props} />
@@ -107,12 +106,15 @@ function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     );
 }
 
+/** The badge's own props, passed straight through once the gate allows it. */
+type BuildStatusHoverCardProps = BuildStatusBadgeProps;
+
 function BuildStatusHoverCard({
     name,
     issues,
     lastLoadedAt,
     hoverMenu
-}: BuildStatusBadgeProps): ReactNode {
+}: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
     const jobRunning = useIsJobRunning();
 
@@ -193,6 +195,8 @@ interface LastModifiedProps {
  */
 function LastModified(props: LastModifiedProps): ReactNode {
     const { lastLoadedAt } = props;
+    // Asked for again rather than threaded through three components; React
+    // Query serves both readers from one cache entry.
     const jobRunning = useIsJobRunning();
     if (jobRunning) {
         return (
@@ -277,19 +281,19 @@ function InsertableHoverMenu(props: InsertableHoverMenuProps): ReactNode {
 
 interface GroupStatusBadgeProps {
     groupId: string;
-    groupName: string;
+    name: string;
 }
 
 /** Build-status badge pre-wired for a group (includes live visibility check). */
 export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
-    const { groupId, groupName } = props;
+    const { groupId, name } = props;
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
     const issues = useGroupBuildIssues(groupStatus, data?.insertables);
     if (!groupStatus) return null;
     return (
         <BuildStatusBadge
-            name={groupName}
+            name={name}
             issues={issues}
             lastLoadedAt={groupStatus.lastLoadedAt}
             hoverMenu={

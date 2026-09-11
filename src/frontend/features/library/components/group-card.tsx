@@ -56,7 +56,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                     buildStatusBadge={
                         <GroupStatusBadge
                             groupId={group.id}
-                            groupName={group.name}
+                            name={group.name}
                         />
                     }
                 />

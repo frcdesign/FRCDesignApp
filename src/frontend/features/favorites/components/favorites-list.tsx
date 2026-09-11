@@ -1,4 +1,4 @@
-import { useAccessData } from "../../auth/access-level";
+import { useAccessData, useShowHidden } from "../../auth/access-level";
 import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -27,7 +27,6 @@ import { ItemTable } from "../../../components/item-row";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
-import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
 import { FavoriteIcon } from "./favorite-button";
 import { startSignIn } from "../../auth/sign-in";
@@ -126,7 +125,7 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     const { query, insertables, favoritesData } = props;
 
     const vendorFilters = useVendorFilters();
-    const accessData = useAccessData();
+    const showHidden = useShowHidden();
     const searchDbQuery = useSearchDbQuery();
 
     if (searchDbQuery.isLoading) {
@@ -145,7 +144,7 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         favoritedInsertableIds: new Set(
             Object.values(favoritesData.favorites).map((f) => f.insertableId)
         ),
-        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+        showHidden
     });
 
     return <FavoriteCards result={result} favoritesData={favoritesData} />;
