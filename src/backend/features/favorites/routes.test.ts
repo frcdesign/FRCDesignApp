@@ -1,8 +1,11 @@
-import { type ConfigurationKey } from "../configurations/contract";
+import {
+    type ConfigurationKey,
+    type SearchRecord
+} from "../configurations/contract";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { favorites, insertables } from "../../db/schema";
+import { configurations, favorites, insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
 import { ApiErrorKind } from "../../lib/api-error";
@@ -34,6 +37,7 @@ interface FavoritesBody {
             insertableId: string;
             defaultSelection?: Record<string, string>;
             configurationKey?: ConfigurationKey;
+            record?: SearchRecord;
         }
     >;
     favoriteOrder: string[];
@@ -168,6 +172,102 @@ describe("favorites routes", () => {
             expect(favorite.defaultSelection).toEqual(configuration);
             // "true" is the parameter default, so it names no override at all.
             expect(favorite.configurationKey).toBe("");
+        });
+
+        // The row's thumbnail is this configuration's, so its part number has
+        // to be too — resolving it from anything else shows two parts at once.
+        it("resolves the record its own selection produces", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({
+                    // The favorite's own record listed second, so picking the
+                    // first would answer with the default instead.
+                    records: [
+                        {
+                            configurationKey: "",
+                            partNumber: "WCP-2222",
+                            name: "Default",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        },
+                        {
+                            configurationKey: "boolean=false",
+                            partNumber: "WCP-1111",
+                            name: "Plain",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        }
+                    ]
+                })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            await db
+                .update(favorites)
+                .set({ defaultSelection: { boolean: "false" } })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const favorite = soleFavorite(await res.json());
+            expect(favorite.configurationKey).toBe("boolean=false");
+            expect(favorite.record?.partNumber).toBe("WCP-1111");
+            expect(favorite.record?.name).toBe("Plain");
+        });
+
+        // A favorite saved with no selection of its own opens on the element's
+        // defaults, so that is the record it has to name.
+        it("resolves the default record for a favorite with no selection", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({
+                    records: [
+                        {
+                            configurationKey: "boolean=false",
+                            partNumber: "WCP-1111",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        },
+                        {
+                            configurationKey: "",
+                            partNumber: "WCP-2222",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        }
+                    ]
+                })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            await seedFavorite(db, TEST_PART_STUDIO_ID);
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const favorite = soleFavorite(await res.json());
+            expect(favorite.configurationKey).toBeUndefined();
+            expect(favorite.record?.partNumber).toBe("WCP-2222");
+        });
+
+        // An insertable with nothing to configure has no configurations row at
+        // all; the join has to answer that as no record rather than throwing.
+        it("has no record for an insertable with no configuration", async () => {
+            await seedPartStudio(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID);
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            expect(res.status).toBe(200);
+            expect(soleFavorite(await res.json()).record).toBeUndefined();
         });
 
         it("only returns the current user's favorites", async () => {

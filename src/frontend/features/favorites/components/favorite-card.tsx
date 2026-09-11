@@ -8,7 +8,11 @@ import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
-import { CardTitle, ItemRow } from "../../../components/item-row";
+import {
+    CardTitle,
+    ItemRow,
+    type RowMatch
+} from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { useIsInsertableHidden } from "../../library/visibility";
@@ -21,10 +25,7 @@ import {
     openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
 } from "../../../components/alerts";
-import {
-    useFavoritesQuery,
-    useSetFavoriteOrderMutation
-} from "../queries";
+import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
 import { SearchHit } from "../../search/search";
 import { InsertSource } from "@backend/features/analytics/events";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
@@ -50,6 +51,18 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     if (isHidden) {
         return null;
     }
+
+    // The part number and name come from the favorite's own configuration, not
+    // from whatever the query matched — the two must never disagree with the
+    // thumbnail beside them, which is that same configuration's. Only the title
+    // underlining is the search's, and favorites do not search the part-number
+    // or part-name fields, so nothing in those ever matched to underline.
+    const rowMatch: RowMatch = {
+        positions: searchHit?.positions ?? [],
+        partNumber: favorite.record?.partNumber,
+        partName: favorite.record?.name,
+        url: favorite.record?.url
+    };
 
     return (
         <ItemRow
@@ -83,7 +96,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             }}
                         />
                     }
-                    match={searchHit}
+                    match={rowMatch}
                 />
             }
             rightSection={

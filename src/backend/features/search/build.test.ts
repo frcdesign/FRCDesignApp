@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchDb, toSearchRecords } from "./build";
+import { buildSearchDb } from "./build";
+import { toSearchRecords } from "./records";
 import { LibraryOut } from "../library/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "../library/vendors";

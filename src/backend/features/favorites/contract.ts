@@ -1,4 +1,8 @@
-import { ConfigurationKey, Selection } from "../configurations/contract";
+import {
+    ConfigurationKey,
+    SearchRecord,
+    Selection
+} from "../configurations/contract";
 import { LibraryId } from "../library/library-id";
 
 /**
@@ -16,6 +20,12 @@ export interface Favorite {
     /** That selection's key, which names its thumbnail. Derived per response:
      * a reload moves the defaults, and a card has no parameters of its own. */
     configurationKey?: ConfigurationKey;
+    /**
+     * What that selection is called and numbered. Derived here for the same
+     * reason as the key, and carried so a favorite row never has to read a part
+     * number off anything but the configuration it was saved with.
+     */
+    record?: SearchRecord;
 }
 
 export interface FavoritesData {
