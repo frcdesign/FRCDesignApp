@@ -2,9 +2,6 @@ import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/cont
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../lib/api-client";
-import { queryClient } from "../../../lib/query-client";
 import { Menu } from "@mantine/core";
 import { PencilIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
@@ -24,14 +21,11 @@ import {
     openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
 } from "../../../components/alerts";
-import { getAppErrorHandler } from "../../../lib/errors";
-import { useFavoritesQuery } from "../queries";
-import { favoritesQueryKey } from "../../../lib/query-keys";
-import { useRefreshFavorites } from "../../../lib/refresh";
-import { produce } from "immer";
+import {
+    useFavoritesQuery,
+    useSetFavoriteOrderMutation
+} from "../queries";
 import { SearchHit } from "../../search/search";
-import { toLibraryPath } from "../../../lib/api-paths";
-import { useLibraryId } from "../../../lib/library";
 import { InsertSource } from "@backend/features/analytics/events";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
 
@@ -168,37 +162,4 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             />
         </>
     );
-}
-
-function useSetFavoriteOrderMutation() {
-    const libraryId = useLibraryId();
-    const refreshFavorites = useRefreshFavorites();
-
-    const queryKey = favoritesQueryKey(libraryId);
-
-    return useMutation({
-        mutationKey: ["set-favorite-order"],
-        mutationFn: async (favoriteOrder: string[]) => {
-            return apiPost("/favorite-order" + toLibraryPath(libraryId), {
-                body: { favoriteOrder }
-            });
-        },
-        onMutate: async (newOrder: string[]) => {
-            await queryClient.cancelQueries({ queryKey });
-            queryClient.setQueryData(
-                queryKey,
-                produce((data?: { favoriteOrder: string[] }) => {
-                    if (!data) return undefined;
-                    data.favoriteOrder = newOrder;
-                    return data;
-                })
-            );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
-        },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to reorder favorites."
-        ),
-        onSettled: refreshFavorites
-    });
 }

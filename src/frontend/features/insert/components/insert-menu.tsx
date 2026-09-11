@@ -15,8 +15,7 @@ import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
-import { useInsertMutation } from "../insert-hooks";
-import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
+import { useConfigurationQuery, useInsertMutation, useIsFetchingConfiguration } from "../queries";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,

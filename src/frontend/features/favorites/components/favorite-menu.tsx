@@ -5,27 +5,19 @@ import { Button } from "@mantine/core";
 import { FloppyDiskIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../lib/api-client";
-import { showErrorToast, showSuccessToast } from "../../../lib/notifications";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { ConfigurationWrapper } from "../../insert/components/configurations";
-import type { FavoritesData } from "@backend/features/favorites/contract";
 import { FavoriteIcon } from "./favorite-button";
-import { queryClient } from "../../../lib/query-client";
 import {
     DEFAULT_CONFIGURATION_KEY,
-    type ConfigurationKey,
     Selection,
     SearchRecord
 } from "@backend/features/configurations/contract";
-import { useFavoritesQuery } from "../queries";
+import {
+    useFavoritesQuery,
+    useSetDefaultConfigurationMutation
+} from "../queries";
 import { useLibraryQuery } from "../../library/queries";
-import { favoritesQueryKey } from "../../../lib/query-keys";
-import { getQueryUpdater } from "../../../lib/query-cache";
-import { toFavoritePath } from "../../../lib/api-paths";
-import { useLibraryId } from "../../../lib/library";
-import { useRefreshFavorites } from "../../../lib/refresh";
 import { PageNotice } from "../../../components/app-zero-state";
 
 interface FavoriteMenuContentProps {
@@ -34,53 +26,6 @@ interface FavoriteMenuContentProps {
     modalId: string;
     /** What the favorite opens with today. */
     initialSelection?: Selection;
-}
-
-/**
- * Saves what the favorite opens with. Takes its key too, so the
- * cached row names the right thumbnail before the refetch answers.
- */
-function useSetDefaultConfigurationMutation(
-    favoriteId: string,
-    selection: Selection | undefined,
-    configurationKey: ConfigurationKey | undefined
-) {
-    const libraryId = useLibraryId();
-    const refreshFavorites = useRefreshFavorites();
-    return useMutation({
-        mutationKey: ["set-default-selection"],
-        mutationFn: async () => {
-            // The whole selection, not its key: the key names only what the
-            // selection overrides, and the favorite opens on all of it.
-            return apiPost("/default-selection" + toFavoritePath(favoriteId), {
-                body: { selection: selection }
-            });
-        },
-        onMutate: async () => {
-            const queryKey = favoritesQueryKey(libraryId);
-            await queryClient.cancelQueries({ queryKey });
-            queryClient.setQueryData(
-                queryKey,
-                getQueryUpdater((data: FavoritesData) => {
-                    const fav = data.favorites[favoriteId];
-                    if (fav) {
-                        fav.defaultSelection = selection;
-                        fav.configurationKey = configurationKey;
-                    }
-                    return data;
-                })
-            );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
-        },
-        onError: () => {
-            showErrorToast("Unexpectedly failed to update default selection.");
-        },
-        onSuccess: () => {
-            showSuccessToast("Successfully updated default selection.");
-        },
-        onSettled: refreshFavorites
-    });
 }
 
 export function FavoriteMenuContent(

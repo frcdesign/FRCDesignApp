@@ -1,6 +1,10 @@
-/** Queries for the library snapshot, its cache version, and its load jobs. */
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { apiGet } from "../../lib/api-client";
+/** Reads and writes of the library: its snapshot, cache version and load jobs. */
+import {
+    queryOptions,
+    useMutation,
+    useQuery
+} from "@tanstack/react-query";
+import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
 import { type JobStatus } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
@@ -13,6 +17,17 @@ import {
     libraryDataQueryKey,
     libraryVersionQueryKey
 } from "../../lib/query-keys";
+import { queryClient } from "../../lib/query-client";
+import { getQueryUpdater } from "../../lib/query-cache";
+import {
+    showErrorToast,
+    showInfoToast,
+    showLoadingToast
+} from "../../lib/notifications";
+import { getAppErrorHandler, appError } from "../../lib/errors";
+import { modals } from "@mantine/modals";
+import { parseOnshapeUrl } from "../../lib/url";
+import { useRefreshLibrary } from "../../lib/refresh";
 
 export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryOut>({
@@ -105,4 +120,109 @@ function useJobStatusQuery() {
             signedIn && hasEditorAccess(currentAccessLevel)
         )
     );
+}
+
+/** Deleting cascades to insertables and their favorites. */
+export function useDeleteGroupMutation(groupId: string) {
+    const libraryId = useLibraryId();
+    const refreshLibrary = useRefreshLibrary();
+    return useMutation({
+        mutationKey: ["delete-group", groupId],
+        mutationFn: async () =>
+            apiDelete("/group" + toLibraryPath(libraryId), {
+                query: { groupId }
+            }),
+        // Refresh the whole view, not just the library list.
+        onSuccess: refreshLibrary
+    });
+}
+
+export function useSetGroupOrderMutation() {
+    const libraryId = useLibraryId();
+    const cacheVersion = useCacheVersion();
+    const refreshLibrary = useRefreshLibrary();
+    const key = libraryDataQueryKey(libraryId, cacheVersion);
+
+    return useMutation({
+        mutationKey: ["group-order"],
+        mutationFn: async (groupOrder: string[]) =>
+            apiPost("/group-order" + toLibraryPath(libraryId), {
+                body: { groupOrder }
+            }),
+        onMutate: async (newOrder: string[]) => {
+            await queryClient.cancelQueries({ queryKey: key });
+            queryClient.setQueryData(
+                key,
+                getQueryUpdater((data: LibraryOut) => {
+                    data.groupOrder = newOrder;
+                    return data;
+                })
+            );
+        },
+        onError: () => {
+            showErrorToast("Unexpectedly failed to reorder group.");
+        },
+        // Reconciled (or rolled back on error) by the onSettled library refetch.
+        onSettled: refreshLibrary
+    });
+}
+
+/**
+ * Shows the spinner without waiting for a round trip, and starts the job poll,
+ * which stays idle until something is known to be running.
+ */
+function markJobStarted(libraryId: LibraryId): void {
+    const justStarted: JobStatus = { running: true, runningForMs: 0 };
+    queryClient.setQueryData<JobStatus>(
+        jobStatusQueryKey(libraryId),
+        justStarted
+    );
+}
+
+/** Reloads documents whose version moved on, or all of them. */
+export function useReloadGroupsMutation(reloadAll: boolean) {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["reload-groups", libraryId],
+        mutationFn: (): Promise<{ status: string }> =>
+            apiPost("/reload-groups" + toLibraryPath(libraryId), {
+                query: { forceReload: reloadAll }
+            }),
+        onError: getAppErrorHandler("Failed to reload documents!"),
+        onSuccess: (data) => {
+            markJobStarted(libraryId);
+            showInfoToast(
+                data.status === "already-running"
+                    ? "A reload is already running."
+                    : "Reloading documents..."
+            );
+        }
+    });
+}
+
+/** Adds an Onshape document to the library, by its url. */
+export function useAddGroupMutation(selectedGroupId?: string) {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["add-group", libraryId],
+        mutationFn: async (url: string) => {
+            const newDocumentId = parseOnshapeUrl(url)?.documentId;
+            if (!newDocumentId) {
+                throw appError("Failed to parse url.");
+            }
+            showLoadingToast("Adding document...", "add-group");
+            modals.closeAll();
+            return apiPost("/group" + toLibraryPath(libraryId), {
+                body: { newDocumentId, selectedGroupId }
+            });
+        },
+        onError: getAppErrorHandler(
+            "Failed to add document. Make sure the document is valid.",
+            "add-group"
+        ),
+        onSuccess: () => {
+            showInfoToast("Adding document...", { id: "add-group" });
+            markJobStarted(libraryId);
+        }
+    });
 }

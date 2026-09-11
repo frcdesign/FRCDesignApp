@@ -1,3 +1,4 @@
+import { useReloadGroupsMutation } from "../queries";
 import { Button, Text } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { ArrowsClockwiseIcon, WarningIcon } from "@phosphor-icons/react";
@@ -5,15 +6,6 @@ import { AppIcon } from "../../../components/app-icon";
 import { AppTitle } from "../../../components/app-title";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import { showInfoToast } from "../../../lib/notifications";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../lib/api-client";
-import { queryClient } from "../../../lib/query-client";
-import { getAppErrorHandler } from "../../../lib/errors";
-import { toLibraryPath } from "../../../lib/api-paths";
-import { useLibraryId } from "../../../lib/library";
-import { jobStatusQueryKey } from "../../../lib/query-keys";
-import type { JobStatus } from "@backend/features/load/contract";
 
 interface ReloadGroupsButtonProps {
     reloadAll?: boolean;
@@ -22,34 +14,11 @@ interface ReloadGroupsButtonProps {
 export function ReloadGroupsButton(props: ReloadGroupsButtonProps): ReactNode {
     const { reloadAll = false } = props;
 
-    const libraryId = useLibraryId();
     // Reloading everything spends the account's Onshape allocation, so it is
     // spoken in the same red as anything else that cannot be taken back.
     const color = reloadAll ? StatusColor.ERROR : StatusColor.INFO;
 
-    const mutation = useMutation({
-        mutationKey: ["reload-groups"],
-        mutationFn: (): Promise<{ status: string }> => {
-            return apiPost("/reload-groups" + toLibraryPath(libraryId), {
-                query: { forceReload: reloadAll }
-            });
-        },
-        onError: getAppErrorHandler("Failed to reload documents!"),
-        onSuccess: (data) => {
-            // Seeding rather than invalidating shows the spinner without waiting
-            // for a round trip.
-            const justStarted: JobStatus = { running: true, runningForMs: 0 };
-            queryClient.setQueryData<JobStatus>(
-                jobStatusQueryKey(libraryId),
-                justStarted
-            );
-            showInfoToast(
-                data.status === "already-running"
-                    ? "A reload is already running."
-                    : "Reloading documents..."
-            );
-        }
-    });
+    const mutation = useReloadGroupsMutation(reloadAll);
 
     const handleClick = () => {
         modals.openConfirmModal({

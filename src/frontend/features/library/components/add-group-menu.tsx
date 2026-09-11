@@ -1,20 +1,10 @@
+import { useAddGroupMutation } from "../queries";
 import { Button, Menu, TextInput } from "@mantine/core";
-import { modals } from "@mantine/modals";
 import { openAppModal } from "../../../components/open-app-modal";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../lib/api-client";
-import { parseOnshapeUrl } from "../../../lib/url";
-import { appError, getAppErrorHandler } from "../../../lib/errors";
-import { showInfoToast, showLoadingToast } from "../../../lib/notifications";
-import { queryClient } from "../../../lib/query-client";
-import { toLibraryPath } from "../../../lib/api-paths";
-import { useLibraryId } from "../../../lib/library";
-import { jobStatusQueryKey } from "../../../lib/query-keys";
-import type { JobStatus } from "@backend/features/load/contract";
 
 function openAddGroupMenu(selectedGroupId?: string) {
     openAppModal({
@@ -29,37 +19,9 @@ interface AddGroupMenuContentProps {
 
 function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
     const { selectedGroupId } = props;
-    const libraryId = useLibraryId();
     const [url, setUrl] = useState("");
 
-    const mutation = useMutation({
-        mutationKey: ["add-group"],
-        mutationFn: async () => {
-            const newDocumentId = parseOnshapeUrl(url)?.documentId;
-            if (!newDocumentId) {
-                throw appError("Failed to parse url.");
-            }
-            showLoadingToast("Adding document...", "add-group");
-            modals.closeAll();
-            return apiPost("/group" + toLibraryPath(libraryId), {
-                body: { newDocumentId, selectedGroupId }
-            });
-        },
-        onError: getAppErrorHandler(
-            "Failed to add document. Make sure the document is valid.",
-            "add-group"
-        ),
-        onSuccess: () => {
-            showInfoToast("Adding document...", { id: "add-group" });
-            // Starts the job poll, which stays idle until something is known to
-            // be running, and shows the spinner without waiting for a request.
-            const justStarted: JobStatus = { running: true, runningForMs: 0 };
-            queryClient.setQueryData<JobStatus>(
-                jobStatusQueryKey(libraryId),
-                justStarted
-            );
-        }
-    });
+    const mutation = useAddGroupMutation(selectedGroupId);
 
     return (
         <>
@@ -76,7 +38,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
                     variant="light"
                     ml="auto"
                     leftSection={<PlusIcon size={IconSize.SMALL} />}
-                    onClick={() => mutation.mutate()}
+                    onClick={() => mutation.mutate(url)}
                     loading={mutation.isPending}
                 >
                     Add

@@ -8,7 +8,8 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { InsertSource } from "@backend/features/analytics/events";
 import { IconSize } from "../../../lib/style-constants";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
-import { useInsertMutation, useIsAssemblyInPartStudio } from "../insert-hooks";
+import { useIsAssemblyInPartStudio } from "../insert-hooks";
+import { useInsertMutation } from "../queries";
 
 interface QuickInsertItemsProps {
     insertable: InsertableOut;
