@@ -10,9 +10,8 @@ import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
 import { AppIcon } from "./app-icon";
 import { TruncatedText } from "./truncated-text";
-import { HighlightedText } from "./highlighted-text";
 import { PartNumberLink } from "./part-number";
-import { type Position } from "../lib/highlight";
+import { mergePositions, type Position } from "../lib/highlight";
 
 /**
  * What a row shows about the query that found it. Structural rather than the
@@ -214,4 +213,33 @@ export function ItemRow(props: ItemRowProps): ReactNode {
             </Table.Tr>
         </AppContextMenu>
     );
+}
+
+interface HighlightedTextProps {
+    text: string;
+    /** Where the query matched; nothing highlights when absent. */
+    positions?: Position[];
+}
+
+/** Underlines wherever the query matched inside `text`. */
+function HighlightedText(props: HighlightedTextProps): ReactNode {
+    const { text, positions = [] } = props;
+    const result: ReactNode[] = [];
+    let currentIndex = 0;
+
+    // `mergePositions` walks an index map upward, so its runs come out
+    // ascending and disjoint; this reads the string in one pass on that.
+    for (const { start, length } of mergePositions(positions)) {
+        const end = start + length;
+        if (currentIndex < start) {
+            result.push(text.slice(currentIndex, start));
+        }
+        result.push(<u key={currentIndex}>{text.slice(start, end)}</u>);
+        currentIndex = end;
+    }
+
+    if (currentIndex < text.length) {
+        result.push(text.slice(currentIndex));
+    }
+    return <>{result}</>;
 }

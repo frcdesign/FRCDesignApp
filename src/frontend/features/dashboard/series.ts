@@ -85,7 +85,7 @@ export function bucketBy<Point extends { day: string }, Totals>(
         .map(([bucket, totals]) => ({ bucket, totals }));
 }
 
-export function toBucketKey(day: string, granularity: Granularity): string {
+function toBucketKey(day: string, granularity: Granularity): string {
     switch (granularity) {
         case Granularity.MONTH:
             return day.slice(0, 7);

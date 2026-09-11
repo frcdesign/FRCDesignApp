@@ -68,7 +68,7 @@ describe("configuration text", () => {
         expect(decodeConfiguration("")).toEqual({});
     });
 
-    it("percent-encodes a value, as Onshape's own encoding does", () => {
+    it("percent-encodes a value", () => {
         expect(encodeConfiguration({ length: "0.0508 m" })).toBe(
             "length=0.0508%20m"
         );

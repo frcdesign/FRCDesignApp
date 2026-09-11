@@ -129,7 +129,9 @@ export function ConfigurationWrapper(
     );
 
     // The one place the panel writes back: the menu inserts the selection it
-    // holds, so settling has to reach it. Idempotent, so this runs once.
+    // holds, so settling has to reach it. `sameSelection` is what stops the
+    // loop, and it stops after one write only while normalizeSelection reaches
+    // a fixed point — see the cap it can bail out at.
     useEffect(() => {
         if (whole && !sameSelection(selection, whole)) {
             setSelection(whole);

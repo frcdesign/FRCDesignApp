@@ -119,14 +119,16 @@ export function getPartUrl(
 }
 
 /**
- * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
- * Values are percent-encoded, which is what Onshape's own encoding does and
- * what keeps a `;` typed into a string parameter from reading as the end of
- * the assignment. Ids are Onshape's and need no encoding.
+ * The text form of a configuration: `id=value;id=value`, values percent-encoded
+ * so a `;` or `=` typed into a string parameter cannot read as the end of the
+ * assignment. {@link decodeConfiguration} is the other half, and `utils.test.ts`
+ * pins the round trip.
  *
- * A caller putting this in a query string encodes it again, and Onshape then
- * decodes twice: once for the query, once for the configuration. A request
- * body carries it as written, so it is decoded once.
+ * Onshape's own encoding is not documented as far as I can tell; percent-encoding
+ * is what this codebase's request bodies already sent, so it is what both halves
+ * now agree on. Whether Onshape decodes a configuration in a query string once or
+ * twice has not been checked against a live document — if a value with a `%` or a
+ * space comes back wrong from Onshape, that is the thing to check first.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {

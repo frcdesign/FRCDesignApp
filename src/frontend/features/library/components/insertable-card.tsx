@@ -116,32 +116,28 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         />
     );
 
-    const favoriteButton = (
-        <RequireSignIn>
-            <FavoriteButton
-                favorite={favorite}
-                insertable={insertable}
-                selection={hitSelection}
-                configurationKey={match?.configurationKey}
-            />
-        </RequireSignIn>
-    );
-
-    const menuItems = (
-        <InsertableMenuItems
-            favorite={favorite}
-            insertable={insertable}
-            selection={hitSelection}
-            source={source}
-        />
-    );
-
     return (
         <ItemRow
             onClick={openMenu}
             left={title}
-            rightSection={favoriteButton}
-            menuItems={menuItems}
+            rightSection={
+                <RequireSignIn>
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                        selection={hitSelection}
+                        configurationKey={match?.configurationKey}
+                    />
+                </RequireSignIn>
+            }
+            menuItems={
+                <InsertableMenuItems
+                    favorite={favorite}
+                    insertable={insertable}
+                    selection={hitSelection}
+                    source={source}
+                />
+            }
         />
     );
 }

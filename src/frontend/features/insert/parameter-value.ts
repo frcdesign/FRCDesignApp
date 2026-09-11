@@ -63,8 +63,11 @@ function normalizeOnce(
         }
         const visible = getVisibleOptions(parameter, next, parameters);
         next[parameter.id] =
-            resolveSelectedOption(visible, next[parameter.id], parameter.default)
-                ?.id ?? parameter.default;
+            resolveSelectedOption(
+                visible,
+                next[parameter.id],
+                parameter.default
+            )?.id ?? parameter.default;
     }
     return next;
 }
@@ -80,8 +83,14 @@ export function sameSelection(a: Selection | undefined, b: Selection): boolean {
 
 /**
  * What the panel actually shows, with each parameter settled against the others.
- * Repeated because resolving one can change what conditions on it allow, and
- * bounded because each pass either settles a parameter or changes nothing.
+ * Repeated because resolving one can change what conditions on it allow.
+ *
+ * The pass cap is what bounds it, not convergence: two parameters whose
+ * conditions name each other could alternate forever, and no configuration
+ * Onshape has handed us does, but nothing here rules it out. Bailing out that
+ * way returns a selection that is not a fixed point, which is why the caller
+ * writing this back has to guard against re-running rather than assume one
+ * write settles it.
  */
 export function normalizeSelection(
     selection: Selection,

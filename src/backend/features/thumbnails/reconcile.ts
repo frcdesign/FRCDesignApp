@@ -54,7 +54,7 @@ export interface ReconcileResult {
  * a thumbnail key names no library, so a set built from one would read every
  * other library's thumbnails as orphaned.
  */
-export async function liveSubjects(db: Db): Promise<Set<string>> {
+async function liveSubjects(db: Db): Promise<Set<string>> {
     const [insertableRows, groupRows] = await Promise.all([
         db
             .select({
