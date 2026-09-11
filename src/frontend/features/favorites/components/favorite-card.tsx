@@ -111,7 +111,8 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
-    const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
+    const favoritesQuery = useFavoritesQuery();
+    const favoriteOrder = favoritesQuery.data?.favoriteOrder ?? [];
 
     return (
         <>

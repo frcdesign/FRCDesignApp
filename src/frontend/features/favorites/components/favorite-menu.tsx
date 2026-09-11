@@ -33,8 +33,10 @@ export function FavoriteMenuContent(
 ): ReactNode {
     const { favoriteId, modalId, initialSelection } = props;
 
-    const insertables = useLibraryQuery().data?.insertables;
-    const favoritesData = useFavoritesQuery().data;
+    const libraryQuery = useLibraryQuery();
+    const favoritesQuery = useFavoritesQuery();
+    const insertables = libraryQuery.data?.insertables;
+    const favoritesData = favoritesQuery.data;
 
     const [selection, setSelection] = useState<Selection | undefined>(
         initialSelection

@@ -55,7 +55,8 @@ export function useFavoritesQuery() {
 
 /** The caller's favorite for an insertable, if signed in and it is one. */
 export function useFavorite(insertableId: string): Favorite | undefined {
-    const favorites = useFavoritesQuery().data?.favorites;
+    const favoritesQuery = useFavoritesQuery();
+    const favorites = favoritesQuery.data?.favorites;
     return favorites
         ? getFavoriteForInsertable(favorites, insertableId)
         : undefined;

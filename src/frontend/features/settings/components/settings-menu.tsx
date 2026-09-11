@@ -180,7 +180,8 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
 }
 
 function ThemeSelect(): ReactNode {
-    const theme = useGetUiState().theme;
+    const uiState = useGetUiState();
+    const theme = uiState.theme;
     const saveSettings = useSaveSettings();
 
     return (

@@ -19,7 +19,8 @@ import {
     rangeTerms,
     rangeValue,
     toTrend,
-    type MetricDefinition
+    type MetricDefinition,
+    type TrendPoint
 } from "./metrics";
 import { formatCount, formatPercent, formatFraction } from "./format";
 import { AppSparkline } from "./sparkline";
@@ -39,6 +40,63 @@ interface TrendTileProps {
  * One number and its trend, with what went into it on hover. Leads with the
  * range so it agrees with the sparkline beneath it.
  */
+interface TileFaceProps {
+    metric: MetricDefinition;
+    /** The range value and the all-time figure, already spelled. */
+    value: string;
+    lifetime: string;
+    trend: TrendPoint[];
+}
+
+/** The tile itself, which is also the hover target. */
+function TileFace(props: TileFaceProps): ReactNode {
+    const { metric, value, lifetime, trend } = props;
+    return (
+        <Card withBorder padding="lg" radius="md">
+            <Group gap={6} wrap="nowrap">
+                <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+                    {metric.label}
+                </Text>
+                {/* Affordance for the hover; the card is the target. */}
+                <InfoIcon
+                    size={IconSize.SMALL}
+                    opacity={0.6}
+                    aria-label={`About ${metric.label}`}
+                />
+            </Group>
+            <Title order={2}>{value}</Title>
+            <AppSparkline
+                data={trend.map((point) => point.value)}
+                h={SPARKLINE_HEIGHT}
+            />
+            <Text size="xs" c="dimmed">
+                {lifetime} all time
+            </Text>
+        </Card>
+    );
+}
+
+interface TileDetailProps {
+    metric: MetricDefinition;
+    series: DailyMetricPoint[];
+}
+
+/** What the hover adds: what the metric means, and the numbers behind it. */
+function TileDetail(props: TileDetailProps): ReactNode {
+    const { metric, series } = props;
+    return (
+        <Stack gap="sm">
+            <div>
+                <Text fw={500}>{metric.label}</Text>
+                <Text size="xs" c="dimmed">
+                    {metric.description}
+                </Text>
+            </div>
+            <MetricTerms metric={metric} series={series} />
+        </Stack>
+    );
+}
+
 export function TrendTile({
     metric,
     totals,
@@ -69,38 +127,15 @@ export function TrendTile({
             openDelay={150}
         >
             <HoverCard.Target>
-                <Card withBorder padding="lg" radius="md">
-                    <Group gap={6} wrap="nowrap">
-                        <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
-                            {metric.label}
-                        </Text>
-                        {/* Affordance for the hover; the card is the target. */}
-                        <InfoIcon
-                            size={IconSize.SMALL}
-                            opacity={0.6}
-                            aria-label={`About ${metric.label}`}
-                        />
-                    </Group>
-                    <Title order={2}>{value}</Title>
-                    <AppSparkline
-                        data={trend.map((point) => point.value)}
-                        h={SPARKLINE_HEIGHT}
-                    />
-                    <Text size="xs" c="dimmed">
-                        {lifetime} all time
-                    </Text>
-                </Card>
+                <TileFace
+                    metric={metric}
+                    value={value}
+                    lifetime={lifetime}
+                    trend={trend}
+                />
             </HoverCard.Target>
             <HoverCard.Dropdown w={DETAIL_WIDTH} p="md">
-                <Stack gap="sm">
-                    <div>
-                        <Text fw={500}>{metric.label}</Text>
-                        <Text size="xs" c="dimmed">
-                            {metric.description}
-                        </Text>
-                    </div>
-                    <MetricTerms metric={metric} series={series} />
-                </Stack>
+                <TileDetail metric={metric} series={series} />
             </HoverCard.Dropdown>
         </HoverCard>
     );

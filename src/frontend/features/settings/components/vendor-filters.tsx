@@ -18,7 +18,9 @@ import type { LibraryId } from "@backend/features/library/library-id";
 
 /** The current library's active filters; `undefined` means every vendor. */
 export function useVendorFilters(): Vendor[] | undefined {
-    return useGetUiState().vendorFilters[useLibraryId()];
+    const uiState = useGetUiState();
+    const libraryId = useLibraryId();
+    return uiState.vendorFilters[libraryId];
 }
 
 /** Replaces one library's filters, leaving what the others have picked. An

@@ -1,6 +1,5 @@
 import {
     ActionIcon,
-    Anchor,
     Center,
     CopyButton,
     Group,
@@ -8,7 +7,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from "@phosphor-icons/react";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect } from "react";
 import { modals } from "@mantine/modals";
 import type { SearchRecord } from "@backend/features/configurations/contract";
@@ -19,6 +18,7 @@ import {
     TITLE_ICON_NUDGE
 } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
+import { PartNumberLink } from "./part-number";
 
 interface AppTitleProps {
     title: ReactNode;
@@ -116,67 +116,57 @@ export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
 /** The xs line box the subtitle row is otherwise sized by, floored. */
 const COPY_BUTTON_SIZE = 16;
 
-/** The part number, linked to the vendor's page for it when there is one. */
+interface CopyPartNumberButtonProps {
+    partNumber: string;
+}
+
+/** Sized to the text line: taller, and the row grows, shifting the title. */
+function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
+    const { partNumber } = props;
+    return (
+        <CopyButton value={partNumber}>
+            {({ copied, copy }) => (
+                <Tooltip
+                    label={copied ? "Copied" : "Copy part number"}
+                    withArrow
+                >
+                    <ActionIcon
+                        variant="subtle"
+                        color={copied ? "teal" : "gray"}
+                        size={COPY_BUTTON_SIZE}
+                        aria-label="Copy part number"
+                        onClick={copy}
+                    >
+                        {copied ? (
+                            <CheckIcon size={IconSize.TINY} />
+                        ) : (
+                            <CopyIcon size={IconSize.TINY} />
+                        )}
+                    </ActionIcon>
+                </Tooltip>
+            )}
+        </CopyButton>
+    );
+}
+
 interface PartNumberProps {
     partNumber: string;
     url?: string;
 }
 
+/** The part number, linked to the vendor's page for it when there is one. */
 function PartNumber(props: PartNumberProps): ReactNode {
     const { partNumber, url } = props;
-    // Nowhere to send them, so offer the number itself to search with.
-    if (!url) {
-        return (
-            <>
-                <Text inherit truncate miw={0}>
-                    {partNumber}
-                </Text>
-                <CopyButton value={partNumber}>
-                    {({ copied, copy }) => (
-                        <Tooltip
-                            label={copied ? "Copied" : "Copy part number"}
-                            withArrow
-                        >
-                            <ActionIcon
-                                variant="subtle"
-                                color={copied ? "teal" : "gray"}
-                                // Sized to the text line: taller, and the row
-                                // grows, shifting the title above it.
-                                size={COPY_BUTTON_SIZE}
-                                aria-label="Copy part number"
-                                onClick={copy}
-                            >
-                                {copied ? (
-                                    <CheckIcon size={IconSize.TINY} />
-                                ) : (
-                                    <CopyIcon size={IconSize.TINY} />
-                                )}
-                            </ActionIcon>
-                        </Tooltip>
-                    )}
-                </CopyButton>
-            </>
-        );
+    if (url) {
+        return <PartNumberLink url={url}>{partNumber}</PartNumberLink>;
     }
+    // Nowhere to send them, so offer the number itself to search with.
     return (
-        // inline-flex so the icon centres on the text rather than sitting on
-        // its baseline, and takes the link's color by being inside it.
-        <Anchor
-            href={url}
-            target="_blank"
-            inherit
-            onClick={(event) => event.stopPropagation()}
-            style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 2,
-                minWidth: 0
-            }}
-        >
-            <Text component="span" inherit truncate miw={0}>
+        <>
+            <Text inherit truncate miw={0}>
                 {partNumber}
             </Text>
-            <ArrowSquareOutIcon size={IconSize.TINY} />
-        </Anchor>
+            <CopyPartNumberButton partNumber={partNumber} />
+        </>
     );
 }

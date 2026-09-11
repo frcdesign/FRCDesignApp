@@ -48,7 +48,8 @@ interface ResolvedAccessData extends AccessData {
 export function useAccessData(): ResolvedAccessData {
     const { data, isPending } = useQuery(getAccessDataQuery());
     const serverData = data ?? DEFAULT_ACCESS_DATA;
-    const chosenLevel = useGetUiState().accessLevel;
+    const uiState = useGetUiState();
+    const chosenLevel = uiState.accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
         let currentAccessLevel = desired;
@@ -65,7 +66,8 @@ export function useAccessData(): ResolvedAccessData {
  * is pending, so a signed-out render wants useAccessData().isPending as well.
  */
 export function useIsSignedIn(): boolean {
-    return useAccessData().signedIn;
+    const accessData = useAccessData();
+    return accessData.signedIn;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {
@@ -102,5 +104,6 @@ export function RequireSignIn(props: PropsWithChildren) {
  * meant finding four of them and getting the negation right at each.
  */
 export function useShowHidden(): boolean {
-    return hasEditorAccess(useAccessData().currentAccessLevel);
+    const accessData = useAccessData();
+    return hasEditorAccess(accessData.currentAccessLevel);
 }

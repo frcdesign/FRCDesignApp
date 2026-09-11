@@ -100,42 +100,48 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         />
     );
 
+    const title = (
+        <CardTitle
+            disabled={isAssemblyInPartStudio}
+            match={match}
+            title={insertable.name}
+            thumbnail={thumbnail}
+            showHiddenTag={!insertable.isVisible}
+            buildStatusBadge={
+                <InsertableStatusBadge
+                    insertableId={insertable.id}
+                    name={insertable.name}
+                />
+            }
+        />
+    );
+
+    const favoriteButton = (
+        <RequireSignIn>
+            <FavoriteButton
+                favorite={favorite}
+                insertable={insertable}
+                selection={hitSelection}
+                configurationKey={match?.configurationKey}
+            />
+        </RequireSignIn>
+    );
+
+    const menuItems = (
+        <InsertableMenuItems
+            favorite={favorite}
+            insertable={insertable}
+            selection={hitSelection}
+            source={source}
+        />
+    );
+
     return (
         <ItemRow
             onClick={openMenu}
-            left={
-                <CardTitle
-                    disabled={isAssemblyInPartStudio}
-                    match={match}
-                    title={insertable.name}
-                    thumbnail={thumbnail}
-                    showHiddenTag={!insertable.isVisible}
-                    buildStatusBadge={
-                        <InsertableStatusBadge
-                            insertableId={insertable.id}
-                            name={insertable.name}
-                        />
-                    }
-                />
-            }
-            rightSection={
-                <RequireSignIn>
-                    <FavoriteButton
-                        favorite={favorite}
-                        insertable={insertable}
-                        selection={hitSelection}
-                        configurationKey={match?.configurationKey}
-                    />
-                </RequireSignIn>
-            }
-            menuItems={
-                <InsertableMenuItems
-                    favorite={favorite}
-                    insertable={insertable}
-                    selection={hitSelection}
-                    source={source}
-                />
-            }
+            left={title}
+            rightSection={favoriteButton}
+            menuItems={menuItems}
         />
     );
 }

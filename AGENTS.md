@@ -45,6 +45,21 @@ A function declared inside a component is a `const` arrow, never a `function`
 declaration: the surrounding component is the hoisting boundary, and an arrow
 reads as the value it is.
 
+Every hook call is its own `const`, on its own line, before anything else the
+body does — never inline in an expression, an argument, an index, or a `return`.
+`return useGetUiState().vendorFilters[useLibraryId()]` works today and breaks the
+day someone adds an early return above it, because the hooks stop running in the
+same order every render. Read the hook, then use what it gave you:
+
+```ts
+const uiState = useGetUiState();
+const libraryId = useLibraryId();
+return uiState.vendorFilters[libraryId];
+```
+
+The same goes for `&&` and `?:` around a hook — `!hidden && !useShowHidden()`
+short-circuits, which is a conditional call the linter will reject.
+
 ## Layout
 
 `src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There

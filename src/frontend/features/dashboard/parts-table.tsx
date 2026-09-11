@@ -37,6 +37,33 @@ const COLUMN_WIDTH = {
     onshape: 90
 } as const;
 
+interface SortableColumn {
+    label: string;
+    column: SortColumn;
+    align?: "right";
+    /** Left off the first column, which absorbs the leftover width. */
+    width?: number;
+}
+
+/** The sortable headings, in the order they are shown. */
+const SORTABLE_COLUMNS: SortableColumn[] = [
+    { label: "Part", column: "name" },
+    { label: "Group", column: "groupName", width: COLUMN_WIDTH.group },
+    {
+        label: "Uses per month",
+        column: "usesPerMonth",
+        align: "right",
+        width: COLUMN_WIDTH.usesPerMonth
+    },
+    {
+        // Not "total": this is the selected window's count.
+        label: "Uses",
+        column: "insertCount",
+        align: "right",
+        width: COLUMN_WIDTH.uses
+    }
+];
+
 interface PartsTableProps {
     libraryId: LibraryId;
     parts: PartUsageOut[];
@@ -76,36 +103,14 @@ export function PartsTable({
             <Table striped highlightOnHover>
                 <Table.Thead>
                     <Table.Tr>
-                        <SortableTh
-                            label="Part"
-                            column="name"
-                            sort={sort}
-                            onToggle={toggle}
-                        />
-                        <SortableTh
-                            label="Group"
-                            column="groupName"
-                            sort={sort}
-                            onToggle={toggle}
-                            width={COLUMN_WIDTH.group}
-                        />
-                        <SortableTh
-                            label="Uses per month"
-                            column="usesPerMonth"
-                            sort={sort}
-                            onToggle={toggle}
-                            align="right"
-                            width={COLUMN_WIDTH.usesPerMonth}
-                        />
-                        {/* Not "total": this is the selected window's count. */}
-                        <SortableTh
-                            label="Uses"
-                            column="insertCount"
-                            sort={sort}
-                            onToggle={toggle}
-                            align="right"
-                            width={COLUMN_WIDTH.uses}
-                        />
+                        {SORTABLE_COLUMNS.map((heading) => (
+                            <SortableTh
+                                key={heading.column}
+                                {...heading}
+                                sort={sort}
+                                onToggle={toggle}
+                            />
+                        ))}
                         <Table.Th w={COLUMN_WIDTH.sparkline}>
                             Last {MONTH_DAYS} days
                         </Table.Th>
@@ -128,14 +133,9 @@ export function PartsTable({
     );
 }
 
-interface SortableThProps {
-    label: string;
-    column: SortColumn;
+interface SortableThProps extends SortableColumn {
     sort: SortState;
     onToggle: (column: SortColumn) => void;
-    align?: "right";
-    /** Left off the first column, which absorbs the leftover width. */
-    width?: number;
 }
 
 function SortableTh({

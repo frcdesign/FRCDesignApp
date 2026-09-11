@@ -64,7 +64,8 @@ export function getLibraryVersionQuery(libraryId: LibraryId) {
 export function useCacheVersion(): number {
     const libraryId = useLibraryId();
     // Loaded by the library route before anything reading this renders.
-    return useQuery(getLibraryVersionQuery(libraryId)).data ?? 0;
+    const versionQuery = useQuery(getLibraryVersionQuery(libraryId));
+    return versionQuery.data ?? 0;
 }
 
 /** Poll a fresh job often, then back off: a full reload runs for hours. */
@@ -103,12 +104,13 @@ function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
 }
 
 /**
- * Job status for the current library. The endpoint is editor-only and needs an
- * Onshape session, so callers who have neither don't poll it at all.
+ * Whether a library load is running, which several places show a spinner for.
+ * The endpoint is editor-only and needs an Onshape session, so callers who have
+ * neither don't poll it at all.
  */
-/** Whether a library load is running, which several places show a spinner for. */
 export function useIsJobRunning(): boolean {
-    return useJobStatusQuery().data?.running ?? false;
+    const jobStatusQuery = useJobStatusQuery();
+    return jobStatusQuery.data?.running ?? false;
 }
 
 function useJobStatusQuery() {

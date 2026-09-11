@@ -2,8 +2,8 @@
  * The anatomy of a list row, shared by the library, favorites and search: the
  * table that holds rows, a row itself, and the title block inside it.
  */
-import { Anchor, Group, Stack, Table, Text } from "@mantine/core";
-import { ArrowSquareOutIcon, EyeSlashIcon } from "@phosphor-icons/react";
+import { Group, Stack, Table, Text } from "@mantine/core";
+import { EyeSlashIcon } from "@phosphor-icons/react";
 import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
@@ -11,6 +11,7 @@ import { AppContextMenu, MenuButton } from "./app-menu";
 import { AppIcon } from "./app-icon";
 import { TruncatedText } from "./truncated-text";
 import { HighlightedText } from "./highlighted-text";
+import { PartNumberLink } from "./part-number";
 import { type Position } from "../lib/highlight";
 
 /**
@@ -155,24 +156,7 @@ function CardPartNumber(props: CardPartNumberProps): ReactNode {
             </Text>
         );
     }
-    return (
-        <Anchor
-            href={url}
-            target="_blank"
-            inherit
-            // The row inserts on click, which is not what the link is for.
-            onClick={(event) => event.stopPropagation()}
-            display="inline-flex"
-            miw={0}
-            maw="100%"
-            style={{ alignItems: "center", gap: 2, ...NO_SHRINK }}
-        >
-            <Text component="span" inherit truncate miw={0}>
-                {text}
-            </Text>
-            <ArrowSquareOutIcon size={IconSize.TINY} />
-        </Anchor>
-    );
+    return <PartNumberLink url={url}>{text}</PartNumberLink>;
 }
 
 /**

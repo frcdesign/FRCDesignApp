@@ -51,7 +51,8 @@ function PartReport(): ReactNode {
     const { libraryId } = Route.useParams();
     const { element } = Route.useSearch();
     const [search, setSearch] = useState("");
-    const range = toDayRange(useRangePreset());
+    const rangePreset = useRangePreset();
+    const range = toDayRange(rangePreset);
     const parts = useQuery(getPartsQuery(libraryId, range));
 
     return (

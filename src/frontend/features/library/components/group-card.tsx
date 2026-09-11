@@ -92,8 +92,10 @@ function GroupAdminContextMenu({
     groupId
 }: GroupAdminContextMenuProps): ReactNode {
     const isHome = useIsHome();
-    const groupStatus = useBuildStatusQuery().data?.groups[groupId];
-    const groupOrder = useLibraryQuery().data?.groupOrder ?? [];
+    const buildStatusQuery = useBuildStatusQuery();
+    const libraryQuery = useLibraryQuery();
+    const groupStatus = buildStatusQuery.data?.groups[groupId];
+    const groupOrder = libraryQuery.data?.groupOrder ?? [];
     const setGroupOrderMutation = useSetGroupOrderMutation();
 
     if (!groupStatus) return null;
