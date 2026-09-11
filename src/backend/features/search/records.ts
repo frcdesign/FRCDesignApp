@@ -17,9 +17,7 @@ import {
     tokenizeName,
     tokenizePartNumber
 } from "./tokenize";
-import { CONFIGURATION_FIELDS } from "./contract";
-
-const [PART_NUMBER_FIELD, PART_NAME_FIELD] = CONFIGURATION_FIELDS;
+import { PART_NAME_FIELD, PART_NUMBER_FIELD } from "./fields";
 
 /**
  * The element's own defaults first. `toKey` leaves out whatever a selection does

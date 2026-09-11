@@ -10,7 +10,7 @@ import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult } from "../search";
 
 /** What a narrowed-down list is called to the user. */
-export type ObjectLabel = "element" | "favorite" | "search result";
+type ObjectLabel = "element" | "favorite" | "search result";
 
 function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";

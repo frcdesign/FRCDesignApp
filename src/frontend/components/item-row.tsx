@@ -14,11 +14,13 @@ import { PartNumberLink } from "./part-number";
 import { mergePositions, type Position } from "../lib/highlight";
 
 /**
- * What a row shows about the query that found it. Structural rather than the
- * search feature's own `SearchHit`: a row displays a match, it does not search.
+ * The configuration a row stands for, and where a query matched inside it.
+ * Structural rather than the search feature's own `SearchHit`: a row displays a
+ * match, it does not search — and a favorites row fills this from the favorite
+ * rather than from any query, with no positions at all.
  */
 export interface RowMatch {
-    /** Where the query matched inside the row's title. */
+    /** Where the query matched inside the row's title; empty when none ran. */
     positions: Position[];
     partNumber?: string;
     partName?: string;
@@ -32,7 +34,7 @@ interface CardTitleProps {
     title: string;
     /** The row's `CardThumbnail`, which only the caller knows how to address. */
     thumbnail: ReactNode;
-    /** Set when the row was found by a search, to underline what matched. */
+    /** The configuration this row shows, and what a query underlined in it. */
     match?: RowMatch;
     /** Dims the text, for a row that cannot be acted on. */
     disabled?: boolean;

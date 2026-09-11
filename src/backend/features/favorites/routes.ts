@@ -80,6 +80,9 @@ async function getFavorites(
         const defaultSelection = stored
             ? toSelection(stored, parameters)
             : undefined;
+        // A favorite storing no selection opens on the element's own defaults,
+        // which is what the empty key names — so it resolves the right record
+        // while the field itself stays absent, as the contract has it.
         const configurationKey = defaultSelection
             ? toKey(defaultSelection, parameters)
             : DEFAULT_CONFIGURATION_KEY;

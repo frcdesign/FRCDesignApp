@@ -5,6 +5,7 @@
  */
 import { isPlaceholderPartNumber } from "../configurations/part-number";
 import { clean } from "../../lib/text";
+import { PART_NUMBER_FIELD } from "./fields";
 
 /** Where a name breaks: punctuation and space, plus a quote used as a quote. */
 const NAME_SEPARATORS = new RegExp("(?<!\\d)\"|[-()',#&\\s/]+");
@@ -140,7 +141,7 @@ export function tokenizePartNumber(text: string): string[] {
 
 /** The fields holding an identifier rather than a description. */
 function isPartNumberField(field?: string): boolean {
-    return field === "partNumbers";
+    return field === PART_NUMBER_FIELD;
 }
 
 /** Splits a field's text the way that field reads; a query has no field. */

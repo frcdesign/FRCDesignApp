@@ -7,6 +7,12 @@ import { Options } from "minisearch";
 import { Vendor } from "../library/vendors";
 import { SearchRecord } from "../configurations/contract";
 import { processTerm, tokenize } from "./tokenize";
+import {
+    GROUP_NAME_FIELD,
+    NAME_FIELD,
+    PART_NAME_FIELD,
+    PART_NUMBER_FIELD
+} from "./fields";
 
 export interface SearchDocument {
     id: string;
@@ -27,14 +33,14 @@ export interface SearchDocument {
 }
 
 /** What the insertable itself is called, and where it lives. */
-export const INSERTABLE_FIELDS = ["name", "groupName"];
+export const INSERTABLE_FIELDS = [NAME_FIELD, GROUP_NAME_FIELD];
 
 /**
  * What its individual configurations are called and numbered. Separated so a
  * surface can leave them out: they describe every configuration at once, which
  * a list showing one specific configuration has no way to represent.
  */
-export const CONFIGURATION_FIELDS = ["partNumbers", "partNames"];
+export const CONFIGURATION_FIELDS = [PART_NUMBER_FIELD, PART_NAME_FIELD];
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
     fields: [...INSERTABLE_FIELDS, ...CONFIGURATION_FIELDS],
