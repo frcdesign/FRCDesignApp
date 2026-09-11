@@ -2,6 +2,7 @@ import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
 import {
+    INSERTABLE_FIELDS,
     SearchDocument,
     normalizeForMatch,
     tokenizeName,
@@ -9,6 +10,7 @@ import {
 } from "@backend/lib/search-index";
 import {
     type ConfigurationKey,
+    DEFAULT_CONFIGURATION_KEY,
     SearchRecord
 } from "@backend/features/configurations/contract";
 
@@ -66,13 +68,33 @@ interface SearchResult {
     filtered: FilterResult;
 }
 
-export function doSearch(
-    searchDb: MiniSearch<SearchDocument>,
-    query?: string,
-    filters?: SearchFilters,
-    favoritedInsertableIds?: Set<string>,
-    showHidden?: boolean
-): SearchResult {
+export interface SearchArgs {
+    searchDb: MiniSearch<SearchDocument>;
+    query?: string;
+    filters?: SearchFilters;
+    /** Required by an `isFavorite` filter, which matches against it. */
+    favoritedInsertableIds?: Set<string>;
+    /** @default false */
+    showHidden?: boolean;
+    /**
+     * Whether a configuration's own part number or name can match. Favorites
+     * turn it off: a favorite names one configuration, but the fields cover
+     * every configuration the insertable has, so a query describing one the
+     * user never favorited would still pull their favorite up.
+     * @default true
+     */
+    searchConfigurations?: boolean;
+}
+
+export function doSearch(args: SearchArgs): SearchResult {
+    const {
+        searchDb,
+        query,
+        filters,
+        favoritedInsertableIds,
+        showHidden,
+        searchConfigurations = true
+    } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     if (!query || query.trim() === "") {
@@ -80,6 +102,7 @@ export function doSearch(
     }
 
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
+        fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
             // MiniSearch types a hit's stored fields as `any`; they are the
             // document that was indexed.
@@ -171,6 +194,28 @@ export function doSearch(
 }
 
 /**
+ * The element's own defaults first. `toKey` leaves out whatever a selection does
+ * not override, so that record is the one keyed by the empty string.
+ *
+ * Records arrive in the order `enumerateConfigurations` produced them, which is
+ * option declaration order — the default lands wherever Onshape happens to
+ * declare it, and for a boolean parameter defaulting to false it is never first.
+ */
+function defaultFirst(records: SearchRecord[]): SearchRecord[] {
+    const index = records.findIndex(
+        (record) => record.configurationKey === DEFAULT_CONFIGURATION_KEY
+    );
+    if (index <= 0) {
+        return records;
+    }
+    return [
+        records[index],
+        ...records.slice(0, index),
+        ...records.slice(index + 1)
+    ];
+}
+
+/**
  * The best record by part number or name, whichever the query describes better,
  * else the default — so a row shows one even when only the title matched.
  */
@@ -180,18 +225,21 @@ function matchedRecord(
     query: string
 ): SearchRecord | undefined {
     const matchedFields = Object.values(result.match).flat();
+    // Reordered once, so the tie-break inside findBestRecord and the fallback
+    // below both land on the configuration the insert menu opens with.
+    const records = defaultFirst(document.records);
     const byNumber = matchedFields.includes("partNumbers")
-        ? findBestRecord(query, document.records, (r) => r.partNumber, LITERAL)
+        ? findBestRecord(query, records, (r) => r.partNumber, LITERAL)
         : undefined;
     const byName = matchedFields.includes("partNames")
-        ? findBestRecord(query, document.records, (r) => r.name, DESCRIPTIVE)
+        ? findBestRecord(query, records, (r) => r.name, DESCRIPTIVE)
         : undefined;
 
     const best = [byNumber, byName]
         .filter((match) => match !== undefined)
         // Part number first, so it wins a tie: it is the more specific field.
         .sort((a, b) => b.score - a.score)[0];
-    return best?.record ?? document.records[0];
+    return best?.record ?? records[0];
 }
 
 interface RecordMatch {
@@ -277,7 +325,8 @@ function matchScore(
 
 /**
  * Scored by term rather than by the whole query, which "maxspline 24t" matches
- * no record as. Ties go first-wins: the latest option, in enumeration order.
+ * no record as. Ties go to whichever came first in `records`, which
+ * {@link defaultFirst} has already put the element's defaults at the front of.
  */
 function findBestRecord(
     query: string,

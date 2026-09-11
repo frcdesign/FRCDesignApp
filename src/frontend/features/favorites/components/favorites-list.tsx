@@ -144,6 +144,11 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         favoritedInsertableIds: new Set(
             Object.values(favoritesData.favorites).map((f) => f.insertableId)
         ),
+        // A favorite is one configuration, but the index's configuration fields
+        // describe all of them at once, so matching on those pulls a favorite up
+        // for a query naming a configuration the user never saved. Off until
+        // favorites are indexed as themselves.
+        searchConfigurations: false,
         showHidden
     });
 

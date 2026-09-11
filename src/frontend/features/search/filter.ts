@@ -1,8 +1,11 @@
-import MiniSearch from "minisearch";
 import { InsertableOut, Insertables } from "@backend/features/library/contract";
-import { SearchDocument } from "@backend/lib/search-index";
 import { Vendor } from "@backend/features/library/vendors";
-import { doSearch, FilterResult, SearchFilters, SearchHit } from "./search";
+import {
+    doSearch,
+    type FilterResult,
+    type SearchArgs,
+    type SearchHit
+} from "./search";
 
 interface FilterArgs {
     /** One or more vendors to keep; every vendor when absent. */
@@ -49,27 +52,17 @@ export function filterInsertables(
     };
 }
 
-interface SearchArgs {
-    searchDb: MiniSearch<SearchDocument>;
+interface SearchInsertablesArgs extends SearchArgs {
+    query: string;
     /** The library's insertables, which hits are resolved against. */
     insertables: Insertables;
-    query: string;
-    filters?: SearchFilters;
-    /** Required by a `isFavorite` filter, which matches against it. */
-    favoritedInsertableIds?: Set<string>;
-    /** @default false */
-    showHidden?: boolean;
 }
 
 /** The search's hits as insertables, in the order it ranked them. */
-export function searchInsertables(args: SearchArgs): FilteredInsertables {
-    const { hits, filtered } = doSearch(
-        args.searchDb,
-        args.query,
-        args.filters,
-        args.favoritedInsertableIds,
-        args.showHidden
-    );
+export function searchInsertables(
+    args: SearchInsertablesArgs
+): FilteredInsertables {
+    const { hits, filtered } = doSearch(args);
 
     const insertables: InsertableOut[] = [];
     const hitsById: Record<string, SearchHit> = {};

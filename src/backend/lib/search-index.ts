@@ -5,7 +5,10 @@
 import MiniSearch, { Options } from "minisearch";
 import { LibraryOut } from "../features/library/contract";
 import { Vendor } from "../features/library/vendors";
-import { ConfigurationRecord, SearchRecord } from "../features/configurations/contract";
+import {
+    ConfigurationRecord,
+    SearchRecord
+} from "../features/configurations/contract";
 import { getPartUrl } from "../features/configurations/utils";
 import {
     isPlaceholderPartNumber,
@@ -222,8 +225,18 @@ export interface SearchDocument {
     records: SearchRecord[];
 }
 
+/** What the insertable itself is called, and where it lives. */
+export const INSERTABLE_FIELDS = ["name", "groupName"];
+
+/**
+ * What its individual configurations are called and numbered. Separated so a
+ * surface can leave them out: they describe every configuration at once, which
+ * a list showing one specific configuration has no way to represent.
+ */
+export const CONFIGURATION_FIELDS = ["partNumbers", "partNames"];
+
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "groupName", "partNumbers", "partNames"],
+    fields: [...INSERTABLE_FIELDS, ...CONFIGURATION_FIELDS],
     storeFields: [
         "id",
         "groupId",
