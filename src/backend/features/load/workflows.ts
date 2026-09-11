@@ -28,6 +28,7 @@ import {
 } from "./context";
 import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
+import { reconcileThumbnails } from "../thumbnails/reconcile";
 
 export interface LoadLibraryParams {
     libraryId: LibraryId;
@@ -105,6 +106,11 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         );
 
         await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
+        // After finalize, so a group that failed this run has already been
+        // flagged rather than read as having lost its elements.
+        await step.do("reconcile-thumbnails", () =>
+            reconcileThumbnails(ctx.env.BLOB, getDb(ctx.env.DB))
+        );
         await step.do("untrack-job", () =>
             untrackJob(ctx.env, libraryId, event.instanceId)
         );

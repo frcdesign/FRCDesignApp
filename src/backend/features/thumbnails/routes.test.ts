@@ -2,7 +2,13 @@ import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { ThumbnailSize } from "./types";
-import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey, thumbnailUrl } from "./keys";
+import {
+    THUMBNAIL_FALLBACK_HEADER,
+    parseThumbnailKey,
+    parseThumbnailUrl,
+    thumbnailKey,
+    thumbnailUrl
+} from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
 import { uploadConfigurationThumbnails } from "./store";
 import type { OnshapeApi } from "../../lib/onshape/client";
@@ -47,6 +53,72 @@ describe("thumbnailKey", () => {
         expect(thumbnailKey("e1", MICROVERSION, SIZE, "a=1")).not.toBe(
             thumbnailKey("e1", MICROVERSION, SIZE, "a=2")
         );
+    });
+});
+
+// Reconciliation reads keys and urls back to decide what to delete, so the
+// readers have to keep pace with the builders above them.
+describe("reading a thumbnail address back", () => {
+    const SUBJECT = { elementId: "e1", microversionId: MICROVERSION };
+
+    it.each(Object.values(ThumbnailSize))(
+        "round-trips a %s default key",
+        (size) => {
+            expect(
+                parseThumbnailKey(
+                    thumbnailKey(SUBJECT.elementId, SUBJECT.microversionId, size)
+                )
+            ).toEqual(SUBJECT);
+        }
+    );
+
+    it("round-trips a configuration key, separators and all", () => {
+        const key = thumbnailKey(
+            SUBJECT.elementId,
+            SUBJECT.microversionId,
+            SIZE,
+            "a=1;b=2/3"
+        );
+        expect(parseThumbnailKey(key)).toEqual(SUBJECT);
+    });
+
+    it.each([
+        ["a key under another prefix", "search-index/frcDesignLib.json"],
+        ["a key with too few segments", "thumbnails/default/e1/mv-1"],
+        ["a key with too many", "thumbnails/default/e1/mv-1/70x40/extra"],
+        ["an unknown kind", "thumbnails/other/e1/mv-1/70x40"]
+    ])("does not resolve %s", (_name, key) => {
+        expect(parseThumbnailKey(key)).toBeUndefined();
+    });
+
+    // A group records its document thumbnail only as these urls.
+    it("round-trips the url a group stores", () => {
+        const url = thumbnailUrl({
+            ...SUBJECT,
+            size: SIZE,
+            configurationKey: DEFAULT_CONFIGURATION_KEY
+        });
+        expect(parseThumbnailUrl(url)).toEqual(SUBJECT);
+    });
+
+    it("round-trips a url carrying every optional parameter", () => {
+        const url = thumbnailUrl({
+            ...SUBJECT,
+            size: SIZE,
+            configurationKey: "a=1;b=2",
+            renderThumbnail: true,
+            insertableId: INSERTABLE_ID,
+            attempt: 3
+        });
+        expect(parseThumbnailUrl(url)).toEqual(SUBJECT);
+    });
+
+    it.each([
+        ["a url naming no microversion", "/api/thumbnail/70x40/e1"],
+        ["a url for another route", "/api/library/frcDesignLib?v=mv-1"],
+        ["a url with a trailing segment", "/api/thumbnail/70x40/e1/x?v=mv-1"]
+    ])("does not resolve %s", (_name, url) => {
+        expect(parseThumbnailUrl(url)).toBeUndefined();
     });
 });
 
