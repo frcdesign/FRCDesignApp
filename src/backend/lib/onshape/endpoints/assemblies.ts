@@ -6,7 +6,7 @@ import {
     toElementApiPath
 } from "../path";
 import { apiPath } from "../api-path";
-import { encodeConfigurationForBody } from "./configurations";
+import { encodeConfiguration } from "../../../features/configurations/utils";
 import { PartType } from "./documents";
 import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
@@ -65,7 +65,7 @@ export function addElementToAssembly(
         instance.configuration =
             typeof configuration === "string"
                 ? configuration
-                : encodeConfigurationForBody(configuration);
+                : encodeConfiguration(configuration);
     }
 
     if (elementType === ElementType.ASSEMBLY) {

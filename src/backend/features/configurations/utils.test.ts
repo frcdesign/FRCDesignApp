@@ -68,11 +68,9 @@ describe("configuration text", () => {
         expect(decodeConfiguration("")).toEqual({});
     });
 
-    it("leaves a value without structural characters as it was", () => {
-        // Quantities canonicalize to "0.0508 m", and the stored keys holding
-        // them predate the escaping, so they have to encode unchanged.
+    it("percent-encodes a value, as Onshape's own encoding does", () => {
         expect(encodeConfiguration({ length: "0.0508 m" })).toBe(
-            "length=0.0508 m"
+            "length=0.0508%20m"
         );
     });
 

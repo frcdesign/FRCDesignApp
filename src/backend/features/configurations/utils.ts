@@ -119,30 +119,21 @@ export function getPartUrl(
 }
 
 /**
- * The three characters that would otherwise be read as structure. `%` goes
- * first: it introduces the escapes, so escaping it last would double-encode.
- */
-function escapeValue(value: string): string {
-    return value
-        .replaceAll("%", "%25")
-        .replaceAll(";", "%3B")
-        .replaceAll("=", "%3D");
-}
-
-/**
  * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
- * A string parameter can hold anything, so `escapeValue` is what keeps a typed
- * `;` from reading as the end of the assignment and setting the next parameter.
+ * Values are percent-encoded, which is what Onshape's own encoding does and
+ * what keeps a `;` typed into a string parameter from reading as the end of
+ * the assignment. Ids are Onshape's and need no encoding.
  *
- * Only the structural characters are escaped, so a value that holds none of
- * them encodes exactly as it did before — which the stored keys rely on.
+ * A caller putting this in a query string encodes it again, and Onshape then
+ * decodes twice: once for the query, once for the configuration. A request
+ * body carries it as written, so it is decoded once.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
         return "";
     }
     return Object.entries(configuration)
-        .map(([id, value]) => `${id}=${escapeValue(value)}`)
+        .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
 }
 
@@ -160,8 +151,6 @@ export function decodeConfiguration(configuration: string): Selection {
     for (const assignment of splitConfiguration(configuration)) {
         const separator = assignment.indexOf("=");
         if (separator > 0) {
-            // Every `%` in the text is one escapeValue wrote, so nothing else
-            // can be mistaken for an escape sequence.
             values[assignment.slice(0, separator)] = decodeURIComponent(
                 assignment.slice(separator + 1)
             );
