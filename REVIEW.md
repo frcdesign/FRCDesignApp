@@ -158,6 +158,14 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   The reorder is bounded by the same number and goes in one batch instead of a
   statement per favorite.
 
+- **Insert source** — searching inside a group is its own source now. It was
+  reported as `SEARCH` alongside a library-wide search, though the group page
+  filters the results to that group, so the two were different searches counted
+  as one. One flat value rather than a source crossed with where the user was:
+  browsing only happens inside a group and favorites only outside one, so search
+  was the only one of the three with two forms. No schema change — the column
+  carries no constraint, and the breakdown lists whatever the enum holds.
+
 - **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
   are gone; the workflow was already the only correct path. `drizzle-kit` and
   the router devtools moved to `devDependencies`.

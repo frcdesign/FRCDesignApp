@@ -6,6 +6,7 @@ import { formatCount, formatFraction } from "./format";
 
 const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.SEARCH]: "Search results",
+    [InsertSource.GROUP_SEARCH]: "Search within a group",
     [InsertSource.BROWSE]: "Browsing a group",
     [InsertSource.FAVORITES]: "Favorites list"
 };

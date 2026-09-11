@@ -420,6 +420,31 @@ describe("tracking", () => {
             });
         });
 
+        // The point of the two: a search filtered to one group is a different
+        // search from one across the library, and reads as one.
+        it("counts a search inside a group apart from one across the library", async () => {
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.SEARCH })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.GROUP_SEARCH })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.GROUP_SEARCH })
+            );
+
+            const rows = await db.select().from(dailySourceMetrics).all();
+            expect(
+                Object.fromEntries(rows.map((row) => [row.source, row.count]))
+            ).toEqual({
+                [InsertSource.SEARCH]: 1,
+                [InsertSource.GROUP_SEARCH]: 2
+            });
+        });
+
         it("keeps a favorited part inserted from search attributed to search", async () => {
             // isFavorite is a property of the part; source is where the insert
             // began. Conflating them would misreport the favorites list.

@@ -391,8 +391,12 @@ describe("analytics routes", () => {
                 count: 5,
                 quickInsertCount: 5
             });
-            // Present as a zero rather than missing, so the UI shows every source.
+            // Present as a zero rather than missing, so the UI shows every
+            // source — a new one included, from the day it is added.
             expect(bySource[InsertSource.BROWSE]).toMatchObject({ count: 0 });
+            expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
+                count: 0
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {

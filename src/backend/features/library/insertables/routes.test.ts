@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
 import { dailyConfigurationMetrics, events } from "../../analytics/schema";
+import { InsertSource } from "../../analytics/events";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import { MateLocation } from "./fasten";
@@ -109,6 +110,32 @@ describe("insertable routes", () => {
 
     // The one place a request's configuration is made whole, so an insert that
     // names nothing still applies — and records — every parameter.
+    // The client names which of the two searches it was; the route takes it
+    // whole rather than deriving anything from the request.
+    it("POST /add-to-part-studio records the source it was sent", async () => {
+        await seedPartStudio(db);
+        vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
+            { feature: { featureId: "feat-1" } }
+        );
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                configuration: undefined,
+                useMateConnector: false,
+                isFavorite: false,
+                isQuickInsert: false,
+                source: InsertSource.GROUP_SEARCH
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const event = await db.select().from(events).get();
+        expect(event?.source).toBe(InsertSource.GROUP_SEARCH);
+    });
+
     it("POST /add-to-part-studio fills the selection it was not given", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);

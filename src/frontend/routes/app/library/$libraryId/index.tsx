@@ -14,6 +14,7 @@ import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../features/library/components/card-components";
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
+import { InsertSource } from "@backend/features/analytics/events";
 import {
     SectionNotice,
     SectionLoading
@@ -81,6 +82,7 @@ function useHomeSections(): Section[] {
             <SearchResults
                 query={uiState.searchQuery ?? ""}
                 filters={{ vendors: vendorFilters }}
+                source={InsertSource.SEARCH}
             />
         ),
         opened: isSearchOpen,
