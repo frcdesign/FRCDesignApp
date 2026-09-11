@@ -10,7 +10,7 @@ import {
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
 const ONSHAPE_API_VERSION = 16;
 
-export function getBaseUrl(): string {
+function getBaseUrl(): string {
     return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
 }
 
@@ -160,73 +160,6 @@ export class OAuthApi extends OnshapeApi {
         const headers = new Headers({
             Authorization: `Bearer ${this._accessToken}`,
             "Content-Type": "application/json",
-            Accept: "application/json"
-        });
-        if (overrides)
-            new Headers(overrides).forEach((v, k) => headers.set(k, v));
-        return headers;
-    }
-}
-
-export class KeyApi extends OnshapeApi {
-    private readonly _accessKey: string;
-    private readonly _keyPromise: Promise<CryptoKey>;
-
-    constructor(accessKey: string, secretKey: string) {
-        super();
-        this._accessKey = accessKey;
-        this._keyPromise = crypto.subtle.importKey(
-            "raw",
-            new TextEncoder().encode(secretKey),
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["sign"]
-        );
-    }
-
-    protected async _request(
-        method: string,
-        url: string,
-        init: RequestInit
-    ): Promise<Response> {
-        const headers = await this._makeHeaders(method, url, init.headers);
-        return fetch(url, { ...init, method, headers });
-    }
-
-    private async _makeHeaders(
-        method: string,
-        url: string,
-        overrides?: HeadersInit
-    ): Promise<Headers> {
-        const date = new Date().toUTCString();
-        const nonce = crypto.randomUUID().replace(/-/g, "");
-        const parsed = new URL(url);
-        const stringToSign = [
-            method,
-            nonce,
-            date,
-            "application/json",
-            parsed.pathname,
-            parsed.search.slice(1)
-        ]
-            .join("\n")
-            .concat("\n")
-            .toLowerCase();
-
-        const key = await this._keyPromise;
-        const sigBuf = await crypto.subtle.sign(
-            "HMAC",
-            key,
-            new TextEncoder().encode(stringToSign)
-        );
-        const signature = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
-
-        const headers = new Headers({
-            Date: date,
-            "On-Nonce": nonce,
-            Authorization: `On ${this._accessKey}:HmacSHA256:${signature}`,
-            "Content-Type": "application/json",
-            "User-Agent": "Onshape App",
             Accept: "application/json"
         });
         if (overrides)

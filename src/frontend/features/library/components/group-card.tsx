@@ -92,7 +92,7 @@ interface GroupAdminContextMenuProps {
     groupId: string;
 }
 
-export function GroupAdminContextMenu({
+function GroupAdminContextMenu({
     groupId
 }: GroupAdminContextMenuProps): ReactNode {
     const isHome = useIsHome();

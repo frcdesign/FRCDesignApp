@@ -5,10 +5,6 @@ export enum AccessLevel {
     USER = "user"
 }
 
-export function hasAdminAccess(accessLevel: AccessLevel) {
-    return accessLevel === AccessLevel.ADMIN;
-}
-
 export function hasEditorAccess(accessLevel: AccessLevel) {
     return (
         accessLevel === AccessLevel.ADMIN || accessLevel === AccessLevel.EDITOR

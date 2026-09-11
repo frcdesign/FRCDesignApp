@@ -67,6 +67,33 @@ describe("configuration text", () => {
     it("decodes the empty string as no values at all", () => {
         expect(decodeConfiguration("")).toEqual({});
     });
+
+    it("leaves a value without structural characters as it was", () => {
+        // Quantities canonicalize to "0.0508 m", and the stored keys holding
+        // them predate the escaping, so they have to encode unchanged.
+        expect(encodeConfiguration({ length: "0.0508 m" })).toBe(
+            "length=0.0508 m"
+        );
+    });
+
+    it("round-trips a value holding the separators", () => {
+        const configuration = { label: "a;other=evil", other: "x" };
+        expect(decodeConfiguration(encodeConfiguration(configuration))).toEqual(
+            configuration
+        );
+    });
+
+    it("round-trips a value holding a percent sign", () => {
+        const configuration = { label: "50%3B off" };
+        expect(decodeConfiguration(encodeConfiguration(configuration))).toEqual(
+            configuration
+        );
+    });
+
+    it("keeps a typed separator from setting another parameter", () => {
+        const encoded = encodeConfiguration({ label: "a;other=evil" });
+        expect(decodeConfiguration(encoded).other).toBeUndefined();
+    });
 });
 
 function metadata(fields: Partial<PartMetadata>): PartMetadata {

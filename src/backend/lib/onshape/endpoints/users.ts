@@ -2,7 +2,7 @@ import { OAuthApi, OnshapeApi } from "../client";
 import { apiPath } from "../api-path";
 import { AccessLevel } from "../../../features/auth/access-level";
 
-export interface SessionInfo {
+interface SessionInfo {
     id: string;
     /** The company the current access token is scoped to; null/absent for a personal context. */
     company?: { id: string } | null;

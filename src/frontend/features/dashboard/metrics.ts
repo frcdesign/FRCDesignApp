@@ -11,7 +11,7 @@ import {
     type Granularity
 } from "./series";
 
-export type MetricKey =
+type MetricKey =
     | "inserts"
     | "fastenFraction"
     | "quickFraction"

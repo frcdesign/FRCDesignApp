@@ -28,7 +28,7 @@ import { OnshapeApi } from "../../lib/onshape/client";
  * What produced a stored thumbnail, tagged onto the R2 object. The key already
  * addresses it; this is for reading an object back and telling what it is.
  */
-export interface ThumbnailMetadata extends Record<string, string> {
+interface ThumbnailMetadata extends Record<string, string> {
     microversionId: string;
     /** Empty for an element's own thumbnail, as everywhere else. */
     configurationKey: ConfigurationKey;

@@ -17,7 +17,7 @@ const ACTIVE_STATUSES = new Set([
     "waitingForPause"
 ]);
 
-export type JobKind = "reload" | "add-group";
+type JobKind = "reload" | "add-group";
 
 interface TrackedJob {
     id: string;

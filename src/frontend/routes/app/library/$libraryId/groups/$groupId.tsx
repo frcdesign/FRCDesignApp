@@ -167,7 +167,7 @@ interface GroupListCardsProps {
     insertables: Insertables;
 }
 
-export function GroupListContent(props: GroupListCardsProps): ReactNode {
+function GroupListContent(props: GroupListCardsProps): ReactNode {
     const { group, insertables } = props;
 
     const accessData = useAccessData();

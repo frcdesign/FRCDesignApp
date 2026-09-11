@@ -16,7 +16,7 @@ import { toInsertablePath } from "../library/library-path";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { InsertSource } from "@backend/features/analytics/events";
 
-export interface InsertArgs {
+interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
     isFavorite: boolean;
     source: InsertSource;

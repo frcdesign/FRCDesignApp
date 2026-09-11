@@ -119,20 +119,35 @@ export function getPartUrl(
 }
 
 /**
+ * The three characters that would otherwise be read as structure. `%` goes
+ * first: it introduces the escapes, so escaping it last would double-encode.
+ */
+function escapeValue(value: string): string {
+    return value
+        .replaceAll("%", "%25")
+        .replaceAll(";", "%3B")
+        .replaceAll("=", "%3D");
+}
+
+/**
  * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
- * Values never carry a `;` or an `=`, which is what lets this round-trip.
+ * A string parameter can hold anything, so its value is escaped — otherwise a
+ * typed `;` reads as the end of the assignment and sets the next parameter.
+ *
+ * Only the structural characters are escaped, leaving the rest as Onshape's
+ * query parameter already carried them.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
         return "";
     }
     return Object.entries(configuration)
-        .map(([id, value]) => `${id}=${value}`)
+        .map(([id, value]) => `${id}=${escapeValue(value)}`)
         .join(";");
 }
 
 /** The assignments a configuration text names, each still `id=value`. */
-export function splitConfiguration(configuration: string): string[] {
+function splitConfiguration(configuration: string): string[] {
     return configuration.split(";").filter((assignment) => assignment !== "");
 }
 
@@ -145,8 +160,10 @@ export function decodeConfiguration(configuration: string): Selection {
     for (const assignment of splitConfiguration(configuration)) {
         const separator = assignment.indexOf("=");
         if (separator > 0) {
-            values[assignment.slice(0, separator)] = assignment.slice(
-                separator + 1
+            // Every `%` in the text is one escapeValue wrote, so nothing else
+            // can be mistaken for an escape sequence.
+            values[assignment.slice(0, separator)] = decodeURIComponent(
+                assignment.slice(separator + 1)
             );
         }
     }

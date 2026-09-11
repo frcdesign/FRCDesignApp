@@ -20,9 +20,6 @@ export interface ElementPath extends InstancePath {
 }
 
 /** Represents a part inside a Part Studio. */
-export interface PartPath extends ElementPath {
-    partId: string;
-}
 
 /** The version-pinned tab a stored insertable row addresses. */
 export function toElementPath(row: {
@@ -42,15 +39,15 @@ export interface ConfigurablePath extends ElementPath {
     selection: Selection;
 }
 
-export function isDocumentPath(path: any): path is DocumentPath {
+function isDocumentPath(path: unknown): path is DocumentPath {
     return (
         typeof path === "object" &&
         path !== null &&
-        typeof path.documentId === "string"
+        typeof (path as DocumentPath).documentId === "string"
     );
 }
 
-export function isInstancePath(path: any): path is InstancePath {
+export function isInstancePath(path: unknown): path is InstancePath {
     return (
         isDocumentPath(path) &&
         typeof (path as InstancePath).instanceId === "string" &&
@@ -60,15 +57,11 @@ export function isInstancePath(path: any): path is InstancePath {
     );
 }
 
-export function isElementPath(path: any): path is ElementPath {
+export function isElementPath(path: unknown): path is ElementPath {
     return (
         isInstancePath(path) &&
         typeof (path as ElementPath).elementId === "string"
     );
-}
-
-export function isPartPath(path: DocumentPath): path is PartPath {
-    return isElementPath(path) && (path as PartPath).partId !== undefined;
 }
 
 export function isConfigurablePath(
@@ -92,9 +85,9 @@ export function toElementApiPath(path: ElementPath): string {
     return `${toInstanceApiPath(path)}/e/${path.elementId}`;
 }
 
-export type InstanceTypeKey = "workspaceId" | "versionId" | "microversionId";
+type InstanceTypeKey = "workspaceId" | "versionId" | "microversionId";
 
-export function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
+function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
     switch (instanceType) {
         case "w":
             return "workspaceId";
@@ -105,17 +98,11 @@ export function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
     }
 }
 
-export function toDocumentApiObject(path: DocumentPath): {
-    documentId: string;
-} {
-    return { documentId: path.documentId };
-}
-
 /**
  * Returns the named-ID object that Onshape API bodies/query params expect,
  * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
  */
-export function toInstanceApiObject(
+function toInstanceApiObject(
     path: InstancePath
 ): Record<string, string> {
     return {

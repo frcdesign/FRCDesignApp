@@ -26,13 +26,13 @@ export type OptionVisibilityCondition =
     | ListOptionVisibilityCondition
     | RangeOptionVisibilityCondition;
 
-export interface ListOptionVisibilityCondition {
+interface ListOptionVisibilityCondition {
     type: OptionVisibilityType.LIST;
     controlledOptions: string[];
     condition: VisibilityCondition;
 }
 
-export interface RangeOptionVisibilityCondition {
+interface RangeOptionVisibilityCondition {
     type: OptionVisibilityType.RANGE;
     start: string;
     end: string;
@@ -97,7 +97,7 @@ export type ConfigurationParameter =
     | BooleanParameter
     | StringParameter;
 
-export interface ConfigurationParameterBase {
+interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;

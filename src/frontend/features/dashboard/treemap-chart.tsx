@@ -7,7 +7,7 @@ import { type TreemapNode } from "./treemap-data";
 // route chunk rather than the panel's bundle.
 import "@mantine/charts/styles.layer.css";
 
-export interface AppTreemapProps {
+interface AppTreemapProps {
     nodes: TreemapNode[];
     h: number;
     onSelect: (node: TreemapNode) => void;

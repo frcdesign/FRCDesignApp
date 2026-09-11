@@ -39,13 +39,10 @@ import {
     addElementToAssembly,
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
-import {
-    PartType,
-    type OnshapeElementType
-} from "../../../lib/onshape/endpoints/documents";
+import { PartType } from "../../../lib/onshape/endpoints/documents";
 import { encodeConfigurationForBody } from "../../../lib/onshape/endpoints/configurations";
 import { toSelection } from "../../configurations/selection";
-import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
+import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
@@ -433,7 +430,7 @@ insertableRoutes.post(
             onshapeApi,
             targetPath,
             sourcePath,
-            row.elementType as unknown as OnshapeElementType,
+            row.elementType,
             {
                 configuration: encodedConfiguration,
                 partTypes
@@ -476,16 +473,15 @@ insertableRoutes.post(
         const instancePath: string[] =
             result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
-        const builder = new FastenMateBuilder(row.name);
-        builder.addQuery(
+        const mate = fastenMate(row.name, [
             getFastenQuery(row.elementType, instancePath, fastenInfo)
-        );
+        ]);
 
         try {
             const fastenResult = await addAssemblyFeature(
                 onshapeApi,
                 targetPath,
-                builder.build()
+                mate
             );
             await track(true);
             const out: InsertOut = {
@@ -501,7 +497,7 @@ insertableRoutes.post(
 );
 /** Always version-pinned; throws 404 when the insertable does not exist. */
 
-export async function getInsertableElementPath(
+async function getInsertableElementPath(
     db: Db,
     insertableId: string
 ): Promise<ElementPath> {

@@ -48,7 +48,7 @@ function compare(a: PartUsageOut, b: PartUsageOut, column: SortColumn): number {
 }
 
 /** Matches a part on its own name or its group's. */
-export function matchesSearch(part: PartUsageOut, search: string): boolean {
+function matchesSearch(part: PartUsageOut, search: string): boolean {
     const term = search.trim().toLowerCase();
     if (term === "") return true;
     return (

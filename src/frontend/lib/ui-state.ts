@@ -40,7 +40,7 @@ const UiStateSchema = z.object({
     groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
 });
 
-export type UiState = z.infer<typeof UiStateSchema>;
+type UiState = z.infer<typeof UiStateSchema>;
 
 type Subscriber = () => void;
 
@@ -117,7 +117,7 @@ export function updateUiState(partialState: Partial<UiState>): UiState {
     return newState;
 }
 
-export type SetUiState = (uiState: Partial<UiState>) => void;
+type SetUiState = (uiState: Partial<UiState>) => void;
 
 /** The current state, re-rendering the caller whenever it changes. */
 export function useGetUiState(): UiState {

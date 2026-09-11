@@ -17,7 +17,7 @@ export interface OnshapeParams extends ElementPath {
 }
 
 /** A resolved theme, as Onshape provides it; Theme adds "system" on top. */
-export type ColorTheme = "light" | "dark";
+type ColorTheme = "light" | "dark";
 
 /**
  * `systemTheme` is Onshape's, forwarded by the entry redirect; standalone there

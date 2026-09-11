@@ -3,7 +3,7 @@ import { ConfigurationParameter } from "../configurations/models";
 import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "../library/vendors";
 
-export interface ConfigurationBuildStatus {
+interface ConfigurationBuildStatus {
     buildIssues: BuildIssue[];
     parameters: ConfigurationParameter[];
 }

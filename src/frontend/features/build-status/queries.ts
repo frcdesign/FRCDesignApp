@@ -10,7 +10,7 @@ import { useLibraryId } from "../library/library-path";
 import { useCacheVersion } from "../library/queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
 
-export function getBuildStatusQuery(
+function getBuildStatusQuery(
     libraryId: LibraryId,
     cacheVersion: number
 ) {

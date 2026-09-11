@@ -2,14 +2,13 @@ import { OnshapeApi } from "../client";
 import { assertWorkspace } from "../assertions";
 import {
     ElementPath,
-    InstancePath,
     toElementApiObject,
-    toElementApiPath,
-    toInstanceApiPath
+    toElementApiPath
 } from "../path";
 import { apiPath } from "../api-path";
 import { encodeConfigurationForBody } from "./configurations";
-import { OnshapeElementType, PartType } from "./documents";
+import { PartType } from "./documents";
+import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
 import {
     OnshapeAssemblyDefinition,
@@ -41,42 +40,6 @@ export function getAssembly(
 }
 
 /**
- * Returns features in an assembly.
- *
- * @param featureIds Feature IDs to retrieve. If omitted, all features are returned.
- */
-export function getAssemblyFeatures(
-    client: OnshapeApi,
-    assemblyPath: ElementPath,
-    featureIds: string[] = []
-): Promise<any> {
-    return client.get(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "features"
-        }),
-        {
-            query: new URLSearchParams(
-                featureIds.map((id) => ["featureId", id])
-            )
-        }
-    );
-}
-
-export function createAssembly(
-    client: OnshapeApi,
-    workspacePath: InstancePath,
-    assemblyName: string
-): Promise<any> {
-    assertWorkspace(workspacePath);
-    return client.post(
-        apiPath("assemblies", workspacePath, toInstanceApiPath),
-        {
-            body: { name: assemblyName }
-        }
-    );
-}
-
-/**
  * Adds the contents of an element tab to an assembly. For a part studio,
  * `options.partTypes` defaults to PARTS and COMPOSITE_PARTS.
  */
@@ -84,7 +47,7 @@ export function addElementToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,
     elementPath: ElementPath,
-    elementType: OnshapeElementType,
+    elementType: ElementType,
     options: {
         configuration?: Record<string, string> | string;
         partTypes?: PartType[];
@@ -105,18 +68,14 @@ export function addElementToAssembly(
                 : encodeConfigurationForBody(configuration);
     }
 
-    if (elementType === OnshapeElementType.ASSEMBLY) {
+    if (elementType === ElementType.ASSEMBLY) {
         instance.isAssembly = true;
-    } else if (elementType === OnshapeElementType.PART_STUDIO) {
+    } else {
         instance.includePartTypes = partTypes ?? [
             PartType.PARTS,
             PartType.COMPOSITE_PARTS
         ];
         instance.isWholePartStudio = true;
-    } else {
-        throw new Error(
-            `Element type must be a part studio or assembly, got ${elementType}`
-        );
     }
 
     return client.post(
@@ -128,32 +87,6 @@ export function addElementToAssembly(
                 transformGroups: [
                     { instances: [instance], transform: IDENTITY_TRANSFORM }
                 ]
-            }
-        }
-    );
-}
-
-/**
- * `isRelative` transforms from the instance's existing location rather than the
- * assembly origin.
- */
-export function transformInstance(
-    client: OnshapeApi,
-    assemblyPath: ElementPath,
-    instanceId: string,
-    transform: number[],
-    isRelative = false
-): Promise<any> {
-    assertWorkspace(assemblyPath);
-    return client.post(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "occurrencetransforms"
-        }),
-        {
-            body: {
-                isRelative,
-                occurrences: [{ path: [instanceId] }],
-                transform
             }
         }
     );
@@ -177,19 +110,5 @@ export function addAssemblyFeature(
             featureId
         }),
         { body: { feature } }
-    );
-}
-
-export function deleteFeature(
-    client: OnshapeApi,
-    assemblyPath: ElementPath,
-    featureId: string
-): Promise<any> {
-    assertWorkspace(assemblyPath);
-    return client.delete(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "features",
-            featureId
-        })
     );
 }

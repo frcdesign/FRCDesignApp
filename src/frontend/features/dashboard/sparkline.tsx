@@ -6,7 +6,7 @@ import { PrimaryColor } from "../../lib/style-constants";
 // route chunk rather than the panel's bundle.
 import "@mantine/charts/styles.layer.css";
 
-export interface AppSparklineProps {
+interface AppSparklineProps {
     data: number[];
     h: number;
     /** Fills its container when omitted, which is what a card wants. */

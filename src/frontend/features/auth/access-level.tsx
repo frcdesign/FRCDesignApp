@@ -31,7 +31,7 @@ export function getAccessDataQuery() {
 }
 
 /** Server access plus the level the app is currently viewed as. */
-export interface ResolvedAccessData extends AccessData {
+interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
     /**
      * While set, the rest are the placeholder — so anything rendered for a

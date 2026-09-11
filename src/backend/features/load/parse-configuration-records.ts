@@ -66,7 +66,7 @@ export const INDEXING_ISSUE_TYPES = [
 ];
 
 /** Whether to index an insertable, and how to flag it if we don't. */
-export interface IndexingDecision {
+interface IndexingDecision {
     /** Index below the threshold, or above it when an admin enabled it. */
     shouldIndex: boolean;
     /** The limit issues this decision raises, if any. */
@@ -116,7 +116,7 @@ export function decideIndexing(
 }
 
 /** What a part studio's parts resolve to, before build issues are decided. */
-export interface PartsEvaluation {
+interface PartsEvaluation {
     /** True when more than one part could be the one to index. */
     hasMultipleParts: boolean;
     /** True when the studio is an open composite (see {@link computeOpenComposite}). */
@@ -129,7 +129,7 @@ export interface PartsEvaluation {
  * The one place that reads meaning out of a `/parts` response. A studio holds
  * one part; an open composite is the exception, and its constituents are ignored.
  */
-export function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
+function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
     const composites = parts.filter((part) => part.bodyType === "composite");
     if (parts.length > 1 && composites.length > 0) {
         return {

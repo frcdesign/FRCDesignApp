@@ -66,4 +66,22 @@ describe("evaluateExpression", () => {
     ])("rejects %s, since %s", (expression) => {
         expect(evaluateExpression(expression, LENGTH).hasError).toBe(true);
     });
+
+    // `expression` is what the input redisplays and the menu stores, so it has
+    // to be something this same parser still reads.
+    it.each([
+        ["(1 + 2) * 3 mm"],
+        ["(2 + 3) mm"],
+        ["2 * (1 + 1) mm"],
+        ["(1 + 2)"],
+        ["-(2 + 3) mm"]
+    ])("re-parses its own output for %s", (input) => {
+        const first = evaluateExpression(input, LENGTH);
+        expect(first.hasError).toBe(false);
+        const second = evaluateExpression(first.expression, LENGTH);
+        expect(second.hasError).toBe(false);
+        expect((second as Result).displayExpression).toBe(
+            (first as Result).displayExpression
+        );
+    });
 });

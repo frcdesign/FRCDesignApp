@@ -107,17 +107,6 @@ export async function loadImageResult(
     };
 }
 
-/** {@link loadImage} for a backend /api route. */
-export async function loadApiImage(
-    path: string,
-    options?: QueryOptionsWithCacheId
-): Promise<string> {
-    return loadImage(
-        getUrl(path, options?.query, options?.cacheId),
-        options?.signal
-    );
-}
-
 /** {@link apiPost} for a DELETE. */
 export async function apiDelete<T>(
     path: string,

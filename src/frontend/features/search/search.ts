@@ -61,7 +61,7 @@ export interface FilterResult {
     byGroup: number;
 }
 
-export interface SearchResult {
+interface SearchResult {
     hits: SearchHit[];
     filtered: FilterResult;
 }

@@ -68,7 +68,7 @@ function jobPollInterval(runningForMs: number): number {
  * Checked once on load, then polled while something runs and left alone when a
  * check comes back idle. `canPoll` is the caller's gate: the route is editor-only.
  */
-export function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
+function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
@@ -95,7 +95,7 @@ export function useIsJobRunning(): boolean {
     return useJobStatusQuery().data?.running ?? false;
 }
 
-export function useJobStatusQuery() {
+function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
     return useQuery(

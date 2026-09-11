@@ -48,7 +48,7 @@ export function pickGranularity(days: string[]): Granularity {
 }
 
 /** Inclusive day count between two "YYYY-MM-DD" keys. */
-export function spanInDays(from: string, to: string): number {
+function spanInDays(from: string, to: string): number {
     const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
     return Math.round(ms / (24 * 3600 * 1000)) + 1;
 }
@@ -81,7 +81,7 @@ export function formatBucket(bucket: string, granularity: Granularity): string {
     });
 }
 
-export type ChartPoint = BucketPoint & Record<string, string | number>;
+type ChartPoint = BucketPoint & Record<string, string | number>;
 
 /**
  * Flattens the API's per-day/per-library counts into the one-record-per-x-value
@@ -119,7 +119,7 @@ export function toChartData(
 }
 
 /** One array per top card, bucketed to the same resolution as the chart. */
-export interface SparkSeries {
+interface SparkSeries {
     inserts: number[];
     activeUsers: number[];
     usesPerUser: number[];

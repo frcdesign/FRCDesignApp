@@ -46,10 +46,6 @@ export function toInsertablePath(insertableId: string): string {
     return `/insertable/${insertableId}`;
 }
 
-export function toGroupPath(groupId: string): string {
-    return `/group/${groupId}`;
-}
-
 export function toFavoritePath(favoriteId: string): string {
     return `/favorite/${favoriteId}`;
 }

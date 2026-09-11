@@ -5,7 +5,7 @@
 
 import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "@backend/lib/onshape/path";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { useIsConnectedToOnshape } from "./onshape-params";
 
 export function useMessageListener() {
@@ -37,18 +37,6 @@ export function useMessageListener() {
     }, [search.server]);
 }
 
-export function useMessageSender() {
-    const search = useSearch({ from: "/app" });
-    const isConnected = useIsConnectedToOnshape();
-    return useCallback(
-        (message: Message) => {
-            if (!isConnected) return;
-            sendMessage(search, message);
-        },
-        [search, isConnected]
-    );
-}
-
 function sendInitMessage(elementPath: ElementPath) {
     sendMessage(elementPath, { messageName: MessageType.APPLICATION_INIT });
 }
@@ -63,7 +51,7 @@ export function sendOpenFeatureMessage(
     });
 }
 
-export enum MessageType {
+enum MessageType {
     APPLICATION_INIT = "applicationInit",
     SHOW_MESSAGE_BUBBLE = "showMessageBubble",
     REQUEST_IMAGE = "requestViewerImage",

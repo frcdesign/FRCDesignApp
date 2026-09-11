@@ -24,7 +24,7 @@ import {
 import { uploadThumbnailsStep } from "./steps";
 import type { InstancePath } from "../../lib/onshape/path";
 
-export interface GroupLoadResult {
+interface GroupLoadResult {
     loadedElements: number;
     deletedElements: number;
     failedElements: number;

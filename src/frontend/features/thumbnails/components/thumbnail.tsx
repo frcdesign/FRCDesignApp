@@ -51,7 +51,7 @@ function getHeightAndWidth(
 }
 
 /** Rows know a configuration, not whether it is rendered; the route falls back. */
-export interface ThumbnailTarget {
+interface ThumbnailTarget {
     elementId: string;
     microversionId: string;
     /** Empty means the element default. */
@@ -259,7 +259,7 @@ function PreviewBox(props: PreviewBoxProps): ReactNode {
     );
 }
 
-export function PreviewImage(props: PreviewImageProps): ReactNode {
+function PreviewImage(props: PreviewImageProps): ReactNode {
     const { insertableId, microversionId, largeThumbnailUrl } = props;
     const { signedIn, isPending } = useAccessData();
     const isConnected = useIsConnectedToOnshape();

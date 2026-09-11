@@ -3,7 +3,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 /** The dashboards reachable from the navbar. */
 export type DashboardKey = "app" | "library" | "unused" | "part";
 
-export interface DashboardDefinition {
+interface DashboardDefinition {
     key: DashboardKey;
     label: string;
     /** The route path; library-scoped ones take a `libraryId` param. */

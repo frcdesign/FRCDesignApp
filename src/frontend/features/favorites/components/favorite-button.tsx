@@ -256,7 +256,7 @@ interface UnfavoriteIconProps {
     size?: IconSize;
 }
 
-export function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
+function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
     return (
         <AppIcon icon={HeartBreakIcon} size={size} color={StatusColor.ERROR} />

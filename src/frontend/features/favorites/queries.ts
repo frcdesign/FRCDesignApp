@@ -11,7 +11,7 @@ import { useLibraryId } from "../library/library-path";
 import { queryClient } from "../../lib/query-client";
 import { favoritesQueryKey } from "../../lib/query-keys";
 
-export function getFavoritesQuery(libraryId: LibraryId) {
+function getFavoritesQuery(libraryId: LibraryId) {
     return queryOptions<FavoritesData>({
         queryKey: favoritesQueryKey(libraryId),
         queryFn: () => apiGet("/favorites/library/" + libraryId)

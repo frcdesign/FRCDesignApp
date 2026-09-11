@@ -38,7 +38,7 @@ export interface InsertEvent {
     fasten: boolean;
 }
 
-export interface AppOpenEvent {
+interface AppOpenEvent {
     libraryId: LibraryId;
     userId: string;
 }

@@ -199,7 +199,7 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
-export function SearchBar() {
+function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const uiState = useGetUiState();
     const setUiState = useSetUiState();

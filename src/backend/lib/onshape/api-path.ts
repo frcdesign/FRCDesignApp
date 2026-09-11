@@ -1,6 +1,6 @@
 import { DocumentPath } from "./path";
 
-export interface ApiPathOptions {
+interface ApiPathOptions {
     endRoute?: string;
     endId?: string;
     featureId?: string;

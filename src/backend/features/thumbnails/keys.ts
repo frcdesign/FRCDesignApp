@@ -25,7 +25,7 @@ export function thumbnailKey(
     return `thumbnails/config/${elementId}/${microversionId}/${segment}/${size}`;
 }
 
-export interface ThumbnailUrlOptions {
+interface ThumbnailUrlOptions {
     elementId: string;
     microversionId: string;
     size: ThumbnailSize;

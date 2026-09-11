@@ -36,30 +36,30 @@ export enum OnshapeOptionVisibilityConditionType {
 
 // --- visibility conditions --------------------------------------------------------
 
-export interface OnshapeLogicalVisibility {
+interface OnshapeLogicalVisibility {
     btType: OnshapeVisibilityConditionType.LOGICAL;
     operation: LogicalOp;
     children: OnshapeVisibilityCondition[];
 }
 
-export interface OnshapeEqualVisibility {
+interface OnshapeEqualVisibility {
     btType: OnshapeVisibilityConditionType.EQUAL;
     parameterId: string;
     value: string;
 }
 
-export interface OnshapeRangeVisibility {
+interface OnshapeRangeVisibility {
     btType: OnshapeVisibilityConditionType.RANGE;
     parameterId: string;
     optionRange: OnshapeOptionRange;
 }
 
-export interface OnshapeAlwaysShownVisibility {
+interface OnshapeAlwaysShownVisibility {
     btType: OnshapeVisibilityConditionType.ALWAYS_SHOWN;
 }
 
 /** The "no condition" sentinel (also appears as a child of logical conditions). */
-export interface OnshapeNoVisibility {
+interface OnshapeNoVisibility {
     btType: OnshapeVisibilityConditionType.NONE;
 }
 
@@ -71,26 +71,26 @@ export type OnshapeVisibilityCondition =
     | OnshapeNoVisibility;
 
 /** A `[start, end]` range over an enum parameter's ordered options. */
-export interface OnshapeOptionRange {
+interface OnshapeOptionRange {
     start: string;
     end: string;
 }
 
 // --- enum option visibility conditions --------------------------------------------
 
-export interface OnshapeOptionVisibilityForList {
+interface OnshapeOptionVisibilityForList {
     btType: OnshapeOptionVisibilityConditionType.LIST;
     controlledOptions: string[];
     condition: OnshapeVisibilityCondition;
 }
 
-export interface OnshapeOptionVisibilityForRange {
+interface OnshapeOptionVisibilityForRange {
     btType: OnshapeOptionVisibilityConditionType.RANGE;
     controlledRange: OnshapeOptionRange;
     condition: OnshapeVisibilityCondition;
 }
 
-export type OnshapeEnumOptionVisibilityCondition =
+type OnshapeEnumOptionVisibilityCondition =
     | OnshapeOptionVisibilityForList
     | OnshapeOptionVisibilityForRange;
 
@@ -100,12 +100,12 @@ export interface OnshapeEnumOptionVisibilityConditionList {
 
 // --- configuration parameters -----------------------------------------------------
 
-export interface OnshapeEnumOption {
+interface OnshapeEnumOption {
     option: string;
     optionName: string;
 }
 
-export interface OnshapeQuantityRange {
+interface OnshapeQuantityRange {
     units: Unit;
     defaultValue: number;
     minValue: number;
@@ -119,30 +119,30 @@ interface OnshapeParameterBase {
     visibilityCondition: OnshapeVisibilityCondition;
 }
 
-export interface OnshapeEnumParameter extends OnshapeParameterBase {
+interface OnshapeEnumParameter extends OnshapeParameterBase {
     btType: OnshapeParameterType.ENUM;
     defaultValue: string;
     options: OnshapeEnumOption[];
     enumOptionVisibilityConditions?: OnshapeEnumOptionVisibilityConditionList;
 }
 
-export interface OnshapeBooleanParameter extends OnshapeParameterBase {
+interface OnshapeBooleanParameter extends OnshapeParameterBase {
     btType: OnshapeParameterType.BOOLEAN;
     defaultValue: boolean;
 }
 
-export interface OnshapeStringParameter extends OnshapeParameterBase {
+interface OnshapeStringParameter extends OnshapeParameterBase {
     btType: OnshapeParameterType.STRING;
     defaultValue: string;
 }
 
-export interface OnshapeQuantityParameter extends OnshapeParameterBase {
+interface OnshapeQuantityParameter extends OnshapeParameterBase {
     btType: OnshapeParameterType.QUANTITY;
     quantityType: QuantityType;
     rangeAndDefault: OnshapeQuantityRange;
 }
 
-export type OnshapeConfigurationParameter =
+type OnshapeConfigurationParameter =
     | OnshapeEnumParameter
     | OnshapeBooleanParameter
     | OnshapeStringParameter
@@ -152,18 +152,6 @@ export type OnshapeConfigurationParameter =
 export interface OnshapeConfigurationResponse {
     btType: "BTConfigurationResponse-2019";
     configurationParameters: OnshapeConfigurationParameter[];
-}
-
-// --- configuration encodings ------------------------------------------------------
-
-export interface OnshapeConfigurationInfoEntry {
-    parameterId: string;
-    parameterValue: string;
-}
-
-/** GET /elements/.../configurationencodings/{cid} response. */
-export interface OnshapeConfigurationInfo {
-    parameters: OnshapeConfigurationInfoEntry[];
 }
 
 // === versions (GET /documents/d/{did}/versions) ===
@@ -208,7 +196,7 @@ export interface OnshapeElementGroup {
 }
 
 /** A reference to an element (tab) within the contents tree. */
-export interface OnshapeElementReference {
+interface OnshapeElementReference {
     btType: OnshapeFolderEntryType.ELEMENT;
     elementId: string;
 }
@@ -242,19 +230,19 @@ export interface OnshapeAssemblyFeature {
 }
 
 /** A top-level instance (part or subassembly) in the root assembly. */
-export interface OnshapeAssemblyInstance {
+interface OnshapeAssemblyInstance {
     id: string;
     /** "Part" or "Assembly". */
     type: string;
 }
 
 /** A part in the assembly's flattened `parts` list. */
-export interface OnshapeAssemblyPart {
+interface OnshapeAssemblyPart {
     mateConnectors?: { featureId: string }[];
 }
 
 /** A subassembly in the assembly's flattened `subAssemblies` list. */
-export interface OnshapeSubAssembly {
+interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
 }
 
@@ -285,7 +273,7 @@ export interface OnshapeCreatedFeature {
 // === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
 
 /** A part's body classification; `composite` marks an open composite's part. */
-export type OnshapePartBodyType = "solid" | "sheet" | "composite";
+type OnshapePartBodyType = "solid" | "sheet" | "composite";
 
 /** A part in a part studio (the subset we read). */
 export interface OnshapePart {
@@ -302,7 +290,7 @@ export interface OnshapePart {
 // === element metadata (GET /metadata/.../e/{eid}) ===
 
 /** One property in an element's metadata bag. */
-export interface OnshapeMetadataProperty {
+interface OnshapeMetadataProperty {
     /** Display name, e.g. "Part number" — how we pick out the ones we store. */
     name: string;
     value: unknown;
@@ -316,7 +304,7 @@ export interface OnshapeMetadataObject {
 // === part studios (GET .../partstudios/.../features) ===
 
 /** A feature in a part studio. */
-export interface OnshapePartStudioFeature {
+interface OnshapePartStudioFeature {
     featureType: string;
     featureId: string;
     name: string;

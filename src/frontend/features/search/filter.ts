@@ -4,7 +4,7 @@ import { SearchDocument } from "@backend/features/search/search-index";
 import { Vendor } from "@backend/features/library/vendors";
 import { doSearch, FilterResult, SearchFilters, SearchHit } from "./search";
 
-export interface FilterArgs {
+interface FilterArgs {
     /**
      * A list of one or more vendors to keep.
      */
@@ -55,7 +55,7 @@ export function filterInsertables(
     };
 }
 
-export interface SearchArgs {
+interface SearchArgs {
     searchDb: MiniSearch<SearchDocument>;
     /** The library's insertables, which hits are resolved against. */
     insertables: Insertables;

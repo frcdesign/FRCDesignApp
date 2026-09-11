@@ -130,11 +130,6 @@ export function getVendorPartUrl(
     }
 }
 
-/** Team-made, so it is expected to have no part number. */
-export function isCustomPart(vendors: Vendor[]): boolean {
-    return vendors.includes(Vendor.CUSTOM);
-}
-
 export function getVendorName(vendor: Vendor) {
     switch (vendor) {
         case Vendor.AB:
