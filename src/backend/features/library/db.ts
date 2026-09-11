@@ -12,7 +12,7 @@ import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
 import { ConfigurationRecord } from "../configurations/contract";
 import { toRecords } from "../configurations/utils";
-import { buildSearchDb } from "../../lib/search-index";
+import { buildSearchDb } from "../search/build";
 
 /**
  * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a

@@ -7,7 +7,14 @@ import {
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
-import { FilterResult, ObjectLabel, plural } from "../search";
+import { FilterResult } from "../search";
+
+/** What a narrowed-down list is called to the user. */
+export type ObjectLabel = "element" | "favorite" | "search result";
+
+function plural(objectLabel: ObjectLabel): string {
+    return objectLabel + "s";
+}
 import { useNavigate } from "@tanstack/react-router";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { useLibraryId } from "../../../lib/library";

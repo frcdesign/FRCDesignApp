@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import MiniSearch from "minisearch";
-import { buildSearchDb, type SearchDocument } from "@backend/lib/search-index";
-import { doSearch, type Position } from "./search";
+import { buildSearchDb } from "@backend/features/search/build";
+import { type SearchDocument } from "@backend/features/search/contract";
+import { doSearch } from "./search";
+import { type Position } from "../../lib/highlight";
 import { LibraryOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {

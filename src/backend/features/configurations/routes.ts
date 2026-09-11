@@ -8,7 +8,7 @@ import { getDb } from "../../db/client";
 import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import { configurations, insertables } from "../../db/schema";
 import { type ConfigurationResult, type UnitInfo } from "./contract";
-import { toSearchRecords } from "../../lib/search-index";
+import { toSearchRecords } from "../search/build";
 import { DEFAULT_QUANTITY_PRECISION, toRecords } from "./utils";
 import { QuantityType, type Unit } from "./enums";
 import { INSTANCE_TYPES } from "../../lib/onshape/path";

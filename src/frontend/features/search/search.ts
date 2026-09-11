@@ -3,25 +3,10 @@ import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
 import {
     INSERTABLE_FIELDS,
-    SearchDocument,
-    normalizeForMatch,
-    tokenizeName,
-    tokenizePartNumber
-} from "@backend/lib/search-index";
-import {
-    type ConfigurationKey,
-    DEFAULT_CONFIGURATION_KEY,
-    SearchRecord
-} from "@backend/features/configurations/contract";
-
-/**
- * A user facing name to use for elements currently being filtered/searched on.
- */
-export type ObjectLabel = "element" | "favorite" | "search result";
-
-export function plural(objectLabel: ObjectLabel): string {
-    return objectLabel + "s";
-}
+    SearchDocument
+} from "@backend/features/search/contract";
+import { matchedRecord } from "@backend/features/search/records";
+import { type ConfigurationKey } from "@backend/features/configurations/contract";
 
 /** As many results as a list is worth scrolling. */
 const MAX_HITS = 50;
@@ -31,8 +16,6 @@ export interface SearchFilters {
     vendors?: Vendor[];
     isFavorite?: boolean;
 }
-
-export type { Position };
 
 export interface SearchHit {
     id: string;
@@ -159,7 +142,11 @@ export function doSearch(args: SearchArgs): SearchResult {
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
-            const record = matchedRecord(miniSearchResult, document, query);
+            const record = matchedRecord(
+                query,
+                document.records,
+                Object.values(miniSearchResult.match).flat()
+            );
             const partNumber = record?.partNumber;
             const partName = record?.name;
             return {
@@ -191,167 +178,6 @@ export function doSearch(args: SearchArgs): SearchResult {
         });
 
     return { hits, filtered };
-}
-
-/**
- * The element's own defaults first. `toKey` leaves out whatever a selection does
- * not override, so that record is the one keyed by the empty string.
- *
- * Records arrive in the order `enumerateConfigurations` produced them, which is
- * option declaration order — the default lands wherever Onshape happens to
- * declare it, and for a boolean parameter defaulting to false it is never first.
- */
-function defaultFirst(records: SearchRecord[]): SearchRecord[] {
-    const index = records.findIndex(
-        (record) => record.configurationKey === DEFAULT_CONFIGURATION_KEY
-    );
-    if (index <= 0) {
-        return records;
-    }
-    return [
-        records[index],
-        ...records.slice(0, index),
-        ...records.slice(index + 1)
-    ];
-}
-
-/**
- * The best record by part number or name, whichever the query describes better,
- * else the default — so a row shows one even when only the title matched.
- */
-function matchedRecord(
-    result: MiniSearchResult,
-    document: SearchDocument,
-    query: string
-): SearchRecord | undefined {
-    const matchedFields = Object.values(result.match).flat();
-    // Reordered once, so the tie-break inside findBestRecord and the fallback
-    // below both land on the configuration the insert menu opens with.
-    const records = defaultFirst(document.records);
-    const byNumber = matchedFields.includes("partNumbers")
-        ? findBestRecord(query, records, (r) => r.partNumber, LITERAL)
-        : undefined;
-    const byName = matchedFields.includes("partNames")
-        ? findBestRecord(query, records, (r) => r.name, DESCRIPTIVE)
-        : undefined;
-
-    const best = [byNumber, byName]
-        .filter((match) => match !== undefined)
-        // Part number first, so it wins a tie: it is the more specific field.
-        .sort((a, b) => b.score - a.score)[0];
-    return best?.record ?? records[0];
-}
-
-interface RecordMatch {
-    record: SearchRecord;
-    score: number;
-}
-
-/**
- * How a field's text is read for scoring: a part number is compared as typed,
- * a name around the decimals its sizes are indexed as.
- */
-interface FieldReader {
-    normalize: (text: string) => string;
-    terms: (text: string) => string[];
-}
-
-/** A part number identifies: `217-2600` is a code, not a number. */
-const LITERAL: FieldReader = {
-    normalize: (text) => text.trim().toLowerCase(),
-    terms: tokenizePartNumber
-};
-
-/** A name describes, so `1/2`, `.5` and `0.5` are one size. */
-const DESCRIPTIVE: FieldReader = {
-    normalize: normalizeForMatch,
-    terms: (text) => tokenizeName(text).map((term) => term.toLowerCase())
-};
-
-/**
- * A term matched whole beats one matched as a prefix, which every longer number
- * satisfies too: `1` names the size `1"`, but only starts `16`.
- */
-function termScore(valueTerms: string[], queryTerm: string): number {
-    // A unit is not part of the number's spelling, so `1` still names `1"`.
-    if (
-        valueTerms.includes(queryTerm) ||
-        valueTerms.includes(queryTerm + '"')
-    ) {
-        return 2;
-    }
-    return valueTerms.some((valueTerm) => valueTerm.startsWith(queryTerm))
-        ? 1
-        : 0;
-}
-
-/** How much of the query the value covers, term by term. */
-function coveredTerms(
-    value: string,
-    queryTerms: string[],
-    field: FieldReader
-): number {
-    const valueTerms = field.terms(value);
-    return queryTerms.reduce(
-        (score, queryTerm) => score + termScore(valueTerms, queryTerm),
-        0
-    );
-}
-
-/**
- * How well a value answers the query: a whole-query match ranks above any
- * number of loose terms, so a part number typed out in full still wins.
- */
-function matchScore(
-    value: string,
-    normalizedQuery: string,
-    queryTerms: string[],
-    field: FieldReader
-): number {
-    let whole = 0;
-    if (value === normalizedQuery) {
-        whole = 3;
-    } else if (value.startsWith(normalizedQuery)) {
-        whole = 2;
-    } else if (value.includes(normalizedQuery)) {
-        whole = 1;
-    }
-    // Outweighs full term coverage, which is worth 2 a term.
-    return (
-        whole * (2 * queryTerms.length + 1) +
-        coveredTerms(value, queryTerms, field)
-    );
-}
-
-/**
- * Scored by term rather than by the whole query, which "maxspline 24t" matches
- * no record as. Ties go to whichever came first in `records`, which
- * {@link defaultFirst} has already put the element's defaults at the front of.
- */
-function findBestRecord(
-    query: string,
-    records: SearchRecord[],
-    selector: (record: SearchRecord) => string | undefined,
-    field: FieldReader
-): RecordMatch | undefined {
-    // Read the query the way the field was indexed, so a `.5` query lines up
-    // with a stored "1/2 Bearing" and a typed part number with itself.
-    const normalizedQuery = field.normalize(query.trim());
-    if (records.length === 0 || normalizedQuery === "") {
-        return undefined;
-    }
-    const queryTerms = field.terms(query);
-
-    let best: RecordMatch | undefined;
-    for (const record of records) {
-        const value = field.normalize(selector(record) ?? "");
-        if (!value) continue;
-        const score = matchScore(value, normalizedQuery, queryTerms, field);
-        if (score > (best?.score ?? 0)) {
-            best = { record, score };
-        }
-    }
-    return best;
 }
 
 /** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */

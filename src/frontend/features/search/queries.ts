@@ -5,7 +5,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import {
     SEARCH_OPTIONS,
     type SearchDocument
-} from "@backend/lib/search-index";
+} from "@backend/features/search/contract";
 import { toLibraryPath } from "../../lib/api-paths";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
