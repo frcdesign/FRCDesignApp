@@ -1,21 +1,12 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
-import {
-    loadImage,
-    loadImageResult,
-    type LoadedImage
-} from "../../../lib/api-client";
+import { loadImage } from "../../../lib/api-client";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { QuestionIcon } from "@phosphor-icons/react";
 
-import {
-    ComponentPropsWithRef,
-    PropsWithChildren,
-    ReactNode,
-    useState
-} from "react";
+import { ComponentPropsWithRef, PropsWithChildren, ReactNode } from "react";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
@@ -76,10 +67,18 @@ interface CardThumbnailProps {
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
+    // Only a row that starts the render asks for one. Nothing else renders a
+    // configuration, so a row that does not would be asking for a picture that
+    // is never going to exist; the element's own is the honest thing to show.
+    const renderTarget =
+        target &&
+        target.configurationKey !== DEFAULT_CONFIGURATION_KEY &&
+        target.renderThumbnail
+            ? target
+            : undefined;
+
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        target && target.configurationKey !== DEFAULT_CONFIGURATION_KEY
-            ? thumbnailUrl({ ...target, size })
-            : stored;
+        renderTarget ? thumbnailUrl({ ...renderTarget, size }) : stored;
 
     return (
         <HoverCard
@@ -123,9 +122,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         queryKey: ["storage-thumbnail", url],
         // Narrowed here rather than guarded inside: `enabled` is what keeps it
         // from running, and the query function should not restate that.
-        queryFn: url
-            ? ({ signal }) => loadImage(url, signal)
-            : skipToken,
+        queryFn: url ? ({ signal }) => loadImage(url, signal) : skipToken,
         retry: 1
     });
 
@@ -185,63 +182,42 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 /** Sized to the preview's footprint rather than to a row's. */
 const PREVIEW_SPINNER_SIZE = 36;
 
-/** How often to re-check while the worker is still standing in the default. */
+/** How often to re-ask while the render is still running. */
 const PREVIEW_POLL_MS = 4000;
 
 /**
- * How many polls apart to ask for the render again. One request is meant to
- * start it; this only covers the run never having been queued at all.
+ * Roughly six minutes of polling. Long because the render is a workflow that
+ * retries Onshape for far longer, cheap because every poll is a worker reading
+ * R2 — the render itself was started once and is not started again.
  */
-const RENDER_EVERY_POLLS = 15;
+const PREVIEW_POLL_ATTEMPTS = 90;
 
 /**
- * The last render actually produced, kept across configuration changes: the
- * worker stands the element default in until a new one lands.
- */
-function useLastRenderedUrl(image?: LoadedImage): string | undefined {
-    const [lastRendered, setLastRendered] = useState<string>();
-    if (image && !image.isFallback && image.url !== lastRendered) {
-        setLastRendered(image.url);
-    }
-    return lastRendered;
-}
-
-/**
- * Polls for the render the worker produces in a workflow: the first request
- * starts one, and the element default stands in until it lands.
+ * Polls for the render the worker produces in a workflow. Until it lands the
+ * route answers 404, so a miss is a rejected query and the retry is the poll;
+ * asking to render is idempotent, so every poll can carry it.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;
-    // A url per poll: the browser caches images by url for the life of the
-    // page, so reusing one leaves the stand-in up however often we refetch.
-    const pollUrl = (attempt: number) =>
-        thumbnailUrl({
-            elementId: path.elementId,
-            microversionId,
-            size: PREVIEW_SIZE,
-            configurationKey,
-            renderThumbnail: attempt % RENDER_EVERY_POLLS === 0,
-            insertableId,
-            attempt
-        });
+    const url = thumbnailUrl({
+        elementId: path.elementId,
+        microversionId,
+        size: PREVIEW_SIZE,
+        configurationKey,
+        renderThumbnail: true,
+        insertableId
+    });
 
-    const queryKey = ["thumbnail", pollUrl(0)];
-    const query = useQuery({
-        queryKey,
-        queryFn: ({ signal, client }) =>
-            loadImageResult(
-                // Counts the polls, so a new configuration starts over.
-                pollUrl(client.getQueryState(queryKey)?.dataUpdateCount ?? 0),
-                signal
-            ),
+    return useQuery({
+        queryKey: ["thumbnail", url],
+        queryFn: ({ signal }) => loadImage(url, signal),
+        // The previous configuration's render, so the box does not blank out
+        // while this one is still being waited on.
         placeholderData: (previousData) => previousData,
-        refetchInterval: (query) =>
-            query.state.data?.isFallback ? PREVIEW_POLL_MS : false,
-        retry: 2,
+        retry: PREVIEW_POLL_ATTEMPTS,
+        retryDelay: PREVIEW_POLL_MS,
         enabled
     });
-    const lastRenderedUrl = useLastRenderedUrl(query.data);
-    return { query, lastRenderedUrl };
 }
 
 interface PreviewBoxProps extends PropsWithChildren {
@@ -267,7 +243,7 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
         microversionId
     );
     const targetElementType = useTargetElementType();
-    const { query, lastRenderedUrl } = usePreviewThumbnail(
+    const query = usePreviewThumbnail(
         props,
         !isFetchingConfiguration && signedIn
     );
@@ -317,15 +293,6 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
         return spinner;
     }
 
-    // A stand-in must not displace a render the user already has.
-    const previewUrl =
-        query.data.isFallback && lastRenderedUrl
-            ? lastRenderedUrl
-            : query.data.url;
-    // Placeholder data is the previous configuration's render, so the spinner
-    // has to cover it too: what is on screen is not what was asked for.
-    const isWaiting = query.isPlaceholderData || query.data.isFallback;
-
     return (
         <>
             <Box
@@ -334,12 +301,14 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
                 h={heightAndWidth.height}
             >
                 <img
-                    src={previewUrl}
+                    src={query.data}
                     {...heightAndWidth}
                     style={FIT_INSIDE_BOX}
                 />
             </Box>
-            {isWaiting && (
+            {/* What is on screen is the previous configuration's render, not
+                the one that was asked for. */}
+            {query.isPlaceholderData && (
                 <Loader pos="absolute" bottom={15} right={15} size={18} />
             )}
         </>

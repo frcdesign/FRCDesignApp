@@ -5,9 +5,6 @@ import {
 } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
 
-/** Marks a response as the element default standing in for an unrendered configuration. */
-export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
-
 /** Everything a thumbnail is stored under, and what reconciliation scans. */
 export const THUMBNAIL_PREFIX = "thumbnails/";
 
@@ -47,9 +44,7 @@ export function subjectKey(subject: ThumbnailSubject): string {
  * is not one {@link thumbnailKey} produces. Reconciliation deletes what this
  * resolves, so anything it does not recognize is left alone.
  */
-export function parseThumbnailKey(
-    key: string
-): ThumbnailSubject | undefined {
+export function parseThumbnailKey(key: string): ThumbnailSubject | undefined {
     if (!key.startsWith(THUMBNAIL_PREFIX)) {
         return undefined;
     }
@@ -74,11 +69,6 @@ interface ThumbnailUrlOptions {
     renderThumbnail?: boolean;
     /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
-    /**
-     * Which poll this is. The worker ignores it; it is what keeps each poll off
-     * the browser's image cache, which serves a url for the page's lifetime.
-     */
-    attempt?: number;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -88,8 +78,7 @@ export function thumbnailUrl({
     size,
     configurationKey,
     renderThumbnail,
-    insertableId,
-    attempt
+    insertableId
 }: ThumbnailUrlOptions): string {
     // `v` is the one abbreviation: it is the cache version every immutable url
     // carries, and a render is pinned to the microversion it was taken from.
@@ -100,11 +89,6 @@ export function thumbnailUrl({
             query.set("renderThumbnail", "true");
             query.set("insertableId", insertableId);
         }
-        // Omitted on the first, so it shares a url with everything else asking
-        // for this configuration.
-        if (attempt) {
-            query.set("attempt", attempt.toString());
-        }
     }
     return `/api/thumbnail/${size}/${elementId}?${query.toString()}`;
 }
@@ -114,16 +98,13 @@ export function thumbnailUrl({
  * thumbnail only as these two urls, so this is what tells reconciliation which
  * element and microversion they still stand for; `keys.test.ts` pins the pair.
  */
-export function parseThumbnailUrl(
-    url: string
-): ThumbnailSubject | undefined {
+export function parseThumbnailUrl(url: string): ThumbnailSubject | undefined {
     // Relative, so it needs a base to parse against; the origin is discarded.
     const parsed = URL.parse(url, "https://x.invalid");
     if (!parsed) {
         return undefined;
     }
-    const [, api, thumbnail, , elementId, ...rest] =
-        parsed.pathname.split("/");
+    const [, api, thumbnail, , elementId, ...rest] = parsed.pathname.split("/");
     const microversionId = parsed.searchParams.get("v");
     if (
         api !== "api" ||

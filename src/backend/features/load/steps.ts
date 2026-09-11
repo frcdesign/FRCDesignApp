@@ -32,8 +32,13 @@ function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     return `${seconds} seconds`;
 }
 
+/**
+ * Every step that calls Onshape takes this. The platform default would retry
+ * too, but on its own curve — a 429 carries a `Retry-After` and this is what
+ * honors it. Five attempts, matching that default rather than shortening it.
+ */
 export const ONSHAPE_STEP_RETRIES = {
-    limit: 3,
+    limit: 5,
     delay: onshapeRetryDelay
 };
 

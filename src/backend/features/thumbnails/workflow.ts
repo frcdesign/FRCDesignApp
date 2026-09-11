@@ -17,12 +17,36 @@ export interface ThumbnailWorkflowParams {
     insertableId: string;
     /** Never the default, which loads eagerly with the element. */
     configurationKey: ConfigurationKey;
+    /** The microversion asked for, which is what makes the run id unique. */
+    microversionId: string;
     sessionId: string;
 }
 
 /**
- * Outside a request, since Onshape can take minutes. Until it finishes,
- * requests fall back to the element's default thumbnail.
+ * Names the render rather than the run, so asking twice is asking once. Hashed
+ * because a configuration key carries `=`, `;` and `%`, and this has to be one
+ * plain token; sha-256 rather than anything shorter so two keys cannot collide
+ * onto one render.
+ */
+export async function thumbnailRunId({
+    insertableId,
+    configurationKey,
+    microversionId
+}: Omit<ThumbnailWorkflowParams, "sessionId">): Promise<string> {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(
+            `${insertableId}\n${microversionId}\n${configurationKey}`
+        )
+    );
+    return [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+/**
+ * Outside a request, since Onshape can take minutes. Until it finishes, the
+ * route answers this configuration with a miss and the client polls.
  */
 export class ThumbnailWorkflow extends WorkflowEntrypoint<
     AppBindings,

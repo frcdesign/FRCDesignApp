@@ -28,6 +28,7 @@ import {
 } from "./context";
 import { untrackJob } from "./job-tracker";
 import { loadGroup } from "./load-group";
+import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { reconcileThumbnails } from "../thumbnails/reconcile";
 
 export interface LoadLibraryParams {
@@ -106,8 +107,8 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         );
 
         await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
-        // After finalize, so a group that failed this run has already been
-        // flagged rather than read as having lost its elements.
+        // Last, so every group that was going to write rows has. A group that
+        // failed kept its old rows, so its thumbnails still read as live.
         await step.do("reconcile-thumbnails", () =>
             reconcileThumbnails(ctx.env.BLOB, getDb(ctx.env.DB))
         );
@@ -185,11 +186,19 @@ async function resolveGroupTarget(
     stepSuffix: string
 ): Promise<GroupTarget> {
     const { documentId } = ids;
-    const document = await ctx.step.do(`document${stepSuffix}`, async () =>
-        getDocument(await getOnshapeApiFromContext(ctx), { documentId })
+    const document = await ctx.step.do(
+        `document${stepSuffix}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () =>
+            getDocument(await getOnshapeApiFromContext(ctx), { documentId })
     );
-    const versionId = await ctx.step.do(`version${stepSuffix}`, async () =>
-        getLatestVersionId(await getOnshapeApiFromContext(ctx), { documentId })
+    const versionId = await ctx.step.do(
+        `version${stepSuffix}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () =>
+            getLatestVersionId(await getOnshapeApiFromContext(ctx), {
+                documentId
+            })
     );
 
     const versionPath: InstancePath = {

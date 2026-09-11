@@ -21,7 +21,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { uploadThumbnailsStep } from "./steps";
+import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 import type { InstancePath } from "../../lib/onshape/path";
 
 interface GroupLoadResult {
@@ -50,8 +50,10 @@ export async function loadGroup(
     const { groupId, versionPath } = target;
 
     // Read the document's loadable tabs (display order) and the stored rows.
-    const insertableTabs = await ctx.step.do(`insertable-tabs-${groupId}`, () =>
-        fetchInsertableTabs(ctx, versionPath)
+    const insertableTabs = await ctx.step.do(
+        `insertable-tabs-${groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        () => fetchInsertableTabs(ctx, versionPath)
     );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,

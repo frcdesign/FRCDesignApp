@@ -34,7 +34,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { uploadThumbnailsStep } from "./steps";
+import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
 /**
  * Exactly the columns a reload overwrites; the rest of the row is identity or
@@ -161,13 +161,17 @@ function parseConfigurationStep(
     ctx: LoadContext,
     { insertableId, elementPath }: InsertableTarget
 ): Promise<ConfigurationParameter[]> {
-    return ctx.step.do(`config-${insertableId}`, async () => {
-        const onshapeConfiguration = await getConfiguration(
-            await getOnshapeApiFromContext(ctx),
-            elementPath
-        );
-        return parseOnshapeConfiguration(onshapeConfiguration);
-    });
+    return ctx.step.do(
+        `config-${insertableId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => {
+            const onshapeConfiguration = await getConfiguration(
+                await getOnshapeApiFromContext(ctx),
+                elementPath
+            );
+            return parseOnshapeConfiguration(onshapeConfiguration);
+        }
+    );
 }
 
 /** What one look at a part studio's default parts tells the rest of the load. */
@@ -188,30 +192,37 @@ function readPartsStep(
     if (elementType !== ElementType.PART_STUDIO) {
         return Promise.resolve({ isOpenComposite: false, buildIssues: [] });
     }
-    return ctx.step.do(`parts-${insertableId}`, async () => {
-        const parts = await getParts(
-            await getOnshapeApiFromContext(ctx),
-            elementPath,
-            {}
-        );
-        return {
-            isOpenComposite: computeOpenComposite(parts),
-            buildIssues:
-                parts.length > 0 ? [] : [{ type: BuildIssueType.NO_PARTS }]
-        };
-    });
+    return ctx.step.do(
+        `parts-${insertableId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => {
+            const parts = await getParts(
+                await getOnshapeApiFromContext(ctx),
+                elementPath,
+                {}
+            );
+            return {
+                isOpenComposite: computeOpenComposite(parts),
+                buildIssues:
+                    parts.length > 0 ? [] : [{ type: BuildIssueType.NO_PARTS }]
+            };
+        }
+    );
 }
 
 function parseFastenInfoStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
 ): Promise<FastenInfo> {
-    return ctx.step.do(`fasten-${insertableId}`, async () =>
-        parseFastenInfo(
-            await getOnshapeApiFromContext(ctx),
-            elementPath,
-            elementType
-        )
+    return ctx.step.do(
+        `fasten-${insertableId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () =>
+            parseFastenInfo(
+                await getOnshapeApiFromContext(ctx),
+                elementPath,
+                elementType
+            )
     );
 }
 
