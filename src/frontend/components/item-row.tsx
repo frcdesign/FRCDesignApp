@@ -156,7 +156,11 @@ function CardPartNumber(props: CardPartNumberProps): ReactNode {
             </Text>
         );
     }
-    return <PartNumberLink url={url}>{text}</PartNumberLink>;
+    return (
+        <PartNumberLink url={url} noShrink>
+            {text}
+        </PartNumberLink>
+    );
 }
 
 /**

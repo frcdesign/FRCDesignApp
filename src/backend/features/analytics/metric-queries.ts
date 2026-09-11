@@ -214,10 +214,17 @@ function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .all();
 }
 
-/** One row per user per day already, so this is a COUNT, not a DISTINCT. */
+/**
+ * DISTINCT, not COUNT: the table holds one row per user *per library* per day,
+ * so an unscoped read counts someone active in two libraries twice — and would
+ * then disagree with getTotals, which counts distinct.
+ */
 function countUsersByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
     return db
-        .select({ day: dailyUserActivity.day, activeUsers: count() })
+        .select({
+            day: dailyUserActivity.day,
+            activeUsers: countDistinct(dailyUserActivity.userId)
+        })
         .from(dailyUserActivity)
         .where(and(...activityFilters(range, libraryId)))
         .groupBy(dailyUserActivity.day)

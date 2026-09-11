@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, max } from "drizzle-orm";
 import { handledError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
 import { cacheMiddleware } from "../../lib/cache";
@@ -151,10 +151,15 @@ favoriteRoutes.post(
             .values({ id: userId, libraryId })
             .onConflictDoNothing();
 
-        // Ordered onto the end of what they already have, and counted to see
-        // whether there is room for one more.
+        // Counted to see whether there is room for one more, and the highest
+        // order taken so the new one lands after it. Not the count: deleting
+        // from the middle leaves a gap, and counting would then reuse an order
+        // a live favorite still holds.
         const existing = await db
-            .select({ value: count() })
+            .select({
+                value: count(),
+                highestOrder: max(favorites.sortOrder)
+            })
             .from(favorites)
             .where(
                 and(
@@ -164,8 +169,8 @@ favoriteRoutes.post(
             )
             .get();
 
-        const sortOrder = existing?.value ?? 0;
-        if (sortOrder >= MAX_FAVORITES) {
+        const sortOrder = (existing?.highestOrder ?? -1) + 1;
+        if ((existing?.value ?? 0) >= MAX_FAVORITES) {
             // Handled rather than internal: the caller can act on this, and
             // removing one is the whole of what it takes.
             throw handledError(

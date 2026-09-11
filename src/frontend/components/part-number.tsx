@@ -7,6 +7,12 @@ interface PartNumberLinkProps {
     /** Already-rendered text, so a caller can underline what a query matched. */
     children: ReactNode;
     url: string;
+    /**
+     * Holds the link at its own width beside text that can outgrow the row,
+     * which a list row wants. A header wants the opposite: it lets a long part
+     * number shrink and ellipsize rather than push the title around.
+     */
+    noShrink?: boolean;
 }
 
 /**
@@ -15,7 +21,7 @@ interface PartNumberLinkProps {
  * colour by being inside it.
  */
 export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
-    const { children, url } = props;
+    const { children, url, noShrink = false } = props;
     return (
         <Anchor
             href={url}
@@ -26,7 +32,11 @@ export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
             display="inline-flex"
             miw={0}
             maw="100%"
-            style={{ alignItems: "center", gap: 2, ...NO_SHRINK }}
+            style={{
+                alignItems: "center",
+                gap: 2,
+                ...(noShrink ? NO_SHRINK : {})
+            }}
         >
             <Text component="span" inherit truncate miw={0}>
                 {children}

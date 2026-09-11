@@ -186,7 +186,7 @@ describe("favorites routes", () => {
     });
 
     describe("POST /favorites/library/:libraryId", () => {
-        it("creates a favorite with sortOrder = existing count", async () => {
+        it("creates a favorite after the highest order taken", async () => {
             await seedPartStudio(db);
             await seedAssembly(db);
             await seedFavorite(db, TEST_PART_STUDIO_ID); // one existing favorite
@@ -207,6 +207,28 @@ describe("favorites routes", () => {
             expect(row?.userId).toBe("test-user");
             expect(row?.insertableId).toBe(TEST_ASSEMBLY_ID);
             expect(row?.sortOrder).toBe(1);
+        });
+
+        // Counting instead would reuse an order a live favorite still holds,
+        // and the two would then sort against each other arbitrarily.
+        it("does not reuse an order after one is deleted from the middle", async () => {
+            await fillFavorites(3);
+            await seedPartStudio(db);
+            await db.delete(favorites).where(eq(favorites.id, "filler-1"));
+
+            const app = createTestApp();
+            const res = await app.request(
+                `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}&id=fav-new`,
+                jsonRequest("POST"),
+                env
+            );
+            expect(res.status).toBe(200);
+
+            const orders = (await db.select().from(favorites).all()).map(
+                (row) => row.sortOrder
+            );
+            expect(new Set(orders).size).toBe(orders.length);
+            expect(Math.max(...orders)).toBe(3);
         });
 
         it("refuses one past the cap, and says so in words", async () => {

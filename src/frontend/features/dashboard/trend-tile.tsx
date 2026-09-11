@@ -8,7 +8,7 @@ import {
     Title
 } from "@mantine/core";
 import { InfoIcon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { type ComponentPropsWithRef, type ReactNode } from "react";
 import type {
     AnalyticsTotals,
     DailyMetricPoint
@@ -36,11 +36,9 @@ interface TrendTileProps {
     series: DailyMetricPoint[];
 }
 
-/**
- * One number and its trend, with what went into it on hover. Leads with the
- * range so it agrees with the sparkline beneath it.
- */
-interface TileFaceProps {
+// Extends div props because HoverCard.Target clones its child with a ref and
+// the mouse handlers that open the panel; dropping them leaves it inert.
+interface TileFaceProps extends ComponentPropsWithRef<"div"> {
     metric: MetricDefinition;
     /** The range value and the all-time figure, already spelled. */
     value: string;
@@ -50,9 +48,9 @@ interface TileFaceProps {
 
 /** The tile itself, which is also the hover target. */
 function TileFace(props: TileFaceProps): ReactNode {
-    const { metric, value, lifetime, trend } = props;
+    const { metric, value, lifetime, trend, ...cardProps } = props;
     return (
-        <Card withBorder padding="lg" radius="md">
+        <Card withBorder padding="lg" radius="md" {...cardProps}>
             <Group gap={6} wrap="nowrap">
                 <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                     {metric.label}
@@ -97,6 +95,10 @@ function TileDetail(props: TileDetailProps): ReactNode {
     );
 }
 
+/**
+ * One number and its trend, with what went into it on hover. Leads with the
+ * range so it agrees with the sparkline beneath it.
+ */
 export function TrendTile({
     metric,
     totals,

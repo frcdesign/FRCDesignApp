@@ -4,7 +4,6 @@ import {
     ElementPath,
     isInstancePath,
     isElementPath,
-    InstanceType,
     ConfigurablePath,
     isConfigurablePath
 } from "@backend/lib/onshape/path";
@@ -36,25 +35,18 @@ export function makeUrl(path: DocumentPath): string {
 }
 
 /**
- * Parses an Onshape document URL into an ElementPath.
- * Returns `undefined` if the URL could not be parsed successfully.
+ * The document a pasted Onshape url names, or undefined when it names none.
+ * Only the document id: a url pointing at a workspace or a tab carries more,
+ * but a link to the document itself does not, and both are worth accepting.
  */
-export function parseOnshapeUrl(urlString: string): ElementPath | undefined {
-    try {
-        // Example pathname: /documents/769b556baf61d32b18813fd0/w/e6d6c2b3a472b97a7e352949/e/8a0c13d3b2b68a99502dc436
-        const url = new URL(urlString);
-        const parts = url.pathname.split("/");
-        // const configuration =
-        //     url.searchParams.get("configuration") ?? undefined;
-        return {
-            documentId: parts[2],
-            instanceId: parts[4],
-            instanceType: parts[3] as InstanceType,
-            elementId: parts[6]
-        };
-    } catch {
+export function parseOnshapeDocumentId(urlString: string): string | undefined {
+    // Example pathname: /documents/{documentId}/w/{workspaceId}/e/{elementId}
+    const url = URL.parse(urlString);
+    if (!url) {
         return undefined;
     }
+    const [, documents, documentId] = url.pathname.split("/");
+    return documents === "documents" && documentId ? documentId : undefined;
 }
 
 /**

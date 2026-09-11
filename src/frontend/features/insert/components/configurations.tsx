@@ -144,6 +144,11 @@ export function ConfigurationWrapper(
         onRecord
     );
 
+    // Before the spinner: a failed fetch leaves `whole` undefined too, so
+    // testing that first would spin forever instead of reporting the failure.
+    if (query.isError) {
+        return <SectionNotice title="Failed to load selection." />;
+    }
     // isLoading, not isPending: the units query sits disabled (and so forever
     // pending) when there is no document to ask.
     if (query.isPending || unitInfoQuery.isLoading || !whole) {
@@ -152,8 +157,6 @@ export function ConfigurationWrapper(
                 <Loader />
             </Center>
         );
-    } else if (query.isError) {
-        return <SectionNotice title="Failed to load selection." />;
     }
 
     return (

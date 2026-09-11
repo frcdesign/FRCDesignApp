@@ -240,7 +240,8 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         retry: 2,
         enabled
     });
-    return { query, lastRenderedUrl: useLastRenderedUrl(query.data) };
+    const lastRenderedUrl = useLastRenderedUrl(query.data);
+    return { query, lastRenderedUrl };
 }
 
 interface PreviewBoxProps extends PropsWithChildren {

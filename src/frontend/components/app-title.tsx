@@ -120,7 +120,7 @@ interface CopyPartNumberButtonProps {
     partNumber: string;
 }
 
-/** Sized to the text line: taller, and the row grows, shifting the title. */
+/** Copies the part number, for a part with no vendor page to send them to. */
 function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
     const { partNumber } = props;
     return (
@@ -133,6 +133,8 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
                     <ActionIcon
                         variant="subtle"
                         color={copied ? "teal" : "gray"}
+                        // Sized to the text line: taller, and the row grows,
+                        // shifting the title above it.
                         size={COPY_BUTTON_SIZE}
                         aria-label="Copy part number"
                         onClick={copy}

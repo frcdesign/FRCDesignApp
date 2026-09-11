@@ -45,20 +45,33 @@ A function declared inside a component is a `const` arrow, never a `function`
 declaration: the surrounding component is the hoisting boundary, and an arrow
 reads as the value it is.
 
-Every hook call is its own `const`, on its own line, before anything else the
-body does — never inline in an expression, an argument, an index, or a `return`.
-`return useGetUiState().vendorFilters[useLibraryId()]` works today and breaks the
-day someone adds an early return above it, because the hooks stop running in the
-same order every render. Read the hook, then use what it gave you:
+Keep hook calls where the next person will see them: at the top of the body,
+one per `const`. The danger is a hook that is easy to miss, because the day
+someone adds an early return above it the hooks stop running in the same order
+every render, and React breaks somewhere else entirely.
+
+So this is fine — the hook is the first and only thing the function does:
 
 ```ts
-const uiState = useGetUiState();
-const libraryId = useLibraryId();
-return uiState.vendorFilters[libraryId];
+function useIsDashboard(): boolean {
+    return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
+}
 ```
 
-The same goes for `&&` and `?:` around a hook — `!hidden && !useShowHidden()`
-short-circuits, which is a conditional call the linter will reject.
+And these are not. Hoist a hook out when it is **buried** — inside a returned
+object or JSX tree, nested in another call, or anywhere below a branch:
+
+```ts
+// Buried in a returned object: easy to miss, easy to strand under a branch.
+return { query, lastRenderedUrl: useLastRenderedUrl(query.data) };
+
+// Two hooks in one expression, one of them inside an index.
+return useGetUiState().vendorFilters[useLibraryId()];
+```
+
+`&&` and `?:` around a hook are always wrong, not just unclear:
+`!hidden && !useShowHidden()` short-circuits, so the call is conditional. The
+linter catches that one; it catches none of the others.
 
 ## Layout
 
