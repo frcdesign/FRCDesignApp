@@ -11,10 +11,6 @@ export function hasEditorAccess(accessLevel: AccessLevel) {
     );
 }
 
-export function hasUserAccess(accessLevel: AccessLevel) {
-    return accessLevel === AccessLevel.USER;
-}
-
 const ACCESS_LEVEL_RANK: Record<AccessLevel, number> = {
     [AccessLevel.USER]: 0,
     [AccessLevel.EDITOR]: 1,

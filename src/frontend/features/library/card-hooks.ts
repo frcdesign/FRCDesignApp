@@ -4,13 +4,9 @@ import { modals } from "@mantine/modals";
 import { apiPost } from "../../lib/api-client";
 import { LibraryBuildStatus } from "@backend/features/build-checker/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { hasUserAccess } from "@backend/features/auth/access-level";
-import { useCallback, useMemo } from "react";
-import {
-    showErrorToast,
-    showLoadingToast,
-    showSuccessToast
-} from "../../lib/notifications";
+import { hasEditorAccess } from "@backend/features/auth/access-level";
+import { useCallback } from "react";
+import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { toInsertablePath, toLibraryPath, useLibraryId } from "./library-path";
 import { getAppErrorHandler } from "../../lib/errors";
 import { useCacheVersion } from "./queries";
@@ -86,20 +82,17 @@ export function useSetVisibilityMutation(
                 "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
             labels: { confirm: "Hide", cancel: "Cancel" },
             confirmProps: { color: "red" },
-            onConfirm: () => mutation.mutate(),
-            onCancel: () => showErrorToast("Cancelled hide operation.")
+            onConfirm: () => mutation.mutate()
         });
     }, [isVisible, closeCard, mutation]);
 
     return { mutate, isPending: mutation.isPending };
 }
 
-/** Narrower than `isVisible`: an admin still sees what is hidden. */
+/** Narrower than `isVisible`: an editor still sees what is hidden. */
 export function useIsInsertableHidden(insertable: InsertableOut): boolean {
     const { currentAccessLevel } = useAccessData();
-    return useMemo(() => {
-        return !insertable.isVisible && hasUserAccess(currentAccessLevel);
-    }, [insertable.isVisible, currentAccessLevel]);
+    return !insertable.isVisible && !hasEditorAccess(currentAccessLevel);
 }
 
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */

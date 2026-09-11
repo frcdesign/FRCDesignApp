@@ -42,8 +42,10 @@ export async function getOnshapeApiFromSessionId(
             .refreshAccessToken(TOKEN_ENDPOINT, session.refreshToken, [])
             .then((refreshed) => makeAuthTokens(refreshed));
 
-        // Spread, so a refresh keeps the userId the session already resolved.
-        void saveSession(kv, sessionId, { ...session, ...newTokens });
+        // Awaited, not floated: a cancelled write leaves the old token in KV
+        // and every later request refreshes again. Spread, so the refresh keeps
+        // the userId the session already resolved.
+        await saveSession(kv, sessionId, { ...session, ...newTokens });
 
         return newTokens.accessToken;
     };
@@ -85,6 +87,8 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
+        // Onshape reports no company for a session outside an enterprise;
+        // "cad" is the id it uses for those, and what we store for them.
         const tokenCompanyId = sessionInfo.company?.id ?? "cad";
         return getSessionCompanyId(c) === tokenCompanyId;
     } catch {

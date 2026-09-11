@@ -10,7 +10,6 @@ import { useSearch } from "@tanstack/react-router";
 import {
     type Dispatch,
     ReactNode,
-    type SyntheticEvent,
     useCallback,
     useEffect,
     useMemo,
@@ -28,7 +27,6 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EnumOption,
     EMPTY_UNIT_INFO,
     SearchRecord
 } from "@backend/features/configurations/models";
@@ -36,7 +34,6 @@ import {
     evaluateCondition,
     findRecordForConfiguration,
     getEvaluateOptions,
-    getOption,
     getVisibleOptions
 } from "@backend/features/configurations/utils";
 import {
@@ -45,16 +42,21 @@ import {
     toSelection
 } from "@backend/features/configurations/selection";
 import {
+    type EvaluateOptions,
     formatValueWithUnits,
     valueWithUnits,
     evaluateExpression
 } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
-import { showErrorToast } from "../../../lib/notifications";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { InputRow } from "../../../components/input-row";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { withParameterValue } from "../parameter-value";
+import {
+    normalizeSelection,
+    resolveSelectedOption,
+    sameSelection,
+    withParameterValue
+} from "../parameter-value";
 
 interface ConfigurationWrapperProps {
     insertableId: string;
@@ -68,12 +70,6 @@ interface ConfigurationWrapperProps {
     onConfigurationKey?: (configurationKey: ConfigurationKey) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
-}
-
-/** Event handler that exposes the target element's value as a boolean. */
-function handleBooleanChange(handler: Dispatch<boolean>) {
-    return (event: SyntheticEvent<HTMLElement>) =>
-        handler((event.target as HTMLInputElement).checked);
 }
 
 /** Reports the selection's key, and the record it resolves to. */
@@ -119,12 +115,27 @@ export function ConfigurationWrapper(
 
     const parameters = query.data?.parameters;
     // Whole the moment the parameters are known, since a search hit names only
-    // its overrides. Derived, so no render holds a partial selection.
+    // its overrides, and settled against the conditions so a row never has to
+    // write its own value back through an effect.
     const whole = useMemo(
         () =>
-            parameters ? toSelection(selection ?? {}, parameters) : undefined,
+            parameters
+                ? normalizeSelection(
+                      toSelection(selection ?? {}, parameters),
+                      parameters
+                  )
+                : undefined,
         [parameters, selection]
     );
+
+    // The one place the panel writes back: the menu inserts the selection it
+    // holds, so settling has to reach it. Idempotent, so this runs once.
+    useEffect(() => {
+        if (whole && !sameSelection(selection, whole)) {
+            setSelection(whole);
+        }
+    }, [whole, selection, setSelection]);
+
     useReportSelection(
         parameters,
         query.data?.records,
@@ -234,82 +245,35 @@ interface ParameterProps<T extends ConfigurationParameter> {
 function ParameterInput(
     props: ParameterProps<ConfigurationParameter>
 ): ReactNode {
-    const { parameter, selection, parameters, onValueChange } = props;
+    const { parameter, selection, parameters } = props;
 
-    const isShown = evaluateCondition(
-        parameter.condition,
-        selection,
-        parameters
-    );
-
-    // Depends on what it reads, rather than on `props` wholesale, which named
-    // nothing and changed identity every render.
-    useEffect(() => {
-        if (!isShown) {
-            onValueChange(undefined);
-        }
-    }, [isShown, onValueChange]);
-
-    if (!isShown) {
+    if (!evaluateCondition(parameter.condition, selection, parameters)) {
         return null;
     }
 
-    // Need to expose and use parameter directly to get type narrowing
-    if (parameter.type === ParameterType.ENUM) {
-        return <EnumInput {...props} parameter={parameter} />;
-    } else if (parameter.type === ParameterType.BOOLEAN) {
-        return <BooleanInput {...props} parameter={parameter} />;
-    } else if (parameter.type === ParameterType.STRING) {
-        return <StringInput {...props} parameter={parameter} />;
-    } else if (parameter.type === ParameterType.QUANTITY) {
-        return <QuantityInput {...props} parameter={parameter} />;
+    // Narrowed on `parameter` rather than `props`, which carries the union.
+    switch (parameter.type) {
+        case ParameterType.ENUM:
+            return <EnumInput {...props} parameter={parameter} />;
+        case ParameterType.BOOLEAN:
+            return <BooleanInput {...props} parameter={parameter} />;
+        case ParameterType.STRING:
+            return <StringInput {...props} parameter={parameter} />;
+        case ParameterType.QUANTITY:
+            return <QuantityInput {...props} parameter={parameter} />;
     }
-}
-
-/**
- * The option an enum lands on: the one selected when visibility still allows it,
- * then the parameter's default, then whatever is left to pick.
- */
-function resolveSelectedOption(
-    visibleOptions: EnumOption[],
-    currentOptionId: string | undefined,
-    defaultOptionId: string
-): EnumOption | undefined {
-    if (visibleOptions.length === 0) {
-        return undefined;
-    }
-    const currentOption = currentOptionId
-        ? getOption(visibleOptions, currentOptionId)
-        : undefined;
-    if (currentOption) {
-        return currentOption;
-    }
-    const defaultOption = getOption(visibleOptions, defaultOptionId);
-    if (defaultOption) {
-        return defaultOption;
-    }
-    return visibleOptions[0];
 }
 
 function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     const { parameter, value, onValueChange, selection, parameters } = props;
 
     const visibleOptions = getVisibleOptions(parameter, selection, parameters);
+    // Already settled by normalizeSelection; nothing visible means nothing to show.
     const currentOption = resolveSelectedOption(
         visibleOptions,
         value,
         parameter.default
     );
-
-    // Writes the resolved option back, so the selection holds what is shown.
-    useEffect(() => {
-        if (!currentOption) {
-            onValueChange(undefined);
-        } else if (currentOption.id !== value) {
-            onValueChange(currentOption.id);
-        }
-    }, [currentOption, onValueChange, value]);
-
     if (!currentOption) {
         return null;
     }
@@ -350,9 +314,11 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
                 styles={{
                     input: { cursor: "pointer" }
                 }}
-                onChange={handleBooleanChange((checked) =>
-                    onValueChange(checked ? "true" : "false")
-                )}
+                onChange={(event) =>
+                    onValueChange(
+                        event.currentTarget.checked ? "true" : "false"
+                    )
+                }
             />
         </InputRow>
     );
@@ -372,67 +338,96 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     );
 }
 
+/** Everything the box shows: the raw expression, its display, and any error. */
+interface QuantityBox {
+    /** What the user typed, shown while the input has focus. */
+    expression: string;
+    /** The evaluated value, shown while it does not. */
+    display: string;
+    errorMessage?: string;
+}
+
+/** What the box shows for a value, and the error if it does not evaluate. */
+function seedFrom(
+    value: string | undefined,
+    parameter: QuantityParameter,
+    options: EvaluateOptions
+): QuantityBox {
+    if (value === undefined) {
+        const display = formatValueWithUnits(
+            valueWithUnits(parameter.defaultValue, parameter.unit),
+            options.displayUnit,
+            options.displayPrecision
+        );
+        return { expression: parameter.default, display };
+    }
+    const result = evaluateExpression(value, options);
+    // Reported in the field rather than as a toast: the field is where the
+    // value is, and seeding happens during render.
+    return result.hasError
+        ? {
+              expression: result.expression,
+              display: result.expression,
+              errorMessage: result.errorMessage
+          }
+        : { expression: value, display: result.displayExpression };
+}
+
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
-    // Alone among the inputs in holding its own state: `value` seeds the
-    // expression and its display, and the input owns both from then on.
+    // Alone among the inputs in holding its own state: the box keeps what was
+    // typed, and `value` re-seeds it only when it changes somewhere else.
     const { parameter, value, onValueChange, unitInfo } = props;
 
-    const evaluateOptions = getEvaluateOptions(parameter, unitInfo);
+    const evaluateOptions = useMemo(
+        () => getEvaluateOptions(parameter, unitInfo),
+        [parameter, unitInfo]
+    );
 
     const inputRef = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
 
-    // The user's raw expression.
-    const [expression, setExpression] = useState(value ?? parameter.default);
-
-    // The pretty print value to display. Only shown when the input isn't focused.
-    const [display, setDisplay] = useState(() => {
-        if (value !== undefined) {
-            const expression = evaluateExpression(value, evaluateOptions);
-            if (expression.hasError) {
-                showErrorToast(
-                    "Failed to parse default value for " + parameter.name
-                );
-                return expression.expression;
-            }
-            return expression.displayExpression;
-        }
-
-        return formatValueWithUnits(
-            valueWithUnits(parameter.defaultValue, parameter.unit),
-            evaluateOptions.displayUnit,
-            evaluateOptions.displayPrecision
-        );
-    });
-
-    const [errorMessage, setErrorMessage] = useState<string | undefined>(
-        undefined
+    const [box, setBox] = useState(() =>
+        seedFrom(value, parameter, evaluateOptions)
     );
 
-    const handleSubmit = useCallback(() => {
+    // A value this box did not submit came from elsewhere — a favorite, a
+    // search hit — so the typed expression it replaces is no longer the value.
+    const [emitted, setEmitted] = useState(value);
+    if (value !== emitted) {
+        setEmitted(value);
+        setBox(seedFrom(value, parameter, evaluateOptions));
+    }
+
+    const handleSubmit = () => {
         setFocused(false);
-        const result = evaluateExpression(expression, evaluateOptions);
-        setExpression(result.expression);
+        const result = evaluateExpression(box.expression, evaluateOptions);
         if (result.hasError) {
-            setErrorMessage(result.errorMessage);
             // Don't change the value so the thumbnail is still okay
-            setDisplay(result.expression);
-        } else {
-            setErrorMessage(undefined);
-            // Canonical, so the menu holds a selection like everywhere else;
-            // `expression` keeps what was typed for as long as this input lives.
-            onValueChange(canonicalizeValue(parameter, result.expression));
-            setDisplay(result.displayExpression);
+            setBox({
+                expression: result.expression,
+                display: result.expression,
+                errorMessage: result.errorMessage
+            });
+            return;
         }
-    }, [evaluateOptions, expression, onValueChange, parameter]);
+        setBox({
+            expression: result.expression,
+            display: result.displayExpression
+        });
+        // Canonical, so the menu holds a selection like everywhere else;
+        // `expression` keeps what was typed for as long as this input lives.
+        const canonical = canonicalizeValue(parameter, result.expression);
+        setEmitted(canonical);
+        onValueChange(canonical);
+    };
 
     return (
         <InputRow label={parameter.name} htmlFor={parameter.id}>
             <TextInput
                 id={parameter.id}
                 ref={inputRef}
-                value={focused ? expression : display}
-                error={errorMessage}
+                value={focused ? box.expression : box.display}
+                error={box.errorMessage}
                 flex={1}
                 onFocus={(event) => {
                     setFocused(true);
@@ -440,14 +435,17 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                 }}
                 onBlur={handleSubmit}
                 onKeyDown={(event) => {
+                    // blur() submits; calling handleSubmit too ran it twice.
                     if (event.key === "Enter") {
                         inputRef.current?.blur();
-                        handleSubmit();
                     }
                 }}
-                onChange={(event) => {
-                    setExpression(event.currentTarget.value);
-                }}
+                onChange={(event) =>
+                    setBox((current) => ({
+                        ...current,
+                        expression: event.currentTarget.value
+                    }))
+                }
             />
         </InputRow>
     );

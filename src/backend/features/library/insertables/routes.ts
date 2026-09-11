@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { internalError } from "../../../lib/api-error";
+import { handledError, internalError } from "../../../lib/api-error";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
@@ -64,40 +64,26 @@ insertableRoutes.post(
         const insertableId = getInsertableParam(c);
         const { supportsFasten } = c.req.valid("json");
 
-        const insertableRow = await db
-            .select({ libraryId: insertables.libraryId })
+        const row = await db
+            .select({
+                libraryId: insertables.libraryId,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
+                elementType: insertables.elementType
+            })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        if (!insertableRow)
+        if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
         let fastenInfo = null;
         if (supportsFasten) {
-            const onshapeApi = await c.var.getOnshapeApi();
-            const elementPath = await getInsertableElementPath(
-                db,
-                insertableId
-            );
-            const insertable = await db
-                .select({
-                    elementType: insertables.elementType
-                })
-                .from(insertables)
-                .where(eq(insertables.id, insertableId))
-                .get();
-
-            if (!insertable) {
-                throw internalError(
-                    "Insertable not found",
-                    HttpStatus.NOT_FOUND
-                );
-            }
-
             fastenInfo = await parseFastenInfo(
-                onshapeApi,
-                elementPath,
-                insertable.elementType
+                await c.var.getOnshapeApi(),
+                toElementPath(row),
+                row.elementType
             );
         }
 
@@ -106,7 +92,7 @@ insertableRoutes.post(
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, insertableRow.libraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
@@ -255,7 +241,7 @@ const targetPathSchema = z.object({
     elementId: z.string().min(1)
 });
 
-const configurationSchema = z.record(z.string(), z.string()).optional();
+const selectionSchema = z.record(z.string(), z.string()).optional();
 
 /**
  * What an insert applies, made whole against the insertable's parameters. Every
@@ -287,7 +273,7 @@ async function readSelection(
 
 const insertBodySchema = z.object({
     targetPath: targetPathSchema,
-    selection: configurationSchema,
+    selection: selectionSchema,
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Where the insert began, which `isFavorite` does not answer. Defaulted so
@@ -315,22 +301,24 @@ insertableRoutes.post(
         const { targetPath } = body;
 
         const db = getDb(c.env.DB);
-        const sourcePath = await getInsertableElementPath(db, insertableId);
-
-        const insertable = await db
+        const row = await db
             .select({
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
                 name: insertables.name,
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId,
-                elementId: insertables.elementId
+                libraryId: insertables.libraryId
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
 
-        if (!insertable) {
+        if (!row) {
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
+
+        const sourcePath = toElementPath(row);
 
         const { selection, parameters } = await readSelection(
             db,
@@ -339,9 +327,9 @@ insertableRoutes.post(
         );
 
         const feature = new DerivedFeature(
-            insertable.name,
+            row.name,
             sourcePath,
-            insertable.microversionId,
+            row.microversionId,
             body.useMateConnector,
             selection,
             parameters
@@ -355,7 +343,7 @@ insertableRoutes.post(
 
         await trackInBackground(c, async () =>
             trackInsert(c, {
-                libraryId: insertable.libraryId,
+                libraryId: row.libraryId,
                 userId: await c.var.getUserId(),
                 path: sourcePath,
                 insertableId,
@@ -370,10 +358,9 @@ insertableRoutes.post(
             })
         );
 
-        const out: InsertOut = {
+        return c.json({
             featureId: result.feature?.featureId ?? null
-        };
-        return c.json(out);
+        } satisfies InsertOut);
     }
 );
 
@@ -464,7 +451,7 @@ insertableRoutes.post(
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
             await track(false);
-            throw internalError(
+            throw handledError(
                 `${row.name} does not support insert and fasten.`,
                 HttpStatus.BAD_REQUEST
             );
@@ -484,10 +471,9 @@ insertableRoutes.post(
                 mate
             );
             await track(true);
-            const out: InsertOut = {
+            return c.json({
                 featureId: fastenResult.feature.featureId
-            };
-            return c.json(out);
+            } satisfies InsertOut);
         } catch (error) {
             // Only the mate failed; the insert is still in the assembly.
             await track(false);
@@ -495,30 +481,3 @@ insertableRoutes.post(
         }
     }
 );
-/** Always version-pinned; throws 404 when the insertable does not exist. */
-
-async function getInsertableElementPath(
-    db: Db,
-    insertableId: string
-): Promise<ElementPath> {
-    const row = await db
-        .select({
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            elementId: insertables.elementId
-        })
-        .from(insertables)
-        .where(eq(insertables.id, insertableId))
-        .get();
-
-    if (!row) {
-        throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-    }
-
-    return {
-        documentId: row.documentId,
-        instanceId: row.versionId,
-        instanceType: "v",
-        elementId: row.elementId
-    };
-}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    OptionVisibilityType,
     ParameterType,
     VisibilityType,
     type ConfigurationParameter,
@@ -7,7 +8,7 @@ import {
 } from "@backend/features/configurations/models";
 import { toSelection } from "@backend/features/configurations/selection";
 import { evaluateCondition } from "@backend/features/configurations/utils";
-import { withParameterValue } from "./parameter-value";
+import { normalizeSelection, withParameterValue } from "./parameter-value";
 
 const SIZE: ConfigurationParameter = {
     id: "size",
@@ -88,5 +89,96 @@ function passesToSettle(limit = 50): number | null {
 describe("the panel's hidden-parameter cycle", () => {
     it("settles instead of re-rendering forever", () => {
         expect(passesToSettle()).toBe(1);
+    });
+});
+
+describe("normalizeSelection", () => {
+    it("settles a hidden parameter on its default", () => {
+        const selection = toSelection(
+            { size: "small", reinforced: "true" },
+            PARAMS
+        );
+        expect(normalizeSelection(selection, PARAMS).reinforced).toBe("false");
+    });
+
+    it("leaves a shown parameter's value alone", () => {
+        const selection = toSelection(
+            { size: "large", reinforced: "true" },
+            PARAMS
+        );
+        expect(normalizeSelection(selection, PARAMS).reinforced).toBe("true");
+    });
+
+    it("is idempotent, which is what lets the panel stop", () => {
+        const once = normalizeSelection(toSelection({}, PARAMS), PARAMS);
+        // Identity: the second pass finds nothing to change.
+        expect(normalizeSelection(once, PARAMS)).toBe(once);
+    });
+
+    it("falls back to a visible option when the selected one is hidden", () => {
+        const material: ConfigurationParameter = {
+            id: "material",
+            name: "Material",
+            default: "alu",
+            isCosmetic: false,
+            type: ParameterType.ENUM,
+            options: [
+                { id: "alu", name: "Aluminium" },
+                { id: "steel", name: "Steel" }
+            ],
+            // Steel is only offered on the large size.
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["steel"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "size",
+                        value: "large"
+                    }
+                },
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["alu"],
+                    condition: { type: VisibilityType.ALWAYS_SHOWN }
+                }
+            ]
+        };
+        const params = [SIZE, material];
+        const selection = toSelection(
+            { size: "small", material: "steel" },
+            params
+        );
+        expect(normalizeSelection(selection, params).material).toBe("alu");
+    });
+
+    it("settles a chain where one parameter decides the next", () => {
+        // `reinforced` is hidden unless size is large, and `bolts` unless
+        // reinforced — so clearing size has to reach bolts too.
+        const bolts: ConfigurationParameter = {
+            id: "bolts",
+            name: "Bolts",
+            default: "2",
+            isCosmetic: false,
+            type: ParameterType.ENUM,
+            options: [
+                { id: "2", name: "Two" },
+                { id: "4", name: "Four" }
+            ],
+            optionConditions: [],
+            condition: {
+                type: VisibilityType.EQUAL,
+                id: "reinforced",
+                value: "true"
+            }
+        };
+        const params = [SIZE, REINFORCED, bolts];
+        const selection = toSelection(
+            { size: "small", reinforced: "true", bolts: "4" },
+            params
+        );
+        const settled = normalizeSelection(selection, params);
+        expect(settled.reinforced).toBe("false");
+        expect(settled.bolts).toBe("2");
     });
 });
