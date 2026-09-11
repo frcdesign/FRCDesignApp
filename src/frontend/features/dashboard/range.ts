@@ -1,4 +1,8 @@
-import { toDayKey, type DayRange } from "./dashboard-queries";
+import {
+    addDays,
+    toDayKey,
+    type DayRange
+} from "@backend/features/analytics/day";
 
 export enum RangePreset {
     ALL = "all",
@@ -28,14 +32,11 @@ export function isRangePreset(value: unknown): value is RangePreset {
 
 /** Resolves a preset to the concrete day bounds the API expects. */
 export function toDayRange(preset: RangePreset): DayRange {
-    const now = Date.now();
+    const today = toDayKey(Date.now());
     const { days } = RANGE_PRESETS[preset];
     return {
         // The app has no data before 2026, so "all time" just reaches back far.
-        from:
-            days === undefined
-                ? "2000-01-01"
-                : toDayKey(now - days * 24 * 3600 * 1000),
-        to: toDayKey(now)
+        from: days === undefined ? "2000-01-01" : addDays(today, -days),
+        to: today
     };
 }

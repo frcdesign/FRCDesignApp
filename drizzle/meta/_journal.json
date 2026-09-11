@@ -8,6 +8,13 @@
             "when": 1789005587221,
             "tag": "0000_init",
             "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "6",
+            "when": 1789095381551,
+            "tag": "0001_event_schema_version_and_configurations_key",
+            "breakpoints": true
         }
     ]
 }

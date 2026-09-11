@@ -2,13 +2,12 @@ import { z } from "zod";
 import { HttpStatus } from "http-status-ts";
 import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
-import { getApp } from "../../lib/context";
+import { getApp, type AppContext } from "../../lib/context";
 
 import { ThumbnailSize } from "./types";
 import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
 
-import type { AppContext } from "../../lib/context";
 import type { ThumbnailWorkflowParams } from "./workflow";
 import { getSessionId } from "../auth/session";
 

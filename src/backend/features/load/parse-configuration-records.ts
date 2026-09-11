@@ -401,11 +401,8 @@ function toResult(
         isOpenComposite: defaultRecord.isOpenComposite
     };
 
-    // Canonical, so a record addresses the same thumbnail the insert menu does
-    // for the same selection.
-    // The selection is destructured off rather than spread through: the key is
-    // what a stored record is addressed by, and carrying the whole selection
-    // alongside it would bloat every row with what the key already says.
+    // Canonical, so a record addresses the thumbnail the insert menu does. The
+    // selection is dropped rather than stored: the key already says what it held.
     const records: ConfigurationRecord[] = batches.flat().map((probe) => {
         const { selection, ...record } = probe;
         return {

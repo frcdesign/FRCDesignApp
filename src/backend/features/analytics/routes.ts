@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
+import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
@@ -18,7 +19,7 @@ import { ParameterType } from "../configurations/models";
 import { usesPerMonth } from "./measures";
 import { getGrowth } from "./growth";
 import { toElementPath } from "../../lib/onshape/path";
-import { toDayKey } from "./tracking";
+import { toDayKey } from "./day";
 import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
 import {
@@ -117,12 +118,18 @@ analyticsRoutes.get(
     }
 );
 
-/** GET /api/analytics/health/library/:libraryId */
-analyticsRoutes.get("/analytics/health" + libraryRoute(), async (c) => {
-    const libraryId = getLibraryParam(c);
-    const db = getDb(c.env.DB);
-    return c.json(await getHealthCounts(db, libraryId));
-});
+/** GET /api/analytics/health/library/:libraryId?v=:cacheVersion */
+analyticsRoutes.get(
+    "/analytics/health" + libraryRoute(),
+    // Off the same build issues `/build-status` reads, so keyed the same way.
+    // Public rather than private: this answer is the same for whoever asks.
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => {
+        const libraryId = getLibraryParam(c);
+        const db = getDb(c.env.DB);
+        return c.json(await getHealthCounts(db, libraryId));
+    }
+);
 
 /** GET /api/analytics/parts/library/:libraryId */
 analyticsRoutes.get(
@@ -250,7 +257,7 @@ analyticsRoutes.get(
                 .from(insertables)
                 .innerJoin(
                     configurations,
-                    eq(configurations.id, insertables.id)
+                    eq(configurations.insertableId, insertables.id)
                 )
                 .where(
                     and(

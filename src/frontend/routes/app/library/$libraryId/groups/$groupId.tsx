@@ -20,6 +20,7 @@ import {
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
+import { InsertSource } from "@backend/features/analytics/events";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { filterInsertables } from "../../../../../features/search/filter";
@@ -105,6 +106,7 @@ function GroupList(): ReactNode {
                     vendors: vendorFilters,
                     groupId: group.id
                 }}
+                source={InsertSource.GROUP_SEARCH}
             />
         );
     } else {

@@ -2,6 +2,8 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
+import { events } from "../analytics/schema";
+import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/events";
 import { LibraryId } from "../library/library-id";
 import { Theme } from "../settings/settings";
 import {
@@ -124,6 +126,16 @@ describe("GET /init", () => {
         await seedResume(LibraryId.MKCAD, TEST_GROUP_ID);
 
         expect(await entryPath()).toBe(`/app/library/${LibraryId.MKCAD}`);
+    });
+
+    it("versions the open it records", async () => {
+        await createTestApp().request("/init", jsonRequest("GET"), env);
+
+        const event = await db.select().from(events).get();
+        expect(event).toMatchObject({
+            type: EventType.APP_OPEN,
+            schemaVersion: EVENT_SCHEMA_VERSION
+        });
     });
 
     it("never caches the gate's verdict", async () => {

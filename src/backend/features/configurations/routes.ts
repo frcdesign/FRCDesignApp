@@ -40,7 +40,10 @@ configurationRoutes.get(
                 records: configurations.records
             })
             .from(insertables)
-            .leftJoin(configurations, eq(configurations.id, insertables.id))
+            .leftJoin(
+                configurations,
+                eq(configurations.insertableId, insertables.id)
+            )
             .where(eq(insertables.id, insertableId))
             .get();
 
@@ -69,9 +72,8 @@ interface OnshapeUnit {
 }
 
 /**
- * The document's unit for a quantity type. Onshape names one for every type, so
- * a missing entry is a response we don't understand rather than a document
- * without a preference.
+ * The document's unit for a quantity type. Onshape names one for every type, so a
+ * missing entry is a response we do not understand, not an absent preference.
  */
 function getDefaultUnit(
     units: OnshapeUnit[],
@@ -97,7 +99,9 @@ configurationRoutes.get(
         const instancePath = c.req.valid("query");
 
         const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
-        const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;
+        // Onshape answers with strings; this is where the app decides they are
+        // the quantity types and units it knows.
+        const units = rawUnitInfo.defaultUnits.units as OnshapeUnit[];
 
         const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
         const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);

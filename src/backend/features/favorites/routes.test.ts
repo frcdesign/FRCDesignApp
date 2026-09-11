@@ -2,9 +2,13 @@ import { type ConfigurationKey } from "../configurations/models";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { favorites } from "../../db/schema";
+import { favorites, insertables } from "../../db/schema";
+import { ElementType } from "../../lib/onshape/element-type";
+import { MAX_FAVORITES } from "./contract";
+import { ApiErrorKind } from "../../lib/api-error";
 import {
     TEST_ASSEMBLY_ID,
+    TEST_GROUP_ID,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     createTestApp,
@@ -13,7 +17,9 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
+    seedGroup,
     seedPartStudio,
+    seedUser,
     seedTestData
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -31,6 +37,59 @@ interface FavoritesBody {
         }
     >;
     favoriteOrder: string[];
+}
+
+/**
+ * Rows straight in, since the route under test is the one being filled up. One
+ * insertable apiece: a favorite is unique per user, library and insertable.
+ */
+async function fillFavorites(howMany: number) {
+    const db = getDb(env.DB);
+    await seedGroup(db);
+    await seedUser(db, "test-user", TEST_LIBRARY_ID);
+
+    const rows = Array.from({ length: howMany }, (_, i) => ({
+        id: `filler-${i}`,
+        insertableId: `filler-insertable-${i}`,
+        sortOrder: i
+    }));
+    // D1 binds at most 100 parameters per query, and an insertable row spends
+    // sixteen of them, so these go in small chunks rather than one statement.
+    for (const chunk of inChunks(rows, 6)) {
+        await db.insert(insertables).values(
+            chunk.map((row) => ({
+                id: row.insertableId,
+                elementId: `filler-element-${row.sortOrder}`,
+                groupId: TEST_GROUP_ID,
+                documentId: "doc-test",
+                libraryId: TEST_LIBRARY_ID,
+                name: `Filler ${row.sortOrder}`,
+                elementType: ElementType.PART_STUDIO,
+                microversionId: "m-1",
+                versionId: "v-test"
+            }))
+        );
+        await db.insert(favorites).values(
+            chunk.map((row) => ({
+                ...row,
+                userId: "test-user",
+                libraryId: TEST_LIBRARY_ID
+            }))
+        );
+    }
+}
+
+function inChunks<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let at = 0; at < items.length; at += size) {
+        chunks.push(items.slice(at, at + size));
+    }
+    return chunks;
+}
+
+async function countFavorites(): Promise<number> {
+    const rows = await getDb(env.DB).select().from(favorites).all();
+    return rows.length;
 }
 
 /** The one favorite a body holds, for the derived-key tests. */
@@ -148,6 +207,43 @@ describe("favorites routes", () => {
             expect(row?.userId).toBe("test-user");
             expect(row?.insertableId).toBe(TEST_ASSEMBLY_ID);
             expect(row?.sortOrder).toBe(1);
+        });
+
+        it("refuses one past the cap, and says so in words", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await fillFavorites(MAX_FAVORITES);
+
+            const app = createTestApp();
+            const res = await app.request(
+                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-past-cap`,
+                jsonRequest("POST"),
+                env
+            );
+
+            expect(res.status).toBe(409);
+            // Handled, so the client shows this rather than its own wording.
+            expect(await res.json<unknown>()).toMatchObject({
+                kind: ApiErrorKind.HANDLED,
+                message: expect.stringContaining(String(MAX_FAVORITES))
+            });
+            expect(await countFavorites()).toBe(MAX_FAVORITES);
+        });
+
+        it("still takes the one that lands exactly on the cap", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await fillFavorites(MAX_FAVORITES - 1);
+
+            const app = createTestApp();
+            const res = await app.request(
+                `${favoritesUrl}?insertableId=${TEST_ASSEMBLY_ID}&id=fav-at-cap`,
+                jsonRequest("POST"),
+                env
+            );
+
+            expect(res.status).toBe(200);
+            expect(await countFavorites()).toBe(MAX_FAVORITES);
         });
 
         it("stamps createdAt, leaving rows that predate the column null", async () => {
@@ -276,6 +372,36 @@ describe("favorites routes", () => {
                 .orderBy(asc(favorites.sortOrder))
                 .all();
             expect(rows.map((r) => r.id)).toEqual([favB, favA]);
+        });
+
+        // One id per favorite they could hold, so the cap bounds the batch too.
+        it("rejects an order longer than the cap", async () => {
+            const app = createTestApp();
+
+            const res = await app.request(
+                `/api/favorite-order/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", {
+                    favoriteOrder: Array.from(
+                        { length: MAX_FAVORITES + 1 },
+                        (_, i) => `fav-${i}`
+                    )
+                }),
+                env
+            );
+
+            expect(res.status).toBe(400);
+        });
+
+        it("takes an empty order without reaching for a batch", async () => {
+            const app = createTestApp();
+
+            const res = await app.request(
+                `/api/favorite-order/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", { favoriteOrder: [] }),
+                env
+            );
+
+            expect(res.status).toBe(200);
         });
     });
 

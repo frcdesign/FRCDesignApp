@@ -63,14 +63,14 @@ async function getConfigurationIssues(
 ): Promise<Map<string, BuildIssue[]>> {
     const rows = await db
         .select({
-            id: configurations.id,
+            insertableId: configurations.insertableId,
             buildIssues: configurations.buildIssues
         })
         .from(configurations)
-        .innerJoin(insertables, eq(insertables.id, configurations.id))
+        .innerJoin(insertables, eq(insertables.id, configurations.insertableId))
         .where(visibleIn(libraryId))
         .all();
-    return new Map(rows.map((row) => [row.id, row.buildIssues]));
+    return new Map(rows.map((row) => [row.insertableId, row.buildIssues]));
 }
 
 /**

@@ -1,13 +1,11 @@
-import { LineChart } from "@mantine/charts";
+import { LineChart, type ChartReferenceLineProps } from "@mantine/charts";
 import { type ReactNode } from "react";
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../library/library-path";
 import { getLibraryShade } from "../../theme";
 import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
-import { toChartData } from "./series";
-import { type BucketPoint, type Granularity } from "./series";
-import type { ChartReferenceLineProps } from "@mantine/charts";
+import { toChartData, type BucketPoint, type Granularity } from "./series";
 import { Program, seasonsBetween } from "@backend/features/analytics/seasons";
 import {
     isPercentage,

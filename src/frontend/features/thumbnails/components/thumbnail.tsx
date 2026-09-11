@@ -209,9 +209,8 @@ function useLastRenderedUrl(image?: LoadedImage): string | undefined {
 }
 
 /**
- * Polls for the configuration's render, which the worker produces in a
- * workflow: the first request starts one, and the element default stands in
- * until it lands.
+ * Polls for the render the worker produces in a workflow: the first request
+ * starts one, and the element default stands in until it lands.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;

@@ -20,29 +20,39 @@ function getUrl(
     return "/api" + path + `?${searchParams}`;
 }
 
-export async function apiPost(
+/**
+ * The route's response, as the route says it is. `T` is inferred from the call
+ * site, so a contract that stops matching is an error there, not an `any`.
+ */
+export async function apiPost<T>(
     path: string,
     options?: PostOptions
-): Promise<any> {
-    return fetch(getUrl(path, options?.query), {
+): Promise<T> {
+    const response = await fetch(getUrl(path, options?.query), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(options?.body ?? {}),
         signal: options?.signal
-    }).then(handleResponse);
+    });
+    return handleResponse<T>(response);
 }
 
 interface QueryOptionsWithCacheId extends QueryOptions {
     cacheId?: string | number;
 }
 
-export async function apiGet(
+/** {@link apiPost} for a GET. */
+export async function apiGet<T>(
     path: string,
     options?: QueryOptionsWithCacheId
-): Promise<any> {
-    return fetch(getUrl(path, options?.query, options?.cacheId), {
-        signal: options?.signal
-    }).then(handleResponse);
+): Promise<T> {
+    const response = await fetch(
+        getUrl(path, options?.query, options?.cacheId),
+        {
+            signal: options?.signal
+        }
+    );
+    return handleResponse<T>(response);
 }
 
 /**
@@ -108,20 +118,26 @@ export async function loadApiImage(
     );
 }
 
-export async function apiDelete(
+/** {@link apiPost} for a DELETE. */
+export async function apiDelete<T>(
     path: string,
     options?: QueryOptions
-): Promise<any> {
-    return fetch(getUrl(path, options?.query), {
+): Promise<T> {
+    const response = await fetch(getUrl(path, options?.query), {
         method: "DELETE",
         signal: options?.signal
-    }).then(handleResponse);
+    });
+    return handleResponse<T>(response);
 }
 
-async function handleResponse(response: Response) {
-    const json = await response.json().catch(() => undefined);
+/**
+ * The body, or the error it describes. Asserted rather than parsed: the contract
+ * is the backend's, and nothing here can check it at runtime without a schema.
+ */
+async function handleResponse<T>(response: Response): Promise<T> {
+    const json: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {
         throw fromApiErrorBody(json);
     }
-    return json;
+    return json as T;
 }

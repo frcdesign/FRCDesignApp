@@ -28,9 +28,8 @@ export async function prefetchFavorites(libraryId: LibraryId): Promise<void> {
 }
 
 /**
- * Stays disabled until access says signed in, since the endpoint 401s otherwise.
- * That leaves it pending forever while signed out, so a caller that renders
- * either way has to check sign-in itself rather than wait on this.
+ * Disabled until access says signed in, the endpoint 401ing otherwise — so it
+ * stays pending while signed out, and callers check sign-in rather than wait.
  */
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();

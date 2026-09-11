@@ -9,9 +9,8 @@ import { ThumbnailSize } from "./types";
 export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
 
 /**
- * Defaults get their own prefix: everything falls back to them, so they never
- * expire. A configuration is url-encoded into its segment, the way Onshape
- * spells one, which keeps `/` and `;` out of the path.
+ * Defaults get their own prefix, everything falling back to them so they never
+ * expire. A configuration is url-encoded, keeping `/` and `;` out of the path.
  */
 export function thumbnailKey(
     elementId: string,

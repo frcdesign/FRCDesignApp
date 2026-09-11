@@ -14,6 +14,7 @@ import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../features/library/components/card-components";
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
+import { InsertSource } from "@backend/features/analytics/events";
 import {
     SectionNotice,
     SectionLoading
@@ -81,6 +82,7 @@ function useHomeSections(): Section[] {
             <SearchResults
                 query={uiState.searchQuery ?? ""}
                 filters={{ vendors: vendorFilters }}
+                source={InsertSource.SEARCH}
             />
         ),
         opened: isSearchOpen,
@@ -128,9 +130,8 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 control: {
                     borderBottom: BORDER,
                     minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a
-                    // section header is a title like the group page's, so it
-                    // reads in the same text color.
+                    // Mantine brightens a control to pure white or black; a section header is a title
+                    // like the group page's, so it reads in the same text color.
                     color: "var(--mantine-color-text)"
                 },
                 // Its own padding would outgrow that height.
@@ -199,7 +200,6 @@ function LibraryList() {
     const groupOrder = libraryQuery.data.groupOrder;
 
     if (groupOrder.length <= 0) {
-        // Add an escape hatch for when no groups are in the database
         return (
             <SectionNotice
                 title="No groups found"

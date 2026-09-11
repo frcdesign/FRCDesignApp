@@ -1,4 +1,4 @@
-import { OnshapeApi } from "../client";
+import { OAuthApi, OnshapeApi } from "../client";
 import { assertInstanceType, assertWorkspace } from "../assertions";
 import {
     DocumentPath,
@@ -11,7 +11,6 @@ import {
     toInstanceTypeKey
 } from "../path";
 import { apiPath } from "../api-path";
-import { OAuthApi } from "../client";
 import { getLatestVersion } from "./versions";
 import {
     OnshapeDocumentContents,
@@ -330,10 +329,17 @@ export function getMicroversionId(
 /**
  * Returns units and precision settings for a given document.
  */
+/** The document's units, as much of the response as anything here reads. */
+export interface OnshapeUnitInfo {
+    defaultUnits: { units: { key: string; value: string }[] };
+    /** Display precision per unit, keyed by the unit's own name. */
+    unitsDisplayPrecision: Record<string, number>;
+}
+
 export function getUnitInfo(
     onshapeApi: OnshapeApi,
     instancePath: InstancePath
-): Promise<any> {
+): Promise<OnshapeUnitInfo> {
     return onshapeApi.get(
         apiPath("documents", instancePath, toInstanceApiPath, {
             endRoute: "unitinfo"

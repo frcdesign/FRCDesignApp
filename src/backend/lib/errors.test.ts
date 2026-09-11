@@ -24,7 +24,7 @@ describe("api error responses", () => {
         );
 
         expect(res.status).toBe(401);
-        expect(await res.json()).toMatchObject({
+        expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.SIGN_IN_REQUIRED,
             message: expect.stringContaining("signed in")
         });
@@ -40,7 +40,7 @@ describe("api error responses", () => {
         );
 
         expect(res.status).toBe(403);
-        expect(await res.json()).toMatchObject({
+        expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.FORBIDDEN,
             message: expect.stringContaining("admin team")
         });
@@ -58,7 +58,7 @@ describe("api error responses", () => {
         );
 
         expect(res.status).toBe(400);
-        expect(await res.json()).toMatchObject({
+        expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.INTERNAL
         });
     });
@@ -73,7 +73,7 @@ describe("api error responses", () => {
         );
 
         expect(res.status).toBe(400);
-        expect(await res.json()).toMatchObject({
+        expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.INTERNAL
         });
     });

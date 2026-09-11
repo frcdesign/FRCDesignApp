@@ -4,10 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { type DayRange } from "@backend/features/analytics/day";
 import {
     getOverviewQuery,
-    getPartsQuery,
-    type DayRange
+    getPartsQuery
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";

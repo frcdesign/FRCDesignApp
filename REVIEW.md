@@ -72,6 +72,104 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   Onshape's own wire names (the `configuration` query param, the `/ac/` path
   segment) stay as Onshape spells them.
 
+- **Analytics range** — a dashboard read can no longer ask for a window ending
+  in the year 9999. `clampRange` holds `to` to today, and `eachDay` caps what it
+  densifies, so an unauthenticated `/analytics/overview` cannot allocate a point
+  per day until then. `range.test.ts` covers both bounds.
+
+- **`DayRange` and `toDayKey`** — were declared once on each side of the app.
+  They now live in `features/analytics/day.ts`, a leaf both sides import, as
+  `measures.ts` already did for the same reason.
+
+- **Insert tracking** — the applied selection is keyed against the parameters
+  the insert had already loaded, rather than reading the `configurations` row a
+  second time inside `trackInsert`. `configurations/storage.ts` existed only for
+  that read and is gone.
+
+- **Favorites** — the next `sortOrder` is a `count()` rather than selecting
+  every row to take its length.
+
+- **Duplicate imports** — a dozen modules were imported twice in the same file.
+  Merged, and `no-duplicate-imports` now keeps them merged.
+
+- **Event schema version** — every event carries the version of what its columns
+  mean, so a later change to their reading stays tellable from the rows written
+  under this one. A session id was tried alongside it and taken back out: it
+  wanted a second cookie, and the funnel it would have bought is not worth one.
+
+- **Insert-and-fasten** — `fasten` recorded what the request asked for, since
+  tracking ran before the mate was built. It now runs after, on every path that
+  leaves a part in the assembly, so a fasten that failed or was never possible
+  records the unfastened insert it turned out to be rather than a fasten that
+  never happened.
+
+- **Day keys** — rollups were keyed on the UTC date, which cut a US evening's
+  work in half: 8pm Eastern is already tomorrow. They are keyed in
+  `America/New_York` now. Stepping between day keys is calendar arithmetic
+  rather than adding 24 hours to an instant, which is what kept the two from
+  disagreeing across a DST change; `growth.ts` and `seasons.ts` had a copy of
+  that arithmetic each, and now share one.
+
+- **`configurations.id`** — renamed to `insertable_id`, which is what it holds.
+  The table stays split from `insertables` rather than folded in: `parameters`
+  and `records` are large, and inlining them takes the b-tree a library scan
+  walks from 126 pages to 1,212.
+
+- **Migrations** — `scripts/check-migrations.py` applies the chain to a database
+  that already holds rows, which is the case an empty local database never
+  covers. CI runs it. `scripts/drizzle-generate.py` answers drizzle-kit's rename
+  prompts, which it otherwise refuses to run without a terminal.
+
+- **Health counts** — `/analytics/health` is keyed on the library's cache
+  version now, like `/build-status` and `/library-data`, so the three full scans
+  behind four integers run once per version rather than once per dashboard load.
+  Public rather than private: unlike the build status, the answer is the same for
+  whoever asks. The dashboard's library route awaits the version first, as the
+  app's does, so nothing fetches once at zero and again at the real one.
+
+- **Cert `NODE_ENV`** — production. Not because cert is production, but because
+  `FORCE_SIGNED_IN` and `VITE_ACCESS_LEVEL_OVERRIDE` are gated on that string
+  alone, and anything else leaves them armed.
+
+- **Configuration panel** — a parameter its condition hides put the panel into an
+  unbounded render loop: the effect that clears it asked whether the key was
+  present, and `toSelection` puts every parameter back on the next render, so it
+  cleared, was restored, and cleared again for as long as the panel was open.
+  `withParameterValue` compares the value instead and hands back the very same
+  selection when nothing moves, which is what lets React stop. Each row is its
+  own component now, so its handler is a stable value rather than a fresh
+  closure per render.
+
+- **Reading an event** — `NOT_AN_INSERT` and the narrowing `rollups.ts` did by
+  hand are one module, `logged-event.ts`. It owns what a non-insert writes and
+  what a reader may count on once a row turns out to be an insert, so nothing
+  else has to know which of the log's columns are set for which kind.
+
+- **API types** — `apiGet`, `apiPost` and `apiDelete` are generic, and the
+  `no-unsafe-*` rules are scoped to the Onshape client and the parsers that read
+  it rather than switched off everywhere. Typing the client caught a real one:
+  the insert's `featureId` is nullable and was being passed to Onshape's
+  open-feature message unchecked.
+
+- **Favorites cap** — 250 per user per library. The count the next `sortOrder`
+  already needed answers it, so the check costs no extra read. Refused as a
+  handled error rather than an internal one: the caller can act on it, and
+  removing one is the whole of what it takes, so they should be told which.
+  The reorder is bounded by the same number and goes in one batch instead of a
+  statement per favorite.
+
+- **Insert source** — searching inside a group is its own source now. It was
+  reported as `SEARCH` alongside a library-wide search, though the group page
+  filters the results to that group, so the two were different searches counted
+  as one. One flat value rather than a source crossed with where the user was:
+  browsing only happens inside a group and favorites only outside one, so search
+  was the only one of the three with two forms. No schema change — the column
+  carries no constraint, and the breakdown lists whatever the enum holds.
+
+- **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
+  are gone; the workflow was already the only correct path. `drizzle-kit` and
+  the router devtools moved to `devDependencies`.
+
 ## Database
 
 Fixed here: the `groups` table export was the only singular one among

@@ -1,24 +1,19 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import {
-    events,
-    type EventCore,
-    type InsertColumns,
-    type LoggedEvent
-} from "./schema";
+import { events, type LoggedEvent } from "./schema";
+import { NOT_AN_INSERT, type EventCore } from "./logged-event";
 import { rollupWrites } from "./rollups";
-import { EventType, InsertSource } from "./events";
+import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
-import { type Selection } from "../configurations/models";
-import { appliedSelection } from "../configurations/storage";
-
-/** Formats an epoch timestamp as the UTC `YYYY-MM-DD` day key. */
-export function toDayKey(timestamp: number): string {
-    return new Date(timestamp).toISOString().slice(0, 10);
-}
+import {
+    type ConfigurationParameter,
+    type Selection
+} from "../configurations/models";
+import { appliedValues } from "../configurations/selection";
+import { toDayKey } from "./day";
 
 export interface InsertEvent {
     libraryId: LibraryId;
@@ -31,6 +26,11 @@ export interface InsertEvent {
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
     selection: Selection | undefined;
+    /**
+     * The parameters that selection was made whole against, carried rather than
+     * read back: applying the insert already had to load them.
+     */
+    parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
     isQuickInsert: boolean;
@@ -74,11 +74,7 @@ export async function trackInsert(
         ...event.path,
         insertableId: event.insertableId,
         targetElementType: event.targetElementType,
-        selection: await appliedSelection(
-            db,
-            event.insertableId,
-            event.selection
-        ),
+        selection: appliedSelection(event.selection, event.parameters),
         isFavorite: event.isFavorite,
         isQuickInsert: event.isQuickInsert,
         source: event.source,
@@ -99,6 +95,18 @@ export async function trackAppOpen(
     });
 }
 
+/**
+ * What Onshape applied for a selection: the values no condition hid. Null when
+ * the insertable has nothing to configure, which is what the log records.
+ */
+function appliedSelection(
+    selection: Selection | undefined,
+    parameters: ConfigurationParameter[]
+): Selection | null {
+    if (!selection || parameters.length === 0) return null;
+    return appliedValues(selection, parameters);
+}
+
 /** What every logged event carries; its kind fills in the rest. */
 function core(
     type: EventType,
@@ -111,34 +119,14 @@ function core(
         createdAt: new Date(now),
         day: toDayKey(now),
         libraryId: event.libraryId,
-        userId: event.userId
+        userId: event.userId,
+        schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
 /**
- * The insert-only columns an app open leaves empty, spelled out rather than
- * defaulted: a column added to the log stops compiling here until someone says
- * what a non-insert should record for it.
- */
-const NOT_AN_INSERT: InsertColumns = {
-    elementId: null,
-    documentId: null,
-    instanceId: null,
-    instanceType: null,
-    insertableId: null,
-    targetElementType: null,
-    selection: null,
-    isFavorite: null,
-    isQuickInsert: null,
-    source: null,
-    fasten: null
-};
-
-/**
- * Appends the event to the log, then applies it to the rollups — the two halves
- * of a write, in one batch so neither can land without the other. They are kept
- * apart so the second can move to a batch job over the log without touching the
- * first: what is recorded and what is counted are separate decisions.
+ * The two halves of a write, batched so neither lands without the other. Kept
+ * apart so the counting can move to a batch job without touching the recording.
  */
 async function record(db: Db, event: LoggedEvent): Promise<void> {
     const writes: BatchItem<"sqlite">[] = [

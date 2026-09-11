@@ -14,8 +14,7 @@ import {
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
 import { MONTH_DAYS, usesPerMonth } from "./measures";
-import { toDayKey } from "./tracking";
-import { type DayRange } from "./range";
+import { addDays, toDayKey, type DayRange } from "./day";
 import { toElementPath } from "../../lib/onshape/path";
 import { type ConfigurationParameter } from "../configurations/models";
 
@@ -143,9 +142,9 @@ export async function getPartSparklines(
     db: Db,
     libraryId: LibraryId
 ): Promise<Map<string, number[]>> {
-    const now = Date.now();
+    const today = toDayKey(Date.now());
     const days = Array.from({ length: MONTH_DAYS }, (_, i) =>
-        toDayKey(now - (MONTH_DAYS - 1 - i) * 24 * 3600 * 1000)
+        addDays(today, i - (MONTH_DAYS - 1))
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 
@@ -293,7 +292,7 @@ export async function getPartParameters(
     const row = await db
         .select({ parameters: configurations.parameters })
         .from(configurations)
-        .where(eq(configurations.id, insertableId))
+        .where(eq(configurations.insertableId, insertableId))
         .get();
     return row?.parameters ?? [];
 }

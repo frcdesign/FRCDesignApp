@@ -5,15 +5,16 @@ import { min } from "drizzle-orm";
 import z from "zod";
 import { type Db } from "../../db/client";
 import { dailyMetrics } from "./schema";
-import { toDayKey } from "./tracking";
-
-export interface DayRange {
-    from: string;
-    to: string;
-}
+import { addDays, toDayKey, type DayRange } from "./day";
 
 /** The uses a part must be at or below for the low-usage reports to list it. */
 const DEFAULT_UNUSED_THRESHOLD = 5;
+
+/**
+ * The most days one densified series may cover. Only a hand-edited url reaches
+ * it: the app asks for at most the days since tracking began.
+ */
+const MAX_SERIES_DAYS = 10 * 366;
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -33,18 +34,15 @@ export const thresholdQuery = rangeQuery.extend({
 });
 
 /**
- * Every day in the range, inclusive. Clamp `from` to the first recorded day
- * first, or "all time" fills two decades of zeroes.
+ * Every day in the range. Clamp `from` first, or "all time" fills two decades of
+ * zeroes; capped as well, since the allocation happens here.
  */
 export function eachDay(range: DayRange): string[] {
     const days: string[] = [];
-    const last = Date.parse(`${range.to}T00:00:00Z`);
-    for (
-        let at = Date.parse(`${range.from}T00:00:00Z`);
-        at <= last;
-        at += 24 * 3600 * 1000
-    ) {
-        days.push(toDayKey(at));
+    let day = range.from;
+    while (day <= range.to && days.length < MAX_SERIES_DAYS) {
+        days.push(day);
+        day = addDays(day, 1);
     }
     return days;
 }
@@ -61,11 +59,16 @@ export async function getTrackingSince(db: Db): Promise<string | undefined> {
     return row?.day ?? undefined;
 }
 
-/** Narrows a requested range to the days actually covered by tracking. */
+/**
+ * Narrows a range to the days tracking covers. `to` is held to today as well:
+ * nothing was recorded tomorrow, and an unclamped one runs to any year asked for.
+ */
 export function clampRange(
     range: DayRange,
-    since: string | undefined
+    since: string | undefined,
+    today: string = toDayKey(Date.now())
 ): DayRange {
-    if (since === undefined) return { from: range.to, to: range.to };
-    return { from: range.from < since ? since : range.from, to: range.to };
+    const to = range.to > today ? today : range.to;
+    if (since === undefined) return { from: to, to };
+    return { from: range.from < since ? since : range.from, to };
 }

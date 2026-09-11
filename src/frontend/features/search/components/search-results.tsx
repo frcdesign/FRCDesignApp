@@ -17,13 +17,18 @@ import { InsertSource } from "@backend/features/analytics/events";
 interface SearchResultsProps {
     query: string;
     filters: SearchFilters;
+    /**
+     * Which search this is. Required rather than defaulted: the whole point of
+     * telling them apart is that neither is the obvious one.
+     */
+    source: InsertSource.SEARCH | InsertSource.GROUP_SEARCH;
 }
 
 /**
  * Given a valid search query and filters, returns the list of current elements.
  */
 export function SearchResults(props: SearchResultsProps): ReactNode {
-    const { query, filters } = props;
+    const { query, filters, source } = props;
 
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
@@ -60,7 +65,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
             key={insertable.id}
             insertable={insertable}
             searchHit={result.hits[insertable.id]}
-            source={InsertSource.SEARCH}
+            source={source}
         />
     ));
 
@@ -144,7 +149,6 @@ function deduplicateRanges(ranges: Position[]): Position[] {
             continue;
         }
         const start = i;
-        // Find length of range
         while (i < indexMap.length && indexMap[i]) {
             i++;
         }

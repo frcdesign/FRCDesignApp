@@ -1,7 +1,6 @@
 /**
  * Tracking's own tables, kept out of `db/schema.ts` because nothing here points
- * at the app's data: the log is keyed on Onshape ids and the rollups are
- * derived from it, so the two sides share no foreign key.
+ * at the app's data: no foreign key crosses between the two sides.
  */
 
 import {
@@ -31,8 +30,13 @@ export const events = sqliteTable(
         createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
         // UTC YYYY-MM-DD, denormalized so rollups can be rebuilt with a GROUP BY
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         userId: text("user_id").notNull(),
+        /**
+         * What the columns meant when the row was written. 1 is the backfill
+         * for rows predating the column, which is what they were.
+         */
+        schemaVersion: integer("schema_version").notNull().default(1),
         // The whole path inserted from, version included: what the part was
         // when it was used, which the library row no longer says after a reload.
         elementId: text("element_id"),
@@ -63,25 +67,15 @@ export const events = sqliteTable(
 /** One row of the log: everything the rollups are derived from. */
 export type LoggedEvent = typeof events.$inferSelect;
 
-/** What every event carries, whatever kind of event it is. */
-export type EventCore = Pick<
-    LoggedEvent,
-    "id" | "type" | "createdAt" | "day" | "libraryId" | "userId"
->;
-
-/** The rest, which only an insert fills in. */
-export type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
-
 /**
- * Per-day counts. Each flag counter is a subset of `count`, and so a percentage
- * of it. Fasten's denominator is not here: it is the assembly row of
- * {@link dailyTargetMetrics}, since Onshape only offers it on an assembly.
+ * Per-day counts, each flag counter a subset of `count`. Fasten's denominator is
+ * the assembly row of {@link dailyTargetMetrics}, Onshape offering it only there.
  */
 export const dailyMetrics = sqliteTable(
     "daily_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         type: text("type").notNull().$type<EventType>(),
         count: integer("count").notNull().default(0),
         favoriteCount: integer("favorite_count").notNull().default(0),
@@ -99,7 +93,7 @@ export const dailyTargetMetrics = sqliteTable(
     "daily_target_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         targetElementType: text("target_element_type")
             .notNull()
             .$type<ElementType>(),
@@ -113,7 +107,7 @@ export const dailySourceMetrics = sqliteTable(
     "daily_source_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         source: text("source").notNull().$type<InsertSource>(),
         count: integer("count").notNull().default(0),
         quickInsertCount: integer("quick_insert_count").notNull().default(0)
@@ -125,7 +119,7 @@ export const dailySourceMetrics = sqliteTable(
 export const insertableStats = sqliteTable(
     "insertable_stats",
     {
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         insertCount: integer("insert_count").notNull().default(0),
         firstInsertedAt: integer("first_inserted_at", {
@@ -149,7 +143,7 @@ export const dailyInsertableMetrics = sqliteTable(
     "daily_insertable_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         targetElementType: text("target_element_type")
             .notNull()
@@ -172,7 +166,7 @@ export const dailyInsertableUsers = sqliteTable(
     "daily_insertable_users",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         userId: text("user_id").notNull()
     },
@@ -191,7 +185,7 @@ export const dailyConfigurationMetrics = sqliteTable(
     "daily_configuration_metrics",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
         parameterId: text("parameter_id").notNull(),
         value: text("value").notNull(),
@@ -213,7 +207,7 @@ export const dailyUserActivity = sqliteTable(
     "daily_user_activity",
     {
         day: text("day").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         userId: text("user_id").notNull()
     },
     (t) => [
@@ -227,7 +221,7 @@ export const userStats = sqliteTable(
     "user_stats",
     {
         userId: text("user_id").notNull(),
-        libraryId: text("library_id").notNull().$type<LibraryId>(),
+        libraryId: text("library_id").$type<LibraryId>().notNull(),
         insertCount: integer("insert_count").notNull().default(0),
         openCount: integer("open_count").notNull().default(0),
         firstSeenAt: integer("first_seen_at", {

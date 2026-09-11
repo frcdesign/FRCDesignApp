@@ -1,11 +1,8 @@
 import type { ZodType } from "zod";
 
 /**
- * Validates url search params, dropping whatever doesn't fit the schema.
- *
- * A rejected key is omitted rather than left as undefined: `retainSearchParams`
- * tests `key in search`, so an undefined value reads as "cleared" and stops the
- * param carrying across navigations.
+ * Validates url search params, omitting what fails rather than leaving it
+ * undefined: `retainSearchParams` tests `key in search`, reading that as cleared.
  */
 export function parseSearch<T extends object>(
     schema: ZodType<T>,

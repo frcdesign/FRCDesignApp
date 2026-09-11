@@ -6,10 +6,13 @@ import z from "zod";
 import { getApp } from "../../../lib/context";
 import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
 import { getDb, type Db } from "../../../db/client";
-import { requireEditorMiddleware } from "../../auth/guards";
-import { requireSignInMiddleware } from "../../auth/guards";
+import {
+    requireEditorMiddleware,
+    requireSignInMiddleware
+} from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import { type InsertOut } from "../contract";
 import {
     toElementPath,
     type ElementPath,
@@ -143,7 +146,7 @@ insertableRoutes.post(
                 await db
                     .select({ parameters: configurations.parameters })
                     .from(configurations)
-                    .where(eq(configurations.id, insertableId))
+                    .where(eq(configurations.insertableId, insertableId))
                     .get()
             )?.parameters ?? [];
         const indexing = decideIndexing(
@@ -180,17 +183,17 @@ insertableRoutes.post(
                 ? db
                       .insert(configurations)
                       .values({
-                          id: insertableId,
+                          insertableId,
                           parameters,
                           records: indexed.records
                       })
                       .onConflictDoUpdate({
-                          target: configurations.id,
+                          target: configurations.insertableId,
                           set: { records: indexed.records }
                       })
                 : db
                       .delete(configurations)
-                      .where(eq(configurations.id, insertableId));
+                      .where(eq(configurations.insertableId, insertableId));
 
         await db.batch([
             db
@@ -272,7 +275,7 @@ async function readSelection(
     const row = await db
         .select({ parameters: configurations.parameters })
         .from(configurations)
-        .where(eq(configurations.id, insertableId))
+        .where(eq(configurations.insertableId, insertableId))
         .get();
 
     const parameters = row?.parameters ?? [];
@@ -361,6 +364,7 @@ insertableRoutes.post(
                 insertableId,
                 targetElementType: ElementType.PART_STUDIO,
                 selection,
+                parameters,
                 isFavorite: body.isFavorite,
                 isQuickInsert: body.isQuickInsert,
                 source: body.source,
@@ -369,7 +373,10 @@ insertableRoutes.post(
             })
         );
 
-        return c.json({ featureId: result.feature?.featureId });
+        const out: InsertOut = {
+            featureId: result.feature?.featureId ?? null
+        };
+        return c.json(out);
     }
 );
 
@@ -412,7 +419,7 @@ insertableRoutes.post(
             ? [PartType.COMPOSITE_PARTS]
             : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        const { selection } = await readSelection(
+        const { selection, parameters } = await readSelection(
             db,
             insertableId,
             body.selection
@@ -433,29 +440,33 @@ insertableRoutes.post(
             }
         );
 
-        // Recorded here so a later fasten failure doesn't lose an insert that
-        // did land.
-        await trackInBackground(c, async () =>
-            trackInsert(c, {
-                libraryId: row.libraryId,
-                userId: await c.var.getUserId(),
-                path: sourcePath,
-                insertableId,
-                targetElementType: ElementType.ASSEMBLY,
-                selection,
-                isFavorite: body.isFavorite,
-                isQuickInsert: body.isQuickInsert,
-                source: body.source,
-                fasten: body.fasten
-            })
-        );
+        // The insert has landed, and every path below records it exactly once — so a
+        // fasten that never happened leaves none unrecorded, and `fasten` says what was.
+        const track = (fasten: boolean) =>
+            trackInBackground(c, async () =>
+                trackInsert(c, {
+                    libraryId: row.libraryId,
+                    userId: await c.var.getUserId(),
+                    path: sourcePath,
+                    insertableId,
+                    targetElementType: ElementType.ASSEMBLY,
+                    selection,
+                    parameters,
+                    isFavorite: body.isFavorite,
+                    isQuickInsert: body.isQuickInsert,
+                    source: body.source,
+                    fasten
+                })
+            );
 
         if (!body.fasten) {
-            return c.json({ featureId: null });
+            await track(false);
+            return c.json({ featureId: null } satisfies InsertOut);
         }
 
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
+            await track(false);
             throw internalError(
                 `${row.name} does not support insert and fasten.`,
                 HttpStatus.BAD_REQUEST
@@ -470,12 +481,22 @@ insertableRoutes.post(
             getFastenQuery(row.elementType, instancePath, fastenInfo)
         );
 
-        const fastenResult = await addAssemblyFeature(
-            onshapeApi,
-            targetPath,
-            builder.build()
-        );
-        return c.json({ featureId: fastenResult.feature.featureId });
+        try {
+            const fastenResult = await addAssemblyFeature(
+                onshapeApi,
+                targetPath,
+                builder.build()
+            );
+            await track(true);
+            const out: InsertOut = {
+                featureId: fastenResult.feature.featureId
+            };
+            return c.json(out);
+        } catch (error) {
+            // Only the mate failed; the insert is still in the assembly.
+            await track(false);
+            throw error;
+        }
     }
 );
 /** Always version-pinned; throws 404 when the insertable does not exist. */

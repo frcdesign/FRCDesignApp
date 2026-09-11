@@ -44,7 +44,7 @@ import {
     type PartUsageOut
 } from "./contract";
 import { MONTH_DAYS } from "./measures";
-import { toDayKey } from "./tracking";
+import { toDayKey } from "./day";
 import { BuildIssueType } from "../build-checker/issues";
 
 const db = getDb(env.DB);
@@ -181,7 +181,7 @@ describe("analytics routes", () => {
                 `/api/analytics/summary/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/parts/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`,
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`,
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
             ];
 
@@ -391,8 +391,12 @@ describe("analytics routes", () => {
                 count: 5,
                 quickInsertCount: 5
             });
-            // Present as a zero rather than missing, so the UI shows every source.
+            // Present as a zero rather than missing, so the UI shows every
+            // source — a new one included, from the day it is added.
             expect(bySource[InsertSource.BROWSE]).toMatchObject({ count: 0 });
+            expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
+                count: 0
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {
@@ -854,6 +858,30 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/health/library/:libraryId", () => {
+        it("caches publicly and immutably, as the library's other reads do", async () => {
+            await seedPartStudio(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=3`
+            );
+
+            expect(res.status).toBe(200);
+            expect(res.headers.get("Cache-Control")).toBe(
+                "public, max-age=31536000, immutable"
+            );
+        });
+
+        // Or the next version of the counts is unreachable behind the cache.
+        it("rejects a request that pins no version", async () => {
+            await seedPartStudio(db);
+
+            const res = await anonymousGet(
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+            );
+
+            expect(res.status).toBe(400);
+        });
+
         it("counts an issue against the item that carries it", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({
@@ -862,7 +890,7 @@ describe("analytics routes", () => {
             });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 
@@ -885,7 +913,7 @@ describe("analytics routes", () => {
             });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 
@@ -897,7 +925,7 @@ describe("analytics routes", () => {
             await db.update(insertables).set({ isVisible: true });
 
             const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}`
+                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
             );
             const body: LibraryHealthCounts = await res.json();
 

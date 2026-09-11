@@ -268,15 +268,15 @@ export async function saveInsertable(
     if (configuration.parameters.length > 0) {
         configurationWrite = db
             .insert(configurations)
-            .values({ id: target.insertableId, ...configuration })
+            .values({ insertableId: target.insertableId, ...configuration })
             .onConflictDoUpdate({
-                target: configurations.id,
+                target: configurations.insertableId,
                 set: configuration
             });
     } else {
         configurationWrite = db
             .delete(configurations)
-            .where(eq(configurations.id, target.insertableId));
+            .where(eq(configurations.insertableId, target.insertableId));
     }
 
     await db.batch([insertableWrite, configurationWrite]);

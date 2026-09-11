@@ -25,9 +25,11 @@ import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { useGetUiState, useSetUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../features/library/library-path";
-import { RequireAccessLevel } from "../features/auth/access-level";
+import {
+    RequireAccessLevel,
+    useAccessData
+} from "../features/auth/access-level";
 import { useSaveSettings } from "../features/settings/settings";
-import { useAccessData } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -203,9 +205,8 @@ export function SearchBar() {
     const setUiState = useSetUiState();
     const libraryId = useLibraryId();
 
-    // `autoFocus` focuses before the ref is attached, so onFocus below has
-    // nothing to select through on the first open: the query carried over from
-    // last time keeps the caret after it, waiting to be cleared by hand.
+    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
+    // through on the first open and last time's query keeps the caret after it.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);

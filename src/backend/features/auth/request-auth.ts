@@ -1,7 +1,6 @@
 /**
- * Answers a request's auth questions from its session, memoized in KV.
- * `createApp` binds `productionAuth` onto every request; guards and routes ask
- * it through `c.var`.
+ * Answers a request's auth questions from its session, memoized in KV. `createApp`
+ * binds `productionAuth` onto every request; guards and routes ask through `c.var`.
  */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";

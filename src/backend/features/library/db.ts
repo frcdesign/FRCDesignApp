@@ -45,14 +45,19 @@ export async function getLibraryOut(
         // Ids only: a configurations row exists exactly when there are
         // parameters, and its payload is fetched when one is opened.
         db
-            .select({ id: configurations.id })
+            .select({ insertableId: configurations.insertableId })
             .from(configurations)
-            .innerJoin(insertables, eq(configurations.id, insertables.id))
+            .innerJoin(
+                insertables,
+                eq(configurations.insertableId, insertables.id)
+            )
             .where(eq(insertables.libraryId, libraryId))
             .all()
     ]);
 
-    const configurableIds = new Set(allConfigurations.map((c) => c.id));
+    const configurableIds = new Set(
+        allConfigurations.map((row) => row.insertableId)
+    );
 
     const groupsOut: Groups = {};
     for (const group of allGroups) {
@@ -154,10 +159,8 @@ export async function placeNewGroup(
 }
 
 /**
- * The library's row, which everything pointing at a library needs to exist
- * first. Called wherever a library id is written rather than assumed: a library
- * gets its row on the first group added to it, and a caller can land on one
- * that has none yet.
+ * The row everything pointing at a library needs first. Called wherever a library
+ * id is written: a library gets its row on the first group added to it.
  */
 export async function ensureLibrary(
     db: Db,
@@ -218,7 +221,10 @@ async function getRecordsMap(
             records: configurations.records
         })
         .from(insertables)
-        .leftJoin(configurations, eq(configurations.id, insertables.id))
+        .leftJoin(
+            configurations,
+            eq(configurations.insertableId, insertables.id)
+        )
         .where(eq(insertables.libraryId, libraryId))
         .all();
 

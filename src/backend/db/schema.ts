@@ -12,6 +12,31 @@ import {
 } from "../features/configurations/models";
 import { BuildIssue } from "../features/build-checker/issues";
 
+/**
+ * Build-time issues flagged by the build checker, recomputed on reload. Declared
+ * once because three tables carry exactly this column.
+ */
+const buildIssues = () =>
+    text("build_issues", { mode: "json" })
+        .$type<BuildIssue[]>()
+        .notNull()
+        .default([]);
+
+/** The pair Onshape renders for a group or an insertable; null until rendered. */
+const thumbnailUrls = () => ({
+    smallThumbnailUrl: text("small_thumbnail_url"),
+    largeThumbnailUrl: text("large_thumbnail_url")
+});
+
+/**
+ * Ordered `$type` then constraints, so the column reads as what it holds before
+ * what is true of it; the callers add their own `.references`.
+ */
+const libraryId = () => text("library_id").$type<LibraryId>().notNull();
+
+/** Null before the first successful load. Failures are conveyed by build issues. */
+const lastLoadedAt = () => integer("last_loaded_at", { mode: "timestamp_ms" });
+
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
     cacheVersion: integer("cache_version").notNull().default(0)
@@ -31,10 +56,7 @@ export const groups = sqliteTable(
         id: text("id")
             .primaryKey()
             .$defaultFn(() => crypto.randomUUID()),
-        libraryId: text("library_id")
-            .notNull()
-            .$type<LibraryId>()
-            .references(() => libraries.id),
+        libraryId: libraryId().references(() => libraries.id),
         name: text("name").notNull(),
         // The Onshape document this group was added from
         documentId: text("document_id").notNull(),
@@ -43,16 +65,9 @@ export const groups = sqliteTable(
             .notNull()
             .default(false),
         sortOrder: integer("sort_order").notNull().default(0),
-        smallThumbnailUrl: text("small_thumbnail_url"),
-        largeThumbnailUrl: text("large_thumbnail_url"),
-        // Build-time issues flagged by the build checker, recomputed on reload.
-        buildIssues: text("build_issues", { mode: "json" })
-            .$type<BuildIssue[]>()
-            .notNull()
-            .default([]),
-        // Null before the first successful load. Failures are conveyed by
-        // buildIssues, not here.
-        lastLoadedAt: integer("last_loaded_at", { mode: "timestamp_ms" })
+        ...thumbnailUrls(),
+        buildIssues: buildIssues(),
+        lastLoadedAt: lastLoadedAt()
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );
@@ -68,10 +83,7 @@ export const insertables = sqliteTable("insertables", {
         .references(() => groups.id, { onDelete: "cascade" }),
     // The Onshape document the element lives in (kept for Onshape API calls).
     documentId: text("document_id").notNull(),
-    libraryId: text("library_id")
-        .notNull()
-        .$type<LibraryId>()
-        .references(() => libraries.id),
+    libraryId: libraryId().references(() => libraries.id),
     name: text("name").notNull(),
     elementType: text("element_type").notNull().$type<ElementType>(),
     microversionId: text("microversion_id").notNull(),
@@ -95,8 +107,7 @@ export const insertables = sqliteTable("insertables", {
         .$type<Vendor[]>()
         .notNull()
         .default([]),
-    smallThumbnailUrl: text("small_thumbnail_url"),
-    largeThumbnailUrl: text("large_thumbnail_url"),
+    ...thumbnailUrls(),
     fastenInfo: text("fasten_info", {
         mode: "json"
     }).$type<FastenInfo | null>(),
@@ -105,20 +116,17 @@ export const insertables = sqliteTable("insertables", {
     partMetadata: text("part_metadata", {
         mode: "json"
     }).$type<PartMetadata | null>(),
-    // Build-time issues flagged by the build checker, recomputed on reload.
-    buildIssues: text("build_issues", { mode: "json" })
-        .$type<BuildIssue[]>()
-        .notNull()
-        .default([]),
-    // Null before the first successful load. Failures are conveyed by
-    // buildIssues, not here.
-    lastLoadedAt: integer("last_loaded_at", { mode: "timestamp_ms" })
+    buildIssues: buildIssues(),
+    lastLoadedAt: lastLoadedAt()
 });
 
+/**
+ * Split off rather than folded into `insertables` because `parameters` and
+ * `records` are large: inline, they would slow every scan of the library.
+ */
 export const configurations = sqliteTable("configurations", {
-    id: text("id")
+    insertableId: text("insertable_id")
         .primaryKey()
-        .notNull()
         .references(() => insertables.id, { onDelete: "cascade" }),
     parameters: text("parameters", { mode: "json" })
         .$type<ConfigurationParameter[]>()
@@ -130,10 +138,7 @@ export const configurations = sqliteTable("configurations", {
         .$type<ConfigurationRecord[]>()
         .notNull()
         .default([]),
-    buildIssues: text("build_issues", { mode: "json" })
-        .$type<BuildIssue[]>()
-        .notNull()
-        .default([])
+    buildIssues: buildIssues()
 });
 
 export const users = sqliteTable("users", {
@@ -142,12 +147,9 @@ export const users = sqliteTable("users", {
         .$type<Theme>()
         .notNull()
         .default(DEFAULT_SETTINGS.theme),
-    // Ordered like every other `library_id`, and pointing at the same place.
-    // The row it needs is upserted wherever one is written, since the default
+    // The row this points at is upserted wherever one is written, since the default
     // below is applied by an insert that names no library at all.
-    libraryId: text("library_id")
-        .notNull()
-        .$type<LibraryId>()
+    libraryId: libraryId()
         .default(DEFAULT_SETTINGS.libraryId)
         .references(() => libraries.id),
     // The group last opened in that library, which entry resumes in. Null for
@@ -164,10 +166,7 @@ export const favorites = sqliteTable(
         userId: text("user_id")
             .notNull()
             .references(() => users.id),
-        libraryId: text("library_id")
-            .notNull()
-            .$type<LibraryId>()
-            .references(() => libraries.id),
+        libraryId: libraryId().references(() => libraries.id),
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),

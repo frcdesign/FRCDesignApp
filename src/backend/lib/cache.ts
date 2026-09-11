@@ -31,9 +31,8 @@ function cacheControl(policy: CachePolicy): string {
 }
 
 /**
- * Declares how one response may be cached, for a route whose answers differ:
- * the same url can serve bytes it pins and a stand-in it does not. Routes
- * whose every answer is alike take {@link cacheMiddleware} instead.
+ * For a route whose answers differ: the same url can serve bytes it pins and a
+ * stand-in it does not. One whose answers are alike takes {@link cacheMiddleware}.
  */
 export function setCache(response: Response, policy: CachePolicy): Response {
     response.headers.set("Cache-Control", cacheControl(policy));

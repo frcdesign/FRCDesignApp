@@ -92,9 +92,8 @@ export async function seedLibrary(
 }
 
 /**
- * Seeds the library the user row points at as well, since its `library_id`
- * takes a default and references `libraries` — which is what `ensureLibrary`
- * does ahead of the same insert in the app.
+ * Seeds the library too: `users.library_id` defaults to one and references it,
+ * which is what `ensureLibrary` does ahead of the same insert in the app.
  */
 export async function seedUser(
     db: Db,
@@ -205,7 +204,7 @@ export async function seedConfiguration(
     await db
         .insert(configurations)
         .values({
-            id: insertableId,
+            insertableId,
             parameters: TEST_PARAMETERS
         })
         .onConflictDoNothing();

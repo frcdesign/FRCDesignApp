@@ -9,16 +9,8 @@ import type {
     UnusedOptionOut
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
+import { type DayRange } from "@backend/features/analytics/day";
 import { toLibraryPath } from "../library/library-path";
-
-export interface DayRange {
-    from: string;
-    to: string;
-}
-
-export function toDayKey(timestamp: number): string {
-    return new Date(timestamp).toISOString().slice(0, 10);
-}
 
 export function getOverviewQuery(range: DayRange) {
     return queryOptions<AnalyticsOverviewOut>({
@@ -126,9 +118,15 @@ export function getInsertableReportQuery(
     });
 }
 
-export function getHealthQuery(libraryId: LibraryId) {
+/** Immutable for a version of the library, as the build status is. */
+export function getHealthQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryHealthCounts>({
-        queryKey: ["analytics", "health", libraryId],
-        queryFn: () => apiGet("/analytics/health" + toLibraryPath(libraryId))
+        queryKey: ["analytics", "health", libraryId, cacheVersion],
+        queryFn: () =>
+            apiGet("/analytics/health" + toLibraryPath(libraryId), {
+                cacheId: cacheVersion
+            }),
+        staleTime: Infinity,
+        gcTime: Infinity
     });
 }

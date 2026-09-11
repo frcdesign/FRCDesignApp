@@ -1,8 +1,8 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
 import { earliest, increment, latest } from "../../db/updates";
-import { ElementType } from "../../lib/onshape/element-type";
-import { EventType, InsertSource } from "./events";
+import { EventType } from "./events";
+import { asInsert, type LoggedInsert } from "./logged-event";
 import {
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
@@ -16,26 +16,9 @@ import {
     type LoggedEvent
 } from "./schema";
 
-/** A logged insert, whose own columns a rollup can then count on. */
-type LoggedInsert = LoggedEvent & {
-    elementId: string;
-    targetElementType: ElementType;
-    source: InsertSource;
-};
-
-function isInsert(event: LoggedEvent): event is LoggedInsert {
-    return (
-        event.type === EventType.INSERT &&
-        event.elementId !== null &&
-        event.targetElementType !== null &&
-        event.source !== null
-    );
-}
-
 /**
- * Every counter one logged event feeds. Derived from the row alone — no app
- * table is read here — so replaying the log rebuilds the rollups exactly, which
- * is what lets the aggregation move to a batch job later.
+ * Every counter one event feeds, derived from the row alone — which is what lets
+ * a replay rebuild the rollups exactly, or move them to a batch job.
  */
 export function rollupWrites(
     db: Db,
@@ -46,16 +29,17 @@ export function rollupWrites(
         markUserActive(db, event),
         countUser(db, event)
     ];
-    if (!isInsert(event)) return writes;
+    const insert = asInsert(event);
+    if (!insert) return writes;
 
     return [
         ...writes,
-        countSource(db, event),
-        countTarget(db, event),
-        countPartDay(db, event),
-        markPartUser(db, event),
-        countPartLifetime(db, event),
-        ...countValues(db, event)
+        countSource(db, insert),
+        countTarget(db, insert),
+        countPartDay(db, insert),
+        markPartUser(db, insert),
+        countPartLifetime(db, insert),
+        ...countValues(db, insert)
     ];
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     Vendor,
     getLibraryVendors,
+    getVendorName,
     getVendorPartUrl,
     parseVendor
 } from "./vendors";
@@ -88,6 +89,33 @@ describe("getLibraryVendors", () => {
         // Shared by both, being where every team buys hardware.
         expect(ftc).toContain(Vendor.MCM);
         expect(frc).toContain(Vendor.MCM);
+    });
+
+    // The roster itself, so a vendor cannot quietly go missing: FRC teams see
+    // this list and nothing else, in this order.
+    it("stocks FRC with exactly the vendors it buys from", () => {
+        expect(
+            getLibraryVendors(LibraryId.FRC_DESIGN_LIB).map((vendor) => [
+                getVendorName(vendor),
+                vendor
+            ])
+        ).toEqual([
+            ["AndyMark", "AM"],
+            ["ARMABOT", "AB"],
+            ["CTR Electronics", "CTRE"],
+            ["IMI Norgren", "Norgren"],
+            ["Last Anvil Innovations", "LAI"],
+            ["McMaster-Carr", "MCM"],
+            ["Parker", "Parker"],
+            ["Redux Robotics", "Redux"],
+            ["REV Robotics", "REV"],
+            ["Swerve Drive Specialties", "SDS"],
+            ["SWYFT Robotics", "SWYFT"],
+            ["The Thrifty Bot", "TTB"],
+            ["VEXpro", "VEX"],
+            ["West Coast Products", "WCP"],
+            ["Custom", "Custom"]
+        ]);
     });
 
     it("gives MKCad the FRC list, being an FRC library", () => {

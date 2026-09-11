@@ -19,8 +19,12 @@ import {
     loadGroup,
     selectInsertablesToLoad
 } from "./load-group";
-import type { GroupTarget, LoadContext } from "./context";
-import { LOAD_CONCURRENCY, createLimiter } from "./context";
+import {
+    LOAD_CONCURRENCY,
+    createLimiter,
+    type GroupTarget,
+    type LoadContext
+} from "./context";
 import * as LoadCommonModule from "./context";
 import {
     FAKE_STEP,

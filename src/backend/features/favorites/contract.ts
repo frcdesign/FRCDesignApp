@@ -1,6 +1,12 @@
 import { ConfigurationKey, Selection } from "../configurations/models";
 import { LibraryId } from "../library/library-id";
 
+/**
+ * The most favorites one user may keep in one library. Far past what anyone
+ * curates by hand, and low enough that reordering stays a single batch.
+ */
+export const MAX_FAVORITES = 250;
+
 export interface Favorite {
     id: string;
     insertableId: string;

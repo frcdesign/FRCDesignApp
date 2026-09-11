@@ -26,13 +26,13 @@ import {
 import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
 import {
-    toDayKey,
     trackAppOpen,
     trackInBackground,
     trackInsert,
     type InsertEvent
 } from "./tracking";
-import { InsertSource } from "./events";
+import { toDayKey } from "./day";
+import { EVENT_SCHEMA_VERSION, InsertSource } from "./events";
 import {
     boolParam,
     enumParam,
@@ -67,6 +67,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
         selection: undefined,
+        parameters: [],
         isFavorite: false,
         isQuickInsert: false,
         source: InsertSource.BROWSE,
@@ -99,6 +100,7 @@ function configuredEvent(
 ): InsertEvent {
     return insertEvent({
         selection: toSelection(values, SIZE_PARAMETERS),
+        parameters: SIZE_PARAMETERS,
         ...overrides
     });
 }
@@ -127,6 +129,7 @@ describe("tracking", () => {
                 type: "insert",
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID,
+                schemaVersion: EVENT_SCHEMA_VERSION,
                 // The whole path, so the version used is still known after a
                 // reload moves the library on.
                 ...TEST_PART_STUDIO_PATH,
@@ -414,6 +417,31 @@ describe("tracking", () => {
             expect(bySource).toEqual({
                 [InsertSource.SEARCH]: { count: 2, quick: 1 },
                 [InsertSource.FAVORITES]: { count: 1, quick: 0 }
+            });
+        });
+
+        // The point of the two: a search filtered to one group is a different
+        // search from one across the library, and reads as one.
+        it("counts a search inside a group apart from one across the library", async () => {
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.SEARCH })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.GROUP_SEARCH })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ source: InsertSource.GROUP_SEARCH })
+            );
+
+            const rows = await db.select().from(dailySourceMetrics).all();
+            expect(
+                Object.fromEntries(rows.map((row) => [row.source, row.count]))
+            ).toEqual({
+                [InsertSource.SEARCH]: 1,
+                [InsertSource.GROUP_SEARCH]: 2
             });
         });
 

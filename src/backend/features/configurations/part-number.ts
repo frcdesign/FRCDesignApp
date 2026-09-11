@@ -9,9 +9,8 @@ export function isPlaceholderPartNumber(text: string): boolean {
 }
 
 /**
- * The part number when it identifies the part, and nothing when it doesn't — a
- * placeholder, or a repeat of the name it sits under. One rule for indexing and
- * display alike, so a number nobody can search for is never shown either.
+ * The part number when it identifies the part, and nothing when it repeats the
+ * name or holds a placeholder. One rule, so an unsearchable number is never shown.
  */
 export function meaningfulPartNumber(
     partNumber: string | undefined | null,
