@@ -60,7 +60,14 @@ const DECIMAL_SPELLINGS: DecimalSpelling[] = [rounded, truncated];
 function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
     return text.replace(
         NUMERIC_PATTERN,
-        (match, mixedWhole, mixedNum, mixedDen, fracNum, fracDen) => {
+        (
+            match: string,
+            mixedWhole: string | undefined,
+            mixedNum: string | undefined,
+            mixedDen: string | undefined,
+            fracNum: string | undefined,
+            fracDen: string | undefined
+        ) => {
             // Left as written, so a long one cannot round-trip through a float.
             if (/^\d+$/.test(match)) {
                 return withoutLeadingZeros(match);

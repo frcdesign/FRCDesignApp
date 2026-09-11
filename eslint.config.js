@@ -35,16 +35,6 @@ export default defineConfig([
             // so lint is the only thing that fails a build on one.
             "@typescript-eslint/no-deprecated": "error",
 
-            // any-cascade rules — Onshape API responses are untyped; fixing requires
-            // full API type definitions which don't exist
-            "@typescript-eslint/no-explicit-any": "off",
-            "@typescript-eslint/no-unsafe-assignment": "off",
-            "@typescript-eslint/no-unsafe-member-access": "off",
-            "@typescript-eslint/no-unsafe-return": "off",
-            "@typescript-eslint/no-unsafe-argument": "off",
-            "@typescript-eslint/no-unsafe-call": "off",
-            "@typescript-eslint/no-unsafe-enum-comparison": "off",
-
             // TanStack Router files must export both component and route config object
             "react-refresh/only-export-components": "off",
 
@@ -69,6 +59,54 @@ export default defineConfig([
                 },
                 tsconfigRootDir: import.meta.dirname
             }
+        }
+    },
+    {
+        // The enum rules catch a comparison between two different enums. What
+        // fires here is a string or a number compared against the enum it is
+        // spelled as — an HTTP status, a library id out of a route param — which
+        // is the comparison being asked for, not a mistake.
+        files: ["**/*.{ts,tsx}"],
+        rules: { "@typescript-eslint/no-unsafe-enum-comparison": "off" }
+    },
+    {
+        // Vitest's asymmetric matchers are typed `any`, so an object built
+        // around one is unsafe by construction and by nobody's fault.
+        files: ["**/*.test.{ts,tsx}"],
+        rules: { "@typescript-eslint/no-unsafe-assignment": "off" }
+    },
+    {
+        // Build configuration, which walks Onshape's OpenAPI document and reads
+        // an environment this project's tsconfigs do not describe.
+        files: ["*.config.ts"],
+        rules: {
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-unsafe-assignment": "off",
+            "@typescript-eslint/no-unsafe-member-access": "off",
+            "@typescript-eslint/no-unsafe-return": "off",
+            "@typescript-eslint/no-unsafe-argument": "off",
+            "@typescript-eslint/no-unsafe-call": "off"
+        }
+    },
+    {
+        // Onshape's API is untyped, and typing the whole of it is not on the
+        // cards, so `any` flows out of the client and through whatever parses
+        // its responses. Scoped here rather than switched off everywhere: the
+        // frontend and the features have contracts of their own, and should be
+        // told when an `any` reaches them.
+        files: [
+            "src/backend/lib/onshape/**/*.ts",
+            "src/backend/features/load/**/*.ts",
+            "src/backend/features/configurations/input-parser.ts"
+        ],
+        rules: {
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-unsafe-assignment": "off",
+            "@typescript-eslint/no-unsafe-member-access": "off",
+            "@typescript-eslint/no-unsafe-return": "off",
+            "@typescript-eslint/no-unsafe-argument": "off",
+            "@typescript-eslint/no-unsafe-call": "off",
+            "@typescript-eslint/no-unsafe-enum-comparison": "off"
         }
     }
 ]);

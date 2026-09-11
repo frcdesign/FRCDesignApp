@@ -263,7 +263,7 @@ describe("POST /group", () => {
         expect(await res.json()).toEqual({ name: "New Doc" });
 
         expect(createSpy).toHaveBeenCalledOnce();
-        const params = createSpy.mock.calls[0][0]?.params;
+        const params: unknown = createSpy.mock.calls[0][0]?.params;
         expect(params).toMatchObject({
             groupId: expect.any(String),
             documentId: "doc-new",

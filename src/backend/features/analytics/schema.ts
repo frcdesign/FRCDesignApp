@@ -68,21 +68,6 @@ export const events = sqliteTable(
 /** One row of the log: everything the rollups are derived from. */
 export type LoggedEvent = typeof events.$inferSelect;
 
-/** What every event carries, whatever kind of event it is. */
-export type EventCore = Pick<
-    LoggedEvent,
-    | "id"
-    | "type"
-    | "createdAt"
-    | "day"
-    | "libraryId"
-    | "userId"
-    | "schemaVersion"
->;
-
-/** The rest, which only an insert fills in. */
-export type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
-
 /**
  * Per-day counts. Each flag counter is a subset of `count`, and so a percentage
  * of it. Fasten's denominator is not here: it is the assembly row of

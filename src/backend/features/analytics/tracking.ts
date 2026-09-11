@@ -1,12 +1,8 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import {
-    events,
-    type EventCore,
-    type InsertColumns,
-    type LoggedEvent
-} from "./schema";
+import { events, type LoggedEvent } from "./schema";
+import { NOT_AN_INSERT, type EventCore } from "./logged-event";
 import { rollupWrites } from "./rollups";
 import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./events";
 import { type LibraryId } from "../library/library-id";
@@ -127,25 +123,6 @@ function core(
         schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
-
-/**
- * The insert-only columns an app open leaves empty, spelled out rather than
- * defaulted: a column added to the log stops compiling here until someone says
- * what a non-insert should record for it.
- */
-const NOT_AN_INSERT: InsertColumns = {
-    elementId: null,
-    documentId: null,
-    instanceId: null,
-    instanceType: null,
-    insertableId: null,
-    targetElementType: null,
-    selection: null,
-    isFavorite: null,
-    isQuickInsert: null,
-    source: null,
-    fasten: null
-};
 
 /**
  * Appends the event to the log, then applies it to the rollups — the two halves

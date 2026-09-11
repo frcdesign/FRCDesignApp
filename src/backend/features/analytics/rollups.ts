@@ -1,8 +1,8 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
 import { earliest, increment, latest } from "../../db/updates";
-import { ElementType } from "../../lib/onshape/element-type";
-import { EventType, InsertSource } from "./events";
+import { EventType } from "./events";
+import { asInsert, type LoggedInsert } from "./logged-event";
 import {
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
@@ -15,22 +15,6 @@ import {
     userStats,
     type LoggedEvent
 } from "./schema";
-
-/** A logged insert, whose own columns a rollup can then count on. */
-type LoggedInsert = LoggedEvent & {
-    elementId: string;
-    targetElementType: ElementType;
-    source: InsertSource;
-};
-
-function isInsert(event: LoggedEvent): event is LoggedInsert {
-    return (
-        event.type === EventType.INSERT &&
-        event.elementId !== null &&
-        event.targetElementType !== null &&
-        event.source !== null
-    );
-}
 
 /**
  * Every counter one logged event feeds. Derived from the row alone — no app
@@ -46,16 +30,17 @@ export function rollupWrites(
         markUserActive(db, event),
         countUser(db, event)
     ];
-    if (!isInsert(event)) return writes;
+    const insert = asInsert(event);
+    if (!insert) return writes;
 
     return [
         ...writes,
-        countSource(db, event),
-        countTarget(db, event),
-        countPartDay(db, event),
-        markPartUser(db, event),
-        countPartLifetime(db, event),
-        ...countValues(db, event)
+        countSource(db, insert),
+        countTarget(db, insert),
+        countPartDay(db, insert),
+        markPartUser(db, insert),
+        countPartLifetime(db, insert),
+        ...countValues(db, insert)
     ];
 }
 

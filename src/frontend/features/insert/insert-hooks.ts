@@ -1,7 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { apiPost } from "../../lib/api-client";
-import { InsertableOut } from "@backend/features/library/contract";
+import {
+    InsertableOut,
+    type InsertOut
+} from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
@@ -69,27 +72,30 @@ export function useInsertMutation(
             await queryClient.cancelQueries({ queryKey: ["thumbnail"] });
 
             showLoadingToast(`Inserting ${insertable.name}...`, toastId);
-            return apiPost(endpoint + toInsertablePath(insertable.id), {
-                body
-            });
+            return apiPost<InsertOut>(
+                endpoint + toInsertablePath(insertable.id),
+                { body }
+            );
         },
         onError: getAppErrorHandler(
             `Unexpectedly failed to insert ${insertable.name}.`,
             toastId
         ),
-        onSuccess: (result, fasten: boolean) => {
-            if (fasten) {
-                sendOpenFeatureMessage(search, result.featureId);
-                showSuccessToast(
-                    `Successfully inserted ${insertable.name} and created a Fasten mate.`,
-                    toastId
-                );
-            } else {
+        // On the mate that was built, not the one that was asked for: only the
+        // assembly path builds one, and it answers with null when it did not.
+        onSuccess: (result) => {
+            if (result.featureId === null) {
                 showSuccessToast(
                     `Successfully inserted ${insertable.name}.`,
                     toastId
                 );
+                return;
             }
+            sendOpenFeatureMessage(search, result.featureId);
+            showSuccessToast(
+                `Successfully inserted ${insertable.name} and created a Fasten mate.`,
+                toastId
+            );
         }
     });
 }

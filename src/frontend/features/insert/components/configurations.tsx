@@ -54,6 +54,7 @@ import { showErrorToast } from "../../../lib/notifications";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { InputRow } from "../../../components/input-row";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { withParameterValue } from "../parameter-value";
 
 interface ConfigurationWrapperProps {
     insertableId: string;
@@ -166,37 +167,59 @@ function ConfigurationParameters(
 ): ReactNode {
     const { configurationResult, selection, setSelection, unitInfo } = props;
 
-    const parameters = configurationResult.parameters.map((parameter) => {
-        const handleValueChange = (newValue: string | undefined) => {
-            if (newValue === undefined) {
-                if (!(parameter.id in selection)) return;
-                const next = { ...selection };
-                delete next[parameter.id];
-                setSelection(next);
-            } else {
-                if (selection[parameter.id] === newValue) return;
-                setSelection({
-                    ...selection,
-                    [parameter.id]: newValue
-                });
-            }
-        };
-
-        return (
-            <ParameterInput
-                key={parameter.id}
-                parameter={parameter}
-                value={selection[parameter.id]}
-                selection={selection}
-                parameters={configurationResult.parameters}
-                onValueChange={handleValueChange}
-                unitInfo={unitInfo}
-            />
-        );
-    });
     // Spaced by the stack, not by a margin on each row, which the first row
     // would add to the gap the body already leaves above it.
-    return <Stack gap="sm">{parameters}</Stack>;
+    return (
+        <Stack gap="sm">
+            {configurationResult.parameters.map((parameter) => (
+                <ParameterRow
+                    key={parameter.id}
+                    parameter={parameter}
+                    selection={selection}
+                    setSelection={setSelection}
+                    parameters={configurationResult.parameters}
+                    unitInfo={unitInfo}
+                />
+            ))}
+        </Stack>
+    );
+}
+
+interface ParameterRowProps {
+    parameter: ConfigurationParameter;
+    selection: Selection;
+    setSelection: Dispatch<Selection>;
+    parameters: ConfigurationParameter[];
+    unitInfo: UnitInfo;
+}
+
+/**
+ * One row, given its own component so its handler can be a stable value. Built
+ * inside the `.map` it replaces, the handler changed identity on every render,
+ * and the effects below name it as a dependency.
+ */
+function ParameterRow(props: ParameterRowProps): ReactNode {
+    const { parameter, selection, setSelection, parameters, unitInfo } = props;
+
+    const handleValueChange = useCallback(
+        (newValue: string | undefined) => {
+            // Hands back the same selection when nothing moves, which React
+            // treats as no change at all.
+            setSelection(withParameterValue(selection, parameter, newValue));
+        },
+        [parameter, selection, setSelection]
+    );
+
+    return (
+        <ParameterInput
+            parameter={parameter}
+            value={selection[parameter.id]}
+            selection={selection}
+            parameters={parameters}
+            onValueChange={handleValueChange}
+            unitInfo={unitInfo}
+        />
+    );
 }
 
 interface ParameterProps<T extends ConfigurationParameter> {

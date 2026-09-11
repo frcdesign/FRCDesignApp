@@ -80,7 +80,7 @@ function readStoredState(): UiState {
     try {
         const parsed = UiStateSchema.safeParse(
             // A stored null reads as absent, which is what a default fills.
-            JSON.parse(raw, (_key, value) => value ?? undefined)
+            JSON.parse(raw, (_key, value: unknown) => value ?? undefined)
         );
         return parsed.success && parsed.data.version >= LATEST_VERSION
             ? parsed.data

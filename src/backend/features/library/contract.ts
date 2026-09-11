@@ -41,6 +41,14 @@ export interface GroupOut {
 export type Insertables = Record<string, InsertableOut>;
 export type Groups = Record<string, GroupOut>;
 
+/**
+ * What an insert answers with: the fasten mate's feature when one was built, and
+ * null whenever none was — the part studio path never builds one.
+ */
+export interface InsertOut {
+    featureId: string | null;
+}
+
 export interface LibraryOut {
     groupOrder: string[];
     groups: Groups;

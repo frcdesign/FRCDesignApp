@@ -17,7 +17,7 @@
         "typegen": "wrangler types",
         "gen:onshape-types": "openapi-ts",
         "test": "vitest run",
-        "check:migrations": "python3 scripts/check-migrations.py",
+        "check:migrations": "node --disable-warning=ExperimentalWarning scripts/check-migrations.js",
         "test:watch": "vitest",
         "prepare": "husky"
     },

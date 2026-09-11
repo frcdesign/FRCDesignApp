@@ -12,15 +12,8 @@
         {
             "idx": 1,
             "version": "6",
-            "when": 1789071763677,
-            "tag": "0001_add_event_schema_version",
-            "breakpoints": true
-        },
-        {
-            "idx": 2,
-            "version": "6",
-            "when": 1789072486681,
-            "tag": "0002_rename_configurations_key",
+            "when": 1789095381551,
+            "tag": "0001_event_schema_version_and_configurations_key",
             "breakpoints": true
         }
     ]

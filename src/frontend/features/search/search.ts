@@ -80,7 +80,14 @@ export function doSearch(
     }
 
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
-        filter: (searchResult) => {
+        filter: (result) => {
+            // MiniSearch types a hit's stored fields as `any`; they are the
+            // document that was indexed.
+            const searchResult = result as unknown as Omit<
+                MiniSearchResult,
+                "id"
+            > &
+                SearchDocument;
             if (!showHidden && !searchResult.isVisible) {
                 return false;
             }

@@ -24,7 +24,7 @@ export function useMessageListener() {
             if (search.server !== event.origin) {
                 return;
             }
-            const messageName = event.data.messageName;
+            const { messageName } = event.data as Partial<Message>;
             if (!messageName) {
                 return;
             }
@@ -76,7 +76,8 @@ export enum MessageType {
 
 interface Message {
     messageName: MessageType;
-    [key: string]: any;
+    /** Whatever that message carries; Onshape names the fields, not us. */
+    [key: string]: MessageType | string | number | boolean | undefined;
 }
 
 function sendMessage(elementPath: ElementPath, message: Message) {

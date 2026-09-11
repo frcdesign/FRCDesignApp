@@ -104,11 +104,10 @@ export async function takeLoginSession(
     const raw = await c.env.KV.get(`login-session:${sessionId}`);
     if (!raw) return null;
 
-    const session = JSON.parse(raw);
-    session.sessionId = sessionId;
+    const session = JSON.parse(raw) as LoginSession;
 
     void c.env.KV.delete(`login-session:${sessionId}`);
-    return session;
+    return { ...session, sessionId };
 }
 
 export async function startLoginSession(

@@ -36,9 +36,9 @@ export function getLibraryVersionQuery(libraryId: LibraryId) {
     return queryOptions<number>({
         queryKey: libraryVersionQueryKey(libraryId),
         queryFn: () =>
-            apiGet("/library-version" + toLibraryPath(libraryId)).then(
-                (result: { version: number }) => result.version
-            ),
+            apiGet<{ version: number }>(
+                "/library-version" + toLibraryPath(libraryId)
+            ).then((result) => result.version),
         // Bumps arrive through the explicit refresh flows, which refetch this.
         staleTime: Infinity
     });

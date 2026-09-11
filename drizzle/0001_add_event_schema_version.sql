@@ -1,1 +1,0 @@
-ALTER TABLE `events` ADD `schema_version` integer DEFAULT 1 NOT NULL;

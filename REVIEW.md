@@ -131,6 +131,26 @@ Legend: ☐ not started · ◐ in progress · ☑ reviewed
   `FORCE_SIGNED_IN` and `VITE_ACCESS_LEVEL_OVERRIDE` are gated on that string
   alone, and anything else leaves them armed.
 
+- **Configuration panel** — a parameter its condition hides put the panel into an
+  unbounded render loop: the effect that clears it asked whether the key was
+  present, and `toSelection` puts every parameter back on the next render, so it
+  cleared, was restored, and cleared again for as long as the panel was open.
+  `withParameterValue` compares the value instead and hands back the very same
+  selection when nothing moves, which is what lets React stop. Each row is its
+  own component now, so its handler is a stable value rather than a fresh
+  closure per render.
+
+- **Reading an event** — `NOT_AN_INSERT` and the narrowing `rollups.ts` did by
+  hand are one module, `logged-event.ts`. It owns what a non-insert writes and
+  what a reader may count on once a row turns out to be an insert, so nothing
+  else has to know which of the log's columns are set for which kind.
+
+- **API types** — `apiGet`, `apiPost` and `apiDelete` are generic, and the
+  `no-unsafe-*` rules are scoped to the Onshape client and the parsers that read
+  it rather than switched off everywhere. Typing the client caught a real one:
+  the insert's `featureId` is nullable and was being passed to Onshape's
+  open-feature message unchecked.
+
 - **Deploy scripts and dependencies** — `deploy:cert` and `deploy:production`
   are gone; the workflow was already the only correct path. `drizzle-kit` and
   the router devtools moved to `devDependencies`.

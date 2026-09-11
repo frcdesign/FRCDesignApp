@@ -100,7 +100,9 @@ configurationRoutes.get(
         const instancePath = c.req.valid("query");
 
         const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
-        const units: OnshapeUnit[] = rawUnitInfo.defaultUnits.units;
+        // Onshape answers with strings; this is where the app decides they are
+        // the quantity types and units it knows.
+        const units = rawUnitInfo.defaultUnits.units as OnshapeUnit[];
 
         const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
         const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);

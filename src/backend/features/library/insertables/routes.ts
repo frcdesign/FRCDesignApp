@@ -12,6 +12,7 @@ import {
 } from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import { type InsertOut } from "../contract";
 import {
     toElementPath,
     type ElementPath,
@@ -372,7 +373,10 @@ insertableRoutes.post(
             })
         );
 
-        return c.json({ featureId: result.feature?.featureId });
+        const out: InsertOut = {
+            featureId: result.feature?.featureId ?? null
+        };
+        return c.json(out);
     }
 );
 
@@ -458,7 +462,7 @@ insertableRoutes.post(
 
         if (!body.fasten) {
             await track(false);
-            return c.json({ featureId: null });
+            return c.json({ featureId: null } satisfies InsertOut);
         }
 
         const fastenInfo = row.fastenInfo;
@@ -485,7 +489,10 @@ insertableRoutes.post(
                 builder.build()
             );
             await track(true);
-            return c.json({ featureId: fastenResult.feature.featureId });
+            const out: InsertOut = {
+                featureId: fastenResult.feature.featureId
+            };
+            return c.json(out);
         } catch (error) {
             // Only the mate failed; the insert is still in the assembly.
             await track(false);
