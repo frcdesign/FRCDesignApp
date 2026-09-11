@@ -6,14 +6,18 @@ const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
 
 /** The vendors an insertable can come from, and how they are displayed. */
 export enum Vendor {
+    AB = "AB",
     AM = "AM",
     AXN = "AXN",
     BWT = "BWT",
+    CTRE = "CTRE",
     GB = "GB",
     LAI = "LAI",
     MB = "MB",
     MCM = "MCM",
     MIS = "MIS",
+    NORGREN = "Norgren",
+    PARKER = "Parker",
     REDUX = "Redux",
     REV = "REV",
     SDS = "SDS",
@@ -29,8 +33,12 @@ export enum Vendor {
 /** Who FRC teams buy from. */
 const FRC_VENDORS: Vendor[] = [
     Vendor.AM,
+    Vendor.AB,
+    Vendor.CTRE,
+    Vendor.NORGREN,
     Vendor.LAI,
     Vendor.MCM,
+    Vendor.PARKER,
     Vendor.REDUX,
     Vendor.REV,
     Vendor.SDS,
@@ -129,12 +137,16 @@ export function isCustomPart(vendors: Vendor[]): boolean {
 
 export function getVendorName(vendor: Vendor) {
     switch (vendor) {
+        case Vendor.AB:
+            return "ARMABOT";
         case Vendor.AM:
             return "AndyMark";
         case Vendor.AXN:
             return "Axon Robotics";
         case Vendor.BWT:
             return "BWTLink";
+        case Vendor.CTRE:
+            return "CTR Electronics";
         case Vendor.CUSTOM:
             return "Custom";
         case Vendor.GB:
@@ -147,6 +159,10 @@ export function getVendorName(vendor: Vendor) {
             return "McMaster-Carr";
         case Vendor.MIS:
             return "Misumi";
+        case Vendor.NORGREN:
+            return "IMI Norgren";
+        case Vendor.PARKER:
+            return "Parker";
         case Vendor.REDUX:
             return "Redux Robotics";
         case Vendor.REV:

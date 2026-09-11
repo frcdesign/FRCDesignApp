@@ -440,9 +440,8 @@ insertableRoutes.post(
             }
         );
 
-        // The insert has landed. Every path below records it exactly once, so
-        // a fasten that never happened cannot leave one unrecorded — and
-        // `fasten` says what happened rather than what was asked for.
+        // The insert has landed, and every path below records it exactly once — so a
+        // fasten that never happened leaves none unrecorded, and `fasten` says what was.
         const track = (fasten: boolean) =>
             trackInBackground(c, async () =>
                 trackInsert(c, {

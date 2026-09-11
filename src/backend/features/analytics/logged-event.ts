@@ -1,10 +1,6 @@
 /**
- * The log's rows, read as the events they are.
- *
- * `events` is one wide table covering every kind of event, so most of its
- * columns are nullable and only some are set for any given row. This is the one
- * place that knows which: what a non-insert writes, and what a reader may count
- * on having once a row turns out to be an insert.
+ * The log's rows, read as the events they are. `events` is one wide table, so
+ * this is the one place that knows which columns a given kind sets.
  */
 import { type ElementType } from "../../lib/onshape/element-type";
 import { EventType, type InsertSource } from "./events";
@@ -26,9 +22,8 @@ export type EventCore = Pick<
 export type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
 
 /**
- * The insert-only columns an app open leaves empty, spelled out rather than
- * defaulted: a column added to the log stops compiling here until someone says
- * what a non-insert should record for it.
+ * Spelled out rather than defaulted: a column added to the log stops compiling
+ * here until someone says what a non-insert records for it.
  */
 export const NOT_AN_INSERT: InsertColumns = {
     elementId: null,
@@ -52,9 +47,8 @@ export type LoggedInsert = LoggedEvent & {
 };
 
 /**
- * The row as an insert, or null when it is some other kind. Also null for an
- * insert whose columns disagree with its type — a row written by a version that
- * did not set them yet, which is worth reading past rather than crashing on.
+ * Null for another kind, and for an insert whose columns disagree with its type —
+ * a row from a version that did not set them, worth reading past not crashing on.
  */
 export function asInsert(event: LoggedEvent): LoggedInsert | null {
     const isInsert =

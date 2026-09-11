@@ -5,9 +5,8 @@
  */
 
 /**
- * What "a month" means throughout: the trailing window the recent comparisons
- * cover, the days a sparkline plots, and the span a usage rate is scaled to.
- * The dashboard names its own headings from it, so nothing can drift.
+ * What "a month" means throughout: the recent comparison window, a sparkline's
+ * days, and the span a rate scales to. The dashboard titles itself from it.
  */
 export const MONTH_DAYS = 30;
 

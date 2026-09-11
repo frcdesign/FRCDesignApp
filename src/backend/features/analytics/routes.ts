@@ -118,15 +118,11 @@ analyticsRoutes.get(
     }
 );
 
-/**
- * GET /api/analytics/health/library/:libraryId?v=:cacheVersion
- *
- * Counted off the same build issues `/build-status` reads, and so keyed the same
- * way: every write behind them bumps the library's version. Public rather than
- * private, since this answer is the same for whoever asks.
- */
+/** GET /api/analytics/health/library/:libraryId?v=:cacheVersion */
 analyticsRoutes.get(
     "/analytics/health" + libraryRoute(),
+    // Off the same build issues `/build-status` reads, so keyed the same way.
+    // Public rather than private: this answer is the same for whoever asks.
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);

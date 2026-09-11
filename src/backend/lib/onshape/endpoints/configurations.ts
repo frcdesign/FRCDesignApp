@@ -39,10 +39,8 @@ export function setConfiguration(
 }
 
 /**
- * A selection encoded for an Onshape request *body*, where nothing else will
- * escape it. Not `encodeConfiguration` from `features/configurations/utils`,
- * which leaves values raw for a query string to encode on the way out — the
- * two differ only in that, so they are named for which side they serve.
+ * For a request *body*, where nothing else will escape it — unlike
+ * `encodeConfiguration`, which leaves values for a query string to encode.
  */
 export function encodeConfigurationForBody(selection: Selection): string {
     return Object.entries(selection)

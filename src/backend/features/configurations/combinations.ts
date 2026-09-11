@@ -104,9 +104,8 @@ export function isIndexedParameter(
 }
 
 /**
- * The values enumeration varies this parameter over, given what the combination
- * has fixed so far. None when its condition hides it here, or when visibility
- * leaves it no option: either way it is left unset for Onshape to default.
+ * What enumeration varies this parameter over, given what is fixed so far. None
+ * when visibility leaves it no option, which leaves it for Onshape to default.
  */
 function parameterValues(
     parameter: EnumParameter | BooleanParameter,

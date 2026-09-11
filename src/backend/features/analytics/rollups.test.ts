@@ -125,9 +125,8 @@ describe("rollupWrites", () => {
         const live = await readRollups();
         expect(live.every((rows) => rows.length > 0)).toBe(true);
 
-        // What a batch job would do: drop the rollups and derive them again
-        // from the log. Replayed newest first, since nothing promises a job
-        // reaches the rows in the order they were written.
+        // What a batch job would do: drop the rollups and derive them from the log.
+        // Newest first, since nothing promises a job reads rows in the order written.
         for (const table of ROLLUPS) {
             await db.delete(table);
         }

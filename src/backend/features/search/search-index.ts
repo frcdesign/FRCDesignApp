@@ -25,9 +25,8 @@ const WORD_BOUNDARIES = new RegExp(
     "g"
 );
 
-// A mixed number, simple fraction, decimal (incl. leading-dot), or plain
-// integer. Alternatives are ordered longest-first so `1-1/2` is consumed whole,
-// not as `1` + `1/2`.
+// A mixed number, fraction, decimal or integer. Ordered longest-first so `1-1/2`
+// is consumed whole rather than as `1` + `1/2`.
 const NUMERIC_PATTERN =
     /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*|\d+/g;
 
@@ -45,17 +44,14 @@ const truncated: DecimalSpelling = (value) =>
     String(Math.trunc(value * 100) / 100);
 
 /**
- * Both spellings of a measurement, since the library writes the same one either
- * way: `.196` is written `.2` by one vendor and `.19` by the next. Storing and
- * searching both is what lets either find the part. Most numbers spell the same
- * both ways and so cost nothing.
+ * Both spellings, since the library writes the same measurement either way: one
+ * vendor's `.2` is the next one's `.19`. Storing both lets either find the part.
  */
 const DECIMAL_SPELLINGS: DecimalSpelling[] = [rounded, truncated];
 
 /**
- * Rewrites numbers and fractions to one 2-dp decimal, at index and query time
- * alike — which is what lets the raw fragments go unstored. Names only: a part
- * number is an identifier, and 217-2600 is not two thousand six hundred.
+ * One 2-dp decimal at index and query time alike, which is what lets the raw
+ * fragments go unstored. Names only: `217-2600` is not two thousand six hundred.
  */
 function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
     return text.replace(
@@ -76,9 +72,8 @@ function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
             let value: number;
             if (mixedWhole !== undefined) {
                 const fraction = Number(mixedNum) / Number(mixedDen);
-                // A leading zero marks a part number segment rather than a
-                // quantity, so `TTB-0016-5/32` is part 16 in 5/32", not 16 and
-                // 5/32. Each half still canonicalizes on its own.
+                // A leading zero marks a part number segment, not a quantity: `TTB-0016-5/32` is
+                // part 16 in 5/32", not 16 and 5/32. Each half still canonicalizes on its own.
                 if (mixedWhole.startsWith("0")) {
                     return Number.isFinite(fraction)
                         ? `${withoutLeadingZeros(mixedWhole)}-${toDecimal(fraction)}`
@@ -171,20 +166,17 @@ export function tokenize(text: string, field?: string): string[] {
  */
 export function tokenizeQuery(text: string): string[] {
     const tokens: string[] = [];
-    // The name reading keeps its case, for processTerm to split camelCase on,
-    // so the literal reading of the same word is a duplicate rather than a
-    // second term to search.
+    // The name reading keeps its case for processTerm to split camelCase on, so the
+    // literal reading of one word is a duplicate rather than a second term.
     const seen = new Set<string>();
     for (const word of text.trim().split(/\s+/)) {
-        // Ingest drops the placeholder, so nothing carries it; typed, it is
-        // still the word for a part number nobody has, and searching its
+        // Typed, it is still the word for a part number nobody has, and searching its
         // letters would answer with whatever starts with `n` or `a`.
         if (!word || isPlaceholderPartNumber(word)) {
             continue;
         }
-        // Segments only for something carrying a letter, which is what a part
-        // number does: splitting a bare `1/2` would search `1`, and a prefix
-        // that short matches every number in the library.
+        // Segments only what carries a letter, as a part number does: splitting a bare
+        // `1/2` would search `1`, and a prefix that short matches every number.
         const literal = /[a-z]/i.test(word)
             ? tokenizePartNumber(word)
             : [word.toLowerCase()];
@@ -260,10 +252,8 @@ function uniqueJoin(values: (string | undefined)[]): string {
 }
 
 /**
- * Keeps the first of each distinct (part number, name) in enumeration order and
- * drops records with neither. First-wins is what keeps the latest revision. A
- * number that identifies nothing is dropped here, so it never reaches the
- * index, the stored records, or a vendor url.
+ * First of each distinct (part number, name) in enumeration order, which keeps
+ * the latest revision. One identifying nothing is dropped before the index sees it.
  */
 export function toSearchRecords(
     records: ConfigurationRecord[],

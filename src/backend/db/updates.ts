@@ -12,10 +12,8 @@ export function increment(column: SQLiteColumn, by: number | SQL = 1): SQL {
 }
 
 /**
- * Bounds rather than assignment, so writes reaching a row out of order — a
- * replay of the event log, say — still leave the true first and last. The
- * milliseconds are spelled out here because a raw `sql` fragment carries no
- * column codec to convert the Date for it.
+ * Bounds rather than assignment, so a write arriving out of order still leaves
+ * the true first and last. Spelled in ms: a raw `sql` fragment has no codec.
  */
 export function earliest(column: SQLiteColumn, value: Date): SQL {
     return sql`min(${column}, ${value.getTime()})`;

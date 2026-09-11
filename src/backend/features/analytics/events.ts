@@ -1,7 +1,6 @@
 /**
- * What the columns of a logged event mean. Bump it when that changes — a
- * column repurposed, or one whose meaning shifts — so a reader can tell rows
- * written under the old reading from rows written under the new one.
+ * What a logged event's columns mean. Bump it when that changes, so a reader can
+ * tell rows written under the old reading from rows written under the new.
  */
 export const EVENT_SCHEMA_VERSION = 1;
 
@@ -14,12 +13,8 @@ export enum EventType {
 }
 
 /**
- * Where an insert started, not whether the part is favorited: a favorited part
- * inserted from search is `SEARCH`.
- *
- * One value per place a part can be inserted from, rather than a source crossed
- * with where the user was: browsing only happens inside a group and favorites
- * only outside one, so search is the only one of the three with two forms.
+ * Where an insert started, not whether the part is favorited. One value per place
+ * rather than a source crossed with a location: only search has two forms.
  */
 export enum InsertSource {
     /** Searching the whole library, from its home list. */

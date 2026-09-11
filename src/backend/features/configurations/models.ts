@@ -152,9 +152,8 @@ export type PartialSelection = Partial<Selection>;
 export type ConfigurationKey = string;
 
 /**
- * The key of a selection that overrides nothing: the element's own defaults.
- * Beside the type rather than in `selection.ts`, which `utils.ts` would have to
- * import back from to name it.
+ * The key of a selection that overrides nothing: the element's own defaults. Here
+ * rather than in `selection.ts`, which `utils.ts` would have to import back from.
  */
 export const DEFAULT_CONFIGURATION_KEY: ConfigurationKey = "";
 

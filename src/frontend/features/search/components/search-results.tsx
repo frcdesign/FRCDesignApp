@@ -149,7 +149,6 @@ function deduplicateRanges(ranges: Position[]): Position[] {
             continue;
         }
         const start = i;
-        // Find length of range
         while (i < indexMap.length && indexMap[i]) {
             i++;
         }

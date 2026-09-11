@@ -1,7 +1,6 @@
 /**
  * Tracking's own tables, kept out of `db/schema.ts` because nothing here points
- * at the app's data: the log is keyed on Onshape ids and the rollups are
- * derived from it, so the two sides share no foreign key.
+ * at the app's data: no foreign key crosses between the two sides.
  */
 
 import {
@@ -69,9 +68,8 @@ export const events = sqliteTable(
 export type LoggedEvent = typeof events.$inferSelect;
 
 /**
- * Per-day counts. Each flag counter is a subset of `count`, and so a percentage
- * of it. Fasten's denominator is not here: it is the assembly row of
- * {@link dailyTargetMetrics}, since Onshape only offers it on an assembly.
+ * Per-day counts, each flag counter a subset of `count`. Fasten's denominator is
+ * the assembly row of {@link dailyTargetMetrics}, Onshape offering it only there.
  */
 export const dailyMetrics = sqliteTable(
     "daily_metrics",

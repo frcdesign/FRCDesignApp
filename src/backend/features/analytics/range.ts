@@ -34,9 +34,8 @@ export const thresholdQuery = rangeQuery.extend({
 });
 
 /**
- * Every day in the range, inclusive. Clamp `from` to the first recorded day
- * first, or "all time" fills two decades of zeroes. Capped as well as clamped,
- * since the allocation happens here: the bound is what a caller asked for.
+ * Every day in the range. Clamp `from` first, or "all time" fills two decades of
+ * zeroes; capped as well, since the allocation happens here.
  */
 export function eachDay(range: DayRange): string[] {
     const days: string[] = [];
@@ -61,9 +60,8 @@ export async function getTrackingSince(db: Db): Promise<string | undefined> {
 }
 
 /**
- * Narrows a requested range to the days actually covered by tracking. `to` is
- * held to today as well: nothing was recorded tomorrow, and an unclamped one is
- * a request to densify a point per day until whatever year was asked for.
+ * Narrows a range to the days tracking covers. `to` is held to today as well:
+ * nothing was recorded tomorrow, and an unclamped one runs to any year asked for.
  */
 export function clampRange(
     range: DayRange,

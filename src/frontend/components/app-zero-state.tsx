@@ -65,9 +65,8 @@ function resolveDescription(
 }
 
 /**
- * Whatever a section has to say in place of its content: a failure, but an
- * empty result or a prompt just as well. Reads as a failure only by default —
- * an `icon` and a `description` of its own are what make it something else.
+ * Whatever a section shows in place of its content: a failure by default, and an
+ * empty result or a prompt when given an `icon` and `description` of its own.
  */
 export function SectionNotice(props: NoticeProps): ReactNode {
     const { title, action, className, icon = DEFAULT_ERROR_ICON } = props;

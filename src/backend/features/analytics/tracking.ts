@@ -125,10 +125,8 @@ function core(
 }
 
 /**
- * Appends the event to the log, then applies it to the rollups — the two halves
- * of a write, in one batch so neither can land without the other. They are kept
- * apart so the second can move to a batch job over the log without touching the
- * first: what is recorded and what is counted are separate decisions.
+ * The two halves of a write, batched so neither lands without the other. Kept
+ * apart so the counting can move to a batch job without touching the recording.
  */
 async function record(db: Db, event: LoggedEvent): Promise<void> {
     const writes: BatchItem<"sqlite">[] = [

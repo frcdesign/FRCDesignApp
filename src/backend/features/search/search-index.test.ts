@@ -189,10 +189,8 @@ describe("tokenizeQuery", () => {
         expect(tokenizeQuery("bearing")).toEqual(["bearing"]);
     });
 
-    // Splitting the placeholder leaves `n` and `a`, and a one-letter prefix
-    // matches most of the library.
-    // Nothing carries the placeholder, and searching its letters would answer
-    // with whatever starts with `n` or `a`.
+    // Nothing carries the placeholder, and splitting it leaves `n` and `a` —
+    // a one-letter prefix, which matches most of the library.
     it.each(["n/a", "N/A"])("has nothing to search for in %s", (query) => {
         expect(tokenizeQuery(query)).toEqual([]);
     });

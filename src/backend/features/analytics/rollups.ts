@@ -17,9 +17,8 @@ import {
 } from "./schema";
 
 /**
- * Every counter one logged event feeds. Derived from the row alone — no app
- * table is read here — so replaying the log rebuilds the rollups exactly, which
- * is what lets the aggregation move to a batch job later.
+ * Every counter one event feeds, derived from the row alone — which is what lets
+ * a replay rebuild the rollups exactly, or move them to a batch job.
  */
 export function rollupWrites(
     db: Db,

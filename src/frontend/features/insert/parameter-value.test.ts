@@ -62,10 +62,8 @@ describe("withParameterValue", () => {
 });
 
 /**
- * The panel's render/effect cycle, run with the app's own functions: a hidden
- * parameter is cleared by an effect, and `toSelection` makes the selection whole
- * again on the next render. Comparing presence rather than value never reached a
- * fixed point here, so the panel re-rendered for as long as it was open.
+ * The panel's cycle, run with the app's own functions: an effect clears a hidden
+ * parameter and `toSelection` puts it back. Comparing presence never settled.
  */
 function passesToSettle(limit = 50): number | null {
     let stored: PartialSelection | undefined = undefined;

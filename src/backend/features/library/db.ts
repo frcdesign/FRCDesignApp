@@ -159,10 +159,8 @@ export async function placeNewGroup(
 }
 
 /**
- * The library's row, which everything pointing at a library needs to exist
- * first. Called wherever a library id is written rather than assumed: a library
- * gets its row on the first group added to it, and a caller can land on one
- * that has none yet.
+ * The row everything pointing at a library needs first. Called wherever a library
+ * id is written: a library gets its row on the first group added to it.
  */
 export async function ensureLibrary(
     db: Db,

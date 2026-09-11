@@ -44,10 +44,8 @@ export interface AppContextEnv {
 export type AppContext = Context<AppContextEnv>;
 
 /**
- * What a route may ask about the request it is serving: who is making it, and
- * what they are allowed to do. Resolved lazily, so a route that asks nothing
- * calls Onshape not at all, and answered per request, so a test can answer
- * without a session. `productionAuth` answers for real.
+ * Who is making the request and what they may do. Resolved lazily, so a route that
+ * asks nothing calls Onshape not at all, and per request, so a test can answer.
  */
 export interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;

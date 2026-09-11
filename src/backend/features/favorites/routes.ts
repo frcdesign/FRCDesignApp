@@ -144,9 +144,8 @@ favoriteRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // Named rather than left to the column default, which points at a
-        // library this caller may have no row for. The favorite's own key
-        // already requires the one they are favoriting in.
+        // Named rather than left to the column default, which points at a library this
+        // caller may have no row for. The favorite's own key requires the one they chose.
         await db
             .insert(users)
             .values({ id: userId, libraryId })

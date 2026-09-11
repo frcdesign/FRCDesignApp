@@ -194,9 +194,8 @@ interface ParameterRowProps {
 }
 
 /**
- * One row, given its own component so its handler can be a stable value. Built
- * inside the `.map` it replaces, the handler changed identity on every render,
- * and the effects below name it as a dependency.
+ * One row, given its own component so its handler is a stable value. Built inside
+ * the `.map` it replaces, it changed identity every render — and effects name it.
  */
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter, selection, setSelection, parameters, unitInfo } = props;

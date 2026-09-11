@@ -121,9 +121,8 @@ export const insertables = sqliteTable("insertables", {
 });
 
 /**
- * One row per insertable, split off rather than folded into `insertables`
- * because `parameters` and `records` are large: keeping them out of that row
- * keeps its b-tree small, and every scan of the library cheap.
+ * Split off rather than folded into `insertables` because `parameters` and
+ * `records` are large: inline, they would slow every scan of the library.
  */
 export const configurations = sqliteTable("configurations", {
     insertableId: text("insertable_id")
@@ -148,8 +147,7 @@ export const users = sqliteTable("users", {
         .$type<Theme>()
         .notNull()
         .default(DEFAULT_SETTINGS.theme),
-    // Ordered like every other `library_id`, and pointing at the same place.
-    // The row it needs is upserted wherever one is written, since the default
+    // The row this points at is upserted wherever one is written, since the default
     // below is applied by an insert that names no library at all.
     libraryId: libraryId()
         .default(DEFAULT_SETTINGS.libraryId)

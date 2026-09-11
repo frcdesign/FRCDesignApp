@@ -27,9 +27,8 @@ export function useLibraryId(): LibraryId {
 const LibraryIdType = z.enum(LibraryId);
 
 /**
- * Reads the library id out of a url. Quietly falling back to another library
- * would hide the bad url and leave the caller wondering why they are somewhere
- * else, so an unknown one 404s here rather than reaching the API.
+ * Reads the library id out of a url. An unknown one 404s here rather than
+ * falling back, which would hide the bad url and strand the caller elsewhere.
  */
 export function parseLibraryId(libraryId: string): LibraryId {
     const parsed = LibraryIdType.safeParse(libraryId);

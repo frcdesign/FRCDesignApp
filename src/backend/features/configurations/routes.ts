@@ -72,9 +72,8 @@ interface OnshapeUnit {
 }
 
 /**
- * The document's unit for a quantity type. Onshape names one for every type, so
- * a missing entry is a response we don't understand rather than a document
- * without a preference.
+ * The document's unit for a quantity type. Onshape names one for every type, so a
+ * missing entry is a response we do not understand, not an absent preference.
  */
 function getDefaultUnit(
     units: OnshapeUnit[],

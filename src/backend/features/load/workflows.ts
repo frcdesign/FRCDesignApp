@@ -230,9 +230,8 @@ async function createShellGroup(
 }
 
 /**
- * Records the failure on the group row, so the library flags it instead of
- * showing an empty group with nothing to explain it. A later successful load
- * recomputes `buildIssues` from scratch and clears it.
+ * Records the failure on the group row, so the library flags it rather than
+ * showing an empty group. A later successful load recomputes the issues afresh.
  */
 async function flagFailedGroup(
     env: AppBindings,

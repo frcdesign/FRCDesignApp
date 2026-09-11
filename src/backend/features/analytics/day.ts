@@ -5,10 +5,8 @@
  */
 
 /**
- * The zone a day key is measured in. The audience is US school and robotics
- * teams, who work evenings: a UTC midnight cuts a build session in half, since
- * 8pm Eastern is already tomorrow. Fixed rather than per-viewer, so one insert
- * lands on one day no matter who reports on it.
+ * US teams work evenings, and a UTC midnight cuts that session in half: 8pm
+ * Eastern is already tomorrow. Fixed, so an insert lands on one day for everyone.
  */
 export const REPORTING_TIME_ZONE = "America/New_York";
 
@@ -27,9 +25,8 @@ export function toDayKey(timestamp: number): string {
 }
 
 /**
- * Steps a day key by whole days. A day key is a calendar date, not an instant,
- * so this is arithmetic on the date: parsing at UTC midnight keeps every step
- * exactly 24 hours, which no zone with a DST shift would.
+ * Steps a day key by whole days. A key is a calendar date, not an instant, so
+ * parsing at UTC midnight keeps every step 24 hours — a DST zone would not.
  */
 export function addDays(day: string, count: number): string {
     const at = Date.parse(`${day}T00:00:00Z`) + count * 24 * 3600 * 1000;

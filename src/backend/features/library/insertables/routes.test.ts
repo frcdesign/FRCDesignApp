@@ -108,8 +108,6 @@ describe("insertable routes", () => {
         );
     });
 
-    // The one place a request's configuration is made whole, so an insert that
-    // names nothing still applies — and records — every parameter.
     // The client names which of the two searches it was; the route takes it
     // whole rather than deriving anything from the request.
     it("POST /add-to-part-studio records the source it was sent", async () => {
@@ -136,6 +134,8 @@ describe("insertable routes", () => {
         expect(event?.source).toBe(InsertSource.GROUP_SEARCH);
     });
 
+    // The one place a request's configuration is made whole, so an insert that
+    // names nothing still applies — and records — every parameter.
     it("POST /add-to-part-studio fills the selection it was not given", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);

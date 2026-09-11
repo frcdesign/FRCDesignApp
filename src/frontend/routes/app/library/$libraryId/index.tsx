@@ -130,9 +130,8 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 control: {
                     borderBottom: BORDER,
                     minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a
-                    // section header is a title like the group page's, so it
-                    // reads in the same text color.
+                    // Mantine brightens a control to pure white or black; a section header is a title
+                    // like the group page's, so it reads in the same text color.
                     color: "var(--mantine-color-text)"
                 },
                 // Its own padding would outgrow that height.
@@ -201,7 +200,6 @@ function LibraryList() {
     const groupOrder = libraryQuery.data.groupOrder;
 
     if (groupOrder.length <= 0) {
-        // Add an escape hatch for when no groups are in the database
         return (
             <SectionNotice
                 title="No groups found"

@@ -205,9 +205,8 @@ export function SearchBar() {
     const setUiState = useSetUiState();
     const libraryId = useLibraryId();
 
-    // `autoFocus` focuses before the ref is attached, so onFocus below has
-    // nothing to select through on the first open: the query carried over from
-    // last time keeps the caret after it, waiting to be cleared by hand.
+    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
+    // through on the first open and last time's query keeps the caret after it.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);

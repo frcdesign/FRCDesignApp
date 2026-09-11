@@ -125,8 +125,7 @@ export function useGetUiState(): UiState {
 }
 
 /** Merges into the state; every reader of it re-renders. */
-// The setter half of the pair above: a component reaches for one or the other,
-// so both read as hooks though setting needs no state of its own.
+// Named a hook to pair with the getter above, though it holds no state itself.
 // eslint-disable-next-line react-x/no-unnecessary-use-prefix
 export function useSetUiState(): SetUiState {
     return updateUiState;

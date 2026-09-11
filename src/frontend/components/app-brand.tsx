@@ -15,9 +15,8 @@ import frcDesignBook from "/frc-design-book.svg";
 const FRC_DESIGN_URL = "https://frcdesign.org";
 
 /**
- * The book and the app's name, in the navbar of both the panel and the
- * dashboard, both linking out to FRCDesign.org. Closed by a rule, so the name
- * reads as the app rather than as the first tab.
+ * The book and the app's name, in both navbars, linking out to FRCDesign.org.
+ * Closed by a rule, so the name reads as the app rather than the first tab.
  */
 export function AppBrand(): ReactNode {
     return (

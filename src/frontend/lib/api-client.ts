@@ -21,9 +21,8 @@ function getUrl(
 }
 
 /**
- * The route's response, as the route says it is. `T` is inferred from what the
- * caller assigns it to, so a contract that stops matching is a type error at the
- * call site rather than an `any` flowing on.
+ * The route's response, as the route says it is. `T` is inferred from the call
+ * site, so a contract that stops matching is an error there, not an `any`.
  */
 export async function apiPost<T>(
     path: string,
