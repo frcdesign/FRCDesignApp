@@ -32,7 +32,7 @@ import {
     type InsertEvent
 } from "./tracking";
 import { toDayKey } from "./day";
-import { EVENT_SCHEMA_VERSION, InsertSource } from "./events";
+import { EVENT_SCHEMA_VERSION, InsertSource } from "./usage";
 import {
     boolParam,
     enumParam,

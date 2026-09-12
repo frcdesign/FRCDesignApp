@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { dailyMetrics, dailyUserActivity } from "./schema";
 import { ChangeUnavailable } from "./contract";
-import { EventType } from "./events";
+import { EventType } from "./usage";
 import { LibraryId } from "../library/library-id";
 import { resetDb, seedLibrary, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import { getDb } from "../../db/client";

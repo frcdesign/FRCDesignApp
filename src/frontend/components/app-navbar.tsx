@@ -201,6 +201,7 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
+    const wasFocused = useRef(false);
     const uiState = useGetUiState();
     const libraryId = useLibraryId();
 
@@ -234,6 +235,20 @@ function SearchBar() {
             value={uiState.searchQuery ?? ""}
             onFocus={() => {
                 selectAllInputText(ref);
+            }}
+            // A click on an unfocused input focuses it — selecting everything
+            // above — and then places the caret on mouseup, which collapses
+            // that selection again. Preventing the default only on the click
+            // that did the focusing keeps the select-all while leaving a click
+            // inside an already-focused field to put the caret where it was
+            // aimed.
+            onMouseDown={() => {
+                wasFocused.current = document.activeElement === ref.current;
+            }}
+            onMouseUp={(event) => {
+                if (!wasFocused.current) {
+                    event.preventDefault();
+                }
             }}
             onChange={(event) => {
                 const value = event.currentTarget.value;

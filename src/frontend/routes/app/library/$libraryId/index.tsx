@@ -14,7 +14,7 @@ import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../components/item-row";
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 import {
     SectionNotice,
     SectionLoading
@@ -23,7 +23,11 @@ import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
-import { getLibraryName, getLibraryStatus, useLibraryId } from "../../../../lib/library";
+import {
+    getLibraryName,
+    getLibraryStatus,
+    useLibraryId
+} from "../../../../lib/library";
 import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";

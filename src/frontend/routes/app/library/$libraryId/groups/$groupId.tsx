@@ -20,7 +20,7 @@ import {
 } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
 import { filterInsertables } from "../../../../../features/search/filter";
 import { GroupMenuItems } from "../../../../../features/library/components/group-card";

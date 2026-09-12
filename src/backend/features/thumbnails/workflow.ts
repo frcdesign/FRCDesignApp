@@ -4,12 +4,14 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
+import { NonRetryableError } from "cloudflare:workflows";
 import { eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { insertables } from "../../db/schema";
 import { createLimiter, getOnshapeApiFromContext } from "../load/context";
 import { THUMBNAIL_STEP_RETRIES } from "../load/steps";
+import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import { uploadConfigurationThumbnails } from "./store";
 
 /** The render to run, plus the session whose Onshape tokens it runs under. */
@@ -80,24 +82,35 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
         await step.do(
             "render-thumbnails",
             { retries: THUMBNAIL_STEP_RETRIES },
-            async () =>
-                uploadConfigurationThumbnails(
-                    this.env.BLOB,
-                    await getOnshapeApiFromContext({
-                        env: this.env,
-                        sessionId,
-                        step,
-                        limit: createLimiter(1)
-                    }),
-                    {
-                        documentId: element.documentId,
-                        instanceId: element.versionId,
-                        instanceType: "v" as const,
-                        elementId: element.elementId
-                    },
-                    element.microversionId,
-                    configurationKey
-                )
+            async () => {
+                try {
+                    await uploadConfigurationThumbnails(
+                        this.env.BLOB,
+                        await getOnshapeApiFromContext({
+                            env: this.env,
+                            sessionId,
+                            step,
+                            limit: createLimiter(1)
+                        }),
+                        {
+                            documentId: element.documentId,
+                            instanceId: element.versionId,
+                            instanceType: "v" as const,
+                            elementId: element.elementId
+                        },
+                        element.microversionId,
+                        configurationKey
+                    );
+                } catch (error) {
+                    // Retrying asks Onshape the same question for the same
+                    // answer. The route restarts a run that ended, so spending
+                    // the step's attempts here spends them again per poll.
+                    if (error instanceof NoSuchConfigurationError) {
+                        throw new NonRetryableError(error.message);
+                    }
+                    throw error;
+                }
+            }
         );
     }
 }

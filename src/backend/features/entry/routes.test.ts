@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
 import { events } from "../analytics/schema";
-import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/events";
+import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import { LibraryId } from "../library/library-id";
 import { Theme } from "../settings/settings";
 import {

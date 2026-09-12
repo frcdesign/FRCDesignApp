@@ -25,7 +25,7 @@ import {
     parseConfigurationRecords
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
-import { InsertSource } from "../../analytics/events";
+import { InsertSource } from "../../analytics/usage";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";

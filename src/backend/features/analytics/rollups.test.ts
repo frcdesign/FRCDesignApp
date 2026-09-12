@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { InsertSource } from "./events";
+import { InsertSource } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
     dailyConfigurationMetrics,

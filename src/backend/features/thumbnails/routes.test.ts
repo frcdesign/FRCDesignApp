@@ -293,9 +293,11 @@ describe("rendering a configuration's thumbnail", () => {
     it("starts the render on a miss", async () => {
         const elementId = "warm-element";
         await seedDefaultOnly(elementId);
+        // A run per instance created, since an empty result is how the route
+        // reads "the id is already held" rather than "nothing to start".
         const createSpy = vi
             .spyOn(env.THUMBNAIL_WORKFLOW, "createBatch")
-            .mockResolvedValue([] as never);
+            .mockResolvedValue([{ id: "run" }] as never);
 
         const res = await get(
             thumbnailUrl({
@@ -321,6 +323,65 @@ describe("rendering a configuration's thumbnail", () => {
                 }
             })
         ]);
+    });
+
+    /**
+     * Stands in for a run already holding the id: `createBatch` starts nothing,
+     * and `get` answers with a run in `status`.
+     */
+    function heldRun(status: InstanceStatus["status"]) {
+        const restart = vi.fn().mockResolvedValue(undefined);
+        vi.spyOn(env.THUMBNAIL_WORKFLOW, "createBatch").mockResolvedValue(
+            [] as never
+        );
+        vi.spyOn(env.THUMBNAIL_WORKFLOW, "get").mockResolvedValue({
+            id: "run",
+            status: () => Promise.resolve({ status }),
+            restart
+        } as never);
+        return restart;
+    }
+
+    async function getRender(elementId: string) {
+        return get(
+            thumbnailUrl({
+                elementId,
+                microversionId: MICROVERSION,
+                size: SIZE,
+                configurationKey: CANONICAL_CONFIGURATION,
+                renderThumbnail: true,
+                insertableId: INSERTABLE_ID
+            }),
+            SESSION_ID
+        );
+    }
+
+    // An id is held for its whole retention window whether the run worked or
+    // failed, so without this a render that died once could never run again.
+    it("restarts a render that stopped without storing anything", async () => {
+        await seedDefaultOnly("errored-element");
+        const restart = heldRun("errored");
+
+        expect((await getRender("errored-element")).status).toBe(404);
+        expect(restart).toHaveBeenCalled();
+    });
+
+    it("leaves a render that is still running alone", async () => {
+        await seedDefaultOnly("running-element");
+        const restart = heldRun("running");
+
+        expect((await getRender("running-element")).status).toBe(404);
+        expect(restart).not.toHaveBeenCalled();
+    });
+
+    // Complete means it stored what it was asked for, under the microversion
+    // its own row named; rerunning it would only store the same thing again.
+    it("does not restart a render that completed", async () => {
+        await seedDefaultOnly("complete-element");
+        const restart = heldRun("complete");
+
+        expect((await getRender("complete-element")).status).toBe(404);
+        expect(restart).not.toHaveBeenCalled();
     });
 
     // Polling is how the client waits, so asking twice has to be asking once.

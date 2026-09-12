@@ -10,6 +10,14 @@ interface AppContextMenuProps {
     /** Set when a button owns the menu, rather than a right-click on a row. */
     controlledByButton?: boolean;
     wideMenu?: boolean;
+    /**
+     * Caps the dropdown to the room it has and scrolls it, for a list that can
+     * outgrow the viewport. Only for a menu of plain items: Mantine renders
+     * `Menu.Sub` inside its parent dropdown rather than in a portal, so a scroll
+     * container here would hold a submenu inside the parent's box rather than
+     * letting it open beside it.
+     */
+    scrollable?: boolean;
 }
 
 /**
@@ -20,7 +28,8 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
         menuItems,
         children,
         controlledByButton = false,
-        wideMenu = false
+        wideMenu = false,
+        scrollable = false
     } = props;
 
     let menuChildren: ReactNode;
@@ -44,9 +53,27 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
                 "contextmenu"
             ]}
             position={position}
+            // `size` caps the dropdown to the room Floating UI measures for it,
+            // so a long list scrolls itself rather than running off the bottom.
+            // Mantine's default flip/shift are spelled out because this replaces
+            // the whole object rather than merging.
+            middlewares={{ flip: true, shift: true, size: scrollable }}
         >
             {menuChildren}
-            <Menu.Dropdown onClick={(event) => event.stopPropagation()}>
+            <Menu.Dropdown
+                onClick={(event) => event.stopPropagation()}
+                // `contain` keeps a scroll that reaches either end of the
+                // dropdown from chaining to the list behind it, which otherwise
+                // scrolls the app out from under the open menu.
+                style={
+                    scrollable
+                        ? {
+                              overflowY: "auto",
+                              overscrollBehavior: "contain"
+                          }
+                        : undefined
+                }
+            >
                 {menuItems}
             </Menu.Dropdown>
         </Menu>

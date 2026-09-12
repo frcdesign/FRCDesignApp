@@ -2,7 +2,7 @@ import { and, countDistinct, eq, gte, lte, sql, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { dailyMetrics, dailyUserActivity } from "./schema";
 import { LibraryId } from "../library/library-id";
-import { EventType } from "./events";
+import { EventType } from "./usage";
 import {
     baselineWindow,
     LIBRARY_PROGRAM,

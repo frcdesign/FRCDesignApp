@@ -28,7 +28,7 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { createApp } from "../../app";
-import { EventType, InsertSource } from "./events";
+import { EventType, InsertSource } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,

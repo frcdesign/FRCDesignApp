@@ -14,7 +14,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { type InstanceType } from "../../lib/onshape/path";
 import { LibraryId } from "../library/library-id";
 import { Selection } from "../configurations/contract";
-import { EventType, InsertSource } from "./events";
+import { EventType, InsertSource } from "./usage";
 
 /**
  * Append-only usage log, keyed on the Onshape `elementId` and free of foreign

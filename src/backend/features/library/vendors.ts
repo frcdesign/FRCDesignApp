@@ -9,18 +9,24 @@ export enum Vendor {
     AB = "AB",
     AM = "AM",
     AXN = "AXN",
+    BSRKR = "BSRKR",
     BWT = "BWT",
     CTRE = "CTRE",
+    ELC = "ELC",
+    FERRA = "Ferra",
     GB = "GB",
     LAI = "LAI",
+    MATA = "MATA",
     MB = "MB",
     MCM = "MCM",
     MIS = "MIS",
     NORGREN = "Norgren",
+    OS = "OS",
     PARKER = "Parker",
     REDUX = "Redux",
     REV = "REV",
     SDS = "SDS",
+    SO = "SO",
     SWYFT = "SWYFT",
     TTB = "TTB",
     VEX = "VEX",
@@ -53,13 +59,19 @@ const FRC_VENDORS: Vendor[] = [
 const FTC_VENDORS: Vendor[] = [
     Vendor.AM,
     Vendor.AXN,
+    Vendor.BSRKR,
     Vendor.BWT,
+    Vendor.ELC,
+    Vendor.FERRA,
     Vendor.GB,
-    Vendor.MB,
+    Vendor.MATA,
     Vendor.MCM,
+    Vendor.MB,
     Vendor.MIS,
+    Vendor.OS,
     Vendor.REDUX,
     Vendor.REV,
+    Vendor.SO,
     Vendor.SWYFT,
     Vendor.VEX,
     Vendor.WCP,
@@ -138,16 +150,24 @@ export function getVendorName(vendor: Vendor) {
             return "AndyMark";
         case Vendor.AXN:
             return "Axon Robotics";
+        case Vendor.BSRKR:
+            return "Bsrkrbotics";
         case Vendor.BWT:
             return "BWTLink";
         case Vendor.CTRE:
             return "CTR Electronics";
         case Vendor.CUSTOM:
             return "Custom";
+        case Vendor.ELC:
+            return "East Loop Components";
+        case Vendor.FERRA:
+            return "Ferra Components";
         case Vendor.GB:
             return "goBILDA";
         case Vendor.LAI:
             return "Last Anvil Innovations";
+        case Vendor.MATA:
+            return "MATA Robotics";
         case Vendor.MB:
             return "Melonbotics";
         case Vendor.MCM:
@@ -156,6 +176,8 @@ export function getVendorName(vendor: Vendor) {
             return "Misumi";
         case Vendor.NORGREN:
             return "IMI Norgren";
+        case Vendor.OS:
+            return "Offset Robotics";
         case Vendor.PARKER:
             return "Parker";
         case Vendor.REDUX:
@@ -164,6 +186,8 @@ export function getVendorName(vendor: Vendor) {
             return "REV Robotics";
         case Vendor.SDS:
             return "Swerve Drive Specialties";
+        case Vendor.SO:
+            return "Sensorange";
         case Vendor.SWYFT:
             return "SWYFT Robotics";
         case Vendor.TTB:

@@ -1,7 +1,7 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
 import { earliest, increment, latest } from "../../db/updates";
-import { EventType } from "./events";
+import { EventType } from "./usage";
 import { asInsert, type LoggedInsert } from "./logged-event";
 import {
     dailyConfigurationMetrics,

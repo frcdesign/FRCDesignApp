@@ -108,7 +108,12 @@ export function VendorMenu(): ReactNode {
     );
 
     return (
-        <AppContextMenu wideMenu menuItems={menuItems} controlledByButton>
+        <AppContextMenu
+            wideMenu
+            scrollable
+            menuItems={menuItems}
+            controlledByButton
+        >
             <ActionIcon
                 variant={hasFilters ? "light" : "subtle"}
                 color={hasFilters ? undefined : "gray"}

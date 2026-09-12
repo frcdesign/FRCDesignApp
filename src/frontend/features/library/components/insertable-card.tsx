@@ -28,7 +28,7 @@ import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 
 /**
  * What a search found in this row. Structural rather than the search feature's

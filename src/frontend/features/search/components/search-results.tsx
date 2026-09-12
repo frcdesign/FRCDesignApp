@@ -11,7 +11,7 @@ import {
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 
 interface SearchResultsProps {
     query: string;

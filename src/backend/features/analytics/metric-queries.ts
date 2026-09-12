@@ -23,7 +23,7 @@ import {
     dailyUserActivity,
     userStats
 } from "./schema";
-import { EventType, InsertSource } from "./events";
+import { EventType, InsertSource } from "./usage";
 import { LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import {

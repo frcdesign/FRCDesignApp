@@ -8,6 +8,16 @@
     -webkit-user-select: none;
 }
 
+// The rule above is about not dragging a selection across the UI's chrome, but
+// `*` reaches text fields too, where dragging to select is how one is edited —
+// and a field that cannot hold a selection is also what makes select-on-focus
+// look like it flashes and gives up.
+input,
+textarea {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
 // Compose with Mantine's global `mantine-focus-auto` (focus).
 .interactive {
     cursor: pointer;
@@ -15,4 +25,15 @@
 
 .interactive:hover {
     background-color: var(--mantine-color-default-hover);
+}
+
+// Mantine hides a button's label while it is `loading` by sliding it down and
+// fading it, then transitions it back over 150ms — so every button that mounts
+// waiting on a query plays a slide-up once its data lands. MantineProvider's
+// only motion switch is `env="test"`, which the docs rule out outside tests and
+// which would take this app's portals (modals, hover cards) with it, so the
+// label snaps instead. The loader itself is untouched.
+.mantine-Button-inner,
+.mantine-ActionIcon-icon {
+    transition: none;
 }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
-import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import { ONSHAPE_STEP_RETRIES, THUMBNAIL_STEP_RETRIES } from "./steps";
 
 /** The delay before the retry that follows attempt `attempt`. */
@@ -35,14 +34,6 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
         ).reduce((sum, seconds) => sum + seconds, 0);
 
         expect(total).toBe(1804);
-    });
-
-    // A warm request naming a configuration that matches nothing would
-    // otherwise hold a workflow instance for the whole budget.
-    it("does not wait on a configuration that matches nothing", () => {
-        const error = new NoSuchConfigurationError("no insertable");
-        expect(thumbnailDelay(1, error)).toEqual("0 seconds");
-        expect(thumbnailDelay(6, error)).toEqual("0 seconds");
     });
 
     // Polling sooner than Onshape asked only earns another 429.

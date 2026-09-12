@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
 import { dailyConfigurationMetrics, events } from "../../analytics/schema";
-import { InsertSource } from "../../analytics/events";
+import { InsertSource } from "../../analytics/usage";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import { MateLocation } from "./fasten";

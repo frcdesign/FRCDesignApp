@@ -72,6 +72,15 @@ export const FRAME_BACKGROUND =
     "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
 
 /**
+ * A surface for a render to sit on. Onshape renders a part light, on white, so
+ * a white card leaves the thumbnail with no edge to it; light mode steps down
+ * far enough to give it one. Dark mode already has the contrast, so it keeps
+ * the card's own background.
+ */
+export const RENDER_BACKGROUND =
+    "light-dark(var(--mantine-color-gray-1), var(--mantine-color-body))";
+
+/**
  * Text reads as centred on its cap height, a pixel above its line box, so an
  * icon centred on that box looks low. `text-box` clips descenders under truncation.
  */

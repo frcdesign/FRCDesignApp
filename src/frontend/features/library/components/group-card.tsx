@@ -1,10 +1,14 @@
-import { Menu } from "@mantine/core";
+import { Menu, Text } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import {
     ArrowRightIcon,
     EyeIcon,
     EyeSlashIcon,
-    TrashIcon
+    TrashIcon,
+    WarningIcon
 } from "@phosphor-icons/react";
+import { AppIcon } from "../../../components/app-icon";
+import { AppTitle } from "../../../components/app-title";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
@@ -78,19 +82,20 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
         <>
             <OpenDocumentItems path={group.path} />
             <AdminOptionsSubmenu>
-                <GroupAdminContextMenu groupId={group.id} />
+                <GroupAdminContextMenu group={group} />
             </AdminOptionsSubmenu>
         </>
     );
 }
 
 interface GroupAdminContextMenuProps {
-    groupId: string;
+    group: GroupOut;
 }
 
 function GroupAdminContextMenu({
-    groupId
+    group
 }: GroupAdminContextMenuProps): ReactNode {
+    const groupId = group.id;
     const isHome = useIsHome();
     const buildStatusQuery = useBuildStatusQuery();
     const libraryQuery = useLibraryQuery();
@@ -120,7 +125,7 @@ function GroupAdminContextMenu({
             {isHome && (
                 <>
                     <Menu.Divider />
-                    <DeleteGroupMenuItem groupId={groupId} />
+                    <DeleteGroupMenuItem groupId={groupId} name={group.name} />
                     <AddGroupItem />
                 </>
             )}
@@ -160,15 +165,44 @@ function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
 
 interface DeleteGroupMenuItemProps {
     groupId: string;
+    name: string;
 }
 
 function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
-    const mutation = useDeleteGroupMutation(props.groupId);
+    const { groupId, name } = props;
+    const mutation = useDeleteGroupMutation(groupId);
+
+    const confirmDelete = () => {
+        modals.openConfirmModal({
+            title: (
+                <AppTitle
+                    icon={
+                        <AppIcon
+                            icon={WarningIcon}
+                            size={IconSize.MEDIUM}
+                            color={StatusColor.ERROR}
+                        />
+                    }
+                    title="Delete group"
+                />
+            ),
+            children: (
+                <Text size="sm">
+                    {`Are you sure you want to delete ${name}? Its elements are deleted with it, and permanently removed from every user's favorites.`}
+                </Text>
+            ),
+            labels: { confirm: "Delete group", cancel: "Cancel" },
+            centered: true,
+            confirmProps: { color: StatusColor.ERROR },
+            onConfirm: () => mutation.mutate()
+        });
+    };
+
     return (
         <Menu.Item
             leftSection={<TrashIcon size={IconSize.SMALL} />}
             color={StatusColor.ERROR}
-            onClick={() => mutation.mutate()}
+            onClick={confirmDelete}
         >
             Delete
         </Menu.Item>

@@ -17,10 +17,7 @@ import {
 } from "@backend/features/configurations/contract";
 import { toFavoritePath, toLibraryPath } from "../../lib/api-paths";
 import { getAppErrorHandler } from "../../lib/errors";
-import {
-    showErrorToast,
-    showSuccessToast
-} from "../../lib/notifications";
+import { showErrorToast, showSuccessToast } from "../../lib/notifications";
 import { getQueryUpdater } from "../../lib/query-cache";
 import { useRefreshFavorites } from "../../lib/refresh";
 
@@ -100,10 +97,12 @@ export function useSetDefaultConfigurationMutation(
             // and that fetch would race the mutation and undo this update.
         },
         onError: () => {
-            showErrorToast("Unexpectedly failed to update default selection.");
+            showErrorToast(
+                "Unexpectedly failed to update default configuration."
+            );
         },
         onSuccess: () => {
-            showSuccessToast("Successfully updated default selection.");
+            showSuccessToast("Successfully updated default configuration.");
         },
         onSettled: refreshFavorites
     });

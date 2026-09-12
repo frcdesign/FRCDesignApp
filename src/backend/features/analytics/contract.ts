@@ -1,7 +1,7 @@
 import { LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { ElementPath } from "../../lib/onshape/path";
-import { InsertSource } from "./events";
+import { InsertSource } from "./usage";
 
 /**
  * Inserts by the kind of tab they landed in. Every type is listed, so a tab

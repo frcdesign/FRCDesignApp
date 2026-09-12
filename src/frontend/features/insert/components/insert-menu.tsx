@@ -15,7 +15,11 @@ import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
-import { useConfigurationQuery, useInsertMutation, useIsFetchingConfiguration } from "../queries";
+import {
+    useConfigurationQuery,
+    useInsertMutation,
+    useIsFetchingConfiguration
+} from "../queries";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
@@ -28,7 +32,7 @@ import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { startSignIn } from "../../auth/sign-in";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -283,7 +287,10 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                variant="light"
+                // Filled rather than light: this is the menu's one action, and
+                // light paints the color's own shade on a tint of itself, which
+                // leaves green on pale green. `autoContrast` picks the label
+                // against a filled background, so it lands readable either way.
                 leftSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}

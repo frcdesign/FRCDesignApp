@@ -1,4 +1,12 @@
 /**
+ * The vocabulary of what gets recorded. Named for what it describes rather than
+ * for the events themselves: as `events.ts` it built to an `events-<hash>.js`
+ * chunk, and the frontend imports these enums, so an ad blocker that matches
+ * that name takes the main entry and the library route down with it. That is
+ * what blocked it in dev, where the url carries the path as written.
+ */
+
+/**
  * What a logged event's columns mean. Bump it when that changes, so a reader can
  * tell rows written under the old reading from rows written under the new.
  */

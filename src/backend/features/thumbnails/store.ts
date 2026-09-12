@@ -124,7 +124,7 @@ export async function uploadConfigurationThumbnails(
     }));
     const keys = targets.map((target) => target.key);
 
-    // Runs are no longer deduplicated by id, and Onshape is the expensive part.
+    // A restarted run replays this step, and Onshape is the expensive part.
     if (await allStored(bucket, keys)) {
         return;
     }

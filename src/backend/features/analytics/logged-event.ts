@@ -3,7 +3,7 @@
  * this is the one place that knows which columns a given kind sets.
  */
 import { type ElementType } from "../../lib/onshape/element-type";
-import { EventType, type InsertSource } from "./events";
+import { EventType, type InsertSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
 /** What every event carries, whatever kind of event it is. */

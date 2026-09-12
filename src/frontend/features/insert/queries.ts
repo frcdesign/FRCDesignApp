@@ -6,20 +6,14 @@ import {
     Selection,
     type UnitInfo
 } from "@backend/features/configurations/contract";
-import {
-    type ElementPath,
-    InstancePath
-} from "@backend/lib/onshape/path";
+import { type ElementPath, InstancePath } from "@backend/lib/onshape/path";
 import {
     InsertableOut,
     type InsertOut
 } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { InsertSource } from "@backend/features/analytics/events";
-import {
-    showLoadingToast,
-    showSuccessToast
-} from "../../lib/notifications";
+import { InsertSource } from "@backend/features/analytics/usage";
+import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";

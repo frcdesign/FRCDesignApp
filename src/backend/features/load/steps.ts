@@ -1,6 +1,5 @@
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
 import type { ThumbnailUrls } from "../thumbnails/contract";
-import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
 import type { LoadContext } from "./context";
 
 /** The retry input a Workflow `delay` callback receives. */
@@ -59,10 +58,6 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
     if (rateLimited) {
         return rateLimited;
-    }
-    // Nothing to wait for; burn the remaining attempts immediately.
-    if (input.error instanceof NoSuchConfigurationError) {
-        return "0 seconds";
     }
     const seconds = Math.min(
         THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),

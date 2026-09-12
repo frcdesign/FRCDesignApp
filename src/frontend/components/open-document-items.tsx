@@ -6,7 +6,7 @@ import {
     DocumentPath,
     InstancePath
 } from "@backend/lib/onshape/path";
-import { IconSize } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../lib/url";
 
 interface OpenDocumentItemsProps {
@@ -20,12 +20,14 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps): ReactNode {
     return (
         <>
             <Menu.Item
+                color={StatusColor.INFO}
                 leftSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
+                color={StatusColor.INFO}
                 leftSection={<LinkIcon size={IconSize.SMALL} />}
                 onClick={() => {
                     void copyUrlToClipboard(url);

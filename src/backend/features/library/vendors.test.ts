@@ -118,6 +118,37 @@ describe("getLibraryVendors", () => {
         ]);
     });
 
+    // The same roster check for FTC, whose list is its own and shares only
+    // part of FRC's.
+    it("stocks FTC with exactly the vendors it buys from", () => {
+        expect(
+            getLibraryVendors(LibraryId.FTC_DESIGN_LIB).map((vendor) => [
+                getVendorName(vendor),
+                vendor
+            ])
+        ).toEqual([
+            ["AndyMark", "AM"],
+            ["Axon Robotics", "AXN"],
+            ["Bsrkrbotics", "BSRKR"],
+            ["BWTLink", "BWT"],
+            ["East Loop Components", "ELC"],
+            ["Ferra Components", "Ferra"],
+            ["goBILDA", "GB"],
+            ["MATA Robotics", "MATA"],
+            ["McMaster-Carr", "MCM"],
+            ["Melonbotics", "MB"],
+            ["Misumi", "MIS"],
+            ["Offset Robotics", "OS"],
+            ["Redux Robotics", "Redux"],
+            ["REV Robotics", "REV"],
+            ["Sensorange", "SO"],
+            ["SWYFT Robotics", "SWYFT"],
+            ["VEXpro", "VEX"],
+            ["West Coast Products", "WCP"],
+            ["Custom", "Custom"]
+        ]);
+    });
+
     it("gives MKCad the FRC list, being an FRC library", () => {
         expect(getLibraryVendors(LibraryId.MKCAD)).toEqual(
             getLibraryVendors(LibraryId.FRC_DESIGN_LIB)

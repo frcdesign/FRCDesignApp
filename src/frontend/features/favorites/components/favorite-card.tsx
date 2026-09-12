@@ -27,7 +27,7 @@ import {
 } from "../../../components/alerts";
 import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
 import { SearchHit } from "../../search/search";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
 
 interface FavoriteCardProps {
@@ -154,7 +154,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     });
                 }}
             >
-                Edit default selection
+                Edit default configuration
             </Menu.Item>
             <Menu.Divider />
             <ChangeOrderItems

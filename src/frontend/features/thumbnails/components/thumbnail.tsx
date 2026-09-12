@@ -13,6 +13,7 @@ import {
 } from "@backend/features/configurations/contract";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-zero-state";
+import { RENDER_BACKGROUND } from "../../../lib/style-constants";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
 import { useAccessData } from "../../auth/access-level";
@@ -80,6 +81,9 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const urlFor = (size: ThumbnailSize, stored?: string) =>
         renderTarget ? thumbnailUrl({ ...renderTarget, size }) : stored;
 
+    // A url this row is having rendered answers 404 until the render lands.
+    const isRendering = renderTarget !== undefined;
+
     return (
         <HoverCard
             withinPortal
@@ -95,6 +99,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     url={urlFor(ThumbnailSize.SMALL, smallThumbnailUrl)}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.SMALL, 0.8)}
                     spinnerSize={25}
+                    isRendering={isRendering}
                 />
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
@@ -102,28 +107,51 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     url={urlFor(ThumbnailSize.LARGE, largeThumbnailUrl)}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
                     spinnerSize={48}
+                    isRendering={isRendering}
                 />
             </HoverCard.Dropdown>
         </HoverCard>
     );
 }
 
+/**
+ * How a row waits out a render it asked for. Onshape takes minutes, and the
+ * worker polls it for half an hour, so a row that stopped at the default retry
+ * abandoned the render a second after starting it.
+ *
+ * On a curve rather than the preview's fixed beat: a list holds dozens of rows,
+ * and each attempt is a request that also re-asks the worker to start the
+ * render. Fifteen of them reach roughly the same six minutes the preview polls.
+ */
+const ROW_POLL_ATTEMPTS = 15;
+const ROW_POLL_CAP_MS = 30_000;
+
+const rowPollDelay = (attemptIndex: number) =>
+    Math.min(2000 * 2 ** attemptIndex, ROW_POLL_CAP_MS);
+
+/** Nothing is rendering it, so a miss is worth one more try and no more. */
+const STORED_RETRIES = 1;
+
 // Extend with div props to support being used as a HoverCard Target
 interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     url?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
+    /** Whether a miss is a render still running, and so worth polling out. */
+    isRendering?: boolean;
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { url, heightAndWidth, spinnerSize, ...centerProps } = props;
+    const { url, heightAndWidth, spinnerSize, isRendering, ...centerProps } =
+        props;
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
         // Narrowed here rather than guarded inside: `enabled` is what keeps it
         // from running, and the query function should not restate that.
         queryFn: url ? ({ signal }) => loadImage(url, signal) : skipToken,
-        retry: 1
+        retry: isRendering ? ROW_POLL_ATTEMPTS : STORED_RETRIES,
+        retryDelay: isRendering ? rowPollDelay : undefined
     });
 
     let content;
@@ -156,7 +184,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
         // No margin: the modal body it sits in supplies the inset, and the
         // padding stays tight so the preview is not lost inside its frame.
-        <Card withBorder pos="relative" p="xs">
+        <Card withBorder pos="relative" p="xs" bg={RENDER_BACKGROUND}>
             <Center>
                 <PreviewImage {...props} />
             </Center>

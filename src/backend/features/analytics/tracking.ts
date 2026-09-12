@@ -4,7 +4,7 @@ import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
 import { NOT_AN_INSERT, type EventCore } from "./logged-event";
 import { rollupWrites } from "./rollups";
-import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./events";
+import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";

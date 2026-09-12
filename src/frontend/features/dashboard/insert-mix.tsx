@@ -1,7 +1,7 @@
 import { Group, Progress, Stack, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import type { InsertSourceUsage } from "@backend/features/analytics/contract";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 import { formatCount, formatFraction } from "./format";
 
 const SOURCE_LABELS: Record<InsertSource, string> = {

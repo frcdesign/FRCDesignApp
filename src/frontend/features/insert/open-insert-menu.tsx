@@ -11,7 +11,7 @@ import {
 } from "../../lib/notifications";
 import { InsertMenuContent } from "./components/insert-menu";
 import { MenuTitle } from "../../components/app-title";
-import { InsertSource } from "@backend/features/analytics/events";
+import { InsertSource } from "@backend/features/analytics/usage";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;

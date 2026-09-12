@@ -5,8 +5,8 @@ import { useSearch } from "@tanstack/react-router";
 import { InsertableOut } from "@backend/features/library/contract";
 import { Selection } from "@backend/features/configurations/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { InsertSource } from "@backend/features/analytics/events";
-import { IconSize } from "../../../lib/style-constants";
+import { InsertSource } from "@backend/features/analytics/usage";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../insert-hooks";
 import { useInsertMutation } from "../queries";
@@ -51,6 +51,7 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
         <>
             {supportsFasten && (
                 <Menu.Item
+                    color={StatusColor.INFO}
                     leftSection={<PlusIcon size={IconSize.SMALL} />}
                     onClick={() => handleClick(true)}
                 >
@@ -58,6 +59,7 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
                 </Menu.Item>
             )}
             <Menu.Item
+                color={StatusColor.INFO}
                 leftSection={<PlusIcon size={IconSize.SMALL} />}
                 onClick={() => handleClick(false)}
             >
