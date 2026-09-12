@@ -34,3 +34,5 @@ dist-ssr
 !.env.example
 
 *.pem
+
+/favorites/

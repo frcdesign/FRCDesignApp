@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import {
     type AuthTokens,
+    PERSONAL_COMPANY_ID,
     saveSession,
     startLoginSession,
     takeLoginSession
@@ -48,9 +49,11 @@ export async function doSignIn(
         state,
         []
     );
-    // Onshape-launched sign-in scopes to a company; standalone sign-in omits it
-    // so the user picks their account.
-    if (companyId) {
+    // company_id scopes the sign-in to an enterprise, and Onshape only accepts
+    // a real one: sign-in worked in an enterprise and failed for plain
+    // cad.onshape.com users, whose id is PERSONAL_COMPANY_ID. So that id is
+    // left off, as a standalone sign-in's missing company already is.
+    if (companyId && companyId !== PERSONAL_COMPANY_ID) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
     return authorizationUrl.toString();
