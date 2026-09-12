@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./models";
+import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./contract";
 import {
     appliedValues,
     formatValue,
@@ -8,6 +8,7 @@ import {
     toSelection
 } from "./selection";
 import { QuantityType, Unit } from "./enums";
+import { decodeConfiguration } from "./utils";
 import {
     boolParam,
     enumParam,
@@ -100,9 +101,10 @@ describe("toKey", () => {
             defaultValue: 0,
             max: 360
         });
-        const spelled = toKey(select({ angle: "180 deg" }, [angle]), [
-            angle
-        ]).replace("angle=", "");
+        // Read back out of the key rather than sliced off it, so this stays
+        // about the spelling and not about how a key encodes one.
+        const key = toKey(select({ angle: "180 deg" }, [angle]), [angle]);
+        const spelled = decodeConfiguration(key).angle;
         expect(spelled).toMatch(/ rad$/);
         expect(Number.parseFloat(spelled)).toBeCloseTo(Math.PI, 10);
     });

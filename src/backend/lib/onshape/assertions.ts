@@ -13,7 +13,3 @@ export function assertInstanceType(
 export function assertWorkspace(path: InstancePath): void {
     assertInstanceType(path, "w");
 }
-
-export function assertVersion(path: InstancePath): void {
-    assertInstanceType(path, "v");
-}

@@ -4,11 +4,11 @@ import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 
-import { ThumbnailSize } from "./types";
-import { THUMBNAIL_FALLBACK_HEADER, thumbnailKey } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/models";
+import { ThumbnailSize } from "./contract";
+import { thumbnailKey } from "./keys";
+import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
-import type { ThumbnailWorkflowParams } from "./workflow";
+import { thumbnailRunId, type ThumbnailWorkflowParams } from "./workflow";
 import { getSessionId } from "../auth/session";
 
 export const thumbnailRoutes = getApp();
@@ -58,29 +58,22 @@ thumbnailRoutes.get(
             );
         }
 
-        if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
-            return notRenderedYet();
-        }
-
-        if (renderThumbnail && insertableId) {
+        // A configuration this has not rendered is a miss, not the element's
+        // own thumbnail: standing that in shows a part the caller did not ask
+        // for, and a favorite pinned to a configuration would show the wrong
+        // one. A caller that wants the element default asks for it by key.
+        if (
+            configurationKey !== DEFAULT_CONFIGURATION_KEY &&
+            renderThumbnail &&
+            insertableId
+        ) {
             await startConfigurationRender(c, {
                 insertableId,
-                configurationKey
+                configurationKey,
+                microversionId
             });
         }
-
-        // Stand in with the default configuration until the real render lands.
-        const fallback = await c.env.BLOB.get(
-            thumbnailKey(elementId, microversionId, size)
-        );
-        if (!fallback) {
-            return notRenderedYet();
-        }
-        const response = thumbnailResponse(fallback);
-        response.headers.set(THUMBNAIL_FALLBACK_HEADER, "1");
-        // Unlike a hit, this url does not pin these bytes: the real render can
-        // land at any moment, and whoever asks next should see it.
-        return setCache(response, CachePolicy.NO_CACHE);
+        return notRenderedYet();
     }
 );
 
@@ -99,8 +92,10 @@ function thumbnailResponse(object: R2ObjectBody): Response {
 }
 
 /**
- * Concurrent requests can each start a run. Rare, and the workflow skips a
- * render that is already stored, which a reused id would rule out permanently.
+ * Idempotent, so a client can poll this route as often as it likes: the id is
+ * the render, and `createBatch` skips an instance already inside its retention
+ * window rather than starting a second one or throwing. A run that failed frees
+ * its id when that window ends, which is the only retry a dead render gets.
  */
 async function startConfigurationRender(
     c: AppContext,
@@ -108,10 +103,13 @@ async function startConfigurationRender(
 ): Promise<void> {
     try {
         // The render runs later, under this caller's Onshape tokens.
-        await c.env.THUMBNAIL_WORKFLOW.create({
-            params: { ...params, sessionId: getSessionId(c) }
-        });
+        await c.env.THUMBNAIL_WORKFLOW.createBatch([
+            {
+                id: await thumbnailRunId(params),
+                params: { ...params, sessionId: getSessionId(c) }
+            }
+        ]);
     } catch {
-        // Never fatal: the caller still has the default thumbnail to serve.
+        // Never fatal: the caller just gets a miss until the render lands.
     }
 }

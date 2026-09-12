@@ -2,8 +2,8 @@ import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { encodeConfiguration } from "../../../features/configurations/utils";
-import { Selection } from "../../../features/configurations/models";
-import type { OnshapeAssemblyDefinition, OnshapePart } from "../types";
+import { Selection } from "../../../features/configurations/contract";
+import type { OnshapePart } from "../types";
 
 /**
  * Builds the `configuration` query for an element request. The value is the
@@ -21,17 +21,6 @@ export function getParts(
     selection: Selection
 ): Promise<OnshapePart[]> {
     return client.get(apiPath("parts", elementPath, toElementApiPath), {
-        query: configurationQuery(selection)
-    });
-}
-
-/** Returns the assembly definition for a given configuration. */
-export function getAssemblyDefinition(
-    client: OnshapeApi,
-    elementPath: ElementPath,
-    selection: Selection
-): Promise<OnshapeAssemblyDefinition> {
-    return client.get(apiPath("assemblies", elementPath, toElementApiPath), {
         query: configurationQuery(selection)
     });
 }

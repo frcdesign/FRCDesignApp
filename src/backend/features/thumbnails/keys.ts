@@ -2,11 +2,11 @@
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
-} from "../configurations/models";
-import { ThumbnailSize } from "./types";
+} from "../configurations/contract";
+import { ThumbnailSize } from "./contract";
 
-/** Marks a response as the element default standing in for an unrendered configuration. */
-export const THUMBNAIL_FALLBACK_HEADER = "X-Thumbnail-Fallback";
+/** Everything a thumbnail is stored under, and what reconciliation scans. */
+export const THUMBNAIL_PREFIX = "thumbnails/";
 
 /**
  * Defaults get their own prefix, everything falling back to them so they never
@@ -19,13 +19,47 @@ export function thumbnailKey(
     configurationKey: ConfigurationKey = DEFAULT_CONFIGURATION_KEY
 ): string {
     if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
-        return `thumbnails/default/${elementId}/${microversionId}/${size}`;
+        return `${THUMBNAIL_PREFIX}default/${elementId}/${microversionId}/${size}`;
     }
     const segment = encodeURIComponent(configurationKey);
-    return `thumbnails/config/${elementId}/${microversionId}/${segment}/${size}`;
+    return `${THUMBNAIL_PREFIX}config/${elementId}/${microversionId}/${segment}/${size}`;
 }
 
-export interface ThumbnailUrlOptions {
+/**
+ * What a stored thumbnail depicts. Both prefixes carry it in the same two
+ * segments, so a configuration render lives and dies with its element's.
+ */
+export interface ThumbnailSubject {
+    elementId: string;
+    microversionId: string;
+}
+
+/** Keyed for set membership, since a pair cannot be compared by identity. */
+export function subjectKey(subject: ThumbnailSubject): string {
+    return `${subject.elementId}/${subject.microversionId}`;
+}
+
+/**
+ * The element and microversion a key was written for, or undefined when the key
+ * is not one {@link thumbnailKey} produces. Reconciliation deletes what this
+ * resolves, so anything it does not recognize is left alone.
+ */
+export function parseThumbnailKey(key: string): ThumbnailSubject | undefined {
+    if (!key.startsWith(THUMBNAIL_PREFIX)) {
+        return undefined;
+    }
+    const [kind, elementId, microversionId, ...rest] = key
+        .slice(THUMBNAIL_PREFIX.length)
+        .split("/");
+    // default/ ends with the size; config/ has the configuration before it.
+    const expected = kind === "default" ? 1 : kind === "config" ? 2 : -1;
+    if (rest.length !== expected || !elementId || !microversionId) {
+        return undefined;
+    }
+    return { elementId, microversionId };
+}
+
+interface ThumbnailUrlOptions {
     elementId: string;
     microversionId: string;
     size: ThumbnailSize;
@@ -35,11 +69,6 @@ export interface ThumbnailUrlOptions {
     renderThumbnail?: boolean;
     /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
-    /**
-     * Which poll this is. The worker ignores it; it is what keeps each poll off
-     * the browser's image cache, which serves a url for the page's lifetime.
-     */
-    attempt?: number;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -49,8 +78,7 @@ export function thumbnailUrl({
     size,
     configurationKey,
     renderThumbnail,
-    insertableId,
-    attempt
+    insertableId
 }: ThumbnailUrlOptions): string {
     // `v` is the one abbreviation: it is the cache version every immutable url
     // carries, and a render is pinned to the microversion it was taken from.
@@ -61,11 +89,31 @@ export function thumbnailUrl({
             query.set("renderThumbnail", "true");
             query.set("insertableId", insertableId);
         }
-        // Omitted on the first, so it shares a url with everything else asking
-        // for this configuration.
-        if (attempt) {
-            query.set("attempt", attempt.toString());
-        }
     }
     return `/api/thumbnail/${size}/${elementId}?${query.toString()}`;
+}
+
+/**
+ * The subject of a url {@link thumbnailUrl} built. Groups record their document
+ * thumbnail only as these two urls, so this is what tells reconciliation which
+ * element and microversion they still stand for; `keys.test.ts` pins the pair.
+ */
+export function parseThumbnailUrl(url: string): ThumbnailSubject | undefined {
+    // Relative, so it needs a base to parse against; the origin is discarded.
+    const parsed = URL.parse(url, "https://x.invalid");
+    if (!parsed) {
+        return undefined;
+    }
+    const [, api, thumbnail, , elementId, ...rest] = parsed.pathname.split("/");
+    const microversionId = parsed.searchParams.get("v");
+    if (
+        api !== "api" ||
+        thumbnail !== "thumbnail" ||
+        rest.length > 0 ||
+        !elementId ||
+        !microversionId
+    ) {
+        return undefined;
+    }
+    return { elementId, microversionId };
 }

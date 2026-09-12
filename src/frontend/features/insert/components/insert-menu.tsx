@@ -15,16 +15,15 @@ import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
-import { useInsertMutation } from "../insert-hooks";
-import { useConfigurationQuery, useIsFetchingConfiguration } from "../queries";
+import { useConfigurationQuery, useInsertMutation, useIsFetchingConfiguration } from "../queries";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
     Selection,
     SearchRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { useFavorite } from "../../favorites/queries";
-import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
+import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { notifications } from "@mantine/notifications";
 import { RequireSignIn, useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
@@ -245,7 +244,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const uiState = useGetUiState();
-    const setUiState = useSetUiState();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -281,7 +279,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 <Checkbox
                     label="Fasten"
                     checked={uiState.fasten}
-                    onChange={() => setUiState({ fasten: !uiState.fasten })}
+                    onChange={() => updateUiState({ fasten: !uiState.fasten })}
                 />
             )}
             <Button

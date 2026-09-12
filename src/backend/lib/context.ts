@@ -47,7 +47,7 @@ export type AppContext = Context<AppContextEnv>;
  * Who is making the request and what they may do. Resolved lazily, so a route that
  * asks nothing calls Onshape not at all, and per request, so a test can answer.
  */
-export interface RequestAuth {
+interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
     getAccessLevel: () => Promise<AccessLevel>;

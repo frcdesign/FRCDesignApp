@@ -40,7 +40,7 @@ const UiStateSchema = z.object({
     groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
 });
 
-export type UiState = z.infer<typeof UiStateSchema>;
+type UiState = z.infer<typeof UiStateSchema>;
 
 type Subscriber = () => void;
 
@@ -100,33 +100,44 @@ function subscribeToUiState(callback: Subscriber) {
     return () => subscribers.delete(callback);
 }
 
+/** Whether the update names a field whose value is not already what it says. */
+function changesAnything(
+    current: UiState,
+    partialState: Partial<UiState>
+): boolean {
+    return (Object.keys(partialState) as (keyof UiState)[]).some(
+        // Compared by value for the two object-valued fields, which are rebuilt
+        // rather than mutated; the rest are primitives.
+        (key) =>
+            key === "vendorFilters"
+                ? JSON.stringify(current[key]) !==
+                  JSON.stringify(partialState[key])
+                : current[key] !== partialState[key]
+    );
+}
+
 /** Merges into the state, stores it, and tells every reader it changed. */
 export function updateUiState(partialState: Partial<UiState>): UiState {
+    const current = getUiState();
+    if (
+        current.version === LATEST_VERSION &&
+        !changesAnything(current, partialState)
+    ) {
+        return current;
+    }
     const newState: UiState = {
-        ...getUiState(),
+        ...current,
         ...partialState,
         // Writing always stamps the version the shape actually has.
         version: LATEST_VERSION
     };
-    if (JSON.stringify(newState) === JSON.stringify(currentState)) {
-        return newState;
-    }
     currentState = newState;
     writeStorage(JSON.stringify(newState));
     subscribers.forEach((callback) => callback());
     return newState;
 }
 
-export type SetUiState = (uiState: Partial<UiState>) => void;
-
 /** The current state, re-rendering the caller whenever it changes. */
 export function useGetUiState(): UiState {
     return useSyncExternalStore(subscribeToUiState, getUiState);
-}
-
-/** Merges into the state; every reader of it re-renders. */
-// Named a hook to pair with the getter above, though it holds no state itself.
-// eslint-disable-next-line react-x/no-unnecessary-use-prefix
-export function useSetUiState(): SetUiState {
-    return updateUiState;
 }

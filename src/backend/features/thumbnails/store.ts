@@ -16,19 +16,19 @@ import {
 } from "../../lib/onshape/endpoints/documents";
 import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
-import { ThumbnailSize, ThumbnailUrls } from "./types";
+import { ThumbnailSize, ThumbnailUrls } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
-} from "../configurations/models";
+} from "../configurations/contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 
 /**
  * What produced a stored thumbnail, tagged onto the R2 object. The key already
  * addresses it; this is for reading an object back and telling what it is.
  */
-export interface ThumbnailMetadata extends Record<string, string> {
+interface ThumbnailMetadata extends Record<string, string> {
     microversionId: string;
     /** Empty for an element's own thumbnail, as everywhere else. */
     configurationKey: ConfigurationKey;
@@ -50,6 +50,12 @@ async function putThumbnail(
     });
 }
 
+/** Whether every key is already stored, so the render can be skipped. */
+async function allStored(bucket: R2Bucket, keys: string[]): Promise<boolean> {
+    const heads = await Promise.all(keys.map((key) => bucket.head(key)));
+    return heads.every((head) => head !== null);
+}
+
 /** Throws until Onshape has rendered them, which drives the load step's retries. */
 export async function uploadThumbnails(
     bucket: R2Bucket,
@@ -57,35 +63,32 @@ export async function uploadThumbnails(
     elementPath: ElementPath,
     microversionId: string
 ): Promise<ThumbnailUrls> {
-    const [small, large] = await Promise.all([
-        getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.SMALL),
-        getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.LARGE)
-    ]);
-    if (!small || !large) {
-        throw new Error("Failed to find thumbnails. Try again later.");
-    }
-
     const { elementId } = elementPath;
-    await Promise.all([
-        putThumbnail(
-            bucket,
-            thumbnailKey(elementId, microversionId, ThumbnailSize.SMALL),
-            small,
-            {
-                microversionId,
-                configurationKey: DEFAULT_CONFIGURATION_KEY
-            }
-        ),
-        putThumbnail(
-            bucket,
-            thumbnailKey(elementId, microversionId, ThumbnailSize.LARGE),
-            large,
-            {
-                microversionId,
-                configurationKey: DEFAULT_CONFIGURATION_KEY
-            }
-        )
-    ]);
+    const keys = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) =>
+        thumbnailKey(elementId, microversionId, size)
+    );
+
+    // The key pins the microversion, so what is stored under it is what Onshape
+    // would render again. A forced reload reaches here with the microversion
+    // unchanged, and downloading both sizes again would spend the account's
+    // Onshape allocation on bytes we already hold.
+    if (!(await allStored(bucket, keys))) {
+        const [small, large] = await Promise.all([
+            getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.SMALL),
+            getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.LARGE)
+        ]);
+        if (!small || !large) {
+            throw new Error("Failed to find thumbnails. Try again later.");
+        }
+        await Promise.all(
+            [small, large].map((thumbnail, index) =>
+                putThumbnail(bucket, keys[index], thumbnail, {
+                    microversionId,
+                    configurationKey: DEFAULT_CONFIGURATION_KEY
+                })
+            )
+        );
+    }
 
     return {
         small: thumbnailUrl({
@@ -101,12 +104,6 @@ export async function uploadThumbnails(
             configurationKey: DEFAULT_CONFIGURATION_KEY
         })
     };
-}
-
-/** Whether every key is already stored, so the render can be skipped. */
-async function allStored(bucket: R2Bucket, keys: string[]): Promise<boolean> {
-    const heads = await Promise.all(keys.map((key) => bucket.head(key)));
-    return heads.every((head) => head !== null);
 }
 
 /**

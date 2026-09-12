@@ -2,7 +2,7 @@ import { LineChart, type ChartReferenceLineProps } from "@mantine/charts";
 import { type ReactNode } from "react";
 import type { DailyInsertPoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import { getLibraryShade } from "../../theme";
 import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
 import { toChartData, type BucketPoint, type Granularity } from "./series";
@@ -12,6 +12,7 @@ import {
     type MetricDefinition,
     type TrendPoint
 } from "./metrics";
+import { formatCount, formatPercent } from "./format";
 
 // The charts' styles, imported where the charts are so they land in the same
 // route chunk rather than the panel's bundle.
@@ -20,7 +21,7 @@ import "@mantine/charts/styles.layer.css";
 // Keeps the hover panel short enough to fit beside a tile on a laptop.
 const DETAIL_HEIGHT = 160;
 
-export interface MetricDetailChartProps {
+interface MetricDetailChartProps {
     metric: MetricDefinition;
     trend: TrendPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
@@ -49,7 +50,7 @@ export function MetricDetailChart({
             // A percentage is only comparable against a fixed axis.
             yAxisProps={percentage ? { domain: [0, 100] } : undefined}
             valueFormatter={(value) =>
-                percentage ? `${value}%` : String(value)
+                percentage ? formatPercent(value) : formatCount(value)
             }
             referenceLines={seasonLines(programs, trend)}
             series={[
@@ -63,7 +64,7 @@ export function MetricDetailChart({
     );
 }
 
-export interface LibraryInsertsChartProps {
+interface LibraryInsertsChartProps {
     series: DailyInsertPoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;

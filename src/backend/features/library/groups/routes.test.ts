@@ -16,7 +16,7 @@ import MiniSearch from "minisearch";
 import { getDb } from "../../../db/client";
 import type { JobStatus } from "../../load/contract";
 import { searchIndexKey } from "../db";
-import { SEARCH_OPTIONS, type SearchDocument } from "../../search/search-index";
+import { SEARCH_OPTIONS, type SearchDocument } from "../../search/contract";
 import * as DocumentsEndpoint from "../../../lib/onshape/endpoints/documents";
 import * as JobTracker from "../../load/job-tracker";
 

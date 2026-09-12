@@ -33,7 +33,7 @@ import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type AnalyticsOverviewOut,
@@ -322,6 +322,36 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals.inserts).toBe(8);
+        });
+
+        // The rollup holds one row per user *per library* per day, so counting
+        // rows would report one person active in two libraries as two.
+        it("counts a user active in two libraries once in the day series", async () => {
+            await seedMetric("2026-06-15", 4);
+            await db.insert(dailyUserActivity).values([
+                {
+                    day: "2026-06-15",
+                    libraryId: LibraryId.FRC_DESIGN_LIB,
+                    userId: "user-a"
+                },
+                {
+                    day: "2026-06-15",
+                    libraryId: LibraryId.FTC_DESIGN_LIB,
+                    userId: "user-a"
+                }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview?from=2026-06-15&to=2026-06-15"
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            const day = body.metricSeries.find(
+                (point) => point.day === "2026-06-15"
+            );
+            // One, not two — which is also how getTotals counts a windowed
+            // read of this table, so the tile and the series agree.
+            expect(day?.activeUsers).toBe(1);
         });
 
         it("fills quiet days in, so an average is per calendar day", async () => {

@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { ElementType } from "../../lib/onshape/element-type";
-import type { ThumbnailUrls } from "../thumbnails/types";
+import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
     type BuildIssue,
@@ -21,10 +21,10 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { uploadThumbnailsStep } from "./steps";
+import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 import type { InstancePath } from "../../lib/onshape/path";
 
-export interface GroupLoadResult {
+interface GroupLoadResult {
     loadedElements: number;
     deletedElements: number;
     failedElements: number;
@@ -50,8 +50,10 @@ export async function loadGroup(
     const { groupId, versionPath } = target;
 
     // Read the document's loadable tabs (display order) and the stored rows.
-    const insertableTabs = await ctx.step.do(`insertable-tabs-${groupId}`, () =>
-        fetchInsertableTabs(ctx, versionPath)
+    const insertableTabs = await ctx.step.do(
+        `insertable-tabs-${groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        () => fetchInsertableTabs(ctx, versionPath)
     );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,

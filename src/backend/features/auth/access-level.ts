@@ -5,18 +5,10 @@ export enum AccessLevel {
     USER = "user"
 }
 
-export function hasAdminAccess(accessLevel: AccessLevel) {
-    return accessLevel === AccessLevel.ADMIN;
-}
-
 export function hasEditorAccess(accessLevel: AccessLevel) {
     return (
         accessLevel === AccessLevel.ADMIN || accessLevel === AccessLevel.EDITOR
     );
-}
-
-export function hasUserAccess(accessLevel: AccessLevel) {
-    return accessLevel === AccessLevel.USER;
 }
 
 const ACCESS_LEVEL_RANK: Record<AccessLevel, number> = {

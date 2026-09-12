@@ -11,7 +11,7 @@ import {
 } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
-import { ItemTable } from "../../../../features/library/components/card-components";
+import { ItemTable } from "../../../../components/item-row";
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
 import { InsertSource } from "@backend/features/analytics/events";
@@ -23,12 +23,8 @@ import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
-import {
-    getLibraryName,
-    getLibraryStatus,
-    useLibraryId
-} from "../../../../features/library/library-path";
-import { useGetUiState, useSetUiState } from "../../../../lib/ui-state";
+import { getLibraryName, getLibraryStatus, useLibraryId } from "../../../../lib/library";
+import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
 import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
@@ -53,7 +49,6 @@ interface Section {
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
     const uiState = useGetUiState();
-    const setUiState = useSetUiState();
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -66,7 +61,7 @@ function useHomeSections(): Section[] {
         title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: uiState.isFavoritesOpen,
-        setOpened: (opened) => setUiState({ isFavoritesOpen: opened })
+        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
     const search: Section = {
@@ -95,7 +90,7 @@ function useHomeSections(): Section[] {
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
         opened: uiState.isLibraryOpen,
-        setOpened: (opened) => setUiState({ isLibraryOpen: opened })
+        setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
     // One slot below favorites, showing search results while a query is active

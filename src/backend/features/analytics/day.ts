@@ -8,7 +8,7 @@
  * US teams work evenings, and a UTC midnight cuts that session in half: 8pm
  * Eastern is already tomorrow. Fixed, so an insert lands on one day for everyone.
  */
-export const REPORTING_TIME_ZONE = "America/New_York";
+const REPORTING_TIME_ZONE = "America/New_York";
 
 // en-CA formats as YYYY-MM-DD, which is the shape day keys are compared as.
 // Built once: constructing a formatter per call is the expensive part.

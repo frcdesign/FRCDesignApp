@@ -1,7 +1,7 @@
 import {
     type ConfigurationKey,
     type Selection
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -17,11 +17,8 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../../../lib/query-client";
 import { appError, handleAppError } from "../../../lib/errors";
 import { getQueryUpdater } from "../../../lib/query-cache";
-import {
-    toFavoritePath,
-    toLibraryPath,
-    useLibraryId
-} from "../../library/library-path";
+import { toFavoritePath, toLibraryPath } from "../../../lib/api-paths";
+import { useLibraryId } from "../../../lib/library";
 import { favoritesQueryKey } from "../../../lib/query-keys";
 import { useRefreshFavorites } from "../../../lib/refresh";
 import { AppIcon } from "../../../components/app-icon";
@@ -256,7 +253,7 @@ interface UnfavoriteIconProps {
     size?: IconSize;
 }
 
-export function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
+function UnfavoriteIcon(props: UnfavoriteIconProps): ReactNode {
     const { size = IconSize.SMALL } = props;
     return (
         <AppIcon icon={HeartBreakIcon} size={size} color={StatusColor.ERROR} />

@@ -1,26 +1,13 @@
-import { type ConfigurationKey } from "../../../features/configurations/models";
+import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { OnshapeApi } from "../client";
-import { assertInstanceType, assertWorkspace } from "../assertions";
+import { assertInstanceType } from "../assertions";
 import {
     ElementPath,
-    InstancePath,
     toElementApiPath,
     toInstanceApiPath
 } from "../path";
 import { apiPath } from "../api-path";
-import { ThumbnailSize } from "../../../features/thumbnails/types";
-
-/** Returns the thumbnail of a given document instance. */
-export function getInstanceThumbnail(
-    client: OnshapeApi,
-    instancePath: InstancePath,
-    size = ThumbnailSize.LARGE
-): Promise<ArrayBuffer> {
-    assertInstanceType(instancePath, "w", "v");
-    const path =
-        apiPath("thumbnails", instancePath, toInstanceApiPath) + "/s/" + size;
-    return client.getImage(path);
-}
+import { ThumbnailSize } from "../../../features/thumbnails/contract";
 
 /** Returns the thumbnail for a given element in a workspace or version. */
 export function getElementThumbnail(
@@ -32,22 +19,6 @@ export function getElementThumbnail(
     const path =
         apiPath("thumbnails", elementPath, toElementApiPath) + "/s/" + size;
     return client.getImage(path);
-}
-
-/** Unlike `getElementThumbnail` this takes a configuration, but only in a workspace. */
-export function getThumbnailFromWorkspace(
-    client: OnshapeApi,
-    elementPath: ElementPath,
-    size = ThumbnailSize.LARGE,
-    configurationKey?: ConfigurationKey
-): Promise<ArrayBuffer> {
-    assertWorkspace(elementPath);
-    let path = apiPath("thumbnails", elementPath, toElementApiPath);
-    if (configurationKey) path += "/ac/" + configurationKey;
-    path += "/s/" + size;
-    return client.getImage(path, {
-        query: { rejectEmpty: "true", requireConfigMatch: "true" }
-    });
 }
 
 /** The configuration matches no insertable, so retrying can only fail again. */

@@ -1,4 +1,4 @@
-export type ParamKeyValuePair = [string, string];
+type ParamKeyValuePair = [string, string];
 
 export type URLSearchParamsInit =
     | string

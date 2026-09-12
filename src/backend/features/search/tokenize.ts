@@ -1,17 +1,11 @@
 /**
- * Shared index definitions: the backend builds the index, the frontend
- * deserializes it with the same options.
+ * How search reads text: where names and part numbers break into terms, and how
+ * a measurement is spelled. The index is built with these and queried with
+ * them, so a change here is a change to both ends at once.
  */
-import MiniSearch, { Options } from "minisearch";
-import { LibraryOut } from "../library/contract";
-import { Vendor } from "../library/vendors";
-import { ConfigurationRecord, SearchRecord } from "../configurations/models";
-import { getPartUrl } from "../configurations/utils";
-import {
-    isPlaceholderPartNumber,
-    meaningfulPartNumber
-} from "../configurations/part-number";
+import { isPlaceholderPartNumber } from "../configurations/part-number";
 import { clean } from "../../lib/text";
+import { PART_NUMBER_FIELD } from "./fields";
 
 /** Where a name breaks: punctuation and space, plus a quote used as a quote. */
 const NAME_SEPARATORS = new RegExp("(?<!\\d)\"|[-()',#&\\s/]+");
@@ -147,7 +141,7 @@ export function tokenizePartNumber(text: string): string[] {
 
 /** The fields holding an identifier rather than a description. */
 function isPartNumberField(field?: string): boolean {
-    return field === "partNumbers";
+    return field === PART_NUMBER_FIELD;
 }
 
 /** Splits a field's text the way that field reads; a query has no field. */
@@ -202,115 +196,4 @@ export function processTerm(term: string, field?: string): string[] {
     }
     const words = term.split(WORD_BOUNDARIES).map((word) => word.toLowerCase());
     return Array.from(new Set([...words, base]));
-}
-
-export interface SearchDocument {
-    id: string;
-    groupId: string;
-    isVisible: boolean;
-    vendors: Vendor[];
-    name: string;
-    groupName: string;
-    // Space-joined, deduped part numbers (a searchable field); empty when the
-    // insertable has no indexed part numbers.
-    partNumbers: string;
-    // Space-joined, deduped configuration (part) names (a searchable field);
-    // empty when the insertable has no indexed records.
-    partNames: string;
-    // Stored, not indexed: picks the best-matching configuration for a hit and
-    // launches it in the insert menu.
-    records: SearchRecord[];
-}
-
-export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    fields: ["name", "groupName", "partNumbers", "partNames"],
-    storeFields: [
-        "id",
-        "groupId",
-        "isVisible",
-        "vendors",
-        "name",
-        "groupName",
-        "records"
-    ],
-    searchOptions: {
-        // The insertable's own title leads; part names and the group name are
-        // weaker signals, so a title match outranks them.
-        boost: { partNames: 0.7, groupName: 0.5 },
-        prefix: true
-    },
-    // Custom tokenizer to split on special characters
-    tokenize,
-    processTerm
-};
-
-/** Joins the distinct non-null values with spaces (a searchable field's form). */
-function uniqueJoin(values: (string | undefined)[]): string {
-    return Array.from(
-        new Set(values.filter((value): value is string => !!value))
-    ).join(" ");
-}
-
-/**
- * First of each distinct (part number, name) in enumeration order, which keeps
- * the latest revision. One identifying nothing is dropped before the index sees it.
- */
-export function toSearchRecords(
-    records: ConfigurationRecord[],
-    vendors: Vendor[] = []
-): SearchRecord[] {
-    const seen = new Set<string>();
-    const searchRecords: SearchRecord[] = [];
-    for (const raw of records) {
-        const partNumber = meaningfulPartNumber(raw.partNumber, raw.name);
-        const name = clean(raw.name);
-        if (!partNumber && !name) {
-            continue;
-        }
-        const key = JSON.stringify([partNumber, name]);
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        searchRecords.push({
-            partNumber,
-            name,
-            url: getPartUrl({ ...raw, partNumber }, vendors),
-            configurationKey: raw.configurationKey
-        });
-    }
-    return searchRecords;
-}
-
-export function buildSearchDb(
-    libraryData: LibraryOut,
-    recordsMap: Record<string, ConfigurationRecord[]> = {}
-): MiniSearch<SearchDocument> {
-    const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
-
-    const searchDocuments: SearchDocument[] = Object.values(
-        libraryData.insertables
-    )
-        .filter((element) => !!element)
-        .map((element) => {
-            const parentGroup = libraryData.groups[element.groupId];
-            const records = toSearchRecords(
-                recordsMap[element.id] ?? [],
-                element.vendors
-            );
-            return {
-                id: element.id,
-                groupId: element.groupId,
-                isVisible: element.isVisible,
-                vendors: element.vendors,
-                name: element.name,
-                groupName: parentGroup.name,
-                partNumbers: uniqueJoin(records.map((r) => r.partNumber)),
-                partNames: uniqueJoin(records.map((r) => r.name)),
-                records
-            };
-        });
-
-    searchDb.addAll(searchDocuments);
-    return searchDb;
 }

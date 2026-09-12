@@ -20,8 +20,10 @@ export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
 function LowUsage(): ReactNode {
     const { libraryId } = Route.useParams();
     // Set from the navbar, so it stays beside the library it filters.
-    const threshold = Route.useSearch().threshold ?? DEFAULT_THRESHOLD;
-    const range = toDayRange(useRangePreset());
+    const search = Route.useSearch();
+    const rangePreset = useRangePreset();
+    const threshold = search.threshold ?? DEFAULT_THRESHOLD;
+    const range = toDayRange(rangePreset);
 
     const parts = useQuery(getUnusedQuery(libraryId, threshold, range));
     const options = useQuery(

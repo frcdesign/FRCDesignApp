@@ -1,4 +1,4 @@
-import { useAccessData } from "../../auth/access-level";
+import { useAccessData, useShowHidden } from "../../auth/access-level";
 import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -23,11 +23,10 @@ import {
     SearchCallout
 } from "../../search/components/search-errors";
 import { FavoriteCard } from "./favorite-card";
-import { ItemTable } from "../../library/components/card-components";
+import { ItemTable } from "../../../components/item-row";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
-import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { AppIcon } from "../../../components/app-icon";
 import { FavoriteIcon } from "./favorite-button";
 import { startSignIn } from "../../auth/sign-in";
@@ -93,7 +92,7 @@ export function FavoritesList(): ReactNode {
         <FavoriteCards
             result={filterInsertables(favoriteInsertables, {
                 vendors: vendorFilters,
-                isVisible: true
+                visibleOnly: true
             })}
             favoritesData={favoritesData}
         />
@@ -126,7 +125,7 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     const { query, insertables, favoritesData } = props;
 
     const vendorFilters = useVendorFilters();
-    const accessData = useAccessData();
+    const showHidden = useShowHidden();
     const searchDbQuery = useSearchDbQuery();
 
     if (searchDbQuery.isLoading) {
@@ -145,7 +144,12 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         favoritedInsertableIds: new Set(
             Object.values(favoritesData.favorites).map((f) => f.insertableId)
         ),
-        showHidden: hasEditorAccess(accessData.currentAccessLevel)
+        // A favorite is one configuration, but the index's configuration fields
+        // describe all of them at once, so matching on those pulls a favorite up
+        // for a query naming a configuration the user never saved. Off until
+        // favorites are indexed as themselves.
+        searchConfigurations: false,
+        showHidden
     });
 
     return <FavoriteCards result={result} favoritesData={favoritesData} />;

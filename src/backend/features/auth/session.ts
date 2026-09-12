@@ -6,7 +6,7 @@ import { type AppContext } from "../../lib/context";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 const LOGIN_TTL = 600; // 10 minutes
-export const SESSION_TTL = 30 * 24 * 3600; // 30 days
+const SESSION_TTL = 30 * 24 * 3600; // 30 days
 
 export function getSessionId(c: AppContext): string {
     const sessionId = getCookie(c, SESSION_COOKIE);
@@ -30,7 +30,7 @@ export interface AuthTokens {
 }
 
 /** A signed-in session: what it takes to call Onshape, and who is calling. */
-export interface Session extends AuthTokens {
+interface Session extends AuthTokens {
     /** Resolved on first use, since signing in never needs to ask. */
     userId?: string;
 }
@@ -90,7 +90,7 @@ export async function getSession(
 }
 
 /** What the callback needs to finish a sign-in it did not start. */
-export interface LoginSession {
+interface LoginSession {
     state: string;
     redirectUrl: string;
 }

@@ -1,8 +1,11 @@
-import { type ConfigurationKey } from "../configurations/models";
+import {
+    type ConfigurationKey,
+    type SearchRecord
+} from "../configurations/contract";
 import { asc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { favorites, insertables } from "../../db/schema";
+import { configurations, favorites, insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
 import { ApiErrorKind } from "../../lib/api-error";
@@ -34,6 +37,7 @@ interface FavoritesBody {
             insertableId: string;
             defaultSelection?: Record<string, string>;
             configurationKey?: ConfigurationKey;
+            record?: SearchRecord;
         }
     >;
     favoriteOrder: string[];
@@ -170,6 +174,102 @@ describe("favorites routes", () => {
             expect(favorite.configurationKey).toBe("");
         });
 
+        // The row's thumbnail is this configuration's, so its part number has
+        // to be too — resolving it from anything else shows two parts at once.
+        it("resolves the record its own selection produces", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({
+                    // The favorite's own record listed second, so picking the
+                    // first would answer with the default instead.
+                    records: [
+                        {
+                            configurationKey: "",
+                            partNumber: "WCP-2222",
+                            name: "Default",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        },
+                        {
+                            configurationKey: "boolean=false",
+                            partNumber: "WCP-1111",
+                            name: "Plain",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        }
+                    ]
+                })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            await db
+                .update(favorites)
+                .set({ defaultSelection: { boolean: "false" } })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const favorite = soleFavorite(await res.json());
+            expect(favorite.configurationKey).toBe("boolean=false");
+            expect(favorite.record?.partNumber).toBe("WCP-1111");
+            expect(favorite.record?.name).toBe("Plain");
+        });
+
+        // A favorite saved with no selection of its own opens on the element's
+        // defaults, so that is the record it has to name.
+        it("resolves the default record for a favorite with no selection", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({
+                    records: [
+                        {
+                            configurationKey: "boolean=false",
+                            partNumber: "WCP-1111",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        },
+                        {
+                            configurationKey: "",
+                            partNumber: "WCP-2222",
+                            hasMultipleParts: false,
+                            isOpenComposite: false
+                        }
+                    ]
+                })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            await seedFavorite(db, TEST_PART_STUDIO_ID);
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const favorite = soleFavorite(await res.json());
+            expect(favorite.configurationKey).toBeUndefined();
+            expect(favorite.record?.partNumber).toBe("WCP-2222");
+        });
+
+        // An insertable with nothing to configure has no configurations row at
+        // all; the join has to answer that as no record rather than throwing.
+        it("has no record for an insertable with no configuration", async () => {
+            await seedPartStudio(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID);
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            expect(res.status).toBe(200);
+            expect(soleFavorite(await res.json()).record).toBeUndefined();
+        });
+
         it("only returns the current user's favorites", async () => {
             await seedTestData(db);
             await seedFavorite(db, TEST_PART_STUDIO_ID, "other-user");
@@ -186,7 +286,7 @@ describe("favorites routes", () => {
     });
 
     describe("POST /favorites/library/:libraryId", () => {
-        it("creates a favorite with sortOrder = existing count", async () => {
+        it("creates a favorite after the highest order taken", async () => {
             await seedPartStudio(db);
             await seedAssembly(db);
             await seedFavorite(db, TEST_PART_STUDIO_ID); // one existing favorite
@@ -207,6 +307,28 @@ describe("favorites routes", () => {
             expect(row?.userId).toBe("test-user");
             expect(row?.insertableId).toBe(TEST_ASSEMBLY_ID);
             expect(row?.sortOrder).toBe(1);
+        });
+
+        // Counting instead would reuse an order a live favorite still holds,
+        // and the two would then sort against each other arbitrarily.
+        it("does not reuse an order after one is deleted from the middle", async () => {
+            await fillFavorites(3);
+            await seedPartStudio(db);
+            await db.delete(favorites).where(eq(favorites.id, "filler-1"));
+
+            const app = createTestApp();
+            const res = await app.request(
+                `${favoritesUrl}?insertableId=${TEST_PART_STUDIO_ID}&id=fav-new`,
+                jsonRequest("POST"),
+                env
+            );
+            expect(res.status).toBe(200);
+
+            const orders = (await db.select().from(favorites).all()).map(
+                (row) => row.sortOrder
+            );
+            expect(new Set(orders).size).toBe(orders.length);
+            expect(Math.max(...orders)).toBe(3);
         });
 
         it("refuses one past the cap, and says so in words", async () => {

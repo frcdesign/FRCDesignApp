@@ -23,8 +23,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { useGetUiState, useSetUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../features/library/library-path";
+import { useGetUiState, updateUiState } from "../lib/ui-state";
+import { getLibraryName, useLibraryId } from "../lib/library";
 import {
     RequireAccessLevel,
     useAccessData
@@ -199,10 +199,9 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
-export function SearchBar() {
+function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const uiState = useGetUiState();
-    const setUiState = useSetUiState();
     const libraryId = useLibraryId();
 
     // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
@@ -218,7 +217,7 @@ export function SearchBar() {
                 if (ref.current) {
                     ref.current.value = "";
                 }
-                setUiState({ searchQuery: undefined });
+                updateUiState({ searchQuery: undefined });
             }}
         />
     ) : undefined;
@@ -239,7 +238,7 @@ export function SearchBar() {
             onChange={(event) => {
                 const value = event.currentTarget.value;
                 const query = value === "" ? undefined : value;
-                setUiState({ searchQuery: query });
+                updateUiState({ searchQuery: query });
             }}
             rightSection={clearButton}
         />

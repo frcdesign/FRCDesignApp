@@ -15,7 +15,7 @@ import {
     UnitInfo,
     VisibilityCondition,
     VisibilityType
-} from "./models";
+} from "./contract";
 import {
     Vendor,
     getVendorPartUrl,
@@ -119,20 +119,28 @@ export function getPartUrl(
 }
 
 /**
- * The text form of a configuration, which is Onshape's own: `id=value;id=value`.
- * Values never carry a `;` or an `=`, which is what lets this round-trip.
+ * The text form of a configuration: `id=value;id=value`, values percent-encoded
+ * so a `;` or `=` typed into a string parameter cannot read as the end of the
+ * assignment. {@link decodeConfiguration} is the other half, and `utils.test.ts`
+ * pins the round trip.
+ *
+ * Onshape's own encoding is not documented as far as I can tell; percent-encoding
+ * is what this codebase's request bodies already sent, so it is what both halves
+ * now agree on. Whether Onshape decodes a configuration in a query string once or
+ * twice has not been checked against a live document — if a value with a `%` or a
+ * space comes back wrong from Onshape, that is the thing to check first.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
         return "";
     }
     return Object.entries(configuration)
-        .map(([id, value]) => `${id}=${value}`)
+        .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
 }
 
 /** The assignments a configuration text names, each still `id=value`. */
-export function splitConfiguration(configuration: string): string[] {
+function splitConfiguration(configuration: string): string[] {
     return configuration.split(";").filter((assignment) => assignment !== "");
 }
 
@@ -145,8 +153,8 @@ export function decodeConfiguration(configuration: string): Selection {
     for (const assignment of splitConfiguration(configuration)) {
         const separator = assignment.indexOf("=");
         if (separator > 0) {
-            values[assignment.slice(0, separator)] = assignment.slice(
-                separator + 1
+            values[assignment.slice(0, separator)] = decodeURIComponent(
+                assignment.slice(separator + 1)
             );
         }
     }

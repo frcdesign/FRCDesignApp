@@ -1,9 +1,9 @@
 import { BuildIssue } from "./issues";
-import { ConfigurationParameter } from "../configurations/models";
+import { ConfigurationParameter } from "../configurations/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "../library/vendors";
 
-export interface ConfigurationBuildStatus {
+interface ConfigurationBuildStatus {
     buildIssues: BuildIssue[];
     parameters: ConfigurationParameter[];
 }

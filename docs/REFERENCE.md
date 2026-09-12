@@ -45,7 +45,7 @@ R2 is Cloudflare's blob storage, optimized for unstructured data like images and
 
 | Prefix          | What it holds                                     | Lifetime                         |
 | --------------- | ------------------------------------------------- | -------------------------------- |
-| `thumbnails/`   | Rendered thumbnails, by element and configuration | See below                        |
+| `thumbnails/`   | Rendered thumbnails, by element and configuration | Kept until reconciled; see below |
 | `search-index/` | Each library's serialized MiniSearch index        | Rewritten on every index rebuild |
 
 Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
@@ -53,19 +53,26 @@ Onshape can generate preview thumbnails for parts and assemblies, but fetching t
 Thumbnails are keyed by whether they are the element's default or a specific configuration:
 
 ```
-thumbnails/default/{elementId}/{microversionId}/{size}                 # never expires
-thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}      # ~90 day lifecycle rule
+thumbnails/default/{elementId}/{microversionId}/{size}
+thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}
 ```
 
-The default is what everything else falls back to, so it must never be reclaimed. Configuration thumbnails expire under an R2 **lifecycle rule on the `config/` prefix**, which is configured on the bucket through the dashboard or API — it is not expressible in `wrangler.jsonc`, and it has to be set up before deploying. Per-prefix rules are what let `thumbnails/default/` and `search-index/` live in the same bucket without expiring.
+`{configKey}` is the url-encoded `ConfigurationKey` — the canonical configuration with hidden and default-valued parameters dropped and quantities in meters and radians — so two equivalent selections resolve to one cached image. Encoding it keeps its `;` and `=` inside a single path segment. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
 
-`{configKey}` is a short hash of the _canonical_ configuration — the one spelling every equivalent selection shares, with hidden and default-valued parameters dropped and quantities expressed in meters and radians. That is what makes two equivalent selections resolve to one cached image. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
+Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. The **`reconcile-thumbnails` step** at the end of `LoadLibraryWorkflow` collects them, in `features/thumbnails/reconcile.ts`:
 
-Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&c={canonicalConfiguration}&warm={bool}`:
+- The live set is every `(elementId, microversionId)` still named by an insertable row, plus the ones a group's two stored thumbnail urls point at — a group's document thumbnail is often not one of its own insertables, and those urls are the only record of which element it is.
+- It spans **every library**, because a thumbnail key names no library. A set built from the library being reloaded would read every other library's thumbnails as orphaned.
+- Both prefixes are reconciled the same way: a configuration render is addressed by the same element and microversion, so it lives and dies with the element's default.
+- An object younger than 24 hours is kept whatever the live set says. A group load stores thumbnails as it goes and commits its rows at the end, and a configuration render is started by a user opening the insert menu rather than by any job — so something in flight is indistinguishable from something orphaned, and only age tells them apart.
+- An empty live set deletes nothing: a library really can have no elements, but so can a read that failed.
+- A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next reload.
+
+Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&renderThumbnail=&insertableId=`:
 
 - **Hit** — streamed from R2 as immutable, cacheable for a year.
-- **Miss** — the element's default is served instead, for 60 seconds only, with an `X-Thumbnail-Fallback` header so the client knows to keep checking. An immutable fallback would pin the wrong image long after the real one landed.
-- **Miss with `warm=true`** — the miss also starts a `ThumbnailWorkflow` to render the configuration. Surfaces where the user picked the configuration (the insert menu, favorites) warm; search rows do not, so one cold search cannot start a render per row.
+- **Miss** — the element's default is served instead as `no-store`, with an `X-Thumbnail-Fallback` header so the client knows to keep checking. A cacheable fallback would pin the wrong image after the real one landed.
+- **Miss with `renderThumbnail=true`** — the miss also starts a `ThumbnailWorkflow` to render the configuration, resolving the element from `insertableId`. Surfaces where the user picked the configuration (the insert menu, favorites) ask for this; search rows do not, so one cold search cannot start a render per row.
 - **Neither exists** — 404, and the client renders a placeholder.
 
 All rendering happens inside the workflow, which keeps Onshape's thumbnail id server-side. There is no HTTP path that proxies an Onshape thumbnail directly.

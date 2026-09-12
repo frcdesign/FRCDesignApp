@@ -16,7 +16,7 @@ import {
     StringParameter,
     VisibilityCondition,
     VisibilityType
-} from "./models";
+} from "./contract";
 import {
     boolParam,
     enumParam,

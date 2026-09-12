@@ -41,7 +41,7 @@ import {
 import {
     VisibilityType,
     type ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import { toSelection } from "../configurations/selection";
 import { ElementType } from "../../lib/onshape/element-type";
 

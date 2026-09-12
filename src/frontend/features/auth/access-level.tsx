@@ -3,7 +3,8 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import {
     AccessLevel,
     type AccessData,
-    isWithinAccessLevel
+    isWithinAccessLevel,
+    hasEditorAccess
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { apiGet } from "../../lib/api-client";
@@ -31,7 +32,7 @@ export function getAccessDataQuery() {
 }
 
 /** Server access plus the level the app is currently viewed as. */
-export interface ResolvedAccessData extends AccessData {
+interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
     /**
      * While set, the rest are the placeholder — so anything rendered for a
@@ -47,7 +48,8 @@ export interface ResolvedAccessData extends AccessData {
 export function useAccessData(): ResolvedAccessData {
     const { data, isPending } = useQuery(getAccessDataQuery());
     const serverData = data ?? DEFAULT_ACCESS_DATA;
-    const chosenLevel = useGetUiState().accessLevel;
+    const uiState = useGetUiState();
+    const chosenLevel = uiState.accessLevel;
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
         let currentAccessLevel = desired;
@@ -64,7 +66,8 @@ export function useAccessData(): ResolvedAccessData {
  * is pending, so a signed-out render wants useAccessData().isPending as well.
  */
 export function useIsSignedIn(): boolean {
-    return useAccessData().signedIn;
+    const accessData = useAccessData();
+    return accessData.signedIn;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {
@@ -93,4 +96,14 @@ export function RequireAccessLevel(props: RequireAccessLevelProps) {
 
 export function RequireSignIn(props: PropsWithChildren) {
     return useIsSignedIn() ? props.children : null;
+}
+
+/**
+ * Whether the caller is shown what is hidden. The rule was spelled out at each
+ * of its call sites, half of them negated, so changing who counts as privileged
+ * meant finding four of them and getting the negation right at each.
+ */
+export function useShowHidden(): boolean {
+    const accessData = useAccessData();
+    return hasEditorAccess(accessData.currentAccessLevel);
 }

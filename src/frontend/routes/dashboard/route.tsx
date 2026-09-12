@@ -19,7 +19,7 @@ const DashboardSearchType = z.object({
     threshold: z.coerce.number().int().nonnegative().optional().catch(undefined)
 });
 
-export type DashboardSearch = z.infer<typeof DashboardSearchType>;
+type DashboardSearch = z.infer<typeof DashboardSearchType>;
 
 export const Route = createFileRoute("/dashboard")({
     component: DashboardLayout,

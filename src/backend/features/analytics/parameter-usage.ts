@@ -5,7 +5,7 @@
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import { formatValue } from "../configurations/selection";
 import type {
     ConfigurationParameterUsage,

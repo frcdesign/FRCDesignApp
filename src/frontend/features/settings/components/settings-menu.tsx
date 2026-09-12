@@ -20,9 +20,9 @@ import {
     useAccessData
 } from "../../auth/access-level";
 import { startSignOut } from "../../auth/sign-out";
-import { useGetUiState, useSetUiState } from "../../../lib/ui-state";
+import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { useLibraryId } from "../../library/library-path";
+import { useLibraryId } from "../../../lib/library";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
 /** The FRCDesign Discord, where feedback and support now live. */
@@ -180,7 +180,8 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
 }
 
 function ThemeSelect(): ReactNode {
-    const theme = useGetUiState().theme;
+    const uiState = useGetUiState();
+    const theme = uiState.theme;
     const saveSettings = useSaveSettings();
 
     return (
@@ -212,7 +213,6 @@ function AdminSettings(): ReactNode {
 
 function AccessLevelSelect(): ReactNode {
     const { maxAccessLevel, currentAccessLevel } = useAccessData();
-    const setUiState = useSetUiState();
 
     return (
         <SettingSelect
@@ -223,7 +223,7 @@ function AccessLevelSelect(): ReactNode {
                 AccessLevel.EDITOR,
                 AccessLevel.USER
             ].filter((level) => isWithinAccessLevel(level, maxAccessLevel))}
-            onSelect={(accessLevel) => setUiState({ accessLevel })}
+            onSelect={(accessLevel) => updateUiState({ accessLevel })}
         />
     );
 }

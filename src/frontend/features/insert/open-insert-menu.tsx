@@ -2,7 +2,7 @@ import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
-import { type Selection } from "@backend/features/configurations/models";
+import { type Selection } from "@backend/features/configurations/contract";
 
 import {
     type NotificationAction,

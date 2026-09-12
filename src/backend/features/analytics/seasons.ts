@@ -93,7 +93,7 @@ export function currentSeason(
     return undefined;
 }
 
-export function previousSeason(season: Season): Season {
+function previousSeason(season: Season): Season {
     return seasonOf(season.program, season.year - 1);
 }
 
@@ -109,7 +109,7 @@ export function lastCompleteSeason(program: Program, day: string): Season {
     return seasonOf(program, year - 1);
 }
 
-export interface SeasonWindow {
+interface SeasonWindow {
     /** The window to measure. */
     from: string;
     to: string;

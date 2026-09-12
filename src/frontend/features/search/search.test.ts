@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import MiniSearch from "minisearch";
-import {
-    buildSearchDb,
-    type SearchDocument
-} from "@backend/features/search/search-index";
-import { doSearch, type Position } from "./search";
+import { buildSearchDb } from "@backend/features/search/build";
+import { type SearchDocument } from "@backend/features/search/contract";
+import { doSearch } from "./search";
+import { type Position } from "../../lib/highlight";
 import { LibraryOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     type ConfigurationKey,
     ConfigurationRecord
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 
 const record = (
@@ -21,7 +20,7 @@ const record = (
 
 /** Hidden insertables shown: these tests are about matching, not visibility. */
 const search = (searchDb: MiniSearch<SearchDocument>, query: string) =>
-    doSearch(searchDb, query, undefined, undefined, true);
+    doSearch({ searchDb, query, showHidden: true });
 
 function library(name = "Bracket"): LibraryOut {
     return {
@@ -78,19 +77,21 @@ describe("doSearch part-number matching", () => {
     });
 
     // "Bracket 217" matches the part-number field on "217", but no single record
-    // matches the whole query — the row must still show a part number.
-    it("falls back to the default record when no one record matches the query", () => {
+    // matches the whole query — the row must still show a part number. This
+    // insertable has no default record, so the fallback is the first listed.
+    it("falls back to the first record when no one record matches the query", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = search(searchDb, "Bracket 217");
         expect(hits).toHaveLength(1);
         expect(hits[0].partNumber).toBe("217-2600");
     });
 
-    it("attaches the default (first) record for a title match", () => {
+    // Neither record is the element's own defaults — every configuration here
+    // overrides `length` — so the first listed is all there is to show.
+    it("attaches the first record for a title match", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = search(searchDb, "Bracket");
         expect(hits).toHaveLength(1);
-        // The insertable's own name matched, so the row shows its default config.
         expect(hits[0].configurationKey).toBe("length=short");
         expect(hits[0].partNumber).toBe("217-2600");
     });
@@ -110,14 +111,15 @@ describe("doSearch part-number matching", () => {
     });
 });
 
-// Production shape: the element's own part data leads the list as the record an
-// unset configuration falls back to, followed by one record per configuration.
+// Records arrive in option declaration order, which puts the element's own
+// defaults wherever Onshape declared them — here, last. Nothing may depend on
+// the default leading the list.
 describe("doSearch configuration matching", () => {
     const searchDb = buildSearchDb(library("MAXSpline Gear"), {
         i1: [
-            record("WCP-1234", "", "12T MAXSpline Gear"),
             record("WCP-1235", "teeth=24", "24T MAXSpline Gear"),
-            record("WCP-1236", "teeth=36", "36T MAXSpline Gear")
+            record("WCP-1236", "teeth=36", "36T MAXSpline Gear"),
+            record("WCP-1234", "", "12T MAXSpline Gear")
         ]
     });
 
@@ -132,9 +134,20 @@ describe("doSearch configuration matching", () => {
         expect(hits[0].configurationKey).toBe("teeth=36");
     });
 
+    // Every record's name carries the whole query, so they tie — and the tie
+    // has to go to the configuration the insert menu opens with.
     it("keeps the default when no term distinguishes a configuration", () => {
         const { hits } = search(searchDb, "maxspline gear");
         expect(hits[0].configurationKey).toBe("");
+        expect(hits[0].partNumber).toBe("WCP-1234");
+    });
+
+    // The title matched and nothing else did, so there is no best record to
+    // pick — the row falls back, and the default is what it must fall back to.
+    it("falls back to the default on a title-only match", () => {
+        const { hits } = search(searchDb, "maxspline");
+        expect(hits[0].configurationKey).toBe("");
+        expect(hits[0].partNumber).toBe("WCP-1234");
     });
 
     it("lets a part number typed in full outrank a looser name match", () => {
@@ -415,5 +428,59 @@ describe("doSearch name matching", () => {
             const hit = hits.find((h) => h.id === "i1");
             expect(hit?.partName).toBe("1/2 Bearing");
         }
+    });
+});
+
+// A favorite names one configuration, but `partNumbers` and `partNames` cover
+// every configuration the insertable has. Matching on them pulls a favorite up
+// for a query describing a configuration its owner never saved.
+describe("doSearch without configuration matching", () => {
+    const searchDb = buildSearchDb(library("MAXSpline Gear"), {
+        i1: [
+            record("WCP-1235", "teeth=24", "24T MAXSpline Gear"),
+            record("WCP-1234", "", "12T MAXSpline Gear")
+        ]
+    });
+
+    const titleOnly = (query: string) =>
+        doSearch({
+            searchDb,
+            query,
+            showHidden: true,
+            searchConfigurations: false
+        });
+
+    it("still matches the insertable's own name", () => {
+        expect(titleOnly("maxspline").hits).toHaveLength(1);
+    });
+
+    it("still matches the group name", () => {
+        expect(titleOnly("Group").hits).toHaveLength(1);
+    });
+
+    it("does not match a configuration's part number", () => {
+        expect(titleOnly("WCP-1235").hits).toHaveLength(0);
+    });
+
+    it("does not match a configuration only its name distinguishes", () => {
+        expect(titleOnly("24t").hits).toHaveLength(0);
+    });
+
+    // The row still needs a part number to show, and the default is the one
+    // that agrees with what inserting it would produce.
+    it("still shows the default record on a name match", () => {
+        const { hits } = titleOnly("maxspline");
+        expect(hits[0].configurationKey).toBe("");
+        expect(hits[0].partNumber).toBe("WCP-1234");
+    });
+
+    it("matches the configuration fields when left on", () => {
+        const { hits } = doSearch({
+            searchDb,
+            query: "WCP-1235",
+            showHidden: true
+        });
+        expect(hits).toHaveLength(1);
+        expect(hits[0].configurationKey).toBe("teeth=24");
     });
 });

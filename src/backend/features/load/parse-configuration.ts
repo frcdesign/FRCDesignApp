@@ -6,7 +6,7 @@ import {
     ParameterType,
     type VisibilityCondition,
     VisibilityType
-} from "../configurations/models";
+} from "../configurations/contract";
 import { getUnitDisplayStr } from "../configurations/enums";
 import { canonicalizeValue } from "../configurations/selection";
 import {

@@ -19,7 +19,7 @@ export type EventCore = Pick<
 >;
 
 /** The rest, which only an insert fills in. */
-export type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
+type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
 
 /**
  * Spelled out rather than defaulted: a column added to the log stops compiling

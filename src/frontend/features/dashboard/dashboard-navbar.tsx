@@ -19,7 +19,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getLibraryName } from "../library/library-path";
+import { getLibraryName } from "../../lib/library";
 import {
     BORDER,
     FRAME_BACKGROUND,
@@ -171,7 +171,8 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
 /** The cutoff the low-usage dashboard lists at or below. */
 function ThresholdControl(): ReactNode {
     const navigate = useNavigate();
-    const threshold = useSearch({ strict: false }).threshold;
+    const search = useSearch({ strict: false });
+    const threshold = search.threshold;
 
     return (
         <NumberInput

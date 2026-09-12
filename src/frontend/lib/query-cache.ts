@@ -4,10 +4,7 @@ import { queryClient } from "./query-client";
 
 type Updater<T> = (value: T | undefined) => T | undefined;
 
-/**
- * A wrapper around Immer which can be used to update query data.
- * Unlike normal updating, you can fully mutate the value without any issues.
- */
+/** Immer, so a recipe can mutate the draft and still produce a new value. */
 export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
     return (value: T | undefined) => {
         if (value === undefined) return undefined;
@@ -16,7 +13,8 @@ export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
 }
 
 /**
- * A helper which can be used to make an optimistic update to a query with the given queryKey.
+ * Shows a mutation's result before the server confirms it. There is no snapshot
+ * to roll back to: callers invalidate on settle, and the refetch is the undo.
  */
 export async function patchQuery<T>(
     queryKey: QueryKey,

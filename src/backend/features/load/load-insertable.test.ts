@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
-import type { PartMetadata } from "../configurations/models";
+import type { PartMetadata } from "../configurations/contract";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 import {
     TEST_PARAMETERS,

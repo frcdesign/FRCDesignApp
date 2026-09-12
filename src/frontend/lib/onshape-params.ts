@@ -17,7 +17,7 @@ export interface OnshapeParams extends ElementPath {
 }
 
 /** A resolved theme, as Onshape provides it; Theme adds "system" on top. */
-export type ColorTheme = "light" | "dark";
+type ColorTheme = "light" | "dark";
 
 /**
  * `systemTheme` is Onshape's, forwarded by the entry redirect; standalone there
@@ -35,5 +35,6 @@ export function getColorTheme(
  * full element path. A signed-in caller opening the app directly is not.
  */
 export function useIsConnectedToOnshape(): boolean {
-    return isElementPath(useSearch({ strict: false }));
+    const search = useSearch({ strict: false });
+    return isElementPath(search);
 }

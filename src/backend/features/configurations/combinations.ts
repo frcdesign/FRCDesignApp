@@ -8,7 +8,7 @@ import {
     ConfigurationParameter,
     EnumParameter,
     ParameterType
-} from "./models";
+} from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
 
 /**
@@ -163,7 +163,7 @@ export function countCombinations(
     return capped ? null : count;
 }
 
-export interface EnumerateResult {
+interface EnumerateResult {
     /** What each combination varies — enums and booleans — which is why these
      * are partial; the only caller runs `toSelection` over them. */
     configurations: PartialSelection[];

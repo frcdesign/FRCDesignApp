@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { queryClient } from "../../../../lib/query-client";
-import { parseLibraryId } from "../../../../features/library/library-path";
+import { parseLibraryId } from "../../../../lib/library";
 import { getLibraryVersionQuery } from "../../../../features/library/queries";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId")({

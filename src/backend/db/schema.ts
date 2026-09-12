@@ -9,7 +9,7 @@ import {
     ConfigurationRecord,
     Selection,
     PartMetadata
-} from "../features/configurations/models";
+} from "../features/configurations/contract";
 import { BuildIssue } from "../features/build-checker/issues";
 
 /**

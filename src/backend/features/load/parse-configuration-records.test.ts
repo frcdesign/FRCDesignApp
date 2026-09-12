@@ -7,7 +7,7 @@ import type {
     OnshapePart
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
-import { Selection, ConfigurationParameter } from "../configurations/models";
+import { Selection, ConfigurationParameter } from "../configurations/contract";
 import {
     enumParam,
     paramsWithConfigs
@@ -205,11 +205,13 @@ function probeRecords(
     const elementType = options.elementType ?? ElementType.PART_STUDIO;
     return parseConfigurationRecords(
         CLIENT,
-        PATH,
-        elementType,
+        {
+            elementPath: PATH,
+            elementType,
+            isOpenComposite: options.isOpenComposite ?? false
+        },
         parameters,
-        probeSelections(parameters, elementType),
-        options.isOpenComposite ?? false
+        probeSelections(parameters, elementType)
     );
 }
 
@@ -290,11 +292,13 @@ describe("parseConfigurationRecords", () => {
 
         const result = await parseConfigurationRecords(
             CLIENT,
-            PATH,
-            ElementType.PART_STUDIO,
+            {
+                elementPath: PATH,
+                elementType: ElementType.PART_STUDIO,
+                isOpenComposite: false
+            },
             [enumParam("A", ["a1", "a2"])],
-            probeSelections([enumParam("A", ["a1", "a2"])]),
-            false
+            probeSelections([enumParam("A", ["a1", "a2"])])
         );
 
         expect(result.buildIssues).toEqual([

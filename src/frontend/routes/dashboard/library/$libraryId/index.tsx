@@ -18,7 +18,7 @@ import { HealthTiles } from "../../../../features/dashboard/health-report";
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { toDayRange } from "../../../../features/dashboard/range";
-import { getLibraryName } from "../../../../features/library/library-path";
+import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";

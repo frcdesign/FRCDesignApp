@@ -7,7 +7,7 @@ import {
     favoritesQueryKey,
     libraryQueryKey
 } from "./query-keys";
-import { useLibraryId } from "../features/library/library-path";
+import { useLibraryId } from "./library";
 
 /**
  * Refreshes the current library and the caller's access. Invalidating the

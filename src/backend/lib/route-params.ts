@@ -37,13 +37,3 @@ export function getFavoriteParam(c: AppContext): string {
     if (!id) throw new Error("Missing favoriteId route param");
     return id;
 }
-
-export function groupRoute(): string {
-    return "/group/:groupId";
-}
-
-export function getGroupParam(c: AppContext): string {
-    const id = c.req.param("groupId");
-    if (!id) throw new Error("Missing groupId route param");
-    return id;
-}

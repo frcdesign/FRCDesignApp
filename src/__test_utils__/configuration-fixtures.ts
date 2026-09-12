@@ -9,7 +9,7 @@ import {
     type EnumParameter,
     type QuantityParameter,
     type UnitInfo
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { canonicalizeValue } from "@backend/features/configurations/selection";
 

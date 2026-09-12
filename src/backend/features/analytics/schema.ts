@@ -13,7 +13,7 @@ import {
 import { ElementType } from "../../lib/onshape/element-type";
 import { type InstanceType } from "../../lib/onshape/path";
 import { LibraryId } from "../library/library-id";
-import { Selection } from "../configurations/models";
+import { Selection } from "../configurations/contract";
 import { EventType, InsertSource } from "./events";
 
 /**

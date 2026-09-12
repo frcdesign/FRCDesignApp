@@ -2,7 +2,7 @@ import {
     ParameterType,
     type Selection,
     type ConfigurationParameter
-} from "../../../features/configurations/models";
+} from "../../../features/configurations/contract";
 import { type ElementPath } from "../path";
 
 const PART_STUDIO_QUERY =

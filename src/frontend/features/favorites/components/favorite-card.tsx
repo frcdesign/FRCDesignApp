@@ -1,10 +1,7 @@
-import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/models";
+import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../lib/api-client";
-import { queryClient } from "../../../lib/query-client";
 import { Menu } from "@mantine/core";
 import { PencilIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
@@ -14,10 +11,11 @@ import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
     ItemRow,
-    OpenDocumentItems,
-    QuickInsertItems
-} from "../../library/components/card-components";
-import { useIsInsertableHidden } from "../../library/card-hooks";
+    type RowMatch
+} from "../../../components/item-row";
+import { OpenDocumentItems } from "../../../components/open-document-items";
+import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
@@ -27,13 +25,8 @@ import {
     openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
 } from "../../../components/alerts";
-import { getAppErrorHandler } from "../../../lib/errors";
-import { useFavoritesQuery } from "../queries";
-import { favoritesQueryKey } from "../../../lib/query-keys";
-import { useRefreshFavorites } from "../../../lib/refresh";
-import { produce } from "immer";
+import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
 import { SearchHit } from "../../search/search";
-import { toLibraryPath, useLibraryId } from "../../library/library-path";
 import { InsertSource } from "@backend/features/analytics/events";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
 
@@ -58,6 +51,18 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     if (isHidden) {
         return null;
     }
+
+    // The part number and name come from the favorite's own configuration, not
+    // from whatever the query matched — the two must never disagree with the
+    // thumbnail beside them, which is that same configuration's. Only the title
+    // underlining is the search's, and favorites do not search the part-number
+    // or part-name fields, so nothing in those ever matched to underline.
+    const rowMatch: RowMatch = {
+        positions: searchHit?.positions ?? [],
+        partNumber: favorite.record?.partNumber,
+        partName: favorite.record?.name,
+        url: favorite.record?.url
+    };
 
     return (
         <ItemRow
@@ -91,7 +96,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                             }}
                         />
                     }
-                    searchHit={searchHit}
+                    match={rowMatch}
                 />
             }
             rightSection={
@@ -119,7 +124,8 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
-    const favoriteOrder = useFavoritesQuery().data?.favoriteOrder ?? [];
+    const favoritesQuery = useFavoritesQuery();
+    const favoriteOrder = favoritesQuery.data?.favoriteOrder ?? [];
 
     return (
         <>
@@ -170,37 +176,4 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             />
         </>
     );
-}
-
-function useSetFavoriteOrderMutation() {
-    const libraryId = useLibraryId();
-    const refreshFavorites = useRefreshFavorites();
-
-    const queryKey = favoritesQueryKey(libraryId);
-
-    return useMutation({
-        mutationKey: ["set-favorite-order"],
-        mutationFn: async (favoriteOrder: string[]) => {
-            return apiPost("/favorite-order" + toLibraryPath(libraryId), {
-                body: { favoriteOrder }
-            });
-        },
-        onMutate: async (newOrder: string[]) => {
-            await queryClient.cancelQueries({ queryKey });
-            queryClient.setQueryData(
-                queryKey,
-                produce((data?: { favoriteOrder: string[] }) => {
-                    if (!data) return undefined;
-                    data.favoriteOrder = newOrder;
-                    return data;
-                })
-            );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
-        },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to reorder favorites."
-        ),
-        onSettled: refreshFavorites
-    });
 }

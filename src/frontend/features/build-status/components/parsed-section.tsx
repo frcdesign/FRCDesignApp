@@ -14,7 +14,7 @@ import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import {
     ConfigurationParameter,
     ParameterType
-} from "@backend/features/configurations/models";
+} from "@backend/features/configurations/contract";
 import {
     type ConfigurationCount,
     countCombinations,
@@ -92,6 +92,9 @@ export function InsertableParsedSection(
     );
 }
 
+/** Tall enough for a handful of parameters before the list starts scrolling. */
+const PARAMETER_LIST_MAX_HEIGHT = 220;
+
 interface ConfigurationSectionProps {
     parameters?: ConfigurationParameter[];
 }
@@ -107,28 +110,36 @@ export function ConfigurationSection(
             <Divider />
             <Stack gap={6}>
                 <SectionHeader>Configurations</SectionHeader>
-                <ScrollArea.Autosize mah={220} type="auto">
+                <ScrollArea.Autosize mah={PARAMETER_LIST_MAX_HEIGHT} type="auto">
                     <Stack gap={4}>
                         {parameters.map((parameter) => (
-                            <Group
+                            <ParameterRow
                                 key={parameter.id}
-                                gap="xl"
-                                wrap="nowrap"
-                                justify="space-between"
-                            >
-                                <Text size="sm">{parameter.name}</Text>
-                                <Group gap={4} wrap="nowrap">
-                                    <ExcludedFromPropertiesIcon
-                                        parameter={parameter}
-                                    />
-                                    <ParameterTypeBadge parameter={parameter} />
-                                </Group>
-                            </Group>
+                                parameter={parameter}
+                            />
                         ))}
                     </Stack>
                 </ScrollArea.Autosize>
             </Stack>
         </>
+    );
+}
+
+interface ParameterRowProps {
+    parameter: ConfigurationParameter;
+}
+
+/** One parameter: its name, and what varies or excludes it. */
+function ParameterRow(props: ParameterRowProps): ReactNode {
+    const { parameter } = props;
+    return (
+        <Group gap="xl" wrap="nowrap" justify="space-between">
+            <Text size="sm">{parameter.name}</Text>
+            <Group gap={4} wrap="nowrap">
+                <ExcludedFromPropertiesIcon parameter={parameter} />
+                <ParameterTypeBadge parameter={parameter} />
+            </Group>
+        </Group>
     );
 }
 

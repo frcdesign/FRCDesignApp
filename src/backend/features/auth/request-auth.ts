@@ -28,7 +28,7 @@ import {
 const ACCESS_LEVEL_TTL_SECONDS = 60 * 60;
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
-export const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";
+const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";
 
 export async function getOnshapeApiFromSessionId(
     kv: KVNamespace,
@@ -42,8 +42,10 @@ export async function getOnshapeApiFromSessionId(
             .refreshAccessToken(TOKEN_ENDPOINT, session.refreshToken, [])
             .then((refreshed) => makeAuthTokens(refreshed));
 
-        // Spread, so a refresh keeps the userId the session already resolved.
-        void saveSession(kv, sessionId, { ...session, ...newTokens });
+        // Awaited, not floated: a cancelled write leaves the old token in KV
+        // and every later request refreshes again. Spread, so the refresh keeps
+        // the userId the session already resolved.
+        await saveSession(kv, sessionId, { ...session, ...newTokens });
 
         return newTokens.accessToken;
     };
@@ -71,7 +73,7 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
 }
 
 /** Returns the caller's Onshape user id, resolved once and kept on the session. */
-export async function getCachedUserId(c: AppContext): Promise<string> {
+async function getCachedUserId(c: AppContext): Promise<string> {
     const sessionId = getSessionId(c);
     const session = await getSession(c.env.KV, sessionId);
     if (session.userId) return session.userId;
@@ -85,6 +87,8 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
+        // Onshape reports no company for a session outside an enterprise;
+        // "cad" is the id it uses for those, and what we store for them.
         const tokenCompanyId = sessionInfo.company?.id ?? "cad";
         return getSessionCompanyId(c) === tokenCompanyId;
     } catch {
@@ -97,7 +101,7 @@ function isDevelopment(): boolean {
     return processEnv.NODE_ENV !== "production";
 }
 
-export function isForceSignedIn(c: AppContext): boolean {
+function isForceSignedIn(c: AppContext): boolean {
     return !!c.env.FORCE_SIGNED_IN && isDevelopment();
 }
 
@@ -133,7 +137,7 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
 }
 
 /** Returns the caller's access level, memoized in KV by session. */
-export async function getCachedAccessLevel(
+async function getCachedAccessLevel(
     c: AppContext
 ): Promise<AccessLevel> {
     const key = accessLevelKey(getSessionId(c));

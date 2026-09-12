@@ -10,7 +10,7 @@ import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 export const LOAD_CONCURRENCY = 15;
 
 /** Runs a task, waiting for a slot when the limiter is full. */
-export type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
+type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
 
 /**
  * Runs at most `max` tasks at once, queueing the rest in call order, so a

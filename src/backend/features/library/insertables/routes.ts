@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { internalError } from "../../../lib/api-error";
+import { handledError, internalError } from "../../../lib/api-error";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
@@ -13,23 +13,17 @@ import {
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type InsertOut } from "../contract";
-import {
-    toElementPath,
-    type ElementPath,
-    INSTANCE_TYPES
-} from "../../../lib/onshape/path";
+import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
     type Selection
-} from "../../configurations/models";
+} from "../../configurations/contract";
 import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
-    parseConfigurationRecords,
-    type ConfigurationRecordsResult
+    parseConfigurationRecords
 } from "../../load/parse-configuration-records";
-import { type OnshapeApi } from "../../../lib/onshape/client";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/events";
 import { trackInBackground, trackInsert } from "../../analytics/tracking";
@@ -39,13 +33,10 @@ import {
     addElementToAssembly,
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
-import {
-    PartType,
-    type OnshapeElementType
-} from "../../../lib/onshape/endpoints/documents";
-import { encodeConfigurationForBody } from "../../../lib/onshape/endpoints/configurations";
+import { PartType } from "../../../lib/onshape/endpoints/documents";
 import { toSelection } from "../../configurations/selection";
-import { FastenMateBuilder } from "../../../lib/onshape/objects/assembly-features";
+import { encodeConfiguration } from "../../configurations/utils";
+import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
@@ -67,40 +58,26 @@ insertableRoutes.post(
         const insertableId = getInsertableParam(c);
         const { supportsFasten } = c.req.valid("json");
 
-        const insertableRow = await db
-            .select({ libraryId: insertables.libraryId })
+        const row = await db
+            .select({
+                libraryId: insertables.libraryId,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
+                elementType: insertables.elementType
+            })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        if (!insertableRow)
+        if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
         let fastenInfo = null;
         if (supportsFasten) {
-            const onshapeApi = await c.var.getOnshapeApi();
-            const elementPath = await getInsertableElementPath(
-                db,
-                insertableId
-            );
-            const insertable = await db
-                .select({
-                    elementType: insertables.elementType
-                })
-                .from(insertables)
-                .where(eq(insertables.id, insertableId))
-                .get();
-
-            if (!insertable) {
-                throw internalError(
-                    "Insertable not found",
-                    HttpStatus.NOT_FOUND
-                );
-            }
-
             fastenInfo = await parseFastenInfo(
-                onshapeApi,
-                elementPath,
-                insertable.elementType
+                await c.var.getOnshapeApi(),
+                toElementPath(row),
+                row.elementType
             );
         }
 
@@ -109,7 +86,7 @@ insertableRoutes.post(
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, insertableRow.libraryId);
+        await bumpLibraryVersion(db, row.libraryId);
         return c.json({ success: true });
     }
 );
@@ -158,15 +135,16 @@ insertableRoutes.post(
         // Index before committing anything: if this throws, nothing is written.
         // The error reaches the client via the app's onError handler.
         const indexed = indexing.shouldIndex
-            ? await indexRecords(await c.var.getOnshapeApi(), {
-                  documentId: row.documentId,
-                  versionId: row.versionId,
-                  elementId: row.elementId,
-                  elementType: row.elementType,
-                  isOpenComposite: row.isOpenComposite,
+            ? await parseConfigurationRecords(
+                  await c.var.getOnshapeApi(),
+                  {
+                      elementPath: toElementPath(row),
+                      elementType: row.elementType,
+                      isOpenComposite: row.isOpenComposite
+                  },
                   parameters,
-                  configurations: indexing.configurations
-              })
+                  indexing.configurations
+              )
             : NO_RECORDS;
 
         // Clear first, so an issue the reindex resolved (or that disabling makes
@@ -216,38 +194,6 @@ insertableRoutes.post(
 );
 
 /**
- * Runs in a request, so it uses the unbatched {@link parseConfigurationRecords}
- * rather than the workflow's stepped loader.
- */
-function indexRecords(
-    client: OnshapeApi,
-    insertable: {
-        documentId: string;
-        versionId: string;
-        elementId: string;
-        elementType: ElementType;
-        isOpenComposite: boolean;
-        parameters: ConfigurationParameter[];
-        configurations: Selection[];
-    }
-): Promise<ConfigurationRecordsResult> {
-    const sourcePath: ElementPath = {
-        documentId: insertable.documentId,
-        instanceId: insertable.versionId,
-        instanceType: "v",
-        elementId: insertable.elementId
-    };
-    return parseConfigurationRecords(
-        client,
-        sourcePath,
-        insertable.elementType,
-        insertable.parameters,
-        insertable.configurations,
-        insertable.isOpenComposite
-    );
-}
-
-/**
  * The tab being inserted into, in the body so the whole path arrives as one
  * object. A half-built one is rejected here, not as a nonsense Onshape URL.
  */
@@ -258,7 +204,7 @@ const targetPathSchema = z.object({
     elementId: z.string().min(1)
 });
 
-const configurationSchema = z.record(z.string(), z.string()).optional();
+const selectionSchema = z.record(z.string(), z.string()).optional();
 
 /**
  * What an insert applies, made whole against the insertable's parameters. Every
@@ -288,9 +234,9 @@ async function readSelection(
     };
 }
 
-const insertBodySchema = z.object({
+const insertBody = z.object({
     targetPath: targetPathSchema,
-    selection: configurationSchema,
+    selection: selectionSchema,
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Where the insert began, which `isFavorite` does not answer. Defaulted so
@@ -298,11 +244,11 @@ const insertBodySchema = z.object({
     source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
-const addToPartStudioBody = insertBodySchema.extend({
+const addToPartStudioBody = insertBody.extend({
     useMateConnector: z.boolean().default(false)
 });
 
-const addToAssemblyBody = insertBodySchema.extend({
+const addToAssemblyBody = insertBody.extend({
     fasten: z.boolean().default(false)
 });
 
@@ -318,22 +264,24 @@ insertableRoutes.post(
         const { targetPath } = body;
 
         const db = getDb(c.env.DB);
-        const sourcePath = await getInsertableElementPath(db, insertableId);
-
-        const insertable = await db
+        const row = await db
             .select({
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId,
                 name: insertables.name,
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId,
-                elementId: insertables.elementId
+                libraryId: insertables.libraryId
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
 
-        if (!insertable) {
+        if (!row) {
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
+
+        const sourcePath = toElementPath(row);
 
         const { selection, parameters } = await readSelection(
             db,
@@ -342,9 +290,9 @@ insertableRoutes.post(
         );
 
         const feature = new DerivedFeature(
-            insertable.name,
+            row.name,
             sourcePath,
-            insertable.microversionId,
+            row.microversionId,
             body.useMateConnector,
             selection,
             parameters
@@ -358,7 +306,7 @@ insertableRoutes.post(
 
         await trackInBackground(c, async () =>
             trackInsert(c, {
-                libraryId: insertable.libraryId,
+                libraryId: row.libraryId,
                 userId: await c.var.getUserId(),
                 path: sourcePath,
                 insertableId,
@@ -373,10 +321,9 @@ insertableRoutes.post(
             })
         );
 
-        const out: InsertOut = {
+        return c.json({
             featureId: result.feature?.featureId ?? null
-        };
-        return c.json(out);
+        } satisfies InsertOut);
     }
 );
 
@@ -426,14 +373,14 @@ insertableRoutes.post(
         );
 
         const encodedConfiguration = selection
-            ? encodeConfigurationForBody(selection)
+            ? encodeConfiguration(selection)
             : undefined;
 
         const result = await addElementToAssembly(
             onshapeApi,
             targetPath,
             sourcePath,
-            row.elementType as unknown as OnshapeElementType,
+            row.elementType,
             {
                 configuration: encodedConfiguration,
                 partTypes
@@ -467,7 +414,7 @@ insertableRoutes.post(
         const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
             await track(false);
-            throw internalError(
+            throw handledError(
                 `${row.name} does not support insert and fasten.`,
                 HttpStatus.BAD_REQUEST
             );
@@ -476,22 +423,20 @@ insertableRoutes.post(
         const instancePath: string[] =
             result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
-        const builder = new FastenMateBuilder(row.name);
-        builder.addQuery(
+        const mate = fastenMate(row.name, [
             getFastenQuery(row.elementType, instancePath, fastenInfo)
-        );
+        ]);
 
         try {
             const fastenResult = await addAssemblyFeature(
                 onshapeApi,
                 targetPath,
-                builder.build()
+                mate
             );
             await track(true);
-            const out: InsertOut = {
+            return c.json({
                 featureId: fastenResult.feature.featureId
-            };
-            return c.json(out);
+            } satisfies InsertOut);
         } catch (error) {
             // Only the mate failed; the insert is still in the assembly.
             await track(false);
@@ -499,30 +444,3 @@ insertableRoutes.post(
         }
     }
 );
-/** Always version-pinned; throws 404 when the insertable does not exist. */
-
-export async function getInsertableElementPath(
-    db: Db,
-    insertableId: string
-): Promise<ElementPath> {
-    const row = await db
-        .select({
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            elementId: insertables.elementId
-        })
-        .from(insertables)
-        .where(eq(insertables.id, insertableId))
-        .get();
-
-    if (!row) {
-        throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-    }
-
-    return {
-        documentId: row.documentId,
-        instanceId: row.versionId,
-        instanceType: "v",
-        elementId: row.elementId
-    };
-}

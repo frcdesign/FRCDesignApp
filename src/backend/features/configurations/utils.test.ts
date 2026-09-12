@@ -5,7 +5,7 @@ import {
     findRecordForConfiguration,
     getPartUrl
 } from "./utils";
-import { PartMetadata, SearchRecord } from "./models";
+import { PartMetadata, SearchRecord } from "./contract";
 import { Vendor } from "../library/vendors";
 
 function rec(configurationKey: string, partNumber = "PN"): SearchRecord {
@@ -66,6 +66,31 @@ describe("configuration text", () => {
 
     it("decodes the empty string as no values at all", () => {
         expect(decodeConfiguration("")).toEqual({});
+    });
+
+    it("percent-encodes a value", () => {
+        expect(encodeConfiguration({ length: "0.0508 m" })).toBe(
+            "length=0.0508%20m"
+        );
+    });
+
+    it("round-trips a value holding the separators", () => {
+        const configuration = { label: "a;other=evil", other: "x" };
+        expect(decodeConfiguration(encodeConfiguration(configuration))).toEqual(
+            configuration
+        );
+    });
+
+    it("round-trips a value holding a percent sign", () => {
+        const configuration = { label: "50%3B off" };
+        expect(decodeConfiguration(encodeConfiguration(configuration))).toEqual(
+            configuration
+        );
+    });
+
+    it("keeps a typed separator from setting another parameter", () => {
+        const encoded = encodeConfiguration({ label: "a;other=evil" });
+        expect(decodeConfiguration(encoded).other).toBeUndefined();
     });
 });
 

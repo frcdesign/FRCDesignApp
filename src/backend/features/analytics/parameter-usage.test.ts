@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     ParameterType,
     type ConfigurationParameter
-} from "../configurations/models";
+} from "../configurations/contract";
 import { buildParameterUsage } from "./parameter-usage";
 import { quantityParam } from "../../../__test_utils__/configuration-fixtures";
 

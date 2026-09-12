@@ -51,31 +51,33 @@ export function formatBaseValue(value: ValueWithUnits): string {
     return formatValueWithUnits(value, baseUnit(value.type), precision);
 }
 
+/** The tolerance the pair is compared at; they must measure the same thing. */
+function comparisonTolerance(
+    value1: ValueWithUnits,
+    value2: ValueWithUnits
+): number {
+    if (value1.type !== value2.type) {
+        throw new ParseError("Cannot compare values with different units");
+    }
+    return TOLERANCE[value1.type];
+}
+
 function tolerantEqualsZero(value: ValueWithUnits) {
     return tolerantEquals(value, { value: 0, type: value.type });
 }
 
 function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
-    if (value1.type !== value2.type) {
-        throw new ParseError("Cannot compare values with different units");
-    }
-    const tolerance = TOLERANCE[value1.type];
+    const tolerance = comparisonTolerance(value1, value2);
     return Math.abs(value1.value - value2.value) < tolerance;
 }
 
 function tolerantLessThan(value1: ValueWithUnits, value2: ValueWithUnits) {
-    if (value1.type !== value2.type) {
-        throw new ParseError("Cannot compare values with different units");
-    }
-    const tolerance = TOLERANCE[value1.type];
+    const tolerance = comparisonTolerance(value1, value2);
     return value1.value < value2.value - tolerance;
 }
 
 function tolerantGreaterThan(value1: ValueWithUnits, value2: ValueWithUnits) {
-    if (value1.type !== value2.type) {
-        throw new ParseError("Cannot compare values with different units");
-    }
-    const tolerance = TOLERANCE[value1.type];
+    const tolerance = comparisonTolerance(value1, value2);
     return value1.value > value2.value + tolerance;
 }
 
@@ -104,7 +106,7 @@ type UnitType = "length" | "angle" | "number";
 
 type Operator = "+" | "-" | "*" | "/";
 
-export interface ValueWithUnits {
+interface ValueWithUnits {
     value: number;
     type: UnitType;
 }
@@ -159,7 +161,7 @@ type Expr =
     | UnitApplicationExpr;
 
 // base unit: meter
-export function getUnitFactor(unit: Unit): number {
+function getUnitFactor(unit: Unit): number {
     switch (unit) {
         // length (base = meter)
         case Unit.METER:
@@ -208,7 +210,7 @@ function getUnitType(unit: Unit): UnitType {
     }
 }
 
-export function classifyUnit(identifier: string): Unit {
+function classifyUnit(identifier: string): Unit {
     switch (identifier.toLowerCase()) {
         // length units
         case "m":
@@ -288,8 +290,12 @@ PRIMARY.setPattern(
             };
             return { kind: "value", value: valueLiteral };
         }),
-        // (expr)
-        kmid(tok(TokenKind.LParen), EXP, tok(TokenKind.RParen))
+        // Kept as a node rather than unwrapped to the inner expression, so
+        // `stringify` writes the parens back and its output re-parses.
+        apply(
+            kmid(tok(TokenKind.LParen), EXP, tok(TokenKind.RParen)),
+            (expr): Expr => ({ kind: "paren", expr })
+        )
     )
 );
 
@@ -311,7 +317,7 @@ TERM.setPattern(
             rest.reduce<Expr>(
                 (acc, [opTok, rhs]) => ({
                     kind: "binary",
-                    op: opTok.text as unknown as Operator,
+                    op: opTok.text as Operator,
                     left: acc,
                     right: rhs
                 }),
@@ -340,7 +346,7 @@ EXP.setPattern(
             rest.reduce<Expr>(
                 (acc, [opTok, rhs]) => ({
                     kind: "binary",
-                    op: opTok.text as unknown as Operator,
+                    op: opTok.text as Operator,
                     left: acc,
                     right: rhs
                 }),
@@ -498,13 +504,6 @@ function evaluateExpressionValue(
     }
 }
 
-function applyDefaultUnit(
-    value: ValueWithUnits,
-    defaultUnit: Unit
-): ValueWithUnits {
-    return valueWithUnits(value.value, defaultUnit);
-}
-
 function stringify(expr: Expr): string {
     switch (expr.kind) {
         case "value": {
@@ -543,9 +542,7 @@ export function formatValueWithUnits(
     return `${displayValue} ${getUnitDisplayStr(displayUnit)}`;
 }
 
-/**
- * Rounds number to a given precision. Unlike toFixed, drops trailing zeros.
- */
+/** Unlike toFixed, drops trailing zeros — so 12.00 reads as "12". */
 function roundToPrecision(num: number, precision: number): string {
     const factor = Math.pow(10, precision);
     return String(Math.round(num * factor) / factor);
@@ -564,7 +561,7 @@ function formatExpression(
             quantityType === QuantityType.ANGLE) &&
         value.type === "number"
     ) {
-        value = applyDefaultUnit(value, displayUnit);
+        value = valueWithUnits(value.value, displayUnit);
 
         if (expr.kind === "binary") {
             expression = `(${expression})`;
@@ -619,7 +616,7 @@ export interface Result {
     expression: string;
 }
 
-export interface ErrorResult {
+interface ErrorResult {
     hasError: true;
     /**
      * The original, unformatted expression.
@@ -651,9 +648,6 @@ export interface EvaluateOptions {
 }
 
 /**
- * Evaluates a string expression.
- */
-/**
  * The value in base units: meters, radians, or unitless. A bare number takes
  * `defaultUnit`, as in the input; undefined when it does not parse.
  */
@@ -673,7 +667,7 @@ export function evaluateBaseValue(
             quantityType === QuantityType.ANGLE) &&
         value.type === "number"
     ) {
-        value = applyDefaultUnit(value, defaultUnit);
+        value = valueWithUnits(value.value, defaultUnit);
     }
     return value;
 }
