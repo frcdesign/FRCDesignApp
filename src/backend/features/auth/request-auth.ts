@@ -21,6 +21,7 @@ import {
     getSession,
     getSessionCompanyId,
     getSessionId,
+    PERSONAL_COMPANY_ID,
     saveSession
 } from "./session";
 
@@ -88,8 +89,9 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
         // Onshape reports no company for a session outside an enterprise;
-        // "cad" is the id it uses for those, and what we store for them.
-        const tokenCompanyId = sessionInfo.company?.id ?? "cad";
+        // PERSONAL_COMPANY_ID is the id it uses for those, and what we store
+        // for them.
+        const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
         return getSessionCompanyId(c) === tokenCompanyId;
     } catch {
         return false;
@@ -137,9 +139,7 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
 }
 
 /** Returns the caller's access level, memoized in KV by session. */
-async function getCachedAccessLevel(
-    c: AppContext
-): Promise<AccessLevel> {
+async function getCachedAccessLevel(c: AppContext): Promise<AccessLevel> {
     const key = accessLevelKey(getSessionId(c));
 
     const cached = await c.env.KV.get(key);

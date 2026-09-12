@@ -19,8 +19,15 @@ export function getSessionId(c: AppContext): string {
     return sessionId;
 }
 
+/**
+ * Onshape's company id for a session outside an enterprise. It is what
+ * `/init` carries for a plain cad.onshape.com user, and it is not a company
+ * OAuth will accept.
+ */
+export const PERSONAL_COMPANY_ID = "cad";
+
 export function getSessionCompanyId(c: AppContext) {
-    return c.req.query("sessionCompanyId") ?? "cad";
+    return c.req.query("sessionCompanyId") ?? PERSONAL_COMPANY_ID;
 }
 
 export interface AuthTokens {

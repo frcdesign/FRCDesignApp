@@ -101,3 +101,33 @@ describe("GET /auth/sign-out", () => {
         expect(res.status).toBe(302);
     });
 });
+
+describe("GET /auth/sign-in", () => {
+    /** The Onshape authorization url the route sends the caller to. */
+    async function authorizationUrl(query: string): Promise<URL> {
+        const res = await createTestApp().request(
+            `/auth/sign-in?redirectUrl=%2Finit&${query}`,
+            { method: "GET", redirect: "manual" },
+            env
+        );
+        expect(res.status).toBe(302);
+        return new URL(res.headers.get("Location")!);
+    }
+
+    it("scopes the sign-in to the enterprise that launched it", async () => {
+        const url = await authorizationUrl("sessionCompanyId=company-1");
+        expect(url.searchParams.get("company_id")).toBe("company-1");
+    });
+
+    // Onshape rejects "cad" as a company, which is what a non-enterprise user
+    // arrives with.
+    it("names no company for a personal account", async () => {
+        const url = await authorizationUrl("sessionCompanyId=cad");
+        expect(url.searchParams.has("company_id")).toBe(false);
+    });
+
+    it("names no company for a standalone sign-in", async () => {
+        const url = await authorizationUrl("");
+        expect(url.searchParams.has("company_id")).toBe(false);
+    });
+});
