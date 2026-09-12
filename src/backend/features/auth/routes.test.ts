@@ -47,22 +47,22 @@ describe("GET /access-data", () => {
     });
 });
 
+const SESSION_COOKIE = "frc-design-app-cookie";
+
+/** A signed-in session, as the OAuth callback would have left it. */
+async function seedSession(sessionId: string) {
+    await env.KV.put(
+        `tokens:${sessionId}`,
+        JSON.stringify({
+            accessToken: "a",
+            refreshToken: "r",
+            expiresAt: Date.now() + 10000
+        })
+    );
+    await env.KV.put(`access-level:${sessionId}`, AccessLevel.ADMIN);
+}
+
 describe("GET /auth/sign-out", () => {
-    const SESSION_COOKIE = "frc-design-app-cookie";
-
-    /** A signed-in session, as the OAuth callback would have left it. */
-    async function seedSession(sessionId: string) {
-        await env.KV.put(
-            `tokens:${sessionId}`,
-            JSON.stringify({
-                accessToken: "a",
-                refreshToken: "r",
-                expiresAt: Date.now() + 10000
-            })
-        );
-        await env.KV.put(`access-level:${sessionId}`, AccessLevel.ADMIN);
-    }
-
     function signOut(redirectUrl: string, sessionId?: string) {
         return createTestApp().request(
             `/auth/sign-out?redirectUrl=${encodeURIComponent(redirectUrl)}`,
@@ -103,13 +103,24 @@ describe("GET /auth/sign-out", () => {
 });
 
 describe("GET /auth/sign-in", () => {
-    /** The Onshape authorization url the route sends the caller to. */
-    async function authorizationUrl(query: string): Promise<URL> {
-        const res = await createTestApp().request(
+    /** The route's response to a caller starting a sign-in. */
+    function signIn(query: string, sessionId?: string) {
+        return createTestApp().request(
             `/auth/sign-in?redirectUrl=%2Finit&${query}`,
-            { method: "GET", redirect: "manual" },
+            {
+                method: "GET",
+                headers: sessionId
+                    ? { Cookie: `${SESSION_COOKIE}=${sessionId}` }
+                    : {},
+                redirect: "manual"
+            },
             env
         );
+    }
+
+    /** The Onshape authorization url the route sends the caller to. */
+    async function authorizationUrl(query: string): Promise<URL> {
+        const res = await signIn(query);
         expect(res.status).toBe(302);
         return new URL(res.headers.get("Location")!);
     }
@@ -129,5 +140,18 @@ describe("GET /auth/sign-in", () => {
     it("names no company for a standalone sign-in", async () => {
         const url = await authorizationUrl("");
         expect(url.searchParams.has("company_id")).toBe(false);
+    });
+
+    // The gate sends a caller here whenever Onshape will not take their
+    // session, so a sign-in they never finish must not sign them out of the one
+    // they arrived with.
+    it("leaves the session the caller arrived with alone", async () => {
+        await seedSession("session-1");
+
+        const res = await signIn("", "session-1");
+
+        const setCookie = res.headers.get("Set-Cookie") ?? "";
+        expect(setCookie).not.toContain(`${SESSION_COOKIE}=`);
+        expect(await env.KV.get("tokens:session-1")).not.toBeNull();
     });
 });
