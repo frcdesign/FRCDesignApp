@@ -30,7 +30,6 @@ API_SECRET_KEY=<Your API Secret Key>
 # OAuth
 OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
-SESSION_SECRET=gNSzdRbs4dJYz0obHfeRwaD+u5QbZgJx+V8/rgUH6AiOdoppP3wjeaM97nZmxeJa
 
 # One of admin, editor, or user. Granted by the server and viewed by the client,
 # so both sides agree. Ignored in production.
