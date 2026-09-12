@@ -138,6 +138,93 @@ describe("GET /init", () => {
         });
     });
 
+    /** Where the gate sends a caller Onshape will not take. */
+    async function signInRedirect(path: string): Promise<URL> {
+        const res = await createTestApp({
+            isAuthenticated: false,
+            signedIn: false
+        }).request(path, jsonRequest("GET"), env);
+
+        expect(res.status).toBe(302);
+        return new URL(res.headers.get("Location")!, "http://x");
+    }
+
+    it("signs in a caller Onshape will not take, scoped to their company", async () => {
+        const location = await signInRedirect(
+            "/init?sessionCompanyId=company-1"
+        );
+
+        expect(location.pathname).toBe("/auth/sign-in");
+        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
+        const redirectUrl = new URL(
+            location.searchParams.get("redirectUrl")!,
+            "http://x"
+        );
+        expect(redirectUrl.pathname).toBe("/init");
+        expect(redirectUrl.searchParams.get("sessionCompanyId")).toBe(
+            "company-1"
+        );
+    });
+
+    // Onshape decides which company a token is scoped to, and there is no
+    // personal company to ask it for, so a caller carrying an enterprise
+    // session into a plain document fails the gate every time it is tried.
+    it("opens the app rather than signing a caller in twice", async () => {
+        const location = await signInRedirect("/init");
+        const res = await createTestApp({
+            isAuthenticated: false,
+            signedIn: false
+        }).request(
+            location.searchParams.get("redirectUrl")!,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(res.status).toBe(302);
+        const entry = new URL(res.headers.get("Location")!, "http://x");
+        expect(entry.pathname).toBe(`/app/library/${LibraryId.FRC_DESIGN_LIB}`);
+        // Spent, so it never reaches the app or a later sign-in.
+        expect(entry.searchParams.has("signInAttempted")).toBe(false);
+    });
+
+    // The enterprise the caller needs is a company Onshape's authorize endpoint
+    // takes, so a session scoped elsewhere is worth trying to replace.
+    it("signs in a caller whose session is scoped to another company", async () => {
+        const res = await createTestApp({ isAuthenticated: false }).request(
+            "/init?sessionCompanyId=company-1",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe("/auth/sign-in");
+    });
+
+    // There is no personal company to ask Onshape for, so the round trip comes
+    // back with the same session it started with.
+    it("opens the app for a session it cannot ask Onshape to rescope", async () => {
+        const res = await createTestApp({ isAuthenticated: false }).request(
+            "/init",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe(
+            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
+        );
+    });
+
+    // Nobody is signed in, so there is no row to read and no open to record.
+    it("records no open for a caller it opens signed out", async () => {
+        await createTestApp({
+            isAuthenticated: false,
+            signedIn: false
+        }).request("/init?signInAttempted=1", jsonRequest("GET"), env);
+
+        expect(await db.select().from(events).get()).toBeUndefined();
+    });
+
     it("never caches the gate's verdict", async () => {
         const res = await createTestApp().request(
             "/init",
