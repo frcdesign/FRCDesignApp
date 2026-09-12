@@ -506,8 +506,9 @@ describe("uploadConfigurationThumbnails", () => {
         expect(getImage).not.toHaveBeenCalled();
     });
 
-    // One size present is a half-done render, not a reason to skip.
-    it("renders when only one size is stored", async () => {
+    // One size present is a half-done render, not a reason to skip — and not a
+    // reason to fetch the size already in hand either.
+    it("renders only the size that is missing", async () => {
         await env.BLOB.put(
             configurationKey("half-stored", ThumbnailSize.SMALL),
             "bytes"
@@ -516,7 +517,40 @@ describe("uploadConfigurationThumbnails", () => {
 
         await upload(api, "half-stored");
 
-        expect(getImage).toHaveBeenCalled();
+        expect(getImage).toHaveBeenCalledTimes(1);
+        expect(getImage.mock.calls[0][0]).toContain(ThumbnailSize.LARGE);
+    });
+
+    // Onshape renders the sizes independently, so a poll can find one ready and
+    // the other not. Storing the ready one leaves the next attempt a single
+    // size to ask for, rather than fetching a pair it throws away again.
+    it("keeps the size that rendered when the other is not ready", async () => {
+        const getImage = vi.fn((path: string) =>
+            path.includes(ThumbnailSize.LARGE)
+                ? Promise.reject(new Error("not rendered"))
+                : Promise.resolve(new ArrayBuffer(4))
+        );
+        const api = { getImage } as unknown as OnshapeApi;
+
+        await expect(upload(api, "one-ready")).rejects.toThrow("not rendered");
+
+        expect(
+            await env.BLOB.head(
+                configurationKey("one-ready", ThumbnailSize.SMALL)
+            )
+        ).not.toBeNull();
+
+        getImage.mockImplementation(() => Promise.resolve(new ArrayBuffer(4)));
+        await upload(api, "one-ready");
+
+        // Two calls for the first attempt and one for the retry: the size that
+        // landed is not asked for again.
+        expect(getImage).toHaveBeenCalledTimes(3);
+        expect(
+            await env.BLOB.head(
+                configurationKey("one-ready", ThumbnailSize.LARGE)
+            )
+        ).not.toBeNull();
     });
 });
 
@@ -579,8 +613,9 @@ describe("uploadThumbnails", () => {
         expect(urls.large).toContain(storedPath.elementId);
     });
 
-    // One size present is a half-done upload, not a reason to skip.
-    it("renders when only one size is stored", async () => {
+    // One size present is a half-done upload, not a reason to skip — and not a
+    // reason to fetch the size already in hand either.
+    it("renders only the size that is missing", async () => {
         const partialPath = { ...elementPath, elementId: "half-rendered" };
         await env.BLOB.put(
             thumbnailKey(
@@ -594,6 +629,36 @@ describe("uploadThumbnails", () => {
 
         await uploadThumbnails(env.BLOB, api, partialPath, MICROVERSION);
 
-        expect(getImage).toHaveBeenCalledTimes(2);
+        expect(getImage).toHaveBeenCalledTimes(1);
+        expect(getImage.mock.calls[0][0]).toContain(ThumbnailSize.LARGE);
+    });
+
+    // The two calls go out together, so one can come back rendered and the
+    // other not. Storing the one that landed is what keeps a retry from
+    // fetching the pair again and discarding it again.
+    it("keeps the size that rendered when the other is not ready", async () => {
+        const failingPath = { ...elementPath, elementId: "one-rendered" };
+        const getImage = vi.fn((path: string) =>
+            path.includes(ThumbnailSize.LARGE)
+                ? Promise.reject(new Error("not rendered"))
+                : Promise.resolve(new ArrayBuffer(4))
+        );
+        const api = { getImage } as unknown as OnshapeApi;
+        const keyFor = (size: ThumbnailSize) =>
+            thumbnailKey(failingPath.elementId, MICROVERSION, size);
+
+        await expect(
+            uploadThumbnails(env.BLOB, api, failingPath, MICROVERSION)
+        ).rejects.toThrow("not rendered");
+
+        expect(await env.BLOB.head(keyFor(ThumbnailSize.SMALL))).not.toBeNull();
+
+        getImage.mockImplementation(() => Promise.resolve(new ArrayBuffer(4)));
+        await uploadThumbnails(env.BLOB, api, failingPath, MICROVERSION);
+
+        // Two calls for the first attempt and one for the retry: the size that
+        // landed is not asked for again.
+        expect(getImage).toHaveBeenCalledTimes(3);
+        expect(await env.BLOB.head(keyFor(ThumbnailSize.LARGE))).not.toBeNull();
     });
 });

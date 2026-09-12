@@ -49,10 +49,43 @@ async function putThumbnail(
     });
 }
 
-/** Whether every key is already stored, so the render can be skipped. */
-async function allStored(bucket: R2Bucket, keys: string[]): Promise<boolean> {
-    const heads = await Promise.all(keys.map((key) => bucket.head(key)));
-    return heads.every((head) => head !== null);
+const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
+
+/**
+ * Stores one size, unless the bucket already holds it. Per size rather than as
+ * a pair: an attempt can find one size ready and the other not, and a pair
+ * stored only when both calls came back throws away the one that was ready —
+ * every attempt, if the sizes keep coming ready in different ones.
+ *
+ * The key pins the microversion, so a size already stored is what Onshape would
+ * render again; skipping it spends none of the account's allocation on bytes we
+ * already hold.
+ */
+async function storeThumbnail(
+    bucket: R2Bucket,
+    key: string,
+    metadata: ThumbnailMetadata,
+    render: () => Promise<ArrayBuffer>
+): Promise<void> {
+    if (await bucket.head(key)) {
+        return;
+    }
+    await putThumbnail(bucket, key, await render(), metadata);
+}
+
+/**
+ * `allSettled`, so one size failing does not cut the other's store short; the
+ * first rejection is rethrown as it came, since the retry curve reads
+ * `Retry-After` off an `OnshapeRateLimitError`.
+ */
+function throwFirstRejection(results: PromiseSettledResult<unknown>[]): void {
+    const rejected = results.find(
+        (result): result is PromiseRejectedResult =>
+            result.status === "rejected"
+    );
+    if (rejected) {
+        throw rejected.reason;
+    }
 }
 
 /** Throws until Onshape has rendered them, which drives the load step's retries. */
@@ -63,31 +96,24 @@ export async function uploadThumbnails(
     microversionId: string
 ): Promise<ThumbnailUrls> {
     const { elementId } = elementPath;
-    const keys = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) =>
-        thumbnailKey(elementId, microversionId, size)
-    );
 
-    // The key pins the microversion, so what is stored under it is what Onshape
-    // would render again. A forced reload reaches here with the microversion
-    // unchanged, and downloading both sizes again would spend the account's
-    // Onshape allocation on bytes we already hold.
-    if (!(await allStored(bucket, keys))) {
-        const [small, large] = await Promise.all([
-            getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.SMALL),
-            getElementThumbnail(onshapeApi, elementPath, ThumbnailSize.LARGE)
-        ]);
-        if (!small || !large) {
-            throw new Error("Failed to find thumbnails. Try again later.");
-        }
-        await Promise.all(
-            [small, large].map((thumbnail, index) =>
-                putThumbnail(bucket, keys[index], thumbnail, {
-                    microversionId,
-                    configurationKey: DEFAULT_CONFIGURATION_KEY
-                })
+    // Both at once: an element reaching here usually needs both, and each is
+    // stored as it lands rather than at the end.
+    throwFirstRejection(
+        await Promise.allSettled(
+            BOTH_SIZES.map((size) =>
+                storeThumbnail(
+                    bucket,
+                    thumbnailKey(elementId, microversionId, size),
+                    {
+                        microversionId,
+                        configurationKey: DEFAULT_CONFIGURATION_KEY
+                    },
+                    () => getElementThumbnail(onshapeApi, elementPath, size)
+                )
             )
-        );
-    }
+        )
+    );
 
     return {
         small: thumbnailUrl({
@@ -118,41 +144,18 @@ export async function uploadConfigurationThumbnails(
     configurationKey: ConfigurationKey
 ): Promise<void> {
     const { elementId, microversionId } = subject;
-    const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({
-        size,
-        key: thumbnailKey(elementId, microversionId, size, configurationKey)
-    }));
-    const keys = targets.map((target) => target.key);
-
-    // A restarted run replays this step, and Onshape is the expensive part.
-    if (await allStored(bucket, keys)) {
-        return;
-    }
 
     // One size at a time rather than both at once: while the render is still
     // running the first call throws, and the attempt this poll is made of costs
-    // one Onshape call instead of two.
-    const rendered: { key: string; thumbnail: ArrayBuffer }[] = [];
-    for (const { size, key } of targets) {
-        rendered.push({
-            key,
-            thumbnail: await getThumbnailFromId(onshapeApi, thumbnailId, size)
-        });
+    // one Onshape call instead of two. What an attempt stores, the next skips.
+    for (const size of BOTH_SIZES) {
+        await storeThumbnail(
+            bucket,
+            thumbnailKey(elementId, microversionId, size, configurationKey),
+            { microversionId, configurationKey },
+            () => getThumbnailFromId(onshapeApi, thumbnailId, size)
+        );
     }
-
-    // The render above takes minutes, long enough to have been beaten to it.
-    if (await allStored(bucket, keys)) {
-        return;
-    }
-
-    await Promise.all(
-        rendered.map(({ key, thumbnail }) =>
-            putThumbnail(bucket, key, thumbnail, {
-                microversionId,
-                configurationKey
-            })
-        )
-    );
 }
 
 /** Falls back to the first element when the document designates no thumbnail. */
