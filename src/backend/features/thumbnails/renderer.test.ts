@@ -83,6 +83,13 @@ const notAcceptable = () =>
 const rendered = () => Promise.resolve(new ArrayBuffer(4));
 
 /**
+ * For tests that only read the queue's order. It keeps jobs queued — a 404 is
+ * "rendering" and would take the thread, which sorts that job first — and keeps
+ * the runtime from reaching the real Onshape while they look.
+ */
+const notAsked = () => Promise.reject(new Error("not asked in this test"));
+
+/**
  * Waits for the drain the runtime starts on its own. Enqueuing sets an alarm
  * for now, so the queue is already moving by the time a test looks at it, and
  * `runDurableObjectAlarm` cannot make that deterministic: it runs a scheduled
@@ -108,6 +115,19 @@ async function renderingKey(): Promise<string> {
     );
     const jobs = await renderer().queued();
     return jobs.find((job) => job.rendering)!.key;
+}
+
+/** The soonest any job may next be touched. */
+async function soonestDueAt(): Promise<number> {
+    return runInDurableObject(
+        renderer(),
+        (_instance, state) =>
+            state.storage.sql
+                .exec<{
+                    dueAt: number | null;
+                }>("SELECT MIN(dueAt) AS dueAt FROM jobs")
+                .one().dueAt ?? 0
+    );
 }
 
 async function queueOf(count: number) {
@@ -209,6 +229,7 @@ describe("ThumbnailRenderer", () => {
     // Nobody is waiting on any one thumbnail of a load, so it yields to the
     // configuration someone is watching a spinner for.
     it("runs what someone is watching before what a load queued", async () => {
+        mockRenders(notAsked);
         await renderer().enqueue(
             elementRequest("loaded"),
             SESSION_ID,
@@ -229,6 +250,7 @@ describe("ThumbnailRenderer", () => {
     // A row shows the small one and reveals the large on hover; the insert menu
     // shows only the large. They are separate renders, and only one may run.
     it("runs the size its surface shows first", async () => {
+        mockRenders(notAsked);
         await renderer().enqueue(
             elementRequest("row"),
             SESSION_ID,
@@ -349,13 +371,12 @@ describe("ThumbnailRenderer", () => {
             RenderSource.LOAD
         );
 
-        await until(async () => (await renderer().queued()).length === 2);
-        await runInDurableObject(renderer(), (_instance, state) => {
-            const soonest = state.storage.sql
-                .exec<{ dueAt: number }>("SELECT MIN(dueAt) AS dueAt FROM jobs")
-                .one().dueAt;
-            expect(soonest).toBeGreaterThan(Date.now() + 20_000);
-        });
+        // Waits for the stand-down itself. Waiting on the queue length instead
+        // waits for nothing — both jobs are queued the moment `enqueue`
+        // returns, so the assertion would race the drain that rate-limits them.
+        await until(async () => (await soonestDueAt()) > Date.now() + 20_000);
+        // Both still queued: a rate limit is not a reason to drop anything.
+        expect(await renderer().queued()).toHaveLength(2);
     });
 
     // Retrying asks Onshape the same question for the same answer.
