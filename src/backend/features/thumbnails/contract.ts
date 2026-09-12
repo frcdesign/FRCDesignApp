@@ -7,7 +7,7 @@ export enum ThumbnailSize {
     LARGE = "300x300"
 }
 
-/** An element's two stored thumbnail URLs, produced (and stored) as a pair. */
+/** An element's two stored thumbnail URLs, returned once both are stored. */
 export interface ThumbnailUrls {
     small: string;
     large: string;

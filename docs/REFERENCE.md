@@ -115,8 +115,8 @@ This app runs inside an Onshape iframe, which adds some authentication complexit
 2. The Worker finds no valid session cookie. It redirects to `/auth/sign-in?redirectUrl=<the /init URL>`.
 3. The sign-in handler generates a random `state` string (a security measure), stores `{ state, redirectUrl }` in KV under a random session ID, sets the session cookie, and redirects the user to Onshape's OAuth login page.
 4. The user sees the Onshape "Authorize App" screen and clicks approve.
-5. Onshape redirects back to `/auth/callback?code=...&state=...`.
-6. The callback handler reads the session from KV, verifies the `state` matches (preventing CSRF attacks), and exchanges the `code` for real access and refresh tokens using the [Arctic](https://arcticjs.dev/) OAuth library.
+5. Onshape redirects back to `/auth/callback?code=...&state=...`. The sign-in names that callback as the `redirect_uri`, taken from the origin the request came in on, so Onshape returns the user to the host they signed in on rather than to whichever redirect URL it would otherwise pick — which is what lets two hosts share one OAuth app during a cutover. Every origin the app answers on has to be one of the redirect URLs registered on the OAuth app, spelled exactly.
+6. The callback handler reads the session from KV, verifies the `state` matches (preventing CSRF attacks), and exchanges the `code` for real access and refresh tokens using the [Arctic](https://arcticjs.dev/) OAuth library. The exchange repeats the same `redirect_uri`, as OAuth requires.
 7. The tokens are saved to KV under the session ID. The temporary login-session entry is deleted.
 8. The user is redirected back to the original `/init` URL, which now succeeds because the session cookie and tokens are in place.
 
