@@ -36,8 +36,8 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
         expect(thumbnailDelay(12)).toEqual("300 seconds");
     });
 
-    // The limit is the only thing that ends the poll: the step's timeout covers
-    // an attempt, not the waits, so an unbounded curve retries for days.
+    // The limit is what ends the poll: the step timeout covers an attempt, not
+    // the waits between them.
     it("gives up about twenty minutes in", () => {
         const total = Array.from(
             { length: THUMBNAIL_STEP_RETRIES.limit - 1 },
@@ -69,9 +69,8 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
     });
 });
 
-// Workflows defaults `backoff` to exponential and multiplies what the callback
-// returned by it, which is how a poll capped at two minutes came to wait four
-// hours between attempts. Each config is the whole curve, so each pins this.
+// A poll capped at two minutes waited four hours between attempts until these
+// were pinned; see CONSTANT_BACKOFF for what the platform was adding.
 describe("every retry config", () => {
     it("leaves the platform no curve to apply on top", () => {
         for (const retries of [

@@ -4,14 +4,11 @@ import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 
 /**
- * Every config below computes its own wait, so the platform must not apply one
- * of its own on top. It does by default: `backoff` is exponential unless set,
- * and it multiplies whatever a `delay` callback returned. A cert run of the
- * thumbnail poll waited 4h16m between attempts — its capped 120 seconds times
- * 2^7 — and the step's timeout does not bound that, since it covers an attempt
- * and not the waits between them. Cloudflare documents `delay` and `backoff`
- * separately and, as far as I can tell, says nothing about combining them, so
- * this is from reading a run rather than the docs.
+ * Pinned because the platform's curve compounds with the callbacks below:
+ * `backoff` defaults to exponential and multiplies what `delay` returned, which
+ * turned the thumbnail poll's capped 120 seconds into 120 × 2^7 — a run waiting
+ * 4h16m between attempts. Cloudflare documents the two settings separately and,
+ * as far as I saw, not how they combine, so that is read off a run.
  */
 const CONSTANT_BACKOFF: WorkflowBackoff = "constant";
 
@@ -92,9 +89,9 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
 }
 
 export const THUMBNAIL_STEP_RETRIES = {
-    // 5s, 10s … 300s and then every five minutes. Nine waits, so the poll gives
-    // up twenty minutes in: nothing else ends it, and a render Onshape has not
-    // produced by then is one a reload has to pick up.
+    // 5s, 10s … 300s: nine waits, about twenty minutes. The limit is what ends
+    // the poll — the step timeout covers an attempt, not the waits between them
+    // — and a render that has not landed by then waits for a reload.
     limit: 10,
     delay: thumbnailRetryDelay,
     backoff: CONSTANT_BACKOFF
@@ -106,8 +103,8 @@ const CONFIGURATION_BASE_DELAY_SECONDS = 4;
 /**
  * Where the doubling stops for a render someone is waiting on. The curve above
  * ends up waiting longer than the render takes — a thumbnail that lands a
- * second after a poll then sits unserved for five minutes, which no one is
- * going to watch an insert preview spin through.
+ * second after a poll then sits unserved for five minutes, longer than anyone
+ * watches an insert preview spin.
  */
 const CONFIGURATION_MAX_DELAY_SECONDS = 15;
 

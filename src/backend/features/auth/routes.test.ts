@@ -135,8 +135,8 @@ describe("GET /auth/sign-in", () => {
         );
     });
 
-    // Onshape returns the caller to the redirect uri the sign-in named, which
-    // is what lets two hosts share one OAuth app for the length of a cutover.
+    // The cutover case: two hosts on one OAuth app, each sign-in coming back to
+    // the host it started on.
     it("names each host's own, not one host's for both", async () => {
         const url = await authorizationUrl("", "https://app.frcdesign.org");
         expect(url.searchParams.get("redirect_uri")).toBe(

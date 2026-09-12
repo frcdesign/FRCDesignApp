@@ -16,14 +16,12 @@ const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
 /**
- * The callback to name to Onshape: this app's, on the host the request came in
- * on. Naming one is what lets two hosts share an OAuth app through a cutover —
- * Onshape returns the user to the host that asked, rather than to whichever
- * registered redirect url it would otherwise pick — and taking it from the
- * request is what keeps each host's sign-in on that host.
+ * Per host, so a sign-in that started on one comes back to it: two hosts share
+ * an OAuth app through a cutover, and the callback's host is where `beginSession`
+ * sets the cookie.
  *
- * Onshape matches it against the redirect urls registered on the OAuth app, so
- * every origin the app answers on has to be registered there and spelled the
+ * Onshape matches this against the redirect urls registered on the OAuth app,
+ * so every origin the app answers on needs one registered there, spelled the
  * same way.
  */
 function getRedirectUri(c: AppContext): string {
@@ -31,8 +29,8 @@ function getRedirectUri(c: AppContext): string {
 }
 
 /**
- * `redirectUri` rides the two legs that carry one, the authorization request
- * and the code exchange, which must agree on it. A refresh sends none.
+ * Defaulted, since only the authorization request and the code exchange carry a
+ * redirect uri: arctic sends none on a refresh whatever the client holds.
  */
 export function getOauthClient(
     redirectUri: string | null = null
@@ -109,8 +107,8 @@ export async function doCallback(c: AppContext): Promise<Response> {
         );
     }
 
-    // The same redirect uri the sign-in sent, which the exchange has to repeat.
-    // This request arrived at it, so the request resolves it the same way.
+    // OAuth has the exchange repeat the uri the sign-in sent. This request
+    // arrived at that uri, so resolving it again here gives the same string.
     const oauthClient = getOauthClient(getRedirectUri(c));
 
     await oauthClient
