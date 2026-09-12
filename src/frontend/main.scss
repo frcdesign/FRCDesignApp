@@ -11,8 +11,10 @@
 // The rule above is about not dragging a selection across the UI's chrome, but
 // `*` reaches text fields too, where dragging to select is how one is edited —
 // and a field that cannot hold a selection is also what makes select-on-focus
-// look like it flashes and gives up.
-input,
+// look like it flashes and gives up. Not a readonly one: Mantine renders a
+// Select as one of those, and there the value is chrome that happens to sit in
+// an input, which highlights on a click meant to open the dropdown.
+input:not([readonly]),
 textarea {
     user-select: text;
     -webkit-user-select: text;

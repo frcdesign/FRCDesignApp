@@ -81,6 +81,11 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const urlFor = (size: ThumbnailSize, stored?: string) =>
         renderTarget ? thumbnailUrl({ ...renderTarget, size }) : stored;
 
+    // Only while a configuration is rendering: without a target the stored url
+    // is what `urlFor` already returns, and falling back to it means nothing.
+    const fallbackFor = (stored?: string) =>
+        renderTarget ? stored : undefined;
+
     // A url this row is having rendered answers 404 until the render lands.
     const isRendering = renderTarget !== undefined;
 
@@ -97,6 +102,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
             <HoverCard.Target>
                 <Thumbnail
                     url={urlFor(ThumbnailSize.SMALL, smallThumbnailUrl)}
+                    fallbackUrl={fallbackFor(smallThumbnailUrl)}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.SMALL, 0.8)}
                     spinnerSize={25}
                     isRendering={isRendering}
@@ -105,6 +111,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
             <HoverCard.Dropdown p="xs">
                 <Thumbnail
                     url={urlFor(ThumbnailSize.LARGE, largeThumbnailUrl)}
+                    fallbackUrl={fallbackFor(largeThumbnailUrl)}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
                     spinnerSize={48}
                     isRendering={isRendering}
@@ -135,6 +142,13 @@ const STORED_RETRIES = 1;
 // Extend with div props to support being used as a HoverCard Target
 interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     url?: string;
+    /**
+     * The element's own thumbnail, shown until `url` renders — a render takes
+     * minutes, and the unconfigured part is closer to the row than a spinner.
+     * Loaded through a query of its own so a url whose bytes are gone shows the
+     * same placeholder as anything else, rather than a broken image.
+     */
+    fallbackUrl?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
     /** Whether a miss is a render still running, and so worth polling out. */
@@ -142,8 +156,14 @@ interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { url, heightAndWidth, spinnerSize, isRendering, ...centerProps } =
-        props;
+    const {
+        url,
+        fallbackUrl,
+        heightAndWidth,
+        spinnerSize,
+        isRendering,
+        ...centerProps
+    } = props;
 
     const imageQuery = useQuery({
         queryKey: ["storage-thumbnail", url],
@@ -153,20 +173,28 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         retry: isRendering ? ROW_POLL_ATTEMPTS : STORED_RETRIES,
         retryDelay: isRendering ? rowPollDelay : undefined
     });
+    const fallbackQuery = useQuery({
+        queryKey: ["storage-thumbnail", fallbackUrl],
+        queryFn: fallbackUrl
+            ? ({ signal }) => loadImage(fallbackUrl, signal)
+            : skipToken,
+        retry: STORED_RETRIES,
+        enabled: !imageQuery.isSuccess
+    });
+
+    // The configuration's own render once it lands, and nothing after that:
+    // the fallback stands in for it, it does not replace it.
+    const shownUrl = imageQuery.data ?? fallbackQuery.data;
 
     let content;
-    if (url === undefined || imageQuery.isError) {
-        content = <QuestionIcon size={spinnerSize} />;
-    } else if (imageQuery.isPending) {
-        content = <Loader size={spinnerSize} />;
-    } else {
+    if (shownUrl !== undefined) {
         content = (
-            <img
-                src={imageQuery.data}
-                {...heightAndWidth}
-                style={FIT_INSIDE_BOX}
-            />
+            <img src={shownUrl} {...heightAndWidth} style={FIT_INSIDE_BOX} />
         );
+    } else if (url === undefined || imageQuery.isError) {
+        content = <QuestionIcon size={spinnerSize} />;
+    } else {
+        content = <Loader size={spinnerSize} />;
     }
 
     return (
