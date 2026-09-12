@@ -15,8 +15,33 @@ import {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-export function getOauthClient(): OAuth2Client {
-    return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
+/**
+ * The callback to name to Onshape: this app's, on the host the request came in
+ * on. Naming one is what lets two hosts share an OAuth app through a cutover —
+ * Onshape returns the user to the host that asked, rather than to whichever
+ * registered redirect url it would otherwise pick — and taking it from the
+ * request is what keeps each host's sign-in on that host.
+ *
+ * Onshape matches it against the redirect urls registered on the OAuth app, so
+ * every origin the app answers on has to be registered there and spelled the
+ * same way.
+ */
+function getRedirectUri(c: AppContext): string {
+    return new URL(c.req.url).origin + "/auth/callback";
+}
+
+/**
+ * `redirectUri` rides the two legs that carry one, the authorization request
+ * and the code exchange, which must agree on it. A refresh sends none.
+ */
+export function getOauthClient(
+    redirectUri: string | null = null
+): OAuth2Client {
+    return new OAuth2Client(
+        env.OAUTH_CLIENT_ID,
+        env.OAUTH_CLIENT_SECRET,
+        redirectUri
+    );
 }
 
 export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
@@ -37,7 +62,7 @@ export async function doSignIn(
     redirectUrl: string,
     companyId?: string
 ): Promise<string> {
-    const oauthClient = getOauthClient();
+    const oauthClient = getOauthClient(getRedirectUri(c));
 
     const state = generateState();
 
@@ -84,7 +109,9 @@ export async function doCallback(c: AppContext): Promise<Response> {
         );
     }
 
-    const oauthClient = getOauthClient();
+    // The same redirect uri the sign-in sent, which the exchange has to repeat.
+    // This request arrived at it, so the request resolves it the same way.
+    const oauthClient = getOauthClient(getRedirectUri(c));
 
     await oauthClient
         .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)
