@@ -22,8 +22,7 @@ import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 import {
     type GroupTarget,
     type LoadContext,
-    LOAD_CONCURRENCY,
-    createLimiter,
+    createLoadContext,
     getOnshapeApiFromContext
 } from "./context";
 import { untrackJob } from "./job-tracker";
@@ -61,12 +60,7 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<GroupResult[]> {
         const { libraryId, sessionId, forceReload = false } = event.payload;
-        const ctx: LoadContext = {
-            env: this.env,
-            sessionId,
-            step,
-            limit: createLimiter(LOAD_CONCURRENCY)
-        };
+        const ctx = createLoadContext(this.env, sessionId, step);
 
         const storedGroups = await step.do("list-groups", () =>
             getDb(ctx.env.DB)
@@ -144,12 +138,7 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<GroupResult> {
         const params = event.payload;
-        const ctx: LoadContext = {
-            env: this.env,
-            sessionId: params.sessionId,
-            step,
-            limit: createLimiter(LOAD_CONCURRENCY)
-        };
+        const ctx = createLoadContext(this.env, params.sessionId, step);
 
         // Written before anything can fail, so an add that dies partway leaves a
         // group the library still shows and an editor can retry or delete.

@@ -62,11 +62,27 @@
             "name": "add-group-workflow",
             "binding": "ADD_GROUP_WORKFLOW",
             "class_name": "AddGroupWorkflow"
-        },
+        }
+    ],
+    /**
+     * One renderer per Onshape user. Onshape appears to run at most one
+     * thumbnail render per user at a time, so every thumbnail fetch queues here
+     * and the object is what makes them one at a time.
+     */
+    "durable_objects": {
+        "bindings": [
+            {
+                "name": "THUMBNAIL_RENDERER",
+                "class_name": "ThumbnailRenderer"
+            }
+        ]
+    },
+    // Inherited by every environment, which is what we want: each gets its own
+    // objects under the same class.
+    "migrations": [
         {
-            "name": "thumbnail-workflow",
-            "binding": "THUMBNAIL_WORKFLOW",
-            "class_name": "ThumbnailWorkflow"
+            "tag": "v1",
+            "new_sqlite_classes": ["ThumbnailRenderer"]
         }
     ],
     /**
@@ -123,13 +139,16 @@
                     "name": "add-group-workflow-cert",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
-                },
-                {
-                    "name": "thumbnail-workflow-cert",
-                    "binding": "THUMBNAIL_WORKFLOW",
-                    "class_name": "ThumbnailWorkflow"
                 }
             ],
+            "durable_objects": {
+                "bindings": [
+                    {
+                        "name": "THUMBNAIL_RENDERER",
+                        "class_name": "ThumbnailRenderer"
+                    }
+                ]
+            },
             "vars": {
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
                 // Production, not because cert is production, but because
@@ -175,13 +194,16 @@
                     "name": "add-group-workflow-prod",
                     "binding": "ADD_GROUP_WORKFLOW",
                     "class_name": "AddGroupWorkflow"
-                },
-                {
-                    "name": "thumbnail-workflow-prod",
-                    "binding": "THUMBNAIL_WORKFLOW",
-                    "class_name": "ThumbnailWorkflow"
                 }
             ],
+            "durable_objects": {
+                "bindings": [
+                    {
+                        "name": "THUMBNAIL_RENDERER",
+                        "class_name": "ThumbnailRenderer"
+                    }
+                ]
+            },
             "vars": {
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "production"

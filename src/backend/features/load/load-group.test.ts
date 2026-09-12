@@ -160,7 +160,9 @@ const CTX: LoadContext = {
     env,
     sessionId: "test-session",
     step: FAKE_STEP,
-    limit: createLimiter(LOAD_CONCURRENCY)
+    limit: createLimiter(LOAD_CONCURRENCY),
+    renderer: () =>
+        Promise.resolve({ userId: "test-user", sessionId: "test-session" })
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */

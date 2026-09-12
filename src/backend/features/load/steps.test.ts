@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
-import {
-    CONFIGURATION_THUMBNAIL_RETRIES,
-    ONSHAPE_STEP_RETRIES,
-    THUMBNAIL_STEP_RETRIES
-} from "./steps";
+import { ONSHAPE_STEP_RETRIES, THUMBNAIL_STEP_RETRIES } from "./steps";
 
 /** The delay before the retry that follows attempt `attempt`. */
 function thumbnailDelay(attempt: number, error = new Error("not rendered")) {
@@ -73,32 +69,9 @@ describe("THUMBNAIL_STEP_RETRIES", () => {
 // were pinned; see CONSTANT_BACKOFF for what the platform was adding.
 describe("every retry config", () => {
     it("leaves the platform no curve to apply on top", () => {
-        for (const retries of [
-            ONSHAPE_STEP_RETRIES,
-            THUMBNAIL_STEP_RETRIES,
-            CONFIGURATION_THUMBNAIL_RETRIES
-        ]) {
+        for (const retries of [ONSHAPE_STEP_RETRIES, THUMBNAIL_STEP_RETRIES]) {
             expect(retries.backoff).toBe("constant");
         }
-    });
-});
-
-describe("CONFIGURATION_THUMBNAIL_RETRIES", () => {
-    const delay = (attempt: number) =>
-        CONFIGURATION_THUMBNAIL_RETRIES.delay({
-            ctx: { attempt },
-            error: new Error("not rendered")
-        });
-
-    // Someone is watching this one render, so it stays on a short leash rather
-    // than following the curve above out to five-minute waits.
-    it("doubles from four seconds, capped at fifteen", () => {
-        expect([1, 2, 3, 9].map(delay)).toEqual([
-            "4 seconds",
-            "8 seconds",
-            "15 seconds",
-            "15 seconds"
-        ]);
     });
 });
 

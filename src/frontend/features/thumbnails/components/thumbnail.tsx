@@ -1,7 +1,10 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { loadImage } from "../../../lib/api-client";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { ThumbnailSize } from "@backend/features/thumbnails/contract";
+import {
+    RenderSource,
+    ThumbnailSize
+} from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { QuestionIcon } from "@phosphor-icons/react";
@@ -49,10 +52,11 @@ interface ThumbnailTarget {
     /** Empty means the element default. */
     configurationKey: ConfigurationKey;
     /**
-     * Whether a miss should start rendering: surfaces where the user picked the
-     * configuration do, where a search would otherwise render a row at a time.
+     * Set where a miss should queue a render: surfaces the user picked the
+     * configuration on. A search would otherwise queue a render per row, and
+     * Onshape does one at a time.
      */
-    renderThumbnail: boolean;
+    renderSource?: RenderSource;
     /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
 }
@@ -68,13 +72,13 @@ interface CardThumbnailProps {
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
-    // Only a row that starts the render asks for one. Nothing else renders a
+    // Only a row that queues the render asks for one. Nothing else renders a
     // configuration, so a row that does not would be asking for a picture that
     // is never going to exist; the element's own is the honest thing to show.
     const renderTarget =
         target &&
         target.configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-        target.renderThumbnail
+        target.renderSource
             ? target
             : undefined;
 
@@ -264,7 +268,9 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         microversionId,
         size: PREVIEW_SIZE,
         configurationKey,
-        renderThumbnail: true,
+        // The one surface that may take the render thread off whatever else is
+        // using it: somebody picked this configuration and is watching it load.
+        renderSource: RenderSource.INSERT_MENU,
         insertableId
     });
 

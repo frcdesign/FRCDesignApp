@@ -1,6 +1,10 @@
 import type { WorkflowBackoff } from "cloudflare:workers";
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
-import type { ThumbnailUrls } from "../thumbnails/contract";
+import { RenderSource, type ThumbnailUrls } from "../thumbnails/contract";
+import {
+    requestThumbnails,
+    type ThumbnailRequest
+} from "../thumbnails/renderer";
 import type { LoadContext } from "./context";
 
 /**
@@ -97,66 +101,37 @@ export const THUMBNAIL_STEP_RETRIES = {
     backoff: CONSTANT_BACKOFF
 };
 
-/** The first wait for a render someone is watching; each attempt doubles it. */
-const CONFIGURATION_BASE_DELAY_SECONDS = 4;
-
 /**
- * Where the doubling stops for a render someone is waiting on. The curve above
- * ends up waiting longer than the render takes — a thumbnail that lands a
- * second after a poll then sits unserved for five minutes, longer than anyone
- * watches an insert preview spin.
- */
-const CONFIGURATION_MAX_DELAY_SECONDS = 15;
-
-function configurationThumbnailRetryDelay(
-    input: RetryDelayInput
-): `${number} seconds` {
-    const rateLimited = rateLimitDelay(input.error);
-    if (rateLimited) {
-        return rateLimited;
-    }
-    const seconds = Math.min(
-        CONFIGURATION_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
-        CONFIGURATION_MAX_DELAY_SECONDS
-    );
-    return `${seconds} seconds`;
-}
-
-/**
- * The configuration render behind the insert preview, where a person is
- * watching a spinner rather than a load nobody is. Each attempt is one Onshape
- * call — see `uploadConfigurationThumbnails` — so this polls harder than
- * {@link THUMBNAIL_STEP_RETRIES} and still asks Onshape fewer times overall.
- */
-export const CONFIGURATION_THUMBNAIL_RETRIES = {
-    // 4s, 8s, then every 15s: about ten minutes, which outlasts the six the
-    // client polls for.
-    limit: 40,
-    delay: configurationThumbnailRetryDelay,
-    backoff: CONSTANT_BACKOFF
-};
-
-/**
+ * Queues a thumbnail and waits for it to land in R2 — the retries are the wait,
+ * and each one re-queues, which is free because the queue dedupes by key.
+ *
  * Returns `null` when the thumbnails never showed up, which the caller records
- * as a build issue rather than failing the whole load.
+ * as a build issue rather than failing the whole load. The render is not lost
+ * with it: it finishes in the queue, and the next load reads it back from R2.
  */
-export async function uploadThumbnailsStep(
+export async function awaitThumbnailsStep(
     ctx: LoadContext,
     name: string,
-    uploadFn: () => Promise<ThumbnailUrls | null>
+    request: ThumbnailRequest,
+    read: () => Promise<ThumbnailUrls | null>
 ): Promise<ThumbnailUrls | null> {
     try {
         return await ctx.step.do(
             name,
-            {
-                retries: THUMBNAIL_STEP_RETRIES
-            },
+            { retries: THUMBNAIL_STEP_RETRIES },
             async () => {
-                const thumbnails = await uploadFn();
-                if (!thumbnails) {
-                    throw new Error("Thumbnails are not rendered yet.");
-                }
-                return thumbnails;
+                // Read first, so a reload whose microversion did not move
+                // queues nothing at all.
+                const stored = await read();
+                if (stored) return stored;
+
+                await requestThumbnails(
+                    ctx.env,
+                    await ctx.renderer(),
+                    request,
+                    RenderSource.LOAD
+                );
+                throw new Error("Thumbnails are not rendered yet.");
             }
         );
     } catch {

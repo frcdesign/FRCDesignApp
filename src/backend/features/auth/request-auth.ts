@@ -73,15 +73,28 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     return api;
 }
 
-/** Returns the caller's Onshape user id, resolved once and kept on the session. */
-async function getCachedUserId(c: AppContext): Promise<string> {
-    const sessionId = getSessionId(c);
-    const session = await getSession(c.env.KV, sessionId);
+/**
+ * The Onshape user a session belongs to, resolved once and kept on it. Taken by
+ * session id rather than request because work started by one outlives it — a
+ * render queued under the user who asked for it, which the renderer is keyed by.
+ */
+export async function getUserIdFromSessionId(
+    kv: KVNamespace,
+    sessionId: string
+): Promise<string> {
+    const session = await getSession(kv, sessionId);
     if (session.userId) return session.userId;
 
-    const userId = await getUserId(await getOnshapeApi(c));
-    await saveSession(c.env.KV, sessionId, { ...session, userId });
+    const userId = await getUserId(
+        await getOnshapeApiFromSessionId(kv, sessionId)
+    );
+    await saveSession(kv, sessionId, { ...session, userId });
     return userId;
+}
+
+/** Returns the caller's Onshape user id, resolved once and kept on the session. */
+function getCachedUserId(c: AppContext): Promise<string> {
+    return getUserIdFromSessionId(c.env.KV, getSessionId(c));
 }
 
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
