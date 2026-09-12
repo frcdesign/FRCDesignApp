@@ -67,74 +67,35 @@ export const ONSHAPE_STEP_RETRIES = {
     backoff: CONSTANT_BACKOFF
 };
 
-/** The first wait after a render isn't ready; each attempt doubles it. */
-const THUMBNAIL_BASE_DELAY_SECONDS = 5;
-
 /**
- * Where the doubling stops. Left uncapped, the last waits grow longer than the
- * renders themselves, so a thumbnail that landed early sits unnoticed.
+ * Queues a thumbnail and returns what is already stored, which is nothing the
+ * first time a microversion is seen. Deliberately does not wait: Onshape
+ * renders one thumbnail per user at a time, so a library's worth of them takes
+ * far longer than a load should, and the renderer records the urls on the row
+ * itself once they land.
  */
-const THUMBNAIL_MAX_DELAY_SECONDS = 300;
-
-/**
- * Onshape gives no signal when a render lands, so the step polls, doubling from
- * five seconds. A rate limit overrides the curve.
- */
-function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
-    const rateLimited = rateLimitDelay(input.error);
-    if (rateLimited) {
-        return rateLimited;
-    }
-    const seconds = Math.min(
-        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
-        THUMBNAIL_MAX_DELAY_SECONDS
-    );
-    return `${seconds} seconds`;
-}
-
-export const THUMBNAIL_STEP_RETRIES = {
-    // 5s, 10s … 300s: nine waits, about twenty minutes. The limit is what ends
-    // the poll — the step timeout covers an attempt, not the waits between them
-    // — and a render that has not landed by then waits for a reload.
-    limit: 10,
-    delay: thumbnailRetryDelay,
-    backoff: CONSTANT_BACKOFF
-};
-
-/**
- * Queues a thumbnail and waits for it to land in R2 — the retries are the wait,
- * and each one re-queues, which is free because the queue dedupes by key.
- *
- * Returns `null` when the thumbnails never showed up, which the caller records
- * as a build issue rather than failing the whole load. The render is not lost
- * with it: it finishes in the queue, and the next load reads it back from R2.
- */
-export async function awaitThumbnailsStep(
+export async function queueThumbnailsStep(
     ctx: LoadContext,
     name: string,
     request: ThumbnailRequest,
     read: () => Promise<ThumbnailUrls | null>
 ): Promise<ThumbnailUrls | null> {
     try {
-        return await ctx.step.do(
-            name,
-            { retries: THUMBNAIL_STEP_RETRIES },
-            async () => {
-                // Read first, so a reload whose microversion did not move
-                // queues nothing at all.
-                const stored = await read();
-                if (stored) return stored;
+        return await ctx.step.do(name, async () => {
+            const stored = await read();
+            if (stored) return stored;
 
-                await requestThumbnails(
-                    ctx.env,
-                    await ctx.renderer(),
-                    request,
-                    RenderSource.LOAD
-                );
-                throw new Error("Thumbnails are not rendered yet.");
-            }
-        );
+            await requestThumbnails(
+                ctx.env,
+                await ctx.renderer(),
+                request,
+                RenderSource.LOAD
+            );
+            return null;
+        });
     } catch {
+        // Queueing failed, which the row records as a pending thumbnail the
+        // renderer will never resolve; a later load asks again.
         return null;
     }
 }

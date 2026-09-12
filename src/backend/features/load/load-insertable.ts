@@ -34,7 +34,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { awaitThumbnailsStep, ONSHAPE_STEP_RETRIES } from "./steps";
+import { ONSHAPE_STEP_RETRIES, queueThumbnailsStep } from "./steps";
 
 /**
  * Exactly the columns a reload overwrites; the rest of the row is identity or
@@ -85,18 +85,22 @@ export async function loadInsertable(
     // indexed element probes once per configuration.
     const probed = await ctx.limit(() => probeInsertable(ctx, target));
 
-    // Outside the limiter: the renderer is what bounds thumbnail calls now, so
-    // a slot held across this wait would only block another insertable's probe.
-    // An empty studio is skipped — Onshape renders nothing for one, so the wait
-    // could only spend its budget on a thumbnail that cannot exist.
+    // Queued rather than waited on: the renderer writes the urls onto this row
+    // when they land. An empty studio is skipped, since Onshape renders nothing
+    // for one and the queue would carry a thumbnail that cannot exist.
     const thumbnailUrls = probed.hasParts
-        ? await awaitThumbnailsStep(
+        ? await queueThumbnailsStep(
               ctx,
               `thumbnail-${insertableId}`,
               {
                   kind: "element",
                   elementPath,
-                  microversionId: target.microversionId
+                  microversionId: target.microversionId,
+                  owner: {
+                      kind: "insertable",
+                      libraryId: target.libraryId,
+                      insertableId
+                  }
               },
               () =>
                   readThumbnailUrls(
