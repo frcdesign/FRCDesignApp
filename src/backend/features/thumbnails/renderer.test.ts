@@ -93,27 +93,35 @@ const rendered = () => Promise.resolve(new ArrayBuffer(4));
 const notAsked = () => Promise.reject(new Error("not asked in this test"));
 
 /**
- * Waits for the drain the runtime starts on its own. Enqueuing sets an alarm
- * for now, so the queue is already moving by the time a test looks at it, and
- * `runDurableObjectAlarm` cannot make that deterministic: it runs a scheduled
- * alarm whatever time it was scheduled for, stepping over the poll interval a
- * held render is waiting out.
+ * Drives the queue with its own alarm until `reached` holds, without waiting on
+ * wall time. Enqueuing schedules an alarm for now, so the runtime may already
+ * be draining; each pass yields, which lets one in flight finish, and runs the
+ * next alarm if one is scheduled.
+ *
+ * Deliberately no timers. The pool runs files in parallel and promises nothing
+ * about how long a drain takes, so anything paced by the clock is both slower
+ * and a coin toss.
  */
-async function until(
-    reached: () => boolean | Promise<boolean>,
-    timeoutMs = 3_000
+async function drainUntil(
+    reached: () => boolean | Promise<boolean>
 ): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
+    for (let pass = 0; pass < 50; pass++) {
         if (await reached()) return;
-        await scheduler.wait(10);
+        await runDurableObjectAlarm(renderer());
     }
     throw new Error("the renderer never reached the expected state");
 }
 
+/** Runs several more alarms, so "nothing changed" means it had the chance to. */
+async function settle(): Promise<void> {
+    for (let pass = 0; pass < 5; pass++) {
+        await runDurableObjectAlarm(renderer());
+    }
+}
+
 /** The key holding the render thread, once one does. */
 async function renderingKey(): Promise<string> {
-    await until(async () =>
+    await drainUntil(async () =>
         (await renderer().queued()).some((job) => job.rendering)
     );
     const jobs = await renderer().queued();
@@ -134,7 +142,7 @@ async function soonestDueAt(): Promise<number> {
 }
 
 async function queueOf(count: number) {
-    await until(async () => (await renderer().queued()).length === count);
+    await drainUntil(async () => (await renderer().queued()).length === count);
     return renderer().queued();
 }
 
@@ -217,17 +225,16 @@ describe("ThumbnailRenderer", () => {
             RenderSource.LOAD
         );
 
-        // Waited out rather than forced: `runDurableObjectAlarm` runs the
-        // handler but does not move the clock, and the poll interval is what
-        // the held job is sitting out.
         const held = await renderingKey();
-        await until(() => callsFor(calls, "first").length >= 2, 10_000);
+        // More passes, so "never asked about" means the queue had every chance
+        // to ask and did not.
+        await settle();
 
         expect(held).toContain(elementIdFor("first"));
         // The job behind it was due the whole time and never asked about:
         // asking would have abandoned the render in flight.
         expect(callsFor(calls, "second")).toEqual([]);
-    }, 15_000);
+    });
 
     // Nobody is waiting on any one thumbnail of a load, so it yields to the
     // configuration someone is watching a spinner for.
@@ -291,8 +298,11 @@ describe("ThumbnailRenderer", () => {
             RenderSource.INSERT_MENU
         );
 
-        await until(async () =>
-            (await renderingKey()).includes(elementIdFor("watched"))
+        await drainUntil(async () =>
+            (await renderer().queued()).some(
+                (job) =>
+                    job.rendering && job.key.includes(elementIdFor("watched"))
+            )
         );
         // The load's render is gone, not its job: it starts over when its turn
         // comes round again.
@@ -377,7 +387,9 @@ describe("ThumbnailRenderer", () => {
         // Waits for the stand-down itself. Waiting on the queue length instead
         // waits for nothing — both jobs are queued the moment `enqueue`
         // returns, so the assertion would race the drain that rate-limits them.
-        await until(async () => (await soonestDueAt()) > Date.now() + 20_000);
+        await drainUntil(
+            async () => (await soonestDueAt()) > Date.now() + 20_000
+        );
         // Both still queued: a rate limit is not a reason to drop anything.
         expect(await renderer().queued()).toHaveLength(2);
     });
@@ -461,8 +473,7 @@ describe("ThumbnailRenderer", () => {
                 RenderSource.LOAD
             );
 
-            await queueOf(0);
-            await until(async () => {
+            await drainUntil(async () => {
                 const row = await readRow(target.insertableId);
                 return row?.smallThumbnailUrl !== null;
             });
@@ -480,7 +491,14 @@ describe("ThumbnailRenderer", () => {
         // Nothing is going to arrive, so the row should stop saying "loading".
         it("turns pending into failed when it gives up", async () => {
             const target = await seedPendingInsertable();
-            mockRenders(() => Promise.reject(new Error("broken")));
+            // Non-retryable, so the job settles on its first attempt: what is
+            // under test is what giving up does to the row, not how many
+            // strikes and half-minute waits it takes to get there.
+            mockRenders(() =>
+                Promise.reject(
+                    new ThumbnailEndpoints.NoSuchConfigurationError("gone")
+                )
+            );
 
             await renderer().enqueue(
                 {
@@ -497,24 +515,7 @@ describe("ThumbnailRenderer", () => {
                 RenderSource.LOAD
             );
 
-            // Pushed past the strike limit rather than waited out: the retry
-            // delay between failures is half a minute, and what is under test
-            // is what happens when it gives up, not how long that takes.
-            await until(async () => (await renderer().queued()).length > 0);
-            await runInDurableObject(renderer(), (_instance, state) => {
-                state.storage.sql.exec(
-                    "UPDATE jobs SET failures = 99, dueAt = ?",
-                    Date.now()
-                );
-            });
-            await runDurableObjectAlarm(renderer());
-
-            // Each poll drives the alarm rather than waiting on its schedule,
-            // which is thirty seconds out between failures.
-            // Each poll drives the alarm rather than waiting on its schedule,
-            // which is thirty seconds out between failures.
-            await until(async () => {
-                await runDurableObjectAlarm(renderer());
+            await drainUntil(async () => {
                 const row = await readRow(target.insertableId);
                 return (
                     row?.buildIssues.some(
@@ -522,13 +523,13 @@ describe("ThumbnailRenderer", () => {
                             issue.type === BuildIssueType.THUMBNAIL_FAILED
                     ) ?? false
                 );
-            }, 10_000);
+            });
 
             const row = await readRow(target.insertableId);
             expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
                 BuildIssueType.THUMBNAIL_PENDING
             );
-        }, 20_000);
+        });
 
         // Clients hold the library payload by cache version; without this the
         // urls are recorded but nobody sees them.
@@ -556,15 +557,15 @@ describe("ThumbnailRenderer", () => {
                 RenderSource.LOAD
             );
 
-            await until(async () => {
+            await drainUntil(async () => {
                 const now = await db
                     .select()
                     .from(libraries)
                     .where(eq(libraries.id, TEST_LIBRARY_ID))
                     .get();
                 return (now?.cacheVersion ?? 0) > (before?.cacheVersion ?? 0);
-            }, 20_000);
-        }, 30_000);
+            });
+        });
     });
 
     it("sets no alarm when there is nothing queued", async () => {
