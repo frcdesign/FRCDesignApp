@@ -633,9 +633,9 @@ describe("uploadThumbnails", () => {
         expect(getImage.mock.calls[0][0]).toContain(ThumbnailSize.LARGE);
     });
 
-    // The two calls go out together, so one can come back rendered and the
-    // other not. Storing the one that landed is what keeps a retry from
-    // fetching the pair again and discarding it again.
+    // Onshape can have one size rendered and not the other. Storing the one
+    // that landed leaves the retry a single size to ask for, rather than
+    // fetching a pair it discards again.
     it("keeps the size that rendered when the other is not ready", async () => {
         const failingPath = { ...elementPath, elementId: "one-rendered" };
         const getImage = vi.fn((path: string) =>

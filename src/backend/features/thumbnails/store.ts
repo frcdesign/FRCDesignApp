@@ -52,39 +52,30 @@ async function putThumbnail(
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
- * Stores one size, unless the bucket already holds it. Per size rather than as
- * a pair: an attempt can find one size ready and the other not, and a pair
- * stored only when both calls came back throws away the one that was ready —
- * every attempt, if the sizes keep coming ready in different ones.
+ * Renders and stores both sizes, skipping either the bucket already holds.
  *
- * The key pins the microversion, so a size already stored is what Onshape would
- * render again; skipping it spends none of the account's allocation on bytes we
- * already hold.
+ * Checked and stored per size, because an attempt can find one size rendered
+ * and the other not: a pair stored only once both calls came back throws away
+ * the one that was ready, every attempt, if the sizes keep coming ready in
+ * different ones. The key pins the microversion, so a size already stored is
+ * what Onshape would render again.
+ *
+ * One call at a time, so an attempt against a render that is not ready costs
+ * one Onshape call rather than two. Asking for both at once also drew
+ * intermittent 406s, which as far as I know nobody has explained.
  */
-async function storeThumbnail(
+async function storeBothSizes(
     bucket: R2Bucket,
-    key: string,
+    keyOf: (size: ThumbnailSize) => string,
     metadata: ThumbnailMetadata,
-    render: () => Promise<ArrayBuffer>
+    render: (size: ThumbnailSize) => Promise<ArrayBuffer>
 ): Promise<void> {
-    if (await bucket.head(key)) {
-        return;
-    }
-    await putThumbnail(bucket, key, await render(), metadata);
-}
-
-/**
- * `allSettled`, so one size failing does not cut the other's store short; the
- * first rejection is rethrown as it came, since the retry curve reads
- * `Retry-After` off an `OnshapeRateLimitError`.
- */
-function throwFirstRejection(results: PromiseSettledResult<unknown>[]): void {
-    const rejected = results.find(
-        (result): result is PromiseRejectedResult =>
-            result.status === "rejected"
-    );
-    if (rejected) {
-        throw rejected.reason;
+    for (const size of BOTH_SIZES) {
+        const key = keyOf(size);
+        if (await bucket.head(key)) {
+            continue;
+        }
+        await putThumbnail(bucket, key, await render(size), metadata);
     }
 }
 
@@ -97,22 +88,11 @@ export async function uploadThumbnails(
 ): Promise<ThumbnailUrls> {
     const { elementId } = elementPath;
 
-    // Both at once: an element reaching here usually needs both, and each is
-    // stored as it lands rather than at the end.
-    throwFirstRejection(
-        await Promise.allSettled(
-            BOTH_SIZES.map((size) =>
-                storeThumbnail(
-                    bucket,
-                    thumbnailKey(elementId, microversionId, size),
-                    {
-                        microversionId,
-                        configurationKey: DEFAULT_CONFIGURATION_KEY
-                    },
-                    () => getElementThumbnail(onshapeApi, elementPath, size)
-                )
-            )
-        )
+    await storeBothSizes(
+        bucket,
+        (size) => thumbnailKey(elementId, microversionId, size),
+        { microversionId, configurationKey: DEFAULT_CONFIGURATION_KEY },
+        (size) => getElementThumbnail(onshapeApi, elementPath, size)
     );
 
     return {
@@ -132,9 +112,8 @@ export async function uploadThumbnails(
 }
 
 /**
- * Both sizes, so a row and its hover never disagree. Each size is a separate
- * Onshape call and either can fail mid-render, which is what the caller's
- * retries poll out.
+ * Both sizes, so a row and its hover never disagree. Either size can fail
+ * mid-render, which is what the caller's retries poll out.
  */
 export async function uploadConfigurationThumbnails(
     bucket: R2Bucket,
@@ -145,17 +124,13 @@ export async function uploadConfigurationThumbnails(
 ): Promise<void> {
     const { elementId, microversionId } = subject;
 
-    // One size at a time rather than both at once: while the render is still
-    // running the first call throws, and the attempt this poll is made of costs
-    // one Onshape call instead of two. What an attempt stores, the next skips.
-    for (const size of BOTH_SIZES) {
-        await storeThumbnail(
-            bucket,
+    await storeBothSizes(
+        bucket,
+        (size) =>
             thumbnailKey(elementId, microversionId, size, configurationKey),
-            { microversionId, configurationKey },
-            () => getThumbnailFromId(onshapeApi, thumbnailId, size)
-        );
-    }
+        { microversionId, configurationKey },
+        (size) => getThumbnailFromId(onshapeApi, thumbnailId, size)
+    );
 }
 
 /** Falls back to the first element when the document designates no thumbnail. */
