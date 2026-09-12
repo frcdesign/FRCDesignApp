@@ -1,6 +1,16 @@
+import type { WorkflowBackoff } from "cloudflare:workers";
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
+
+/**
+ * Pinned because the platform's curve compounds with the callbacks below:
+ * `backoff` defaults to exponential and multiplies what `delay` returned, which
+ * turned the thumbnail poll's capped 120 seconds into 120 × 2^7 — a run waiting
+ * 4h16m between attempts. Cloudflare documents the two settings separately and,
+ * as far as I saw, not how they combine, so that is read off a run.
+ */
+const CONSTANT_BACKOFF: WorkflowBackoff = "constant";
 
 /** The retry input a Workflow `delay` callback receives. */
 interface RetryDelayInput {
@@ -49,21 +59,22 @@ function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
  */
 export const ONSHAPE_STEP_RETRIES = {
     limit: 5,
-    delay: onshapeRetryDelay
+    delay: onshapeRetryDelay,
+    backoff: CONSTANT_BACKOFF
 };
 
 /** The first wait after a render isn't ready; each attempt doubles it. */
-const THUMBNAIL_BASE_DELAY_SECONDS = 4;
+const THUMBNAIL_BASE_DELAY_SECONDS = 5;
 
 /**
  * Where the doubling stops. Left uncapped, the last waits grow longer than the
  * renders themselves, so a thumbnail that landed early sits unnoticed.
  */
-const THUMBNAIL_MAX_DELAY_SECONDS = 120;
+const THUMBNAIL_MAX_DELAY_SECONDS = 300;
 
 /**
  * Onshape gives no signal when a render lands, so the step polls, doubling from
- * four seconds. A rate limit overrides the curve.
+ * five seconds. A rate limit overrides the curve.
  */
 function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
@@ -78,17 +89,22 @@ function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
 }
 
 export const THUMBNAIL_STEP_RETRIES = {
-    // 4s, 8s … 120s and then every two minutes: half an hour of polling, since
-    // a reload is the only other way to pick a late render up.
-    limit: 20,
-    delay: thumbnailRetryDelay
+    // 5s, 10s … 300s: nine waits, about twenty minutes. The limit is what ends
+    // the poll — the step timeout covers an attempt, not the waits between them
+    // — and a render that has not landed by then waits for a reload.
+    limit: 10,
+    delay: thumbnailRetryDelay,
+    backoff: CONSTANT_BACKOFF
 };
+
+/** The first wait for a render someone is watching; each attempt doubles it. */
+const CONFIGURATION_BASE_DELAY_SECONDS = 4;
 
 /**
  * Where the doubling stops for a render someone is waiting on. The curve above
  * ends up waiting longer than the render takes — a thumbnail that lands a
- * second after a poll then sits unserved for two minutes, which is most of what
- * an insert preview spends spinning.
+ * second after a poll then sits unserved for five minutes, longer than anyone
+ * watches an insert preview spin.
  */
 const CONFIGURATION_MAX_DELAY_SECONDS = 15;
 
@@ -100,7 +116,7 @@ function configurationThumbnailRetryDelay(
         return rateLimited;
     }
     const seconds = Math.min(
-        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
+        CONFIGURATION_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
         CONFIGURATION_MAX_DELAY_SECONDS
     );
     return `${seconds} seconds`;
@@ -116,7 +132,8 @@ export const CONFIGURATION_THUMBNAIL_RETRIES = {
     // 4s, 8s, then every 15s: about ten minutes, which outlasts the six the
     // client polls for.
     limit: 40,
-    delay: configurationThumbnailRetryDelay
+    delay: configurationThumbnailRetryDelay,
+    backoff: CONSTANT_BACKOFF
 };
 
 /**

@@ -15,8 +15,31 @@ import {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-export function getOauthClient(): OAuth2Client {
-    return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
+/**
+ * Per host, so a sign-in that started on one comes back to it: two hosts share
+ * an OAuth app through a cutover, and the callback's host is where `beginSession`
+ * sets the cookie.
+ *
+ * Onshape matches this against the redirect urls registered on the OAuth app,
+ * so every origin the app answers on needs one registered there, spelled the
+ * same way.
+ */
+function getRedirectUri(c: AppContext): string {
+    return new URL(c.req.url).origin + "/auth/callback";
+}
+
+/**
+ * Defaulted, since only the authorization request and the code exchange carry a
+ * redirect uri: arctic sends none on a refresh whatever the client holds.
+ */
+export function getOauthClient(
+    redirectUri: string | null = null
+): OAuth2Client {
+    return new OAuth2Client(
+        env.OAUTH_CLIENT_ID,
+        env.OAUTH_CLIENT_SECRET,
+        redirectUri
+    );
 }
 
 export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
@@ -37,7 +60,7 @@ export async function doSignIn(
     redirectUrl: string,
     companyId?: string
 ): Promise<string> {
-    const oauthClient = getOauthClient();
+    const oauthClient = getOauthClient(getRedirectUri(c));
 
     const state = generateState();
 
@@ -84,7 +107,9 @@ export async function doCallback(c: AppContext): Promise<Response> {
         );
     }
 
-    const oauthClient = getOauthClient();
+    // OAuth has the exchange repeat the uri the sign-in sent. This request
+    // arrived at that uri, so resolving it again here gives the same string.
+    const oauthClient = getOauthClient(getRedirectUri(c));
 
     await oauthClient
         .validateAuthorizationCode(TOKEN_ENDPOINT, search.code, null)

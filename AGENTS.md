@@ -14,22 +14,9 @@ better than a short one that is wrong.** Brevity is not worth an inaccuracy.
 
 A comment is a claim, and a reader will believe it without checking. So:
 
-- **Don't assert an invariant nothing enforces.** "Values never carry a `;`"
-  was true of the values anyone had tried and false of the ones a user could
-  type; it stood above the code it was wrong about for months. If a comment
-  states an invariant, either the code next to it enforces that invariant, or
-  the comment names what does (a validator, a schema, a filter upstream). If
-  neither is true, the comment is a bug report — fix the code instead.
-- **Write what you checked, not what you assume.** "These enums share these
-  values" was written about two enums that overlap on two of five members.
-  Prefer "the loader filters to these two types, so a cast is safe here" —
-  which a reader can go and verify — over a flat assertion they cannot.
 - **Hedge where you are actually unsure.** "as far as I can tell" and "Onshape
   does not document this" are useful; they tell the next person where to look.
   Confident phrasing on a guess is worse than no comment.
-- **Don't write a comment that forecloses checking.** "which is what lets this
-  round-trip" and "so nothing else has to" read as settled and stop the reader
-  from looking. State the reason; don't certify the conclusion.
 
 Update the comment in the same change as the code it describes, and delete it
 when it stops being true. A stale comment outranks the code in a reader's head,
@@ -42,36 +29,18 @@ it, never an inline object type — the name is what error messages and editors
 show at the call site.
 
 A function declared inside a component is a `const` arrow, never a `function`
-declaration: the surrounding component is the hoisting boundary, and an arrow
-reads as the value it is.
+declaration.
 
 Keep hook calls where the next person will see them: at the top of the body,
-one per `const`. The danger is a hook that is easy to miss, because the day
-someone adds an early return above it the hooks stop running in the same order
-every render, and React breaks somewhere else entirely.
+one per `const`.
 
-So this is fine — the hook is the first and only thing the function does:
+This is fine — the hook is the first and only thing the function does:
 
 ```ts
 function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 ```
-
-And these are not. Hoist a hook out when it is **buried** — inside a returned
-object or JSX tree, nested in another call, or anywhere below a branch:
-
-```ts
-// Buried in a returned object: easy to miss, easy to strand under a branch.
-return { query, lastRenderedUrl: useLastRenderedUrl(query.data) };
-
-// Two hooks in one expression, one of them inside an index.
-return useGetUiState().vendorFilters[useLibraryId()];
-```
-
-`&&` and `?:` around a hook are always wrong, not just unclear:
-`!hidden && !useShowHidden()` short-circuits, so the call is conditional. The
-linter catches that one; it catches none of the others.
 
 ## Layout
 
@@ -87,7 +56,7 @@ Both sides are organized the same way:
 - `lib/` — cross-cutting plumbing that belongs to no single feature.
 - `components/` (frontend only) — UI used by more than one feature.
 
-Anything the frontend imports from a backend feature must be a leaf module —
+Anything the frontend imports from a backend feature should be a leaf module —
 pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
@@ -160,7 +129,7 @@ npx wrangler d1 execute DB --local --file=<cert-dump>.sql
 
 # Cloudflare Workers
 
-STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
+Beware your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
 
 ## Docs
 
