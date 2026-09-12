@@ -173,7 +173,9 @@ describe("reconcileThumbnails", () => {
         });
         await store(...defaultKeys(LIVE_ELEMENT, OLD_MICROVERSION));
 
-        expect((await reconcileThumbnails(env.BLOB, db, LATER)).deleted).toBe(2);
+        expect((await reconcileThumbnails(env.BLOB, db, LATER)).deleted).toBe(
+            2
+        );
         const second = await reconcileThumbnails(env.BLOB, db, LATER);
         expect(second.deleted).toBe(0);
         expect(second.scanned).toBe(0);

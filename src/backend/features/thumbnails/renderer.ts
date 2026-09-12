@@ -37,7 +37,10 @@ import {
 } from "../configurations/contract";
 import { PREFERRED_SIZE, RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
-import { putThumbnail } from "./store";
+import { putThumbnail, readThumbnailUrls } from "./store";
+import { recordThumbnailOutcome, type ThumbnailOwner } from "./record";
+import { bumpLibraryVersion } from "../library/db";
+import type { LibraryId } from "../library/library-id";
 
 /** An element's own thumbnail, which Onshape renders when the document is saved. */
 export interface ElementThumbnailRequest {
@@ -45,6 +48,11 @@ export interface ElementThumbnailRequest {
     /** Where Onshape reads it from; the key comes from its `elementId`. */
     elementPath: ElementPath;
     microversionId: string;
+    /**
+     * The row to write the urls onto once both sizes land. A load queues these
+     * and moves on, so this is what eventually tells it how the render ended.
+     */
+    owner?: ThumbnailOwner;
 }
 
 /** A configuration's render, the kind Onshape only does one of at a time. */
@@ -105,6 +113,19 @@ const JOB_TTL_MS = 6 * 60 * 60_000;
 
 /** Bounds one alarm, not the queue, which a cold load fills with thousands. */
 const ALARM_BUDGET_MS = 20_000;
+
+/**
+ * How often a library's cache version is bumped while thumbnails land. A cold
+ * load finishes hundreds of them, and bumping per thumbnail would throw away
+ * every client's cached library that many times.
+ */
+const BUMP_INTERVAL_MS = 30_000;
+
+/** Libraries with thumbnails recorded since the last bump. */
+const BUMP_PREFIX = "bump:";
+
+/** When a bump was last flushed, which is what the interval is measured from. */
+const LAST_BUMP_KEY = "lastBumpAt";
 
 /**
  * A row of the queue. It extends `Record` only because `sql.exec` constrains its
@@ -249,6 +270,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         this.#running = true;
         try {
             await this.#drain();
+            await this.#flushBumps();
         } finally {
             this.#running = false;
             await this.#scheduleNext();
@@ -263,7 +285,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         const until = Date.now() + ALARM_BUDGET_MS;
 
         while (Date.now() < until) {
-            this.#dropExpired();
+            await this.#dropExpired();
 
             const rendering = this.#renderingJob();
             if (rendering) {
@@ -274,14 +296,107 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                     this.#fail(rendering);
                     continue;
                 }
-                this.#record(rendering, await this.#poll(rendering));
+                await this.#attempt(rendering, await this.#poll(rendering));
                 continue;
             }
 
             const next = this.#nextQueuedJob();
             if (!next) return;
-            this.#record(next, await this.#start(next));
+            await this.#attempt(next, await this.#start(next));
         }
+    }
+
+    /**
+     * Writes back what the attempt decided, and tells the row that asked for it
+     * once the pair is settled either way.
+     */
+    async #attempt(job: JobRow, attempt: Attempt): Promise<void> {
+        const gone = this.#record(job, attempt);
+        if (gone) {
+            await this.#reportOutcome(job);
+        }
+    }
+
+    /**
+     * Reports a finished thumbnail to whatever queued it. Both sizes are one
+     * pair of columns, so it waits for the second: the first to land finds the
+     * other missing and leaves the row alone.
+     */
+    async #reportOutcome(job: JobRow): Promise<void> {
+        const request = requestOf(job);
+        if (request.kind !== "element" || !request.owner) {
+            return;
+        }
+        const urls = await readThumbnailUrls(
+            this.env.BLOB,
+            request.elementPath.elementId,
+            request.microversionId
+        );
+        // Nothing stored and a sibling still queued: the pair is not settled,
+        // so there is nothing to say yet.
+        if (!urls && this.#hasSibling(job)) {
+            return;
+        }
+
+        const recorded = await recordThumbnailOutcome(
+            getDb(this.env.DB),
+            request.owner,
+            urls ? { stored: true, urls } : { stored: false }
+        );
+        if (recorded) {
+            this.ctx.storage.kv.put(
+                `${BUMP_PREFIX}${request.owner.libraryId}`,
+                true
+            );
+        }
+    }
+
+    /** Whether the other size of this request is still queued. */
+    #hasSibling(job: JobRow): boolean {
+        return (
+            this.ctx.storage.sql
+                .exec<{
+                    count: number;
+                }>(
+                    "SELECT COUNT(*) AS count FROM jobs WHERE request = ?",
+                    job.request
+                )
+                .one().count > 0
+        );
+    }
+
+    /**
+     * Bumps the libraries whose thumbnails have landed, at most once an
+     * interval. Clients hold the library payload by cache version, so this is
+     * what puts the new urls in front of them.
+     */
+    async #flushBumps(): Promise<void> {
+        const dueAt = this.#bumpDueAt();
+        if (dueAt === undefined || dueAt > Date.now()) {
+            return;
+        }
+        const db = getDb(this.env.DB);
+        for (const key of this.#pendingBumps()) {
+            await bumpLibraryVersion(
+                db,
+                key.slice(BUMP_PREFIX.length) as LibraryId
+            );
+            this.ctx.storage.kv.delete(key);
+        }
+        this.ctx.storage.kv.put(LAST_BUMP_KEY, Date.now());
+    }
+
+    /** When the pending bumps may next flush, or undefined when there are none. */
+    #bumpDueAt(): number | undefined {
+        if (this.#pendingBumps().length === 0) return undefined;
+        const last = this.ctx.storage.kv.get<number>(LAST_BUMP_KEY) ?? 0;
+        return last + BUMP_INTERVAL_MS;
+    }
+
+    #pendingBumps(): string[] {
+        return [...this.ctx.storage.kv.list({ prefix: BUMP_PREFIX })].map(
+            ([key]) => key
+        );
     }
 
     /**
@@ -413,12 +528,15 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         return getOnshapeApiFromSessionId(this.env.KV, sessionId);
     }
 
-    /** Writes back what one call decided: done, keep polling, or give up. */
-    #record(job: JobRow, attempt: Attempt): void {
+    /**
+     * Writes back what one call decided: done, keep polling, or give up.
+     * Returns whether the job left the queue, settled one way or the other.
+     */
+    #record(job: JobRow, attempt: Attempt): boolean {
         switch (attempt.outcome) {
             case "stored":
                 this.#finish(job.key);
-                return;
+                return true;
 
             case "rendering":
                 // Takes the thread: nothing else may be asked of Onshape until
@@ -431,31 +549,33 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                     Date.now() + pollDelay(job),
                     job.key
                 );
-                return;
+                return false;
 
             case "rate-limited":
                 // The account is being throttled, not this job, so the render
                 // keeps its hold: waiting is not the same as switching away.
                 this.#delayAll(attempt.retryAfterSeconds * 1000);
-                return;
+                return false;
 
             case "failed":
                 // A configuration Onshape has no insertable for, or one that
                 // left the library: retrying asks the same question.
                 if (attempt.error instanceof NoSuchConfigurationError) {
                     this.#finish(job.key);
-                    return;
+                    return true;
                 }
-                this.#fail(job);
-                return;
+                return this.#fail(job);
         }
     }
 
-    /** Gives the thread back after a job broke, and drops it once it keeps doing so. */
-    #fail(job: JobRow): void {
+    /**
+     * Gives the thread back after a job broke, and drops it once it keeps doing
+     * so. Returns whether it was dropped, which settles it as a failure.
+     */
+    #fail(job: JobRow): boolean {
         if (job.failures + 1 >= MAX_FAILURES) {
             this.#finish(job.key);
-            return;
+            return true;
         }
         this.ctx.storage.sql.exec(
             `UPDATE jobs
@@ -464,6 +584,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
             Date.now() + RETRY_DELAY_MS,
             job.key
         );
+        return false;
     }
 
     /**
@@ -515,12 +636,18 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         return Date.now() - (job.startedAt ?? 0) > RENDER_TIMEOUT_MS;
     }
 
-    /** A job nothing came back for; a later request queues it again. */
-    #dropExpired(): void {
-        this.ctx.storage.sql.exec(
-            "DELETE FROM jobs WHERE expiresAt <= ?",
-            Date.now()
-        );
+    /**
+     * A job nothing came back for. Its owner is told, or a row queued by a load
+     * would say "still rendering" for good; a later request queues it again.
+     */
+    async #dropExpired(): Promise<void> {
+        const expired = this.ctx.storage.sql
+            .exec<JobRow>("SELECT * FROM jobs WHERE expiresAt <= ?", Date.now())
+            .toArray();
+        for (const job of expired) {
+            this.#finish(job.key);
+            await this.#reportOutcome(job);
+        }
     }
 
     #delayAll(delayMs: number): void {
@@ -537,7 +664,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
      */
     async #scheduleNext(): Promise<void> {
         const rendering = this.#renderingJob();
-        const next =
+        const queued =
             rendering?.dueAt ??
             this.ctx.storage.sql
                 .exec<{
@@ -545,11 +672,16 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 }>("SELECT MIN(dueAt) AS dueAt FROM jobs")
                 .one().dueAt;
 
-        if (next === null || next === undefined) {
+        // A pending bump has to wake the object too, or a queue that empties
+        // leaves the last thumbnails recorded but invisible to clients.
+        const wakeAt = [queued, this.#bumpDueAt()].filter(
+            (at): at is number => at !== null && at !== undefined
+        );
+        if (wakeAt.length === 0) {
             await this.ctx.storage.deleteAlarm();
             return;
         }
-        await this.ctx.storage.setAlarm(next);
+        await this.ctx.storage.setAlarm(Math.min(...wakeAt));
     }
 }
 

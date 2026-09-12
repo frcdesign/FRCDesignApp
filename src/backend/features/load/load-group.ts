@@ -25,7 +25,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { awaitThumbnailsStep, ONSHAPE_STEP_RETRIES } from "./steps";
+import { ONSHAPE_STEP_RETRIES, queueThumbnailsStep } from "./steps";
 import type { InstancePath } from "../../lib/onshape/path";
 
 interface GroupLoadResult {
@@ -151,10 +151,18 @@ async function loadDocumentThumbnail(
         return null;
     }
 
-    return awaitThumbnailsStep(
+    return queueThumbnailsStep(
         ctx,
         `document-thumbnail-${groupId}`,
-        { kind: "element", ...element },
+        {
+            kind: "element",
+            ...element,
+            owner: {
+                kind: "group",
+                libraryId: target.libraryId,
+                groupId
+            }
+        },
         () =>
             readThumbnailUrls(
                 ctx.env.BLOB,

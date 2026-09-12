@@ -1,8 +1,9 @@
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
-import { resetDb, seedGroup } from "../../../__test_utils__";
+import { resetDb, seedGroup, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import {
     insertableTarget,
     parsedInsertable
@@ -13,6 +14,8 @@ import {
     OnshapeApiError,
     OnshapeRateLimitError
 } from "../../lib/onshape/client";
+import { insertables, libraries } from "../../db/schema";
+import { BuildIssueType } from "../build-checker/issues";
 import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import type { ThumbnailRequest } from "./renderer";
@@ -404,6 +407,164 @@ describe("ThumbnailRenderer", () => {
         );
 
         expect(await queueOf(0)).toEqual([]);
+    });
+
+    // A load queues its thumbnails and moves on, so this is the only thing that
+    // ever learns how one ended.
+    describe("recording the outcome on the row that asked", () => {
+        const db = getDb(env.DB);
+
+        /** A stored insertable whose thumbnail is queued and still pending. */
+        async function seedPendingInsertable() {
+            await resetDb(db);
+            await seedGroup(db);
+            // Its own element too: R2 is one bucket across tests, and a key
+            // another test stored would make this render succeed on the spot.
+            const target = insertableTarget({
+                insertableId: testId,
+                elementPath: {
+                    ...ELEMENT_PATH,
+                    elementId: elementIdFor("owned")
+                }
+            });
+            await saveInsertable(db, target, parsedInsertable());
+            await db
+                .update(insertables)
+                .set({
+                    smallThumbnailUrl: null,
+                    largeThumbnailUrl: null,
+                    buildIssues: [{ type: BuildIssueType.THUMBNAIL_PENDING }]
+                })
+                .where(eq(insertables.id, target.insertableId));
+            return target;
+        }
+
+        const readRow = (id: string) =>
+            db.select().from(insertables).where(eq(insertables.id, id)).get();
+
+        it("writes the urls and clears pending once both sizes land", async () => {
+            const target = await seedPendingInsertable();
+            mockRenders(rendered);
+
+            await renderer().enqueue(
+                {
+                    kind: "element",
+                    elementPath: target.elementPath,
+                    microversionId: target.microversionId,
+                    owner: {
+                        kind: "insertable",
+                        libraryId: TEST_LIBRARY_ID,
+                        insertableId: target.insertableId
+                    }
+                },
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            await queueOf(0);
+            await until(async () => {
+                const row = await readRow(target.insertableId);
+                return row?.smallThumbnailUrl !== null;
+            });
+
+            const row = await readRow(target.insertableId);
+            expect(row?.smallThumbnailUrl).toContain(
+                target.elementPath.elementId
+            );
+            expect(row?.largeThumbnailUrl).toContain(
+                target.elementPath.elementId
+            );
+            expect(row?.buildIssues).toEqual([]);
+        });
+
+        // Nothing is going to arrive, so the row should stop saying "loading".
+        it("turns pending into failed when it gives up", async () => {
+            const target = await seedPendingInsertable();
+            mockRenders(() => Promise.reject(new Error("broken")));
+
+            await renderer().enqueue(
+                {
+                    kind: "element",
+                    elementPath: target.elementPath,
+                    microversionId: target.microversionId,
+                    owner: {
+                        kind: "insertable",
+                        libraryId: TEST_LIBRARY_ID,
+                        insertableId: target.insertableId
+                    }
+                },
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            // Pushed past the strike limit rather than waited out: the retry
+            // delay between failures is half a minute, and what is under test
+            // is what happens when it gives up, not how long that takes.
+            await until(async () => (await renderer().queued()).length > 0);
+            await runInDurableObject(renderer(), (_instance, state) => {
+                state.storage.sql.exec(
+                    "UPDATE jobs SET failures = 99, dueAt = ?",
+                    Date.now()
+                );
+            });
+            await runDurableObjectAlarm(renderer());
+
+            // Each poll drives the alarm rather than waiting on its schedule,
+            // which is thirty seconds out between failures.
+            // Each poll drives the alarm rather than waiting on its schedule,
+            // which is thirty seconds out between failures.
+            await until(async () => {
+                await runDurableObjectAlarm(renderer());
+                const row = await readRow(target.insertableId);
+                return (
+                    row?.buildIssues.some(
+                        (issue) =>
+                            issue.type === BuildIssueType.THUMBNAIL_FAILED
+                    ) ?? false
+                );
+            }, 10_000);
+
+            const row = await readRow(target.insertableId);
+            expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
+                BuildIssueType.THUMBNAIL_PENDING
+            );
+        }, 20_000);
+
+        // Clients hold the library payload by cache version; without this the
+        // urls are recorded but nobody sees them.
+        it("bumps the library so clients pick the urls up", async () => {
+            const target = await seedPendingInsertable();
+            mockRenders(rendered);
+            const before = await db
+                .select()
+                .from(libraries)
+                .where(eq(libraries.id, TEST_LIBRARY_ID))
+                .get();
+
+            await renderer().enqueue(
+                {
+                    kind: "element",
+                    elementPath: target.elementPath,
+                    microversionId: target.microversionId,
+                    owner: {
+                        kind: "insertable",
+                        libraryId: TEST_LIBRARY_ID,
+                        insertableId: target.insertableId
+                    }
+                },
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            await until(async () => {
+                const now = await db
+                    .select()
+                    .from(libraries)
+                    .where(eq(libraries.id, TEST_LIBRARY_ID))
+                    .get();
+                return (now?.cacheVersion ?? 0) > (before?.cacheVersion ?? 0);
+            }, 20_000);
+        }, 30_000);
     });
 
     it("sets no alarm when there is nothing queued", async () => {
