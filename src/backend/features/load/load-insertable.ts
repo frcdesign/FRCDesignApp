@@ -95,6 +95,7 @@ export async function loadInsertable(
               {
                   kind: "element",
                   elementPath,
+                  workspacePath: target.workspacePath,
                   microversionId: target.microversionId,
                   owner: {
                       kind: "insertable",

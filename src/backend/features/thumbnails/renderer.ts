@@ -47,6 +47,16 @@ export interface ElementThumbnailRequest {
     kind: "element";
     /** Where Onshape reads it from; the key comes from its `elementId`. */
     elementPath: ElementPath;
+    /**
+     * The same tab in the document's workspace, tried when the version above
+     * does not answer. The version form of Onshape's thumbnail endpoint has
+     * been unreliable for these and the workspace form has not, but the version
+     * is what the library shows, so it is still asked first.
+     *
+     * Absent when the tab has left the workspace, which leaves the version as
+     * the only place to ask.
+     */
+    workspacePath?: ElementPath;
     microversionId: string;
     /**
      * The row to write the urls onto once both sizes land. A load queues these
@@ -89,9 +99,10 @@ const POLL_SCHEDULE = [
 ] as const;
 
 /**
- * How long one render may hold the thread before the queue takes it back. Well
- * past the two minutes an outlier takes: this is for a render that is never
- * going to land, not for cutting a slow one short.
+ * The most thread time one thumbnail can ever cost. Well past the two minutes
+ * an outlier takes, and hard: a render that reaches it is abandoned rather than
+ * retried, so one bad thumbnail cannot hold up the queue behind it for longer
+ * than this.
  */
 const RENDER_TIMEOUT_MS = 5 * 60_000;
 
@@ -120,6 +131,15 @@ const ALARM_BUDGET_MS = 20_000;
  * every client's cached library that many times.
  */
 const BUMP_INTERVAL_MS = 30_000;
+
+/**
+ * Bumped to throw away every queue. A job carries the shape the code that
+ * queued it expected — which paths to try, what to report back to — so a
+ * deploy that changes any of that leaves work behind that can only fail
+ * quietly. Raising this drops it the next time each object is touched; a
+ * library reload then queues what is actually wanted.
+ */
+const QUEUE_GENERATION = 2;
 
 /** Libraries with thumbnails recorded since the last bump. */
 const BUMP_PREFIX = "bump:";
@@ -202,6 +222,21 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
     }
 
     /**
+     * Throws away a queue an older deploy left behind. Checked on the way in
+     * rather than in the constructor: an object already warm would otherwise
+     * keep working its stale queue until something happened to evict it.
+     */
+    #purgeStaleQueue(): void {
+        if (
+            this.ctx.storage.kv.get<number>("generation") === QUEUE_GENERATION
+        ) {
+            return;
+        }
+        this.ctx.storage.sql.exec("DELETE FROM jobs");
+        this.ctx.storage.kv.put("generation", QUEUE_GENERATION);
+    }
+
+    /**
      * Queues both sizes and returns; callers read the bytes back out of R2.
      *
      * A job is named by the R2 key it will write, so asking twice is asking
@@ -214,6 +249,8 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         sessionId: string,
         source: RenderSource
     ): Promise<void> {
+        this.#purgeStaleQueue();
+
         const now = Date.now();
         // Any live session for this user can render any of these jobs, so the
         // newest one wins — which is what keeps a job queued under a session
@@ -267,6 +304,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
 
     async alarm(): Promise<void> {
         if (this.#running) return;
+        this.#purgeStaleQueue();
         this.#running = true;
         try {
             await this.#drain();
@@ -292,8 +330,11 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 // Not due yet — and nothing else may run in the meantime, so
                 // there is nothing to do but let the alarm come back.
                 if (rendering.dueAt > Date.now()) return;
+                // Terminal, not a strike. Retrying would take the thread for
+                // another five minutes on a render that has already shown it
+                // is not coming, with the whole queue waiting behind it.
                 if (this.#outOfRenderTime(rendering)) {
-                    this.#fail(rendering);
+                    await this.#giveUp(rendering);
                     continue;
                 }
                 await this.#attempt(rendering, await this.#poll(rendering));
@@ -304,6 +345,12 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
             if (!next) return;
             await this.#attempt(next, await this.#start(next));
         }
+    }
+
+    /** Ends a job for good, and tells whatever queued it that nothing came. */
+    async #giveUp(job: JobRow): Promise<void> {
+        this.#finish(job.key);
+        await this.#reportOutcome(job);
     }
 
     /**
@@ -450,11 +497,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         const size = sizeOf(job.key);
         let thumbnail: ArrayBuffer;
         if (request.kind === "element") {
-            thumbnail = await getElementThumbnail(
-                onshapeApi,
-                request.elementPath,
-                size
-            );
+            thumbnail = await this.#fetchElement(request, onshapeApi, size);
         } else {
             if (!thumbnailId) {
                 throw new Error(`No thumbnail id resolved for ${job.key}`);
@@ -470,6 +513,30 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                     : DEFAULT_CONFIGURATION_KEY
         });
         return { outcome: "stored" };
+    }
+
+    /**
+     * The version first, since that is what the library shows, and the
+     * workspace when it does not answer. Any failure pivots, not just a 404:
+     * whatever the version says, the workspace is the one that reliably has
+     * the bytes, and its answer is the one the caller acts on.
+     */
+    async #fetchElement(
+        request: ElementThumbnailRequest,
+        onshapeApi: OnshapeApi,
+        size: ThumbnailSize
+    ): Promise<ArrayBuffer> {
+        const workspacePath = request.workspacePath;
+        try {
+            return await getElementThumbnail(
+                onshapeApi,
+                request.elementPath,
+                size
+            );
+        } catch (error) {
+            if (!workspacePath) throw error;
+        }
+        return getElementThumbnail(onshapeApi, workspacePath, size);
     }
 
     /**
@@ -645,8 +712,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
             .exec<JobRow>("SELECT * FROM jobs WHERE expiresAt <= ?", Date.now())
             .toArray();
         for (const job of expired) {
-            this.#finish(job.key);
-            await this.#reportOutcome(job);
+            await this.#giveUp(job);
         }
     }
 

@@ -51,7 +51,7 @@ export async function loadGroup(
     target: GroupTarget,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const { groupId, versionPath } = target;
+    const { groupId, versionPath, workspacePath } = target;
 
     // Read the document's loadable tabs (display order) and the stored rows.
     const insertableTabs = await ctx.step.do(
@@ -59,24 +59,37 @@ export async function loadGroup(
         { retries: ONSHAPE_STEP_RETRIES },
         () => fetchInsertableTabs(ctx, versionPath)
     );
+    // The same document as the workspace sees it, which is where thumbnails
+    // are read from. A tab can be in the version and gone from the workspace,
+    // and then there is nothing to read.
+    const workspaceTabs = await ctx.step.do(
+        `workspace-tabs-${groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        () => fetchInsertableTabs(ctx, workspacePath)
+    );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,
         () => fetchStoredInsertables(ctx, groupId)
     );
 
     // Wrap in a step so new UUIDs are deterministic
-    const insertablesToLoad = await ctx.step.do(
-        `select-insertables-${groupId}`,
-        () =>
-            Promise.resolve(
-                selectInsertablesToLoad(
-                    target,
-                    insertableTabs,
-                    storedInsertables,
-                    forceReload
-                )
+    const selected = await ctx.step.do(`select-insertables-${groupId}`, () =>
+        Promise.resolve(
+            selectInsertablesToLoad(
+                target,
+                insertableTabs,
+                storedInsertables,
+                forceReload
             )
+        )
     );
+    const inWorkspace = new Set(workspaceTabs.map((tab) => tab.id));
+    const insertablesToLoad = selected.map((insertable) => ({
+        ...insertable,
+        workspacePath: inWorkspace.has(insertable.elementPath.elementId)
+            ? { ...workspacePath, elementId: insertable.elementPath.elementId }
+            : undefined
+    }));
     // Removal detection is pure, so it needs no step.
     const removedInsertableIds = findRemovedInsertables(
         insertableTabs,
@@ -85,7 +98,7 @@ export async function loadGroup(
 
     const failedInsertableIds = await loadInsertables(ctx, insertablesToLoad);
 
-    const thumbnailUrls = await loadDocumentThumbnail(ctx, target);
+    const thumbnailUrls = await loadDocumentThumbnail(ctx, target, inWorkspace);
 
     await ctx.step.do(`save-group-${groupId}`, () =>
         saveGroup(getDb(ctx.env.DB), target, {
@@ -130,9 +143,10 @@ async function loadInsertables(
  */
 async function loadDocumentThumbnail(
     ctx: LoadContext,
-    target: GroupTarget
+    target: GroupTarget,
+    inWorkspace: Set<string>
 ): Promise<ThumbnailUrls | null> {
-    const { groupId, versionPath } = target;
+    const { groupId, versionPath, workspacePath } = target;
 
     // Never fatal: `checkGroup` already flags a missing thumbnail, and failing
     // the load over a cosmetic one would lose the group's insertables.
@@ -156,7 +170,14 @@ async function loadDocumentThumbnail(
         `document-thumbnail-${groupId}`,
         {
             kind: "element",
-            ...element,
+            elementPath: element.elementPath,
+            workspacePath: inWorkspace.has(element.elementPath.elementId)
+                ? {
+                      ...workspacePath,
+                      elementId: element.elementPath.elementId
+                  }
+                : undefined,
+            microversionId: element.microversionId,
             owner: {
                 kind: "group",
                 libraryId: target.libraryId,

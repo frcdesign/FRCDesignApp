@@ -106,6 +106,12 @@ export interface GroupTarget {
     libraryId: LibraryId;
     groupId: string;
     versionPath: InstancePath;
+    /**
+     * The document's default workspace. Everything the library shows is pinned
+     * to the version; this is only where thumbnails are read from, because the
+     * version form of that endpoint does not reliably return them.
+     */
+    workspacePath: InstancePath;
     name: string;
     /** The tab the document renders its thumbnail from, when one is set. */
     thumbnailElementId?: string;
@@ -114,6 +120,12 @@ export interface GroupTarget {
 /** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
+    /**
+     * The same tab in the document's workspace, which the thumbnail falls back
+     * to when the version does not answer. Absent when the tab has left the
+     * workspace, leaving the version as the only place to ask.
+     */
+    workspacePath?: ElementPath;
     libraryId: LibraryId;
     groupId: string;
     elementPath: ElementPath;

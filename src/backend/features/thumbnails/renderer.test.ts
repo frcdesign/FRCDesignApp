@@ -568,6 +568,133 @@ describe("ThumbnailRenderer", () => {
         });
     });
 
+    // Everything else is queued behind it, so a render that has run out of
+    // thread time is abandoned rather than given another five minutes.
+    it("abandons a render that runs out of thread time", async () => {
+        mockRenders(stillRendering);
+        await renderer().enqueue(
+            elementRequest(),
+            SESSION_ID,
+            RenderSource.LOAD
+        );
+        const held = await renderingKey();
+
+        // Backdated past the limit rather than waited out: what is under test
+        // is that reaching it ends the job, not how long reaching it takes.
+        await runInDurableObject(renderer(), (_instance, state) => {
+            state.storage.sql.exec(
+                `UPDATE jobs SET startedAt = 0, dueAt = ?
+                 WHERE startedAt IS NOT NULL`,
+                Date.now()
+            );
+        });
+
+        const gone = async () =>
+            !(await renderer().queued()).some((job) => job.key === held);
+        await drainUntil(gone);
+
+        // Dropped outright rather than requeued for another hold on the thread.
+        await settle();
+        expect(await gone()).toBe(true);
+    });
+
+    describe("reading an element thumbnail", () => {
+        const workspacePath = (name: string) => ({
+            ...ELEMENT_PATH,
+            instanceType: "w" as const,
+            instanceId: "w-1",
+            elementId: elementIdFor(name)
+        });
+
+        const withWorkspace = (name = "e"): ThumbnailRequest => ({
+            kind: "element",
+            elementPath: { ...ELEMENT_PATH, elementId: elementIdFor(name) },
+            workspacePath: workspacePath(name),
+            microversionId: MICROVERSION
+        });
+
+        // The version is what the library shows, so it is what gets asked.
+        it("asks the version first", async () => {
+            const calls = mockRenders(rendered);
+            await renderer().enqueue(
+                withWorkspace(),
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            await queueOf(0);
+            expect(
+                calls.mock.calls.every((call) => call[1].instanceType === "v")
+            ).toBe(true);
+        });
+
+        // The version form of this endpoint has been unreliable; the workspace
+        // form has not, so a version that does not answer is not the end of it.
+        it("pivots to the workspace when the version does not answer", async () => {
+            // Answers by which instance was asked: the version never has it,
+            // the workspace always does.
+            const calls: ReturnType<typeof mockRenders> = mockRenders(() =>
+                calls.mock.calls.at(-1)?.[1].instanceType === "v"
+                    ? stillRendering()
+                    : rendered()
+            );
+            await renderer().enqueue(
+                withWorkspace(),
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            await queueOf(0);
+            for (const key of bothKeys("e")) {
+                expect(await env.BLOB.head(key)).not.toBeNull();
+            }
+            expect(
+                calls.mock.calls.some((call) => call[1].instanceType === "w")
+            ).toBe(true);
+        });
+
+        // A tab that has left the workspace has nowhere else to ask, so the
+        // version's answer stands on its own.
+        it("keeps polling the version when there is no workspace to fall back to", async () => {
+            mockRenders(stillRendering);
+            await renderer().enqueue(
+                elementRequest(),
+                SESSION_ID,
+                RenderSource.LOAD
+            );
+
+            expect(await renderingKey()).toContain(elementIdFor("e"));
+        });
+    });
+
+    // A job carries the shape the code that queued it expected, so work left
+    // over from an older deploy can only fail quietly.
+    it("throws away a queue left by an older generation", async () => {
+        await renderer().enqueue(
+            elementRequest(),
+            SESSION_ID,
+            RenderSource.LOAD
+        );
+        expect(await renderer().queued()).toHaveLength(2);
+
+        await runInDurableObject(renderer(), (_instance, state) => {
+            state.storage.kv.put("generation", 0);
+        });
+        // Anything that touches the queue is what notices.
+        await renderer().enqueue(
+            elementRequest("after"),
+            SESSION_ID,
+            RenderSource.LOAD
+        );
+
+        // Only what was queued after the purge.
+        expect(
+            (await renderer().queued()).every((job) =>
+                job.key.includes(elementIdFor("after"))
+            )
+        ).toBe(true);
+    });
+
     it("sets no alarm when there is nothing queued", async () => {
         expect(await runDurableObjectAlarm(renderer())).toBe(false);
     });
