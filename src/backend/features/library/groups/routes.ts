@@ -1,8 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { cacheMiddleware } from "../../../lib/cache";
 import { getApp } from "../../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../../lib/route-params";
 import { getDb } from "../../../db/client";
+import { chunkForInArray } from "../../../db/chunk";
 import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
@@ -95,26 +97,39 @@ groupRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        if (!body.isVisible) {
-            await db
-                .delete(favorites)
-                .where(
-                    and(
-                        eq(favorites.libraryId, libraryId),
-                        inArray(favorites.insertableId, body.insertableIds)
-                    )
+        // "Hide all elements" names every insertable in a group, which is more
+        // ids than one statement can bind.
+        const writes: BatchItem<"sqlite">[] = [];
+        for (const insertableIds of chunkForInArray(body.insertableIds)) {
+            if (!body.isVisible) {
+                writes.push(
+                    db
+                        .delete(favorites)
+                        .where(
+                            and(
+                                eq(favorites.libraryId, libraryId),
+                                inArray(favorites.insertableId, insertableIds)
+                            )
+                        )
                 );
-        }
-
-        await db
-            .update(insertables)
-            .set({ isVisible: body.isVisible })
-            .where(
-                and(
-                    eq(insertables.libraryId, libraryId),
-                    inArray(insertables.id, body.insertableIds)
-                )
+            }
+            writes.push(
+                db
+                    .update(insertables)
+                    .set({ isVisible: body.isVisible })
+                    .where(
+                        and(
+                            eq(insertables.libraryId, libraryId),
+                            inArray(insertables.id, insertableIds)
+                        )
+                    )
             );
+        }
+        if (writes.length > 0) {
+            await db.batch(
+                writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
+            );
+        }
 
         // Rebuild before bumping: the new version makes /search-db immutable,
         // so a client fetching in between would pin the stale index for a year.

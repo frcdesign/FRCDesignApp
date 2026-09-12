@@ -10,6 +10,7 @@ import {
     jsonRequest,
     resetDb,
     seedGroup,
+    seedInsertable,
     seedTestData
 } from "../../../../__test_utils__";
 import MiniSearch from "minisearch";
@@ -95,6 +96,34 @@ describe("group admin routes", () => {
             expect(indexed?.isVisible).toBe(isVisible);
         }
     );
+
+    // "Hide all elements" sends a whole group's ids, and D1 takes at most 100
+    // bound parameters in a statement.
+    it("POST /set-insertable-visibility handles more ids than a statement can bind", async () => {
+        const count = 120;
+        await seedGroup(db);
+        const insertableIds: string[] = [];
+        for (let i = 0; i < count; i++) {
+            insertableIds.push(
+                await seedInsertable(db, {
+                    id: `ins-${i}`,
+                    elementId: `e-${i}`,
+                    isVisible: true
+                })
+            );
+        }
+
+        const res = await createTestApp().request(
+            `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
+            jsonRequest("POST", { insertableIds, isVisible: false }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const rows = await db.select().from(insertables).all();
+        expect(rows).toHaveLength(count);
+        expect(rows.every((row) => !row.isVisible)).toBe(true);
+    });
 
     it("POST /sort-group-alphabetically updates the flag", async () => {
         await seedTestData(db);

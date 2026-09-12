@@ -6,8 +6,16 @@ import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
-/** How many insertables a load reads from Onshape at once. */
-export const LOAD_CONCURRENCY = 15;
+/**
+ * How many insertables a load probes Onshape for at once — see
+ * `probeInsertable`, which is the part of a load that asks Onshape anything
+ * beyond a thumbnail. What bounds this is Onshape's rate limit rather than
+ * anything here: past it the extra calls come back 429 and wait out their
+ * `Retry-After` (see `ONSHAPE_STEP_RETRIES`), and a step whose five attempts run
+ * out fails its insertable. Raised from 15 without measuring where Onshape
+ * actually starts pushing back.
+ */
+export const LOAD_CONCURRENCY = 40;
 
 /** Runs a task, waiting for a slot when the limiter is full. */
 type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
@@ -44,7 +52,7 @@ export interface LoadContext {
     env: AppBindings;
     sessionId: string;
     step: WorkflowStep;
-    /** Bounds concurrent insertable loads across the whole run. */
+    /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
 }
 

@@ -9,13 +9,24 @@ interface RetryDelayInput {
 }
 
 /**
- * How long Onshape asked us to wait, or `null` when the error wasn't a rate
- * limit.
+ * Spread added on top of Onshape's `Retry-After`. Every step caught in one
+ * burst is handed the same number to wait, so without this they all wake at the
+ * same instant and re-send together — the burst that earned the 429. Twenty
+ * seconds trickles a full set of probe slots back in at a few per second.
+ */
+const RATE_LIMIT_JITTER_SECONDS = 20;
+
+/**
+ * How long Onshape asked us to wait plus jitter, or `null` when the error
+ * wasn't a rate limit.
  */
 function rateLimitDelay(error: Error): `${number} seconds` | null {
-    return error instanceof OnshapeRateLimitError
-        ? `${error.retryAfterSeconds} seconds`
-        : null;
+    if (!(error instanceof OnshapeRateLimitError)) {
+        return null;
+    }
+    // Rounded: Workflows documents whole units, not fractional ones.
+    const jitter = Math.round(Math.random() * RATE_LIMIT_JITTER_SECONDS);
+    return `${error.retryAfterSeconds + jitter} seconds`;
 }
 
 /**

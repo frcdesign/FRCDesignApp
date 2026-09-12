@@ -1,13 +1,16 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type { PartMetadata } from "../configurations/contract";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 import {
+    FAKE_STEP,
+    MOCK_ONSHAPE_API,
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
+    TEST_PART_STUDIO_PATH,
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
@@ -15,7 +18,12 @@ import {
     insertableTarget,
     parsedInsertable
 } from "../../../__test_utils__/insertable-fixtures";
-import { saveInsertable } from "./load-insertable";
+import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
+import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as ThumbnailStore from "../thumbnails/store";
+import { createLimiter, type LoadContext } from "./context";
+import * as LoadContextModule from "./context";
+import { loadInsertable, saveInsertable } from "./load-insertable";
 
 const db = getDb(env.DB);
 
@@ -153,5 +161,100 @@ describe("saveInsertable", () => {
         await saveInsertable(db, insertableTarget(), parsedInsertable());
 
         expect(await db.select().from(configurations).all()).toHaveLength(0);
+    });
+});
+
+/** Rejects instead of hanging, so a slot that never frees says so. */
+function withTimeout(promise: Promise<void>, message: string): Promise<void> {
+    return Promise.race([
+        promise,
+        new Promise<void>((_resolve, reject) =>
+            setTimeout(() => reject(new Error(message)), 2_000)
+        )
+    ]);
+}
+
+describe("loadInsertable", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedGroup(db);
+        vi.spyOn(
+            LoadContextModule,
+            "getOnshapeApiFromContext"
+        ).mockResolvedValue(MOCK_ONSHAPE_API);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue({
+            btType: "BTConfigurationResponse-2019",
+            configurationParameters: []
+        });
+        // Non-empty, so the load has something to ask for a render of.
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p1" }
+        ]);
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    // A render can take half an hour to land. Holding a limiter slot while
+    // waiting on one stalls every insertable queued behind it, which is most of
+    // what a slow load spends its time on.
+    it("waits for a thumbnail outside the limiter", async () => {
+        // One slot, so anything still holding it blocks the other insertable.
+        const ctx: LoadContext = {
+            env,
+            sessionId: "test-session",
+            step: FAKE_STEP,
+            limit: createLimiter(1)
+        };
+
+        let releaseRenders!: () => void;
+        const rendered = new Promise<void>((resolve) => {
+            releaseRenders = resolve;
+        });
+        let bothWaiting!: () => void;
+        const bothStarted = new Promise<void>((resolve) => {
+            bothWaiting = resolve;
+        });
+
+        const waiting = new Set<string>();
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockImplementation(
+            async (_bucket, _api, elementPath) => {
+                waiting.add(elementPath.elementId);
+                if (waiting.size === 2) bothWaiting();
+                await rendered;
+                return { small: "small.png", large: "large.png" };
+            }
+        );
+
+        const loads = Promise.all([
+            loadInsertable(
+                ctx,
+                insertableTarget({
+                    insertableId: "ins-a",
+                    elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-a" }
+                })
+            ),
+            loadInsertable(
+                ctx,
+                insertableTarget({
+                    insertableId: "ins-b",
+                    elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-b" }
+                })
+            )
+        ]);
+
+        // Both reached their render: the first one's wait did not gate the
+        // second one's probe.
+        await withTimeout(
+            bothStarted,
+            "the second insertable never probed — the thumbnail held the slot"
+        );
+        releaseRenders();
+        await loads;
+
+        const rows = await db.select().from(insertables).all();
+        expect(rows.map((row) => row.id).sort()).toEqual(["ins-a", "ins-b"]);
+        expect(rows.every((row) => row.smallThumbnailUrl === "small.png")).toBe(
+            true
+        );
     });
 });
