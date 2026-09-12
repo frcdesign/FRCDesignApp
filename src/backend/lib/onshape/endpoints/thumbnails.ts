@@ -1,11 +1,7 @@
 import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
-import {
-    ElementPath,
-    toElementApiPath,
-    toInstanceApiPath
-} from "../path";
+import { ElementPath, toElementApiPath, toInstanceApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { ThumbnailSize } from "../../../features/thumbnails/contract";
 

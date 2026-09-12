@@ -203,7 +203,12 @@ describe("loadInsertable", () => {
             env,
             sessionId: "test-session",
             step: FAKE_STEP,
-            limit: createLimiter(1)
+            limit: createLimiter(1),
+            renderer: () =>
+                Promise.resolve({
+                    userId: "test-user",
+                    sessionId: "test-session"
+                })
         };
 
         let releaseRenders!: () => void;
@@ -216,9 +221,9 @@ describe("loadInsertable", () => {
         });
 
         const waiting = new Set<string>();
-        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockImplementation(
-            async (_bucket, _api, elementPath) => {
-                waiting.add(elementPath.elementId);
+        vi.spyOn(ThumbnailStore, "readThumbnailUrls").mockImplementation(
+            async (_bucket, elementId) => {
+                waiting.add(elementId);
                 if (waiting.size === 2) bothWaiting();
                 await rendered;
                 return { small: "small.png", large: "large.png" };

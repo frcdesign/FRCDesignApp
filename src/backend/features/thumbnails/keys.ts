@@ -3,7 +3,7 @@ import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
 } from "../configurations/contract";
-import { ThumbnailSize } from "./contract";
+import { RenderSource, ThumbnailSize } from "./contract";
 
 /** Everything a thumbnail is stored under, and what reconciliation scans. */
 export const THUMBNAIL_PREFIX = "thumbnails/";
@@ -65,8 +65,11 @@ interface ThumbnailUrlOptions {
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
     configurationKey: ConfigurationKey;
-    /** Whether a miss should start rendering this configuration. */
-    renderThumbnail?: boolean;
+    /**
+     * Set to have a miss queue this configuration for rendering; which surface
+     * is asking is what orders it against everything else queued.
+     */
+    renderSource?: RenderSource;
     /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
 }
@@ -77,7 +80,7 @@ export function thumbnailUrl({
     microversionId,
     size,
     configurationKey,
-    renderThumbnail,
+    renderSource,
     insertableId
 }: ThumbnailUrlOptions): string {
     // `v` is the one abbreviation: it is the cache version every immutable url
@@ -85,8 +88,8 @@ export function thumbnailUrl({
     const query = new URLSearchParams({ v: microversionId });
     if (configurationKey !== DEFAULT_CONFIGURATION_KEY) {
         query.set("configurationKey", configurationKey);
-        if (renderThumbnail && insertableId) {
-            query.set("renderThumbnail", "true");
+        if (renderSource && insertableId) {
+            query.set("renderSource", renderSource);
             query.set("insertableId", insertableId);
         }
     }

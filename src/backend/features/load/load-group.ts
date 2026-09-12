@@ -10,7 +10,10 @@ import {
     BuildIssueType
 } from "../build-checker/issues";
 import { groups, insertables } from "../../db/schema";
-import { uploadDocumentThumbnails } from "../thumbnails/store";
+import {
+    readThumbnailUrls,
+    resolveDocumentThumbnail
+} from "../thumbnails/store";
 import { getContents } from "../../lib/onshape/endpoints/documents";
 import type { OnshapeElement } from "../../lib/onshape/types";
 import { checkGroup } from "../build-checker/checks";
@@ -22,7 +25,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
+import { awaitThumbnailsStep, ONSHAPE_STEP_RETRIES } from "./steps";
 import type { InstancePath } from "../../lib/onshape/path";
 
 interface GroupLoadResult {
@@ -82,16 +85,7 @@ export async function loadGroup(
 
     const failedInsertableIds = await loadInsertables(ctx, insertablesToLoad);
 
-    const thumbnailUrls = await uploadThumbnailsStep(
-        ctx,
-        `document-thumbnail-${groupId}`,
-        async () =>
-            uploadDocumentThumbnails(
-                ctx.env.BLOB,
-                await getOnshapeApiFromContext(ctx),
-                versionPath
-            )
-    );
+    const thumbnailUrls = await loadDocumentThumbnail(ctx, target);
 
     await ctx.step.do(`save-group-${groupId}`, () =>
         saveGroup(getDb(ctx.env.DB), target, {
@@ -128,6 +122,46 @@ async function loadInsertables(
         })
     );
     return failedInsertableIds;
+}
+
+/**
+ * The group's own thumbnail. Which element it comes from is its own question,
+ * asked here rather than in the renderer, which only renders.
+ */
+async function loadDocumentThumbnail(
+    ctx: LoadContext,
+    target: GroupTarget
+): Promise<ThumbnailUrls | null> {
+    const { groupId, versionPath } = target;
+
+    // Never fatal: `checkGroup` already flags a missing thumbnail, and failing
+    // the load over a cosmetic one would lose the group's insertables.
+    let element;
+    try {
+        element = await ctx.step.do(
+            `document-thumbnail-element-${groupId}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                resolveDocumentThumbnail(
+                    await getOnshapeApiFromContext(ctx),
+                    versionPath
+                )
+        );
+    } catch {
+        return null;
+    }
+
+    return awaitThumbnailsStep(
+        ctx,
+        `document-thumbnail-${groupId}`,
+        { kind: "element", ...element },
+        () =>
+            readThumbnailUrls(
+                ctx.env.BLOB,
+                element.elementPath.elementId,
+                element.microversionId
+            )
+    );
 }
 
 interface SaveGroupInput {

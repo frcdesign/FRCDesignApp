@@ -16,7 +16,7 @@ import type { FastenInfo } from "../library/insertables/fasten";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { Vendor } from "../library/vendors";
 import { configurations, insertables } from "../../db/schema";
-import { uploadThumbnails } from "../thumbnails/store";
+import { readThumbnailUrls } from "../thumbnails/store";
 import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
@@ -34,7 +34,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
+import { awaitThumbnailsStep, ONSHAPE_STEP_RETRIES } from "./steps";
 
 /**
  * Exactly the columns a reload overwrites; the rest of the row is identity or
@@ -85,22 +85,23 @@ export async function loadInsertable(
     // indexed element probes once per configuration.
     const probed = await ctx.limit(() => probeInsertable(ctx, target));
 
-    // Deliberately outside the limiter. Onshape gives no signal when a render
-    // lands, so this polls for up to half an hour (see THUMBNAIL_STEP_RETRIES)
-    // while asking only once per attempt — a slot held across that waits out
-    // someone else's turn rather than protecting Onshape from anything.
-    //
-    // Nothing is asked for an empty studio: Onshape renders nothing for one, so
-    // the poll could only spend its whole budget on a thumbnail that cannot exist.
+    // Outside the limiter: the renderer is what bounds thumbnail calls now, so
+    // a slot held across this wait would only block another insertable's probe.
+    // An empty studio is skipped — Onshape renders nothing for one, so the wait
+    // could only spend its budget on a thumbnail that cannot exist.
     const thumbnailUrls = probed.hasParts
-        ? await uploadThumbnailsStep(
+        ? await awaitThumbnailsStep(
               ctx,
               `thumbnail-${insertableId}`,
-              async () =>
-                  uploadThumbnails(
+              {
+                  kind: "element",
+                  elementPath,
+                  microversionId: target.microversionId
+              },
+              () =>
+                  readThumbnailUrls(
                       ctx.env.BLOB,
-                      await getOnshapeApiFromContext(ctx),
-                      elementPath,
+                      elementPath.elementId,
                       target.microversionId
                   )
           )

@@ -4,11 +4,14 @@ import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 
-import { ThumbnailSize } from "./contract";
+import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
-import { thumbnailRunId, type ThumbnailWorkflowParams } from "./workflow";
+import {
+    type ConfigurationThumbnailRequest,
+    requestThumbnails
+} from "./renderer";
 import { getSessionId } from "../auth/session";
 
 export const thumbnailRoutes = getApp();
@@ -21,17 +24,24 @@ const storedThumbnailParams = z.object({
 /** Absent means the element default, which is what `""` encodes. */
 const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 
+/**
+ * Only the two sources a client can legitimately be. The insert menu may take
+ * the render thread from whatever holds it, so this is not free-form.
+ */
+const renderSourceQuery = z.enum([RenderSource.INSERT_MENU, RenderSource.ROW]);
+
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
     configurationKey: configurationKeyQuery,
-    renderThumbnail: z.stringbool().default(false),
-    /** The insertable to render from; only sent with `renderThumbnail`. */
+    /** Absent means serve what is stored and queue nothing. */
+    renderSource: renderSourceQuery.optional(),
+    /** The insertable to render from; only sent with `renderSource`. */
     insertableId: z.string().optional()
 });
 
 /**
- * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderThumbnail=
+ * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderSource=
  * Each answer caches itself: stored bytes are pinned by the url, a miss is not.
  */
 thumbnailRoutes.get(
@@ -43,7 +53,7 @@ thumbnailRoutes.get(
         const {
             v: microversionId,
             configurationKey,
-            renderThumbnail,
+            renderSource,
             insertableId
         } = c.req.valid("query");
         const object = await c.env.BLOB.get(
@@ -64,14 +74,20 @@ thumbnailRoutes.get(
         // one. A caller that wants the element default asks for it by key.
         if (
             configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-            renderThumbnail &&
+            renderSource &&
             insertableId
         ) {
-            await startConfigurationRender(c, {
-                insertableId,
-                configurationKey,
-                microversionId
-            });
+            await queueConfigurationRender(
+                c,
+                {
+                    kind: "configuration",
+                    insertableId,
+                    elementId,
+                    configurationKey,
+                    microversionId
+                },
+                renderSource
+            );
         }
         return notRenderedYet();
     }
@@ -92,89 +108,22 @@ function thumbnailResponse(object: R2ObjectBody): Response {
 }
 
 /**
- * How long a failed render keeps its id. The account default is the full
- * retention period — 30 days on a paid plan — and the id is what stops a second
- * run, so a render that failed under a session that has since gone would never
- * get one carrying a live one. Long enough that polling cannot spin up runs
- * back to back.
+ * Queues the render and returns; the client polls this route until the bytes
+ * land. Polling is free — the queue names a job by the key it will write, so
+ * asking twice is asking once and never disturbs a render already running.
  */
-const ERROR_RETENTION = "1 hour";
-
-/** A run in one of these has stopped for good, so the render must be asked again. */
-const DEAD_STATUSES: ReadonlySet<InstanceStatus["status"]> = new Set([
-    "errored",
-    "terminated"
-]);
-
-/**
- * Idempotent, so a client can poll this route as often as it likes: the id is
- * the render, so asking twice is asking once.
- *
- * An id is held for the whole retention window whether its run worked or
- * failed, and the default window is the account maximum — 30 days on a paid
- * plan. A render that died once therefore answered 404 for as long as that
- * lasted, since nothing new could be started under its id. A dead run is
- * restarted instead, and {@link ERROR_RETENTION} bounds how long one that
- * cannot be revived that way holds its id.
- */
-async function startConfigurationRender(
+async function queueConfigurationRender(
     c: AppContext,
-    params: Omit<ThumbnailWorkflowParams, "sessionId">
+    request: ConfigurationThumbnailRequest,
+    source: RenderSource
 ): Promise<void> {
     try {
-        // Read first, so a caller with no session starts nothing: the render
+        // Read first, so a caller with no session queues nothing: the render
         // runs later, under this caller's Onshape tokens.
         const sessionId = getSessionId(c);
-        const id = await thumbnailRunId(params);
-        const started = await createRun(c.env.THUMBNAIL_WORKFLOW, id, {
-            ...params,
-            sessionId
-        });
-        if (!started) {
-            await restartIfDead(c.env.THUMBNAIL_WORKFLOW, id);
-        }
+        const userId = await c.var.getUserId();
+        await requestThumbnails(c.env, { userId, sessionId }, request, source);
     } catch {
         // Never fatal: the caller just gets a miss until the render lands.
-    }
-}
-
-/** Whether a run was started, as against the id already being held by one. */
-async function createRun(
-    workflow: Workflow<ThumbnailWorkflowParams>,
-    id: string,
-    params: ThumbnailWorkflowParams
-): Promise<boolean> {
-    try {
-        const started = await workflow.createBatch([
-            { id, params, retention: { errorRetention: ERROR_RETENTION } }
-        ]);
-        // An id inside its retention window is skipped and left out of the
-        // result; the runtime types say it throws instead. Either way it is
-        // held, and the difference does not matter to the caller.
-        return started.length > 0;
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Restarts a run that has stopped without storing anything. Only reached for an
- * id something already holds, so it never asks after a run that is not there.
- *
- * A restart replays the run under the session it was created with, since there
- * is no way to hand it a newer one — which is what {@link ERROR_RETENTION} is
- * for when that session is what failed.
- */
-async function restartIfDead(
-    workflow: Workflow<ThumbnailWorkflowParams>,
-    id: string
-): Promise<void> {
-    const run = await workflow.get(id);
-    const { status } = await run.status();
-    // Anything queued, running or waiting is left to finish, and a complete run
-    // stored what it was asked for — under the microversion its row named,
-    // which a request carrying an older one misses however often it is rerun.
-    if (DEAD_STATUSES.has(status)) {
-        await run.restart();
     }
 }

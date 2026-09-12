@@ -93,9 +93,9 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 elementId: insertable.elementId,
                 microversionId: insertable.microversionId,
                 configurationKey:
-                    match?.configurationKey ?? DEFAULT_CONFIGURATION_KEY,
-                // A cold search would otherwise start a render per row.
-                renderThumbnail: false
+                    match?.configurationKey ?? DEFAULT_CONFIGURATION_KEY
+                // No renderSource: a cold search would otherwise queue a render
+                // per row, against a thread that runs one at a time.
             }}
         />
     );

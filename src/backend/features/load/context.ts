@@ -1,6 +1,10 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
-import { getOnshapeApiFromSessionId } from "../auth/request-auth";
+import {
+    getOnshapeApiFromSessionId,
+    getUserIdFromSessionId
+} from "../auth/request-auth";
+import type { Renderer } from "../thumbnails/renderer";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
@@ -54,6 +58,41 @@ export interface LoadContext {
     step: WorkflowStep;
     /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
+    /** The queue this load's thumbnails join; lazy, since resolving it reads KV. */
+    renderer: () => Promise<Renderer>;
+}
+
+export function createLoadContext(
+    env: AppBindings,
+    sessionId: string,
+    step: WorkflowStep
+): LoadContext {
+    // Kept across the run, but only when it worked: caching the rejection
+    // would fail every thumbnail after one bad read.
+    let resolved: Promise<Renderer> | undefined;
+    const renderer = () =>
+        (resolved ??= resolveRenderer(env, sessionId).catch((error) => {
+            resolved = undefined;
+            throw error;
+        }));
+
+    return {
+        env,
+        sessionId,
+        step,
+        limit: createLimiter(LOAD_CONCURRENCY),
+        renderer
+    };
+}
+
+async function resolveRenderer(
+    env: AppBindings,
+    sessionId: string
+): Promise<Renderer> {
+    return {
+        userId: await getUserIdFromSessionId(env.KV, sessionId),
+        sessionId
+    };
 }
 
 export function getOnshapeApiFromContext(

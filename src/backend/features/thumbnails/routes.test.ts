@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
-import { ThumbnailSize } from "./contract";
+import { RenderSource, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
     parseThumbnailUrl,
@@ -9,9 +9,6 @@ import {
     thumbnailUrl
 } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
-import { uploadConfigurationThumbnails, uploadThumbnails } from "./store";
-import { thumbnailRunId } from "./workflow";
-import type { OnshapeApi } from "../../lib/onshape/client";
 
 const SIZE = ThumbnailSize.LARGE;
 const MICROVERSION = "mv-1";
@@ -110,7 +107,7 @@ describe("reading a thumbnail address back", () => {
             ...SUBJECT,
             size: SIZE,
             configurationKey: "a=1;b=2",
-            renderThumbnail: true,
+            renderSource: RenderSource.ROW,
             insertableId: INSERTABLE_ID
         });
         expect(parseThumbnailUrl(url)).toEqual(SUBJECT);
@@ -250,8 +247,9 @@ describe("thumbnail serving", () => {
     });
 });
 
-describe("rendering a configuration's thumbnail", () => {
-    afterEach(() => vi.restoreAllMocks());
+describe("queueing a configuration's thumbnail", () => {
+    /** The queue the route enqueues on; `createTestApp` signs in as this user. */
+    const queue = () => env.THUMBNAIL_RENDERER.getByName("test-user");
 
     /** Seeds only the default, so a configuration request always misses. */
     async function seedDefaultOnly(elementId: string) {
@@ -261,404 +259,141 @@ describe("rendering a configuration's thumbnail", () => {
         );
     }
 
-    it("passes renderThumbnail as a boolean the validator accepts", () => {
+    function renderUrl(renderSource: RenderSource, elementId: string) {
+        return thumbnailUrl({
+            elementId,
+            microversionId: MICROVERSION,
+            size: SIZE,
+            configurationKey: CANONICAL_CONFIGURATION,
+            renderSource,
+            insertableId: INSERTABLE_ID
+        });
+    }
+
+    async function getRender(
+        elementId: string,
+        renderSource = RenderSource.ROW
+    ) {
+        return get(renderUrl(renderSource, elementId), SESSION_ID);
+    }
+
+    /** What the queue holds for one element, whatever else is in it. */
+    async function queuedFor(elementId: string) {
+        const jobs = await queue().queued();
+        return jobs.filter((job) => job.key.includes(elementId));
+    }
+
+    it("passes the source the validator accepts", () => {
         const url = thumbnailUrl({
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
             configurationKey: CANONICAL_CONFIGURATION,
-            renderThumbnail: true,
+            renderSource: RenderSource.INSERT_MENU,
             insertableId: INSERTABLE_ID
         });
-        expect(
-            new URL(url, "http://x").searchParams.get("renderThumbnail")
-        ).toBe("true");
+        expect(new URL(url, "http://x").searchParams.get("renderSource")).toBe(
+            "insert"
+        );
     });
 
     // Without one there is nothing to resolve the element from, so the render
     // is simply not requested.
-    it("omits renderThumbnail when no insertable is named", () => {
+    it("omits the source when no insertable is named", () => {
         const url = thumbnailUrl({
             elementId: "any",
             microversionId: MICROVERSION,
             size: SIZE,
             configurationKey: CANONICAL_CONFIGURATION,
-            renderThumbnail: true
+            renderSource: RenderSource.ROW
         });
         expect(
-            new URL(url, "http://x").searchParams.get("renderThumbnail")
+            new URL(url, "http://x").searchParams.get("renderSource")
         ).toBeNull();
     });
 
-    it("starts the render on a miss", async () => {
-        const elementId = "warm-element";
-        await seedDefaultOnly(elementId);
-        // A run per instance created, since an empty result is how the route
-        // reads "the id is already held" rather than "nothing to start".
-        const createSpy = vi
-            .spyOn(env.THUMBNAIL_WORKFLOW, "createBatch")
-            .mockResolvedValue([{ id: "run" }] as never);
+    // Both, so the row and the hover card it opens never disagree.
+    it("queues both sizes on a miss", async () => {
+        await seedDefaultOnly("warm-element");
 
-        const res = await get(
-            thumbnailUrl({
-                elementId,
-                microversionId: MICROVERSION,
-                size: SIZE,
-                configurationKey: CANONICAL_CONFIGURATION,
-                renderThumbnail: true,
-                insertableId: INSERTABLE_ID
-            }),
-            SESSION_ID
-        );
+        const res = await getRender("warm-element");
 
         expect(res.status).toBe(404);
-        expect(createSpy).toHaveBeenCalledWith([
-            expect.objectContaining({
-                params: {
-                    insertableId: INSERTABLE_ID,
-                    configurationKey: CANONICAL_CONFIGURATION,
-                    microversionId: MICROVERSION,
-                    // The render runs later, so it needs a session to authenticate.
-                    sessionId: SESSION_ID
-                }
-            })
-        ]);
-    });
-
-    /**
-     * Stands in for a run already holding the id: `createBatch` starts nothing,
-     * and `get` answers with a run in `status`.
-     */
-    function heldRun(status: InstanceStatus["status"]) {
-        const restart = vi.fn().mockResolvedValue(undefined);
-        vi.spyOn(env.THUMBNAIL_WORKFLOW, "createBatch").mockResolvedValue(
-            [] as never
+        expect((await queuedFor("warm-element")).map((job) => job.key)).toEqual(
+            expect.arrayContaining([
+                thumbnailKey(
+                    "warm-element",
+                    MICROVERSION,
+                    ThumbnailSize.SMALL,
+                    CANONICAL_CONFIGURATION
+                ),
+                thumbnailKey(
+                    "warm-element",
+                    MICROVERSION,
+                    ThumbnailSize.LARGE,
+                    CANONICAL_CONFIGURATION
+                )
+            ])
         );
-        vi.spyOn(env.THUMBNAIL_WORKFLOW, "get").mockResolvedValue({
-            id: "run",
-            status: () => Promise.resolve({ status }),
-            restart
-        } as never);
-        return restart;
-    }
-
-    async function getRender(elementId: string) {
-        return get(
-            thumbnailUrl({
-                elementId,
-                microversionId: MICROVERSION,
-                size: SIZE,
-                configurationKey: CANONICAL_CONFIGURATION,
-                renderThumbnail: true,
-                insertableId: INSERTABLE_ID
-            }),
-            SESSION_ID
-        );
-    }
-
-    // An id is held for its whole retention window whether the run worked or
-    // failed, so without this a render that died once could never run again.
-    it("restarts a render that stopped without storing anything", async () => {
-        await seedDefaultOnly("errored-element");
-        const restart = heldRun("errored");
-
-        expect((await getRender("errored-element")).status).toBe(404);
-        expect(restart).toHaveBeenCalled();
-    });
-
-    it("leaves a render that is still running alone", async () => {
-        await seedDefaultOnly("running-element");
-        const restart = heldRun("running");
-
-        expect((await getRender("running-element")).status).toBe(404);
-        expect(restart).not.toHaveBeenCalled();
-    });
-
-    // Complete means it stored what it was asked for, under the microversion
-    // its own row named; rerunning it would only store the same thing again.
-    it("does not restart a render that completed", async () => {
-        await seedDefaultOnly("complete-element");
-        const restart = heldRun("complete");
-
-        expect((await getRender("complete-element")).status).toBe(404);
-        expect(restart).not.toHaveBeenCalled();
     });
 
     // Polling is how the client waits, so asking twice has to be asking once.
-    it("names the run after the render, so a repeat poll starts nothing new", async () => {
-        const params = {
-            insertableId: INSERTABLE_ID,
-            configurationKey: CANONICAL_CONFIGURATION,
-            microversionId: MICROVERSION
-        };
-        expect(await thumbnailRunId(params)).toBe(
-            await thumbnailRunId({ ...params })
-        );
-        expect(await thumbnailRunId(params)).not.toBe(
-            await thumbnailRunId({ ...params, configurationKey: "other=1" })
-        );
-        expect(await thumbnailRunId(params)).not.toBe(
-            await thumbnailRunId({ ...params, microversionId: "mv-other" })
-        );
+    it("queues nothing new when the same render is asked for again", async () => {
+        await seedDefaultOnly("repeat-element");
+
+        await getRender("repeat-element");
+        await getRender("repeat-element");
+
+        expect(await queuedFor("repeat-element")).toHaveLength(2);
     });
 
-    it("starts no render when there is no session to run it under", async () => {
-        const elementId = "sessionless-element";
-        await seedDefaultOnly(elementId);
-        const createSpy = vi.spyOn(env.THUMBNAIL_WORKFLOW, "createBatch");
+    it("records which surface asked, since that is what orders the queue", async () => {
+        await seedDefaultOnly("sourced-element");
+
+        await getRender("sourced-element", RenderSource.INSERT_MENU);
+
+        const jobs = await queuedFor("sourced-element");
+        expect(
+            jobs.every((job) => job.source === RenderSource.INSERT_MENU)
+        ).toBe(true);
+    });
+
+    it("queues no render when there is no session to run it under", async () => {
+        await seedDefaultOnly("sessionless-element");
 
         const res = await get(
-            thumbnailUrl({
-                elementId,
-                microversionId: MICROVERSION,
-                size: SIZE,
-                configurationKey: CANONICAL_CONFIGURATION,
-                renderThumbnail: true,
-                insertableId: INSERTABLE_ID
-            })
+            renderUrl(RenderSource.ROW, "sessionless-element")
         );
 
         expect(res.status).toBe(404);
-        expect(createSpy).not.toHaveBeenCalled();
+        expect(await queuedFor("sessionless-element")).toEqual([]);
     });
 
     // Search results show many configurations at once; one cold search must not
-    // kick off a render per row.
-    it("does not start the render when renderThumbnail is absent", async () => {
-        const elementId = "cold-element";
-        await seedDefaultOnly(elementId);
-        const createSpy = vi.spyOn(env.THUMBNAIL_WORKFLOW, "createBatch");
+    // queue a render per row against a thread that runs one at a time.
+    it("queues nothing when no source is named", async () => {
+        await seedDefaultOnly("cold-element");
 
         const res = await get(
             thumbnailUrl({
-                elementId,
+                elementId: "cold-element",
                 microversionId: MICROVERSION,
                 size: SIZE,
                 configurationKey: CANONICAL_CONFIGURATION
-            })
+            }),
+            SESSION_ID
         );
 
         expect(res.status).toBe(404);
-        expect(createSpy).not.toHaveBeenCalled();
+        expect(await queuedFor("cold-element")).toEqual([]);
     });
 
-    it("rejects a renderThumbnail that is not a boolean", async () => {
+    // A client must not be able to label itself a library load, nor invent a
+    // surface that outranks the insert menu.
+    it("rejects a source that is not one a client may claim", async () => {
         const res = await get(
-            `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&configuration=x&renderThumbnail=maybe`
+            `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&configurationKey=x&renderSource=load`
         );
         expect(res.status).toBe(400);
-    });
-});
-
-describe("uploadConfigurationThumbnails", () => {
-    const THUMBNAIL_ID = "tid";
-
-    /** Stands in for Onshape; only the calls matter, not the bytes. */
-    function fakeOnshapeApi() {
-        const getImage = vi.fn().mockResolvedValue(new ArrayBuffer(4));
-        return { api: { getImage } as unknown as OnshapeApi, getImage };
-    }
-
-    function upload(api: OnshapeApi, elementId: string) {
-        return uploadConfigurationThumbnails(
-            env.BLOB,
-            api,
-            THUMBNAIL_ID,
-            { elementId, microversionId: MICROVERSION },
-            CANONICAL_CONFIGURATION
-        );
-    }
-
-    function configurationKey(elementId: string, size: ThumbnailSize) {
-        return thumbnailKey(
-            elementId,
-            MICROVERSION,
-            size,
-            CANONICAL_CONFIGURATION
-        );
-    }
-
-    it("renders and stores both sizes", async () => {
-        const { api } = fakeOnshapeApi();
-
-        await upload(api, "upload-element");
-
-        for (const size of [ThumbnailSize.SMALL, ThumbnailSize.LARGE]) {
-            expect(
-                await env.BLOB.head(configurationKey("upload-element", size))
-            ).not.toBeNull();
-        }
-    });
-
-    // Runs are no longer deduplicated by instance id, so this is what keeps a
-    // second run from paying for a render Onshape already did.
-    it("skips Onshape entirely when both sizes are already stored", async () => {
-        for (const size of [ThumbnailSize.SMALL, ThumbnailSize.LARGE]) {
-            await env.BLOB.put(
-                configurationKey("already-stored", size),
-                "bytes"
-            );
-        }
-        const { api, getImage } = fakeOnshapeApi();
-
-        await upload(api, "already-stored");
-
-        expect(getImage).not.toHaveBeenCalled();
-    });
-
-    // One size present is a half-done render, not a reason to skip — and not a
-    // reason to fetch the size already in hand either.
-    it("renders only the size that is missing", async () => {
-        await env.BLOB.put(
-            configurationKey("half-stored", ThumbnailSize.SMALL),
-            "bytes"
-        );
-        const { api, getImage } = fakeOnshapeApi();
-
-        await upload(api, "half-stored");
-
-        expect(getImage).toHaveBeenCalledTimes(1);
-        expect(getImage.mock.calls[0][0]).toContain(ThumbnailSize.LARGE);
-    });
-
-    // Onshape renders the sizes independently, so a poll can find one ready and
-    // the other not. Storing the ready one leaves the next attempt a single
-    // size to ask for, rather than fetching a pair it throws away again.
-    it("keeps the size that rendered when the other is not ready", async () => {
-        const getImage = vi.fn((path: string) =>
-            path.includes(ThumbnailSize.LARGE)
-                ? Promise.reject(new Error("not rendered"))
-                : Promise.resolve(new ArrayBuffer(4))
-        );
-        const api = { getImage } as unknown as OnshapeApi;
-
-        await expect(upload(api, "one-ready")).rejects.toThrow("not rendered");
-
-        expect(
-            await env.BLOB.head(
-                configurationKey("one-ready", ThumbnailSize.SMALL)
-            )
-        ).not.toBeNull();
-
-        getImage.mockImplementation(() => Promise.resolve(new ArrayBuffer(4)));
-        await upload(api, "one-ready");
-
-        // Two calls for the first attempt and one for the retry: the size that
-        // landed is not asked for again.
-        expect(getImage).toHaveBeenCalledTimes(3);
-        expect(
-            await env.BLOB.head(
-                configurationKey("one-ready", ThumbnailSize.LARGE)
-            )
-        ).not.toBeNull();
-    });
-});
-
-describe("uploadThumbnails", () => {
-    const elementPath = {
-        documentId: "d",
-        instanceId: "v",
-        instanceType: "v" as const,
-        elementId: "default-upload-element"
-    };
-
-    function fakeOnshapeApi() {
-        const getImage = vi.fn().mockResolvedValue(new ArrayBuffer(4));
-        return { api: { getImage } as unknown as OnshapeApi, getImage };
-    }
-
-    it("renders and stores both sizes", async () => {
-        const { api, getImage } = fakeOnshapeApi();
-
-        const urls = await uploadThumbnails(
-            env.BLOB,
-            api,
-            elementPath,
-            MICROVERSION
-        );
-
-        expect(getImage).toHaveBeenCalledTimes(2);
-        expect(urls.small).toContain(elementPath.elementId);
-        for (const size of [ThumbnailSize.SMALL, ThumbnailSize.LARGE]) {
-            expect(
-                await env.BLOB.head(
-                    thumbnailKey(elementPath.elementId, MICROVERSION, size)
-                )
-            ).not.toBeNull();
-        }
-    });
-
-    // A forced reload reaches here with the microversion unchanged, and the key
-    // pins the microversion — so what is stored is what Onshape would send back.
-    it("skips Onshape when both sizes are already stored", async () => {
-        const storedPath = { ...elementPath, elementId: "already-rendered" };
-        for (const size of [ThumbnailSize.SMALL, ThumbnailSize.LARGE]) {
-            await env.BLOB.put(
-                thumbnailKey(storedPath.elementId, MICROVERSION, size),
-                "bytes"
-            );
-        }
-        const { api, getImage } = fakeOnshapeApi();
-
-        const urls = await uploadThumbnails(
-            env.BLOB,
-            api,
-            storedPath,
-            MICROVERSION
-        );
-
-        expect(getImage).not.toHaveBeenCalled();
-        // Still the urls the group row records, not a skipped result.
-        expect(urls.small).toContain(storedPath.elementId);
-        expect(urls.large).toContain(storedPath.elementId);
-    });
-
-    // One size present is a half-done upload, not a reason to skip — and not a
-    // reason to fetch the size already in hand either.
-    it("renders only the size that is missing", async () => {
-        const partialPath = { ...elementPath, elementId: "half-rendered" };
-        await env.BLOB.put(
-            thumbnailKey(
-                partialPath.elementId,
-                MICROVERSION,
-                ThumbnailSize.SMALL
-            ),
-            "bytes"
-        );
-        const { api, getImage } = fakeOnshapeApi();
-
-        await uploadThumbnails(env.BLOB, api, partialPath, MICROVERSION);
-
-        expect(getImage).toHaveBeenCalledTimes(1);
-        expect(getImage.mock.calls[0][0]).toContain(ThumbnailSize.LARGE);
-    });
-
-    // Onshape can have one size rendered and not the other. Storing the one
-    // that landed leaves the retry a single size to ask for, rather than
-    // fetching a pair it discards again.
-    it("keeps the size that rendered when the other is not ready", async () => {
-        const failingPath = { ...elementPath, elementId: "one-rendered" };
-        const getImage = vi.fn((path: string) =>
-            path.includes(ThumbnailSize.LARGE)
-                ? Promise.reject(new Error("not rendered"))
-                : Promise.resolve(new ArrayBuffer(4))
-        );
-        const api = { getImage } as unknown as OnshapeApi;
-        const keyFor = (size: ThumbnailSize) =>
-            thumbnailKey(failingPath.elementId, MICROVERSION, size);
-
-        await expect(
-            uploadThumbnails(env.BLOB, api, failingPath, MICROVERSION)
-        ).rejects.toThrow("not rendered");
-
-        expect(await env.BLOB.head(keyFor(ThumbnailSize.SMALL))).not.toBeNull();
-
-        getImage.mockImplementation(() => Promise.resolve(new ArrayBuffer(4)));
-        await uploadThumbnails(env.BLOB, api, failingPath, MICROVERSION);
-
-        // Two calls for the first attempt and one for the retry: the size that
-        // landed is not asked for again.
-        expect(getImage).toHaveBeenCalledTimes(3);
-        expect(await env.BLOB.head(keyFor(ThumbnailSize.LARGE))).not.toBeNull();
     });
 });
