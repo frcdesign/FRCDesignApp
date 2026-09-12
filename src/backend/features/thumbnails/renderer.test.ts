@@ -77,6 +77,9 @@ function mockRenders(
 const stillRendering = () =>
     Promise.reject(new OnshapeApiError("Onshape API error 404: nope", 404));
 
+const notAcceptable = () =>
+    Promise.reject(new OnshapeApiError("Onshape API error 406: nope", 406));
+
 const rendered = () => Promise.resolve(new ArrayBuffer(4));
 
 /**
@@ -315,6 +318,23 @@ describe("ThumbnailRenderer", () => {
 
         expect(await queueOf(0)).toEqual([]);
         expect(callsFor(calls, "stored")).toEqual([]);
+    });
+
+    // Onshape answers a thumbnail it has not rendered with a JSON error, which
+    // it cannot send when the request rules that content type out. Read as a
+    // failure it drops the job after three strikes, and the render never lands.
+    it("treats a 406 as a render still running, not a failure", async () => {
+        mockRenders(notAcceptable);
+        await renderer().enqueue(
+            elementRequest(),
+            SESSION_ID,
+            RenderSource.LOAD
+        );
+
+        const held = await renderingKey();
+        expect(held).toContain(elementIdFor("e"));
+        // Still queued rather than dropped, and holding the thread.
+        expect(await renderer().queued()).toHaveLength(2);
     });
 
     // Onshape is pushing back on the account, not on this render, and waiting

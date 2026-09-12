@@ -59,10 +59,17 @@ export abstract class OnshapeApi {
         return this._call("GET", path, options);
     }
 
+    // Accepts any media type rather than `image/*`, matching the Python
+    // implementation this was ported from, which set no Accept header at all.
+    // Onshape answers a thumbnail it has not rendered yet with a JSON error,
+    // which it cannot send under `image/*` — so it replies 406 rather than the
+    // 404 that means "still rendering", and a caller reading status codes takes
+    // a slow render for a dead one. That is my best explanation for the
+    // intermittent 406s this code recorded and could not account for.
     async getImage(path: string, options?: QueryOptions): Promise<ArrayBuffer> {
         const res = await this._call("GET", path, {
             ...options,
-            accept: "image/*"
+            accept: "*/*"
         });
         return res.arrayBuffer();
     }

@@ -126,16 +126,17 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 /**
- * How a row waits out a render it asked for. Onshape takes minutes, and the
- * worker polls it for half an hour, so a row that stopped at the default retry
- * abandoned the render a second after starting it.
+ * How a row waits out a render it asked for. A poll is a worker reading R2, not
+ * an Onshape call — the renderer owns that cadence — so what this trades off is
+ * how late a landed thumbnail shows up against how many requests a list of rows
+ * makes between them.
  *
- * On a curve rather than the preview's fixed beat: a list holds dozens of rows,
- * and each attempt is a request that also re-asks the worker to start the
- * render. Fifteen of them reach roughly the same six minutes the preview polls.
+ * The horizon has to outlast the renderer, which gives a render five minutes of
+ * the Onshape thread and retries a failed one three times: a row that stopped
+ * sooner would report a render that was still perfectly alive as missing.
  */
-const ROW_POLL_ATTEMPTS = 15;
-const ROW_POLL_CAP_MS = 30_000;
+const ROW_POLL_ATTEMPTS = 50;
+const ROW_POLL_CAP_MS = 15_000;
 
 const rowPollDelay = (attemptIndex: number) =>
     Math.min(2000 * 2 ** attemptIndex, ROW_POLL_CAP_MS);
@@ -243,23 +244,28 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 const PREVIEW_SPINNER_SIZE = 36;
 
 /**
- * How often to re-ask while the render is still running. Tight because this is
- * the last wait between a stored render and the person watching the spinner,
- * and a poll is a worker reading R2 rather than anything Onshape is asked.
+ * How often to re-ask while the render is still running, and for how long.
+ *
+ * Tight at first because this is the last wait between a stored render and the
+ * person watching the spinner, and a poll is a worker reading R2 rather than
+ * anything asked of Onshape. It eases off after a minute, which is where
+ * renders normally land, and then keeps going long enough to outlast the
+ * renderer — five minutes of the Onshape thread, plus its retries. Stopping
+ * before that reports a live render as a failure, which is what a spinner that
+ * turns into an error while the thumbnail is still coming looks like.
  */
-const PREVIEW_POLL_MS = 2000;
+const PREVIEW_FAST_POLLS = 30;
+const PREVIEW_FAST_MS = 2_000;
+const PREVIEW_STEADY_MS = 5_000;
+const PREVIEW_POLL_ATTEMPTS = 160;
+
+const previewPollDelay = (attemptIndex: number) =>
+    attemptIndex < PREVIEW_FAST_POLLS ? PREVIEW_FAST_MS : PREVIEW_STEADY_MS;
 
 /**
- * Roughly six minutes of polling. Long because the render is a workflow that
- * retries Onshape for far longer, cheap because every poll is a worker reading
- * R2 — the render itself was started once and is not started again.
- */
-const PREVIEW_POLL_ATTEMPTS = 180;
-
-/**
- * Polls for the render the worker produces in a workflow. Until it lands the
- * route answers 404, so a miss is a rejected query and the retry is the poll;
- * asking to render is idempotent, so every poll can carry it.
+ * Polls for the render the renderer produces. Until it lands the route answers
+ * 404, so a miss is a rejected query and the retry is the poll; queueing is
+ * idempotent, so every poll can carry it without disturbing what is running.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;
@@ -281,7 +287,7 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         // while this one is still being waited on.
         placeholderData: (previousData) => previousData,
         retry: PREVIEW_POLL_ATTEMPTS,
-        retryDelay: PREVIEW_POLL_MS,
+        retryDelay: previewPollDelay,
         enabled
     });
 }

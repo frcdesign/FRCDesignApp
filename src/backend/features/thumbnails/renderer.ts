@@ -69,10 +69,16 @@ const SOURCE_RANK: Record<RenderSource, number> = {
 };
 
 /**
- * How often the render holding the thread is asked about. Tight because polling
- * the same thumbnail does not disturb it; only asking for a different one does.
+ * How often the render holding the thread is asked about, by how long it has
+ * held it. Polling the same thumbnail does not disturb it, so the first minute —
+ * where renders normally land — is worth about ten calls. Past that they are
+ * outliers, and the backoff stops spending the account's allocation on them.
  */
-const POLL_INTERVAL_MS = 2_000;
+const POLL_SCHEDULE = [
+    { withinMs: 60_000, everyMs: 6_000 },
+    { withinMs: 3 * 60_000, everyMs: 20_000 },
+    { withinMs: Infinity, everyMs: 60_000 }
+] as const;
 
 /**
  * How long one render may hold the thread before the queue takes it back. Well
@@ -422,7 +428,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                      SET startedAt = COALESCE(startedAt, ?), dueAt = ?
                      WHERE key = ?`,
                     Date.now(),
-                    Date.now() + POLL_INTERVAL_MS,
+                    Date.now() + pollDelay(job),
                     job.key
                 );
                 return;
@@ -547,7 +553,15 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
     }
 }
 
-/** A 404 is Onshape rendering in the background, which is the normal case. */
+/**
+ * A 404 is Onshape rendering in the background, which is the normal case.
+ *
+ * So is a 406, as best I can tell: it means Onshape wanted to answer with
+ * something the request's Accept header excluded, and the only thing it has to
+ * say about a thumbnail that is not ready is a JSON error. `getImage` accepts
+ * any media type to stop that happening, but reading a 406 as a hard failure
+ * would drop a job over a render that was only slow, so it is read the same.
+ */
 function classify(error: unknown): Attempt {
     if (error instanceof OnshapeRateLimitError) {
         return {
@@ -557,7 +571,8 @@ function classify(error: unknown): Attempt {
     }
     if (
         error instanceof OnshapeApiError &&
-        error.status === HttpStatus.NOT_FOUND
+        (error.status === HttpStatus.NOT_FOUND ||
+            error.status === HttpStatus.NOT_ACCEPTABLE)
     ) {
         return { outcome: "rendering" };
     }
@@ -587,6 +602,15 @@ function keyOf(request: ThumbnailRequest, size: ThumbnailSize): string {
 /** Every key ends in the size it stores; see `thumbnailKey`. */
 function sizeOf(key: string): ThumbnailSize {
     return key.slice(key.lastIndexOf("/") + 1) as ThumbnailSize;
+}
+
+/** How long to wait before asking about a render again; see POLL_SCHEDULE. */
+function pollDelay(job: JobRow): number {
+    // A job on its first 404 has not been stamped yet, so it reads as zero.
+    const heldMs = Date.now() - (job.startedAt ?? Date.now());
+    const step = POLL_SCHEDULE.find(({ withinMs }) => heldMs < withinMs);
+    // The schedule ends in an unbounded step, so this only satisfies the types.
+    return step?.everyMs ?? POLL_SCHEDULE[POLL_SCHEDULE.length - 1].everyMs;
 }
 
 /** The size a surface shows first goes first; its other size follows. */

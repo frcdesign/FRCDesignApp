@@ -9,13 +9,12 @@ import { ThumbnailSize } from "../../../features/thumbnails/contract";
 export function getElementThumbnail(
     client: OnshapeApi,
     elementPath: ElementPath,
-    size = ThumbnailSize.LARGE,
-    signal?: AbortSignal
+    size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(elementPath, "w", "v");
     const path =
         apiPath("thumbnails", elementPath, toElementApiPath) + "/s/" + size;
-    return client.getImage(path, { signal });
+    return client.getImage(path);
 }
 
 /** The configuration matches no insertable, so retrying can only fail again. */
@@ -24,8 +23,7 @@ export class NoSuchConfigurationError extends Error {}
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configurationKey?: ConfigurationKey,
-    signal?: AbortSignal
+    configurationKey?: ConfigurationKey
 ): Promise<string> {
     const query = new URLSearchParams({
         includeParts: "true",
@@ -39,7 +37,7 @@ export async function getThumbnailId(
         apiPath("documents", elementPath, toInstanceApiPath, {
             endRoute: "insertables"
         }),
-        { query, signal }
+        { query }
     );
     // A configuration matching nothing comes back with no items at all.
     const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
@@ -55,12 +53,11 @@ export async function getThumbnailId(
 export function getThumbnailFromId(
     client: OnshapeApi,
     thumbnailId: string,
-    size = ThumbnailSize.LARGE,
-    signal?: AbortSignal
+    size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     const path =
         apiPath("thumbnails", undefined, undefined, { endId: thumbnailId }) +
         "/s/" +
         size;
-    return client.getImage(path, { signal });
+    return client.getImage(path);
 }
