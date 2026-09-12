@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
+import { chunkForInArray } from "../../db/chunk";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
@@ -108,8 +109,9 @@ export async function loadGroup(
 }
 
 /**
- * Loads every selected insertable in parallel, returning the ids of the ones
- * that failed.
+ * Starts every selected insertable at once, returning the ids of the ones that
+ * failed. `loadInsertable` holds a limiter slot for the part of itself that
+ * asks Onshape anything, so what runs in parallel here is bounded there.
  */
 async function loadInsertables(
     ctx: LoadContext,
@@ -117,15 +119,13 @@ async function loadInsertables(
 ): Promise<string[]> {
     const failedInsertableIds: string[] = [];
     await Promise.all(
-        targets.map((target) =>
-            ctx.limit(async () => {
-                try {
-                    await loadInsertable(ctx, target);
-                } catch {
-                    failedInsertableIds.push(target.insertableId);
-                }
-            })
-        )
+        targets.map(async (target) => {
+            try {
+                await loadInsertable(ctx, target);
+            } catch {
+                failedInsertableIds.push(target.insertableId);
+            }
+        })
     );
     return failedInsertableIds;
 }
@@ -181,14 +181,10 @@ async function saveGroup(
                 .where(eq(insertables.groupId, target.groupId))
         );
     }
-    if (removedInsertableIds.length > 0) {
-        // Configurations and favorites follow deleted insertables via their
-        // cascading foreign keys.
-        writes.push(
-            db
-                .delete(insertables)
-                .where(inArray(insertables.id, removedInsertableIds))
-        );
+    // Configurations and favorites follow deleted insertables via their
+    // cascading foreign keys.
+    for (const ids of chunkForInArray(removedInsertableIds)) {
+        writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }
     writes.push(
         ...(await flagFailedInsertables(db, input.failedInsertableIds))
@@ -205,15 +201,21 @@ async function flagFailedInsertables(
     db: Db,
     failedInsertableIds: string[]
 ): Promise<BatchItem<"sqlite">[]> {
-    if (failedInsertableIds.length === 0) {
-        return [];
-    }
-    const rows = await db
-        .select({ id: insertables.id, buildIssues: insertables.buildIssues })
-        .from(insertables)
-        .where(inArray(insertables.id, failedInsertableIds));
+    // Chunked: a rate-limited load can fail more insertables at once than one
+    // statement can bind ids for.
+    const reads = await Promise.all(
+        chunkForInArray(failedInsertableIds).map((ids) =>
+            db
+                .select({
+                    id: insertables.id,
+                    buildIssues: insertables.buildIssues
+                })
+                .from(insertables)
+                .where(inArray(insertables.id, ids))
+        )
+    );
 
-    return rows.map((row) =>
+    return reads.flat().map((row) =>
         db
             .update(insertables)
             .set({

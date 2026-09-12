@@ -1,14 +1,16 @@
 import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { groups, insertables } from "../../db/schema";
+import { configurations, groups, insertables } from "../../db/schema";
 import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
+    TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
     createTestApp,
     resetDb,
     seedGroup,
+    seedInsertable,
     seedPartStudio
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -79,6 +81,37 @@ describe("GET /build-status", () => {
 
         const body: LibraryBuildStatus = await res.json();
         expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBeNull();
+    });
+
+    // D1 takes at most 100 bound parameters in a statement and an `inArray`
+    // binds one per value, so listing every insertable id failed 500 here on
+    // any library past that — every real one.
+    it("serves a library with more insertables than a statement can bind", async () => {
+        const count = 120;
+        await seedGroup(db);
+        for (let i = 0; i < count; i++) {
+            const id = `ins-${i}`;
+            await seedInsertable(db, { id, elementId: `e-${i}` });
+            await db.insert(configurations).values({
+                insertableId: id,
+                parameters: TEST_PARAMETERS,
+                records: []
+            });
+        }
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
+            { method: "GET" },
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const body: LibraryBuildStatus = await res.json();
+        expect(Object.keys(body.insertables)).toHaveLength(count);
+        // The configurations come back joined, not just the insertables.
+        expect(body.insertables["ins-119"].configuration?.parameters).toEqual(
+            TEST_PARAMETERS
+        );
     });
 
     // Job state lives on /job-status, which is what lets this be cached.

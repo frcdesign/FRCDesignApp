@@ -59,10 +59,78 @@ interface InsertableFlags {
     indexConfigurations: boolean;
 }
 
+/**
+ * What a load reads under the limiter: every Onshape call an insertable makes
+ * except the thumbnail's.
+ */
+interface ProbedInsertable {
+    vendors: Vendor[];
+    fastenInfo: FastenInfo | null;
+    isOpenComposite: boolean;
+    /** Whether there is anything for Onshape to render. */
+    hasParts: boolean;
+    partMetadata: PartMetadata | null;
+    configuration: Configuration;
+    /** Everything raised so far; the thumbnail check adds its own. */
+    buildIssues: BuildIssue[];
+}
+
 export async function loadInsertable(
     ctx: LoadContext,
     target: InsertableTarget
 ): Promise<void> {
+    const { insertableId, elementPath } = target;
+
+    // Bounded, because this is where an insertable's Onshape calls are: an
+    // indexed element probes once per configuration.
+    const probed = await ctx.limit(() => probeInsertable(ctx, target));
+
+    // Deliberately outside the limiter. Onshape gives no signal when a render
+    // lands, so this polls for up to half an hour (see THUMBNAIL_STEP_RETRIES)
+    // while asking only once per attempt — a slot held across that waits out
+    // someone else's turn rather than protecting Onshape from anything.
+    //
+    // Nothing is asked for an empty studio: Onshape renders nothing for one, so
+    // the poll could only spend its whole budget on a thumbnail that cannot exist.
+    const thumbnailUrls = probed.hasParts
+        ? await uploadThumbnailsStep(
+              ctx,
+              `thumbnail-${insertableId}`,
+              async () =>
+                  uploadThumbnails(
+                      ctx.env.BLOB,
+                      await getOnshapeApiFromContext(ctx),
+                      elementPath,
+                      target.microversionId
+                  )
+          )
+        : null;
+
+    const parsed: ParsedInsertable = {
+        vendors: probed.vendors,
+        thumbnailUrls,
+        fastenInfo: probed.fastenInfo,
+        isOpenComposite: probed.isOpenComposite,
+        buildIssues: addBuildIssue(
+            probed.hasParts
+                ? checkInsertable({ vendors: probed.vendors, thumbnailUrls })
+                : [],
+            ...probed.buildIssues
+        ),
+        partMetadata: probed.partMetadata,
+        configuration: probed.configuration
+    };
+
+    await ctx.step.do(`save-${insertableId}`, () =>
+        saveInsertable(getDb(ctx.env.DB), target, parsed)
+    );
+}
+
+/** Reads everything about an insertable that asking Onshape can answer at once. */
+async function probeInsertable(
+    ctx: LoadContext,
+    target: InsertableTarget
+): Promise<ProbedInsertable> {
     const { insertableId, elementPath } = target;
 
     const flags = await readFlagsStep(ctx, insertableId);
@@ -97,43 +165,19 @@ export async function loadInsertable(
           )
         : NO_RECORDS;
 
-    // Onshape renders nothing for an empty studio, so asking would only spend
-    // the whole retry budget waiting for a thumbnail that cannot exist.
-    const thumbnailUrls = hasParts
-        ? await uploadThumbnailsStep(
-              ctx,
-              `thumbnail-${insertableId}`,
-              async () =>
-                  uploadThumbnails(
-                      ctx.env.BLOB,
-                      await getOnshapeApiFromContext(ctx),
-                      elementPath,
-                      target.microversionId
-                  )
-          )
-        : null;
-
-    const buildIssues = addBuildIssue(
-        hasParts
-            ? checkInsertable({ vendors, thumbnailUrls })
-            : parts.buildIssues,
-        ...recordsResult.buildIssues,
-        ...indexing.buildIssues
-    );
-
-    const parsed: ParsedInsertable = {
+    return {
         vendors,
-        thumbnailUrls,
         fastenInfo,
         isOpenComposite,
-        buildIssues,
+        hasParts,
         partMetadata: recordsResult.partMetadata,
-        configuration: { parameters, records: recordsResult.records }
+        configuration: { parameters, records: recordsResult.records },
+        buildIssues: addBuildIssue(
+            hasParts ? [] : parts.buildIssues,
+            ...recordsResult.buildIssues,
+            ...indexing.buildIssues
+        )
     };
-
-    await ctx.step.do(`save-${insertableId}`, () =>
-        saveInsertable(getDb(ctx.env.DB), target, parsed)
-    );
 }
 
 /**

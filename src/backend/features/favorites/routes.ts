@@ -10,6 +10,7 @@ import {
     libraryRoute
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
+import { chunkForInArray } from "../../db/chunk";
 import { users, favorites, configurations, insertables } from "../../db/schema";
 import { toKey, toSelection } from "../configurations/selection";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
@@ -132,25 +133,28 @@ async function getConfigurations(
     db: Db,
     insertableIds: string[]
 ): Promise<Map<string, InsertableConfiguration>> {
-    if (insertableIds.length === 0) {
-        return new Map();
-    }
-    const rows = await db
-        .select({
-            insertableId: insertables.id,
-            vendors: insertables.vendors,
-            parameters: configurations.parameters,
-            records: configurations.records
-        })
-        .from(insertables)
-        .leftJoin(
-            configurations,
-            eq(configurations.insertableId, insertables.id)
+    // Chunked: a caller can have more favorites than one statement can bind ids
+    // for.
+    const reads = await Promise.all(
+        chunkForInArray(insertableIds).map((ids) =>
+            db
+                .select({
+                    insertableId: insertables.id,
+                    vendors: insertables.vendors,
+                    parameters: configurations.parameters,
+                    records: configurations.records
+                })
+                .from(insertables)
+                .leftJoin(
+                    configurations,
+                    eq(configurations.insertableId, insertables.id)
+                )
+                .where(inArray(insertables.id, ids))
+                .all()
         )
-        .where(inArray(insertables.id, insertableIds))
-        .all();
+    );
     return new Map(
-        rows.map((row) => [
+        reads.flat().map((row) => [
             row.insertableId,
             {
                 parameters: row.parameters ?? [],

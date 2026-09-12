@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
@@ -56,7 +56,9 @@ buildStatusRoutes.get(
                 .all()
         ]);
 
-        const insertableIds = allInsertables.map((ins) => ins.id);
+        // Joined to the library rather than filtered by the ids just read: D1
+        // takes at most 100 bound parameters in a statement, and an `inArray`
+        // binds one per id, so listing them fails on any real library.
         const allConfigurations = await db
             .select({
                 insertableId: configurations.insertableId,
@@ -64,7 +66,11 @@ buildStatusRoutes.get(
                 parameters: configurations.parameters
             })
             .from(configurations)
-            .where(inArray(configurations.insertableId, insertableIds))
+            .innerJoin(
+                insertables,
+                eq(configurations.insertableId, insertables.id)
+            )
+            .where(eq(insertables.libraryId, libraryId))
             .all();
 
         const configMap = new Map(

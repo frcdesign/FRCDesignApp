@@ -217,9 +217,9 @@ async function resolveGroupTarget(
 
 /**
  * Writes the group row the load then fills in, creating the library if this is
- * its first groups.
+ * its first groups. Exported for its tests.
  */
-async function createShellGroup(
+export async function createShellGroup(
     env: AppBindings,
     params: AddGroupParams
 ): Promise<void> {
@@ -242,6 +242,11 @@ async function createShellGroup(
             sortOrder
         })
         .onConflictDoNothing();
+    // Without this the row is unreachable until the load finishes: every
+    // library response is pinned to the version, immutably. No search rebuild
+    // to go with it, since buildSearchDb indexes insertables and the shell has
+    // none — the index the old version served is still right for the new one.
+    await bumpLibraryVersion(db, params.libraryId);
 }
 
 /**
