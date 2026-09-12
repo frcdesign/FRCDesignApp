@@ -186,6 +186,11 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
+    /**
+     * Optional because nothing here has confirmed Onshape always sends it; the
+     * load throws rather than guessing when it is absent.
+     */
+    defaultWorkspace?: { id: string };
 }
 
 /** A folder (group) node in the document contents tree. */

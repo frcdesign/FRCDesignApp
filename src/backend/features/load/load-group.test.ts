@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     type OnshapeConfigurationResponse,
+    type OnshapeDocumentContents,
     type OnshapeElement,
     OnshapeElementType,
     OnshapeFolderEntryType
@@ -10,6 +11,7 @@ import {
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as RendererModule from "../thumbnails/renderer";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
 import { BuildIssueType } from "../build-checker/issues";
@@ -44,6 +46,11 @@ const GROUP: GroupTarget = {
         documentId: "doc-1",
         instanceId: "v-1",
         instanceType: "v"
+    },
+    workspacePath: {
+        documentId: "doc-1",
+        instanceId: "w-1",
+        instanceType: "w"
     }
 };
 
@@ -153,6 +160,11 @@ const LOADED_TARGET: GroupTarget = {
         documentId: `doc-${TEST_GROUP_ID}`,
         instanceId: "v-2",
         instanceType: "v"
+    },
+    workspacePath: {
+        documentId: `doc-${TEST_GROUP_ID}`,
+        instanceId: "w-2",
+        instanceType: "w"
     }
 };
 
@@ -166,8 +178,8 @@ const CTX: LoadContext = {
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */
-function mockContents(tabs: OnshapeElement[]) {
-    vi.spyOn(DocumentEndpoints, "getContents").mockResolvedValue({
+function contentsOf(tabs: OnshapeElement[]): OnshapeDocumentContents {
+    return {
         elements: tabs,
         folders: {
             btType: OnshapeFolderEntryType.GROUP,
@@ -176,7 +188,26 @@ function mockContents(tabs: OnshapeElement[]) {
                 elementId: element.id
             }))
         }
-    });
+    };
+}
+
+function mockContents(tabs: OnshapeElement[]) {
+    vi.spyOn(DocumentEndpoints, "getContents").mockResolvedValue(
+        contentsOf(tabs)
+    );
+}
+
+/** The same document read two ways, since a load reads both. */
+function mockContentsPerInstance(
+    version: OnshapeElement[],
+    workspace: OnshapeElement[]
+) {
+    vi.spyOn(DocumentEndpoints, "getContents").mockImplementation(
+        (_client, path) =>
+            Promise.resolve(
+                contentsOf(path.instanceType === "w" ? workspace : version)
+            )
+    );
 }
 
 /** An element with no configuration parameters. */
@@ -224,6 +255,38 @@ describe("loadGroup", () => {
 
         const rows = await db.select().from(insertables).all();
         expect(rows.map((row) => row.elementId).sort()).toEqual(["e1", "e2"]);
+    });
+
+    // The version is asked first and the workspace is the fallback, so a tab
+    // the workspace no longer has simply has nowhere to fall back to.
+    it("gives a workspace fallback only to tabs the workspace still has", async () => {
+        mockContentsPerInstance([tab("e1"), tab("e2")], [tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        // An empty studio records NO_PARTS and never reaches the thumbnail.
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p1" }
+        ]);
+        const queued = vi
+            .spyOn(RendererModule, "requestThumbnails")
+            .mockResolvedValue(undefined);
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        const elementRequests = queued.mock.calls
+            .map((call) => call[2])
+            .filter((request) => request.kind === "element");
+        const requestFor = (elementId: string) =>
+            elementRequests.find(
+                (request) => request.elementPath.elementId === elementId
+            );
+
+        expect(requestFor("e1")).toMatchObject({
+            elementPath: { instanceType: "v" },
+            workspacePath: { instanceType: "w" }
+        });
+        expect(requestFor("e2")?.workspacePath).toBeUndefined();
     });
 
     // A skipped tab never reaches saveInsertable, but its version still has to
