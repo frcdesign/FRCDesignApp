@@ -210,15 +210,19 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 /** Sized to the preview's footprint rather than to a row's. */
 const PREVIEW_SPINNER_SIZE = 36;
 
-/** How often to re-ask while the render is still running. */
-const PREVIEW_POLL_MS = 4000;
+/**
+ * How often to re-ask while the render is still running. Tight because this is
+ * the last wait between a stored render and the person watching the spinner,
+ * and a poll is a worker reading R2 rather than anything Onshape is asked.
+ */
+const PREVIEW_POLL_MS = 2000;
 
 /**
  * Roughly six minutes of polling. Long because the render is a workflow that
  * retries Onshape for far longer, cheap because every poll is a worker reading
  * R2 — the render itself was started once and is not started again.
  */
-const PREVIEW_POLL_ATTEMPTS = 90;
+const PREVIEW_POLL_ATTEMPTS = 180;
 
 /**
  * Polls for the render the worker produces in a workflow. Until it lands the

@@ -74,6 +74,41 @@ export const THUMBNAIL_STEP_RETRIES = {
 };
 
 /**
+ * Where the doubling stops for a render someone is waiting on. The curve above
+ * ends up waiting longer than the render takes — a thumbnail that lands a
+ * second after a poll then sits unserved for two minutes, which is most of what
+ * an insert preview spends spinning.
+ */
+const CONFIGURATION_MAX_DELAY_SECONDS = 15;
+
+function configurationThumbnailRetryDelay(
+    input: RetryDelayInput
+): `${number} seconds` {
+    const rateLimited = rateLimitDelay(input.error);
+    if (rateLimited) {
+        return rateLimited;
+    }
+    const seconds = Math.min(
+        THUMBNAIL_BASE_DELAY_SECONDS * 2 ** (input.ctx.attempt - 1),
+        CONFIGURATION_MAX_DELAY_SECONDS
+    );
+    return `${seconds} seconds`;
+}
+
+/**
+ * The configuration render behind the insert preview, where a person is
+ * watching a spinner rather than a load nobody is. Each attempt is one Onshape
+ * call — see `uploadConfigurationThumbnails` — so this polls harder than
+ * {@link THUMBNAIL_STEP_RETRIES} and still asks Onshape fewer times overall.
+ */
+export const CONFIGURATION_THUMBNAIL_RETRIES = {
+    // 4s, 8s, then every 15s: about ten minutes, which outlasts the six the
+    // client polls for.
+    limit: 40,
+    delay: configurationThumbnailRetryDelay
+};
+
+/**
  * Returns `null` when the thumbnails never showed up, which the caller records
  * as a build issue rather than failing the whole load.
  */

@@ -10,8 +10,14 @@ import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { insertables } from "../../db/schema";
 import { createLimiter, getOnshapeApiFromContext } from "../load/context";
-import { THUMBNAIL_STEP_RETRIES } from "../load/steps";
-import { NoSuchConfigurationError } from "../../lib/onshape/endpoints/thumbnails";
+import {
+    CONFIGURATION_THUMBNAIL_RETRIES,
+    ONSHAPE_STEP_RETRIES
+} from "../load/steps";
+import {
+    getThumbnailId,
+    NoSuchConfigurationError
+} from "../../lib/onshape/endpoints/thumbnails";
 import { uploadConfigurationThumbnails } from "./store";
 
 /** The render to run, plus the session whose Onshape tokens it runs under. */
@@ -79,26 +85,30 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
             return row;
         });
 
-        await step.do(
-            "render-thumbnails",
-            { retries: THUMBNAIL_STEP_RETRIES },
+        const onshapeApi = () =>
+            getOnshapeApiFromContext({
+                env: this.env,
+                sessionId,
+                step,
+                limit: createLimiter(1)
+            });
+
+        // Its own step, so the poll below is the render alone: the id is what
+        // it is for the element and configuration named here, and asking again
+        // on every attempt spent an Onshape call to be told so.
+        const thumbnailId = await step.do(
+            "resolve-thumbnail-id",
+            { retries: ONSHAPE_STEP_RETRIES },
             async () => {
                 try {
-                    await uploadConfigurationThumbnails(
-                        this.env.BLOB,
-                        await getOnshapeApiFromContext({
-                            env: this.env,
-                            sessionId,
-                            step,
-                            limit: createLimiter(1)
-                        }),
+                    return await getThumbnailId(
+                        await onshapeApi(),
                         {
                             documentId: element.documentId,
                             instanceId: element.versionId,
                             instanceType: "v" as const,
                             elementId: element.elementId
                         },
-                        element.microversionId,
                         configurationKey
                     );
                 } catch (error) {
@@ -110,6 +120,25 @@ export class ThumbnailWorkflow extends WorkflowEntrypoint<
                     }
                     throw error;
                 }
+            }
+        );
+
+        // Onshape renders in the background and says nothing when it lands, so
+        // the retries are the poll: each attempt asks for the thumbnail again.
+        await step.do(
+            "render-thumbnails",
+            { retries: CONFIGURATION_THUMBNAIL_RETRIES },
+            async () => {
+                await uploadConfigurationThumbnails(
+                    this.env.BLOB,
+                    await onshapeApi(),
+                    thumbnailId,
+                    {
+                        elementId: element.elementId,
+                        microversionId: element.microversionId
+                    },
+                    configurationKey
+                );
             }
         );
     }

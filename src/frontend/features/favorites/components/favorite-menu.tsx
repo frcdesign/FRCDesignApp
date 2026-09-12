@@ -1,5 +1,9 @@
 import { modals } from "@mantine/modals";
-import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import {
+    AppModalBody,
+    AppModalFooter,
+    AppModalTop
+} from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
 import { Button } from "@mantine/core";
 import { FloppyDiskIcon } from "@phosphor-icons/react";
@@ -78,7 +82,7 @@ export function FavoriteMenuContent(
 
     return (
         <>
-            <AppModalBody>
+            <AppModalTop>
                 <PreviewImageCard
                     path={insertable.path}
                     insertableId={insertable.id}
@@ -88,6 +92,8 @@ export function FavoriteMenuContent(
                         configurationKey ?? DEFAULT_CONFIGURATION_KEY
                     }
                 />
+            </AppModalTop>
+            <AppModalBody>
                 <ConfigurationWrapper
                     onConfigurationKey={setConfigurationKey}
                     onRecord={setRecord}

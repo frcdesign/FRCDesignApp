@@ -7,8 +7,7 @@ import { CachePolicy, immutableCacheControl } from "../../lib/cache";
 
 import {
     getElementThumbnail,
-    getThumbnailFromId,
-    getThumbnailId
+    getThumbnailFromId
 } from "../../lib/onshape/endpoints/thumbnails";
 import {
     getDocument,
@@ -17,7 +16,7 @@ import {
 import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./contract";
-import { thumbnailKey, thumbnailUrl } from "./keys";
+import { thumbnailKey, thumbnailUrl, type ThumbnailSubject } from "./keys";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
@@ -107,17 +106,18 @@ export async function uploadThumbnails(
 }
 
 /**
- * Both sizes, so a row and its hover never disagree. The two-stage id flow is the
- * only Onshape path taking a configuration; either call can fail mid-render.
+ * Both sizes, so a row and its hover never disagree. Each size is a separate
+ * Onshape call and either can fail mid-render, which is what the caller's
+ * retries poll out.
  */
 export async function uploadConfigurationThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
-    elementPath: ElementPath,
-    microversionId: string,
+    thumbnailId: string,
+    subject: ThumbnailSubject,
     configurationKey: ConfigurationKey
 ): Promise<void> {
-    const { elementId } = elementPath;
+    const { elementId, microversionId } = subject;
     const targets = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => ({
         size,
         key: thumbnailKey(elementId, microversionId, size, configurationKey)
@@ -129,17 +129,16 @@ export async function uploadConfigurationThumbnails(
         return;
     }
 
-    const thumbnailId = await getThumbnailId(
-        onshapeApi,
-        elementPath,
-        configurationKey
-    );
-    const rendered = await Promise.all(
-        targets.map(async ({ size, key }) => ({
+    // One size at a time rather than both at once: while the render is still
+    // running the first call throws, and the attempt this poll is made of costs
+    // one Onshape call instead of two.
+    const rendered: { key: string; thumbnail: ArrayBuffer }[] = [];
+    for (const { size, key } of targets) {
+        rendered.push({
             key,
             thumbnail: await getThumbnailFromId(onshapeApi, thumbnailId, size)
-        }))
-    );
+        });
+    }
 
     // The render above takes minutes, long enough to have been beaten to it.
     if (await allStored(bucket, keys)) {

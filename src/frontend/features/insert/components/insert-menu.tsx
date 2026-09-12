@@ -6,7 +6,11 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
 import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
-import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import {
+    AppModalBody,
+    AppModalFooter,
+    AppModalTop
+} from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
 import { showQuickInsertTip } from "../quick-insert-tip";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
@@ -125,7 +129,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
     return (
         <>
-            <AppModalBody>
+            <AppModalTop>
                 <PreviewImageCard
                     path={insertable.path}
                     insertableId={insertable.id}
@@ -133,8 +137,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
                     configurationKey={configurationKey}
                 />
-                {parameters}
-            </AppModalBody>
+            </AppModalTop>
+            <AppModalBody>{parameters}</AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
