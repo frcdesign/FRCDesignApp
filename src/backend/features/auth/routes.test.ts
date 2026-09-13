@@ -230,7 +230,7 @@ describe("GET /auth/sign-in redirect target", () => {
             await storedRedirect(
                 "redirectOnshapeUri=%2Fdocuments%2Fdoc-1%2Fw%2Fws-1%2Fe%2Fel-1"
             )
-        ).toBeUndefined();
+        ).toBe("/init");
     });
 
     it("refuses an origin that is not Onshape", async () => {
@@ -238,13 +238,21 @@ describe("GET /auth/sign-in redirect target", () => {
             await storedRedirect(
                 "redirectOnshapeUri=https%3A%2F%2Fevil.com%2Fx"
             )
-        ).toBeUndefined();
+        ).toBe("/init");
         // A host that merely ends in the zone's spelling is not in it.
         expect(
             await storedRedirect(
                 "redirectOnshapeUri=https%3A%2F%2Fnotonshape.com%2Fx"
             )
-        ).toBeUndefined();
+        ).toBe("/init");
+    });
+
+    // Refusing outright would leave a caller unable to sign in at all if this
+    // reading of what Onshape sends turns out to be too narrow.
+    it("opens the app rather than refusing a value it cannot place", async () => {
+        expect(await storedRedirect("redirectOnshapeUri=not-a-url")).toBe(
+            "/init"
+        );
     });
 
     it("refuses a protocol-relative url, which names another host", async () => {

@@ -21,6 +21,9 @@ accessRoutes.get("/access-data", cacheMiddleware(), async (c) => {
     } satisfies AccessData);
 });
 
+/** The app's own entry, which re-runs the gate and opens wherever it lands. */
+const ENTRY_PATH = "/init";
+
 /** Onshape's own hosts. An enterprise is a subdomain, so the zone is allowed. */
 function isOnshapeUrl(url: URL): boolean {
     return (
@@ -43,6 +46,12 @@ function isOnshapeUrl(url: URL): boolean {
  * whether it can be a bare path, and one would be the more damaging case: it
  * resolves against this origin instead, landing the caller on a url the app has
  * no route for, with none of the launch parameters the panel needs.
+ *
+ * Anything else falls back to the entry rather than refusing the sign-in. What
+ * Onshape actually sends here is not something we can see from the outside, so
+ * a value this does not recognize is as likely to be our own reading being too
+ * narrow as it is to be hostile, and opening the app without the caller's
+ * element beats leaving them unable to sign in at all.
  */
 function getSignInRedirect(query: Record<string, string>): string | undefined {
     const { redirectUrl, redirectOnshapeUri } = query;
@@ -53,12 +62,13 @@ function getSignInRedirect(query: Record<string, string>): string | undefined {
         return undefined;
     }
     try {
-        return isOnshapeUrl(new URL(redirectOnshapeUri))
-            ? redirectOnshapeUri
-            : undefined;
+        if (isOnshapeUrl(new URL(redirectOnshapeUri))) {
+            return redirectOnshapeUri;
+        }
     } catch {
-        return undefined;
+        // Not a url at all, which the fallback covers along with a bad one.
     }
+    return ENTRY_PATH;
 }
 
 authRoutes.get("/sign-in", async (c) => {
