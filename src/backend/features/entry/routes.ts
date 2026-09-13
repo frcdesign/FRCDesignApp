@@ -10,7 +10,7 @@ import { getApp, type AppContext } from "../../lib/context";
 import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
-import { LibraryId } from "../library/library-id";
+import { LibraryId, toLibraryId } from "../library/library-id";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
@@ -100,7 +100,10 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
     }
     search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
 
-    const libraryId = user?.libraryId ?? DEFAULT_SETTINGS.libraryId;
+    // Checked rather than trusted, as the stored group above is: the frontend
+    // 404s an id it does not know, and this url is the only thing between a
+    // stale row and the caller's panel.
+    const libraryId = toLibraryId(user?.libraryId, DEFAULT_SETTINGS.libraryId);
     const path = `/app/library/${libraryId}`;
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
     return { url: `${groupPath}?${search.toString()}`, userId, libraryId };
