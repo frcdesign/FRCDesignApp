@@ -36,3 +36,7 @@ dist-ssr
 *.pem
 
 /db-export/
+
+# Python caches, from the scripts/ helpers
+__pycache__/
+*.pyc
