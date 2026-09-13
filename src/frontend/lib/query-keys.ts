@@ -25,11 +25,20 @@ export function libraryQueryKey(libraryId: LibraryId) {
     return ["library", libraryId];
 }
 
+/**
+ * The library-scoped queries pinned to a cache version. Their urls are
+ * immutable, so one answers for its own version and no other — which is what
+ * {@link isVersionedLibraryQuery} exists to keep a refresh from forgetting.
+ */
+const LIBRARY_DATA = "library-data";
+const SEARCH_DB = "search-db";
+const BUILD_STATUS = "build-status";
+
 export function libraryDataQueryKey(
     libraryId: LibraryId,
     cacheVersion: number
 ) {
-    return [...libraryQueryKey(libraryId), "library-data", cacheVersion];
+    return [...libraryQueryKey(libraryId), LIBRARY_DATA, cacheVersion];
 }
 
 export function libraryVersionQueryKey(libraryId: LibraryId) {
@@ -37,7 +46,7 @@ export function libraryVersionQueryKey(libraryId: LibraryId) {
 }
 
 export function searchDbQueryKey(libraryId: LibraryId, cacheVersion: number) {
-    return [...libraryQueryKey(libraryId), "search-db", cacheVersion];
+    return [...libraryQueryKey(libraryId), SEARCH_DB, cacheVersion];
 }
 
 export function favoritesQueryKey(libraryId: LibraryId) {
@@ -48,7 +57,15 @@ export function buildStatusQueryKey(
     libraryId: LibraryId,
     cacheVersion: number
 ) {
-    return [...libraryQueryKey(libraryId), "build-status", cacheVersion];
+    return [...libraryQueryKey(libraryId), BUILD_STATUS, cacheVersion];
+}
+
+/** Whether `queryKey` is one of the version-keyed library queries. */
+export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
+    // The name sits where every library key puts it, after the library's id.
+    return [LIBRARY_DATA, SEARCH_DB, BUILD_STATUS].includes(
+        queryKey[2] as string
+    );
 }
 
 export function jobStatusQueryKey(libraryId: LibraryId) {

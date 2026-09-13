@@ -141,7 +141,7 @@ export function useDeleteGroupMutation(groupId: string) {
                 query: { groupId }
             }),
         // Refresh the whole view, not just the library list.
-        onSuccess: refreshLibrary
+        onSuccess: () => refreshLibrary()
     });
 }
 
@@ -170,8 +170,10 @@ export function useSetGroupOrderMutation() {
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
         },
-        // Reconciled (or rolled back on error) by the onSettled library refetch.
-        onSettled: refreshLibrary
+        // The bump reconciles it; a failure bumps nothing, so the patch has to
+        // be dropped explicitly.
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
     });
 }
 

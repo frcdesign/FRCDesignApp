@@ -96,7 +96,8 @@ export function useSetVisibilityMutation(
             "Unexpectedly failed to modify visibility.",
             "set-visibility"
         ),
-        onSettled: refreshLibrary
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
     });
 
     const mutate = useCallback(() => {
@@ -153,7 +154,8 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
             "Failed to enable insert and fasten. Is the target valid?",
             toastId
         ),
-        onSettled: refreshLibrary
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
     });
 }
 
@@ -195,7 +197,8 @@ export function useIndexConfigurationsMutation(insertableId: string) {
             "Unexpectedly failed to update part number indexing.",
             toastId
         ),
-        onSettled: refreshLibrary
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
     });
 }
 
@@ -218,6 +221,7 @@ export function useToggleSortOrderMutation(groupId: string) {
         onError: getAppErrorHandler(
             "Unexpectedly failed to update sort order."
         ),
-        onSettled: refreshLibrary
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
     });
 }
