@@ -28,6 +28,14 @@ export class OnshapeApiError extends Error {
 const DEFAULT_RETRY_AFTER_SECONDS = 60;
 
 /**
+ * Ceiling on a single Onshape call, so a socket that never answers surfaces as a
+ * retryable failure instead of being left to whatever is waiting on it. Well
+ * above any call we make — a rate limit answers in milliseconds — and well under
+ * the ten minutes a workflow step gets, so the step still has room to retry.
+ */
+const REQUEST_TIMEOUT_MS = 60_000;
+
+/**
  * Thrown on a 429, carrying Onshape's `Retry-After` seconds so callers can wait
  * it out. Extends {@link OnshapeApiError}, so `status` handling still works.
  *
@@ -126,7 +134,7 @@ export abstract class OnshapeApi {
             : undefined;
         const res = await this._request(method, url, {
             body: body !== undefined ? JSON.stringify(body) : undefined,
-            signal: options?.signal,
+            signal: options?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
             headers
         });
 

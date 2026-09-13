@@ -3,10 +3,18 @@ import { OnshapeApi, OnshapeApiError, OnshapeRateLimitError } from "./client";
 
 /** Minimal concrete client whose `_request` returns a canned response. */
 class TestApi extends OnshapeApi {
+    /** What the last call handed the transport, for asserting on the signal. */
+    lastInit?: RequestInit;
+
     constructor(private readonly response: Response) {
         super();
     }
-    protected _request(): Promise<Response> {
+    protected _request(
+        _method: string,
+        _url: string,
+        init: RequestInit
+    ): Promise<Response> {
+        this.lastInit = init;
         return Promise.resolve(this.response.clone());
     }
 }
@@ -31,6 +39,22 @@ describe("OnshapeApi error handling", () => {
         await expect(api.get("/x")).rejects.toMatchObject({
             retryAfterSeconds: 60
         });
+    });
+
+    it("aborts a call that never answers", async () => {
+        const api = new TestApi(new Response("{}"));
+        await api.get("/x");
+        // Nothing here waits a minute, so this asserts the signal is armed
+        // rather than that it fires.
+        expect(api.lastInit?.signal).toBeInstanceOf(AbortSignal);
+        expect(api.lastInit?.signal?.aborted).toBe(false);
+    });
+
+    it("lets a caller's own signal win", async () => {
+        const api = new TestApi(new Response("{}"));
+        const controller = new AbortController();
+        await api.get("/x", { signal: controller.signal });
+        expect(api.lastInit?.signal).toBe(controller.signal);
     });
 
     it("throws a plain OnshapeApiError for non-429 failures", async () => {

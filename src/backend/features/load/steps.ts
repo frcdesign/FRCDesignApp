@@ -93,8 +93,13 @@ export async function uploadThumbnailsStep(
     upload: () => Promise<ThumbnailUrls>
 ): Promise<ThumbnailUrls | null> {
     try {
-        return await ctx.step.do(name, { retries: THUMBNAIL_RETRIES }, () =>
-            ctx.limit(upload)
+        // Slot first, step inside — the order `loadInsertable` already takes. A
+        // step's timeout covers its whole callback, so acquiring within one
+        // counted the wait for a slot against it: under a rate limit these spent
+        // all ten minutes queued behind probes that were themselves backing off,
+        // and timed out having asked Onshape for nothing.
+        return await ctx.limit(() =>
+            ctx.step.do(name, { retries: THUMBNAIL_RETRIES }, upload)
         );
     } catch {
         return null;
