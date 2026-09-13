@@ -12,10 +12,14 @@ import type { ElementPath, InstancePath } from "../../lib/onshape/path";
  * beyond a thumbnail. What bounds this is Onshape's rate limit rather than
  * anything here: past it the extra calls come back 429 and wait out their
  * `Retry-After` (see `ONSHAPE_STEP_RETRIES`), and a step whose five attempts run
- * out fails its insertable. Raised from 15 without measuring where Onshape
- * actually starts pushing back.
+ * out fails its insertable.
+ *
+ * Back to 15 after 40 drove a load into a rate limit it never climbed out of:
+ * six attempts on one step, all 429, across five minutes. Still not measured
+ * against where Onshape actually starts pushing back, so this is the number that
+ * was working before rather than a considered one.
  */
-export const LOAD_CONCURRENCY = 40;
+export const LOAD_CONCURRENCY = 15;
 
 /** Runs a task, waiting for a slot when the limiter is full. */
 type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
