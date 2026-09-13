@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HttpStatus } from "http-status-ts";
+import { handledError } from "../../lib/api-error";
 import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
@@ -10,6 +11,9 @@ import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
 import { requestThumbnails, type ThumbnailRequest } from "./renderer";
 import { getSessionId } from "../auth/session";
+import { requireEditorMiddleware } from "../auth/guards";
+import { getDb } from "../../db/client";
+import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
 export const thumbnailRoutes = getApp();
 
@@ -123,3 +127,45 @@ async function queueConfigurationRender(
         // Never fatal: the caller just gets a miss until the render lands.
     }
 }
+
+const reloadThumbnailBody = z.object({
+    /** Exactly one: a group's own thumbnail, or one element's. */
+    groupId: z.string().min(1).optional(),
+    insertableId: z.string().min(1).optional()
+});
+
+/**
+ * POST /api/reload-thumbnail
+ *
+ * Asks Onshape for a thumbnail again and replaces what is stored. A load does
+ * not wait for one, so a thumbnail that was not there at the time stays missing
+ * until the next reload of the whole document — this is the way to ask for just
+ * the one.
+ */
+thumbnailRoutes.post(
+    "/reload-thumbnail",
+    requireEditorMiddleware,
+    validate("json", reloadThumbnailBody),
+    async (c) => {
+        const { groupId, insertableId } = c.req.valid("json");
+        const db = getDb(c.env.DB);
+        const onshapeApi = await c.var.getOnshapeApi();
+
+        if (insertableId) {
+            await reloadInsertableThumbnail(
+                db,
+                c.env.BLOB,
+                onshapeApi,
+                insertableId
+            );
+        } else if (groupId) {
+            await reloadGroupThumbnail(db, c.env.BLOB, onshapeApi, groupId);
+        } else {
+            throw handledError(
+                "Name a group or an element to reload.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+        return c.json({ success: true });
+    }
+);
