@@ -1,5 +1,10 @@
 /** Reads and writes of the library: its snapshot, cache version and load jobs. */
-import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
+import {
+    keepPreviousData,
+    queryOptions,
+    useMutation,
+    useQuery
+} from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
 import { type JobStatus } from "@backend/features/load/contract";
@@ -33,6 +38,10 @@ export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
             apiGet("/library-data/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
+        // An admin change bumps cacheVersion (and thus this key); keep the old
+        // snapshot on screen while the new one loads, so an edit reads as a
+        // merge rather than dropping the whole list back to a spinner.
+        placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
     });

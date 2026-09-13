@@ -1,4 +1,8 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import {
+    keepPreviousData,
+    queryOptions,
+    useQuery
+} from "@tanstack/react-query";
 import MiniSearch from "minisearch";
 import { apiGetText } from "../../lib/api-client";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -29,6 +33,9 @@ export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
                 SEARCH_OPTIONS
             );
         },
+        // Keyed by cacheVersion, which an admin change bumps: keep the old
+        // index searchable while the new one downloads.
+        placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
     });

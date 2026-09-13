@@ -42,4 +42,30 @@ describe("ONSHAPE_STEP_RETRIES", () => {
         expect(delay).toBeGreaterThanOrEqual(7);
         expect(delay).toBeLessThanOrEqual(7 + JITTER_SECONDS);
     });
+
+    // What the platform actually hands the callback. Passing the instance above
+    // is what let an `instanceof` check pass here and fail in production, where
+    // every 429 fell through to the curve and hammered Onshape six times.
+    it("waits out a rate limit Workflows rebuilt as a plain Error", () => {
+        const rebuilt = new Error(
+            new OnshapeRateLimitError("slow down", 450).message
+        );
+        const delay = secondsOf(
+            ONSHAPE_STEP_RETRIES.delay({ ctx: { attempt: 3 }, error: rebuilt })
+        );
+        expect(delay).toBeGreaterThanOrEqual(450);
+        expect(delay).toBeLessThanOrEqual(450 + JITTER_SECONDS);
+    });
+
+    // Workflows may prefix the name when it rebuilds the message.
+    it("reads the wait out of a name-prefixed message", () => {
+        const rebuilt = new Error(
+            `OnshapeRateLimitError: ${new OnshapeRateLimitError("slow down", 90).message}`
+        );
+        const delay = secondsOf(
+            ONSHAPE_STEP_RETRIES.delay({ ctx: { attempt: 2 }, error: rebuilt })
+        );
+        expect(delay).toBeGreaterThanOrEqual(90);
+        expect(delay).toBeLessThanOrEqual(90 + JITTER_SECONDS);
+    });
 });

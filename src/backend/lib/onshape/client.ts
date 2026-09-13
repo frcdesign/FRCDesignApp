@@ -30,15 +30,36 @@ const DEFAULT_RETRY_AFTER_SECONDS = 60;
 /**
  * Thrown on a 429, carrying Onshape's `Retry-After` seconds so callers can wait
  * it out. Extends {@link OnshapeApiError}, so `status` handling still works.
+ *
+ * The wait is also spelled into the message, because the message is all that
+ * survives a Workflows retry: the `delay` callback is handed an error rebuilt
+ * across the RPC layer, which keeps `name` and `message` but neither the
+ * prototype nor any own property. {@link readRetryAfterSeconds} reads it back.
  */
 export class OnshapeRateLimitError extends OnshapeApiError {
     constructor(
-        message: string,
+        text: string,
         public readonly retryAfterSeconds: number
     ) {
-        super(message, HttpStatus.TOO_MANY_REQUESTS);
+        super(
+            `Onshape API error 429 (retry after ${retryAfterSeconds}s): ${text}`,
+            HttpStatus.TOO_MANY_REQUESTS
+        );
         this.name = "OnshapeRateLimitError";
     }
+}
+
+/** Matches what {@link OnshapeRateLimitError} spells into its message. */
+const RETRY_AFTER_PATTERN = /Onshape API error 429 \(retry after (\d+)s\)/;
+
+/**
+ * The seconds a 429 asked us to wait, or null when the error is not one. Reads
+ * the message rather than the instance, so it answers the same for an error
+ * Workflows rebuilt as for the one that was thrown.
+ */
+export function readRetryAfterSeconds(error: Error): number | null {
+    const match = RETRY_AFTER_PATTERN.exec(error.message);
+    return match ? Number.parseInt(match[1], 10) : null;
 }
 
 export abstract class OnshapeApi {
@@ -117,7 +138,7 @@ export abstract class OnshapeApi {
                     10
                 );
                 throw new OnshapeRateLimitError(
-                    `Onshape API error 429: ${text}`,
+                    text,
                     Number.isFinite(retryAfter)
                         ? retryAfter
                         : DEFAULT_RETRY_AFTER_SECONDS
