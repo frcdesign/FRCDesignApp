@@ -1,11 +1,11 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { users } from "../../db/schema";
+import { libraries, users } from "../../db/schema";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import { LibraryId } from "../library/library-id";
-import { Theme } from "../settings/settings";
+import { DEFAULT_SETTINGS, Theme } from "../settings/settings";
 import {
     TEST_GROUP_ID,
     TEST_USER_ID,
@@ -40,6 +40,35 @@ describe("GET /init", () => {
         // The Onshape params have to survive the redirect.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("workspaceId")).toBe("ws");
+    });
+
+    // The frontend 404s a library id it does not know, so a row naming one the
+    // app has dropped would strand the caller on every panel open.
+    it("sends a user whose stored library is unknown to the default", async () => {
+        const staleLibraryId = "old-frc-lib";
+        await db
+            .insert(libraries)
+            .values({ id: staleLibraryId as LibraryId })
+            .onConflictDoNothing();
+        await db
+            .insert(users)
+            .values({
+                id: TEST_USER_ID,
+                libraryId: staleLibraryId as LibraryId
+            })
+            .onConflictDoNothing();
+
+        const res = await createTestApp().request(
+            "/init?documentId=doc",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe(
+            `/app/library/${DEFAULT_SETTINGS.libraryId}`
+        );
+        expect(location.searchParams.get("documentId")).toBe("doc");
     });
 
     it("sends a user with no row to the default library", async () => {
