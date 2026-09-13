@@ -21,7 +21,7 @@ function BetaComplete(): JSX.Element {
     return (
         <PageNotice
             title="The FRCDesignApp Beta has concluded."
-            description="The Beta is now over, and the FRCDesignApp has replaced the existing MKCad app. If you don't have the MKCad app, you can get it from the Onshape App Store. Thank you for participating!"
+            description="The Beta is now over, and the FRCDesignApp has replaced the existing MKCad app. If you don't have the FRCDesignApp, you can get it from the Onshape App Store. Thank you for participating!"
             action={frcDesignAppButton}
         />
     );
