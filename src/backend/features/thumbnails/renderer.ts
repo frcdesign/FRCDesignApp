@@ -48,6 +48,9 @@ export interface ThumbnailRequest {
     configurationKey: ConfigurationKey;
 }
 
+/** Both stored sizes, which a request always queues and drops together. */
+const SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE] as const;
+
 /** Where each source sits in the queue; lower goes first. */
 const SOURCE_RANK: Record<RenderSource, number> = {
     [RenderSource.INSERT_MENU]: 0,
@@ -86,6 +89,14 @@ const RETRY_DELAY_MS = 30_000;
 /** How long a job stays queued; past it a later request asks again. */
 const JOB_TTL_MS = 60 * 60_000;
 
+/**
+ * How long a configuration Onshape had no insertable for stays remembered.
+ * The answer only changes when the document does, and a reload moves the
+ * microversion, which keys a different render — so this is really only a floor
+ * on how often a mistyped configuration is worth asking about again.
+ */
+const INVALID_TTL_MS = 60 * 60_000;
+
 /** Bounds one alarm, not the queue. */
 const ALARM_BUDGET_MS = 20_000;
 
@@ -122,6 +133,14 @@ type Attempt =
     | { outcome: "failed"; error: unknown }
     /** Everything must wait; Onshape said how long. */
     | { outcome: "rate-limited"; retryAfterSeconds: number };
+
+/**
+ * What {@link ThumbnailRenderer.enqueue} did with a request. A configuration
+ * Onshape has no insertable for is not queued at all — the caller is told, so
+ * it can say the configuration is what is wrong rather than waiting out a
+ * render that was never going to happen.
+ */
+export type EnqueueOutcome = "queued" | "no-such-configuration";
 
 /** One entry of {@link ThumbnailRenderer.queued}. */
 export interface QueuedJob {
@@ -164,6 +183,10 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 startedAt INTEGER
             );
             CREATE INDEX IF NOT EXISTS jobs_queue ON jobs (queueRank, dueAt);
+            CREATE TABLE IF NOT EXISTS invalid (
+                key TEXT PRIMARY KEY,
+                expiresAt INTEGER NOT NULL
+            );
         `);
     }
 
@@ -184,6 +207,8 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
 
     /**
      * Queues both sizes and returns; callers read the bytes back out of R2.
+     * A configuration an earlier attempt found no insertable for is declined
+     * instead — see {@link EnqueueOutcome}.
      *
      * A job is named by the R2 key it will write, so asking twice is asking
      * once and a client may poll as fast as it likes. A repeat does refresh the
@@ -194,8 +219,13 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         request: ThumbnailRequest,
         sessionId: string,
         source: RenderSource
-    ): Promise<void> {
+    ): Promise<EnqueueOutcome> {
         this.#purgeStaleQueue();
+
+        const keys = SIZES.map((size) => keyOf(request, size));
+        if (this.#isInvalid(keys)) {
+            return "no-such-configuration";
+        }
 
         const now = Date.now();
         // Any live session for this user can render any of these jobs, so the
@@ -203,8 +233,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         // that has since expired renderable.
         this.ctx.storage.kv.put("sessionId", sessionId);
 
-        const keys = [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) => {
-            const key = keyOf(request, size);
+        for (const size of SIZES) {
             this.ctx.storage.sql.exec(
                 `INSERT INTO jobs
                      (key, request, source, queueRank, dueAt, expiresAt)
@@ -213,20 +242,20 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                      source = CASE WHEN excluded.queueRank < jobs.queueRank
                                    THEN excluded.source ELSE jobs.source END,
                      queueRank = MIN(jobs.queueRank, excluded.queueRank)`,
-                key,
+                keyOf(request, size),
                 JSON.stringify(request),
                 source,
                 rankOf(source, size),
                 now,
                 now + JOB_TTL_MS
             );
-            return key;
-        });
+        }
 
         if (source === RenderSource.INSERT_MENU) {
             this.#preemptFor(keys);
         }
         await this.#scheduleNext();
+        return "queued";
     }
 
     /**
@@ -423,12 +452,49 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 // A configuration Onshape has no insertable for, or one that
                 // left the library: retrying asks the same question.
                 if (attempt.error instanceof NoSuchConfigurationError) {
-                    this.#finish(job.key);
+                    this.#markInvalid(job);
                     return;
                 }
                 this.#fail(job);
                 return;
         }
+    }
+
+    /**
+     * Drops both of a request's sizes and remembers why. Neither can render —
+     * the id they would both have rendered from is what Onshape had nothing
+     * for — so the sibling is dropped rather than left to spend a call
+     * learning the same thing.
+     */
+    #markInvalid(job: JobRow): void {
+        const request = requestOf(job);
+        for (const size of SIZES) {
+            const key = keyOf(request, size);
+            this.ctx.storage.sql.exec(
+                `INSERT INTO invalid (key, expiresAt) VALUES (?, ?)
+                 ON CONFLICT (key) DO UPDATE SET expiresAt = excluded.expiresAt`,
+                key,
+                Date.now() + INVALID_TTL_MS
+            );
+            this.#finish(key);
+        }
+    }
+
+    /** Whether either size of a request is one already marked invalid. */
+    #isInvalid(keys: string[]): boolean {
+        const placeholders = keys.map(() => "?").join(", ");
+        return (
+            this.ctx.storage.sql
+                .exec<{
+                    count: number;
+                }>(
+                    `SELECT COUNT(*) AS count FROM invalid
+                     WHERE key IN (${placeholders}) AND expiresAt > ?`,
+                    ...keys,
+                    Date.now()
+                )
+                .one().count > 0
+        );
     }
 
     /** Gives the thread back after a job broke, and drops it once it keeps doing so. */
@@ -503,6 +569,10 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
     #dropExpired(): void {
         this.ctx.storage.sql.exec(
             "DELETE FROM jobs WHERE expiresAt <= ?",
+            Date.now()
+        );
+        this.ctx.storage.sql.exec(
+            "DELETE FROM invalid WHERE expiresAt <= ?",
             Date.now()
         );
     }
@@ -604,7 +674,7 @@ export function requestThumbnails(
     { userId, sessionId }: Renderer,
     request: ThumbnailRequest,
     source: RenderSource
-): Promise<void> {
+): Promise<EnqueueOutcome> {
     return env.THUMBNAIL_RENDERER.getByName(userId).enqueue(
         request,
         sessionId,

@@ -17,7 +17,11 @@ import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
-import { configurationQueryKey, unitInfoQueryKey } from "../../lib/query-keys";
+import {
+    configurationQueryKey,
+    renderQueryPrefix,
+    unitInfoQueryKey
+} from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 
 interface InsertArgs {
@@ -124,7 +128,9 @@ export function useInsertMutation(
                     useMateConnector: insertable.supportsFasten
                 };
             }
-            await queryClient.cancelQueries({ queryKey: ["thumbnail"] });
+            await queryClient.cancelQueries({
+                queryKey: renderQueryPrefix()
+            });
 
             showLoadingToast(`Inserting ${insertable.name}...`, toastId);
             return apiPost<InsertOut>(

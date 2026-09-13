@@ -4,7 +4,7 @@ import {
     type QueryOptions,
     type PostOptions
 } from "@backend/lib/query-params";
-import { fromApiErrorBody } from "./errors";
+import { fromApiErrorBody, ImageLoadError } from "./errors";
 import { HttpStatus } from "http-status-ts";
 
 function getUrl(
@@ -78,7 +78,8 @@ export async function apiGetText(
  * Fetching here surfaces failures as a rejected query and warms the browser
  * cache. Returns the url, not a blob url, which has no safe moment to revoke.
  * A configuration still rendering answers 404, so it rejects and the caller
- * retries.
+ * retries; the status travels with the rejection so a caller can tell that
+ * apart from a refusal worth giving up on.
  */
 export async function loadImage(
     url: string,
@@ -86,7 +87,7 @@ export async function loadImage(
 ): Promise<string> {
     const response = await fetch(url, { signal });
     if (!response.ok) {
-        throw new Error("Network response failed.");
+        throw new ImageLoadError(response.status);
     }
     return url;
 }

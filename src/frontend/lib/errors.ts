@@ -14,6 +14,19 @@ export class AppError extends Error {
     }
 }
 
+/**
+ * A failed image fetch. Carries the status because an image route answers with
+ * bytes or nothing at all, so the status is the only thing it can say — and a
+ * thumbnail still rendering and one that cannot render are different answers.
+ */
+export class ImageLoadError extends Error {
+    constructor(readonly status: number) {
+        super(`Image request failed with ${status}.`);
+        this.name = "ImageLoadError";
+        Object.setPrototypeOf(this, new.target.prototype);
+    }
+}
+
 /** Raised on the client, with wording already written for the user. */
 export function appError(message: string): AppError {
     return new AppError({ kind: ApiErrorKind.HANDLED, message });

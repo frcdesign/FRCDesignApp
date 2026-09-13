@@ -1,3 +1,8 @@
+/**
+ * Re-exported because the runtime looks them up here: a Durable Object or
+ * Workflow class has to be an export of the Worker's entrypoint for the
+ * `class_name`s in wrangler.jsonc to resolve.
+ */
 export {
     AddGroupWorkflow,
     LoadLibraryWorkflow
