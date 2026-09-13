@@ -7,7 +7,8 @@ import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
     type BuildIssue,
-    BuildIssueType
+    BuildIssueType,
+    hasBuildIssue
 } from "../build-checker/issues";
 import { groups, insertables } from "../../db/schema";
 import { uploadThumbnails } from "../thumbnails/store";
@@ -120,7 +121,13 @@ async function loadInsertables(
         targets.map(async (target) => {
             try {
                 await loadInsertable(ctx, target);
-            } catch {
+            } catch (error) {
+                // The only record of why: the row stores that it failed, never
+                // what failed.
+                console.error(
+                    `Failed to load insertable ${target.insertableId} (${target.name})`,
+                    error
+                );
                 failedInsertableIds.push(target.insertableId);
             }
         })
@@ -288,6 +295,8 @@ export interface StoredInsertable {
     id: string;
     elementId: string;
     microversionId: string;
+    /** Read so a row the last load failed on is retried rather than skipped. */
+    buildIssues: BuildIssue[];
 }
 
 async function fetchStoredInsertables(
@@ -298,15 +307,21 @@ async function fetchStoredInsertables(
         .select({
             id: insertables.id,
             elementId: insertables.elementId,
-            microversionId: insertables.microversionId
+            microversionId: insertables.microversionId,
+            buildIssues: insertables.buildIssues
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
 }
 
 /**
- * New tabs, and stored ones whose microversion changed. A stored insertable
- * keeps its id so favorites and links survive.
+ * New tabs, stored ones whose microversion changed, and stored ones the last
+ * load failed on. A stored insertable keeps its id so favorites and links
+ * survive.
+ *
+ * The failed ones are picked up because a failure writes no microversion: the
+ * tab looks unchanged next time, so matching on it alone would leave a
+ * transient Onshape failure flagged until someone forced a reload.
  */
 export function selectInsertablesToLoad(
     target: GroupTarget,
@@ -324,7 +339,8 @@ export function selectInsertablesToLoad(
         if (
             storedRow &&
             !forceReload &&
-            storedRow.microversionId === tab.microversionId
+            storedRow.microversionId === tab.microversionId &&
+            !hasBuildIssue(storedRow.buildIssues, BuildIssueType.LOAD_FAILED)
         ) {
             return;
         }

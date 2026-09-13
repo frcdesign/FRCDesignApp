@@ -1,5 +1,5 @@
 import type { WorkflowBackoff } from "cloudflare:workers";
-import { OnshapeRateLimitError } from "../../lib/onshape/client";
+import { readRetryAfterSeconds } from "../../lib/onshape/client";
 import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 
@@ -29,14 +29,19 @@ const RATE_LIMIT_JITTER_SECONDS = 20;
 /**
  * How long Onshape asked us to wait plus jitter, or `null` when the error
  * wasn't a rate limit.
+ *
+ * Read off the message: this runs on an error Workflows rebuilt, which is no
+ * longer an `OnshapeRateLimitError`, so an `instanceof` here answered false for
+ * every real 429 and quietly handed back the curve below instead.
  */
 function rateLimitDelay(error: Error): `${number} seconds` | null {
-    if (!(error instanceof OnshapeRateLimitError)) {
+    const retryAfterSeconds = readRetryAfterSeconds(error);
+    if (retryAfterSeconds === null) {
         return null;
     }
     // Rounded: Workflows documents whole units, not fractional ones.
     const jitter = Math.round(Math.random() * RATE_LIMIT_JITTER_SECONDS);
-    return `${error.retryAfterSeconds + jitter} seconds`;
+    return `${retryAfterSeconds + jitter} seconds`;
 }
 
 /**

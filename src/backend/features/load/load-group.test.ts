@@ -14,7 +14,7 @@ import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
-import { BuildIssueType } from "../build-checker/issues";
+import { type BuildIssue, BuildIssueType } from "../build-checker/issues";
 import {
     type StoredInsertable,
     findRemovedInsertables,
@@ -84,8 +84,16 @@ function tab(elementId: string, microversionId = "mv-1"): OnshapeElement {
     };
 }
 
-function storedRow(elementId: string): StoredInsertable {
-    return { id: `row-${elementId}`, elementId, microversionId: "mv-1" };
+function storedRow(
+    elementId: string,
+    buildIssues: BuildIssue[] = []
+): StoredInsertable {
+    return {
+        id: `row-${elementId}`,
+        elementId,
+        microversionId: "mv-1",
+        buildIssues
+    };
 }
 
 describe("selectInsertablesToLoad", () => {
@@ -121,6 +129,26 @@ describe("selectInsertablesToLoad", () => {
             insertableId: "row-e1",
             microversionId: "mv-2"
         });
+    });
+
+    // A failure writes no microversion, so the tab still looks unchanged.
+    it("retries an unchanged element the last load failed on", () => {
+        const toLoad = select(
+            [tab("e1")],
+            [storedRow("e1", [{ type: BuildIssueType.LOAD_FAILED }])],
+            false
+        );
+        expect(toLoad).toHaveLength(1);
+        expect(toLoad[0].insertableId).toBe("row-e1");
+    });
+
+    it("leaves an unchanged element with an unrelated issue alone", () => {
+        const toLoad = select(
+            [tab("e1")],
+            [storedRow("e1", [{ type: BuildIssueType.NO_VENDORS }])],
+            false
+        );
+        expect(toLoad).toEqual([]);
     });
 
     it("reloads unchanged elements on forceReload", () => {

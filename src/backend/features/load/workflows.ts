@@ -17,7 +17,12 @@ import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersion } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
 import { groups, PLACEHOLDER_VERSION_ID } from "../../db/schema";
-import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType,
+    hasBuildIssue
+} from "../build-checker/issues";
 
 import {
     type GroupTarget,
@@ -67,7 +72,8 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                 .select({
                     groupId: groups.id,
                     documentId: groups.documentId,
-                    versionId: groups.versionId
+                    versionId: groups.versionId,
+                    buildIssues: groups.buildIssues
                 })
                 .from(groups)
                 .where(eq(groups.libraryId, libraryId))
@@ -85,13 +91,17 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     if (
                         storedGroup.versionId ===
                             target.versionPath.instanceId &&
-                        !forceReload
+                        !forceReload &&
+                        !hasFailedLoad(storedGroup.buildIssues)
                     ) {
                         return { groupId, status: "skipped" };
                     }
                     const loaded = await loadGroup(ctx, target, forceReload);
                     return { groupId, status: "reloaded", ...loaded };
-                } catch {
+                } catch (error) {
+                    // The only record of why: the group row stores that it
+                    // failed, never what failed.
+                    console.error(`Failed to load group ${groupId}`, error);
                     await ctx.step.do(`flag-failed-${groupId}`, () =>
                         flagFailedGroup(ctx.env, groupId)
                     );
@@ -166,6 +176,21 @@ export class AddGroupWorkflow extends WorkflowEntrypoint<
         );
         return result;
     }
+}
+
+/**
+ * Whether the group's stored issues record a load that did not finish. The
+ * version alone cannot decide a skip: a failure leaves the row's version where
+ * it was, so a group that failed while already on the latest version — a forced
+ * reload, or a blip in the version probe below, which runs even for a group that
+ * is about to be skipped — would keep its flag until someone forced another.
+ */
+function hasFailedLoad(buildIssues: BuildIssue[]): boolean {
+    return hasBuildIssue(
+        buildIssues,
+        BuildIssueType.LOAD_FAILED,
+        BuildIssueType.INSERTABLES_FAILED
+    );
 }
 
 /** Reads the document and its latest version, pinning the group to that version. */
