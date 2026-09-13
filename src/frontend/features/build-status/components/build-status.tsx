@@ -7,9 +7,9 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ClockIcon } from "@phosphor-icons/react";
+import { EyeSlashIcon, GitBranchIcon } from "@phosphor-icons/react";
 import { ReactNode, createContext, use, useCallback, useState } from "react";
-import { formatRelativeTime } from "../../../lib/format-time";
+import { formatDaysAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
     getMaxSeverity
@@ -21,14 +21,16 @@ import {
     NO_SHRINK,
     StatusColor
 } from "../../../lib/style-constants";
+import { AppIcon } from "../../../components/app-icon";
 import { RequireAccessLevel } from "../../auth/access-level";
+import { TruncatedText } from "../../../components/truncated-text";
 import { useBuildStatusQuery } from "../queries";
 import { useIsJobRunning } from "../../library/queries";
 import {
     BuildChecksSection,
+    type ConfigurationTarget,
     IssueIcon,
     SeverityBadges,
-    getInsertableBuildIssues,
     useGroupBuildIssues
 } from "./issues";
 import {
@@ -43,8 +45,12 @@ interface BuildStatusSubject {
     /** The group/insertable name shown in the header. */
     name: string;
     issues: BuildIssue[];
-    /** When it was last successfully loaded (epoch ms); null if never. */
-    lastLoadedAt: number | null;
+    /** When Onshape cut the version it is pinned to (epoch ms); null if none. */
+    versionCreatedAt: number | null;
+    /** Set for an insertable, so an issue can open the configuration it blames. */
+    configurationTarget?: ConfigurationTarget;
+    /** Draws the badge as hidden-from-users instead of as its worst severity. */
+    isHidden?: boolean;
 }
 
 interface BuildStatusCardProps extends BuildStatusSubject {
@@ -57,18 +63,22 @@ interface BuildStatusCardProps extends BuildStatusSubject {
  * the build checks (when any), and the wrapped group/insertable admin menu.
  */
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { name, issues, lastLoadedAt, children } = props;
+    const { name, issues, versionCreatedAt, configurationTarget, children } =
+        props;
     return (
         <Stack gap="sm" w={300}>
             <CardHeader
                 name={name}
                 issues={issues}
-                lastLoadedAt={lastLoadedAt}
+                versionCreatedAt={versionCreatedAt}
             />
             {issues.length > 0 && (
                 <>
                     <Divider />
-                    <BuildChecksSection issues={issues} />
+                    <BuildChecksSection
+                        issues={issues}
+                        configurationTarget={configurationTarget}
+                    />
                 </>
             )}
             <Divider />
@@ -112,7 +122,9 @@ type BuildStatusHoverCardProps = BuildStatusBadgeProps;
 function BuildStatusHoverCard({
     name,
     issues,
-    lastLoadedAt,
+    versionCreatedAt,
+    configurationTarget,
+    isHidden,
     hoverMenu
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
@@ -135,6 +147,14 @@ function BuildStatusHoverCard({
                 <HoverCard.Target>
                     {jobRunning ? (
                         <Loader size={IconSize.SMALL} />
+                    ) : isHidden ? (
+                        // Nobody but an editor sees a hidden insertable, so what
+                        // its checks say about it does not matter yet.
+                        <AppIcon
+                            icon={EyeSlashIcon}
+                            color={StatusColor.WARNING}
+                            label="Hidden"
+                        />
                     ) : (
                         <IssueIcon severity={maxSeverity} />
                     )}
@@ -143,7 +163,8 @@ function BuildStatusHoverCard({
                     <BuildStatusCard
                         name={name}
                         issues={issues}
-                        lastLoadedAt={lastLoadedAt}
+                        versionCreatedAt={versionCreatedAt}
+                        configurationTarget={configurationTarget}
                     >
                         {hoverMenu}
                     </BuildStatusCard>
@@ -156,12 +177,12 @@ function BuildStatusHoverCard({
 interface CardHeaderProps {
     name: string;
     issues: BuildIssue[];
-    lastLoadedAt: number | null;
+    versionCreatedAt: number | null;
 }
 
-/** The card header: name + severity summary on the left, last-loaded on the right. */
+/** The card header: name + severity summary on the left, the version's age on the right. */
 function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, issues, lastLoadedAt } = props;
+    const { name, issues, versionCreatedAt } = props;
     return (
         <Stack gap={6}>
             <Group
@@ -170,31 +191,33 @@ function CardHeader(props: CardHeaderProps): ReactNode {
                 wrap="nowrap"
                 gap="sm"
             >
-                <Text
+                <TruncatedText
+                    hoverText={name}
                     fw={FontWeight.SEMI_BOLD}
                     size="sm"
-                    lineClamp={2}
                     flex={1}
                     miw={0}
                 >
                     {name}
-                </Text>
-                <LastModified lastLoadedAt={lastLoadedAt} />
+                </TruncatedText>
+                <VersionAge versionCreatedAt={versionCreatedAt} />
             </Group>
             <SeverityBadges issues={issues} />
         </Stack>
     );
 }
 
-interface LastModifiedProps {
-    lastLoadedAt: number | null;
+interface VersionAgeProps {
+    versionCreatedAt: number | null;
 }
 
 /**
- * The last-modified time, or a spinner (with a tooltip) while a job is running.
+ * How old the pinned Onshape version is — when the version was cut, not when we
+ * last synced it. A spinner (with a tooltip) stands in while a job is running;
+ * otherwise the version icon and a day count say it without a label.
  */
-function LastModified(props: LastModifiedProps): ReactNode {
-    const { lastLoadedAt } = props;
+function VersionAge(props: VersionAgeProps): ReactNode {
+    const { versionCreatedAt } = props;
     // Asked for again rather than threaded through three components; React
     // Query serves both readers from one cache entry.
     const jobRunning = useIsJobRunning();
@@ -206,24 +229,17 @@ function LastModified(props: LastModifiedProps): ReactNode {
         );
     }
     return (
-        <Tooltip
-            label="The last time changes were pulled from Onshape."
-            withArrow
+        <Group
+            gap={4}
+            wrap="nowrap"
+            c={StatusColor.DIMMED}
+            style={{ whiteSpace: "nowrap", ...NO_SHRINK }}
         >
-            <Group
-                gap={4}
-                wrap="nowrap"
-                c={StatusColor.DIMMED}
-                style={{ whiteSpace: "nowrap", ...NO_SHRINK }}
-            >
-                <ClockIcon size={IconSize.TINY} />
-                <Text size="xs">
-                    {!lastLoadedAt
-                        ? "Unknown"
-                        : `Last modified ${formatRelativeTime(lastLoadedAt)}`}
-                </Text>
-            </Group>
-        </Tooltip>
+            <GitBranchIcon size={IconSize.TINY} />
+            <Text size="xs">
+                {versionCreatedAt ? formatDaysAgo(versionCreatedAt) : "Unknown"}
+            </Text>
+        </Group>
     );
 }
 
@@ -243,8 +259,15 @@ export function InsertableStatusBadge(
     return (
         <BuildStatusBadge
             name={name}
-            issues={getInsertableBuildIssues(insertable)}
-            lastLoadedAt={insertable.lastLoadedAt}
+            issues={insertable.buildIssues}
+            versionCreatedAt={insertable.versionCreatedAt}
+            isHidden={!insertable.isVisible}
+            configurationTarget={
+                insertable.configuration && {
+                    elementPath: insertable.elementPath,
+                    parameters: insertable.configuration.parameters
+                }
+            }
             hoverMenu={
                 <InsertableHoverMenu
                     insertableId={insertableId}
@@ -295,7 +318,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
         <BuildStatusBadge
             name={name}
             issues={issues}
-            lastLoadedAt={groupStatus.lastLoadedAt}
+            versionCreatedAt={groupStatus.versionCreatedAt}
             hoverMenu={
                 <GroupAdminSection groupId={groupId} status={groupStatus} />
             }

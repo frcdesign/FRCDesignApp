@@ -21,7 +21,12 @@ import {
     countConfigurations,
     MAX_COUNTED_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
-import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
+import {
+    CATEGORY_COLOR,
+    IconSize,
+    NO_SHRINK,
+    StatusColor
+} from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
 
@@ -84,7 +89,7 @@ export function InsertableParsedSection(
                     value={{ kind: "vendors", vendors: status.vendors }}
                 />
                 <ParsedRow
-                    label="Configurations"
+                    label="Indexable Configurations"
                     value={configurationCountValue(count)}
                 />
             </Stack>
@@ -195,7 +200,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
         : getParameterTypeLabel(parameter.type);
 
     const badge = (
-        <Badge size="xs" variant="light" color={StatusColor.NEUTRAL}>
+        <Badge size="xs" variant="light" color={CATEGORY_COLOR}>
             {label}
         </Badge>
     );

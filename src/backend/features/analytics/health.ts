@@ -4,7 +4,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { configurations, groups, insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import type { LibraryHealthCounts } from "./contract";
 import {
@@ -46,41 +46,16 @@ export async function getHealthCounts(
             .all()
     ]);
 
-    return summarizeHealth(
-        allGroups,
-        allInsertables,
-        await getConfigurationIssues(db, libraryId)
-    );
+    return summarizeHealth(allGroups, allInsertables);
 }
 
 /**
- * Joined rather than fetched by id list, so this is one round trip whatever the
- * library's size. `parameters` is left unselected: large, and unused here.
- */
-async function getConfigurationIssues(
-    db: Db,
-    libraryId: LibraryId
-): Promise<Map<string, BuildIssue[]>> {
-    const rows = await db
-        .select({
-            insertableId: configurations.insertableId,
-            buildIssues: configurations.buildIssues
-        })
-        .from(configurations)
-        .innerJoin(insertables, eq(insertables.id, configurations.insertableId))
-        .where(visibleIn(libraryId))
-        .all();
-    return new Map(rows.map((row) => [row.insertableId, row.buildIssues]));
-}
-
-/**
- * An insertable's configuration issues count as its own, matching the panel.
- * Hidden ones are filtered upstream: exempt from the checks, so never healthy.
+ * Hidden insertables are filtered upstream: exempt from the checks, so never
+ * healthy.
  */
 export function summarizeHealth(
     groups: { buildIssues: BuildIssue[] }[],
-    insertables: { id: string; buildIssues: BuildIssue[] }[],
-    configurationIssues: Map<string, BuildIssue[]>
+    insertables: { buildIssues: BuildIssue[] }[]
 ): LibraryHealthCounts {
     const counts: LibraryHealthCounts = {
         groupCount: groups.length,
@@ -112,12 +87,7 @@ export function summarizeHealth(
     };
 
     for (const row of groups) record(row.buildIssues);
-    for (const row of insertables) {
-        record([
-            ...row.buildIssues,
-            ...(configurationIssues.get(row.id) ?? [])
-        ]);
-    }
+    for (const row of insertables) record(row.buildIssues);
 
     return counts;
 }

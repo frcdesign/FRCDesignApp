@@ -932,24 +932,6 @@ describe("analytics routes", () => {
             });
         });
 
-        it("merges configuration issues into the insertable", async () => {
-            await seedPartStudio(db);
-            await db.update(insertables).set({ isVisible: true });
-            await seedConfiguration(db);
-            await db.update(configurations).set({
-                buildIssues: [
-                    { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }
-                ]
-            });
-
-            const res = await anonymousGet(
-                `/api/analytics/health/library/${TEST_LIBRARY_ID}?v=0`
-            );
-            const body: LibraryHealthCounts = await res.json();
-
-            expect(body.warningCount).toBe(1);
-        });
-
         it("returns a clean report for a library with no issues", async () => {
             await seedPartStudio(db);
             await db.update(insertables).set({ isVisible: true });

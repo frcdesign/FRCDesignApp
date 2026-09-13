@@ -14,7 +14,7 @@ import {
     rebuildSearchDb
 } from "../library/db";
 import { getDocument } from "../../lib/onshape/endpoints/documents";
-import { getLatestVersionId } from "../../lib/onshape/endpoints/versions";
+import { getLatestVersion } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
 import { groups, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
@@ -181,18 +181,20 @@ async function resolveGroupTarget(
         async () =>
             getDocument(await getOnshapeApiFromContext(ctx), { documentId })
     );
-    const versionId = await ctx.step.do(
+    // The step hands back what Onshape sent, `createdAt` still an ISO string:
+    // a step's result is persisted for replay, which a Date does not survive.
+    const version = await ctx.step.do(
         `version${stepSuffix}`,
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
-            getLatestVersionId(await getOnshapeApiFromContext(ctx), {
+            getLatestVersion(await getOnshapeApiFromContext(ctx), {
                 documentId
             })
     );
 
     const versionPath: InstancePath = {
         documentId,
-        instanceId: versionId,
+        instanceId: version.id,
         instanceType: "v"
     };
     // Thrown rather than defaulted: every thumbnail in the group is read from
@@ -209,6 +211,7 @@ async function resolveGroupTarget(
         libraryId: ids.libraryId,
         groupId: ids.groupId,
         versionPath,
+        versionCreatedAt: new Date(version.createdAt),
         workspacePath,
         name: document.name,
         thumbnailElementId: document.documentThumbnailElementId

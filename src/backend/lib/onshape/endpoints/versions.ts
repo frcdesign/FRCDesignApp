@@ -19,19 +19,12 @@ function getVersions(
     );
 }
 
-function getLatestVersion(
+/** The most recently created version of a document, with when it was cut. */
+export function getLatestVersion(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeVersionInfo> {
     return getVersions(client, documentPath).then(
         (versions) => versions[versions.length - 1]
     );
-}
-
-/** Fetches the id of the most recently created version of a document. */
-export function getLatestVersionId(
-    client: OnshapeApi,
-    documentPath: DocumentPath
-): Promise<string> {
-    return getLatestVersion(client, documentPath).then((v) => v.id);
 }

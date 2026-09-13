@@ -1,5 +1,6 @@
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { Anchor, Badge, Group, Stack, Text } from "@mantine/core";
 import {
+    ArrowSquareOutIcon,
     CheckIcon,
     InfoIcon,
     WarningIcon,
@@ -11,10 +12,15 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
+    getIssueConfigurationKey,
     getIssueDescription,
     getIssueSeverity,
     hasBuildIssue
 } from "@backend/features/build-checker/issues";
+import { ConfigurationParameter } from "@backend/features/configurations/contract";
+import { fromKey } from "@backend/features/configurations/selection";
+import { ElementPath } from "@backend/lib/onshape/path";
+import { makeUrl } from "../../../lib/url";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
@@ -28,17 +34,6 @@ import {
 } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
-
-/**
- * Returns the build issues for an insertable, merging insertable-level and
- * configuration-level issues.
- */
-export function getInsertableBuildIssues(
-    insertable: InsertableBuildStatus
-): BuildIssue[] {
-    const configIssues = insertable.configuration?.buildIssues ?? [];
-    return [...insertable.buildIssues, ...configIssues];
-}
 
 /**
  * Stored issues plus the live "no unhidden insertables" check, which needs the
@@ -202,49 +197,112 @@ function countSeverities(issues: BuildIssue[]): SeverityCounts {
     return counts;
 }
 
+/**
+ * What a configuration issue opens: the tab it belongs to, and the parameters
+ * its key is spelled against. An element with no configurations has none.
+ */
+export interface ConfigurationTarget {
+    elementPath: ElementPath;
+    parameters: ConfigurationParameter[];
+}
+
+/** The offending configuration in Onshape, for an issue that blames one. */
+function getIssueUrl(
+    issue: BuildIssue,
+    target: ConfigurationTarget | undefined
+): string | undefined {
+    const key = getIssueConfigurationKey(issue);
+    if (key === undefined || !target) {
+        return undefined;
+    }
+    return makeUrl({
+        ...target.elementPath,
+        selection: fromKey(key, target.parameters)
+    });
+}
+
 interface BuildChecksSectionProps {
     issues: BuildIssue[];
+    /** Passed for an insertable; a group has no configurations to open. */
+    configurationTarget?: ConfigurationTarget;
 }
 
 /** The build checks: one tinted callout per issue. Rendered only when non-empty. */
 export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
-    const { issues } = props;
+    const { issues, configurationTarget } = props;
     return (
         <Stack gap={6}>
             <SectionHeader>Build checks</SectionHeader>
             {issues.map((issue) => (
-                <IssueCallout key={issue.type} issue={issue} />
+                <IssueCallout
+                    key={issue.type}
+                    issue={issue}
+                    url={getIssueUrl(issue, configurationTarget)}
+                />
             ))}
         </Stack>
     );
 }
 
+/** Shared by both callouts, so the linked one is laid out like the plain one. */
+const CALLOUT_LAYOUT = {
+    gap: "xs",
+    wrap: "nowrap",
+    align: "flex-start",
+    p: "xs"
+} as const;
+
+/** Nudged down so the icon aligns with the first line of text. */
+const CALLOUT_ICON = { ...NO_SHRINK, marginTop: 2 };
+
 interface IssueCalloutProps {
     issue: BuildIssue;
+    /** Where the issue opens, when it blames one configuration. */
+    url?: string;
 }
 
-/** A single build issue rendered as a tinted callout box in its severity color. */
+/**
+ * A single build issue rendered as a tinted callout box in its severity color.
+ * An issue that names a configuration is the link to it, whole box included —
+ * there is nothing else in the callout to click.
+ */
 function IssueCallout(props: IssueCalloutProps): ReactNode {
-    const { issue } = props;
+    const { issue, url } = props;
     const severity = getIssueSeverity(issue);
+    const background = {
+        backgroundColor: severityBackground(severity),
+        borderRadius: RADIUS
+    };
+
+    if (!url) {
+        return (
+            <Group {...CALLOUT_LAYOUT} style={background}>
+                <IssueIcon severity={severity} style={CALLOUT_ICON} />
+                <Text size="sm">{getIssueDescription(issue)}</Text>
+            </Group>
+        );
+    }
+
     return (
-        <Group
-            gap="xs"
-            wrap="nowrap"
-            align="flex-start"
-            p="xs"
-            style={{
-                backgroundColor: severityBackground(severity),
-                borderRadius: RADIUS
-            }}
+        // The box is the link, so the anchor drops its own color and rule and
+        // lets the callout keep the severity's.
+        <Anchor
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            display="block"
+            underline="never"
+            c="inherit"
+            aria-label={`${getIssueDescription(issue)} — open the configuration in Onshape`}
         >
-            {/* Nudge the icon down so it aligns with the first line of text. */}
-            <IssueIcon
-                severity={severity}
-                style={{ ...NO_SHRINK, marginTop: 2 }}
-            />
-            <Text size="sm">{getIssueDescription(issue)}</Text>
-        </Group>
+            <Group {...CALLOUT_LAYOUT} style={background}>
+                <IssueIcon severity={severity} style={CALLOUT_ICON} />
+                <Text size="sm" flex={1}>
+                    {getIssueDescription(issue)}
+                </Text>
+                <AppIcon icon={ArrowSquareOutIcon} style={CALLOUT_ICON} />
+            </Group>
+        </Anchor>
     );
 }
 

@@ -41,12 +41,7 @@ import {
     toKey,
     toSelection
 } from "@backend/features/configurations/selection";
-import {
-    type EvaluateOptions,
-    formatValueWithUnits,
-    valueWithUnits,
-    evaluateExpression
-} from "@backend/features/configurations/input-parser";
+import { evaluateExpression } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { InputRow } from "../../../components/input-row";
@@ -57,6 +52,7 @@ import {
     sameSelection,
     withParameterValue
 } from "../parameter-value";
+import { seedFrom } from "../quantity-box";
 
 interface ConfigurationWrapperProps {
     insertableId: string;
@@ -343,41 +339,6 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     );
 }
 
-/** Everything the box shows: the raw expression, its display, and any error. */
-interface QuantityBox {
-    /** What the user typed, shown while the input has focus. */
-    expression: string;
-    /** The evaluated value, shown while it does not. */
-    display: string;
-    errorMessage?: string;
-}
-
-/** What the box shows for a value, and the error if it does not evaluate. */
-function seedFrom(
-    value: string | undefined,
-    parameter: QuantityParameter,
-    options: EvaluateOptions
-): QuantityBox {
-    if (value === undefined) {
-        const display = formatValueWithUnits(
-            valueWithUnits(parameter.defaultValue, parameter.unit),
-            options.displayUnit,
-            options.displayPrecision
-        );
-        return { expression: parameter.default, display };
-    }
-    const result = evaluateExpression(value, options);
-    // Reported in the field rather than as a toast: the field is where the
-    // value is, and seeding happens during render.
-    return result.hasError
-        ? {
-              expression: result.expression,
-              display: result.expression,
-              errorMessage: result.errorMessage
-          }
-        : { expression: value, display: result.displayExpression };
-}
-
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     // Alone among the inputs in holding its own state: the box keeps what was
     // typed, and `value` re-seeds it only when it changes somewhere else.
@@ -445,12 +406,12 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                         inputRef.current?.blur();
                     }
                 }}
-                onChange={(event) =>
-                    setBox((current) => ({
-                        ...current,
-                        expression: event.currentTarget.value
-                    }))
-                }
+                onChange={(event) => {
+                    // Read before the updater runs: React nulls `currentTarget`
+                    // once the handler returns, and an updater runs after that.
+                    const expression = event.currentTarget.value;
+                    setBox((current) => ({ ...current, expression }));
+                }}
             />
         </InputRow>
     );

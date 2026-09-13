@@ -6,18 +6,75 @@ import {
     BuildIssueSeverity,
     BuildIssueType,
     clearBuildIssue,
-    getMaxSeverity
+    getIssueConfigurationKey,
+    getIssueDescription,
+    getMaxSeverity,
+    knownBuildIssues
 } from "./issues";
 
-/** A representative issue type for each severity. */
-const TYPE_BY_SEVERITY: Record<BuildIssueSeverity, BuildIssueType> = {
+/** A representative issue type for each severity, each one payload-free. */
+const TYPE_BY_SEVERITY = {
     [BuildIssueSeverity.INFO]: BuildIssueType.NO_VENDORS,
     [BuildIssueSeverity.WARNING]: BuildIssueType.NO_THUMBNAIL_TAB,
     [BuildIssueSeverity.ERROR]: BuildIssueType.THUMBNAIL_FAILED
-};
+} as const satisfies Record<BuildIssueSeverity, BuildIssueType>;
 
 const issue = (severity: BuildIssueSeverity): BuildIssue => ({
     type: TYPE_BY_SEVERITY[severity]
+});
+
+describe("getIssueConfigurationKey", () => {
+    it("names the configuration an issue blames", () => {
+        expect(
+            getIssueConfigurationKey({
+                type: BuildIssueType.UNSTABLE_COMPOSITE,
+                configurationKey: "size=large",
+                configurationCount: 1
+            })
+        ).toBe("size=large");
+    });
+
+    it("names none where the element itself is at fault", () => {
+        expect(
+            getIssueConfigurationKey({ type: BuildIssueType.MULTIPLE_PARTS })
+        ).toBeUndefined();
+    });
+});
+
+describe("getIssueDescription", () => {
+    // The count is the difference between "go fix this one" and "go fix forty".
+    it.each([
+        [1, "A configuration resolves to more than one part"],
+        [4, "4 configurations resolve to more than one part"]
+    ])("counts %i offending configurations", (count, expected) => {
+        expect(
+            getIssueDescription({
+                type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
+                configurationKey: "size=large",
+                configurationCount: count
+            })
+        ).toBe(expected);
+    });
+});
+
+describe("knownBuildIssues", () => {
+    /** A type an older deploy stored, cast because this build no longer has it. */
+    const retired = { type: "thumbnail-pending" } as unknown as BuildIssue;
+
+    it("drops a type this build has no check for", () => {
+        expect(
+            knownBuildIssues([retired, { type: BuildIssueType.LOAD_FAILED }])
+        ).toEqual([{ type: BuildIssueType.LOAD_FAILED }]);
+    });
+
+    it("keeps every type it knows", () => {
+        // Only the type is read, so the ones carrying a configuration stand up
+        // bare here rather than being built twice.
+        const issues = Object.values(BuildIssueType).map(
+            (type) => ({ type }) as BuildIssue
+        );
+        expect(knownBuildIssues(issues)).toEqual(issues);
+    });
 });
 
 describe("getMaxSeverity", () => {
@@ -63,7 +120,7 @@ describe("addBuildIssue", () => {
 });
 
 describe("hasBuildIssue", () => {
-    const issues = [
+    const issues: BuildIssue[] = [
         { type: BuildIssueType.NO_PARTS },
         { type: BuildIssueType.NO_VENDORS }
     ];
@@ -88,13 +145,11 @@ describe("hasBuildIssue", () => {
 
 describe("clearBuildIssue", () => {
     it("removes issues with the given type", () => {
-        const result = clearBuildIssue(
-            [
-                { type: BuildIssueType.THUMBNAIL_FAILED },
-                { type: BuildIssueType.NO_VENDORS }
-            ],
-            BuildIssueType.THUMBNAIL_FAILED
-        );
+        const issues: BuildIssue[] = [
+            { type: BuildIssueType.THUMBNAIL_FAILED },
+            { type: BuildIssueType.NO_VENDORS }
+        ];
+        const result = clearBuildIssue(issues, BuildIssueType.THUMBNAIL_FAILED);
         expect(result).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 

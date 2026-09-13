@@ -4,7 +4,7 @@ import { summarizeHealth } from "./health";
 
 describe("summarizeHealth", () => {
     const cleanGroup = { buildIssues: [] };
-    const insertable = { id: "i1", buildIssues: [] };
+    const insertable = { buildIssues: [] };
 
     it("counts every issue, including a lesser one on the same item", () => {
         const counts = summarizeHealth(
@@ -12,22 +12,17 @@ describe("summarizeHealth", () => {
             [
                 insertable,
                 {
-                    ...insertable,
-                    id: "i2",
                     buildIssues: [
                         { type: BuildIssueType.LOAD_FAILED },
                         { type: BuildIssueType.NO_VENDORS }
                     ]
                 },
                 {
-                    ...insertable,
-                    id: "i3",
                     // Info-only, so it leaves the item unhealthy without
                     // landing on either tile.
                     buildIssues: [{ type: BuildIssueType.NO_THUMBNAIL_TAB }]
                 }
-            ],
-            new Map()
+            ]
         );
 
         expect(counts).toEqual({
@@ -39,37 +34,21 @@ describe("summarizeHealth", () => {
         });
     });
 
-    it("counts an insertable's configuration issues as its own", () => {
-        // The panel merges these, so the dashboard must not disagree.
-        const counts = summarizeHealth(
-            [cleanGroup],
-            [insertable],
-            new Map([
-                ["i1", [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }]]
-            ])
-        );
-
-        expect(counts.warningCount).toBe(1);
-        expect(counts.healthyItems).toBe(1); // the group
-    });
-
     it("counts issues, not items, so two on one part read as two", () => {
         const counts = summarizeHealth(
             [cleanGroup],
-            [insertable],
-            new Map([
-                [
-                    "i1",
-                    [
+            [
+                {
+                    buildIssues: [
                         { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED },
                         { type: BuildIssueType.MANUAL_INDEXING_REQUIRED }
                     ]
-                ]
-            ])
+                }
+            ]
         );
 
         expect(counts.warningCount).toBe(2);
-        expect(counts.healthyItems).toBe(1);
+        expect(counts.healthyItems).toBe(1); // the group
     });
 
     it("reports a group's stored issues without recomputing any", () => {
@@ -84,8 +63,7 @@ describe("summarizeHealth", () => {
                     ]
                 }
             ],
-            [],
-            new Map()
+            []
         );
 
         expect(counts.errorCount).toBe(1);

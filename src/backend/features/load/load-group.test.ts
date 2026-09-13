@@ -35,7 +35,8 @@ import {
     TEST_LIBRARY_ID,
     resetDb,
     seedGroup,
-    seedInsertable
+    seedInsertable,
+    TEST_VERSION_CREATED_AT
 } from "../../../__test_utils__";
 
 const GROUP: GroupTarget = {
@@ -47,6 +48,7 @@ const GROUP: GroupTarget = {
         instanceId: "v-1",
         instanceType: "v"
     },
+    versionCreatedAt: TEST_VERSION_CREATED_AT,
     workspacePath: {
         documentId: "doc-1",
         instanceId: "w-1",
@@ -161,6 +163,9 @@ describe("findRemovedInsertables", () => {
 
 const db = getDb(env.DB);
 
+/** The version "v-2" was cut, which is the date the load should record. */
+const LOADED_VERSION_CREATED_AT = new Date("2026-02-03T04:05:06Z");
+
 /** The group seeds start at version "inst-1"; the load moves them to "v-2". */
 const LOADED_TARGET: GroupTarget = {
     libraryId: TEST_LIBRARY_ID,
@@ -171,6 +176,7 @@ const LOADED_TARGET: GroupTarget = {
         instanceId: "v-2",
         instanceType: "v"
     },
+    versionCreatedAt: LOADED_VERSION_CREATED_AT,
     workspacePath: {
         documentId: `doc-${TEST_GROUP_ID}`,
         instanceId: "w-2",
@@ -242,6 +248,9 @@ describe("loadGroup", () => {
         expect(result).toMatchObject({ loadedElements: 2, failedElements: 0 });
         const groupRow = await readGroup();
         expect(groupRow?.versionId).toBe("v-2");
+        // The version's date moves with the version, not with the sync: the
+        // card dates the version, and reloading an old one does not freshen it.
+        expect(groupRow?.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
         expect(groupRow?.name).toBe("Reloaded Group");
         expect(groupRow?.lastLoadedAt).toEqual(expect.any(Date));
         expect(groupRow?.buildIssues).not.toContainEqual({
@@ -250,6 +259,9 @@ describe("loadGroup", () => {
 
         const rows = await db.select().from(insertables).all();
         expect(rows.map((row) => row.elementId).sort()).toEqual(["e1", "e2"]);
+        for (const row of rows) {
+            expect(row.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
+        }
     });
 
     // Every thumbnail gets both: the version is asked first because that is

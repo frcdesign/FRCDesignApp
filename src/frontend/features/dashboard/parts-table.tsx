@@ -11,7 +11,7 @@ import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
-import { IconSize } from "../../lib/style-constants";
+import { IconSize, StatusColor } from "../../lib/style-constants";
 import { formatCount } from "./format";
 import {
     DEFAULT_SORT,
@@ -196,7 +196,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 <Group gap="xs">
                     {part.name}
                     {!part.isVisible && (
-                        <Badge color="gray" size="sm">
+                        <Badge color={StatusColor.INFO} size="sm">
                             Hidden
                         </Badge>
                     )}

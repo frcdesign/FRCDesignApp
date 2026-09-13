@@ -6,6 +6,7 @@ import {
     AUTO_INDEX_THRESHOLD,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../configurations/combinations";
+import type { ConfigurationKey } from "../configurations/contract";
 
 export enum BuildIssueSeverity {
     /** A potential issue that is usually fine, e.g. no vendors parsed. */
@@ -26,6 +27,7 @@ export enum BuildIssueType {
     CONFIGURATION_LIMIT_EXCEEDED = "configuration-limit-exceeded",
     MANUAL_INDEXING_REQUIRED = "manual-indexing-required",
     MULTIPLE_PARTS = "multiple-parts",
+    CONFIGURATION_MULTIPLE_PARTS = "configuration-multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
     LOAD_FAILED = "load-failed"
@@ -38,6 +40,24 @@ interface BuildIssueOf<T extends BuildIssueType> {
     type: T;
 }
 
+/**
+ * An issue particular configurations raise, which the element's own defaults do
+ * not — a problem with those configurations rather than with the part itself.
+ */
+interface ConfigurationBuildIssueOf<
+    T extends ConfigurationIssueType
+> extends BuildIssueOf<T> {
+    /** The first offender, which the build card links out to. */
+    configurationKey: ConfigurationKey;
+    /** How many configurations raise it, that first one included. */
+    configurationCount: number;
+}
+
+/** The issue types a configuration raises, rather than the element itself. */
+export type ConfigurationIssueType =
+    | BuildIssueType.CONFIGURATION_MULTIPLE_PARTS
+    | BuildIssueType.UNSTABLE_COMPOSITE;
+
 export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
@@ -47,9 +67,46 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED>
     | BuildIssueOf<BuildIssueType.MANUAL_INDEXING_REQUIRED>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
-    | BuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
+    | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
+    | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
+
+/**
+ * Builds the issue a set of offending configurations raises. The first is the
+ * one the card links out to; the rest are only counted.
+ */
+export function toConfigurationIssue(
+    type: ConfigurationIssueType,
+    offenders: { configurationKey: ConfigurationKey }[]
+): BuildIssue {
+    return {
+        type,
+        configurationKey: offenders[0].configurationKey,
+        configurationCount: offenders.length
+    };
+}
+
+/**
+ * The configuration an issue blames, or undefined where the element itself is
+ * at fault and there is nothing narrower to open.
+ */
+export function getIssueConfigurationKey(
+    issue: BuildIssue
+): ConfigurationKey | undefined {
+    return "configurationKey" in issue ? issue.configurationKey : undefined;
+}
+
+const BUILD_ISSUE_TYPES = new Set<string>(Object.values(BuildIssueType));
+
+/**
+ * Drops issues this deploy has no check for. A stored array was written by
+ * whichever deploy last loaded the row, so it can name a type since removed from
+ * `BuildIssueType`, which has no severity or description to render.
+ */
+export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
+    return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
+}
 
 /** A human-readable description of a build issue, shown to editors. */
 export function getIssueDescription(issue: BuildIssue): string {
@@ -70,8 +127,14 @@ export function getIssueDescription(issue: BuildIssue): string {
             return `Over ${AUTO_INDEX_THRESHOLD} configurations, so indexing must be enabled manually`;
         case BuildIssueType.MULTIPLE_PARTS:
             return "This part studio has more than one part";
+        case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
+            return issue.configurationCount === 1
+                ? "A configuration resolves to more than one part"
+                : `${issue.configurationCount} configurations resolve to more than one part`;
         case BuildIssueType.UNSTABLE_COMPOSITE:
-            return "The part studio does not use an open composite across all configurations";
+            return issue.configurationCount === 1
+                ? "A configuration does not use the part studio's open composite"
+                : `${issue.configurationCount} configurations do not use the part studio's open composite`;
         case BuildIssueType.INSERTABLES_FAILED:
             return "Some child insertables failed to load";
         case BuildIssueType.LOAD_FAILED:
@@ -85,6 +148,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.THUMBNAIL_FAILED:
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
         case BuildIssueType.MULTIPLE_PARTS:
+        case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
         case BuildIssueType.NO_PARTS:
         case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.INSERTABLES_FAILED:

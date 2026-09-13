@@ -13,7 +13,11 @@ import type {
     ConfigurationParameterUsage,
     ConfigurationValueUsage
 } from "@backend/features/analytics/contract";
-import { FontWeight, MUTED_MARK } from "../../lib/style-constants";
+import {
+    CATEGORY_COLOR,
+    FontWeight,
+    MUTED_MARK
+} from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
 
 interface ConfigurationBreakdownProps {
@@ -57,7 +61,7 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
             <Group justify="space-between" mb="sm" wrap="wrap">
                 <Group gap="xs">
                     <Title order={5}>{parameter.name}</Title>
-                    <Badge variant="light" color="gray" size="sm">
+                    <Badge variant="light" color={CATEGORY_COLOR} size="sm">
                         {parameter.type}
                     </Badge>
                 </Group>

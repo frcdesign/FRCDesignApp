@@ -128,7 +128,7 @@ describe("getLibraryVendors", () => {
             ])
         ).toEqual([
             ["AndyMark", "AM"],
-            ["Axon Robotics", "AXN"],
+            ["Axon Robotics", "AXON"],
             ["Bsrkrbotics", "BSRKR"],
             ["BWTLink", "BWT"],
             ["East Loop Components", "ELC"],

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, groups, insertables } from "../../db/schema";
@@ -18,22 +18,30 @@ import type { LibraryBuildStatus } from "./contract";
 
 const db = getDb(env.DB);
 
-const GROUP_LOADED_AT = new Date(1000);
-const INSERTABLE_LOADED_AT = new Date(2000);
+const GROUP_VERSION_AT = new Date(1000);
+const INSERTABLE_VERSION_AT = new Date(2000);
 
 describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it("returns each group's and insertable's last-loaded time", async () => {
+    // The date the card shows is the version's, not the sync's: a library
+    // reloaded today off a year-old version is a year-old version.
+    it("returns each group's and insertable's version date", async () => {
         await seedPartStudio(db);
         await db
             .update(groups)
-            .set({ lastLoadedAt: GROUP_LOADED_AT })
+            .set({
+                versionCreatedAt: GROUP_VERSION_AT,
+                lastLoadedAt: new Date()
+            })
             .where(eq(groups.id, TEST_GROUP_ID));
         await db
             .update(insertables)
-            .set({ lastLoadedAt: INSERTABLE_LOADED_AT })
+            .set({
+                versionCreatedAt: INSERTABLE_VERSION_AT,
+                lastLoadedAt: new Date()
+            })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
         const res = await createTestApp().request(
@@ -44,11 +52,11 @@ describe("GET /build-status", () => {
         expect(res.status).toBe(200);
 
         const body: LibraryBuildStatus = await res.json();
-        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBe(
-            GROUP_LOADED_AT.getTime()
+        expect(body.groups[TEST_GROUP_ID].versionCreatedAt).toBe(
+            GROUP_VERSION_AT.getTime()
         );
-        expect(body.insertables[TEST_PART_STUDIO_ID].lastLoadedAt).toBe(
-            INSERTABLE_LOADED_AT.getTime()
+        expect(body.insertables[TEST_PART_STUDIO_ID].versionCreatedAt).toBe(
+            INSERTABLE_VERSION_AT.getTime()
         );
     });
 
@@ -68,7 +76,7 @@ describe("GET /build-status", () => {
 
     it("reports a never-loaded entity as null", async () => {
         await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID, {
-            lastLoadedAt: null
+            versionCreatedAt: null
         });
         await seedPartStudio(db);
 
@@ -80,7 +88,7 @@ describe("GET /build-status", () => {
         expect(res.status).toBe(200);
 
         const body: LibraryBuildStatus = await res.json();
-        expect(body.groups[TEST_GROUP_ID].lastLoadedAt).toBeNull();
+        expect(body.groups[TEST_GROUP_ID].versionCreatedAt).toBeNull();
     });
 
     // D1 takes at most 100 bound parameters in a statement and an `inArray`
@@ -112,6 +120,28 @@ describe("GET /build-status", () => {
         expect(body.insertables["ins-119"].configuration?.parameters).toEqual(
             TEST_PARAMETERS
         );
+    });
+
+    // A removed check has no severity or description, so left in it renders as a
+    // blank callout and steals the row's status color.
+    it("drops a stored issue whose type this build no longer has", async () => {
+        await seedPartStudio(db);
+        // Written as raw JSON, the way the deploy that still had the check did.
+        await db.run(
+            sql`update groups set build_issues = '[{"type":"thumbnail-pending"},{"type":"load-failed"}]' where id = ${TEST_GROUP_ID}`
+        );
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=1`,
+            { method: "GET" },
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const body: LibraryBuildStatus = await res.json();
+        expect(body.groups[TEST_GROUP_ID].buildIssues).toEqual([
+            { type: "load-failed" }
+        ]);
     });
 
     // Job state lives on /job-status, which is what lets this be cached.
