@@ -1,12 +1,15 @@
+import { useEffect } from "react";
 import { showInfoToast } from "../../lib/notifications";
+import { useIsThumbnailRendering } from "../thumbnails/queries";
+import { useIsConnectedToOnshape } from "../../lib/onshape-params";
 
 /** An insert this soon after opening didn't need anything from the menu. */
 const QUICK_INSERT_WINDOW_MS = 1500;
 
 /**
- * How long in the menu counts as having sat through the render. Half the window
- * the preview itself gives up after, so this is someone who watched the spinner
- * rather than someone who took their time over the parameters.
+ * How long a render has to keep the menu waiting before the wait is worth
+ * naming. Half the window the preview itself gives up after, so this reaches
+ * someone mid-spinner rather than someone who merely took their time.
  */
 const THUMBNAIL_WAIT_MS = 15000;
 
@@ -28,18 +31,29 @@ export function showQuickInsertTip(openedAt: number): void {
 }
 
 /**
- * Points out that the render was never what the insert was waiting on — only
- * for someone who waited on one anyway, which is who would not know.
+ * Points out, while they are still waiting, that the render was never what the
+ * insert needed. Raised on a timer rather than at the click: by the time
+ * somebody gives up and inserts they have already spent the wait, and telling
+ * them then is too late to save it.
+ *
+ * The timer restarts whenever a render does, so this is fifteen seconds on one
+ * selection rather than fifteen spread across several.
  */
-export function showThumbnailWaitTip(
-    openedAt: number,
-    isThumbnailRendering: boolean
-): void {
-    if (!isThumbnailRendering || Date.now() - openedAt < THUMBNAIL_WAIT_MS) {
-        return;
-    }
-    showInfoToast(
-        "Tip: you can insert a part even while the part's thumbnail is still generating.",
-        { id: "thumbnail-wait-tip", autoClose: TIP_AUTO_CLOSE_MS }
-    );
+export function useThumbnailWaitTip(): void {
+    const isRendering = useIsThumbnailRendering();
+    // Standalone has no insert button for the tip to point at.
+    const isConnected = useIsConnectedToOnshape();
+
+    useEffect(() => {
+        if (!isRendering || !isConnected) {
+            return;
+        }
+        const timer = setTimeout(() => {
+            showInfoToast(
+                "Tip: you can insert a part even while the part's thumbnail is still generating.",
+                { id: "thumbnail-wait-tip", autoClose: TIP_AUTO_CLOSE_MS }
+            );
+        }, THUMBNAIL_WAIT_MS);
+        return () => clearTimeout(timer);
+    }, [isRendering, isConnected]);
 }
