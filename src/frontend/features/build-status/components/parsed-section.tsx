@@ -110,7 +110,10 @@ export function ConfigurationSection(
             <Divider />
             <Stack gap={6}>
                 <SectionHeader>Configurations</SectionHeader>
-                <ScrollArea.Autosize mah={PARAMETER_LIST_MAX_HEIGHT} type="auto">
+                <ScrollArea.Autosize
+                    mah={PARAMETER_LIST_MAX_HEIGHT}
+                    type="auto"
+                >
                     <Stack gap={4}>
                         {parameters.map((parameter) => (
                             <ParameterRow

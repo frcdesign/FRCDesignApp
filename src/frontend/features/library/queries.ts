@@ -1,9 +1,5 @@
 /** Reads and writes of the library: its snapshot, cache version and load jobs. */
-import {
-    queryOptions,
-    useMutation,
-    useQuery
-} from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
 import { type JobStatus } from "@backend/features/load/contract";
@@ -22,7 +18,8 @@ import { getQueryUpdater } from "../../lib/query-cache";
 import {
     showErrorToast,
     showInfoToast,
-    showLoadingToast
+    showLoadingToast,
+    showSuccessToast
 } from "../../lib/notifications";
 import { getAppErrorHandler, appError } from "../../lib/errors";
 import { modals } from "@mantine/modals";
@@ -225,6 +222,32 @@ export function useAddGroupMutation(selectedGroupId?: string) {
         onSuccess: () => {
             showInfoToast("Adding document...", { id: "add-group" });
             markJobStarted(libraryId);
+        }
+    });
+}
+
+/**
+ * Asks Onshape for one thumbnail again. A load does not wait for thumbnails,
+ * so one that was not there at the time stays missing until the whole document
+ * is reloaded; this is how to ask for just the one.
+ */
+export function useReloadThumbnailMutation(
+    target: { groupId: string } | { insertableId: string }
+) {
+    const refreshLibrary = useRefreshLibrary();
+    return useMutation({
+        mutationKey: ["reload-thumbnail", target],
+        mutationFn: async () => {
+            showLoadingToast("Reloading thumbnail...", "reload-thumbnail");
+            return apiPost("/reload-thumbnail", { body: target });
+        },
+        onError: getAppErrorHandler(
+            "Failed to reload thumbnail. Onshape may not have one yet.",
+            "reload-thumbnail"
+        ),
+        onSuccess: async () => {
+            showSuccessToast("Thumbnail reloaded.", "reload-thumbnail");
+            await refreshLibrary();
         }
     });
 }

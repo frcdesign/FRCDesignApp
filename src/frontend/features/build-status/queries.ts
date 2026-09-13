@@ -7,10 +7,7 @@ import {
 import { apiGet, apiPost } from "../../lib/api-client";
 import { modals } from "@mantine/modals";
 import { useCallback } from "react";
-import {
-    showLoadingToast,
-    showSuccessToast
-} from "../../lib/notifications";
+import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
@@ -22,10 +19,7 @@ import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
 
-function getBuildStatusQuery(
-    libraryId: LibraryId,
-    cacheVersion: number
-) {
+function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryBuildStatus>({
         queryKey: buildStatusQueryKey(libraryId, cacheVersion),
         queryFn: () =>

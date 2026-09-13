@@ -21,9 +21,10 @@ export function insertableTarget(
         libraryId: TEST_LIBRARY_ID,
         groupId: TEST_GROUP_ID,
         elementPath: TEST_PART_STUDIO_PATH,
-        // The workspace fallback a tab normally has; one without it is a tab
-        // that has left the workspace, which is the unusual case.
-        workspacePath: { ...TEST_PART_STUDIO_PATH, instanceType: "w" },
+        elementWorkspacePath: {
+            ...TEST_PART_STUDIO_PATH,
+            instanceType: "w"
+        },
         elementType: ElementType.PART_STUDIO,
         name: "Test part studio",
         microversionId: "mv-1",

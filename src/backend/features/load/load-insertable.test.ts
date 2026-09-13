@@ -21,7 +21,8 @@ import {
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as ThumbnailStore from "../thumbnails/store";
-import { createLimiter, type LoadContext } from "./context";
+import { BuildIssueType } from "../build-checker/issues";
+import { createLimiter, LOAD_CONCURRENCY, type LoadContext } from "./context";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
 
@@ -164,15 +165,12 @@ describe("saveInsertable", () => {
     });
 });
 
-/** Rejects instead of hanging, so a slot that never frees says so. */
-function withTimeout(promise: Promise<void>, message: string): Promise<void> {
-    return Promise.race([
-        promise,
-        new Promise<void>((_resolve, reject) =>
-            setTimeout(() => reject(new Error(message)), 2_000)
-        )
-    ]);
-}
+const ctx = (): LoadContext => ({
+    env,
+    sessionId: "test-session",
+    step: FAKE_STEP,
+    limit: createLimiter(LOAD_CONCURRENCY)
+});
 
 describe("loadInsertable", () => {
     beforeEach(async () => {
@@ -197,69 +195,54 @@ describe("loadInsertable", () => {
     // A render can take half an hour to land. Holding a limiter slot while
     // waiting on one stalls every insertable queued behind it, which is most of
     // what a slow load spends its time on.
-    it("waits for a thumbnail outside the limiter", async () => {
-        // One slot, so anything still holding it blocks the other insertable.
-        const ctx: LoadContext = {
-            env,
-            sessionId: "test-session",
-            step: FAKE_STEP,
-            limit: createLimiter(1),
-            renderer: () =>
-                Promise.resolve({
-                    userId: "test-user",
-                    sessionId: "test-session"
-                })
-        };
-
-        let releaseRenders!: () => void;
-        const rendered = new Promise<void>((resolve) => {
-            releaseRenders = resolve;
-        });
-        let bothWaiting!: () => void;
-        const bothStarted = new Promise<void>((resolve) => {
-            bothWaiting = resolve;
-        });
-
-        const waiting = new Set<string>();
-        vi.spyOn(ThumbnailStore, "readThumbnailUrls").mockImplementation(
-            async (_bucket, elementId) => {
-                waiting.add(elementId);
-                if (waiting.size === 2) bothWaiting();
-                await rendered;
-                return { small: "small.png", large: "large.png" };
-            }
+    // A thumbnail neither instance will give up is a build issue, not a
+    // failed insertable: the row is still worth having without a picture.
+    it("records a failed thumbnail rather than failing the insertable", async () => {
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockRejectedValue(
+            new Error("no thumbnail anywhere")
         );
 
-        const loads = Promise.all([
-            loadInsertable(
-                ctx,
-                insertableTarget({
-                    insertableId: "ins-a",
-                    elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-a" }
-                })
-            ),
-            loadInsertable(
-                ctx,
-                insertableTarget({
-                    insertableId: "ins-b",
-                    elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-b" }
-                })
-            )
-        ]);
-
-        // Both reached their render: the first one's wait did not gate the
-        // second one's probe.
-        await withTimeout(
-            bothStarted,
-            "the second insertable never probed — the thumbnail held the slot"
+        await loadInsertable(
+            ctx(),
+            insertableTarget({
+                insertableId: "ins-a",
+                elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-a" }
+            })
         );
-        releaseRenders();
-        await loads;
 
-        const rows = await db.select().from(insertables).all();
-        expect(rows.map((row) => row.id).sort()).toEqual(["ins-a", "ins-b"]);
-        expect(rows.every((row) => row.smallThumbnailUrl === "small.png")).toBe(
-            true
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-a"))
+            .get();
+        expect(row?.smallThumbnailUrl).toBeNull();
+        expect(row?.buildIssues.map((issue) => issue.type)).toContain(
+            BuildIssueType.THUMBNAIL_FAILED
+        );
+    });
+
+    it("stores the urls both sizes landed at", async () => {
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockResolvedValue({
+            small: "small.png",
+            large: "large.png"
+        });
+
+        await loadInsertable(
+            ctx(),
+            insertableTarget({
+                insertableId: "ins-b",
+                elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "e-b" }
+            })
+        );
+
+        const row = await db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, "ins-b"))
+            .get();
+        expect(row?.smallThumbnailUrl).toBe("small.png");
+        expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
+            BuildIssueType.THUMBNAIL_FAILED
         );
     });
 });

@@ -21,6 +21,8 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
+import { AdminOptionsSubmenu } from "../../../components/app-menu";
+import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -190,6 +192,11 @@ export function InsertableMenuItems(
                 <Menu.Divider />
             </RequireSignIn>
             <OpenDocumentItems path={{ ...insertable.path, selection }} />
+            <AdminOptionsSubmenu>
+                <ReloadThumbnailMenuItem
+                    target={{ insertableId: insertable.id }}
+                />
+            </AdminOptionsSubmenu>
         </>
     );
 }

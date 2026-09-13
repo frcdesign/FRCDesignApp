@@ -20,7 +20,7 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
 
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            type: BuildIssueType.THUMBNAIL_PENDING
+            type: BuildIssueType.THUMBNAIL_FAILED
         });
     } else if (!input.hasThumbnailTab) {
         issues = addBuildIssue(issues, {
@@ -50,12 +50,9 @@ interface InsertableCheckInput {
 export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
     let issues: BuildIssue[] = [];
 
-    // Pending rather than failed: a load queues the render and does not wait
-    // for it, so at this point nothing has gone wrong yet. The renderer
-    // replaces this with THUMBNAIL_FAILED if it gives up.
     if (input.thumbnailUrls === null) {
         issues = addBuildIssue(issues, {
-            type: BuildIssueType.THUMBNAIL_PENDING
+            type: BuildIssueType.THUMBNAIL_FAILED
         });
     }
 

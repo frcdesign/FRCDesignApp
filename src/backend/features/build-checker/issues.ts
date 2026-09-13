@@ -19,7 +19,6 @@ export enum BuildIssueSeverity {
 /** Discriminates the {@link BuildIssue} union. */
 export enum BuildIssueType {
     THUMBNAIL_FAILED = "thumbnail-failed",
-    THUMBNAIL_PENDING = "thumbnail-pending",
     NO_THUMBNAIL_TAB = "no-thumbnail-tab",
     NO_VENDORS = "no-vendors",
     NO_PARTS = "no-parts",
@@ -41,7 +40,6 @@ interface BuildIssueOf<T extends BuildIssueType> {
 
 export type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
-    | BuildIssueOf<BuildIssueType.THUMBNAIL_PENDING>
     | BuildIssueOf<BuildIssueType.NO_THUMBNAIL_TAB>
     | BuildIssueOf<BuildIssueType.NO_VENDORS>
     | BuildIssueOf<BuildIssueType.NO_PARTS>
@@ -58,8 +56,6 @@ export function getIssueDescription(issue: BuildIssue): string {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
             return "Thumbnail failed to generate";
-        case BuildIssueType.THUMBNAIL_PENDING:
-            return "Thumbnail is still rendering";
         case BuildIssueType.NO_THUMBNAIL_TAB:
             return "No thumbnail tab set";
         case BuildIssueType.NO_VENDORS:
@@ -98,11 +94,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
             return BuildIssueSeverity.WARNING;
-        // A pending thumbnail is information, not a fault: Onshape renders one
-        // per user at a time, so a freshly loaded library waits its way
-        // through them, and only the renderer giving up makes it FAILED.
         case BuildIssueType.NO_VENDORS:
-        case BuildIssueType.THUMBNAIL_PENDING:
             return BuildIssueSeverity.INFO;
     }
 }

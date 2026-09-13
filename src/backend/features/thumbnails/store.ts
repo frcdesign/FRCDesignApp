@@ -5,11 +5,8 @@
 
 import { CachePolicy, immutableCacheControl } from "../../lib/cache";
 
-import {
-    getDocument,
-    getContents
-} from "../../lib/onshape/endpoints/documents";
-import { type ElementPath, type InstancePath } from "../../lib/onshape/path";
+import { getElementThumbnail } from "../../lib/onshape/endpoints/thumbnails";
+import { type ElementPath } from "../../lib/onshape/path";
 
 import { ThumbnailSize, ThumbnailUrls } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
@@ -46,6 +43,65 @@ export async function putThumbnail(
 }
 
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
+
+/**
+ * One size, the version first and the workspace when it will not answer.
+ *
+ * Any failure pivots, not just a 404: the version form of this endpoint has
+ * been unreliable for element thumbnails and the workspace form has not, but
+ * the version is what the library shows, so it is still asked first.
+ */
+async function fetchThumbnail(
+    onshapeApi: OnshapeApi,
+    elementPath: ElementPath,
+    elementWorkspacePath: ElementPath,
+    size: ThumbnailSize
+): Promise<ArrayBuffer> {
+    try {
+        return await getElementThumbnail(onshapeApi, elementPath, size);
+    } catch {
+        return getElementThumbnail(onshapeApi, elementWorkspacePath, size);
+    }
+}
+
+/**
+ * Stores both sizes, skipping either the bucket already holds, and throws when
+ * neither instance will give one up.
+ *
+ * Onshape renders these when a document is saved, so reading one starts no work
+ * and races nothing — unlike a configuration, which `ThumbnailRenderer` has to
+ * serialize. A load fetches them directly, several elements at a time.
+ */
+export async function uploadThumbnails(
+    bucket: R2Bucket,
+    onshapeApi: OnshapeApi,
+    elementPath: ElementPath,
+    elementWorkspacePath: ElementPath,
+    microversionId: string
+): Promise<ThumbnailUrls> {
+    const { elementId } = elementPath;
+
+    // One size at a time: an attempt that fails should cost one call rather
+    // than two, and what runs in parallel is elements, not their sizes.
+    for (const size of BOTH_SIZES) {
+        const key = thumbnailKey(elementId, microversionId, size);
+        if (await bucket.head(key)) {
+            continue;
+        }
+        const thumbnail = await fetchThumbnail(
+            onshapeApi,
+            elementPath,
+            elementWorkspacePath,
+            size
+        );
+        await putThumbnail(bucket, key, thumbnail, {
+            microversionId,
+            configurationKey: DEFAULT_CONFIGURATION_KEY
+        });
+    }
+
+    return thumbnailUrls(elementId, microversionId);
+}
 
 /** The urls serving a subject's two sizes, whether or not they are stored yet. */
 export function thumbnailUrls(
@@ -90,43 +146,4 @@ export async function readThumbnailUrls(
         return null;
     }
     return thumbnailUrls(elementId, microversionId, configurationKey);
-}
-
-/** The element whose thumbnail stands for a whole document, and its microversion. */
-export interface DocumentThumbnailElement {
-    elementPath: ElementPath;
-    microversionId: string;
-}
-
-/**
- * Which element a group's thumbnail comes from, falling back to the first when
- * the document designates none.
- */
-export async function resolveDocumentThumbnail(
-    onshapeApi: OnshapeApi,
-    versionPath: InstancePath
-): Promise<DocumentThumbnailElement> {
-    const [onshapeDocument, contents] = await Promise.all([
-        getDocument(onshapeApi, versionPath),
-        getContents(onshapeApi, versionPath)
-    ]);
-
-    let thumbnailElementId = onshapeDocument.documentThumbnailElementId;
-    if (!thumbnailElementId) {
-        if (contents.elements.length < 1)
-            throw new Error(
-                `Document ${onshapeDocument.name} has no elements to use as a thumbnail.`
-            );
-        thumbnailElementId = contents.elements[0].id;
-    }
-
-    const element = contents.elements.find((e) => e.id === thumbnailElementId);
-    if (!element) {
-        throw new Error("Unexpectedly failed to find the thumbnail element.");
-    }
-
-    return {
-        elementPath: { ...versionPath, elementId: thumbnailElementId },
-        microversionId: element.microversionId
-    };
 }

@@ -15,6 +15,7 @@ import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut } from "@backend/features/library/contract";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { AdminOptionsSubmenu } from "../../../components/app-menu";
+import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AddGroupItem } from "./add-group-menu";
@@ -122,6 +123,7 @@ function GroupAdminContextMenu({
             <HideAllElementsMenuItem
                 insertableOrder={groupStatus.insertableOrder}
             />
+            <ReloadThumbnailMenuItem target={{ groupId }} />
             {isHome && (
                 <>
                     <Menu.Divider />
