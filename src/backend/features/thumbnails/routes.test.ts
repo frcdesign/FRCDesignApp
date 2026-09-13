@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { runDurableObjectAlarm } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { RenderSource, ThumbnailSize } from "./contract";
@@ -356,6 +357,42 @@ describe("queueing a configuration's thumbnail", () => {
         expect(
             jobs.every((job) => job.source === RenderSource.INSERT_MENU)
         ).toBe(true);
+    });
+
+    /** What the renderer resolves its Onshape tokens from. */
+    async function seedRendererSession() {
+        await env.KV.put(
+            `tokens:${SESSION_ID}`,
+            JSON.stringify({
+                accessToken: "token",
+                refreshToken: "refresh",
+                expiresAt: Date.now() + 3_600_000,
+                userId: "test-user"
+            })
+        );
+    }
+
+    /** The route's answer once the queue has had the chance to fail the job. */
+    async function statusAfterDraining(elementId: string): Promise<number> {
+        for (let pass = 0; pass < 20; pass++) {
+            await runDurableObjectAlarm(queue());
+            const { status } = await getRender(elementId);
+            if (status !== 404) return status;
+        }
+        return 404;
+    }
+
+    // A miss is a render still coming; this is one that never will be, and the
+    // client shows different wording for each.
+    it("answers a render that cannot resolve its element with its own status", async () => {
+        await seedDefaultOnly("invalid-element");
+        await seedRendererSession();
+
+        // Nothing stores a row for INSERTABLE_ID, so the render has no element
+        // path to resolve — the terminal failure a bad configuration also takes.
+        expect((await getRender("invalid-element")).status).toBe(404);
+
+        expect(await statusAfterDraining("invalid-element")).toBe(422);
     });
 
     it("queues no render when there is no session to run it under", async () => {

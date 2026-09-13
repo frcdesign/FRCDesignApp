@@ -1,5 +1,11 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
+import { HttpStatus } from "http-status-ts";
 import { loadImage } from "../../../lib/api-client";
+import { ImageLoadError } from "../../../lib/errors";
+import {
+    renderQueryKey,
+    storedThumbnailQueryKey
+} from "../../../lib/query-keys";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     RenderSource,
@@ -126,23 +132,37 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 /**
- * How a row waits out a render it asked for. A poll is a worker reading R2, not
- * an Onshape call — the renderer owns that cadence — so what this trades off is
- * how late a landed thumbnail shows up against how many requests a list of rows
- * makes between them.
- *
- * The horizon has to outlast the renderer, which gives a render five minutes of
- * the Onshape thread and retries a failed one three times: a row that stopped
- * sooner would report a render that was still perfectly alive as missing.
+ * How long any surface waits out a render before calling it failed. The
+ * renderer can spend far longer than this on one, and a thumbnail that lands
+ * afterwards is still stored for the next person to ask — but nobody watches a
+ * spinner for minutes, and an insert never needed the render in the first place.
  */
-const ROW_POLL_ATTEMPTS = 50;
-const ROW_POLL_CAP_MS = 15_000;
+const RENDER_TIMEOUT_MS = 30_000;
 
-const rowPollDelay = (attemptIndex: number) =>
-    Math.min(2000 * 2 ** attemptIndex, ROW_POLL_CAP_MS);
+/** A poll is a worker reading R2, not an Onshape call, so it can be this tight. */
+const POLL_INTERVAL_MS = 2_000;
+
+/** Retries inside the window; the first ask is not one of them. */
+const POLL_RETRIES = RENDER_TIMEOUT_MS / POLL_INTERVAL_MS;
 
 /** Nothing is rendering it, so a miss is worth one more try and no more. */
 const STORED_RETRIES = 1;
+
+/**
+ * Onshape has no insertable for the configuration, which the route answers with
+ * its own status: the part did not regenerate, so no render is coming and
+ * polling for one only delays saying so.
+ */
+function isInvalidConfiguration(error: unknown): boolean {
+    return (
+        error instanceof ImageLoadError &&
+        error.status === HttpStatus.UNPROCESSABLE_ENTITY
+    );
+}
+
+/** Polls out a render, and gives up at once on one that cannot happen. */
+const retryRender = (failureCount: number, error: Error) =>
+    !isInvalidConfiguration(error) && failureCount <= POLL_RETRIES;
 
 // Extend with div props to support being used as a HoverCard Target
 interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
@@ -171,15 +191,15 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     } = props;
 
     const imageQuery = useQuery({
-        queryKey: ["storage-thumbnail", url],
+        queryKey: storedThumbnailQueryKey(url),
         // Narrowed here rather than guarded inside: `enabled` is what keeps it
         // from running, and the query function should not restate that.
         queryFn: url ? ({ signal }) => loadImage(url, signal) : skipToken,
-        retry: isRendering ? ROW_POLL_ATTEMPTS : STORED_RETRIES,
-        retryDelay: isRendering ? rowPollDelay : undefined
+        retry: isRendering ? retryRender : STORED_RETRIES,
+        retryDelay: isRendering ? POLL_INTERVAL_MS : undefined
     });
     const fallbackQuery = useQuery({
-        queryKey: ["storage-thumbnail", fallbackUrl],
+        queryKey: storedThumbnailQueryKey(fallbackUrl),
         queryFn: fallbackUrl
             ? ({ signal }) => loadImage(fallbackUrl, signal)
             : skipToken,
@@ -244,25 +264,6 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 const PREVIEW_SPINNER_SIZE = 36;
 
 /**
- * How often to re-ask while the render is still running, and for how long.
- *
- * Tight at first because this is the last wait between a stored render and the
- * person watching the spinner, and a poll is a worker reading R2 rather than
- * anything asked of Onshape. It eases off after a minute, which is where
- * renders normally land, and then keeps going long enough to outlast the
- * renderer — five minutes of the Onshape thread, plus its retries. Stopping
- * before that reports a live render as a failure, which is what a spinner that
- * turns into an error while the thumbnail is still coming looks like.
- */
-const PREVIEW_FAST_POLLS = 30;
-const PREVIEW_FAST_MS = 2_000;
-const PREVIEW_STEADY_MS = 5_000;
-const PREVIEW_POLL_ATTEMPTS = 160;
-
-const previewPollDelay = (attemptIndex: number) =>
-    attemptIndex < PREVIEW_FAST_POLLS ? PREVIEW_FAST_MS : PREVIEW_STEADY_MS;
-
-/**
  * Polls for the render the renderer produces. Until it lands the route answers
  * 404, so a miss is a rejected query and the retry is the poll; queueing is
  * idempotent, so every poll can carry it without disturbing what is running.
@@ -281,13 +282,13 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     });
 
     return useQuery({
-        queryKey: ["thumbnail", url],
+        queryKey: renderQueryKey(url),
         queryFn: ({ signal }) => loadImage(url, signal),
         // The previous configuration's render, so the box does not blank out
         // while this one is still being waited on.
         placeholderData: (previousData) => previousData,
-        retry: PREVIEW_POLL_ATTEMPTS,
-        retryDelay: previewPollDelay,
+        retry: retryRender,
+        retryDelay: POLL_INTERVAL_MS,
         enabled
     });
 }
@@ -346,6 +347,20 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
     }
 
     if (query.isError) {
+        // Onshape had no insertable for the selection, which is as far as a
+        // render gets: the part itself is what did not come out, so say that
+        // rather than blaming the thumbnail.
+        if (isInvalidConfiguration(query.error)) {
+            return (
+                <PreviewBox heightAndWidth={heightAndWidth}>
+                    <SectionNotice
+                        title="Part failed to regenerate."
+                        description="Your configuration may be invalid."
+                    />
+                </PreviewBox>
+            );
+        }
+
         const action =
             targetElementType === ElementType.ASSEMBLY ? "insert" : "derive";
         return (

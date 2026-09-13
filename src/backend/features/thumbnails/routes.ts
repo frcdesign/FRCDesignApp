@@ -9,7 +9,11 @@ import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
-import { requestThumbnails, type ThumbnailRequest } from "./renderer";
+import {
+    type EnqueueOutcome,
+    requestThumbnails,
+    type ThumbnailRequest
+} from "./renderer";
 import { getSessionId } from "../auth/session";
 import { requireEditorMiddleware } from "../auth/guards";
 import { getDb } from "../../db/client";
@@ -78,7 +82,7 @@ thumbnailRoutes.get(
             renderSource &&
             insertableId
         ) {
-            await queueConfigurationRender(
+            const outcome = await queueConfigurationRender(
                 c,
                 {
                     insertableId,
@@ -88,6 +92,9 @@ thumbnailRoutes.get(
                 },
                 renderSource
             );
+            if (outcome === "no-such-configuration") {
+                return noSuchConfiguration();
+            }
         }
         return notRenderedYet();
     }
@@ -97,6 +104,19 @@ thumbnailRoutes.get(
 function notRenderedYet(): Response {
     return setCache(
         new Response(null, { status: HttpStatus.NOT_FOUND }),
+        CachePolicy.NO_CACHE
+    );
+}
+
+/**
+ * Onshape has no insertable for this configuration, so no render is coming.
+ * Told apart from a miss by its status, which is what lets a client stop
+ * polling and say the configuration is what is wrong; the answer is not cached,
+ * since a reload of the document can make it wrong.
+ */
+function noSuchConfiguration(): Response {
+    return setCache(
+        new Response(null, { status: HttpStatus.UNPROCESSABLE_ENTITY }),
         CachePolicy.NO_CACHE
     );
 }
@@ -116,15 +136,21 @@ async function queueConfigurationRender(
     c: AppContext,
     request: ThumbnailRequest,
     source: RenderSource
-): Promise<void> {
+): Promise<EnqueueOutcome | undefined> {
     try {
         // Read first, so a caller with no session queues nothing: the render
         // runs later, under this caller's Onshape tokens.
         const sessionId = getSessionId(c);
         const userId = await c.var.getUserId();
-        await requestThumbnails(c.env, { userId, sessionId }, request, source);
+        return await requestThumbnails(
+            c.env,
+            { userId, sessionId },
+            request,
+            source
+        );
     } catch {
         // Never fatal: the caller just gets a miss until the render lands.
+        return undefined;
     }
 }
 

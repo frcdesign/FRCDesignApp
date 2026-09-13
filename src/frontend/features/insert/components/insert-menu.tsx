@@ -12,8 +12,9 @@ import {
     AppModalTop
 } from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
-import { showQuickInsertTip } from "../quick-insert-tip";
+import { showQuickInsertTip, showThumbnailWaitTip } from "../insert-tips";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
+import { useIsThumbnailRendering } from "../../thumbnails/queries";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
@@ -43,7 +44,7 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     initialSelection?: Selection;
-    /** When the menu opened, for the quick insert tip. */
+    /** When the menu opened, which is what the tips are timed from. */
     openedAt: number;
     onInsert: () => void;
     source: InsertSource;
@@ -223,7 +224,7 @@ interface InsertButtonsProps {
     insertable: InsertableOut;
     selection?: Selection;
     isFavorite: boolean;
-    /** When the menu opened, for the quick insert tip. */
+    /** When the menu opened, which is what the tips are timed from. */
     openedAt: number;
     onInsert: () => void;
     source: InsertSource;
@@ -252,6 +253,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const uiState = useGetUiState();
+    // The preview's state as of this render, which is what the click reads: the
+    // insert cancels that query, so asking once it has begun answers no.
+    const isThumbnailRendering = useIsThumbnailRendering();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -267,6 +271,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         if (isUnchanged) {
             showQuickInsertTip(openedAt);
         }
+        showThumbnailWaitTip(openedAt, isThumbnailRendering);
         onInsert();
     }, [
         insertMutation,
@@ -274,7 +279,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         canFasten,
         uiState.fasten,
         isUnchanged,
-        openedAt
+        openedAt,
+        isThumbnailRendering
     ]);
 
     if (!isConnected) {

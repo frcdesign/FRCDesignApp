@@ -71,3 +71,23 @@ export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
 export function jobStatusQueryKey(libraryId: LibraryId) {
     return [...libraryQueryKey(libraryId), "job-status"];
 }
+
+/**
+ * A render the insert preview is waiting on. Everything hangs off the prefix:
+ * an insert cancels the lot, and the insert buttons ask it whether one is
+ * still running.
+ */
+const RENDER = "thumbnail";
+
+export function renderQueryPrefix() {
+    return [RENDER];
+}
+
+export function renderQueryKey(url: string) {
+    return [RENDER, url];
+}
+
+/** Bytes already stored, which a row and its hover card read. */
+export function storedThumbnailQueryKey(url: string | undefined) {
+    return ["storage-thumbnail", url];
+}

@@ -398,6 +398,43 @@ describe("ThumbnailRenderer", () => {
         expect(await queueOf(0)).toEqual([]);
     });
 
+    // What the client polls for: it is waiting on a spinner that can only run
+    // out, and the wording it shows depends on knowing the difference.
+    it("tells a later request that the configuration has no insertable", async () => {
+        const ids = vi
+            .spyOn(ThumbnailEndpoints, "getThumbnailId")
+            .mockRejectedValue(
+                new ThumbnailEndpoints.NoSuchConfigurationError("no such thing")
+            );
+
+        await renderer().enqueue(
+            request(),
+            SESSION_ID,
+            RenderSource.INSERT_MENU
+        );
+        await queueOf(0);
+
+        expect(
+            await renderer().enqueue(
+                request(),
+                SESSION_ID,
+                RenderSource.INSERT_MENU
+            )
+        ).toBe("no-such-configuration");
+        // Nothing requeued, and the sibling size never spent a call of its own
+        // learning what the first already found out.
+        expect(await renderer().queued()).toEqual([]);
+        expect(ids).toHaveBeenCalledTimes(1);
+    });
+
+    it("queues a configuration it has nothing against", async () => {
+        mockRenders(stillRendering);
+
+        expect(
+            await renderer().enqueue(request(), SESSION_ID, RenderSource.ROW)
+        ).toBe("queued");
+    });
+
     it("abandons a render that runs out of thread time", async () => {
         mockRenders(stillRendering);
         await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
