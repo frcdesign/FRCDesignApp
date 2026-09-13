@@ -43,6 +43,8 @@ interface ParsedGroup {
     lastLoadedAt: Date;
     /** Undefined if an insertable failed. */
     versionId?: string;
+    /** Moves with `versionId`, so the row's date is always that version's. */
+    versionCreatedAt?: Date;
 }
 
 export async function loadGroup(
@@ -210,6 +212,7 @@ async function saveGroup(
     };
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;
+        parsed.versionCreatedAt = target.versionCreatedAt;
     }
 
     const writes: BatchItem<"sqlite">[] = [
@@ -221,7 +224,10 @@ async function saveGroup(
         writes.push(
             db
                 .update(insertables)
-                .set({ versionId: target.versionPath.instanceId })
+                .set({
+                    versionId: target.versionPath.instanceId,
+                    versionCreatedAt: target.versionCreatedAt
+                })
                 .where(eq(insertables.groupId, target.groupId))
         );
     }
@@ -328,6 +334,7 @@ export function selectInsertablesToLoad(
             libraryId: target.libraryId,
             groupId: target.groupId,
             elementPath: { ...target.versionPath, elementId: tab.id },
+            versionCreatedAt: target.versionCreatedAt,
             elementWorkspacePath: {
                 ...target.workspacePath,
                 elementId: tab.id

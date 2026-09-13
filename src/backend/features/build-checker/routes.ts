@@ -3,6 +3,7 @@ import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
+import { toElementPath } from "../../lib/onshape/path";
 import { requireEditorMiddleware } from "../auth/guards";
 import { groups, insertables, configurations } from "../../db/schema";
 import type {
@@ -31,7 +32,7 @@ buildStatusRoutes.get(
                     buildIssues: groups.buildIssues,
                     sortAlphabetically: groups.sortAlphabetically,
                     sortOrder: groups.sortOrder,
-                    lastLoadedAt: groups.lastLoadedAt
+                    versionCreatedAt: groups.versionCreatedAt
                 })
                 .from(groups)
                 .where(eq(groups.libraryId, libraryId))
@@ -42,13 +43,16 @@ buildStatusRoutes.get(
                     id: insertables.id,
                     groupId: insertables.groupId,
                     buildIssues: insertables.buildIssues,
+                    documentId: insertables.documentId,
+                    versionId: insertables.versionId,
+                    elementId: insertables.elementId,
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
                     indexConfigurations: insertables.indexConfigurations,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
-                    lastLoadedAt: insertables.lastLoadedAt
+                    versionCreatedAt: insertables.versionCreatedAt
                 })
                 .from(insertables)
                 .where(eq(insertables.libraryId, libraryId))
@@ -62,7 +66,6 @@ buildStatusRoutes.get(
         const allConfigurations = await db
             .select({
                 insertableId: configurations.insertableId,
-                buildIssues: configurations.buildIssues,
                 parameters: configurations.parameters
             })
             .from(configurations)
@@ -89,7 +92,7 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                lastLoadedAt: group.lastLoadedAt?.getTime() ?? null
+                versionCreatedAt: group.versionCreatedAt?.getTime() ?? null
             };
         }
 
@@ -97,13 +100,14 @@ buildStatusRoutes.get(
         for (const ins of allInsertables) {
             insertablesOut[ins.id] = {
                 buildIssues: ins.buildIssues,
+                elementPath: toElementPath(ins),
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
                 indexConfigurations: ins.indexConfigurations,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
-                lastLoadedAt: ins.lastLoadedAt?.getTime() ?? null
+                versionCreatedAt: ins.versionCreatedAt?.getTime() ?? null
             };
         }
 

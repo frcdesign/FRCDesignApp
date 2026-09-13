@@ -7,7 +7,11 @@ import {
 import { apiGet, apiPost } from "../../lib/api-client";
 import { modals } from "@mantine/modals";
 import { useCallback } from "react";
-import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
+import {
+    showInfoToast,
+    showLoadingToast,
+    showSuccessToast
+} from "../../lib/notifications";
 import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
@@ -153,7 +157,10 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/** Forces part-number indexing for an insertable (a slow Onshape call). */
+/**
+ * Toggles part-number indexing for an insertable. The Onshape call behind it
+ * runs long, so the toast reports the switch rather than sitting on the response.
+ */
 export function useIndexConfigurationsMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
@@ -165,11 +172,11 @@ export function useIndexConfigurationsMutation(insertableId: string) {
                 body: { indexConfigurations }
             }),
         onMutate: (indexConfigurations) => {
-            showLoadingToast(
+            showInfoToast(
                 indexConfigurations
-                    ? "Forcing part number indexing..."
-                    : "Disabling forced part number indexing...",
-                toastId
+                    ? "Enabling part indexing"
+                    : "Disabling part indexing",
+                { id: toastId }
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
@@ -180,8 +187,8 @@ export function useIndexConfigurationsMutation(insertableId: string) {
         onSuccess: (_result, indexConfigurations) =>
             showSuccessToast(
                 indexConfigurations
-                    ? "Forced part number indexing."
-                    : "Disabled forced part number indexing.",
+                    ? "Part number indexing enabled."
+                    : "Part number indexing disabled.",
                 toastId
             ),
         onError: getAppErrorHandler(

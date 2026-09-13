@@ -8,7 +8,7 @@ const VENDOR_PREFIX = new RegExp("^([A-Za-z]+)-");
 export enum Vendor {
     AB = "AB",
     AM = "AM",
-    AXN = "AXN",
+    AXON = "AXON",
     BSRKR = "BSRKR",
     BWT = "BWT",
     CTRE = "CTRE",
@@ -58,7 +58,7 @@ const FRC_VENDORS: Vendor[] = [
 /** Who FTC teams buy from — overlapping with FRC, but its own list. */
 const FTC_VENDORS: Vendor[] = [
     Vendor.AM,
-    Vendor.AXN,
+    Vendor.AXON,
     Vendor.BSRKR,
     Vendor.BWT,
     Vendor.ELC,
@@ -148,7 +148,7 @@ export function getVendorName(vendor: Vendor) {
             return "ARMABOT";
         case Vendor.AM:
             return "AndyMark";
-        case Vendor.AXN:
+        case Vendor.AXON:
             return "Axon Robotics";
         case Vendor.BSRKR:
             return "Bsrkrbotics";

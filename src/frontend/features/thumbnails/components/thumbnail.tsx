@@ -72,26 +72,26 @@ interface CardThumbnailProps {
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
-    // Only a row that queues the render asks for one. Nothing else renders a
-    // configuration, so a row that does not would be asking for a picture that
-    // is never going to exist; the element's own is the honest thing to show.
-    const renderTarget =
-        target &&
-        target.configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-        target.renderSource
+    // Asked for by key whether or not this row may queue one: the route serves
+    // what is already stored either way, so a row that cannot queue still shows
+    // a configuration something else rendered. It costs that row a 404 when
+    // nothing has, and it falls back to the element's own.
+    const configuredTarget =
+        target && target.configurationKey !== DEFAULT_CONFIGURATION_KEY
             ? target
             : undefined;
 
     const urlFor = (size: ThumbnailSize, stored?: string) =>
-        renderTarget ? thumbnailUrl({ ...renderTarget, size }) : stored;
+        configuredTarget ? thumbnailUrl({ ...configuredTarget, size }) : stored;
 
     // Only while a configuration is rendering: without a target the stored url
     // is what `urlFor` already returns, and falling back to it means nothing.
     const fallbackFor = (stored?: string) =>
-        renderTarget ? stored : undefined;
+        configuredTarget ? stored : undefined;
 
-    // A url this row is having rendered answers 404 until the render lands.
-    const isRendering = renderTarget !== undefined;
+    // Only a row that queued the render has one coming; anything else takes the
+    // miss for the answer rather than polling for a render nobody started.
+    const isRendering = configuredTarget?.renderSource !== undefined;
 
     return (
         <HoverCard

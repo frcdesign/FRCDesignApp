@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, unique } from "drizzle-orm/sqlite-core";
+import {
+    sqliteTable,
+    text,
+    integer,
+    unique,
+    customType
+} from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { LibraryId } from "../features/library/library-id";
@@ -10,17 +16,27 @@ import {
     Selection,
     PartMetadata
 } from "../features/configurations/contract";
-import { BuildIssue } from "../features/build-checker/issues";
+import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
 
 /**
  * Build-time issues flagged by the build checker, recomputed on reload. Declared
- * once because three tables carry exactly this column.
+ * once because both tables carry exactly this column.
+ *
+ * Filtered on read rather than trusted: a stored array was written by whichever
+ * deploy last loaded the row, so it can still name a check that has since been
+ * removed. The next write of the row drops it for good.
  */
+const buildIssuesColumn = customType<{
+    data: BuildIssue[];
+    driverData: string;
+}>({
+    dataType: () => "text",
+    toDriver: (issues) => JSON.stringify(issues),
+    fromDriver: (value) => knownBuildIssues(JSON.parse(value) as BuildIssue[])
+});
+
 const buildIssues = () =>
-    text("build_issues", { mode: "json" })
-        .$type<BuildIssue[]>()
-        .notNull()
-        .default([]);
+    buildIssuesColumn("build_issues").notNull().default([]);
 
 /** The pair Onshape renders for a group or an insertable; null until rendered. */
 const thumbnailUrls = () => ({
@@ -36,6 +52,13 @@ const libraryId = () => text("library_id").$type<LibraryId>().notNull();
 
 /** Null before the first successful load. Failures are conveyed by build issues. */
 const lastLoadedAt = () => integer("last_loaded_at", { mode: "timestamp_ms" });
+
+/**
+ * When Onshape cut the version this row is pinned to — what the row depicts,
+ * rather than when we last asked. Null until the row has a real version.
+ */
+const versionCreatedAt = () =>
+    integer("version_created_at", { mode: "timestamp_ms" });
 
 export const libraries = sqliteTable("libraries", {
     id: text("id").primaryKey(),
@@ -61,6 +84,7 @@ export const groups = sqliteTable(
         // The Onshape document this group was added from
         documentId: text("document_id").notNull(),
         versionId: text("version_id").notNull(),
+        versionCreatedAt: versionCreatedAt(),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
             .default(false),
@@ -102,6 +126,7 @@ export const insertables = sqliteTable("insertables", {
         .notNull()
         .default(false),
     versionId: text("version_id").notNull(),
+    versionCreatedAt: versionCreatedAt(),
     sortOrder: integer("sort_order").notNull().default(0),
     vendors: text("vendors", { mode: "json" })
         .$type<Vendor[]>()
@@ -137,8 +162,7 @@ export const configurations = sqliteTable("configurations", {
     records: text("records", { mode: "json" })
         .$type<ConfigurationRecord[]>()
         .notNull()
-        .default([]),
-    buildIssues: buildIssues()
+        .default([])
 });
 
 export const users = sqliteTable("users", {

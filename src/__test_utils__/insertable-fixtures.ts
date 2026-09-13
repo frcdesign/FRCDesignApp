@@ -9,7 +9,8 @@ import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
-    TEST_PART_STUDIO_PATH
+    TEST_PART_STUDIO_PATH,
+    TEST_VERSION_CREATED_AT
 } from "./seed";
 
 /** A part-studio {@link InsertableTarget}; override any field under test. */
@@ -25,6 +26,7 @@ export function insertableTarget(
             ...TEST_PART_STUDIO_PATH,
             instanceType: "w"
         },
+        versionCreatedAt: TEST_VERSION_CREATED_AT,
         elementType: ElementType.PART_STUDIO,
         name: "Test part studio",
         microversionId: "mv-1",

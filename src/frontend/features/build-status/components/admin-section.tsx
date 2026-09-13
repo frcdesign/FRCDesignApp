@@ -7,7 +7,6 @@ import {
 } from "@backend/features/build-checker/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
-    AUTO_INDEX_THRESHOLD,
     type ConfigurationCount,
     IndexingBand,
     MAX_PART_NUMBER_CONFIGURATIONS
@@ -132,7 +131,7 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
         control = (
             <IndexingIcon
                 severity={null}
-                tooltip="This part is an assembly, so metadata is pulled directly from the assembly tab."
+                tooltip="Metadata is pulled from the top level assembly tab."
             />
         );
     } else if (band === IndexingBand.EXCEEDED) {
@@ -146,7 +145,7 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
         control = (
             <IndexingIcon
                 severity={null}
-                tooltip={`Indexed automatically: an insertable under ${AUTO_INDEX_THRESHOLD} configurations indexes on every load.`}
+                tooltip="Metadata is indexed from this part's configurations."
             />
         );
     } else {

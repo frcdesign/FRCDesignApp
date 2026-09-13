@@ -112,7 +112,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
         <Group gap="xs">
             {value.label}
             {value.count === 0 && (
-                <Badge color={StatusColor.NEUTRAL} size="sm">
+                <Badge color={StatusColor.INFO} size="sm">
                     Never used
                 </Badge>
             )}

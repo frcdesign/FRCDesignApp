@@ -3,12 +3,10 @@
  * table that holds rows, a row itself, and the title block inside it.
  */
 import { Group, Stack, Table, Text } from "@mantine/core";
-import { EyeSlashIcon } from "@phosphor-icons/react";
 import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
-import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
+import { NO_SHRINK, StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
-import { AppIcon } from "./app-icon";
 import { TruncatedText } from "./truncated-text";
 import { PartNumberLink } from "./part-number";
 import { mergePositions, type Position } from "../lib/highlight";
@@ -38,8 +36,6 @@ interface CardTitleProps {
     match?: RowMatch;
     /** Dims the text, for a row that cannot be acted on. */
     disabled?: boolean;
-    /** Marks a row only an editor can see. */
-    showHiddenTag?: boolean;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
 }
@@ -50,15 +46,14 @@ export function CardTitle(props: CardTitleProps): ReactNode {
         title,
         thumbnail,
         buildStatusBadge,
-        disabled = false,
-        showHiddenTag = false
+        disabled = false
     } = props;
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
             {thumbnail}
-            {/* Shrinks to truncate, but never grows: the badge and hidden tag
-                belong beside the name, not at the row's edge. */}
+            {/* Shrinks to truncate, but never grows: the badge belongs beside
+                the name, not at the row's edge. */}
             <Stack gap={0} miw={0}>
                 <TruncatedText
                     hoverText={title}
@@ -75,16 +70,6 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 <PartNameAndNumber title={title} match={match} />
             </Stack>
             {buildStatusBadge}
-            {/* After the badge: toggling visibility would otherwise shift the
-                badge, dragging its open hover card out from under the cursor. */}
-            {showHiddenTag && (
-                <AppIcon
-                    icon={EyeSlashIcon}
-                    size={IconSize.SMALL}
-                    color={StatusColor.WARNING}
-                    label="Hidden"
-                />
-            )}
         </Group>
     );
 }

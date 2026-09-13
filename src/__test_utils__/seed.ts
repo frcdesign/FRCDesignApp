@@ -34,6 +34,9 @@ export const TEST_GROUP_ID = "test-group";
 export const TEST_PART_STUDIO_ID = "test-part-studio";
 export const TEST_ASSEMBLY_ID = "test-assembly";
 
+/** When the version the fixtures are pinned to was cut. */
+export const TEST_VERSION_CREATED_AT = new Date("2026-01-02T03:04:05Z");
+
 /** Onshape paths backing the seeded insertables — also useful for API mocking. */
 export const TEST_INSTANCE_PATH: InstancePath = {
     documentId: "doc-test",
@@ -122,6 +125,7 @@ export async function seedGroup(
             documentId: `doc-${id}`,
             versionId: "inst-1",
             lastLoadedAt: new Date(),
+            versionCreatedAt: TEST_VERSION_CREATED_AT,
             ...overrides
         })
         .onConflictDoNothing();

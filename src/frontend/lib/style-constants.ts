@@ -44,6 +44,13 @@ export enum StatusColor {
 }
 
 /**
+ * A badge naming a kind rather than a state — a configuration parameter's type,
+ * say. Off every {@link StatusColor} so it never reads as one, and never gray,
+ * which on a badge reads as disabled rather than as a label.
+ */
+export const CATEGORY_COLOR = "violet";
+
+/**
  * Mantine's default step for a color: what a bare color name renders as, and
  * so the step anything picking its own color should match.
  */

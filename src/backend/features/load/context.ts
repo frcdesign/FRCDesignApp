@@ -80,6 +80,8 @@ export interface GroupTarget {
     libraryId: LibraryId;
     groupId: string;
     versionPath: InstancePath;
+    /** When Onshape cut `versionPath`'s version. */
+    versionCreatedAt: Date;
     /**
      * The document's default workspace. Everything the library shows is pinned
      * to the version; this is only where thumbnails are read from, because the
@@ -102,6 +104,8 @@ export interface InsertableTarget {
     libraryId: LibraryId;
     groupId: string;
     elementPath: ElementPath;
+    /** When Onshape cut `elementPath`'s version. */
+    versionCreatedAt: Date;
     elementType: ElementType;
     name: string;
     microversionId: string;

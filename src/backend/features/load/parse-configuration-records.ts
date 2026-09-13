@@ -17,7 +17,8 @@ import {
 import {
     addBuildIssue,
     type BuildIssue,
-    BuildIssueType
+    BuildIssueType,
+    toConfigurationIssue
 } from "../build-checker/issues";
 import {
     countConfigurations,
@@ -62,6 +63,7 @@ export const INDEXING_ISSUE_TYPES = [
     BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED,
     BuildIssueType.MANUAL_INDEXING_REQUIRED,
     BuildIssueType.MULTIPLE_PARTS,
+    BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
     BuildIssueType.UNSTABLE_COMPOSITE
 ];
 
@@ -406,22 +408,42 @@ function toResult(
 
     // A capped insertable never reaches here: decideIndexing turns indexing off
     // past the cap, and raises CONFIGURATION_LIMIT_EXCEEDED itself.
-    const probes: PartMetadata[] = [partMetadata, ...records];
     let buildIssues: BuildIssue[] = [];
-    if (probes.some((probe) => probe.hasMultipleParts)) {
+
+    // Which probe fails decides whose problem it is. The element's own defaults
+    // failing is the part being wrong, and every configuration inherits it, so
+    // there is nothing narrower to report; a configuration failing where the
+    // defaults hold is that configuration's problem, and can be opened.
+    if (partMetadata.hasMultipleParts) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.MULTIPLE_PARTS
         });
+    } else {
+        const offenders = records.filter((record) => record.hasMultipleParts);
+        if (offenders.length > 0) {
+            buildIssues = addBuildIssue(
+                buildIssues,
+                toConfigurationIssue(
+                    BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
+                    offenders
+                )
+            );
+        }
     }
+
     // The element's own probe sets the expectation; losing the composite in any
     // configuration is what makes it unstable.
-    if (
-        partMetadata.isOpenComposite &&
-        probes.some((probe) => !probe.isOpenComposite)
-    ) {
-        buildIssues = addBuildIssue(buildIssues, {
-            type: BuildIssueType.UNSTABLE_COMPOSITE
-        });
+    if (partMetadata.isOpenComposite) {
+        const offenders = records.filter((record) => !record.isOpenComposite);
+        if (offenders.length > 0) {
+            buildIssues = addBuildIssue(
+                buildIssues,
+                toConfigurationIssue(
+                    BuildIssueType.UNSTABLE_COMPOSITE,
+                    offenders
+                )
+            );
+        }
     }
 
     return { partMetadata, records, buildIssues };

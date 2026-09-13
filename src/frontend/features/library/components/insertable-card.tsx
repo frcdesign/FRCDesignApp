@@ -108,7 +108,6 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             match={match}
             title={insertable.name}
             thumbnail={thumbnail}
-            showHiddenTag={!insertable.isVisible}
             buildStatusBadge={
                 <InsertableStatusBadge
                     insertableId={insertable.id}

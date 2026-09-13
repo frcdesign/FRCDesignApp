@@ -238,7 +238,7 @@ function readPartsStep(
     return ctx.step.do(
         `parts-${insertableId}`,
         { retries: ONSHAPE_STEP_RETRIES },
-        async () => {
+        async (): Promise<PartsSummary> => {
             const parts = await getParts(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
@@ -284,6 +284,7 @@ export async function saveInsertable(
         elementType: target.elementType,
         microversionId: target.microversionId,
         versionId: target.elementPath.instanceId,
+        versionCreatedAt: target.versionCreatedAt,
         vendors: parsed.vendors,
         smallThumbnailUrl: parsed.thumbnailUrls?.small ?? null,
         largeThumbnailUrl: parsed.thumbnailUrls?.large ?? null,

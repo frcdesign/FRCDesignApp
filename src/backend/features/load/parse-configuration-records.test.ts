@@ -280,9 +280,11 @@ describe("parseConfigurationRecords", () => {
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a1"]);
     });
 
-    it("flags a studio with more than one part in any configuration", async () => {
+    // The element's own defaults hold, so only the configurations that break
+    // are at fault, and the first of them is what the build card opens.
+    it("blames the configurations that resolve to more than one part", async () => {
         mockParts((configuration) =>
-            configuration.A === "a2"
+            configuration.A === "a2" || configuration.A === "a3"
                 ? [
                       { partId: "p1", partNumber: "PN-1" },
                       { partId: "p2", partNumber: "PN-2" }
@@ -290,23 +292,33 @@ describe("parseConfigurationRecords", () => {
                 : [{ partId: "p1", partNumber: "PN-1" }]
         );
 
-        const result = await parseConfigurationRecords(
-            CLIENT,
+        const result = await probeRecords([enumParam("A", ["a1", "a2", "a3"])]);
+
+        expect(result.buildIssues).toEqual([
             {
-                elementPath: PATH,
-                elementType: ElementType.PART_STUDIO,
-                isOpenComposite: false
-            },
-            [enumParam("A", ["a1", "a2"])],
-            probeSelections([enumParam("A", ["a1", "a2"])])
-        );
+                type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
+                configurationKey: "A=a2",
+                configurationCount: 2
+            }
+        ]);
+    });
+
+    // Every configuration inherits a broken default, so there is nothing
+    // narrower to blame or to open.
+    it("blames the part itself when its own defaults resolve to more than one part", async () => {
+        mockParts(() => [
+            { partId: "p1", partNumber: "PN-1" },
+            { partId: "p2", partNumber: "PN-2" }
+        ]);
+
+        const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
 
         expect(result.buildIssues).toEqual([
             { type: BuildIssueType.MULTIPLE_PARTS }
         ]);
     });
 
-    it("flags an unstable composite when a configuration loses its composite", async () => {
+    it("blames the configuration that loses the part studio's composite", async () => {
         mockParts((configuration) =>
             configuration.A === "a2"
                 ? [{ partId: "p", partNumber: "PN-2" }]
@@ -325,7 +337,11 @@ describe("parseConfigurationRecords", () => {
         });
 
         expect(result.buildIssues).toEqual([
-            { type: BuildIssueType.UNSTABLE_COMPOSITE }
+            {
+                type: BuildIssueType.UNSTABLE_COMPOSITE,
+                configurationKey: "A=a2",
+                configurationCount: 1
+            }
         ]);
     });
 
