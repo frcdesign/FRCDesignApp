@@ -63,6 +63,16 @@ function select(
     return selectInsertablesToLoad(GROUP, insertableTabs, stored, forceReload);
 }
 
+/** An element that is in the document but never an insertable tab. */
+function drawing(elementId: string): OnshapeElement {
+    return {
+        id: elementId,
+        name: `Drawing ${elementId}`,
+        elementType: OnshapeElementType.DRAWING,
+        microversionId: "mv-1"
+    };
+}
+
 function tab(elementId: string, microversionId = "mv-1"): OnshapeElement {
     return {
         id: elementId,
@@ -287,6 +297,37 @@ describe("loadGroup", () => {
             workspacePath: { instanceType: "w" }
         });
         expect(requestFor("e2")?.workspacePath).toBeUndefined();
+    });
+
+    // The group's own thumbnail gets the same fallback as an insertable's, and
+    // it can come from an element that is not an insertable at all — so the
+    // workspace is checked against every element, not just the loadable tabs.
+    it("gives the group thumbnail a workspace fallback too", async () => {
+        const elements = [tab("e1"), drawing("cover")];
+        mockContentsPerInstance(elements, elements);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Doc",
+            documentThumbnailElementId: "cover"
+        });
+        const queued = vi
+            .spyOn(RendererModule, "requestThumbnails")
+            .mockResolvedValue(undefined);
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        const groupRequest = queued.mock.calls
+            .map((call) => call[2])
+            .filter((request) => request.kind === "element")
+            .find((request) => request.elementPath.elementId === "cover");
+
+        expect(groupRequest).toMatchObject({
+            elementPath: { instanceType: "v" },
+            workspacePath: { instanceType: "w", elementId: "cover" }
+        });
     });
 
     // A skipped tab never reaches saveInsertable, but its version still has to

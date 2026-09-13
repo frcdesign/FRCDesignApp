@@ -59,13 +59,13 @@ export async function loadGroup(
         { retries: ONSHAPE_STEP_RETRIES },
         () => fetchInsertableTabs(ctx, versionPath)
     );
-    // The same document as the workspace sees it, which is where thumbnails
-    // are read from. A tab can be in the version and gone from the workspace,
-    // and then there is nothing to read.
-    const workspaceTabs = await ctx.step.do(
-        `workspace-tabs-${groupId}`,
+    // Every element the workspace has, which is what a thumbnail can fall back
+    // to. Unfiltered, unlike the tabs above: a group's own thumbnail can come
+    // from an element that is not an insertable at all.
+    const workspaceElementIds = await ctx.step.do(
+        `workspace-elements-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
-        () => fetchInsertableTabs(ctx, workspacePath)
+        () => fetchElementIds(ctx, workspacePath)
     );
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,
@@ -83,7 +83,7 @@ export async function loadGroup(
             )
         )
     );
-    const inWorkspace = new Set(workspaceTabs.map((tab) => tab.id));
+    const inWorkspace = new Set(workspaceElementIds);
     const insertablesToLoad = selected.map((insertable) => ({
         ...insertable,
         workspacePath: inWorkspace.has(insertable.elementPath.elementId)
@@ -293,6 +293,18 @@ async function flagFailedInsertables(
 /**
  * Fetches the document's part studio / assembly tabs, in display order.
  */
+/** Every element in a document, whatever its type. */
+async function fetchElementIds(
+    ctx: LoadContext,
+    instancePath: InstancePath
+): Promise<string[]> {
+    const contents = await getContents(
+        await getOnshapeApiFromContext(ctx),
+        instancePath
+    );
+    return contents.elements.map((element) => element.id);
+}
+
 async function fetchInsertableTabs(
     ctx: LoadContext,
     versionPath: InstancePath
