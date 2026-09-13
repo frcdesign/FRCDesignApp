@@ -16,7 +16,7 @@ import type { FastenInfo } from "../library/insertables/fasten";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { Vendor } from "../library/vendors";
 import { configurations, insertables } from "../../db/schema";
-import { readThumbnailUrls } from "../thumbnails/store";
+import { uploadThumbnails } from "../thumbnails/store";
 import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
@@ -34,7 +34,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { ONSHAPE_STEP_RETRIES, queueThumbnailsStep } from "./steps";
+import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
 /**
  * Exactly the columns a reload overwrites; the rest of the row is identity or
@@ -85,28 +85,21 @@ export async function loadInsertable(
     // indexed element probes once per configuration.
     const probed = await ctx.limit(() => probeInsertable(ctx, target));
 
-    // Queued rather than waited on: the renderer writes the urls onto this row
-    // when they land. An empty studio is skipped, since Onshape renders nothing
-    // for one and the queue would carry a thumbnail that cannot exist.
+    // Fetched here rather than queued: an element's own thumbnail is one
+    // Onshape already rendered when the document was saved, so reading it
+    // starts nothing and races nothing. Only a configuration has to queue.
+    //
+    // Nothing is asked for an empty studio, which renders to nothing at all.
     const thumbnailUrls = probed.hasParts
-        ? await queueThumbnailsStep(
+        ? await uploadThumbnailsStep(
               ctx,
               `thumbnail-${insertableId}`,
-              {
-                  kind: "element",
-                  elementPath,
-                  workspacePath: target.workspacePath,
-                  microversionId: target.microversionId,
-                  owner: {
-                      kind: "insertable",
-                      libraryId: target.libraryId,
-                      insertableId
-                  }
-              },
-              () =>
-                  readThumbnailUrls(
+              async () =>
+                  uploadThumbnails(
                       ctx.env.BLOB,
-                      elementPath.elementId,
+                      await getOnshapeApiFromContext(ctx),
+                      elementPath,
+                      target.elementWorkspacePath,
                       target.microversionId
                   )
           )

@@ -41,11 +41,9 @@ describe("checkGroup", () => {
         expect(issues).toEqual([{ type: BuildIssueType.NO_THUMBNAIL_TAB }]);
     });
 
-    // A load queues the render and moves on, so nothing has gone wrong yet;
-    // the renderer turns this into THUMBNAIL_FAILED only if it gives up.
-    it("reports a thumbnail that has not landed as pending", () => {
+    it("errors when the thumbnail failed to generate", () => {
         const issues = checkGroup({ ...HEALTHY_GROUP, thumbnailUrls: null });
-        expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_PENDING }]);
+        expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_FAILED }]);
     });
 
     it("errors when an insertable failed to load", () => {
@@ -75,11 +73,11 @@ describe("checkInsertable", () => {
         expect(issues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 
-    it("reports a thumbnail that has not landed as pending", () => {
+    it("errors when the thumbnail failed to generate", () => {
         const issues = checkInsertable({
             ...HEALTHY_INSERTABLE,
             thumbnailUrls: null
         });
-        expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_PENDING }]);
+        expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_FAILED }]);
     });
 });

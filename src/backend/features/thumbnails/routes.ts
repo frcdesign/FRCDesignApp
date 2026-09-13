@@ -8,10 +8,7 @@ import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 
-import {
-    type ConfigurationThumbnailRequest,
-    requestThumbnails
-} from "./renderer";
+import { requestThumbnails, type ThumbnailRequest } from "./renderer";
 import { getSessionId } from "../auth/session";
 
 export const thumbnailRoutes = getApp();
@@ -80,7 +77,6 @@ thumbnailRoutes.get(
             await queueConfigurationRender(
                 c,
                 {
-                    kind: "configuration",
                     insertableId,
                     elementId,
                     configurationKey,
@@ -114,7 +110,7 @@ function thumbnailResponse(object: R2ObjectBody): Response {
  */
 async function queueConfigurationRender(
     c: AppContext,
-    request: ConfigurationThumbnailRequest,
+    request: ThumbnailRequest,
     source: RenderSource
 ): Promise<void> {
     try {

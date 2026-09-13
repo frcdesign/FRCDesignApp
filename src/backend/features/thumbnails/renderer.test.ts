@@ -1,9 +1,8 @@
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
-import { resetDb, seedGroup, TEST_LIBRARY_ID } from "../../../__test_utils__";
+import { resetDb, seedGroup } from "../../../__test_utils__";
 import {
     insertableTarget,
     parsedInsertable
@@ -14,8 +13,6 @@ import {
     OnshapeApiError,
     OnshapeRateLimitError
 } from "../../lib/onshape/client";
-import { insertables, libraries } from "../../db/schema";
-import { BuildIssueType } from "../build-checker/issues";
 import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import type { ThumbnailRequest } from "./renderer";
@@ -23,13 +20,6 @@ import type { ThumbnailRequest } from "./renderer";
 const MICROVERSION = "mv-1";
 const SESSION_ID = "renderer-session";
 const CONFIGURATION = "size=l";
-
-const ELEMENT_PATH = {
-    documentId: "d1",
-    instanceId: "v1",
-    instanceType: "v" as const,
-    elementId: "e1"
-};
 
 /**
  * A fresh object and a fresh element per test: the queue is per object, but R2
@@ -39,19 +29,40 @@ let testId = "";
 const renderer = () => env.THUMBNAIL_RENDERER.getByName(testId);
 const elementIdFor = (name: string) => `${testId}-${name}`;
 
-const elementRequest = (name = "e"): ThumbnailRequest => ({
-    kind: "element",
-    elementPath: { ...ELEMENT_PATH, elementId: elementIdFor(name) },
-    microversionId: MICROVERSION
-});
+/**
+ * A render of one configuration. The element is per test and the configuration
+ * names the render, so two of these are two different renders competing.
+ */
+const request = (name = "e", configurationKey = CONFIGURATION) =>
+    ({
+        insertableId: testId,
+        elementId: elementIdFor(name),
+        microversionId: MICROVERSION,
+        configurationKey
+    }) satisfies ThumbnailRequest;
 
-const keyFor = (name: string, size: ThumbnailSize) =>
-    thumbnailKey(elementIdFor(name), MICROVERSION, size);
+const keyFor = (
+    name: string,
+    size: ThumbnailSize,
+    configuration = CONFIGURATION
+) => thumbnailKey(elementIdFor(name), MICROVERSION, size, configuration);
 
-const bothKeys = (name: string) =>
+const bothKeys = (name: string, configuration = CONFIGURATION) =>
     [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) =>
-        keyFor(name, size)
+        keyFor(name, size, configuration)
     );
+
+/** The stored insertable a render resolves its element path from. */
+async function seedInsertableRow() {
+    const db = getDb(env.DB);
+    await resetDb(db);
+    await seedGroup(db);
+    await saveInsertable(
+        db,
+        insertableTarget({ insertableId: testId }),
+        parsedInsertable()
+    );
+}
 
 /** Stands in for a session, which is what the renderer resolves tokens from. */
 async function seedSession() {
@@ -66,15 +77,18 @@ async function seedSession() {
     );
 }
 
-/** Onshape's answer per element: bytes, or the 404 that means "still rendering". */
-function mockRenders(
-    answer: (elementId: string, size: ThumbnailSize) => Promise<ArrayBuffer>
-) {
+/**
+ * Onshape's answer for a render, by the id it was asked about. The id is
+ * derived from the configuration so two renders are told apart.
+ */
+function mockRenders(answer: (thumbnailId: string) => Promise<ArrayBuffer>) {
+    vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockImplementation(
+        (_client, _path, configurationKey) =>
+            Promise.resolve(`tid-${configurationKey}`)
+    );
     return vi
-        .spyOn(ThumbnailEndpoints, "getElementThumbnail")
-        .mockImplementation((_client, path, size) =>
-            answer(path.elementId, size ?? ThumbnailSize.LARGE)
-        );
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
+        .mockImplementation((_client, thumbnailId) => answer(thumbnailId));
 }
 
 const stillRendering = () =>
@@ -146,13 +160,13 @@ async function queueOf(count: number) {
     return renderer().queued();
 }
 
-/** What Onshape was asked about this test's element, in order. */
+/** What Onshape was asked about one configuration, in order. */
 function callsFor(
     calls: ReturnType<typeof mockRenders>,
-    name: string
+    configuration: string
 ): unknown[] {
     return calls.mock.calls.filter(
-        (call) => call[1].elementId === elementIdFor(name)
+        (call) => call[1] === `tid-${configuration}`
     );
 }
 
@@ -160,16 +174,13 @@ describe("ThumbnailRenderer", () => {
     beforeEach(async () => {
         testId = `t${crypto.randomUUID()}`;
         await seedSession();
+        await seedInsertableRow();
     });
 
     afterEach(() => vi.restoreAllMocks());
 
     it("queues both sizes of one request", async () => {
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
 
         expect((await renderer().queued()).map((job) => job.key)).toEqual(
             expect.arrayContaining(bothKeys("e"))
@@ -179,27 +190,15 @@ describe("ThumbnailRenderer", () => {
     // A client polls the route, and every poll re-enqueues; without this the
     // queue would grow a job per poll.
     it("names a job by its key, so enqueuing twice enqueues once", async () => {
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
 
         expect(await renderer().queued()).toHaveLength(2);
     });
 
     it("stores what Onshape rendered and drops the job", async () => {
         mockRenders(rendered);
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
 
         expect(await queueOf(0)).toEqual([]);
         for (const key of bothKeys("e")) {
@@ -211,16 +210,18 @@ describe("ThumbnailRenderer", () => {
     // abandons the render in flight, so a job that has started one is polled to
     // the exclusion of everything else.
     it("holds the render thread until its own render lands", async () => {
-        const calls = mockRenders((elementId) =>
-            elementId === elementIdFor("first") ? stillRendering() : rendered()
+        // Two configurations of one element: two renders, and Onshape will
+        // only ever finish the second.
+        const calls = mockRenders((thumbnailId) =>
+            thumbnailId === "tid-size=l" ? stillRendering() : rendered()
         );
         await renderer().enqueue(
-            elementRequest("first"),
+            request("e", "size=l"),
             SESSION_ID,
             RenderSource.LOAD
         );
         await renderer().enqueue(
-            elementRequest("second"),
+            request("e", "size=s"),
             SESSION_ID,
             RenderSource.LOAD
         );
@@ -230,10 +231,10 @@ describe("ThumbnailRenderer", () => {
         // to ask and did not.
         await settle();
 
-        expect(held).toContain(elementIdFor("first"));
+        expect(held).toContain(encodeURIComponent("size=l"));
         // The job behind it was due the whole time and never asked about:
         // asking would have abandoned the render in flight.
-        expect(callsFor(calls, "second")).toEqual([]);
+        expect(callsFor(calls, "size=s")).toEqual([]);
     });
 
     // Nobody is waiting on any one thumbnail of a load, so it yields to the
@@ -241,12 +242,12 @@ describe("ThumbnailRenderer", () => {
     it("runs what someone is watching before what a load queued", async () => {
         mockRenders(notAsked);
         await renderer().enqueue(
-            elementRequest("loaded"),
+            request("loaded"),
             SESSION_ID,
             RenderSource.LOAD
         );
         await renderer().enqueue(
-            elementRequest("watched"),
+            request("watched"),
             SESSION_ID,
             RenderSource.ROW
         );
@@ -261,18 +262,14 @@ describe("ThumbnailRenderer", () => {
     // shows only the large. They are separate renders, and only one may run.
     it("runs the size its surface shows first", async () => {
         mockRenders(notAsked);
-        await renderer().enqueue(
-            elementRequest("row"),
-            SESSION_ID,
-            RenderSource.ROW
-        );
+        await renderer().enqueue(request("row"), SESSION_ID, RenderSource.ROW);
         expect((await renderer().queued())[0].key).toBe(
             keyFor("row", ThumbnailSize.SMALL)
         );
 
         testId = `t${crypto.randomUUID()}`;
         await renderer().enqueue(
-            elementRequest("menu"),
+            request("menu"),
             SESSION_ID,
             RenderSource.INSERT_MENU
         );
@@ -286,14 +283,14 @@ describe("ThumbnailRenderer", () => {
     it("takes the render thread for the insert menu", async () => {
         mockRenders(stillRendering);
         await renderer().enqueue(
-            elementRequest("loaded"),
+            request("loaded"),
             SESSION_ID,
             RenderSource.LOAD
         );
         expect(await renderingKey()).toContain(elementIdFor("loaded"));
 
         await renderer().enqueue(
-            elementRequest("watched"),
+            request("watched"),
             SESSION_ID,
             RenderSource.INSERT_MENU
         );
@@ -316,14 +313,14 @@ describe("ThumbnailRenderer", () => {
     it("does not interrupt the render the insert menu is waiting on", async () => {
         mockRenders(stillRendering);
         await renderer().enqueue(
-            elementRequest("watched"),
+            request("watched"),
             SESSION_ID,
             RenderSource.INSERT_MENU
         );
         const held = await renderingKey();
 
         await renderer().enqueue(
-            elementRequest("watched"),
+            request("watched"),
             SESSION_ID,
             RenderSource.INSERT_MENU
         );
@@ -346,7 +343,7 @@ describe("ThumbnailRenderer", () => {
         }
         const calls = mockRenders(rendered);
         await renderer().enqueue(
-            elementRequest("stored"),
+            request("stored"),
             SESSION_ID,
             RenderSource.LOAD
         );
@@ -360,11 +357,7 @@ describe("ThumbnailRenderer", () => {
     // failure it drops the job after three strikes, and the render never lands.
     it("treats a 406 as a render still running, not a failure", async () => {
         mockRenders(notAcceptable);
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
 
         const held = await renderingKey();
         expect(held).toContain(elementIdFor("e"));
@@ -378,11 +371,7 @@ describe("ThumbnailRenderer", () => {
         mockRenders(() =>
             Promise.reject(new OnshapeRateLimitError("slow down", 30))
         );
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
 
         // Waits for the stand-down itself. Waiting on the queue length instead
         // waits for nothing — both jobs are queued the moment `enqueue`
@@ -396,24 +385,12 @@ describe("ThumbnailRenderer", () => {
 
     // Retrying asks Onshape the same question for the same answer.
     it("drops a configuration Onshape has no insertable for", async () => {
-        const db = getDb(env.DB);
-        await resetDb(db);
-        await seedGroup(db);
-        const target = insertableTarget();
-        await saveInsertable(db, target, parsedInsertable());
-
         vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockRejectedValue(
             new ThumbnailEndpoints.NoSuchConfigurationError("no such thing")
         );
 
         await renderer().enqueue(
-            {
-                kind: "configuration",
-                insertableId: target.insertableId,
-                elementId: target.elementPath.elementId,
-                microversionId: MICROVERSION,
-                configurationKey: CONFIGURATION
-            },
+            request(),
             SESSION_ID,
             RenderSource.INSERT_MENU
         );
@@ -421,162 +398,9 @@ describe("ThumbnailRenderer", () => {
         expect(await queueOf(0)).toEqual([]);
     });
 
-    // A load queues its thumbnails and moves on, so this is the only thing that
-    // ever learns how one ended.
-    describe("recording the outcome on the row that asked", () => {
-        const db = getDb(env.DB);
-
-        /** A stored insertable whose thumbnail is queued and still pending. */
-        async function seedPendingInsertable() {
-            await resetDb(db);
-            await seedGroup(db);
-            // Its own element too: R2 is one bucket across tests, and a key
-            // another test stored would make this render succeed on the spot.
-            const target = insertableTarget({
-                insertableId: testId,
-                elementPath: {
-                    ...ELEMENT_PATH,
-                    elementId: elementIdFor("owned")
-                }
-            });
-            await saveInsertable(db, target, parsedInsertable());
-            await db
-                .update(insertables)
-                .set({
-                    smallThumbnailUrl: null,
-                    largeThumbnailUrl: null,
-                    buildIssues: [{ type: BuildIssueType.THUMBNAIL_PENDING }]
-                })
-                .where(eq(insertables.id, target.insertableId));
-            return target;
-        }
-
-        const readRow = (id: string) =>
-            db.select().from(insertables).where(eq(insertables.id, id)).get();
-
-        it("writes the urls and clears pending once both sizes land", async () => {
-            const target = await seedPendingInsertable();
-            mockRenders(rendered);
-
-            await renderer().enqueue(
-                {
-                    kind: "element",
-                    elementPath: target.elementPath,
-                    microversionId: target.microversionId,
-                    owner: {
-                        kind: "insertable",
-                        libraryId: TEST_LIBRARY_ID,
-                        insertableId: target.insertableId
-                    }
-                },
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            await drainUntil(async () => {
-                const row = await readRow(target.insertableId);
-                return row?.smallThumbnailUrl !== null;
-            });
-
-            const row = await readRow(target.insertableId);
-            expect(row?.smallThumbnailUrl).toContain(
-                target.elementPath.elementId
-            );
-            expect(row?.largeThumbnailUrl).toContain(
-                target.elementPath.elementId
-            );
-            expect(row?.buildIssues).toEqual([]);
-        });
-
-        // Nothing is going to arrive, so the row should stop saying "loading".
-        it("turns pending into failed when it gives up", async () => {
-            const target = await seedPendingInsertable();
-            // Non-retryable, so the job settles on its first attempt: what is
-            // under test is what giving up does to the row, not how many
-            // strikes and half-minute waits it takes to get there.
-            mockRenders(() =>
-                Promise.reject(
-                    new ThumbnailEndpoints.NoSuchConfigurationError("gone")
-                )
-            );
-
-            await renderer().enqueue(
-                {
-                    kind: "element",
-                    elementPath: target.elementPath,
-                    microversionId: target.microversionId,
-                    owner: {
-                        kind: "insertable",
-                        libraryId: TEST_LIBRARY_ID,
-                        insertableId: target.insertableId
-                    }
-                },
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            await drainUntil(async () => {
-                const row = await readRow(target.insertableId);
-                return (
-                    row?.buildIssues.some(
-                        (issue) =>
-                            issue.type === BuildIssueType.THUMBNAIL_FAILED
-                    ) ?? false
-                );
-            });
-
-            const row = await readRow(target.insertableId);
-            expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
-                BuildIssueType.THUMBNAIL_PENDING
-            );
-        });
-
-        // Clients hold the library payload by cache version; without this the
-        // urls are recorded but nobody sees them.
-        it("bumps the library so clients pick the urls up", async () => {
-            const target = await seedPendingInsertable();
-            mockRenders(rendered);
-            const before = await db
-                .select()
-                .from(libraries)
-                .where(eq(libraries.id, TEST_LIBRARY_ID))
-                .get();
-
-            await renderer().enqueue(
-                {
-                    kind: "element",
-                    elementPath: target.elementPath,
-                    microversionId: target.microversionId,
-                    owner: {
-                        kind: "insertable",
-                        libraryId: TEST_LIBRARY_ID,
-                        insertableId: target.insertableId
-                    }
-                },
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            await drainUntil(async () => {
-                const now = await db
-                    .select()
-                    .from(libraries)
-                    .where(eq(libraries.id, TEST_LIBRARY_ID))
-                    .get();
-                return (now?.cacheVersion ?? 0) > (before?.cacheVersion ?? 0);
-            });
-        });
-    });
-
-    // Everything else is queued behind it, so a render that has run out of
-    // thread time is abandoned rather than given another five minutes.
     it("abandons a render that runs out of thread time", async () => {
         mockRenders(stillRendering);
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
         const held = await renderingKey();
 
         // Backdated past the limit rather than waited out: what is under test
@@ -598,83 +422,8 @@ describe("ThumbnailRenderer", () => {
         expect(await gone()).toBe(true);
     });
 
-    describe("reading an element thumbnail", () => {
-        const workspacePath = (name: string) => ({
-            ...ELEMENT_PATH,
-            instanceType: "w" as const,
-            instanceId: "w-1",
-            elementId: elementIdFor(name)
-        });
-
-        const withWorkspace = (name = "e"): ThumbnailRequest => ({
-            kind: "element",
-            elementPath: { ...ELEMENT_PATH, elementId: elementIdFor(name) },
-            workspacePath: workspacePath(name),
-            microversionId: MICROVERSION
-        });
-
-        // The version is what the library shows, so it is what gets asked.
-        it("asks the version first", async () => {
-            const calls = mockRenders(rendered);
-            await renderer().enqueue(
-                withWorkspace(),
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            await queueOf(0);
-            expect(
-                calls.mock.calls.every((call) => call[1].instanceType === "v")
-            ).toBe(true);
-        });
-
-        // The version form of this endpoint has been unreliable; the workspace
-        // form has not, so a version that does not answer is not the end of it.
-        it("pivots to the workspace when the version does not answer", async () => {
-            // Answers by which instance was asked: the version never has it,
-            // the workspace always does.
-            const calls: ReturnType<typeof mockRenders> = mockRenders(() =>
-                calls.mock.calls.at(-1)?.[1].instanceType === "v"
-                    ? stillRendering()
-                    : rendered()
-            );
-            await renderer().enqueue(
-                withWorkspace(),
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            await queueOf(0);
-            for (const key of bothKeys("e")) {
-                expect(await env.BLOB.head(key)).not.toBeNull();
-            }
-            expect(
-                calls.mock.calls.some((call) => call[1].instanceType === "w")
-            ).toBe(true);
-        });
-
-        // A tab that has left the workspace has nowhere else to ask, so the
-        // version's answer stands on its own.
-        it("keeps polling the version when there is no workspace to fall back to", async () => {
-            mockRenders(stillRendering);
-            await renderer().enqueue(
-                elementRequest(),
-                SESSION_ID,
-                RenderSource.LOAD
-            );
-
-            expect(await renderingKey()).toContain(elementIdFor("e"));
-        });
-    });
-
-    // A job carries the shape the code that queued it expected, so work left
-    // over from an older deploy can only fail quietly.
     it("throws away a queue left by an older generation", async () => {
-        await renderer().enqueue(
-            elementRequest(),
-            SESSION_ID,
-            RenderSource.LOAD
-        );
+        await renderer().enqueue(request(), SESSION_ID, RenderSource.LOAD);
         expect(await renderer().queued()).toHaveLength(2);
 
         await runInDurableObject(renderer(), (_instance, state) => {
@@ -682,7 +431,7 @@ describe("ThumbnailRenderer", () => {
         });
         // Anything that touches the queue is what notices.
         await renderer().enqueue(
-            elementRequest("after"),
+            request("after"),
             SESSION_ID,
             RenderSource.LOAD
         );

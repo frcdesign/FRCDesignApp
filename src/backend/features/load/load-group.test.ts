@@ -11,7 +11,7 @@ import {
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
-import * as RendererModule from "../thumbnails/renderer";
+import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
 import { BuildIssueType } from "../build-checker/issues";
@@ -182,9 +182,7 @@ const CTX: LoadContext = {
     env,
     sessionId: "test-session",
     step: FAKE_STEP,
-    limit: createLimiter(LOAD_CONCURRENCY),
-    renderer: () =>
-        Promise.resolve({ userId: "test-user", sessionId: "test-session" })
+    limit: createLimiter(LOAD_CONCURRENCY)
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */
@@ -204,19 +202,6 @@ function contentsOf(tabs: OnshapeElement[]): OnshapeDocumentContents {
 function mockContents(tabs: OnshapeElement[]) {
     vi.spyOn(DocumentEndpoints, "getContents").mockResolvedValue(
         contentsOf(tabs)
-    );
-}
-
-/** The same document read two ways, since a load reads both. */
-function mockContentsPerInstance(
-    version: OnshapeElement[],
-    workspace: OnshapeElement[]
-) {
-    vi.spyOn(DocumentEndpoints, "getContents").mockImplementation(
-        (_client, path) =>
-            Promise.resolve(
-                contentsOf(path.instanceType === "w" ? workspace : version)
-            )
     );
 }
 
@@ -267,10 +252,10 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.elementId).sort()).toEqual(["e1", "e2"]);
     });
 
-    // The version is asked first and the workspace is the fallback, so a tab
-    // the workspace no longer has simply has nowhere to fall back to.
-    it("gives a workspace fallback only to tabs the workspace still has", async () => {
-        mockContentsPerInstance([tab("e1"), tab("e2")], [tab("e1")]);
+    // Every thumbnail gets both: the version is asked first because that is
+    // what the library shows, and the workspace is where it falls back to.
+    it("gives every tab's thumbnail a workspace to fall back to", async () => {
+        mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
         );
@@ -278,56 +263,50 @@ describe("loadGroup", () => {
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p1" }
         ]);
-        const queued = vi
-            .spyOn(RendererModule, "requestThumbnails")
-            .mockResolvedValue(undefined);
+        const uploaded = vi
+            .spyOn(ThumbnailStore, "uploadThumbnails")
+            .mockResolvedValue({ small: "s", large: "l" });
 
         await loadGroup(CTX, LOADED_TARGET, false);
 
-        const elementRequests = queued.mock.calls
-            .map((call) => call[2])
-            .filter((request) => request.kind === "element");
-        const requestFor = (elementId: string) =>
-            elementRequests.find(
-                (request) => request.elementPath.elementId === elementId
+        // (bucket, api, elementPath, elementWorkspacePath, microversionId)
+        for (const elementId of ["e1", "e2"]) {
+            const call = uploaded.mock.calls.find(
+                (args) => args[2].elementId === elementId
             );
-
-        expect(requestFor("e1")).toMatchObject({
-            elementPath: { instanceType: "v" },
-            workspacePath: { instanceType: "w" }
-        });
-        expect(requestFor("e2")?.workspacePath).toBeUndefined();
+            expect(call?.[2]).toMatchObject({ instanceType: "v", elementId });
+            expect(call?.[3]).toMatchObject({ instanceType: "w", elementId });
+        }
     });
 
-    // The group's own thumbnail gets the same fallback as an insertable's, and
-    // it can come from an element that is not an insertable at all — so the
-    // workspace is checked against every element, not just the loadable tabs.
-    it("gives the group thumbnail a workspace fallback too", async () => {
-        const elements = [tab("e1"), drawing("cover")];
-        mockContentsPerInstance(elements, elements);
+    // The element a group's thumbnail comes from is often not a loadable tab,
+    // and which one it is already came back with the document, so resolving it
+    // should cost nothing.
+    it("takes the group thumbnail from the designated element without re-reading the document", async () => {
+        mockContents([tab("e1"), drawing("cover")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
         );
-        vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
-            id: "doc",
-            name: "Doc",
-            documentThumbnailElementId: "cover"
+        const document = vi.spyOn(DocumentEndpoints, "getDocument");
+        const uploaded = vi
+            .spyOn(ThumbnailStore, "uploadThumbnails")
+            .mockResolvedValue({ small: "s", large: "l" });
+
+        await loadGroup(
+            CTX,
+            { ...LOADED_TARGET, thumbnailElementId: "cover" },
+            false
+        );
+
+        const groupCall = uploaded.mock.calls.find(
+            (args) => args[2].elementId === "cover"
+        );
+        expect(groupCall?.[2]).toMatchObject({ instanceType: "v" });
+        expect(groupCall?.[3]).toMatchObject({
+            instanceType: "w",
+            elementId: "cover"
         });
-        const queued = vi
-            .spyOn(RendererModule, "requestThumbnails")
-            .mockResolvedValue(undefined);
-
-        await loadGroup(CTX, LOADED_TARGET, false);
-
-        const groupRequest = queued.mock.calls
-            .map((call) => call[2])
-            .filter((request) => request.kind === "element")
-            .find((request) => request.elementPath.elementId === "cover");
-
-        expect(groupRequest).toMatchObject({
-            elementPath: { instanceType: "v" },
-            workspacePath: { instanceType: "w", elementId: "cover" }
-        });
+        expect(document).not.toHaveBeenCalled();
     });
 
     // A skipped tab never reaches saveInsertable, but its version still has to

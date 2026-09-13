@@ -10,12 +10,12 @@ import {
     BuildIssueType
 } from "../build-checker/issues";
 import { groups, insertables } from "../../db/schema";
-import {
-    readThumbnailUrls,
-    resolveDocumentThumbnail
-} from "../thumbnails/store";
+import { uploadThumbnails } from "../thumbnails/store";
 import { getContents } from "../../lib/onshape/endpoints/documents";
-import type { OnshapeElement } from "../../lib/onshape/types";
+import type {
+    OnshapeDocumentContents,
+    OnshapeElement
+} from "../../lib/onshape/types";
 import { checkGroup } from "../build-checker/checks";
 import { parseInsertableTabs } from "./parse-document-contents";
 import { loadInsertable } from "./load-insertable";
@@ -25,8 +25,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { ONSHAPE_STEP_RETRIES, queueThumbnailsStep } from "./steps";
-import type { InstancePath } from "../../lib/onshape/path";
+import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
 interface GroupLoadResult {
     loadedElements: number;
@@ -51,45 +50,35 @@ export async function loadGroup(
     target: GroupTarget,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const { groupId, versionPath, workspacePath } = target;
+    const { groupId, versionPath } = target;
 
-    // Read the document's loadable tabs (display order) and the stored rows.
-    const insertableTabs = await ctx.step.do(
-        `insertable-tabs-${groupId}`,
+    // Read once and derive from it: the loadable tabs, and the element the
+    // group's own thumbnail comes from, which is often not one of them.
+    const contents = await ctx.step.do(
+        `document-contents-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
-        () => fetchInsertableTabs(ctx, versionPath)
+        async () =>
+            getContents(await getOnshapeApiFromContext(ctx), versionPath)
     );
-    // Every element the workspace has, which is what a thumbnail can fall back
-    // to. Unfiltered, unlike the tabs above: a group's own thumbnail can come
-    // from an element that is not an insertable at all.
-    const workspaceElementIds = await ctx.step.do(
-        `workspace-elements-${groupId}`,
-        { retries: ONSHAPE_STEP_RETRIES },
-        () => fetchElementIds(ctx, workspacePath)
-    );
+    const insertableTabs = parseInsertableTabs(contents);
     const storedInsertables = await ctx.step.do(
         `stored-insertables-${groupId}`,
         () => fetchStoredInsertables(ctx, groupId)
     );
 
     // Wrap in a step so new UUIDs are deterministic
-    const selected = await ctx.step.do(`select-insertables-${groupId}`, () =>
-        Promise.resolve(
-            selectInsertablesToLoad(
-                target,
-                insertableTabs,
-                storedInsertables,
-                forceReload
+    const insertablesToLoad = await ctx.step.do(
+        `select-insertables-${groupId}`,
+        () =>
+            Promise.resolve(
+                selectInsertablesToLoad(
+                    target,
+                    insertableTabs,
+                    storedInsertables,
+                    forceReload
+                )
             )
-        )
     );
-    const inWorkspace = new Set(workspaceElementIds);
-    const insertablesToLoad = selected.map((insertable) => ({
-        ...insertable,
-        workspacePath: inWorkspace.has(insertable.elementPath.elementId)
-            ? { ...workspacePath, elementId: insertable.elementPath.elementId }
-            : undefined
-    }));
     // Removal detection is pure, so it needs no step.
     const removedInsertableIds = findRemovedInsertables(
         insertableTabs,
@@ -98,7 +87,7 @@ export async function loadGroup(
 
     const failedInsertableIds = await loadInsertables(ctx, insertablesToLoad);
 
-    const thumbnailUrls = await loadDocumentThumbnail(ctx, target, inWorkspace);
+    const thumbnailUrls = await loadDocumentThumbnail(ctx, target, contents);
 
     await ctx.step.do(`save-group-${groupId}`, () =>
         saveGroup(getDb(ctx.env.DB), target, {
@@ -144,53 +133,45 @@ async function loadInsertables(
 async function loadDocumentThumbnail(
     ctx: LoadContext,
     target: GroupTarget,
-    inWorkspace: Set<string>
+    contents: OnshapeDocumentContents
 ): Promise<ThumbnailUrls | null> {
     const { groupId, versionPath, workspacePath } = target;
 
     // Never fatal: `checkGroup` already flags a missing thumbnail, and failing
     // the load over a cosmetic one would lose the group's insertables.
-    let element;
-    try {
-        element = await ctx.step.do(
-            `document-thumbnail-element-${groupId}`,
-            { retries: ONSHAPE_STEP_RETRIES },
-            async () =>
-                resolveDocumentThumbnail(
-                    await getOnshapeApiFromContext(ctx),
-                    versionPath
-                )
-        );
-    } catch {
+    const element = documentThumbnailElement(target, contents);
+    if (!element) {
         return null;
     }
 
-    return queueThumbnailsStep(
+    return uploadThumbnailsStep(
         ctx,
         `document-thumbnail-${groupId}`,
-        {
-            kind: "element",
-            elementPath: element.elementPath,
-            workspacePath: inWorkspace.has(element.elementPath.elementId)
-                ? {
-                      ...workspacePath,
-                      elementId: element.elementPath.elementId
-                  }
-                : undefined,
-            microversionId: element.microversionId,
-            owner: {
-                kind: "group",
-                libraryId: target.libraryId,
-                groupId
-            }
-        },
-        () =>
-            readThumbnailUrls(
+        async () =>
+            uploadThumbnails(
                 ctx.env.BLOB,
-                element.elementPath.elementId,
+                await getOnshapeApiFromContext(ctx),
+                { ...versionPath, elementId: element.id },
+                { ...workspacePath, elementId: element.id },
                 element.microversionId
             )
     );
+}
+
+/**
+ * The element a group's thumbnail is taken from: the one the document
+ * designates, or the first it has. Which element that is, and the document's
+ * name, both came back with the document when the group was resolved, so this
+ * asks Onshape nothing.
+ */
+function documentThumbnailElement(
+    target: GroupTarget,
+    contents: OnshapeDocumentContents
+): OnshapeElement | undefined {
+    const designated = target.thumbnailElementId;
+    return designated
+        ? contents.elements.find((element) => element.id === designated)
+        : contents.elements[0];
 }
 
 interface SaveGroupInput {
@@ -293,29 +274,6 @@ async function flagFailedInsertables(
 /**
  * Fetches the document's part studio / assembly tabs, in display order.
  */
-/** Every element in a document, whatever its type. */
-async function fetchElementIds(
-    ctx: LoadContext,
-    instancePath: InstancePath
-): Promise<string[]> {
-    const contents = await getContents(
-        await getOnshapeApiFromContext(ctx),
-        instancePath
-    );
-    return contents.elements.map((element) => element.id);
-}
-
-async function fetchInsertableTabs(
-    ctx: LoadContext,
-    versionPath: InstancePath
-): Promise<OnshapeElement[]> {
-    const contents = await getContents(
-        await getOnshapeApiFromContext(ctx),
-        versionPath
-    );
-    return parseInsertableTabs(contents);
-}
-
 /**
  * What an existing insertable row contributes to the reload decision: its id, so
  * a reload keeps it, and its microversion, to tell whether it changed.
@@ -370,6 +328,10 @@ export function selectInsertablesToLoad(
             libraryId: target.libraryId,
             groupId: target.groupId,
             elementPath: { ...target.versionPath, elementId: tab.id },
+            elementWorkspacePath: {
+                ...target.workspacePath,
+                elementId: tab.id
+            },
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
             name: tab.name,

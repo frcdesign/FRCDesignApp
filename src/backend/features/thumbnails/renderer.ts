@@ -1,16 +1,20 @@
 /**
- * The one place that asks Onshape for a thumbnail.
+ * The one place that asks Onshape to render a configuration.
  *
- * Onshape runs one thumbnail render per user at a time. Asking for one it has
- * not got answers 404 and starts rendering it; asking for a *different* one
+ * Onshape runs one such render per user at a time. Asking for one it has not
+ * got answers 404 and starts rendering it; asking for a *different* one
  * abandons that render and starts the new one. So a caller that interleaves two
- * thumbnails finishes neither, however long it polls. Onshape does not document
- * this — it is read off renders that either land in under a minute or never.
+ * finishes neither, however long it polls. Onshape does not document this — it
+ * is read off renders that either land in under a minute or never.
  *
  * Hence one object per user, and a job that has started rendering holds the
  * render thread: every pass polls that one key until it lands. Only the insert
  * menu may take the thread off a job, since that is the one surface where
  * somebody is watching a particular render happen.
+ *
+ * An element's own thumbnail does not come through here at all. Onshape renders
+ * those when a document is saved, so reading one starts nothing and cannot
+ * displace a render in flight — a load fetches them itself, in parallel.
  */
 import { DurableObject } from "cloudflare:workers";
 import { HttpStatus } from "http-status-ts";
@@ -26,58 +30,23 @@ import {
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import type { ElementPath } from "../../lib/onshape/path";
 import {
-    getElementThumbnail,
     getThumbnailFromId,
     getThumbnailId,
     NoSuchConfigurationError
 } from "../../lib/onshape/endpoints/thumbnails";
-import {
-    type ConfigurationKey,
-    DEFAULT_CONFIGURATION_KEY
-} from "../configurations/contract";
+import { type ConfigurationKey } from "../configurations/contract";
 import { PREFERRED_SIZE, RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
-import { putThumbnail, readThumbnailUrls } from "./store";
-import { recordThumbnailOutcome, type ThumbnailOwner } from "./record";
-import { bumpLibraryVersion } from "../library/db";
-import type { LibraryId } from "../library/library-id";
-
-/** An element's own thumbnail, which Onshape renders when the document is saved. */
-export interface ElementThumbnailRequest {
-    kind: "element";
-    /** Where Onshape reads it from; the key comes from its `elementId`. */
-    elementPath: ElementPath;
-    /**
-     * The same tab in the document's workspace, tried when the version above
-     * does not answer. The version form of Onshape's thumbnail endpoint has
-     * been unreliable for these and the workspace form has not, but the version
-     * is what the library shows, so it is still asked first.
-     *
-     * Absent when the tab has left the workspace, which leaves the version as
-     * the only place to ask.
-     */
-    workspacePath?: ElementPath;
-    microversionId: string;
-    /**
-     * The row to write the urls onto once both sizes land. A load queues these
-     * and moves on, so this is what eventually tells it how the render ended.
-     */
-    owner?: ThumbnailOwner;
-}
+import { putThumbnail } from "./store";
 
 /** A configuration's render, the kind Onshape only does one of at a time. */
-export interface ConfigurationThumbnailRequest {
-    kind: "configuration";
+export interface ThumbnailRequest {
     /** What the element path is resolved from, since the caller has only this. */
     insertableId: string;
     elementId: string;
     microversionId: string;
     configurationKey: ConfigurationKey;
 }
-
-export type ThumbnailRequest =
-    | ElementThumbnailRequest
-    | ConfigurationThumbnailRequest;
 
 /** Where each source sits in the queue; lower goes first. */
 const SOURCE_RANK: Record<RenderSource, number> = {
@@ -88,8 +57,8 @@ const SOURCE_RANK: Record<RenderSource, number> = {
 
 /**
  * How often the render holding the thread is asked about, by how long it has
- * held it. Polling the same thumbnail does not disturb it, so the first minute —
- * where renders normally land — is worth about ten calls. Past that they are
+ * held it. Polling the same render does not disturb it, so the first minute —
+ * where they normally land — is worth about ten calls. Past that they are
  * outliers, and the backoff stops spending the account's allocation on them.
  */
 const POLL_SCHEDULE = [
@@ -99,59 +68,36 @@ const POLL_SCHEDULE = [
 ] as const;
 
 /**
- * The most thread time one thumbnail can ever cost. Well past the two minutes
- * an outlier takes, and hard: a render that reaches it is abandoned rather than
- * retried, so one bad thumbnail cannot hold up the queue behind it for longer
- * than this.
+ * The most thread time one render can ever cost. Well past the two minutes an
+ * outlier takes, and hard: a render that reaches it is abandoned rather than
+ * retried, so one bad one cannot hold up the queue behind it for longer.
  */
 const RENDER_TIMEOUT_MS = 5 * 60_000;
 
 /**
- * Failures or expired renders before a job is dropped. Being preempted is
- * neither — that is the queue's doing, not the job's.
+ * Failures before a job is dropped. Being preempted is not one — that is the
+ * queue's doing, not the job's.
  */
 const MAX_FAILURES = 3;
 
 /** How long a failed job waits before it is worth the thread again. */
 const RETRY_DELAY_MS = 30_000;
 
-/**
- * How long a job stays queued. Long because it bounds garbage, not patience:
- * behind a library load the queue is legitimately hours deep, and a render that
- * lands after everyone stopped watching is still stored for the next request.
- */
-const JOB_TTL_MS = 6 * 60 * 60_000;
+/** How long a job stays queued; past it a later request asks again. */
+const JOB_TTL_MS = 60 * 60_000;
 
-/** Bounds one alarm, not the queue, which a cold load fills with thousands. */
+/** Bounds one alarm, not the queue. */
 const ALARM_BUDGET_MS = 20_000;
 
 /**
- * How often a library's cache version is bumped while thumbnails land. A cold
- * load finishes hundreds of them, and bumping per thumbnail would throw away
- * every client's cached library that many times.
- */
-const BUMP_INTERVAL_MS = 30_000;
-
-/**
  * Bumped to throw away every queue. A job carries the shape the code that
- * queued it expected — which paths to try, what to report back to — so a
- * deploy that changes any of that leaves work behind that can only fail
- * quietly. Raising this drops it the next time each object is touched; a
- * library reload then queues what is actually wanted.
+ * queued it expected, so a deploy that changes that shape leaves work behind
+ * which can only fail quietly. Raising this drops it the next time each object
+ * is touched.
  */
-const QUEUE_GENERATION = 2;
+const QUEUE_GENERATION = 3;
 
-/** Libraries with thumbnails recorded since the last bump. */
-const BUMP_PREFIX = "bump:";
-
-/** When a bump was last flushed, which is what the interval is measured from. */
-const LAST_BUMP_KEY = "lastBumpAt";
-
-/**
- * A row of the queue. It extends `Record` only because `sql.exec` constrains its
- * result type that way, and a TypeScript interface has no implicit index
- * signature to satisfy it with.
- */
+/** A row of the queue, as stored; the index signature is what `sql.exec` reads it as. */
 interface JobRow extends Record<string, SqlStorageValue> {
     key: string;
     request: string;
@@ -162,7 +108,7 @@ interface JobRow extends Record<string, SqlStorageValue> {
     dueAt: number;
     expiresAt: number;
     failures: number;
-    /** Resolved once per configuration job and kept, since it cannot change. */
+    /** Resolved once per job and kept, since it cannot change. */
     thumbnailId: string | null;
     /** When this job took the render thread; null while it is only queued. */
     startedAt: number | null;
@@ -286,7 +232,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
     /**
      * The queue in the order it will run, the held render first. Exposed
      * because the order is what this object is for: it is how to tell someone
-     * how far down they are, and how to see what a stalled load is stalled on.
+     * how far down they are, and how to see what a stalled queue is stalled on.
      */
     queued(): QueuedJob[] {
         return this.ctx.storage.sql
@@ -308,7 +254,6 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         this.#running = true;
         try {
             await this.#drain();
-            await this.#flushBumps();
         } finally {
             this.#running = false;
             await this.#scheduleNext();
@@ -323,7 +268,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         const until = Date.now() + ALARM_BUDGET_MS;
 
         while (Date.now() < until) {
-            await this.#dropExpired();
+            this.#dropExpired();
 
             const rendering = this.#renderingJob();
             if (rendering) {
@@ -334,137 +279,30 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 // another five minutes on a render that has already shown it
                 // is not coming, with the whole queue waiting behind it.
                 if (this.#outOfRenderTime(rendering)) {
-                    await this.#giveUp(rendering);
+                    this.#finish(rendering.key);
                     continue;
                 }
-                await this.#attempt(rendering, await this.#poll(rendering));
+                this.#record(rendering, await this.#poll(rendering));
                 continue;
             }
 
             const next = this.#nextQueuedJob();
             if (!next) return;
-            await this.#attempt(next, await this.#start(next));
-        }
-    }
-
-    /** Ends a job for good, and tells whatever queued it that nothing came. */
-    async #giveUp(job: JobRow): Promise<void> {
-        this.#finish(job.key);
-        await this.#reportOutcome(job);
-    }
-
-    /**
-     * Writes back what the attempt decided, and tells the row that asked for it
-     * once the pair is settled either way.
-     */
-    async #attempt(job: JobRow, attempt: Attempt): Promise<void> {
-        const gone = this.#record(job, attempt);
-        if (gone) {
-            await this.#reportOutcome(job);
+            this.#record(next, await this.#start(next));
         }
     }
 
     /**
-     * Reports a finished thumbnail to whatever queued it. Both sizes are one
-     * pair of columns, so it waits for the second: the first to land finds the
-     * other missing and leaves the row alone.
-     */
-    async #reportOutcome(job: JobRow): Promise<void> {
-        const request = requestOf(job);
-        if (request.kind !== "element" || !request.owner) {
-            return;
-        }
-        const urls = await readThumbnailUrls(
-            this.env.BLOB,
-            request.elementPath.elementId,
-            request.microversionId
-        );
-        // Nothing stored and a sibling still queued: the pair is not settled,
-        // so there is nothing to say yet.
-        if (!urls && this.#hasSibling(job)) {
-            return;
-        }
-
-        const recorded = await recordThumbnailOutcome(
-            getDb(this.env.DB),
-            request.owner,
-            urls ? { stored: true, urls } : { stored: false }
-        );
-        if (recorded) {
-            this.ctx.storage.kv.put(
-                `${BUMP_PREFIX}${request.owner.libraryId}`,
-                true
-            );
-        }
-    }
-
-    /** Whether the other size of this request is still queued. */
-    #hasSibling(job: JobRow): boolean {
-        return (
-            this.ctx.storage.sql
-                .exec<{
-                    count: number;
-                }>(
-                    "SELECT COUNT(*) AS count FROM jobs WHERE request = ?",
-                    job.request
-                )
-                .one().count > 0
-        );
-    }
-
-    /**
-     * Bumps the libraries whose thumbnails have landed, at most once an
-     * interval. Clients hold the library payload by cache version, so this is
-     * what puts the new urls in front of them.
-     */
-    async #flushBumps(): Promise<void> {
-        const dueAt = this.#bumpDueAt();
-        if (dueAt === undefined || dueAt > Date.now()) {
-            return;
-        }
-        const db = getDb(this.env.DB);
-        for (const key of this.#pendingBumps()) {
-            await bumpLibraryVersion(
-                db,
-                key.slice(BUMP_PREFIX.length) as LibraryId
-            );
-            this.ctx.storage.kv.delete(key);
-        }
-        this.ctx.storage.kv.put(LAST_BUMP_KEY, Date.now());
-    }
-
-    /** When the pending bumps may next flush, or undefined when there are none. */
-    #bumpDueAt(): number | undefined {
-        if (this.#pendingBumps().length === 0) return undefined;
-        const last = this.ctx.storage.kv.get<number>(LAST_BUMP_KEY) ?? 0;
-        return last + BUMP_INTERVAL_MS;
-    }
-
-    #pendingBumps(): string[] {
-        return [...this.ctx.storage.kv.list({ prefix: BUMP_PREFIX })].map(
-            ([key]) => key
-        );
-    }
-
-    /**
-     * Takes the render thread. R2 is checked first because another load or an
-     * earlier pass may have stored these bytes since the job was queued; the
-     * Onshape call that follows is what starts the render.
+     * Takes the render thread for a job: checks R2 first, since another caller
+     * may have stored these bytes since it was queued, and only then asks
+     * Onshape — which is the call that starts the render.
      */
     async #start(job: JobRow): Promise<Attempt> {
         try {
             if (await this.env.BLOB.head(job.key)) {
                 return { outcome: "stored" };
             }
-
-            const request = requestOf(job);
-            const onshapeApi = await this.#onshapeApi();
-            const thumbnailId =
-                request.kind === "configuration"
-                    ? await this.#thumbnailId(job, request, onshapeApi)
-                    : undefined;
-
-            return await this.#fetch(job, request, onshapeApi, thumbnailId);
+            return await this.#fetch(job);
         } catch (error) {
             return classify(error);
         }
@@ -476,67 +314,27 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
      */
     async #poll(job: JobRow): Promise<Attempt> {
         try {
-            return await this.#fetch(
-                job,
-                requestOf(job),
-                await this.#onshapeApi(),
-                job.thumbnailId ?? undefined
-            );
+            return await this.#fetch(job);
         } catch (error) {
             return classify(error);
         }
     }
 
     /** The one Onshape call, and the store when it comes back with bytes. */
-    async #fetch(
-        job: JobRow,
-        request: ThumbnailRequest,
-        onshapeApi: OnshapeApi,
-        thumbnailId: string | undefined
-    ): Promise<Attempt> {
-        const size = sizeOf(job.key);
-        let thumbnail: ArrayBuffer;
-        if (request.kind === "element") {
-            thumbnail = await this.#fetchElement(request, onshapeApi, size);
-        } else {
-            if (!thumbnailId) {
-                throw new Error(`No thumbnail id resolved for ${job.key}`);
-            }
-            thumbnail = await getThumbnailFromId(onshapeApi, thumbnailId, size);
-        }
+    async #fetch(job: JobRow): Promise<Attempt> {
+        const request = requestOf(job);
+        const onshapeApi = await this.#onshapeApi();
+        const thumbnail = await getThumbnailFromId(
+            onshapeApi,
+            await this.#thumbnailId(job, request, onshapeApi),
+            sizeOf(job.key)
+        );
 
         await putThumbnail(this.env.BLOB, job.key, thumbnail, {
             microversionId: request.microversionId,
-            configurationKey:
-                request.kind === "configuration"
-                    ? request.configurationKey
-                    : DEFAULT_CONFIGURATION_KEY
+            configurationKey: request.configurationKey
         });
         return { outcome: "stored" };
-    }
-
-    /**
-     * The version first, since that is what the library shows, and the
-     * workspace when it does not answer. Any failure pivots, not just a 404:
-     * whatever the version says, the workspace is the one that reliably has
-     * the bytes, and its answer is the one the caller acts on.
-     */
-    async #fetchElement(
-        request: ElementThumbnailRequest,
-        onshapeApi: OnshapeApi,
-        size: ThumbnailSize
-    ): Promise<ArrayBuffer> {
-        const workspacePath = request.workspacePath;
-        try {
-            return await getElementThumbnail(
-                onshapeApi,
-                request.elementPath,
-                size
-            );
-        } catch (error) {
-            if (!workspacePath) throw error;
-        }
-        return getElementThumbnail(onshapeApi, workspacePath, size);
     }
 
     /**
@@ -546,7 +344,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
      */
     async #thumbnailId(
         job: JobRow,
-        request: ConfigurationThumbnailRequest,
+        request: ThumbnailRequest,
         onshapeApi: OnshapeApi
     ): Promise<string> {
         if (job.thumbnailId) return job.thumbnailId;
@@ -595,15 +393,12 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         return getOnshapeApiFromSessionId(this.env.KV, sessionId);
     }
 
-    /**
-     * Writes back what one call decided: done, keep polling, or give up.
-     * Returns whether the job left the queue, settled one way or the other.
-     */
-    #record(job: JobRow, attempt: Attempt): boolean {
+    /** Writes back what one call decided: done, keep polling, or give up. */
+    #record(job: JobRow, attempt: Attempt): void {
         switch (attempt.outcome) {
             case "stored":
                 this.#finish(job.key);
-                return true;
+                return;
 
             case "rendering":
                 // Takes the thread: nothing else may be asked of Onshape until
@@ -616,33 +411,31 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                     Date.now() + pollDelay(job),
                     job.key
                 );
-                return false;
+                return;
 
             case "rate-limited":
                 // The account is being throttled, not this job, so the render
                 // keeps its hold: waiting is not the same as switching away.
                 this.#delayAll(attempt.retryAfterSeconds * 1000);
-                return false;
+                return;
 
             case "failed":
                 // A configuration Onshape has no insertable for, or one that
                 // left the library: retrying asks the same question.
                 if (attempt.error instanceof NoSuchConfigurationError) {
                     this.#finish(job.key);
-                    return true;
+                    return;
                 }
-                return this.#fail(job);
+                this.#fail(job);
+                return;
         }
     }
 
-    /**
-     * Gives the thread back after a job broke, and drops it once it keeps doing
-     * so. Returns whether it was dropped, which settles it as a failure.
-     */
-    #fail(job: JobRow): boolean {
+    /** Gives the thread back after a job broke, and drops it once it keeps doing so. */
+    #fail(job: JobRow): void {
         if (job.failures + 1 >= MAX_FAILURES) {
             this.#finish(job.key);
-            return true;
+            return;
         }
         this.ctx.storage.sql.exec(
             `UPDATE jobs
@@ -651,13 +444,12 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
             Date.now() + RETRY_DELAY_MS,
             job.key
         );
-        return false;
     }
 
     /**
      * Hands the render thread to the insert menu, the only surface that may
      * take it: somebody is watching that render, and the alternative is making
-     * them wait out a library load.
+     * them wait out everything else queued.
      *
      * The job that loses it is requeued rather than dropped — its render is
      * gone, so it starts over at its turn. `dueAt` moves to now, putting it
@@ -699,21 +491,20 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
             .toArray()[0];
     }
 
+    /** Only a render that actually started can run out of time holding the thread. */
     #outOfRenderTime(job: JobRow): boolean {
-        return Date.now() - (job.startedAt ?? 0) > RENDER_TIMEOUT_MS;
+        return (
+            job.startedAt !== null &&
+            Date.now() - job.startedAt > RENDER_TIMEOUT_MS
+        );
     }
 
-    /**
-     * A job nothing came back for. Its owner is told, or a row queued by a load
-     * would say "still rendering" for good; a later request queues it again.
-     */
-    async #dropExpired(): Promise<void> {
-        const expired = this.ctx.storage.sql
-            .exec<JobRow>("SELECT * FROM jobs WHERE expiresAt <= ?", Date.now())
-            .toArray();
-        for (const job of expired) {
-            await this.#giveUp(job);
-        }
+    /** A render nothing came back for; a later request queues it again. */
+    #dropExpired(): void {
+        this.ctx.storage.sql.exec(
+            "DELETE FROM jobs WHERE expiresAt <= ?",
+            Date.now()
+        );
     }
 
     #delayAll(delayMs: number): void {
@@ -730,7 +521,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
      */
     async #scheduleNext(): Promise<void> {
         const rendering = this.#renderingJob();
-        const queued =
+        const next =
             rendering?.dueAt ??
             this.ctx.storage.sql
                 .exec<{
@@ -738,28 +529,15 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
                 }>("SELECT MIN(dueAt) AS dueAt FROM jobs")
                 .one().dueAt;
 
-        // A pending bump has to wake the object too, or a queue that empties
-        // leaves the last thumbnails recorded but invisible to clients.
-        const wakeAt = [queued, this.#bumpDueAt()].filter(
-            (at): at is number => at !== null && at !== undefined
-        );
-        if (wakeAt.length === 0) {
+        if (next === null || next === undefined) {
             await this.ctx.storage.deleteAlarm();
             return;
         }
-        await this.ctx.storage.setAlarm(Math.min(...wakeAt));
+        await this.ctx.storage.setAlarm(next);
     }
 }
 
-/**
- * A 404 is Onshape rendering in the background, which is the normal case.
- *
- * So is a 406, as best I can tell: it means Onshape wanted to answer with
- * something the request's Accept header excluded, and the only thing it has to
- * say about a thumbnail that is not ready is a JSON error. `getImage` accepts
- * any media type to stop that happening, but reading a 406 as a hard failure
- * would drop a job over a render that was only slow, so it is read the same.
- */
+/** A 404 is Onshape rendering in the background, which is the normal case. */
 function classify(error: unknown): Attempt {
     if (error instanceof OnshapeRateLimitError) {
         return {
@@ -767,6 +545,9 @@ function classify(error: unknown): Attempt {
             retryAfterSeconds: error.retryAfterSeconds
         };
     }
+    // A 406 reads the same way: it means Onshape wanted to answer with
+    // something the request's Accept header excluded, and the only thing it has
+    // to say about a render that is not ready is a JSON error.
     if (
         error instanceof OnshapeApiError &&
         (error.status === HttpStatus.NOT_FOUND ||
@@ -783,23 +564,22 @@ function requestOf(job: JobRow): ThumbnailRequest {
 
 /** The R2 key a request writes at one size, which is also the job's name. */
 function keyOf(request: ThumbnailRequest, size: ThumbnailSize): string {
-    return request.kind === "element"
-        ? thumbnailKey(
-              request.elementPath.elementId,
-              request.microversionId,
-              size
-          )
-        : thumbnailKey(
-              request.elementId,
-              request.microversionId,
-              size,
-              request.configurationKey
-          );
+    return thumbnailKey(
+        request.elementId,
+        request.microversionId,
+        size,
+        request.configurationKey
+    );
 }
 
 /** Every key ends in the size it stores; see `thumbnailKey`. */
 function sizeOf(key: string): ThumbnailSize {
     return key.slice(key.lastIndexOf("/") + 1) as ThumbnailSize;
+}
+
+/** The size a surface shows first goes first; its other size follows. */
+function rankOf(source: RenderSource, size: ThumbnailSize): number {
+    return SOURCE_RANK[source] + (size === PREFERRED_SIZE[source] ? 0 : 1);
 }
 
 /** How long to wait before asking about a render again; see POLL_SCHEDULE. */
@@ -811,11 +591,6 @@ function pollDelay(job: JobRow): number {
     return step?.everyMs ?? POLL_SCHEDULE[POLL_SCHEDULE.length - 1].everyMs;
 }
 
-/** The size a surface shows first goes first; its other size follows. */
-function rankOf(source: RenderSource, size: ThumbnailSize): number {
-    return SOURCE_RANK[source] + (size === PREFERRED_SIZE[source] ? 0 : 1);
-}
-
 /** Who a render runs as: the queue it joins, and the tokens it uses. */
 export interface Renderer {
     /** The Onshape user whose one render thread this queue is for. */
@@ -823,7 +598,7 @@ export interface Renderer {
     sessionId: string;
 }
 
-/** Queues a thumbnail with the object holding this user's Onshape render thread. */
+/** Queues a render with the object holding this user's Onshape render thread. */
 export function requestThumbnails(
     env: AppBindings,
     { userId, sessionId }: Renderer,

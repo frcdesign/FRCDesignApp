@@ -1,10 +1,6 @@
 import type { WorkflowBackoff } from "cloudflare:workers";
 import { OnshapeRateLimitError } from "../../lib/onshape/client";
-import { RenderSource, type ThumbnailUrls } from "../thumbnails/contract";
-import {
-    requestThumbnails,
-    type ThumbnailRequest
-} from "../thumbnails/renderer";
+import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 
 /**
@@ -68,34 +64,34 @@ export const ONSHAPE_STEP_RETRIES = {
 };
 
 /**
- * Queues a thumbnail and returns what is already stored, which is nothing the
- * first time a microversion is seen. Deliberately does not wait: Onshape
- * renders one thumbnail per user at a time, so a library's worth of them takes
- * far longer than a load should, and the renderer records the urls on the row
- * itself once they land.
+ * Three tries about ten seconds apart, honouring a rate limit when Onshape
+ * asks for one. The workspace either has the thumbnail or does not; this only
+ * covers Onshape still writing one out just after a save.
  */
-export async function queueThumbnailsStep(
+const THUMBNAIL_RETRIES = {
+    limit: 3,
+    delay: onshapeRetryDelay,
+    backoff: CONSTANT_BACKOFF
+};
+
+/**
+ * Fetches an element's thumbnails and returns where they are stored, or `null`
+ * when neither the version nor the workspace would give one up — which the
+ * caller records as a build issue rather than failing the whole load.
+ *
+ * Bounded by the run's limiter: these are ordinary Onshape reads that start no
+ * render, so what caps them is the rate limit rather than anything else.
+ */
+export async function uploadThumbnailsStep(
     ctx: LoadContext,
     name: string,
-    request: ThumbnailRequest,
-    read: () => Promise<ThumbnailUrls | null>
+    upload: () => Promise<ThumbnailUrls>
 ): Promise<ThumbnailUrls | null> {
     try {
-        return await ctx.step.do(name, async () => {
-            const stored = await read();
-            if (stored) return stored;
-
-            await requestThumbnails(
-                ctx.env,
-                await ctx.renderer(),
-                request,
-                RenderSource.LOAD
-            );
-            return null;
-        });
+        return await ctx.step.do(name, { retries: THUMBNAIL_RETRIES }, () =>
+            ctx.limit(upload)
+        );
     } catch {
-        // Queueing failed, which the row records as a pending thumbnail the
-        // renderer will never resolve; a later load asks again.
         return null;
     }
 }
