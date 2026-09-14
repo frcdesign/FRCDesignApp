@@ -2,7 +2,6 @@ import { OnshapeApi } from "../client";
 import { assertWorkspace } from "../assertions";
 import { ElementPath, toElementApiObject, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { PartType } from "./documents";
 import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
@@ -45,7 +44,8 @@ export function addElementToAssembly(
     elementPath: ElementPath,
     elementType: ElementType,
     options: {
-        configuration?: ConfigurationKey;
+        /** Encoded `id=value;…`, as the caller wants Onshape told it. */
+        configuration?: string;
         partTypes?: PartType[];
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
@@ -57,8 +57,9 @@ export function addElementToAssembly(
         ...toElementApiObject(elementPath)
     };
 
-    // An empty key overrides nothing, and is left off rather than sent as "":
-    // the element's own defaults are what Onshape applies either way.
+    // An empty configuration is left off rather than sent as "", which Onshape
+    // treats the same way. A caller Onshape does need told something — a part
+    // studio insert is one — passes a non-empty configuration instead.
     if (configuration) {
         instance.configuration = configuration;
     }

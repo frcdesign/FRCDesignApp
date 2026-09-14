@@ -34,7 +34,11 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { toKey, toSelection } from "../../configurations/selection";
+import {
+    toShortestConfiguration,
+    toOnshapeConfiguration,
+    toSelection
+} from "../../configurations/selection";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -374,9 +378,22 @@ insertableRoutes.post(
         // Only what the selection overrides. Onshape applies the element's own
         // default to every parameter left out, so this inserts the same thing —
         // and a whole selection can outrun the configuration Onshape accepts.
-        const configurationKey = selection
-            ? toKey(selection, parameters)
+        let configuration = selection
+            ? toOnshapeConfiguration(selection, parameters)
             : undefined;
+
+        // Except a part studio at its defaults, which Onshape refuses to insert
+        // from an empty configuration and from no configuration alike, though an
+        // assembly inserts from either. Naming one parameter, at the default it
+        // already holds, is enough: what Onshape wants turns out to be a
+        // configuration that is there, not one that is complete.
+        if (
+            selection &&
+            configuration === "" &&
+            row.elementType === ElementType.PART_STUDIO
+        ) {
+            configuration = toShortestConfiguration(selection, parameters);
+        }
 
         const result = await addElementToAssembly(
             onshapeApi,
@@ -384,7 +401,7 @@ insertableRoutes.post(
             sourcePath,
             row.elementType,
             {
-                configuration: configurationKey,
+                configuration,
                 partTypes
             }
         );

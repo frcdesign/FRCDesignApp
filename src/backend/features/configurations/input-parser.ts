@@ -42,13 +42,29 @@ function baseUnit(type: UnitType): Unit {
     }
 }
 
+/** The decimals a type is distinguished to, which is what a canonical spelling keeps. */
+function canonicalPrecision(type: UnitType): number {
+    return Math.round(-Math.log10(TOLERANCE[type]));
+}
+
 /**
  * The one spelling of a value: its base unit, to the decimals its tolerance
  * distinguishes. Two values read as equal spell the same, which is why it keys.
  */
 export function formatBaseValue(value: ValueWithUnits): string {
-    const precision = Math.round(-Math.log10(TOLERANCE[value.type]));
-    return formatValueWithUnits(value, baseUnit(value.type), precision);
+    return formatValueWithUnits(
+        value,
+        baseUnit(value.type),
+        canonicalPrecision(value.type)
+    );
+}
+
+/**
+ * The same value in another unit, still to full precision — every unit here is
+ * larger than its base, so the decimals a base spelling keeps are never fewer.
+ */
+export function formatValueInUnit(value: ValueWithUnits, unit: Unit): string {
+    return formatValueWithUnits(value, unit, canonicalPrecision(value.type));
 }
 
 /** The tolerance the pair is compared at; they must measure the same thing. */
