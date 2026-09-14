@@ -7,6 +7,7 @@ import {
     IconSize,
     PrimaryColor,
     SECTION_HEADER_HEIGHT,
+    SHRINKABLE_COLUMN,
     TITLE_ICON_NUDGE
 } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -124,18 +125,33 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 .map((section) => section.value)}
             onChange={handleChange}
             styles={{
+                // Every box from here down to the list is a column that may
+                // shrink past its content, so the open sections divide the
+                // main region's height between them and each list scrolls
+                // inside its own section rather than taking the page with it.
+                root: SHRINKABLE_COLUMN,
+                item: SHRINKABLE_COLUMN,
+                panel: SHRINKABLE_COLUMN,
                 // On the control, so a collapsed section still divides from
                 // the next one; content closes off an open one.
                 control: {
                     borderBottom: BORDER,
                     minHeight: SECTION_HEADER_HEIGHT,
+                    // The one part that does not shrink: a squeezed section
+                    // gives up its list, never the header naming it.
+                    flexShrink: 0,
                     // Mantine brightens a control to pure white or black; a section header is a title
                     // like the group page's, so it reads in the same text color.
                     color: "var(--mantine-color-text)"
                 },
                 // Its own padding would outgrow that height.
                 label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
+                content: {
+                    padding: 0,
+                    borderBottom: BORDER,
+                    minHeight: 0,
+                    overflowY: "auto"
+                },
                 icon: TITLE_ICON_NUDGE
             }}
         >
