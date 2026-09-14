@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     type OnshapeConfigurationResponse,
@@ -17,6 +17,7 @@ import { groups, insertables } from "../../db/schema";
 import { type BuildIssue, BuildIssueType } from "../build-checker/issues";
 import {
     type StoredInsertable,
+    findMovedInsertables,
     findRemovedInsertables,
     loadGroup,
     selectInsertablesToLoad
@@ -86,13 +87,15 @@ function tab(elementId: string, microversionId = "mv-1"): OnshapeElement {
 
 function storedRow(
     elementId: string,
-    buildIssues: BuildIssue[] = []
+    buildIssues: BuildIssue[] = [],
+    sortOrder = 0
 ): StoredInsertable {
     return {
         id: `row-${elementId}`,
         elementId,
         microversionId: "mv-1",
-        buildIssues
+        buildIssues,
+        sortOrder
     };
 }
 
@@ -186,6 +189,37 @@ describe("findRemovedInsertables", () => {
             [storedRow("e1")]
         );
         expect(removedIds).toEqual([]);
+    });
+});
+
+describe("findMovedInsertables", () => {
+    it("returns the new position of every row the tab order moved", () => {
+        const moved = findMovedInsertables(
+            [tab("e2"), tab("e1")],
+            [storedRow("e1", [], 0), storedRow("e2", [], 1)]
+        );
+        expect(moved).toEqual([
+            { insertableId: "row-e2", sortOrder: 0 },
+            { insertableId: "row-e1", sortOrder: 1 }
+        ]);
+    });
+
+    it("is empty when the stored rows already sit in tab order", () => {
+        const moved = findMovedInsertables(
+            [tab("e1"), tab("e2")],
+            [storedRow("e1", [], 0), storedRow("e2", [], 1)]
+        );
+        expect(moved).toEqual([]);
+    });
+
+    // A new tab is inserted with its position, and a removed one is about to be
+    // deleted, so neither belongs in the reorder.
+    it("names only stored rows the document still has a tab for", () => {
+        const moved = findMovedInsertables(
+            [tab("new"), tab("e1")],
+            [storedRow("e1", [], 0), storedRow("gone", [], 1)]
+        );
+        expect(moved).toEqual([{ insertableId: "row-e1", sortOrder: 1 }]);
     });
 });
 
@@ -379,6 +413,67 @@ describe("loadGroup", () => {
             .get();
         expect(row?.versionId).toBe("v-2");
         expect((await readGroup())?.versionId).toBe("v-2");
+    });
+
+    // The reason the order has to be written from the tab list: moving a tab
+    // changes no microversion, so every row that moved is one the load skips.
+    it("applies the document's tab order to insertables it did not reload", async () => {
+        mockContents([tab("e2"), tab("e1")]);
+        await seedInsertable(db, {
+            id: "ins-e1",
+            elementId: "e1",
+            name: "First",
+            microversionId: "mv-1",
+            sortOrder: 0
+        });
+        await seedInsertable(db, {
+            id: "ins-e2",
+            elementId: "e2",
+            name: "Second",
+            microversionId: "mv-1",
+            sortOrder: 1
+        });
+        const configurationSpy = vi.spyOn(
+            ConfigurationEndpoints,
+            "getConfiguration"
+        );
+
+        const result = await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(result).toMatchObject({ loadedElements: 0 });
+        expect(configurationSpy).not.toHaveBeenCalled();
+        const rows = await db
+            .select()
+            .from(insertables)
+            .orderBy(asc(insertables.sortOrder))
+            .all();
+        expect(rows.map((row) => row.elementId)).toEqual(["e2", "e1"]);
+    });
+
+    // A new tab is inserted at its own position, which moves everything below
+    // it: the rows that shift are saved by the group, not by their own load.
+    it("makes room in the tab order for a newly added tab", async () => {
+        mockContents([tab("new"), tab("e1")]);
+        await seedInsertable(db, {
+            id: "ins-e1",
+            elementId: "e1",
+            name: "Existing",
+            microversionId: "mv-1",
+            sortOrder: 0
+        });
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        const rows = await db
+            .select()
+            .from(insertables)
+            .orderBy(asc(insertables.sortOrder))
+            .all();
+        expect(rows.map((row) => row.elementId)).toEqual(["new", "e1"]);
+        expect(rows.map((row) => row.sortOrder)).toEqual([0, 1]);
     });
 
     // The version is what makes a failure self-healing: leaving it stale is what

@@ -271,7 +271,8 @@ function parseFastenInfoStep(
 
 /**
  * Everything outside `parsed` is written only on insert, so a reload preserves
- * sort order and the user's flags.
+ * the user's flags. Sort order is seeded here and maintained by the group's save
+ * instead, which is the only place the document's tab order is known.
  */
 export async function saveInsertable(
     db: Db,
