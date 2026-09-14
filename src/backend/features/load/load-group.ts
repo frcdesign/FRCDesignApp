@@ -82,8 +82,12 @@ export async function loadGroup(
                 )
             )
     );
-    // Removal detection is pure, so it needs no step.
+    // Removal and reorder detection are both pure, so neither needs a step.
     const removedInsertableIds = findRemovedInsertables(
+        insertableTabs,
+        storedInsertables
+    );
+    const movedInsertables = findMovedInsertables(
         insertableTabs,
         storedInsertables
     );
@@ -96,6 +100,7 @@ export async function loadGroup(
         saveGroup(getDb(ctx.env.DB), target, {
             thumbnailUrls,
             removedInsertableIds,
+            movedInsertables,
             failedInsertableIds
         })
     );
@@ -187,13 +192,15 @@ interface SaveGroupInput {
     thumbnailUrls: ThumbnailUrls | null;
     /** Stored insertables whose tab left the document. */
     removedInsertableIds: string[];
+    /** Stored insertables the document's tab order moved, and where to. */
+    movedInsertables: InsertableOrder[];
     /** Insertables that threw while loading. */
     failedInsertableIds: string[];
 }
 
 /**
- * Writes the group row, drops the insertables whose tabs are gone, and flags the
- * ones that failed to load.
+ * Writes the group row, applies the document's tab order, drops the insertables
+ * whose tabs are gone, and flags the ones that failed to load.
  */
 async function saveGroup(
     db: Db,
@@ -236,6 +243,14 @@ async function saveGroup(
                     versionCreatedAt: target.versionCreatedAt
                 })
                 .where(eq(insertables.groupId, target.groupId))
+        );
+    }
+    for (const { insertableId, sortOrder } of input.movedInsertables) {
+        writes.push(
+            db
+                .update(insertables)
+                .set({ sortOrder })
+                .where(eq(insertables.id, insertableId))
         );
     }
     // Configurations and favorites follow deleted insertables via their
@@ -285,9 +300,6 @@ async function flagFailedInsertables(
 }
 
 /**
- * Fetches the document's part studio / assembly tabs, in display order.
- */
-/**
  * What an existing insertable row contributes to the reload decision: its id, so
  * a reload keeps it, and its microversion, to tell whether it changed.
  */
@@ -297,6 +309,8 @@ export interface StoredInsertable {
     microversionId: string;
     /** Read so a row the last load failed on is retried rather than skipped. */
     buildIssues: BuildIssue[];
+    /** Where the row sits now, which is what the tab order is compared against. */
+    sortOrder: number;
 }
 
 async function fetchStoredInsertables(
@@ -308,7 +322,8 @@ async function fetchStoredInsertables(
             id: insertables.id,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
-            buildIssues: insertables.buildIssues
+            buildIssues: insertables.buildIssues,
+            sortOrder: insertables.sortOrder
         })
         .from(insertables)
         .where(eq(insertables.groupId, groupId));
@@ -377,4 +392,36 @@ export function findRemovedInsertables(
     return storedInsertables
         .filter((row) => !tabIds.has(row.elementId))
         .map((row) => row.id);
+}
+
+/** A stored insertable's new position in the document's tab order. */
+export interface InsertableOrder {
+    insertableId: string;
+    sortOrder: number;
+}
+
+/**
+ * The stored rows the tab order has moved, with the positions to write.
+ *
+ * Reordering tabs changes no microversion, so the moved rows are usually ones
+ * the load skips entirely: the order has to be written from the tab list rather
+ * than fall out of saving an insertable. A new row already carries its position
+ * from `selectInsertablesToLoad`, and a removed one is not in the tab list.
+ */
+export function findMovedInsertables(
+    insertableTabs: OnshapeElement[],
+    storedInsertables: StoredInsertable[]
+): InsertableOrder[] {
+    const storedByElementId = new Map(
+        storedInsertables.map((row) => [row.elementId, row])
+    );
+
+    const moved: InsertableOrder[] = [];
+    insertableTabs.forEach((tab, sortOrder) => {
+        const storedRow = storedByElementId.get(tab.id);
+        if (storedRow && storedRow.sortOrder !== sortOrder) {
+            moved.push({ insertableId: storedRow.id, sortOrder });
+        }
+    });
+    return moved;
 }
