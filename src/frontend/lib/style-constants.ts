@@ -145,6 +145,13 @@ export const NAVBAR_DIVIDER_COLOR =
  */
 export const SECTION_HEADER_HEIGHT = 48;
 
+/**
+ * How tall the favorites list grows before it scrolls itself — about four rows.
+ * A ceiling rather than a share of the panel: a long list of favorites should
+ * not be what decides how much of the library is visible under it.
+ */
+export const FAVORITES_MAX_LIST_HEIGHT = 200;
+
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
     /** The current library's color, e.g. green for FRCDesign. */
