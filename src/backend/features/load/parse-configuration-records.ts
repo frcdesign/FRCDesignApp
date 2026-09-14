@@ -253,7 +253,7 @@ async function indexRecords(
     // The element's own defaults, probed as a batch of one so every read the
     // runner sees has the same shape.
     const [defaultRecord] = await run("default", async () =>
-        fetchBatch(await getClient(), target, [{}])
+        fetchBatch(await getClient(), target, parameters, [{}])
     );
     const batches = planBatches(configurations, parameters);
 
@@ -261,7 +261,7 @@ async function indexRecords(
     for (const [index, batch] of batches.entries()) {
         batchRecords.push(
             await run(`batch-${index}`, async () =>
-                fetchBatch(await getClient(), target, batch)
+                fetchBatch(await getClient(), target, parameters, batch)
             )
         );
     }
@@ -331,21 +331,27 @@ function planBatches(
     return batches;
 }
 
-/** Reads the record Onshape reports for an element in a given configuration. */
+/**
+ * Reads the record Onshape reports for an element in a given configuration.
+ * Asks by key rather than by whole selection, so the probe and the record it is
+ * stored under name the same thing, and neither carries what it never overrode.
+ */
 async function probeConfiguration(
     client: OnshapeApi,
     target: ProbeTarget,
+    parameters: ConfigurationParameter[],
     selection: Selection
 ): Promise<ProbedRecord> {
     const { elementPath, elementType, isOpenComposite } = target;
+    const configurationKey = toKey(selection, parameters);
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
-            await getElementMetadata(client, elementPath, selection),
+            await getElementMetadata(client, elementPath, configurationKey),
             selection
         );
     }
     return parsePartStudioRecord(
-        await getParts(client, elementPath, selection),
+        await getParts(client, elementPath, configurationKey),
         selection,
         isOpenComposite
     );
@@ -355,11 +361,14 @@ async function probeConfiguration(
 async function fetchBatch(
     client: OnshapeApi,
     target: ProbeTarget,
+    parameters: ConfigurationParameter[],
     batch: Selection[]
 ): Promise<ProbedRecord[]> {
     const records: ProbedRecord[] = [];
     for (const selection of batch) {
-        records.push(await probeConfiguration(client, target, selection));
+        records.push(
+            await probeConfiguration(client, target, parameters, selection)
+        );
     }
     return records;
 }

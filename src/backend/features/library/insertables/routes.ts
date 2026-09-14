@@ -34,8 +34,7 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { toSelection } from "../../configurations/selection";
-import { encodeConfiguration } from "../../configurations/utils";
+import { toKey, toSelection } from "../../configurations/selection";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -372,8 +371,11 @@ insertableRoutes.post(
             body.selection
         );
 
-        const encodedConfiguration = selection
-            ? encodeConfiguration(selection)
+        // Only what the selection overrides. Onshape applies the element's own
+        // default to every parameter left out, so this inserts the same thing —
+        // and a whole selection can outrun the configuration Onshape accepts.
+        const configurationKey = selection
+            ? toKey(selection, parameters)
             : undefined;
 
         const result = await addElementToAssembly(
@@ -382,7 +384,7 @@ insertableRoutes.post(
             sourcePath,
             row.elementType,
             {
-                configuration: encodedConfiguration,
+                configuration: configurationKey,
                 partTypes
             }
         );

@@ -7,7 +7,12 @@ import type {
     OnshapePart
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
-import { Selection, ConfigurationParameter } from "../configurations/contract";
+import {
+    DEFAULT_CONFIGURATION_KEY,
+    Selection,
+    ConfigurationParameter
+} from "../configurations/contract";
+import { decodeConfiguration } from "../configurations/utils";
 import {
     enumParam,
     paramsWithConfigs
@@ -177,12 +182,15 @@ describe("parseAssemblyRecord", () => {
     });
 });
 
-/** Mocks the parts endpoint, deriving a studio's parts from the selection. */
-function mockParts(partsFor: (selection: Selection) => OnshapePart[]) {
+/**
+ * Mocks the parts endpoint, deriving a studio's parts from what the probe
+ * overrode — a key names that alone, the defaults being left out of it.
+ */
+function mockParts(partsFor: (overrides: Selection) => OnshapePart[]) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
-        .mockImplementation((_client, _path, selection) =>
-            Promise.resolve(partsFor(selection))
+        .mockImplementation((_client, _path, configurationKey) =>
+            Promise.resolve(partsFor(decodeConfiguration(configurationKey)))
         );
 }
 
@@ -377,6 +385,10 @@ describe("parseConfigurationRecords", () => {
             hasMultipleParts: false,
             isOpenComposite: false
         });
-        expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
+        expect(spy).toHaveBeenCalledWith(
+            CLIENT,
+            PATH,
+            DEFAULT_CONFIGURATION_KEY
+        );
     });
 });
