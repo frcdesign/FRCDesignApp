@@ -4,6 +4,7 @@ import { AppTitle } from "../../../../components/app-title";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
+    FAVORITES_MAX_LIST_HEIGHT,
     IconSize,
     PrimaryColor,
     SECTION_HEADER_HEIGHT,
@@ -49,6 +50,12 @@ interface Section {
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
+    /**
+     * How tall this section's list may grow before it scrolls itself. A capped
+     * section is only ever as tall as its list needs; the uncapped one takes
+     * whatever height the capped ones leave, so the stack is one viewport.
+     */
+    maxListHeight?: number;
 }
 
 /** The sections the home list shows, in the order they are stacked. */
@@ -66,7 +73,10 @@ function useHomeSections(): Section[] {
         title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: uiState.isFavoritesOpen,
-        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
+        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened }),
+        // A shortlist, not a second library: past this it scrolls itself rather
+        // than pushing the library below it off the panel.
+        maxListHeight: FAVORITES_MAX_LIST_HEIGHT
     };
 
     const search: Section = {
@@ -156,14 +166,30 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
             }}
         >
             {sections.map((section) => (
-                <Accordion.Item key={section.value} value={section.value}>
+                <Accordion.Item
+                    key={section.value}
+                    value={section.value}
+                    // A capped section takes the height its list asks for and
+                    // never gives any of it back; the uncapped one grows and
+                    // shrinks into whatever is left.
+                    style={{
+                        flex:
+                            section.maxListHeight === undefined
+                                ? "1 1 auto"
+                                : "0 0 auto"
+                    }}
+                >
                     <Accordion.Control
                         icon={section.icon}
                         className="interactive"
                     >
                         {section.title}
                     </Accordion.Control>
-                    <Accordion.Panel>{section.panel}</Accordion.Panel>
+                    <Accordion.Panel
+                        style={{ maxHeight: section.maxListHeight }}
+                    >
+                        {section.panel}
+                    </Accordion.Panel>
                 </Accordion.Item>
             ))}
         </Accordion>
