@@ -1,12 +1,8 @@
 import { OnshapeApi } from "../client";
 import { assertWorkspace } from "../assertions";
-import {
-    ElementPath,
-    toElementApiObject,
-    toElementApiPath
-} from "../path";
+import { ElementPath, toElementApiObject, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { encodeConfiguration } from "../../../features/configurations/utils";
+import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { PartType } from "./documents";
 import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/constants";
@@ -49,7 +45,7 @@ export function addElementToAssembly(
     elementPath: ElementPath,
     elementType: ElementType,
     options: {
-        configuration?: Record<string, string> | string;
+        configuration?: ConfigurationKey;
         partTypes?: PartType[];
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
@@ -61,11 +57,10 @@ export function addElementToAssembly(
         ...toElementApiObject(elementPath)
     };
 
-    if (configuration !== undefined) {
-        instance.configuration =
-            typeof configuration === "string"
-                ? configuration
-                : encodeConfiguration(configuration);
+    // An empty key overrides nothing, and is left off rather than sent as "":
+    // the element's own defaults are what Onshape applies either way.
+    if (configuration) {
+        instance.configuration = configuration;
     }
 
     if (elementType === ElementType.ASSEMBLY) {

@@ -203,3 +203,99 @@ export class OAuthApi extends OnshapeApi {
         return headers;
     }
 }
+
+/**
+ * Signs with an API key pair instead of a user's session, for the callers that
+ * have no session to borrow: scripts, and reproducing a request the app made.
+ *
+ * Onshape verifies an HMAC over the request line rather than a bearer token, so
+ * every header the signature covers has to be the one actually sent — which is
+ * why these are built together rather than merged in afterwards.
+ */
+export class ApiKeyApi extends OnshapeApi {
+    constructor(
+        private readonly _accessKey: string,
+        private readonly _secretKey: string
+    ) {
+        super();
+    }
+
+    protected async _request(
+        method: string,
+        url: string,
+        init: RequestInit
+    ): Promise<Response> {
+        return fetch(url, {
+            ...init,
+            method,
+            headers: await this._makeHeaders(method, url, init.headers)
+        });
+    }
+
+    private async _makeHeaders(
+        method: string,
+        url: string,
+        overrides?: HeadersInit
+    ): Promise<Headers> {
+        const date = new Date().toUTCString();
+        const nonce = makeNonce();
+        const contentType = "application/json";
+        const { pathname, search } = new URL(url);
+
+        // Lowercased because Onshape signs the folded form on both ends, so the
+        // request keeps its own casing. The trailing newline after the query is
+        // in Onshape's sample clients but not in its docs, and the keys in .env
+        // are dead, so this half is unverified against a live pair.
+        const signature = await sign(
+            this._secretKey,
+            [
+                method,
+                nonce,
+                date,
+                contentType,
+                pathname,
+                search.replace(/^\?/, ""),
+                ""
+            ]
+                .join("\n")
+                .toLowerCase()
+        );
+
+        const headers = new Headers({
+            Authorization: `On ${this._accessKey}:HmacSHA256:${signature}`,
+            Date: date,
+            "On-Nonce": nonce,
+            "Content-Type": contentType,
+            Accept: "application/json"
+        });
+        // Only `Accept` is ever overridden, and it is not part of the signature.
+        if (overrides)
+            new Headers(overrides).forEach((v, k) => headers.set(k, v));
+        return headers;
+    }
+}
+
+/** Alphanumeric and unique per request, which is all Onshape asks of it. */
+function makeNonce(): string {
+    const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const bytes = crypto.getRandomValues(new Uint8Array(25));
+    return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join(
+        ""
+    );
+}
+
+async function sign(secretKey: string, payload: string): Promise<string> {
+    const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(secretKey),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+    const signature = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        new TextEncoder().encode(payload)
+    );
+    return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}

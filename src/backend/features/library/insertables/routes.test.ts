@@ -226,6 +226,38 @@ describe("insertable routes", () => {
         );
     });
 
+    // Onshape applies the element's own default to whatever the configuration
+    // leaves out, so naming every parameter says the same thing at far greater
+    // length — and long enough is a configuration Onshape refuses to insert.
+    it.each([
+        ["nothing when the selection is all defaults", { boolean: "true" }, ""],
+        ["the override alone", { boolean: "false" }, "boolean=false"]
+    ])(
+        "POST /add-to-assembly sends %s",
+        async (_label, selection, expected) => {
+            await seedAssembly(db);
+            await seedConfiguration(db, TEST_ASSEMBLY_ID);
+            const spy = vi
+                .spyOn(AssemblyEndpoints, "addElementToAssembly")
+                .mockResolvedValue({});
+
+            const res = await createTestApp().request(
+                `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+                jsonRequest("POST", { targetPath, selection, fasten: false }),
+                env
+            );
+            expect(res.status).toBe(200);
+
+            expect(spy).toHaveBeenCalledWith(
+                MOCK_ONSHAPE_API,
+                targetPath,
+                TEST_ASSEMBLY_PATH,
+                ElementType.ASSEMBLY,
+                expect.objectContaining({ configuration: expected })
+            );
+        }
+    );
+
     /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */
     async function seedFastenable() {
         await seedAssembly(db);

@@ -67,8 +67,18 @@ function App() {
             </AppShell.Header>
             {/* Cap the main region at one viewport so it (not the window)
                 scrolls; the fixed header covers the top of this scrollbar,
-                keeping it within the body. */}
-            <AppShell.Main h="100dvh" style={{ overflowY: "auto" }}>
+                keeping it within the body. A column, so each section below
+                measures itself against that one viewport and scrolls its own
+                list — this scrollbar is only the fallback for whatever cannot
+                shrink that far. */}
+            <AppShell.Main
+                h="100dvh"
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    overflowY: "auto"
+                }}
+            >
                 {/* Without a boundary here, a pending match suspends past
                     the navbar to the root and blanks the page. */}
                 <Suspense

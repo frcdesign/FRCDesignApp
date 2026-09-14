@@ -115,7 +115,17 @@ function GroupList(): ReactNode {
     return (
         <>
             <GroupHeaderRow group={group} />
-            <Box style={{ borderBottom: BORDER }}>
+            {/* The group's own scroll container, so the header above it stays
+                put and the page never scrolls on its behalf. It takes the room
+                its list wants and no more, capped at what the main region has
+                left — which is what `min-height` allows it to shrink to. */}
+            <Box
+                style={{
+                    borderBottom: BORDER,
+                    minHeight: 0,
+                    overflowY: "auto"
+                }}
+            >
                 {content}
                 <Outlet />
             </Box>
@@ -145,8 +155,10 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
             px="md"
             h={SECTION_HEADER_HEIGHT}
             // Owned here, as an accordion control owns its own, so the row and
-            // its divider measure the same as a section header's.
-            style={{ borderBottom: BORDER }}
+            // its divider measure the same as a section header's. It is also
+            // the one part that does not shrink: the list below gives up its
+            // room, never the header naming it.
+            style={{ borderBottom: BORDER, flexShrink: 0 }}
         >
             <Group wrap="nowrap" justify="space-between" h="100%">
                 <AppTitle
