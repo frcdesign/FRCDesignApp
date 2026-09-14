@@ -67,10 +67,10 @@ function App() {
             </AppShell.Header>
             {/* Cap the main region at one viewport so it (not the window)
                 scrolls; the fixed header covers the top of this scrollbar,
-                keeping it within the body. A column, so each section below
-                measures itself against that one viewport and scrolls its own
-                list — this scrollbar is only the fallback for whatever cannot
-                shrink that far. */}
+                keeping it within the body. A column, so a page that wants its
+                list in its own scroll container can have one by shrinking; a
+                page that does not, like the home sections, keeps its content
+                height and scrolls here. */}
             <AppShell.Main
                 h="100dvh"
                 style={{

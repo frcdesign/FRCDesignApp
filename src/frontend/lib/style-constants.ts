@@ -97,19 +97,6 @@ export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
 export const NO_SHRINK = { flexShrink: 0 };
 
 /**
- * Stacks children and may shrink past them, which is what lets a section cap
- * itself against the height it is given rather than the height its list wants.
- * The `min-height` is the half flexbox does not do on its own: a flex item
- * floors at its content by default, so a column of these keeps its own scroll
- * container only if every box down to it can shrink.
- */
-export const SHRINKABLE_COLUMN = {
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0
-} as const;
-
-/**
  * Paints an image in the current text color rather than its own. The url needs
  * quoting: Vite inlines an asset as a data uri, which can contain apostrophes.
  */
@@ -144,13 +131,6 @@ export const NAVBAR_DIVIDER_COLOR =
  * accordion is sized by its label, a group header by its menu button.
  */
 export const SECTION_HEADER_HEIGHT = 48;
-
-/**
- * How tall the favorites list grows before it scrolls itself — about four rows.
- * A ceiling rather than a share of the panel: a long list of favorites should
- * not be what decides how much of the library is visible under it.
- */
-export const FAVORITES_MAX_LIST_HEIGHT = 400;
 
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {

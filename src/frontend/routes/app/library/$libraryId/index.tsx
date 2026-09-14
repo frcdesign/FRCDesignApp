@@ -4,11 +4,9 @@ import { AppTitle } from "../../../../components/app-title";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     BORDER,
-    FAVORITES_MAX_LIST_HEIGHT,
     IconSize,
     PrimaryColor,
     SECTION_HEADER_HEIGHT,
-    SHRINKABLE_COLUMN,
     TITLE_ICON_NUDGE
 } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -50,12 +48,6 @@ interface Section {
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
-    /**
-     * How tall this section's list may grow before it scrolls itself. A capped
-     * section is only ever as tall as its list needs; the uncapped one takes
-     * whatever height the capped ones leave, so the stack is one viewport.
-     */
-    maxListHeight?: number;
 }
 
 /** The sections the home list shows, in the order they are stacked. */
@@ -73,10 +65,7 @@ function useHomeSections(): Section[] {
         title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: uiState.isFavoritesOpen,
-        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened }),
-        // A shortlist, not a second library: past this it scrolls itself rather
-        // than pushing the library below it off the panel.
-        maxListHeight: FAVORITES_MAX_LIST_HEIGHT
+        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
     const search: Section = {
@@ -135,61 +124,30 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 .map((section) => section.value)}
             onChange={handleChange}
             styles={{
-                // Every box from here down to the list is a column that may
-                // shrink past its content, so the open sections divide the
-                // main region's height between them and each list scrolls
-                // inside its own section rather than taking the page with it.
-                root: SHRINKABLE_COLUMN,
-                item: SHRINKABLE_COLUMN,
-                panel: SHRINKABLE_COLUMN,
                 // On the control, so a collapsed section still divides from
                 // the next one; content closes off an open one.
                 control: {
                     borderBottom: BORDER,
                     minHeight: SECTION_HEADER_HEIGHT,
-                    // The one part that does not shrink: a squeezed section
-                    // gives up its list, never the header naming it.
-                    flexShrink: 0,
                     // Mantine brightens a control to pure white or black; a section header is a title
                     // like the group page's, so it reads in the same text color.
                     color: "var(--mantine-color-text)"
                 },
                 // Its own padding would outgrow that height.
                 label: { paddingBlock: 0 },
-                content: {
-                    padding: 0,
-                    borderBottom: BORDER,
-                    minHeight: 0,
-                    overflowY: "auto"
-                },
+                content: { padding: 0, borderBottom: BORDER },
                 icon: TITLE_ICON_NUDGE
             }}
         >
             {sections.map((section) => (
-                <Accordion.Item
-                    key={section.value}
-                    value={section.value}
-                    // A capped section takes the height its list asks for and
-                    // never gives any of it back; the uncapped one grows and
-                    // shrinks into whatever is left.
-                    style={{
-                        flex:
-                            section.maxListHeight === undefined
-                                ? "1 1 auto"
-                                : "0 0 auto"
-                    }}
-                >
+                <Accordion.Item key={section.value} value={section.value}>
                     <Accordion.Control
                         icon={section.icon}
                         className="interactive"
                     >
                         {section.title}
                     </Accordion.Control>
-                    <Accordion.Panel
-                        style={{ maxHeight: section.maxListHeight }}
-                    >
-                        {section.panel}
-                    </Accordion.Panel>
+                    <Accordion.Panel>{section.panel}</Accordion.Panel>
                 </Accordion.Item>
             ))}
         </Accordion>
