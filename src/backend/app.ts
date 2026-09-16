@@ -9,6 +9,7 @@ import { configurationRoutes } from "./features/configurations/routes";
 import { entryRoutes } from "./features/entry/routes";
 import { favoriteRoutes } from "./features/favorites/routes";
 import { groupRoutes } from "./features/library/groups/routes";
+import { insertLocationRoutes } from "./features/insert-location/routes";
 import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { settingsRoutes } from "./features/settings/routes";
@@ -24,6 +25,7 @@ const apiRoutes = [
     libraryRoutes,
     groupRoutes,
     insertableRoutes,
+    insertLocationRoutes,
     configurationRoutes,
     thumbnailRoutes,
     favoriteRoutes,

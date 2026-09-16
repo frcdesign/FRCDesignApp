@@ -226,12 +226,33 @@ export interface OnshapeDocumentContents {
 
 // === assemblies (GET /assemblies/.../e/{eid}, POST .../{transformedinstances,features}) ===
 
+/**
+ * A mate connector's frame. Onshape's schema names the axes after its Java
+ * getters, so both spellings are declared and readers take whichever arrives.
+ */
+export interface OnshapeMateConnectorCS {
+    origin?: number[];
+    xAxis?: number[];
+    zAxis?: number[];
+    getxAxis?: number[];
+    getzAxis?: number[];
+}
+
 /** A feature in an assembly's root or a subassembly. */
 export interface OnshapeAssemblyFeature {
     featureType: string;
     id: string;
-    /** Present on mate connectors; its `occurrence` is the path to the connector. */
-    featureData?: { occurrence: string[] };
+    suppressed?: boolean;
+    /**
+     * Present on mate connectors. Onshape's schema declares only `name`;
+     * `occurrence` (the path to the connector) and `mateConnectorCS` (where it
+     * sits) are undocumented, so neither is guaranteed to arrive.
+     */
+    featureData?: {
+        occurrence?: string[];
+        name?: string;
+        mateConnectorCS?: OnshapeMateConnectorCS;
+    };
 }
 
 /** A top-level instance (part or subassembly) in the root assembly. */

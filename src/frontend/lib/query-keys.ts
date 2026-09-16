@@ -3,7 +3,7 @@
  * {@link libraryQueryKey}, so the refresh flows invalidate that one prefix.
  */
 import { LibraryId } from "@backend/features/library/library-id";
-import { InstancePath } from "@backend/lib/onshape/path";
+import { ElementPath, InstancePath } from "@backend/lib/onshape/path";
 
 export function accessDataQueryKey() {
     return ["access-data"];
@@ -18,6 +18,10 @@ export function configurationQueryKey(
 
 export function unitInfoQueryKey(instancePath: InstancePath | undefined) {
     return ["unit-info", instancePath];
+}
+
+export function insertLocationQueryKey(elementPath: ElementPath | undefined) {
+    return ["insert-location", elementPath];
 }
 
 /** The prefix every library-scoped query extends with its endpoint. */

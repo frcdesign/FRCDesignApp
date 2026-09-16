@@ -4,7 +4,7 @@ import { ElementPath, toElementApiObject, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { PartType } from "./documents";
 import { ElementType } from "../element-type";
-import { IDENTITY_TRANSFORM } from "../objects/constants";
+import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
     OnshapeCreatedFeature,
@@ -47,11 +47,13 @@ export function addElementToAssembly(
         /** Encoded `id=value;…`, as the caller wants Onshape told it. */
         configuration?: string;
         partTypes?: PartType[];
+        /** Where to land it; the origin when left out. */
+        transform?: number[];
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
 
-    const { configuration, partTypes } = options;
+    const { configuration, partTypes, transform } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -81,7 +83,10 @@ export function addElementToAssembly(
         {
             body: {
                 transformGroups: [
-                    { instances: [instance], transform: IDENTITY_TRANSFORM }
+                    {
+                        instances: [instance],
+                        transform: transform ?? IDENTITY_TRANSFORM
+                    }
                 ]
             }
         }

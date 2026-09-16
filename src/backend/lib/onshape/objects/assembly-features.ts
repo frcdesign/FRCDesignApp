@@ -26,7 +26,10 @@ export function featureOccurrenceQuery(
     };
 }
 
-function queryParameter(parameterId: string, queries: Iterable<object>): object {
+function queryParameter(
+    parameterId: string,
+    queries: Iterable<object>
+): object {
     return {
         btType: "BTMParameterQueryWithOccurrenceList-67",
         parameterId,
@@ -40,6 +43,30 @@ function mateTypeParameter(value: string): object {
         parameterId: "mateType",
         value,
         enumName: "Mate type"
+    };
+}
+
+/**
+ * A mate connector on the assembly's own origin, for the caller to move where
+ * they want it. Onshape documents creating one on an entity; leaving the origin
+ * query empty is, as far as we can tell, how the dialog says "nothing selected".
+ */
+export function originMateConnector(name: string): object {
+    return {
+        btType: "BTMMateConnector-66",
+        featureType: "mateConnector",
+        name,
+        parameters: [
+            {
+                btType: "BTMParameterEnum-145",
+                parameterId: "originType",
+                value: "ON_ENTITY",
+                enumName: "Origin type"
+            },
+            queryParameter("originQuery", [])
+        ],
+        isHidden: false,
+        suppressed: false
     };
 }
 

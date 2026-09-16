@@ -42,6 +42,7 @@ import {
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
+import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 
 export const insertableRoutes = getApp();
@@ -252,7 +253,9 @@ const addToPartStudioBody = insertBody.extend({
 });
 
 const addToAssemblyBody = insertBody.extend({
-    fasten: z.boolean().default(false)
+    fasten: z.boolean().default(false),
+    /** The assembly's insert location connector, when it has one. */
+    insertLocationId: z.string().optional()
 });
 
 /** POST /api/add-to-part-studio/insertable/:insertableId */
@@ -395,6 +398,16 @@ insertableRoutes.post(
             configuration = toShortestConfiguration(selection, parameters);
         }
 
+        // Resolved here rather than sent by the client: the connector moves
+        // whenever somebody drags it, so only Onshape knows where it is now.
+        const transform = body.insertLocationId
+            ? await getInsertLocationTransform(
+                  onshapeApi,
+                  targetPath,
+                  body.insertLocationId
+              )
+            : undefined;
+
         const result = await addElementToAssembly(
             onshapeApi,
             targetPath,
@@ -402,7 +415,8 @@ insertableRoutes.post(
             row.elementType,
             {
                 configuration,
-                partTypes
+                partTypes,
+                transform
             }
         );
 

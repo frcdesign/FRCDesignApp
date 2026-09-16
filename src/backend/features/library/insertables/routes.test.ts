@@ -226,6 +226,93 @@ describe("insertable routes", () => {
         );
     });
 
+    it("POST /add-to-assembly lands the insert on the insert location", async () => {
+        await seedAssembly(db);
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
+            rootAssembly: {
+                features: [
+                    {
+                        id: "mc",
+                        featureType: "mateConnector",
+                        featureData: {
+                            mateConnectorCS: {
+                                origin: [1, 2, 3],
+                                xAxis: [1, 0, 0],
+                                zAxis: [0, 0, 1]
+                            }
+                        }
+                    }
+                ],
+                instances: []
+            },
+            parts: [],
+            subAssemblies: []
+        });
+        const spy = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockResolvedValue({});
+
+        const res = await createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                fasten: false,
+                insertLocationId: "mc"
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        expect(spy).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            targetPath,
+            TEST_ASSEMBLY_PATH,
+            ElementType.ASSEMBLY,
+            // prettier-ignore
+            expect.objectContaining({
+                transform: [
+                    1, 0, 0, 1,
+                    0, 1, 0, 2,
+                    0, 0, 1, 3,
+                    0, 0, 0, 1
+                ]
+            })
+        );
+    });
+
+    // A connector can be deleted between the app opening and an insert, and an
+    // insert at the origin beats refusing to insert at all.
+    it("POST /add-to-assembly inserts at the origin when the location is gone", async () => {
+        await seedAssembly(db);
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
+            rootAssembly: { features: [], instances: [] },
+            parts: [],
+            subAssemblies: []
+        });
+        const spy = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockResolvedValue({});
+
+        const res = await createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                fasten: false,
+                insertLocationId: "mc"
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        expect(spy).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            targetPath,
+            TEST_ASSEMBLY_PATH,
+            ElementType.ASSEMBLY,
+            expect.objectContaining({ transform: undefined })
+        );
+    });
+
     // Onshape applies the element's own default to whatever the configuration
     // leaves out, so naming every parameter says the same thing at far greater
     // length — and long enough is a configuration Onshape refuses to insert.

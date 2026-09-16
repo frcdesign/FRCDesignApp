@@ -39,6 +39,7 @@ import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { RequireSignIn } from "../../auth/access-level";
 import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
+import { InsertLocationPill } from "../../insert-location/components/insert-location-pill";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -263,6 +264,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
+            <InsertLocationPill />
             {canFasten && (
                 <Checkbox
                     label="Fasten"

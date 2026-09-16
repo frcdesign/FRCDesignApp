@@ -28,6 +28,7 @@ import {
     unitInfoQueryKey
 } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
+import { useInsertLocationId } from "../insert-location/queries";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -96,6 +97,9 @@ export function useInsertMutation(
     insertArgs: InsertArgs
 ) {
     const target = useTargetElement();
+    // Named, not resolved: the backend asks Onshape where the connector is now,
+    // since it moves whenever somebody drags it.
+    const insertLocationId = useInsertLocationId();
 
     const toastId = "insert-" + insertable.id;
 
@@ -128,6 +132,7 @@ export function useInsertMutation(
                     isQuickInsert: insertArgs.isQuickInsert ?? false,
                     source: insertArgs.source,
                     fasten,
+                    insertLocationId,
                     elementType: insertable.elementType
                 };
             } else {

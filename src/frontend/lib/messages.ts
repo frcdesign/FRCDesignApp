@@ -50,6 +50,36 @@ export function sendOpenFeatureMessage(
     });
 }
 
+/** Onshape wants every request identified; only one of ours is ever up. */
+const MATE_CONNECTOR_HIGHLIGHT_ID = "highlight-mate-connector";
+
+/**
+ * Lights up a mate connector in the Onshape viewport until
+ * {@link sendStopRequestMessage}. A mate connector is a body rather than an
+ * entity, and Onshape addresses it by the id of the feature that made it.
+ */
+export function sendHighlightMateConnectorMessage(
+    elementPath: ElementPath,
+    mateConnectorId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        messageId: MATE_CONNECTOR_HIGHLIGHT_ID,
+        selections: [
+            {
+                selectionType: "BODY",
+                bodyType: "MATE_CONNECTOR",
+                selectionId: mateConnectorId
+            }
+        ]
+    });
+}
+
+/** Ends whatever request is pending, which is how a highlight is taken back. */
+export function sendStopRequestMessage(elementPath: ElementPath) {
+    sendMessage(elementPath, { messageName: MessageType.STOP_REQUEST });
+}
+
 enum MessageType {
     APPLICATION_INIT = "applicationInit",
     SHOW_MESSAGE_BUBBLE = "showMessageBubble",
@@ -58,13 +88,14 @@ enum MessageType {
     REQUEST_HIGHLIGHT_SELECTION = "requestSelectionHighlight",
     SWITCH_TAB = "openAnotherElementInCurrentWorkspace",
     OPEN_FEATURE = "openFeatureDialog",
-    CLOSE_FEATURE = "closeFeatureDialog"
+    CLOSE_FEATURE = "closeFeatureDialog",
+    STOP_REQUEST = "stopRequest"
 }
 
 interface Message {
     messageName: MessageType;
     /** Whatever that message carries; Onshape names the fields, not us. */
-    [key: string]: MessageType | string | number | boolean | undefined;
+    [key: string]: MessageType | string | number | boolean | object | undefined;
 }
 
 function sendMessage(elementPath: ElementPath, message: Message) {
