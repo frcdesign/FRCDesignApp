@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Theme } from "@backend/features/settings/settings";
 
 /** A Storage the tests can read back, and break on demand. */
 function fakeStorage() {
@@ -116,5 +117,53 @@ describe("ui state", () => {
 
         expect(() => updateUiState({ searchQuery: "gear" })).not.toThrow();
         expect(getUiState().searchQuery).toBe("gear");
+    });
+});
+
+describe("synced fields", () => {
+    it("sends a changed field to the caller's row, and stores it too", async () => {
+        const { setSettingsSync, updateUiState } = await loadUiState();
+        const sent: unknown[] = [];
+        setSettingsSync((settings) => sent.push(settings));
+
+        updateUiState({ theme: Theme.DARK });
+
+        expect(sent).toEqual([{ theme: "dark" }]);
+        expect(stored(local, "uiState").theme).toBe("dark");
+    });
+
+    // The entry redirect writes the group the caller resumed in, which is the
+    // one their row already holds.
+    it("sends nothing for a field that did not move", async () => {
+        const { setSettingsSync, updateUiState } = await loadUiState();
+        updateUiState({ groupId: "group-1" });
+        const sent: unknown[] = [];
+        setSettingsSync((settings) => sent.push(settings));
+
+        updateUiState({ groupId: "group-1" });
+
+        expect(sent).toEqual([]);
+    });
+
+    it("sends only the synced fields the update moved", async () => {
+        const { setSettingsSync, updateUiState } = await loadUiState();
+        const sent: unknown[] = [];
+        setSettingsSync((settings) => sent.push(settings));
+
+        updateUiState({ theme: Theme.DARK, searchQuery: "gear" });
+
+        expect(sent).toEqual([{ theme: "dark" }]);
+    });
+
+    it("sends nothing back for a value the row is what seeded", async () => {
+        const { setSettingsSync, updateUiState } = await loadUiState();
+        const sent: unknown[] = [];
+        setSettingsSync((settings) => sent.push(settings));
+
+        updateUiState({ theme: Theme.DARK }, { sync: false });
+
+        expect(sent).toEqual([]);
+        // Stored all the same: the store is still what the app reads.
+        expect(stored(local, "uiState").theme).toBe("dark");
     });
 });

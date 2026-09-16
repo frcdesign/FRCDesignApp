@@ -39,15 +39,14 @@ import {
 } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
-import { useGetUiState } from "../../../../../lib/ui-state";
-import { rememberOpenGroup } from "../../../../../features/settings/settings";
+import { updateUiState, useGetUiState } from "../../../../../lib/ui-state";
 import { AppIcon } from "../../../../../components/app-icon";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
         component: GroupList,
         onEnter: (match) => {
-            rememberOpenGroup(match.params.groupId);
+            updateUiState({ groupId: match.params.groupId });
         }
     }
 );

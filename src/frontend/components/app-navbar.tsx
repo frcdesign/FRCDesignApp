@@ -39,7 +39,6 @@ import {
     RequireAccessLevel,
     useAccessData
 } from "../features/auth/access-level";
-import { useSaveSettings } from "../features/settings/settings";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -144,7 +143,6 @@ function RunningJobLoader(): ReactNode {
 /** Switches libraries; the url is what actually selects one. */
 function LibraryTabs(): ReactNode {
     const currentLibraryId = useLibraryId();
-    const saveSettings = useSaveSettings();
     const navigate = useNavigate();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -165,7 +163,7 @@ function LibraryTabs(): ReactNode {
                 const libraryId = value as LibraryId;
                 // Write-behind: the url displays it, this only decides where
                 // `/init` lands next time.
-                saveSettings({ libraryId });
+                updateUiState({ libraryId });
                 void navigate({
                     to: "/app/library/$libraryId",
                     params: { libraryId }

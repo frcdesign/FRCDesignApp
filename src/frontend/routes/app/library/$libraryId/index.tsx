@@ -29,14 +29,13 @@ import {
     useLibraryId
 } from "../../../../lib/library";
 import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
-import { rememberOpenGroup } from "../../../../features/settings/settings";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     // Back in the library itself, which is where entry should resume.
     onEnter: () => {
-        rememberOpenGroup(null);
+        updateUiState({ groupId: null });
     }
 });
 

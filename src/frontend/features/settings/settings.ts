@@ -1,17 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
 import type { SettingsUpdate } from "@backend/features/settings/settings";
 import { showErrorToast } from "../../lib/notifications";
 import { apiPost } from "../../lib/api-client";
 import { getAccessDataQuery } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
-import { updateUiState } from "../../lib/ui-state";
+import { setSettingsSync } from "../../lib/ui-state";
 
-/**
- * Applies a setting where the app reads it, and saves it to the caller's row,
- * which a first-run browser and the Onshape launch start from.
- */
-async function saveSettings(newSettings: SettingsUpdate): Promise<void> {
-    updateUiState(newSettings);
+/** Writes the caller's row, which the entry redirect starts their next browser from. */
+async function postSettings(newSettings: SettingsUpdate): Promise<void> {
     // Resolved here rather than read off a render: a placeholder that says
     // signed out would skip the save for a user who has a server-side row.
     const { signedIn } =
@@ -22,24 +17,15 @@ async function saveSettings(newSettings: SettingsUpdate): Promise<void> {
     await apiPost("/settings", { body: newSettings });
 }
 
-export function useSaveSettings() {
-    const { mutate } = useMutation({
-        mutationKey: ["settings"],
-        mutationFn: saveSettings,
-        onError: () => {
-            showErrorToast("Unexpectedly failed to update settings.");
-        }
-    });
-
-    return mutate;
-}
-
 /**
- * Records where the caller is, for the entry redirect to resume at. Called from
- * a route rather than a component, so it cannot be the mutation above.
+ * Hands the store somewhere to put a synced field, so writing one is an
+ * ordinary `updateUiState` from wherever it is set — a menu, or a route that
+ * cannot hold a hook.
  */
-export function rememberOpenGroup(groupId: string | null): void {
-    void saveSettings({ groupId }).catch(() => {
-        // Resuming in the library instead of the group is not worth a toast.
+export function installSettingsSync(): void {
+    setSettingsSync((settings) => {
+        void postSettings(settings).catch(() => {
+            showErrorToast("Unexpectedly failed to update settings.");
+        });
     });
 }

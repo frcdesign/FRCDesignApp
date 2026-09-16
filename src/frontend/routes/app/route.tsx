@@ -50,7 +50,7 @@ export const Route = createFileRoute("/app")({
         // The entry redirect seeds the account's saved theme; ui-state is what
         // the app reads, so take it rather than leave a second answer in the url.
         if (search.theme) {
-            updateUiState({ theme: search.theme });
+            updateUiState({ theme: search.theme }, { sync: false });
             throw redirect({
                 to: location.pathname,
                 search: { ...search, theme: undefined },

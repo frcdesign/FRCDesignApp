@@ -13,6 +13,18 @@ const AccessLevelType = z.enum(Object.values(AccessLevel));
 const ThemeType = z.enum(Object.values(Theme));
 const LibraryIdType = z.enum(Object.values(LibraryId));
 
+/**
+ * Kept locally and pushed to the caller's row, so a browser that has never run
+ * the app starts where their last one left off. The store is still what the app
+ * reads: the row is the copy, and the entry redirect is what seeds it back.
+ */
+const SyncedStateSchema = z.object({
+    theme: ThemeType.default(DEFAULT_SETTINGS.theme),
+    libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
+    /** The group last opened in that library; null for the library itself. */
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
+});
+
 /** Kept until the browser's storage is cleared: preferences, and where to resume. */
 const LocalStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
@@ -26,12 +38,6 @@ const LocalStateSchema = z.object({
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
     accessLevel: AccessLevelType.optional(),
-    // The caller's settings, and the source of truth for them; a signed-in
-    // caller's row is what a browser that has never run the app starts from.
-    theme: ThemeType.default(DEFAULT_SETTINGS.theme),
-    libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
-    /** The group last opened in that library; null for the library itself. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
     /** The insertable whose insert menu is open, and what it is configured to.
      * Written as the menu opens and closes, so a relaunch can reopen it. */
     openInsertableId: z.string().optional(),
@@ -50,7 +56,8 @@ const SessionStateSchema = z.object({
 
 type LocalState = z.infer<typeof LocalStateSchema>;
 type SessionState = z.infer<typeof SessionStateSchema>;
-type UiState = LocalState & SessionState;
+type SyncedState = z.infer<typeof SyncedStateSchema>;
+type UiState = LocalState & SessionState & SyncedState;
 
 /**
  * One store's half of the state: which fields it owns, and how long they last.
@@ -65,7 +72,13 @@ interface StateArea {
 
 const LOCAL_AREA: StateArea = {
     storageKey: "uiState",
-    schema: LocalStateSchema,
+    // Synced fields are local too, and in the same blob: their scope is about
+    // where else they go, not where they are kept — and moving them to a blob
+    // of their own would reset the preferences already stored in this one.
+    schema: z.object({
+        ...LocalStateSchema.shape,
+        ...SyncedStateSchema.shape
+    }),
     getStorage: () => window.localStorage
 };
 
@@ -76,6 +89,20 @@ const SESSION_AREA: StateArea = {
 };
 
 const AREAS = [LOCAL_AREA, SESSION_AREA];
+
+const SYNCED_KEYS = Object.keys(SyncedStateSchema.shape);
+
+type SettingsSync = (settings: Partial<SyncedState>) => void;
+
+let settingsSync: SettingsSync | undefined;
+
+/**
+ * Installed at startup by the feature that owns the caller's row, which keeps
+ * the endpoint — and the sign-in it needs — out of here.
+ */
+export function setSettingsSync(sync: SettingsSync): void {
+    settingsSync = sync;
+}
 
 type Subscriber = () => void;
 
@@ -166,8 +193,20 @@ function changedKeys(
     });
 }
 
+interface UpdateOptions {
+    /**
+     * False for a value the caller's row already holds — the entry redirect
+     * seeding the theme — which would otherwise be posted straight back.
+     * @default true
+     */
+    sync?: boolean;
+}
+
 /** Merges into the state, stores it, and tells every reader it changed. */
-export function updateUiState(partialState: Partial<UiState>): UiState {
+export function updateUiState(
+    partialState: Partial<UiState>,
+    options: UpdateOptions = {}
+): UiState {
     const current = getUiState();
     const changed = changedKeys(current, partialState);
     if (changed.length === 0) {
@@ -179,6 +218,19 @@ export function updateUiState(partialState: Partial<UiState>): UiState {
         if (changed.some((key) => key in area.schema.shape)) {
             writeArea(area, newState);
         }
+    }
+    // Only what moved: the row is written for a field the caller changed, not
+    // for every field that happened to ride along with it.
+    const syncedChanges = changed.filter((key) => SYNCED_KEYS.includes(key));
+    if ((options.sync ?? true) && syncedChanges.length > 0) {
+        settingsSync?.(
+            Object.fromEntries(
+                syncedChanges.map((key) => [
+                    key,
+                    newState[key as keyof UiState]
+                ])
+            )
+        );
     }
     subscribers.forEach((callback) => callback());
     return newState;

@@ -10,7 +10,6 @@ import {
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
-import { useSaveSettings } from "../settings";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { Section } from "../../../components/section";
@@ -190,14 +189,13 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
 function ThemeSelect(): ReactNode {
     const uiState = useGetUiState();
     const theme = uiState.theme;
-    const saveSettings = useSaveSettings();
 
     return (
         <SettingSelect
             label="Theme"
             value={theme ?? DEFAULT_SETTINGS.theme}
             options={[Theme.SYSTEM, Theme.DARK, Theme.LIGHT]}
-            onSelect={(theme) => saveSettings({ theme })}
+            onSelect={(theme) => updateUiState({ theme })}
         />
     );
 }
