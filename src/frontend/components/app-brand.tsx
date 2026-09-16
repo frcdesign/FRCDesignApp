@@ -1,10 +1,9 @@
-import { Box, Center, Divider, Group, Text } from "@mantine/core";
+import { Box, Center, Group, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
     FontWeight,
     IconSize,
     maskedImage,
-    NAVBAR_DIVIDER_COLOR,
     PrimaryColor,
     RADIUS
 } from "../lib/style-constants";
@@ -15,8 +14,8 @@ import frcDesignBook from "/frc-design-book.svg";
 const FRC_DESIGN_URL = "https://frcdesign.org";
 
 /**
- * The book and the app's name, in both navbars, linking out to FRCDesign.org.
- * Closed by a rule, so the name reads as the app rather than the first tab.
+ * The book and the app's name, in every navbar, linking out to FRCDesign.org.
+ * `NavbarRow` closes it with a rule wherever something follows it.
  */
 export function AppBrand(): ReactNode {
     return (
@@ -52,13 +51,6 @@ export function AppBrand(): ReactNode {
             >
                 FRCDesignApp
             </Text>
-            {/* Mantine's default divider is tuned for a white page and all
-                but disappears on the navbar's own gray. */}
-            <Divider
-                orientation="vertical"
-                my="sm"
-                color={NAVBAR_DIVIDER_COLOR}
-            />
         </Group>
     );
 }

@@ -44,27 +44,28 @@ function vendorLabel(vendor: Vendor): string {
     return name === vendor ? name : `${name} (${vendor})`;
 }
 
+/** Drops the current library's filters, which is what most callers want. */
+export function useClearVendorFilters(): () => void {
+    const libraryId = useLibraryId();
+    return () => setVendorFilters(libraryId, []);
+}
+
 interface ClearFiltersButtonProps {
     /** @default "Clear filters" */
     text?: string;
-    /** @default false */
-    small?: boolean;
 }
 
 export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
-    const { text = "Clear filters", small = false } = props;
-    const libraryId = useLibraryId();
+    const { text = "Clear filters" } = props;
+    const clearVendorFilters = useClearVendorFilters();
     const areAllTagsActive = useVendorFilters() === undefined;
 
     return (
         <Button
             disabled={areAllTagsActive}
             variant="default"
-            size={small ? "xs" : undefined}
             leftSection={<FunnelXIcon size={IconSize.SMALL} />}
-            onClick={() => {
-                setVendorFilters(libraryId, []);
-            }}
+            onClick={clearVendorFilters}
         >
             {text}
         </Button>

@@ -1,6 +1,7 @@
 import {
     ActionIcon,
     Button,
+    Divider,
     Group,
     Input,
     Loader,
@@ -14,10 +15,18 @@ import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
+    NAVBAR_DIVIDER_COLOR,
     NAVBAR_ROW_HEIGHT,
     StatusColor
 } from "../lib/style-constants";
-import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
+import {
+    PropsWithChildren,
+    ReactNode,
+    RefObject,
+    useEffect,
+    useRef,
+    useState
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
@@ -39,24 +48,46 @@ import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 
 /**
+ * The bar every page is topped by: the brand, then whatever that page puts
+ * beside it. Stretched so a full-height child — the library tabs, the
+ * dashboard's — lands its underline on the row's own border.
+ */
+export function NavbarRow(props: PropsWithChildren): ReactNode {
+    const { children } = props;
+    return (
+        <Group
+            gap="sm"
+            px="sm"
+            h={NAVBAR_ROW_HEIGHT}
+            wrap="nowrap"
+            align="stretch"
+            bg={FRAME_BACKGROUND}
+            style={{ borderBottom: BORDER }}
+        >
+            <AppBrand />
+            {children && (
+                // Closes the brand off, so the name reads as the app rather
+                // than as the first tab. Mantine's default divider is tuned for
+                // a white page and all but disappears on the navbar's gray.
+                <Divider
+                    orientation="vertical"
+                    my="sm"
+                    color={NAVBAR_DIVIDER_COLOR}
+                />
+            )}
+            {children}
+        </Group>
+    );
+}
+
+/**
  * Provides top-level navigation for the app: a row of library tabs with the
  * brand and settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
     return (
         <Stack gap={0}>
-            {/* Stretched so the tabs run the full height and their underline
-                lands on the row's own border. */}
-            <Group
-                gap="sm"
-                px="sm"
-                h={NAVBAR_ROW_HEIGHT}
-                wrap="nowrap"
-                align="stretch"
-                bg={FRAME_BACKGROUND}
-                style={{ borderBottom: BORDER }}
-            >
-                <AppBrand />
+            <NavbarRow>
                 <LibraryTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <JobIndicator />
@@ -64,7 +95,7 @@ export function AppNavbar(): ReactNode {
                     <SignInButton />
                     <SettingsButton />
                 </Group>
-            </Group>
+            </NavbarRow>
             <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
                 <SearchBar />
                 <VendorMenu />

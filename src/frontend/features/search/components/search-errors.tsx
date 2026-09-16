@@ -3,7 +3,10 @@ import { HeartBreakIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { Callout } from "../../../components/callout";
-import { ClearFiltersButton } from "../../settings/components/vendor-filters";
+import {
+    ClearFiltersButton,
+    useClearVendorFilters
+} from "../../settings/components/vendor-filters";
 import { FilterResult } from "../search";
 
 /** What a narrowed-down list is called to the user. */
@@ -45,6 +48,9 @@ interface FilterCalloutProps {
  */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
     const { filtered, objectLabel } = props;
+    const searchAllDocuments = useSearchAllDocuments();
+    const clearVendorFilters = useClearVendorFilters();
+
     if (filtered.byGroup === 0 && filtered.byVendor === 0) {
         return null;
     }
@@ -53,14 +59,17 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
         return (
             <Callout
                 text={getGroupString(filtered, objectLabel)}
-                action={<SearchAllButton small />}
+                action={{
+                    text: "Search all",
+                    onClick: searchAllDocuments
+                }}
             />
         );
     }
     return (
         <Callout
             text={getVendorString(filtered, objectLabel)}
-            action={<ClearFiltersButton small />}
+            action={{ text: "Clear filters", onClick: clearVendorFilters }}
         />
     );
 }
@@ -118,30 +127,23 @@ export function NoSearchResultError(
     );
 }
 
-interface SearchAllButtonProps {
-    /**
-     * @default false
-     */
-    small?: boolean;
-}
-
-function SearchAllButton(props: SearchAllButtonProps): ReactNode {
-    const { small = false } = props;
+/** Leaves a group's search for the one across the whole library. */
+function useSearchAllDocuments(): () => void {
     const navigate = useNavigate();
     const libraryId = useLibraryId();
+    return () =>
+        void navigate({
+            to: "/app/library/$libraryId",
+            params: { libraryId }
+        });
+}
+
+function SearchAllButton(): ReactNode {
+    const searchAllDocuments = useSearchAllDocuments();
     return (
         <Button
             leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
-            // Small means inside the callout, where a filled button would
-            // shout over the note it sits in.
-            variant={small ? "default" : undefined}
-            size={small ? "xs" : undefined}
-            onClick={() => {
-                void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId }
-                });
-            }}
+            onClick={searchAllDocuments}
         >
             Search all documents
         </Button>

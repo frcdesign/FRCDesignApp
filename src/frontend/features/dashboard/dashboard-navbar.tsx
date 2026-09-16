@@ -20,14 +20,8 @@ import {
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import {
-    BORDER,
-    FRAME_BACKGROUND,
-    IconSize,
-    NAVBAR_ROW_HEIGHT
-} from "../../lib/style-constants";
-import { AppBrand } from "../../components/app-brand";
-import { SettingsButton } from "../../components/app-navbar";
+import { BORDER, IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
+import { NavbarRow, SettingsButton } from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -50,22 +44,13 @@ export function DashboardNavbar(): ReactNode {
 
     return (
         <Stack gap={0}>
-            <Group
-                gap="sm"
-                px="sm"
-                h={NAVBAR_ROW_HEIGHT}
-                wrap="nowrap"
-                align="stretch"
-                bg={FRAME_BACKGROUND}
-                style={{ borderBottom: BORDER }}
-            >
-                <AppBrand />
+            <NavbarRow>
                 <DashboardTabs current={current} />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <RefreshButton />
                     <SettingsButton />
                 </Group>
-            </Group>
+            </NavbarRow>
             {/* Only the library-scoped dashboards have anything to put here:
                 the app dashboard spans every library, and its cards each state
                 their own window. */}
