@@ -19,6 +19,14 @@ import { IconSize } from "./style-constants";
 export const APP_STORE_URL =
     "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
 
+/**
+ * The setup instructions. Opened in a window of their own like the dashboard:
+ * a navigation would take the insert menu they are offered from with it, and
+ * the part being looked at is why somebody would want the app in the first
+ * place.
+ */
+export const SETUP_URL = "/setup";
+
 export function makeUrl(path: ConfigurablePath): string;
 export function makeUrl(path: ElementPath): string;
 export function makeUrl(path: InstancePath): string;

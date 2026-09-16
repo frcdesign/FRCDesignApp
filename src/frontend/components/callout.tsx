@@ -7,6 +7,8 @@ import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
 export interface CalloutAction {
     /** A verb or a destination, e.g. "Instructions". */
     text: string;
+    /** Named beside the label, as on every other button in the app. */
+    icon: ReactNode;
     onClick: () => void;
 }
 
@@ -41,15 +43,15 @@ export function Callout(props: CalloutProps): ReactNode {
             <Group justify="space-between" wrap="nowrap" gap="sm">
                 <Text size="sm">{text}</Text>
                 {action && (
-                    // Subtle and in the alert's own color, like the action on a
-                    // toast: a filled or bordered button reads as a control
-                    // dropped on the note rather than part of it. Held at its
-                    // own width, since the text is what should give on a narrow
-                    // row.
+                    // Outlined, so it reads as a button rather than as a link
+                    // in a sentence, without the weight a filled one would
+                    // bring to a note. Held at its own width, since the text is
+                    // what should give on a narrow row.
                     <Button
-                        variant="subtle"
+                        variant="outline"
                         color={StatusColor.INFO}
                         size="compact-sm"
+                        leftSection={action.icon}
                         style={NO_SHRINK}
                         onClick={action.onClick}
                     >

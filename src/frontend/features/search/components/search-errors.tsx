@@ -1,5 +1,9 @@
 import { Button } from "@mantine/core";
-import { HeartBreakIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+    FunnelXIcon,
+    HeartBreakIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { Callout } from "../../../components/callout";
@@ -61,6 +65,7 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
                 text={getGroupString(filtered, objectLabel)}
                 action={{
                     text: "Search all",
+                    icon: <MagnifyingGlassIcon size={IconSize.SMALL} />,
                     onClick: searchAllDocuments
                 }}
             />
@@ -69,7 +74,11 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
     return (
         <Callout
             text={getVendorString(filtered, objectLabel)}
-            action={{ text: "Clear filters", onClick: clearVendorFilters }}
+            action={{
+                text: "Clear filters",
+                icon: <FunnelXIcon size={IconSize.SMALL} />,
+                onClick: clearVendorFilters
+            }}
         />
     );
 }

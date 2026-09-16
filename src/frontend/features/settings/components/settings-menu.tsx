@@ -22,6 +22,7 @@ import {
 import { startSignOut } from "../../auth/sign-out";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
@@ -127,6 +128,13 @@ function UserSettings(): ReactNode {
             <InputRow spread label="Discord">
                 <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>
+            {/* Only worth offering to somebody who is not already running the
+                app, which inside Onshape's panel they are. */}
+            {!isConnected && (
+                <InputRow spread label="Get the FRCDesignApp">
+                    <OpenUrlButton text="Instructions" url={SETUP_URL} />
+                </InputRow>
+            )}
             {/* Onshape owns the session the panel runs in, so signing out is
                 only the standalone app's to offer. */}
             {!isConnected && (
