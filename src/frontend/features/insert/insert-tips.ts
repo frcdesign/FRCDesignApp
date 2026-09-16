@@ -18,11 +18,7 @@ const THUMBNAIL_WAIT_MS = 15000;
 /** Long enough to read, short enough not to follow them around. */
 const TIP_AUTO_CLOSE_MS = 8000;
 
-/**
- * Points out that a right-click would have done it. Whether it would have is
- * the menu's to know — it is the one holding whether anything was configured
- * — so this only says so.
- */
+/** Points out that a right-click would have done it; the menu decides when. */
 export function showQuickInsertTip(): void {
     showInfoToast(
         "Tip: right-click a part to insert it without opening the insert menu.",
@@ -59,10 +55,9 @@ export function useThumbnailWaitTip(): void {
 }
 
 /**
- * Points out, to a signed-out viewer who has just changed a parameter, that the
- * preview is not following them: with no Onshape session the box falls back to
- * the element's stored thumbnail, which shows the default selection whatever
- * they pick. Raised on the change rather than on opening, where the two agree.
+ * Points out to a signed-out viewer that the preview has stopped following
+ * them: with no Onshape session the box falls back to the stored thumbnail of
+ * the default. Raised on the first change, not on opening, where they agree.
  */
 export function useSignInPreviewTip(isSelectionEdited: boolean): void {
     const { signedIn, isPending } = useAccessData();

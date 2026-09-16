@@ -14,7 +14,7 @@ interface ChangeOrderMenuProps {
     onOrderChange: (newOrder: string[]) => void;
 }
 
-/** The move items a list's order allows, and nothing when it allows none. */
+/** The move items a list's order allows. */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
 

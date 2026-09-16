@@ -175,9 +175,8 @@ describe("getPartUrl", () => {
 });
 
 describe("getVisibleOptions", () => {
-    // Five sizes, of which only the last three are restricted — to the heavy
-    // style. Nothing is said about s1 and s2, which is the ordinary shape of a
-    // configuration somebody has narrowed one end of.
+    // Only the last three sizes are restricted, to the heavy style; nothing is
+    // said about s1 and s2.
     const style = enumParam("style", ["light", "heavy"]);
     const size = enumParam("size", ["s1", "s2", "s3", "s4", "s5"], {
         optionConditions: [
@@ -200,11 +199,8 @@ describe("getVisibleOptions", () => {
         expect(getVisibleOptions(plain, {}, [plain])).toHaveLength(2);
     });
 
-    /**
-     * The panel drops an enum with no options left, so reading the conditions
-     * as a list of what may be shown took the whole parameter off the screen
-     * — on a part whose first parameter this was, the panel opened without it.
-     */
+    // The panel drops an enum with no options left, so reading the conditions
+    // as a list of what may be shown took the whole parameter off the screen.
     it("keeps the options no condition names", () => {
         const visible = getVisibleOptions(size, { style: "light" }, params);
         expect(visible.map((option) => option.id)).toEqual(["s1", "s2"]);
@@ -257,8 +253,7 @@ describe("getVisibleOptions", () => {
 
 describe("evaluateCondition", () => {
     // The parser drops children it cannot represent, so a logical can arrive
-    // holding none. An OR of nothing reads as never, which hid parameters over
-    // a condition we had merely failed to understand.
+    // holding none — and an OR of nothing reads as never.
     it.each([LogicalOp.AND, LogicalOp.OR])(
         "shows a parameter whose %s condition holds no children",
         (operation) => {

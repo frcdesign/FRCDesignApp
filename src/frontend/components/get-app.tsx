@@ -7,10 +7,8 @@ import { Callout } from "./callout";
 
 /**
  * Offers the app over the insert menu's preview, where a part somebody cannot
- * insert is in front of them and the reason why is worth naming. Settings
- * offers it too; the navbar does not, having no room to spare at a phone's
- * width. Inside Onshape's panel the caller is already running the app, so this
- * renders nothing there.
+ * insert is in front of them. Inside Onshape's panel they are already running
+ * it, so nothing renders there.
  */
 export function GetAppCallout(): ReactNode {
     const isConnected = useIsConnectedToOnshape();

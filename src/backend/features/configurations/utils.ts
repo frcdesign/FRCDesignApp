@@ -62,9 +62,8 @@ export function evaluateCondition(
     }
 
     if (condition.type === VisibilityType.LOGICAL) {
-        // Nothing left to test: the parser drops children it cannot represent,
-        // and an OR of none reads as false, which would hide a parameter over
-        // a condition we merely failed to understand.
+        // An OR of no children reads as false, which would hide a parameter
+        // over a condition the parser merely failed to represent.
         if (condition.children.length === 0) {
             return true;
         }
@@ -179,7 +178,7 @@ export function getOption(
  * The enum options the selection leaves visible, by the parameter's own option
  * conditions. Partial for the same reason {@link evaluateCondition} is.
  */
-/** The options one condition speaks for, named or spanned. */
+/** The options one condition controls, listed or spanned. */
 function getControlledOptionIds(
     optionCondition: OptionVisibilityCondition,
     optionIds: string[]
@@ -197,12 +196,10 @@ function getControlledOptionIds(
 
 /**
  * The options an enum currently offers. A condition restricts the options it
- * names and says nothing about the rest, so an option no condition mentions is
- * always offered — reading the conditions as a list of what may be shown
- * instead hides every option of a partly-conditioned enum, and empties the
- * parameter out of the panel entirely on the selection where they all fail.
- *
- * An option named by several is offered while any one of them holds.
+ * names and says nothing about the rest, so an option no condition names is
+ * always offered, and one several name is offered while any of them holds.
+ * Offering only what a passing condition names instead empties a
+ * partly-conditioned enum, and the panel drops a parameter with no options.
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,

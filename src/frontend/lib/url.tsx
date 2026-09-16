@@ -12,18 +12,13 @@ import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 
-/**
- * The app's listing in the Onshape App Store, which is where somebody without
- * the app subscribes to it.
- */
+/** The app's listing in the Onshape App Store, where it is subscribed to. */
 export const APP_STORE_URL =
     "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
 
 /**
- * The setup instructions. Opened in a window of their own like the dashboard:
- * a navigation would take the insert menu they are offered from with it, and
- * the part being looked at is why somebody would want the app in the first
- * place.
+ * The setup instructions. Opened in a window of their own: a navigation would
+ * take the insert menu they are offered from with it.
  */
 export const SETUP_URL = "/setup";
 

@@ -13,10 +13,7 @@ import frcDesignBook from "/frc-design-book.svg";
 /** The site the app belongs to, which both halves of the brand link out to. */
 const FRC_DESIGN_URL = "https://frcdesign.org";
 
-/**
- * The book and the app's name, in every navbar, linking out to FRCDesign.org.
- * `NavbarRow` closes it with a rule wherever something follows it.
- */
+/** The book and the app's name, in every navbar, linking out to FRCDesign.org. */
 export function AppBrand(): ReactNode {
     return (
         <Group gap="xs" wrap="nowrap" h="100%">

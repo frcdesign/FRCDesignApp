@@ -44,7 +44,7 @@ function vendorLabel(vendor: Vendor): string {
     return name === vendor ? name : `${name} (${vendor})`;
 }
 
-/** Drops the current library's filters, which is what most callers want. */
+/** Drops the current library's filters, leaving the other libraries' alone. */
 export function useClearVendorFilters(): () => void {
     const libraryId = useLibraryId();
     return () => setVendorFilters(libraryId, []);

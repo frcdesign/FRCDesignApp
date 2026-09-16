@@ -48,8 +48,8 @@ import { getLibraryVersionQuery } from "../features/library/queries";
 
 /**
  * The bar every page is topped by: the brand, then whatever that page puts
- * beside it. Stretched so a full-height child — the library tabs, the
- * dashboard's — lands its underline on the row's own border.
+ * beside it. Stretched so a full-height child lands its underline on the row's
+ * own border.
  */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
@@ -66,8 +66,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             <AppBrand />
             {children && (
                 // Closes the brand off, so the name reads as the app rather
-                // than as the first tab. Mantine's default divider is tuned for
-                // a white page and all but disappears on the navbar's gray.
+                // than the first tab. Mantine's own all but vanishes on gray.
                 <Divider
                     orientation="vertical"
                     my="sm"
@@ -232,10 +231,9 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
 }
 
 /**
- * How long typing pauses before the search runs. Each stored query re-searches
- * the index and rebuilds the result list, which is enough work to be felt
- * between keystrokes; a wait this short still lands the results while the
- * caller is looking at the box.
+ * How long typing pauses before the search runs. Each query re-searches the
+ * index and rebuilds the list, which is enough work to be felt between
+ * keystrokes.
  */
 const SEARCH_DEBOUNCE_MS = 200;
 

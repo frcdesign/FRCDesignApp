@@ -15,8 +15,7 @@ export const Route = createFileRoute("/_pages/setup")({
 function Setup(): ReactNode {
     return (
         <>
-            {/* The brand alone: there is nowhere else to go from here, and the
-                page is reached from outside the app as often as from in it. */}
+            {/* The brand alone: there is nowhere else to go from here. */}
             <NavbarRow />
             {/* Read outside Onshape's panel, so it is given a page's width
                 rather than run to whatever the window happens to be. */}
@@ -76,11 +75,9 @@ function AppIconMark(): ReactNode {
             alt="the FRCDesignApp's icon"
             w={ICON_MARK_SIZE}
             h={ICON_MARK_SIZE}
-            // Holds the words off the icon, which otherwise close on it as if
-            // it were a letter.
+            // Keeps the parentheses off the icon.
             mx={4}
-            // Centered on the text rather than sat on its baseline, which
-            // leaves a square mark hanging below the line.
+            // Centered on the text; on the baseline a square mark hangs low.
             display="inline-block"
             style={{ verticalAlign: "middle" }}
         />

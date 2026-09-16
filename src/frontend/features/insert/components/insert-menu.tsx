@@ -61,12 +61,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const [configurationKey, setConfigurationKey] = useState(
         DEFAULT_CONFIGURATION_KEY
     );
-    // Whether anybody has configured anything, which is what the preview stops
-    // following for a signed-out caller.
+    // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // Whether an insert would be one a right-click could have done: cleared
-    // below by the menu being used, and by it simply having been up long
-    // enough to have been read.
+    // by an edit below, and by the menu having been up long enough to read.
     const [canShowQuickInsertTip, setCanShowQuickInsertTip] = useState(true);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —

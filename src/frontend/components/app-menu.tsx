@@ -108,7 +108,7 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
 interface MenuSectionProps extends PropsWithChildren {
     /** What the items under it are for, e.g. "Insert". */
     label: string;
-    /** Colors the label, for a section not everyone is shown. */
+    /** Colors the label, for a section only some callers see. */
     color?: StatusColor;
 }
 

@@ -3,29 +3,24 @@ import { InfoIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
 
-/** What the note offers to do about itself. */
 export interface CalloutAction {
     /** A verb or a destination, e.g. "Instructions". */
     text: string;
-    /** Named beside the label, as on every other button in the app. */
     icon: ReactNode;
     onClick: () => void;
 }
 
 interface CalloutProps {
-    /** A whole sentence, ending in a period, as every callout's does. */
+    /** A whole sentence, ending in a period. */
     text: string;
     /** Omitted for a note that only reports something. */
     action?: CalloutAction;
 }
 
 /**
- * A note above a list or a preview, saying something about what is under it.
- * The app's one shape for this, action included: a callout that builds its own
- * button is a callout that cannot be styled into a different thing per caller.
- *
- * Blue rather than the library accent, so it reads as a remark beside the
- * content rather than as part of it.
+ * A note above a list or a preview, saying something about what is under it. It
+ * builds its own button, so no caller can style one of its own. Blue rather
+ * than the library accent, so it reads as a remark beside the content.
  */
 export function Callout(props: CalloutProps): ReactNode {
     const { text, action } = props;
@@ -44,10 +39,9 @@ export function Callout(props: CalloutProps): ReactNode {
             <Group justify="space-between" wrap="nowrap" gap="sm">
                 <Text size="sm">{text}</Text>
                 {action && (
-                    // Outlined, so it reads as a button rather than as a link
-                    // in a sentence, without the weight a filled one would
-                    // bring to a note. Held at its own width, since the text is
-                    // what should give on a narrow row.
+                    // Outlined rather than filled, which would shout on a
+                    // note; held at its own width, since the text is what
+                    // gives on a narrow row.
                     <Button
                         variant="outline"
                         color={StatusColor.INFO}

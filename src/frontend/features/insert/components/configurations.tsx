@@ -68,9 +68,7 @@ interface ConfigurationWrapperProps {
     onRecord?: (record: SearchRecord | undefined) => void;
     /**
      * A row was moved, as against the panel settling the selection on load.
-     * Reported from here because this is the one place both writes meet; any
-     * interaction with a row counts, including one that picks what was already
-     * picked — the menu was used either way.
+     * Any interaction counts, including picking what was already picked.
      */
     onEdit?: () => void;
 }
