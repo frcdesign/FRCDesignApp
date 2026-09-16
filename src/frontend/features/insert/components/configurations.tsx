@@ -66,6 +66,13 @@ interface ConfigurationWrapperProps {
     onConfigurationKey?: (configurationKey: ConfigurationKey) => void;
     /** Reports the record the selection produces, for the menu's header. */
     onRecord?: (record: SearchRecord | undefined) => void;
+    /**
+     * A row was moved, as against the panel settling the selection on load.
+     * Reported from here because this is the one place both writes meet; any
+     * interaction with a row counts, including one that picks what was already
+     * picked — the menu was used either way.
+     */
+    onEdit?: () => void;
 }
 
 /** Reports the selection's key, and the record it resolves to. */
@@ -97,7 +104,8 @@ export function ConfigurationWrapper(
         selection,
         setSelection,
         onConfigurationKey,
-        onRecord
+        onRecord,
+        onEdit
     } = props;
 
     const query = useConfigurationQuery(insertableId, microversionId);
@@ -142,6 +150,16 @@ export function ConfigurationWrapper(
         onRecord
     );
 
+    // The rows' own writes, as against the settle above: same selection, but
+    // only this one is somebody configuring the part.
+    const editSelection = useCallback(
+        (newSelection: Selection) => {
+            onEdit?.();
+            setSelection(newSelection);
+        },
+        [onEdit, setSelection]
+    );
+
     // Before the spinner: a failed fetch leaves `whole` undefined too, so
     // testing that first would spin forever instead of reporting the failure.
     if (query.isError) {
@@ -161,7 +179,7 @@ export function ConfigurationWrapper(
         <ConfigurationParameters
             configurationResult={query.data}
             selection={whole}
-            setSelection={setSelection}
+            setSelection={editSelection}
             unitInfo={unitInfo}
         />
     );

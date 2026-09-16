@@ -50,13 +50,12 @@ function Setup(): ReactNode {
                         </List.Item>
                         <List.Item>
                             Find the FRCDesignApp in the sidebar on the right
-                            side of the screen (
+                            side of the screen (Look for the
                             <AppIconMark />
-                            ).
+                            icon).
                         </List.Item>
                         <List.Item>
-                            Search for parts, configure them, and insert them
-                            into your document!
+                            Search for parts and add them to your document.
                         </List.Item>
                     </List>
                 </Stack>
@@ -77,8 +76,8 @@ function AppIconMark(): ReactNode {
             alt="the FRCDesignApp's icon"
             w={ICON_MARK_SIZE}
             h={ICON_MARK_SIZE}
-            // Holds the parentheses off the icon, which they otherwise sit
-            // against as if it were a letter.
+            // Holds the words off the icon, which otherwise close on it as if
+            // it were a letter.
             mx={4}
             // Centered on the text rather than sat on its baseline, which
             // leaves a square mark hanging below the line.

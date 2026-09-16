@@ -13,6 +13,7 @@ export interface CalloutAction {
 }
 
 interface CalloutProps {
+    /** A whole sentence, ending in a period, as every callout's does. */
     text: string;
     /** Omitted for a note that only reports something. */
     action?: CalloutAction;

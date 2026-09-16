@@ -21,7 +21,7 @@ export function GetAppCallout(): ReactNode {
 
     return (
         <Callout
-            text="To use this part, get the FRCDesignApp"
+            text="To use this part, get the FRCDesignApp."
             action={{
                 text: "Instructions",
                 icon: <ArrowSquareOutIcon size={IconSize.SMALL} />,

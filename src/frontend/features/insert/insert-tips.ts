@@ -6,7 +6,7 @@ import { useAccessData } from "../auth/access-level";
 import { startSignIn } from "../auth/sign-in";
 
 /** An insert this soon after opening didn't need anything from the menu. */
-const QUICK_INSERT_WINDOW_MS = 1500;
+export const QUICK_INSERT_WINDOW_MS = 1500;
 
 /**
  * How long a render has to keep the menu waiting before the wait is worth
@@ -19,13 +19,11 @@ const THUMBNAIL_WAIT_MS = 15000;
 const TIP_AUTO_CLOSE_MS = 8000;
 
 /**
- * Points out that a right-click would have done it — only when the menu was
- * dismissed that fast, a slower one having been spent looking at the part.
+ * Points out that a right-click would have done it. Whether it would have is
+ * the menu's to know — it is the one holding whether anything was configured
+ * — so this only says so.
  */
-export function showQuickInsertTip(openedAt: number): void {
-    if (Date.now() - openedAt >= QUICK_INSERT_WINDOW_MS) {
-        return;
-    }
+export function showQuickInsertTip(): void {
     showInfoToast(
         "Tip: right-click a part to insert it without opening the insert menu.",
         { id: "quick-insert-tip", autoClose: TIP_AUTO_CLOSE_MS }

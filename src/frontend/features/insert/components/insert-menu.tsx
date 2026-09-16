@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -13,6 +13,7 @@ import {
 } from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
 import {
+    QUICK_INSERT_WINDOW_MS,
     showQuickInsertTip,
     useSignInPreviewTip,
     useThumbnailWaitTip
@@ -45,54 +46,28 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     initialSelection?: Selection;
-    /** When the menu opened, for the quick insert tip. */
-    openedAt: number;
     onInsert: () => void;
     source: InsertSource;
 }
 
-/**
- * The selection the menu holds and its key, plus whether it still stands where
- * it opened.
- */
-function useInsertSelection(initialSelection?: Selection) {
-    const [selection, setSelection] = useState(initialSelection);
+export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
+    const { insertable, modalId, onInsert, source } = props;
+    const favorite = useFavorite(insertable.id);
+    useThumbnailWaitTip();
+
+    const [selection, setSelection] = useState(props.initialSelection);
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
     const [configurationKey, setConfigurationKey] = useState(
         DEFAULT_CONFIGURATION_KEY
     );
-    // The first report is what the menu opened with, and so what a right-click
-    // on the card would have inserted. Absent until the parameters load.
-    const [openedWith, setOpenedWith] = useState<string>();
-
-    const onConfigurationKey = useCallback((key: string) => {
-        setConfigurationKey(key);
-        setOpenedWith((opened) => opened ?? key);
-    }, []);
-
-    return {
-        selection,
-        setSelection,
-        configurationKey,
-        onConfigurationKey,
-        isUnchanged:
-            configurationKey === (openedWith ?? DEFAULT_CONFIGURATION_KEY)
-    };
-}
-
-export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, openedAt, onInsert, source } = props;
-    const favorite = useFavorite(insertable.id);
-    useThumbnailWaitTip();
-
-    const {
-        selection,
-        setSelection,
-        configurationKey,
-        onConfigurationKey,
-        isUnchanged
-    } = useInsertSelection(props.initialSelection);
+    // Whether anybody has configured anything, which is what the preview stops
+    // following for a signed-out caller.
+    const [isEdited, setIsEdited] = useState(false);
+    // Whether an insert would be one a right-click could have done: cleared
+    // below by the menu being used, and by it simply having been up long
+    // enough to have been read.
+    const [canShowQuickInsertTip, setCanShowQuickInsertTip] = useState(true);
     const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
@@ -106,7 +81,20 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         name: insertable.name,
         record: record ?? soleRecord
     });
-    useSignInPreviewTip(!isUnchanged);
+    useSignInPreviewTip(isEdited);
+
+    const onEdit = useCallback(() => {
+        setIsEdited(true);
+        setCanShowQuickInsertTip(false);
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(
+            () => setCanShowQuickInsertTip(false),
+            QUICK_INSERT_WINDOW_MS
+        );
+        return () => clearTimeout(timer);
+    }, []);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {
@@ -116,8 +104,9 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 selection={selection}
                 setSelection={setSelection}
-                onConfigurationKey={onConfigurationKey}
+                onConfigurationKey={setConfigurationKey}
                 onRecord={setRecord}
+                onEdit={onEdit}
             />
         );
     }
@@ -142,8 +131,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 favorite={favorite}
                 selection={selection}
                 configurationKey={configurationKey}
-                isUnchanged={isUnchanged}
-                openedAt={openedAt}
+                canShowQuickInsertTip={canShowQuickInsertTip}
                 source={source}
                 onInsert={onInsert}
             />
@@ -156,9 +144,8 @@ interface InsertMenuFooterProps {
     favorite: Favorite | undefined;
     selection?: Selection;
     configurationKey: ConfigurationKey;
-    /** Whether the selection still stands where the menu opened. */
-    isUnchanged: boolean;
-    openedAt: number;
+    /** Whether an insert now is worth pointing out a right-click for. */
+    canShowQuickInsertTip: boolean;
     /** Where the insert began, which the menu and the buttons both record. */
     source: InsertSource;
     onInsert: () => void;
@@ -171,8 +158,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         favorite,
         selection,
         configurationKey,
-        isUnchanged,
-        openedAt,
+        canShowQuickInsertTip,
         source,
         onInsert
     } = props;
@@ -202,9 +188,8 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
             <InsertButtons
                 insertable={insertable}
                 selection={selection}
-                isUnchanged={isUnchanged}
+                canShowQuickInsertTip={canShowQuickInsertTip}
                 isFavorite={favorite !== undefined}
-                openedAt={openedAt}
                 source={source}
                 onInsert={onInsert}
             />
@@ -213,16 +198,11 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
 }
 
 interface InsertButtonsProps {
-    /**
-     * Whether the selection is still the one the menu opened with, which a
-     * right-click on the card would have inserted without opening anything.
-     */
-    isUnchanged: boolean;
+    /** Whether an insert now is worth pointing out a right-click for. */
+    canShowQuickInsertTip: boolean;
     insertable: InsertableOut;
     selection?: Selection;
     isFavorite: boolean;
-    /** When the menu opened, for the quick insert tip. */
-    openedAt: number;
     onInsert: () => void;
     source: InsertSource;
 }
@@ -234,9 +214,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     const {
         insertable,
         selection,
-        isUnchanged,
+        canShowQuickInsertTip,
         isFavorite,
-        openedAt,
         source,
         onInsert
     } = props;
@@ -262,8 +241,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
-        if (isUnchanged) {
-            showQuickInsertTip(openedAt);
+        if (canShowQuickInsertTip) {
+            showQuickInsertTip();
         }
         onInsert();
     }, [
@@ -271,8 +250,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         onInsert,
         canFasten,
         uiState.fasten,
-        isUnchanged,
-        openedAt
+        canShowQuickInsertTip
     ]);
 
     if (!isConnected) {
