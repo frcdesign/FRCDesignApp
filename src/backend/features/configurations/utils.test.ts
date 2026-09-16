@@ -2,11 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
     decodeConfiguration,
     encodeConfiguration,
+    evaluateCondition,
     findRecordForConfiguration,
-    getPartUrl
+    getPartUrl,
+    getVisibleOptions
 } from "./utils";
-import { PartMetadata, SearchRecord } from "./contract";
+import {
+    OptionVisibilityType,
+    PartMetadata,
+    SearchRecord,
+    VisibilityType,
+    type ConfigurationParameter
+} from "./contract";
+import { LogicalOp } from "./enums";
 import { Vendor } from "../library/vendors";
+import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 
 function rec(configurationKey: string, partNumber = "PN"): SearchRecord {
     return { partNumber, configurationKey };
@@ -162,4 +172,103 @@ describe("getPartUrl", () => {
         );
         expect(url).toBe("https://www.mcmaster.com/91251A445/");
     });
+});
+
+describe("getVisibleOptions", () => {
+    // Five sizes, of which only the last three are restricted — to the heavy
+    // style. Nothing is said about s1 and s2, which is the ordinary shape of a
+    // configuration somebody has narrowed one end of.
+    const style = enumParam("style", ["light", "heavy"]);
+    const size = enumParam("size", ["s1", "s2", "s3", "s4", "s5"], {
+        optionConditions: [
+            {
+                type: OptionVisibilityType.RANGE,
+                start: "s3",
+                end: "s5",
+                condition: {
+                    type: VisibilityType.EQUAL,
+                    id: "style",
+                    value: "heavy"
+                }
+            }
+        ]
+    });
+    const params: ConfigurationParameter[] = [size, style];
+
+    it("offers every option when nothing is conditioned", () => {
+        const plain = enumParam("plain", ["a", "b"]);
+        expect(getVisibleOptions(plain, {}, [plain])).toHaveLength(2);
+    });
+
+    /**
+     * The panel drops an enum with no options left, so reading the conditions
+     * as a list of what may be shown took the whole parameter off the screen
+     * — on a part whose first parameter this was, the panel opened without it.
+     */
+    it("keeps the options no condition names", () => {
+        const visible = getVisibleOptions(size, { style: "light" }, params);
+        expect(visible.map((option) => option.id)).toEqual(["s1", "s2"]);
+    });
+
+    it("adds the restricted options once their condition holds", () => {
+        const visible = getVisibleOptions(size, { style: "heavy" }, params);
+        expect(visible.map((option) => option.id)).toEqual([
+            "s1",
+            "s2",
+            "s3",
+            "s4",
+            "s5"
+        ]);
+    });
+
+    it("hides an option every condition naming it rejects", () => {
+        const either = enumParam("either", ["a", "b"], {
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["b"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "style",
+                        value: "heavy"
+                    }
+                },
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["b"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "style",
+                        value: "light"
+                    }
+                }
+            ]
+        });
+        const withStyle = [either, style];
+        // Either condition is enough to offer it.
+        expect(
+            getVisibleOptions(either, { style: "light" }, withStyle)
+        ).toHaveLength(2);
+        expect(
+            getVisibleOptions(either, { style: "other" }, withStyle)
+        ).toHaveLength(1);
+    });
+});
+
+describe("evaluateCondition", () => {
+    // The parser drops children it cannot represent, so a logical can arrive
+    // holding none. An OR of nothing reads as never, which hid parameters over
+    // a condition we had merely failed to understand.
+    it.each([LogicalOp.AND, LogicalOp.OR])(
+        "shows a parameter whose %s condition holds no children",
+        (operation) => {
+            expect(
+                evaluateCondition(
+                    { type: VisibilityType.LOGICAL, operation, children: [] },
+                    {},
+                    []
+                )
+            ).toBe(true);
+        }
+    );
 });

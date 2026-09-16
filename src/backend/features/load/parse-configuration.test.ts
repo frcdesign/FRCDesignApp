@@ -195,12 +195,10 @@ describe("parseOnshapeConfiguration", () => {
         ]);
     });
 
-    it("drops no-op children from a logical condition", () => {
-        expect(parameters[2].condition).toEqual({
-            type: VisibilityType.LOGICAL,
-            operation: LogicalOp.AND,
-            children: []
-        });
+    // A logical left with no children says nothing about when to show the
+    // parameter, so it is dropped rather than stored as a condition of its own.
+    it("drops a logical condition whose children were all no-ops", () => {
+        expect(parameters[2].condition).toBeUndefined();
     });
 
     it("parses a QUANTITY parameter with units and range", () => {

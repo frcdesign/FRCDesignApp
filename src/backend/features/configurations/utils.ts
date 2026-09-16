@@ -7,6 +7,7 @@ import {
     DEFAULT_CONFIGURATION_KEY,
     EnumOption,
     EnumParameter,
+    OptionVisibilityCondition,
     OptionVisibilityType,
     ConfigurationParameter,
     ParameterType,
@@ -61,6 +62,12 @@ export function evaluateCondition(
     }
 
     if (condition.type === VisibilityType.LOGICAL) {
+        // Nothing left to test: the parser drops children it cannot represent,
+        // and an OR of none reads as false, which would hide a parameter over
+        // a condition we merely failed to understand.
+        if (condition.children.length === 0) {
+            return true;
+        }
         if (condition.operation === LogicalOp.AND) {
             return condition.children.every((child) =>
                 evaluateCondition(child, selection, parameters)
@@ -172,6 +179,31 @@ export function getOption(
  * The enum options the selection leaves visible, by the parameter's own option
  * conditions. Partial for the same reason {@link evaluateCondition} is.
  */
+/** The options one condition speaks for, named or spanned. */
+function getControlledOptionIds(
+    optionCondition: OptionVisibilityCondition,
+    optionIds: string[]
+): string[] {
+    if (optionCondition.type === OptionVisibilityType.LIST) {
+        return optionCondition.controlledOptions;
+    } else if (optionCondition.type === OptionVisibilityType.RANGE) {
+        return optionIds.slice(
+            optionIds.indexOf(optionCondition.start),
+            optionIds.indexOf(optionCondition.end) + 1
+        );
+    }
+    throw new Error("Unhandled option condition type");
+}
+
+/**
+ * The options an enum currently offers. A condition restricts the options it
+ * names and says nothing about the rest, so an option no condition mentions is
+ * always offered — reading the conditions as a list of what may be shown
+ * instead hides every option of a partly-conditioned enum, and empties the
+ * parameter out of the panel entirely on the selection where they all fail.
+ *
+ * An option named by several is offered while any one of them holds.
+ */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
     selection: PartialSelection,
@@ -183,26 +215,28 @@ export function getVisibleOptions(
     }
 
     const optionIds = enumParameter.options.map((option) => option.id);
+    const controlled = new Set<string>();
+    const shown = new Set<string>();
 
-    const validOptionIds = enumParameter.optionConditions
-        .filter((optionCondition) =>
-            evaluateCondition(optionCondition.condition, selection, parameters)
-        )
-        .flatMap((optionCondition) => {
-            if (optionCondition.type === OptionVisibilityType.LIST) {
-                return optionCondition.controlledOptions;
-            } else if (optionCondition.type === OptionVisibilityType.RANGE) {
-                return optionIds.slice(
-                    optionIds.indexOf(optionCondition.start),
-                    optionIds.indexOf(optionCondition.end) + 1
-                );
+    for (const optionCondition of enumParameter.optionConditions) {
+        const holds = evaluateCondition(
+            optionCondition.condition,
+            selection,
+            parameters
+        );
+        for (const optionId of getControlledOptionIds(
+            optionCondition,
+            optionIds
+        )) {
+            controlled.add(optionId);
+            if (holds) {
+                shown.add(optionId);
             }
-            throw new Error("Unhandled option condition type");
-        });
+        }
+    }
 
-    const validOptionsSet = new Set(validOptionIds);
-    return enumParameter.options.filter((option) =>
-        validOptionsSet.has(option.id)
+    return enumParameter.options.filter(
+        (option) => !controlled.has(option.id) || shown.has(option.id)
     );
 }
 
