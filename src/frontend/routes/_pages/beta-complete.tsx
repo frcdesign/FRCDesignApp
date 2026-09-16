@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
 import { PageNotice } from "../../components/app-zero-state";
+import { APP_STORE_URL } from "../../lib/url";
 
 /**
  * Where the beta-era app extension still points. Nothing links here anymore,
@@ -12,11 +13,10 @@ export const Route = createFileRoute("/_pages/beta-complete")({
     component: BetaComplete
 });
 
-const URL =
-    "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
-
 function BetaComplete(): JSX.Element {
-    const frcDesignAppButton = <OpenUrlButton text="FRCDesignApp" url={URL} />;
+    const frcDesignAppButton = (
+        <OpenUrlButton text="FRCDesignApp" url={APP_STORE_URL} />
+    );
 
     return (
         <PageNotice

@@ -13,6 +13,7 @@ import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
@@ -45,6 +46,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRouteRoute,
+} as any)
+const PagesSetupRoute = PagesSetupRouteImport.update({
+  id: '/_pages/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PagesSafariErrorRoute = PagesSafariErrorRouteImport.update({
   id: '/_pages/safari-error',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/setup': typeof PagesSetupRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
+  '/setup': typeof PagesSetupRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
+  '/_pages/setup': typeof PagesSetupRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/setup'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/grant-denied'
     | '/license'
     | '/safari-error'
+    | '/setup'
     | '/dashboard'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
+    | '/_pages/setup'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -229,6 +241,7 @@ export interface RootRouteChildren {
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
   PagesLicenseRoute: typeof PagesLicenseRoute
   PagesSafariErrorRoute: typeof PagesSafariErrorRoute
+  PagesSetupRoute: typeof PagesSetupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
+    }
+    '/_pages/setup': {
+      id: '/_pages/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof PagesSetupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_pages/safari-error': {
       id: '/_pages/safari-error'
@@ -419,6 +439,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,
   PagesLicenseRoute: PagesLicenseRoute,
   PagesSafariErrorRoute: PagesSafariErrorRoute,
+  PagesSetupRoute: PagesSetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -3,7 +3,7 @@ import { ReactNode, useCallback, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { Button, Checkbox, Group } from "@mantine/core";
+import { Button, Checkbox, Group, Stack } from "@mantine/core";
 import { PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import {
@@ -20,6 +20,7 @@ import {
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { MenuButton } from "../../../components/app-menu";
+import { GetAppCallout } from "../../../components/get-app";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
 import {
@@ -124,13 +125,16 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     return (
         <>
             <AppModalTop>
-                <PreviewImageCard
-                    path={insertable.path}
-                    insertableId={insertable.id}
-                    microversionId={insertable.microversionId}
-                    largeThumbnailUrl={insertable.largeThumbnailUrl}
-                    configurationKey={configurationKey}
-                />
+                <Stack gap="sm">
+                    <GetAppCallout />
+                    <PreviewImageCard
+                        path={insertable.path}
+                        insertableId={insertable.id}
+                        microversionId={insertable.microversionId}
+                        largeThumbnailUrl={insertable.largeThumbnailUrl}
+                        configurationKey={configurationKey}
+                    />
+                </Stack>
             </AppModalTop>
             <AppModalBody>{parameters}</AppModalBody>
             <InsertMenuFooter

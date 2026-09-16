@@ -1,11 +1,8 @@
-import { Alert, Button, Group, Text } from "@mantine/core";
-import {
-    HeartBreakIcon,
-    InfoIcon,
-    MagnifyingGlassIcon
-} from "@phosphor-icons/react";
+import { Button } from "@mantine/core";
+import { HeartBreakIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
+import { Callout } from "../../../components/callout";
 import { ClearFiltersButton } from "../../settings/components/vendor-filters";
 import { FilterResult } from "../search";
 
@@ -41,31 +38,6 @@ function getVendorString(filtered: FilterResult, objectLabel: ObjectLabel) {
 interface FilterCalloutProps {
     objectLabel: ObjectLabel;
     filtered: FilterResult;
-}
-
-/**
- * Blue rather than the library accent: the strip reports on the results, so it
- * should read as a note beside them rather than as part of the library.
- */
-interface CalloutProps {
-    text: string;
-    action: ReactNode;
-}
-
-function Callout(props: CalloutProps): ReactNode {
-    return (
-        <Alert
-            color={StatusColor.INFO}
-            p="xs"
-            icon={<InfoIcon size={IconSize.MEDIUM} />}
-            styles={{ body: { minWidth: 0 } }}
-        >
-            <Group justify="space-between" wrap="nowrap" gap="sm">
-                <Text size="sm">{props.text}</Text>
-                {props.action}
-            </Group>
-        </Alert>
-    );
 }
 
 /**

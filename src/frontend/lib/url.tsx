@@ -12,6 +12,13 @@ import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 
+/**
+ * The app's listing in the Onshape App Store, which is where somebody without
+ * the app subscribes to it.
+ */
+export const APP_STORE_URL =
+    "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
+
 export function makeUrl(path: ConfigurablePath): string;
 export function makeUrl(path: ElementPath): string;
 export function makeUrl(path: InstancePath): string;
