@@ -31,7 +31,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
-import { GetAppButton } from "./get-app";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, updateUiState } from "../lib/ui-state";
@@ -91,7 +90,6 @@ export function AppNavbar(): ReactNode {
                 <LibraryTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <JobIndicator />
-                    <GetAppButton />
                     <SignInButton />
                     <SettingsButton />
                 </Group>
