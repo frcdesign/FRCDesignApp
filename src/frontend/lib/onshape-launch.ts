@@ -1,11 +1,10 @@
 /**
- * What Onshape launches the panel with. Parsed off the url once and kept for
- * the tab: the document is the caller's own, so a url carrying it is one nobody
- * can usefully share — and every Onshape tab switch lands a fresh panel that
- * says which document it is this time.
+ * What Onshape launches the panel with. Kept for the tab rather than left in the
+ * url: the document is the caller's own, so a url carrying it is one nobody can
+ * usefully share.
  *
- * A leaf on purpose: the store declares these fields from this shape, and the
- * hooks that read them back are in `onshape-params`.
+ * A leaf, so the store can declare these fields without reaching the hooks that
+ * read them back — those are in `onshape-params`.
  */
 import * as z from "zod";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -40,15 +39,13 @@ export const LAUNCH_KEYS = Object.keys(
     OnshapeLaunchType.shape
 ) as (keyof OnshapeLaunch)[];
 
-/** The element a launch addresses, with the type of tab it is. */
 export interface TargetElement extends ElementPath {
     elementType: ElementType;
 }
 
 /**
- * The element the panel can insert into. A workspace and nothing else: a
- * version and a microversion are snapshots, so there is nothing to insert into
- * even though Onshape will happily launch us in one.
+ * The element the panel can insert into: a workspace and nothing else, since a
+ * version and a microversion are snapshots with nothing to put a part in.
  */
 export function toTargetElement(
     launch: OnshapeLaunch

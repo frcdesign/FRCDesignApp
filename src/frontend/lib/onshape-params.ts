@@ -1,5 +1,5 @@
 import { Theme } from "@backend/features/settings/settings";
-import { getUiState, updateUiState, useGetUiState } from "./ui-state";
+import { updateUiState, useGetUiState } from "./ui-state";
 import {
     type ColorTheme,
     type OnshapeLaunch,
@@ -8,22 +8,14 @@ import {
 } from "./onshape-launch";
 
 /**
- * Takes a launch off the url into the store, where the app reads it from for
+ * Takes a launch off the url into the store, which the app reads it from for
  * the rest of the tab's life. Called before the url is stripped of it.
  */
 export function adoptOnshapeLaunch(launch: OnshapeLaunch): void {
     updateUiState(launch);
 }
 
-/** What Onshape launched this panel with, as it was stored. */
-export function getOnshapeLaunch(): OnshapeLaunch {
-    return getUiState();
-}
-
-/**
- * The element the panel can insert into, or nothing when there is none — the
- * app opened standalone, or in a document it can only read.
- */
+/** The element the panel can insert into; nothing when there is none. */
 export function useTargetElement(): TargetElement | undefined {
     return toTargetElement(useGetUiState());
 }
@@ -36,7 +28,6 @@ export function useIsConnectedToOnshape(): boolean {
     return useTargetElement() !== undefined;
 }
 
-/** Onshape's origin, which a client message has to be addressed to. */
 export function useOnshapeServer(): string | undefined {
     return useGetUiState().server;
 }

@@ -53,9 +53,8 @@ const SessionStateSchema = z.object({
     /** Set on leaving for Onshape, so the app can confirm the sign-in on
      * return — and only in the tab that left, which a second one did not. */
     justSignedIn: z.boolean().default(false),
-    // What Onshape launched this panel with. A tab switch opens a new panel in
-    // the same browser tab, so the launch it arrives with replaces this one;
-    // another browser tab is another document, and has a store of its own.
+    // What Onshape launched this panel with: a tab switch replaces it, and
+    // another browser tab is another document, with a store of its own.
     ...OnshapeLaunchType.shape
 });
 

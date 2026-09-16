@@ -1,4 +1,9 @@
-import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
+import {
+    skipToken,
+    useIsFetching,
+    useMutation,
+    useQuery
+} from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api-client";
 import {
     type ConfigurationResult,
@@ -38,15 +43,18 @@ interface InsertArgs {
 export function useUnitInfoQuery(instancePath: InstancePath | undefined) {
     return useQuery<UnitInfo>({
         queryKey: unitInfoQueryKey(instancePath),
-        queryFn: () =>
-            apiGet("/unit-info", {
-                query: {
-                    documentId: instancePath!.documentId,
-                    instanceId: instancePath!.instanceId,
-                    instanceType: instancePath!.instanceType
-                }
-            }),
-        enabled: instancePath !== undefined
+        // Narrowed here rather than guarded inside, as the thumbnail queries
+        // are: the query function should not restate what stops it running.
+        queryFn: instancePath
+            ? () =>
+                  apiGet("/unit-info", {
+                      query: {
+                          documentId: instancePath.documentId,
+                          instanceId: instancePath.instanceId,
+                          instanceType: instancePath.instanceType
+                      }
+                  })
+            : skipToken
     });
 }
 
@@ -157,8 +165,7 @@ export function useInsertMutation(
                 );
                 return;
             }
-            // Always set here: the insert that built the mate is the one that
-            // had a target to build it in.
+            // Always set: the insert that built the mate had one.
             if (target) {
                 sendOpenFeatureMessage(target, result.featureId);
             }

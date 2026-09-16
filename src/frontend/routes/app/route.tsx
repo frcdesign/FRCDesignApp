@@ -72,7 +72,6 @@ export const Route = createFileRoute("/app")({
     errorComponent: RootAppError
 });
 
-/** Whether the url still carries a launch, which is what is struck off it. */
 function isLaunch(search: LaunchSearch): boolean {
     return (
         search.theme !== undefined ||
@@ -81,9 +80,8 @@ function isLaunch(search: LaunchSearch): boolean {
 }
 
 /**
- * The same url with the launch taken out, leaving the app's own parameters.
- * Undefined rather than absent: `retainSearchParams` reads a missing key as one
- * it should put back.
+ * The url with the launch taken out. Undefined rather than absent:
+ * `retainSearchParams` reads a missing key as one it should put back.
  */
 function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
     const cleared = Object.fromEntries(
