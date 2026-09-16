@@ -1,0 +1,73 @@
+/**
+ * What Onshape launches the panel with. Parsed off the url once and kept for
+ * the tab: the document is the caller's own, so a url carrying it is one nobody
+ * can usefully share — and every Onshape tab switch lands a fresh panel that
+ * says which document it is this time.
+ *
+ * A leaf on purpose: the store declares these fields from this shape, and the
+ * hooks that read them back are in `onshape-params`.
+ */
+import * as z from "zod";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { INSTANCE_TYPES, type ElementPath } from "@backend/lib/onshape/path";
+
+/** A resolved color scheme, as Onshape provides it; Theme adds "system" on top. */
+export const ColorThemeType = z.enum(["light", "dark"]);
+
+export type ColorTheme = z.infer<typeof ColorThemeType>;
+
+/**
+ * Every field optional: the app is opened standalone as well, and a launch we
+ * cannot read in full is one to treat as no launch rather than half of one.
+ */
+export const OnshapeLaunchType = z.object({
+    documentId: z.string().optional().catch(undefined),
+    instanceId: z.string().optional().catch(undefined),
+    instanceType: z.enum(INSTANCE_TYPES).optional().catch(undefined),
+    elementId: z.string().optional().catch(undefined),
+    /** The tab kind, which decides whether a part is inserted or derived. */
+    elementType: z.enum(ElementType).optional().catch(undefined),
+    /** Onshape's own origin, which a client message has to be addressed to. */
+    server: z.string().optional().catch(undefined),
+    /** Onshape's color scheme, which "system" resolves to inside the panel. */
+    systemTheme: ColorThemeType.optional().catch(undefined)
+});
+
+export type OnshapeLaunch = z.infer<typeof OnshapeLaunchType>;
+
+/** The url keys a launch occupies, which the app strips once it has them. */
+export const LAUNCH_KEYS = Object.keys(
+    OnshapeLaunchType.shape
+) as (keyof OnshapeLaunch)[];
+
+/** The element a launch addresses, with the type of tab it is. */
+export interface TargetElement extends ElementPath {
+    elementType: ElementType;
+}
+
+/**
+ * The element the panel can insert into. A workspace and nothing else: a
+ * version and a microversion are snapshots, so there is nothing to insert into
+ * even though Onshape will happily launch us in one.
+ */
+export function toTargetElement(
+    launch: OnshapeLaunch
+): TargetElement | undefined {
+    const { documentId, instanceId, instanceType, elementId, elementType } =
+        launch;
+    if (
+        !documentId ||
+        !instanceId ||
+        instanceType !== "w" ||
+        !elementId ||
+        !elementType
+    ) {
+        return undefined;
+    }
+    return { documentId, instanceId, instanceType, elementId, elementType };
+}
+
+/** Whether a launch names a document the app cannot be used in. */
+export function isReadOnlyInstance(launch: OnshapeLaunch): boolean {
+    return launch.instanceType === "v" || launch.instanceType === "m";
+}

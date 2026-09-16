@@ -1,9 +1,10 @@
-import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ElementType } from "@backend/lib/onshape/element-type";
-export function useTargetElementType(): ElementType {
-    const search = useSearch({ from: "/app" });
-    return search.elementType;
+import { useTargetElement } from "../../lib/onshape-params";
+
+/** The kind of tab the panel was launched on; absent when it was not. */
+export function useTargetElementType(): ElementType | undefined {
+    return useTargetElement()?.elementType;
 }
 
 export function useIsAssemblyInPartStudio(elementType: ElementType): boolean {

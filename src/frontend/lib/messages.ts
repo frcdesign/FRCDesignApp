@@ -3,25 +3,24 @@
  * https://onshape-public.github.io/docs/app-dev/clientmessaging/
  */
 
-import { useSearch } from "@tanstack/react-router";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useEffect } from "react";
-import { useIsConnectedToOnshape } from "./onshape-params";
+import { useOnshapeServer, useTargetElement } from "./onshape-params";
 
 export function useMessageListener() {
-    const search = useSearch({ from: "/app" });
     // Nothing to message unless embedded in an Onshape document.
-    const isConnected = useIsConnectedToOnshape();
+    const target = useTargetElement();
+    const server = useOnshapeServer();
 
     useEffect(() => {
-        if (isConnected) {
-            sendInitMessage(search);
+        if (target) {
+            sendInitMessage(target);
         }
-    }, [search, isConnected]);
+    }, [target]);
 
     useEffect(() => {
         const handlePostMessage = (event: MessageEvent) => {
-            if (search.server !== event.origin) {
+            if (server !== event.origin) {
                 return;
             }
             const { messageName } = event.data as Partial<Message>;
@@ -34,7 +33,7 @@ export function useMessageListener() {
         return () => {
             window.removeEventListener("message", handlePostMessage);
         };
-    }, [search.server]);
+    }, [server]);
 }
 
 function sendInitMessage(elementPath: ElementPath) {

@@ -9,10 +9,18 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { OnshapeParams } from "../../lib/onshape-params";
+import * as z from "zod";
+import { Theme } from "@backend/features/settings/settings";
+import { adoptOnshapeLaunch } from "../../lib/onshape-params";
+import {
+    isReadOnlyInstance,
+    LAUNCH_KEYS,
+    OnshapeLaunchType
+} from "../../lib/onshape-launch";
 import {
     adoptAppParams,
     APP_PARAM_KEYS,
+    type AppParams,
     AppParamsType
 } from "../../lib/app-params";
 import { parseSearch } from "../../lib/search-params";
@@ -22,44 +30,67 @@ import { useMessageListener } from "../../lib/messages";
 import { updateUiState } from "../../lib/ui-state";
 import { RootAppError } from "../../components/root-error";
 
+/** What the entry redirect carries and the app takes off the url. */
+const LaunchSearchType = OnshapeLaunchType.extend({
+    /** The caller's saved theme, from their row. */
+    theme: z.enum(Theme).optional().catch(undefined)
+});
+
+type LaunchSearch = z.infer<typeof LaunchSearchType>;
+
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => ({
-        ...(search as unknown as OnshapeParams),
+        ...parseSearch(LaunchSearchType, search),
         ...parseSearch(AppParamsType, search)
     }),
     search: {
-        // What Onshape launched us with and what the app put there itself,
-        // which every navigation keeps. The theme rides along too, but only as
-        // far as beforeLoad below.
-        middlewares: [
-            retainSearchParams([
-                "documentId",
-                "instanceId",
-                "instanceType",
-                "elementId",
-                "elementType",
-                "systemTheme",
-                "server",
-                ...APP_PARAM_KEYS
-            ])
-        ]
+        // Only the app's own: a launch is taken into the store below and struck
+        // off, so navigating never carries the caller's document around.
+        middlewares: [retainSearchParams([...APP_PARAM_KEYS])]
     },
     beforeLoad: ({ search, location }) => {
         adoptAppParams(search);
+        adoptOnshapeLaunch(search);
         // The entry redirect seeds the account's saved theme; ui-state is what
         // the app reads, so take it rather than leave a second answer in the url.
         if (search.theme) {
             updateUiState({ theme: search.theme }, { sync: false });
+        }
+        // Nothing to insert into, so the app cannot do its one job here.
+        if (isReadOnlyInstance(search)) {
+            throw redirect({ to: "/version-error", replace: true });
+        }
+        if (isLaunch(search)) {
             throw redirect({
                 to: location.pathname,
-                search: { ...search, theme: undefined },
+                search: strippedOfLaunch(search),
                 replace: true
             });
         }
     },
     errorComponent: RootAppError
 });
+
+/** Whether the url still carries a launch, which is what is struck off it. */
+function isLaunch(search: LaunchSearch): boolean {
+    return (
+        search.theme !== undefined ||
+        LAUNCH_KEYS.some((key) => search[key] !== undefined)
+    );
+}
+
+/**
+ * The same url with the launch taken out, leaving the app's own parameters.
+ * Undefined rather than absent: `retainSearchParams` reads a missing key as one
+ * it should put back.
+ */
+function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
+    const cleared = Object.fromEntries(
+        [...LAUNCH_KEYS, "theme"].map((key) => [key, undefined])
+    );
+    return { ...search, ...cleared };
+}
 
 function App() {
     // The navbar (control row + always-open filters) is self-sizing, so measure

@@ -1,4 +1,3 @@
-import { useSearch } from "@tanstack/react-router";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -38,7 +37,7 @@ import {
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { RequireSignIn } from "../../auth/access-level";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 
 interface InsertMenuContentProps {
@@ -227,10 +226,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         onInsert
     } = props;
 
-    const search = useSearch({ from: "/app" });
     // Inserting targets the current Onshape document; there's nothing to insert
     // into when the app is open standalone.
-    const isConnected = useIsConnectedToOnshape();
+    const targetElementType = useTargetElementType();
     const insertMutation = useInsertMutation(insertable, selection, {
         isFavorite,
         source
@@ -243,8 +241,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     );
 
     const canFasten =
-        insertable.supportsFasten &&
-        search.elementType === ElementType.ASSEMBLY;
+        insertable.supportsFasten && targetElementType === ElementType.ASSEMBLY;
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && uiState.fasten);
@@ -260,7 +257,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         canShowQuickInsertTip
     ]);
 
-    if (!isConnected) {
+    if (!targetElementType) {
         return null;
     }
 
@@ -282,7 +279,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >
-                {search.elementType === ElementType.ASSEMBLY
+                {targetElementType === ElementType.ASSEMBLY
                     ? "Insert"
                     : "Derive"}
             </Button>

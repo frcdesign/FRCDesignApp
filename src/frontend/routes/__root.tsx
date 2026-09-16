@@ -1,9 +1,4 @@
-import {
-    createRootRoute,
-    Outlet,
-    useParams,
-    useSearch
-} from "@tanstack/react-router";
+import { createRootRoute, Outlet, useParams } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
@@ -27,22 +22,18 @@ export const Route = createRootRoute({
 
 function RootComponent(): ReactNode {
     // The library comes off the url, so the first paint is already its color.
-    const search = useSearch({ strict: false });
     const params = useParams({ strict: false });
-    const { theme: savedTheme, libraryId } = useGetUiState();
+    const { theme: savedTheme, libraryId, systemTheme } = useGetUiState();
 
     const theme = useMemo(
         () => createAppTheme(params.libraryId ?? libraryId),
         [params.libraryId, libraryId]
     );
 
-    // Onshape puts its own scheme on the url when it launches us; standalone
-    // there is none, and the OS is what "system" means.
+    // Onshape's own scheme, taken off the launch; standalone there is none,
+    // and the OS is what "system" means.
     const osColorScheme = useColorScheme();
-    const colorTheme = getColorTheme(
-        savedTheme,
-        search.systemTheme ?? osColorScheme
-    );
+    const colorTheme = getColorTheme(savedTheme, systemTheme ?? osColorScheme);
 
     return (
         <QueryClientProvider client={queryClient}>

@@ -16,7 +16,7 @@ export function configurationQueryKey(
     return ["configuration", insertableId, microversionId];
 }
 
-export function unitInfoQueryKey(instancePath: InstancePath) {
+export function unitInfoQueryKey(instancePath: InstancePath | undefined) {
     return ["unit-info", instancePath];
 }
 

@@ -13,6 +13,7 @@ import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as PagesVersionErrorRouteImport } from './routes/_pages/version-error'
 import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
@@ -46,6 +47,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRouteRoute,
+} as any)
+const PagesVersionErrorRoute = PagesVersionErrorRouteImport.update({
+  id: '/_pages/version-error',
+  path: '/version-error',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PagesSetupRoute = PagesSetupRouteImport.update({
   id: '/_pages/setup',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
+  '/version-error': typeof PagesVersionErrorRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
+  '/version-error': typeof PagesVersionErrorRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
   '/_pages/setup': typeof PagesSetupRoute
+  '/_pages/version-error': typeof PagesVersionErrorRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/license'
     | '/safari-error'
     | '/setup'
+    | '/version-error'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/license'
     | '/safari-error'
     | '/setup'
+    | '/version-error'
     | '/dashboard'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_pages/license'
     | '/_pages/safari-error'
     | '/_pages/setup'
+    | '/_pages/version-error'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -242,6 +254,7 @@ export interface RootRouteChildren {
   PagesLicenseRoute: typeof PagesLicenseRoute
   PagesSafariErrorRoute: typeof PagesSafariErrorRoute
   PagesSetupRoute: typeof PagesSetupRoute
+  PagesVersionErrorRoute: typeof PagesVersionErrorRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -273,6 +286,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
+    }
+    '/_pages/version-error': {
+      id: '/_pages/version-error'
+      path: '/version-error'
+      fullPath: '/version-error'
+      preLoaderRoute: typeof PagesVersionErrorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_pages/setup': {
       id: '/_pages/setup'
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagesLicenseRoute: PagesLicenseRoute,
   PagesSafariErrorRoute: PagesSafariErrorRoute,
   PagesSetupRoute: PagesSetupRoute,
+  PagesVersionErrorRoute: PagesVersionErrorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

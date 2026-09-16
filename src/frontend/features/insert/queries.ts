@@ -1,5 +1,4 @@
 import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
 import { apiGet, apiPost } from "../../lib/api-client";
 import {
     type ConfigurationResult,
@@ -17,6 +16,7 @@ import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
+import { useTargetElement } from "../../lib/onshape-params";
 import {
     configurationQueryKey,
     renderQueryPrefix,
@@ -32,21 +32,21 @@ interface InsertArgs {
 }
 
 /**
- * The current document's units. Disabled when not connected to a document, and
- * each quantity then falls back to its own unit.
+ * The current document's units. There are none to ask for when the app is not
+ * in a document, and each quantity then falls back to its own unit.
  */
-export function useUnitInfoQuery(instancePath: InstancePath, enabled = true) {
+export function useUnitInfoQuery(instancePath: InstancePath | undefined) {
     return useQuery<UnitInfo>({
         queryKey: unitInfoQueryKey(instancePath),
         queryFn: () =>
             apiGet("/unit-info", {
                 query: {
-                    documentId: instancePath.documentId,
-                    instanceId: instancePath.instanceId,
-                    instanceType: instancePath.instanceType
+                    documentId: instancePath!.documentId,
+                    instanceId: instancePath!.instanceId,
+                    instanceType: instancePath!.instanceType
                 }
             }),
-        enabled
+        enabled: instancePath !== undefined
     });
 }
 
@@ -87,7 +87,7 @@ export function useInsertMutation(
     selection: Selection | undefined,
     insertArgs: InsertArgs
 ) {
-    const search = useSearch({ from: "/app" });
+    const target = useTargetElement();
 
     const toastId = "insert-" + insertable.id;
 
@@ -97,16 +97,21 @@ export function useInsertMutation(
             let endpoint: string;
             let body: Record<string, unknown>;
 
+            // Only reachable from a panel that has one: the buttons that
+            // start an insert do not render without a target.
+            if (!target) {
+                throw new Error("Nothing to insert into.");
+            }
             // The tab being inserted into, sent whole so the instance type
-            // travels with its id rather than being reassembled from the URL.
+            // travels with its id rather than being reassembled.
             const targetPath: ElementPath = {
-                documentId: search.documentId,
-                instanceId: search.instanceId,
-                instanceType: search.instanceType,
-                elementId: search.elementId
+                documentId: target.documentId,
+                instanceId: target.instanceId,
+                instanceType: target.instanceType,
+                elementId: target.elementId
             };
 
-            if (search.elementType == ElementType.ASSEMBLY) {
+            if (target.elementType == ElementType.ASSEMBLY) {
                 endpoint = "/add-to-assembly";
                 body = {
                     targetPath,
@@ -152,7 +157,11 @@ export function useInsertMutation(
                 );
                 return;
             }
-            sendOpenFeatureMessage(search, result.featureId);
+            // Always set here: the insert that built the mate is the one that
+            // had a target to build it in.
+            if (target) {
+                sendOpenFeatureMessage(target, result.featureId);
+            }
             showSuccessToast(
                 `Successfully inserted ${insertable.name} and created a Fasten mate.`,
                 toastId

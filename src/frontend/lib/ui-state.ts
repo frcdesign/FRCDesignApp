@@ -4,6 +4,7 @@ import { AccessLevel } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { Vendor } from "@backend/features/library/vendors";
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
+import { OnshapeLaunchType } from "./onshape-launch";
 
 /** Bumped when a change to the schema makes stored state unusable. */
 const LATEST_VERSION = 4;
@@ -51,7 +52,11 @@ const LocalStateSchema = z.object({
 const SessionStateSchema = z.object({
     /** Set on leaving for Onshape, so the app can confirm the sign-in on
      * return — and only in the tab that left, which a second one did not. */
-    justSignedIn: z.boolean().default(false)
+    justSignedIn: z.boolean().default(false),
+    // What Onshape launched this panel with. A tab switch opens a new panel in
+    // the same browser tab, so the launch it arrives with replaces this one;
+    // another browser tab is another document, and has a store of its own.
+    ...OnshapeLaunchType.shape
 });
 
 type LocalState = z.infer<typeof LocalStateSchema>;

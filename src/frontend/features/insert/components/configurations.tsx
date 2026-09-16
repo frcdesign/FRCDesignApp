@@ -6,7 +6,6 @@ import {
     Stack,
     TextInput
 } from "@mantine/core";
-import { useSearch } from "@tanstack/react-router";
 import {
     type Dispatch,
     ReactNode,
@@ -45,7 +44,7 @@ import { evaluateExpression } from "@backend/features/configurations/input-parse
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { InputRow } from "../../../components/input-row";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
+import { useTargetElement } from "../../../lib/onshape-params";
 import {
     normalizeSelection,
     resolveSelectedOption,
@@ -108,11 +107,10 @@ export function ConfigurationWrapper(
 
     const query = useConfigurationQuery(insertableId, microversionId);
 
-    const search = useSearch({ from: "/app" });
     // Units come from the current document; empty when not connected to one, in
     // which case each quantity renders in its own unit (see getEvaluateOptions).
-    const isConnected = useIsConnectedToOnshape();
-    const unitInfoQuery = useUnitInfoQuery(search, isConnected);
+    const target = useTargetElement();
+    const unitInfoQuery = useUnitInfoQuery(target);
     const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
 
     const parameters = query.data?.parameters;
