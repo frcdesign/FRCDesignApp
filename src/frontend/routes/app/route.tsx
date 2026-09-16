@@ -10,6 +10,12 @@ import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { OnshapeParams } from "../../lib/onshape-params";
+import {
+    adoptAppParams,
+    APP_PARAM_KEYS,
+    AppParamsType
+} from "../../lib/app-params";
+import { parseSearch } from "../../lib/search-params";
 import { AppNavbar } from "../../components/app-navbar";
 import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
@@ -18,12 +24,14 @@ import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
     component: App,
-    validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => {
-        return search as unknown as OnshapeParams;
-    },
+    validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => ({
+        ...(search as unknown as OnshapeParams),
+        ...parseSearch(AppParamsType, search)
+    }),
     search: {
-        // What Onshape launched us with, which every navigation keeps. The
-        // theme rides along too, but only as far as beforeLoad below.
+        // What Onshape launched us with and what the app put there itself,
+        // which every navigation keeps. The theme rides along too, but only as
+        // far as beforeLoad below.
         middlewares: [
             retainSearchParams([
                 "documentId",
@@ -32,11 +40,13 @@ export const Route = createFileRoute("/app")({
                 "elementId",
                 "elementType",
                 "systemTheme",
-                "server"
+                "server",
+                ...APP_PARAM_KEYS
             ])
         ]
     },
     beforeLoad: ({ search, location }) => {
+        adoptAppParams(search);
         // The entry redirect seeds the account's saved theme; ui-state is what
         // the app reads, so take it rather than leave a second answer in the url.
         if (search.theme) {

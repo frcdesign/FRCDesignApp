@@ -2,7 +2,11 @@ import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
-import { type Selection } from "@backend/features/configurations/contract";
+import {
+    type ConfigurationKey,
+    type Selection
+} from "@backend/features/configurations/contract";
+import { updateUiState } from "../../lib/ui-state";
 
 import {
     type NotificationAction,
@@ -16,12 +20,37 @@ import { InsertSource } from "@backend/features/analytics/usage";
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
     initialSelection?: Selection;
+    /** That selection's key, when the caller knows it; the menu reports its
+     * own once the parameters load, which is what keeps the url current. */
+    configurationKey?: ConfigurationKey;
+    /** The favorite this was opened from, so a relaunch can reopen it as one. */
+    favoriteId?: string;
     source: InsertSource;
 }
 
+/** Nothing is open, which is what closing the menu leaves behind. */
+const NO_OPEN_MENU = {
+    openInsertableId: undefined,
+    openConfigurationKey: undefined,
+    openFavoriteId: undefined
+};
+
 export function openInsertMenu(props: OpenInsertMenuProps) {
-    const { insertable, initialSelection, source } = props;
+    const {
+        insertable,
+        initialSelection,
+        configurationKey,
+        favoriteId,
+        source
+    } = props;
     let didInsert = false;
+    // Recorded rather than merely rendered: the url mirrors this, and a
+    // relaunch — an Onshape tab switch among them — reopens what it names.
+    updateUiState({
+        openInsertableId: insertable.id,
+        openConfigurationKey: configurationKey,
+        openFavoriteId: favoriteId
+    });
     // Minted here so the content can address the modal it lives in, which is
     // what lets the header follow the selected configuration.
     const id = crypto.randomUUID();
@@ -30,6 +59,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         title: <MenuTitle name={insertable.name} />,
         size: 500,
         onClose: () => {
+            updateUiState(NO_OPEN_MENU);
             if (!didInsert) {
                 showRestoreToast(insertable, source, initialSelection);
             }
@@ -39,6 +69,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
                 insertable={insertable}
                 modalId={id}
                 initialSelection={initialSelection}
+                initialConfigurationKey={configurationKey}
                 source={source}
                 onInsert={() => {
                     didInsert = true;

@@ -76,6 +76,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 openInsertMenu({
                     insertable,
                     initialSelection: favorite.defaultSelection,
+                    configurationKey: favorite.configurationKey,
+                    favoriteId: favorite.id,
                     source: InsertSource.FAVORITES
                 });
             }}

@@ -82,6 +82,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         openInsertMenu({
             insertable,
             initialSelection: hitSelection,
+            configurationKey: match?.configurationKey,
             source
         });
     };

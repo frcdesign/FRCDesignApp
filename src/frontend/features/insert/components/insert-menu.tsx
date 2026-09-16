@@ -46,6 +46,9 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     initialSelection?: Selection;
+    /** That selection's key, so the preview and the url have it before the
+     * parameters load and the panel reports its own. */
+    initialConfigurationKey?: ConfigurationKey;
     onInsert: () => void;
     source: InsertSource;
 }
@@ -59,7 +62,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     // Reported by ConfigurationWrapper, which has the parameters the key is
     // measured against. Empty means the element's own defaults.
     const [configurationKey, setConfigurationKey] = useState(
-        DEFAULT_CONFIGURATION_KEY
+        props.initialConfigurationKey ?? DEFAULT_CONFIGURATION_KEY
     );
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
@@ -85,6 +88,12 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         setIsEdited(true);
         setCanShowQuickInsertTip(false);
     }, []);
+
+    // What the url carries, so a relaunch reopens the configuration on screen
+    // rather than the one the menu was opened with.
+    useEffect(() => {
+        updateUiState({ openConfigurationKey: configurationKey || undefined });
+    }, [configurationKey]);
 
     useEffect(() => {
         const timer = setTimeout(

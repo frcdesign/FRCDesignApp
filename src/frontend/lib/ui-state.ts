@@ -8,17 +8,13 @@ import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 /** Bumped when a change to the schema makes stored state unusable. */
 const LATEST_VERSION = 4;
 
-const STORAGE_KEY = "uiState";
-
 const VendorType = z.enum(Object.values(Vendor));
 const AccessLevelType = z.enum(Object.values(AccessLevel));
 const ThemeType = z.enum(Object.values(Theme));
 const LibraryIdType = z.enum(Object.values(LibraryId));
 
-const UiStateSchema = z.object({
-    // Defaulted to the first version rather than the latest: state stored
-    // before the field existed is old state, not current state.
-    version: z.number().default(1),
+/** Kept until the browser's storage is cleared: preferences, and where to resume. */
+const LocalStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
     /** Vendor filters per library, so switching libraries keeps each one's;
@@ -30,68 +26,122 @@ const UiStateSchema = z.object({
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
     accessLevel: AccessLevelType.optional(),
-    /** Set on leaving for Onshape, so the app can confirm the sign-in on return. */
-    justSignedIn: z.boolean().default(false),
     // The caller's settings, and the source of truth for them; a signed-in
     // caller's row is what a browser that has never run the app starts from.
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
     libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
     /** The group last opened in that library; null for the library itself. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
+    /** The insertable whose insert menu is open, and what it is configured to.
+     * Written as the menu opens and closes, so a relaunch can reopen it. */
+    openInsertableId: z.string().optional(),
+    /** Absent for the element's own defaults, which is the empty key. */
+    openConfigurationKey: z.string().optional(),
+    /** Set when the menu was opened from a favorite rather than a row. */
+    openFavoriteId: z.string().optional()
 });
 
-type UiState = z.infer<typeof UiStateSchema>;
+/** Kept for this tab only, being about this visit rather than this browser. */
+const SessionStateSchema = z.object({
+    /** Set on leaving for Onshape, so the app can confirm the sign-in on
+     * return — and only in the tab that left, which a second one did not. */
+    justSignedIn: z.boolean().default(false)
+});
+
+type LocalState = z.infer<typeof LocalStateSchema>;
+type SessionState = z.infer<typeof SessionStateSchema>;
+type UiState = LocalState & SessionState;
+
+/**
+ * One store's half of the state: which fields it owns, and how long they last.
+ * Held apart so a field's scope is declared once, beside the field.
+ */
+interface StateArea {
+    storageKey: string;
+    schema: z.ZodObject;
+    /** Read at call time: touching a blocked store is what throws. */
+    getStorage: () => Storage;
+}
+
+const LOCAL_AREA: StateArea = {
+    storageKey: "uiState",
+    schema: LocalStateSchema,
+    getStorage: () => window.localStorage
+};
+
+const SESSION_AREA: StateArea = {
+    storageKey: "uiSessionState",
+    schema: SessionStateSchema,
+    getStorage: () => window.sessionStorage
+};
+
+const AREAS = [LOCAL_AREA, SESSION_AREA];
 
 type Subscriber = () => void;
 
 const subscribers = new Set<Subscriber>();
 
-/** The state this session is working from; the store is written behind it. */
+/** The state this session is working from; the stores are written behind it. */
 let currentState: UiState | null = null;
 
-const defaultState = (): UiState => UiStateSchema.parse({});
-
 /** Blocked or partitioned storage must not break the app, only its memory. */
-function readStorage(): string | null {
+function readStorage(area: StateArea): string | null {
     try {
-        return window.localStorage.getItem(STORAGE_KEY);
+        return area.getStorage().getItem(area.storageKey);
     } catch {
         return null;
     }
 }
 
-function writeStorage(value: string): void {
+function writeStorage(area: StateArea, value: string): void {
     try {
-        window.localStorage.setItem(STORAGE_KEY, value);
+        area.getStorage().setItem(area.storageKey, value);
     } catch {
         // Nothing to do; the in-memory cache still serves this session.
     }
 }
 
 /**
- * What was stored, or the defaults when it cannot be used — older, hand-edited,
- * or naming something dropped. Losing a preference beats failing to start.
+ * What one area stored, or its defaults when that cannot be used — older,
+ * hand-edited, or naming something dropped. Losing a preference beats failing
+ * to start. The version is read off the raw blob rather than the schema, being
+ * about the stored shape rather than anything the app reads.
  */
-function readStoredState(): UiState {
-    const raw = readStorage();
+function readArea(area: StateArea): Record<string, unknown> {
+    const defaults = () => area.schema.parse({});
+    const raw = readStorage(area);
     if (!raw) {
-        return defaultState();
+        return defaults();
     }
     try {
-        const parsed = UiStateSchema.safeParse(
-            // A stored null reads as absent, which is what a default fills.
-            JSON.parse(raw, (_key, value: unknown) => value ?? undefined)
-        );
-        return parsed.success && parsed.data.version >= LATEST_VERSION
-            ? parsed.data
-            : defaultState();
+        // A stored null reads as absent, which is what a default fills.
+        const stored = JSON.parse(
+            raw,
+            (_key, value: unknown) => value ?? undefined
+        ) as { version?: number };
+        if ((stored.version ?? 1) < LATEST_VERSION) {
+            return defaults();
+        }
+        const parsed = area.schema.safeParse(stored);
+        return parsed.success ? parsed.data : defaults();
     } catch {
-        return defaultState();
+        return defaults();
     }
 }
 
+function writeArea(area: StateArea, state: UiState): void {
+    const stored: Record<string, unknown> = { version: LATEST_VERSION };
+    for (const key of Object.keys(area.schema.shape)) {
+        stored[key] = state[key as keyof UiState];
+    }
+    writeStorage(area, JSON.stringify(stored));
+}
+
 export function getUiState(): UiState {
-    currentState ??= readStoredState();
+    currentState ??= {
+        ...readArea(LOCAL_AREA),
+        ...readArea(SESSION_AREA)
+    } as UiState;
     return currentState;
 }
 
@@ -100,39 +150,36 @@ function subscribeToUiState(callback: Subscriber) {
     return () => subscribers.delete(callback);
 }
 
-/** Whether the update names a field whose value is not already what it says. */
-function changesAnything(
+/** The fields the update names whose value is not already what it says. */
+function changedKeys(
     current: UiState,
     partialState: Partial<UiState>
-): boolean {
-    return (Object.keys(partialState) as (keyof UiState)[]).some(
-        // Compared by value for the two object-valued fields, which are rebuilt
+): string[] {
+    return Object.keys(partialState).filter((key) => {
+        const typedKey = key as keyof UiState;
+        // Compared by value for the one object-valued field, which is rebuilt
         // rather than mutated; the rest are primitives.
-        (key) =>
-            key === "vendorFilters"
-                ? JSON.stringify(current[key]) !==
-                  JSON.stringify(partialState[key])
-                : current[key] !== partialState[key]
-    );
+        return typedKey === "vendorFilters"
+            ? JSON.stringify(current[typedKey]) !==
+                  JSON.stringify(partialState[typedKey])
+            : current[typedKey] !== partialState[typedKey];
+    });
 }
 
 /** Merges into the state, stores it, and tells every reader it changed. */
 export function updateUiState(partialState: Partial<UiState>): UiState {
     const current = getUiState();
-    if (
-        current.version === LATEST_VERSION &&
-        !changesAnything(current, partialState)
-    ) {
+    const changed = changedKeys(current, partialState);
+    if (changed.length === 0) {
         return current;
     }
-    const newState: UiState = {
-        ...current,
-        ...partialState,
-        // Writing always stamps the version the shape actually has.
-        version: LATEST_VERSION
-    };
+    const newState: UiState = { ...current, ...partialState };
     currentState = newState;
-    writeStorage(JSON.stringify(newState));
+    for (const area of AREAS) {
+        if (changed.some((key) => key in area.schema.shape)) {
+            writeArea(area, newState);
+        }
+    }
     subscribers.forEach((callback) => callback());
     return newState;
 }
